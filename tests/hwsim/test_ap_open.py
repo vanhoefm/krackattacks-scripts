@@ -139,8 +139,11 @@ def test_ap_open_select_any(dev, apdev):
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    only_add_network=True)
     dev[0].select_network(id)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
-    if ev is not None:
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("No result reported")
+    if "CTRL-EVENT-CONNECTED" in ev:
         raise Exception("Unexpected connection")
 
     dev[0].select_network("any")

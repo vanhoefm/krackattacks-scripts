@@ -504,14 +504,14 @@ int hostapd_config_wmm_ac(struct hostapd_wmm_ac_params wmm_ac_params[],
 		ac->aifs = v;
 	} else if (os_strcmp(pos, "cwmin") == 0) {
 		v = atoi(val);
-		if (v < 0 || v > 12) {
+		if (v < 0 || v > 15) {
 			wpa_printf(MSG_ERROR, "Invalid cwMin value %d", v);
 			return -1;
 		}
 		ac->cwmin = v;
 	} else if (os_strcmp(pos, "cwmax") == 0) {
 		v = atoi(val);
-		if (v < 0 || v > 12) {
+		if (v < 0 || v > 15) {
 			wpa_printf(MSG_ERROR, "Invalid cwMax value %d", v);
 			return -1;
 		}

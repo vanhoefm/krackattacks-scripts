@@ -415,6 +415,34 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
 
+def test_ap_wpa2_eap_sim_oom(dev, apdev):
+    """EAP-SIM and OOM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    tests = [ (1, "milenage_f2345"),
+              (2, "milenage_f2345"),
+              (3, "milenage_f2345"),
+              (4, "milenage_f2345"),
+              (5, "milenage_f2345"),
+              (6, "milenage_f2345"),
+              (7, "milenage_f2345"),
+              (8, "milenage_f2345"),
+              (9, "milenage_f2345"),
+              (10, "milenage_f2345"),
+              (11, "milenage_f2345"),
+              (12, "milenage_f2345") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
+                           identity="1232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("EAP method not selected")
+            dev[0].wait_disconnected()
+            dev[0].request("REMOVE_NETWORK all")
+
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
     check_hlr_auc_gw_support()

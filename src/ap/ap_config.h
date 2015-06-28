@@ -619,6 +619,7 @@ struct hostapd_config {
 	u16 ht_capab;
 	int ieee80211n;
 	int secondary_channel;
+	int no_pri_sec_switch;
 	int require_ht;
 	int obss_interval;
 	u32 vht_capab;

@@ -142,6 +142,29 @@ void wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 			}
 		}
 	}
+
+	if (conf->secondary_channel) {
+		struct wpa_supplicant *iface;
+
+		for (iface = wpa_s->global->ifaces; iface; iface = iface->next)
+		{
+			if (iface == wpa_s ||
+			    iface->wpa_state < WPA_AUTHENTICATING ||
+			    (int) iface->assoc_freq != ssid->frequency)
+				continue;
+
+			/*
+			 * Do not allow 40 MHz co-ex PRI/SEC switch to force us
+			 * to change our PRI channel since we have an existing,
+			 * concurrent connection on that channel and doing
+			 * multi-channel concurrency is likely to cause more
+			 * harm than using different PRI/SEC selection in
+			 * environment with multiple BSSes on these two channels
+			 * with mixed 20 MHz or PRI channel selection.
+			 */
+			conf->no_pri_sec_switch = 1;
+		}
+	}
 #endif /* CONFIG_IEEE80211N */
 }
 

@@ -1841,9 +1841,13 @@ static void wpa_group_ensure_init(struct wpa_authenticator *wpa_auth,
 		group->reject_4way_hs_for_entropy = FALSE;
 	}
 
-	wpa_group_init_gmk_and_counter(wpa_auth, group);
-	wpa_gtk_update(wpa_auth, group);
-	wpa_group_config_group_keys(wpa_auth, group);
+	if (wpa_group_init_gmk_and_counter(wpa_auth, group) < 0 ||
+	    wpa_gtk_update(wpa_auth, group) < 0 ||
+	    wpa_group_config_group_keys(wpa_auth, group) < 0) {
+		wpa_printf(MSG_INFO, "WPA: GMK/GTK setup failed");
+		group->first_sta_seen = FALSE;
+		group->reject_4way_hs_for_entropy = TRUE;
+	}
 }
 
 

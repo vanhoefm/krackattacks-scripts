@@ -226,6 +226,9 @@ int os_get_random(unsigned char *buf, size_t len)
 	FILE *f;
 	size_t rc;
 
+	if (TEST_FAIL())
+		return -1;
+
 	f = fopen("/dev/urandom", "rb");
 	if (f == NULL) {
 		printf("Could not open /dev/urandom.\n");
@@ -539,6 +542,78 @@ static int testing_fail_alloc(void)
 	if (wpa_trace_fail_after == 0) {
 		wpa_printf(MSG_INFO, "TESTING: fail allocation at %s",
 			   wpa_trace_fail_func);
+		for (i = 0; i < res; i++)
+			wpa_printf(MSG_INFO, "backtrace[%d] = %s",
+				   (int) i, func[i]);
+		return 1;
+	}
+
+	return 0;
+}
+
+
+char wpa_trace_test_fail_func[256] = { 0 };
+unsigned int wpa_trace_test_fail_after;
+
+int testing_test_fail(void)
+{
+	const char *func[WPA_TRACE_LEN];
+	size_t i, res, len;
+	char *pos, *next;
+	int match;
+
+	if (!wpa_trace_test_fail_after)
+		return 0;
+
+	res = wpa_trace_calling_func(func, WPA_TRACE_LEN);
+	i = 0;
+	if (i < res && os_strcmp(func[i], __func__) == 0)
+		i++;
+
+	pos = wpa_trace_test_fail_func;
+
+	match = 0;
+	while (i < res) {
+		int allow_skip = 1;
+		int maybe = 0;
+
+		if (*pos == '=') {
+			allow_skip = 0;
+			pos++;
+		} else if (*pos == '?') {
+			maybe = 1;
+			pos++;
+		}
+		next = os_strchr(pos, ';');
+		if (next)
+			len = next - pos;
+		else
+			len = os_strlen(pos);
+		if (os_memcmp(pos, func[i], len) != 0) {
+			if (maybe && next) {
+				pos = next + 1;
+				continue;
+			}
+			if (allow_skip) {
+				i++;
+				continue;
+			}
+			return 0;
+		}
+		if (!next) {
+			match = 1;
+			break;
+		}
+		pos = next + 1;
+		i++;
+	}
+	if (!match)
+		return 0;
+
+	wpa_trace_test_fail_after--;
+	if (wpa_trace_test_fail_after == 0) {
+		wpa_printf(MSG_INFO, "TESTING: fail at %s",
+			   wpa_trace_test_fail_func);
 		for (i = 0; i < res; i++)
 			wpa_printf(MSG_INFO, "backtrace[%d] = %s",
 				   (int) i, func[i]);

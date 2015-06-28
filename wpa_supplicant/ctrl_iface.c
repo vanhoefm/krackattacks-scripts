@@ -7562,6 +7562,44 @@ static int wpas_ctrl_get_alloc_fail(struct wpa_supplicant *wpa_s,
 #endif /* WPA_TRACE_BFD */
 }
 
+
+static int wpas_ctrl_test_fail(struct wpa_supplicant *wpa_s, char *cmd)
+{
+#ifdef WPA_TRACE_BFD
+	extern char wpa_trace_test_fail_func[256];
+	extern unsigned int wpa_trace_test_fail_after;
+	char *pos;
+
+	wpa_trace_test_fail_after = atoi(cmd);
+	pos = os_strchr(cmd, ':');
+	if (pos) {
+		pos++;
+		os_strlcpy(wpa_trace_test_fail_func, pos,
+			   sizeof(wpa_trace_test_fail_func));
+	} else {
+		wpa_trace_test_fail_after = 0;
+	}
+	return 0;
+#else /* WPA_TRACE_BFD */
+	return -1;
+#endif /* WPA_TRACE_BFD */
+}
+
+
+static int wpas_ctrl_get_fail(struct wpa_supplicant *wpa_s,
+				    char *buf, size_t buflen)
+{
+#ifdef WPA_TRACE_BFD
+	extern char wpa_trace_test_fail_func[256];
+	extern unsigned int wpa_trace_test_fail_after;
+
+	return os_snprintf(buf, buflen, "%u:%s", wpa_trace_test_fail_after,
+			   wpa_trace_test_fail_func);
+#else /* WPA_TRACE_BFD */
+	return -1;
+#endif /* WPA_TRACE_BFD */
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -8579,6 +8617,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "GET_ALLOC_FAIL") == 0) {
 		reply_len = wpas_ctrl_get_alloc_fail(wpa_s, reply, reply_size);
+	} else if (os_strncmp(buf, "TEST_FAIL ", 10) == 0) {
+		if (wpas_ctrl_test_fail(wpa_s, buf + 10) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "GET_FAIL") == 0) {
+		reply_len = wpas_ctrl_get_fail(wpa_s, reply, reply_size);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {
 		if (wpas_ctrl_vendor_elem_add(wpa_s, buf + 16) < 0)

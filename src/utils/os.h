@@ -646,4 +646,12 @@ int os_exec(const char *program, const char *arg, int wait_completion);
 #define strcpy OS_DO_NOT_USE_strcpy
 #endif /* OS_REJECT_C_LIB_FUNCTIONS */
 
+
+#if defined(WPA_TRACE_BFD) && defined(CONFIG_TESTING_OPTIONS)
+#define TEST_FAIL() testing_test_fail()
+int testing_test_fail(void);
+#else
+#define TEST_FAIL() 0
+#endif
+
 #endif /* OS_H */

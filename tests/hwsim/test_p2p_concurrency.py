@@ -1,11 +1,12 @@
 # P2P concurrency test cases
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
 import logging
 logger = logging.getLogger()
+import subprocess
 import time
 
 import hwsim_utils
@@ -18,6 +19,7 @@ from test_p2p_persistent import form
 from test_p2p_persistent import invite_from_cli
 from test_p2p_persistent import invite_from_go
 from test_p2p_persistent import invite
+from test_ap_ht import clear_scan_cache
 
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
@@ -40,6 +42,62 @@ def test_concurrent_autogo(dev, apdev):
 
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_concurrent_autogo_5ghz_ht40(dev, apdev):
+    """Concurrent P2P autonomous GO on 5 GHz and HT40 co-ex"""
+    clear_scan_cache(apdev[1]['ifname'])
+    try:
+        hapd = None
+        hapd2 = None
+        params = { "ssid": "ht40",
+                   "hw_mode": "a",
+                   "channel": "153",
+                   "country_code": "US",
+                   "ht_capab": "[HT40-]" }
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+        params = { "ssid": "test-open-5",
+                   "hw_mode": "a",
+                   "channel": "149",
+                   "country_code": "US" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].request("P2P_SET cross_connect 0")
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq=5745)
+        dev[0].scan_for_bss(apdev[1]['bssid'], freq=5765)
+        dev[0].connect("test-open-5", key_mgmt="NONE", scan_freq="5745")
+
+        dev[0].request("SET p2p_no_group_iface 0")
+        if "OK" not in dev[0].global_request("P2P_GROUP_ADD ht40"):
+            raise Exception("P2P_GROUP_ADD failed")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("GO start up timed out")
+        dev[0].group_form_result(ev)
+
+        pin = dev[1].wps_read_pin()
+        dev[0].p2p_go_authorize_client(pin)
+        dev[1].p2p_find(freq=5745)
+        addr0 = dev[0].p2p_dev_addr()
+        count = 0
+        while count < 10:
+            time.sleep(0.25)
+            count += 1
+            if dev[1].peer_known(addr0):
+                break
+        dev[1].p2p_connect_group(addr0, pin, timeout=60)
+
+        dev[0].remove_group()
+        dev[1].wait_go_ending_session()
+    finally:
+        dev[0].request("REMOVE_NETWORK all")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
 
 def test_concurrent_autogo_crossconnect(dev, apdev):
     """Concurrent P2P autonomous GO"""

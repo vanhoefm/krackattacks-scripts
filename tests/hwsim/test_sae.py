@@ -1,5 +1,5 @@
 # Test cases for SAE
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail
+from utils import HwsimSkip, alloc_fail, fail_test
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def test_sae(dev, apdev):
@@ -677,3 +677,23 @@ def test_sae_anti_clogging_proto(dev, apdev):
     if req is not None:
         if req['subtype'] == 11:
             raise Exception("Unexpected Authentication frame seen")
+
+def test_sae_no_random(dev, apdev):
+    """SAE and no random numbers available"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups ")
+    tests = [ (1, "os_get_random;sae_get_rand"),
+              (1, "os_get_random;get_rand_1_to_p_1"),
+              (1, "os_get_random;get_random_qr_qnr"),
+              (1, "os_get_random;sae_derive_pwe_ecc") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                           scan_freq="2412")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

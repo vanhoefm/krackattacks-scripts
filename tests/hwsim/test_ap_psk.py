@@ -17,7 +17,7 @@ import subprocess
 import time
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, fail_test
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 
@@ -1971,3 +1971,21 @@ def test_ap_wpa_ie_parsing(dev, apdev):
             dev[0].request("DISCONNECT")
         finally:
             dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def test_ap_wpa2_psk_no_random(dev, apdev):
+    """WPA2-PSK AP and no random numbers available"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with fail_test(hapd, 1, "wpa_gmk_to_gtk"):
+        id = dev[0].connect(ssid, raw_psk=psk, scan_freq="2412",
+                            wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Disconnection event not reported")
+        dev[0].request("DISCONNECT")
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()

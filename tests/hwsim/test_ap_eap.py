@@ -2027,6 +2027,46 @@ def test_ap_wpa2_eap_psk(dev, apdev):
                 password_hex="ff23456789abcdef0123456789abcdef", sha256=True,
                 expect_failure=True)
 
+def test_ap_wpa2_eap_psk_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PSK and OOM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    tests = [ (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt"),
+              (1, "omac1_aes_128;aes_128_eax_encrypt"),
+              (2, "omac1_aes_128;aes_128_eax_encrypt"),
+              (3, "omac1_aes_128;aes_128_eax_encrypt"),
+              (1, "=aes_128_eax_encrypt"),
+              (1, "omac1_aes_vector"),
+              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt"),
+              (1, "omac1_aes_128;aes_128_eax_decrypt"),
+              (2, "omac1_aes_128;aes_128_eax_decrypt"),
+              (3, "omac1_aes_128;aes_128_eax_decrypt"),
+              (1, "=aes_128_eax_decrypt") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PSK",
+                           identity="psk.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("EAP method not selected")
+            for i in range(10):
+                if "0:" in dev[0].request("GET_ALLOC_FAIL"):
+                    break
+                time.sleep(0.02)
+            dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(dev[0], 1, "aes_128_encrypt_block"):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PSK",
+                           identity="psk.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+            if ev is None:
+                raise Exception("EAP method failure not reported")
+            dev[0].request("REMOVE_NETWORK all")
+
 def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     """WPA-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""
     params = hostapd.wpa_eap_params(ssid="test-wpa-eap")

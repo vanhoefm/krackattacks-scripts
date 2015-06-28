@@ -15,7 +15,7 @@ import os
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail
+from utils import HwsimSkip, alloc_fail, fail_test
 from wpasupplicant import WpaSupplicant
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -1988,6 +1988,43 @@ def test_ap_wpa2_eap_ikev2_as_frag(dev, apdev):
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
                 password="ike password")
     eap_reauth(dev[0], "IKEV2")
+
+def test_ap_wpa2_eap_ikev2_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-IKEv2 and OOM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "dh_init"),
+              (2, "dh_init"),
+              (1, "dh_derive_shared") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="IKEV2",
+                           identity="ikev2 user", password="ike password",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("EAP method not selected")
+            for i in range(10):
+                if "0:" in dev[0].request("GET_ALLOC_FAIL"):
+                    break
+                time.sleep(0.02)
+            dev[0].request("REMOVE_NETWORK all")
+
+    tests = [ (1, "os_get_random;dh_init") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="IKEV2",
+                           identity="ikev2 user", password="ike password",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("EAP method not selected")
+            for i in range(10):
+                if "0:" in dev[0].request("GET_FAIL"):
+                    break
+                time.sleep(0.02)
+            dev[0].request("REMOVE_NETWORK all")
 
 def test_ap_wpa2_eap_pax(dev, apdev):
     """WPA2-Enterprise connection using EAP-PAX"""

@@ -3112,3 +3112,34 @@ def test_ap_wpa2_eap_tls_check_crl(dev, apdev):
                 client_cert="auth_serv/user.pem",
                 private_key="auth_serv/user.key")
     dev[0].request("REMOVE_NETWORK all")
+
+def test_ap_wpa2_eap_tls_oom(dev, apdev):
+    """EAP-TLS and OOM"""
+    check_subject_match_support(dev[0])
+    check_altsubject_match_support(dev[0])
+    check_domain_match_full(dev[0])
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "tls_connection_set_subject_match"),
+              (2, "tls_connection_set_subject_match"),
+              (3, "tls_connection_set_subject_match"),
+              (4, "tls_connection_set_subject_match") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                           identity="tls user", ca_cert="auth_serv/ca.pem",
+                           client_cert="auth_serv/user.pem",
+                           private_key="auth_serv/user.key",
+                           subject_match="/C=FI/O=w1.fi/CN=server.w1.fi",
+                           altsubject_match="EMAIL:noone@example.com;DNS:server.w1.fi;URI:http://example.com/",
+                           domain_suffix_match="server.w1.fi",
+                           domain_match="server.w1.fi",
+                           wait_connect=False, scan_freq="2412")
+            # TLS parameter configuration error results in CTRL-REQ-PASSPHRASE
+            ev = dev[0].wait_event(["CTRL-REQ-PASSPHRASE"], timeout=5)
+            if ev is None:
+                raise Exception("No passphrase request")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

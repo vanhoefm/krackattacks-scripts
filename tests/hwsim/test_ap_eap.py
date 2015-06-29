@@ -3080,3 +3080,35 @@ def test_ap_wpa2_eap_no_workaround(dev, apdev):
                 ca_cert="auth_serv/ca.pem", eap_workaround='0',
                 phase2="auth=PAP")
     eap_reauth(dev[0], "TTLS")
+
+def test_ap_wpa2_eap_tls_check_crl(dev, apdev):
+    """EAP-TLS and server checking CRL"""
+    params = int_eap_server_params()
+    params['check_crl'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    # check_crl=1 and no CRL available --> reject connection
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key", expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+
+    hapd.disable()
+    hapd.set("ca_cert", "auth_serv/ca-and-crl.pem")
+    hapd.enable()
+
+    # check_crl=1 and valid CRL --> accept
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    dev[0].request("REMOVE_NETWORK all")
+
+    hapd.disable()
+    hapd.set("check_crl", "2")
+    hapd.enable()
+
+    # check_crl=2 and valid CRL --> accept
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    dev[0].request("REMOVE_NETWORK all")

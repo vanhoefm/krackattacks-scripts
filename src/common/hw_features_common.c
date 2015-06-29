@@ -272,10 +272,8 @@ int check_40mhz_2g4(struct hostapd_hw_modes *mode,
 	int affected_start, affected_end;
 	size_t i;
 
-	if (!mode || !scan_res || !pri_chan || !sec_chan)
-		return 0;
-
-	if (pri_chan == sec_chan)
+	if (!mode || !scan_res || !pri_chan || !sec_chan ||
+	    pri_chan == sec_chan)
 		return 0;
 
 	pri_freq = hw_get_freq(mode, pri_chan);

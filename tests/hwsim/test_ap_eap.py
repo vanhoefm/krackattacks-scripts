@@ -2663,6 +2663,45 @@ def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
                 dh_file="auth_serv/dh.conf")
 
+def test_ap_wpa2_eap_ttls_dh_params_dsa(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS and setting DH params (DSA)"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
+                dh_file="auth_serv/dsaparam.pem")
+
+def test_ap_wpa2_eap_ttls_dh_params_not_found(dev, apdev):
+    """EAP-TTLS and DH params file not found"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   dh_file="auth_serv/dh-no-such-file.conf",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("EAP failure timed out")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+def test_ap_wpa2_eap_ttls_dh_params_invalid(dev, apdev):
+    """EAP-TTLS and invalid DH params file"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   dh_file="auth_serv/ca.pem",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("EAP failure timed out")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_ttls_dh_params_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP and setting DH params from blob"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -2683,6 +2722,31 @@ def test_ap_wpa2_eap_ttls_dh_params_server(dev, apdev):
     eap_connect(dev[0], apdev[0], "TTLS", "chap user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
+
+def test_ap_wpa2_eap_ttls_dh_params_dsa_server(dev, apdev):
+    """WPA2-Enterprise using EAP-TTLS and alternative server dhparams (DSA)"""
+    params = int_eap_server_params()
+    params["dh_file"] = "auth_serv/dsaparam.pem"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
+
+def test_ap_wpa2_eap_ttls_dh_params_not_found(dev, apdev):
+    """EAP-TLS server and dhparams file not found"""
+    params = int_eap_server_params()
+    params["dh_file"] = "auth_serv/dh-no-such-file.conf"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("Invalid configuration accepted")
+
+def test_ap_wpa2_eap_ttls_dh_params_invalid(dev, apdev):
+    """EAP-TLS server and invalid dhparams file"""
+    params = int_eap_server_params()
+    params["dh_file"] = "auth_serv/ca.pem"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("Invalid configuration accepted")
 
 def test_ap_wpa2_eap_reauth(dev, apdev):
     """WPA2-Enterprise and Authenticator forcing reauthentication"""

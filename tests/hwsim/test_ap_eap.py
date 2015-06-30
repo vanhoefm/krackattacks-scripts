@@ -3308,3 +3308,12 @@ def test_ap_wpa2_eap_tls_oom(dev, apdev):
                 raise Exception("No passphrase request")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_ap_wpa2_eap_tls_macacl(dev, apdev):
+    """WPA2-Enterprise connection using MAC ACL"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params["macaddr_acl"] = "2"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[1], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")

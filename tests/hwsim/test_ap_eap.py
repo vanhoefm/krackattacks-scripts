@@ -2367,6 +2367,32 @@ def test_ap_wpa2_eap_fast_prf_oom(dev, apdev):
             raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
 
+def test_ap_wpa2_eap_fast_server_oom(dev, apdev):
+    """EAP-FAST/MSCHAPv2 and server OOM"""
+    check_eap_capa(dev[0], "FAST")
+
+    params = int_eap_server_params()
+    params['dh_file'] = 'auth_serv/dh.conf'
+    params['pac_opaque_encr_key'] = '000102030405060708090a0b0c0d0e0f'
+    params['eap_fast_a_id'] = '1011'
+    params['eap_fast_a_id_info'] = 'another test server'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with alloc_fail(hapd, 1, "tls_session_ticket_ext_cb"):
+        id = eap_connect(dev[0], apdev[0], "FAST", "user",
+                         anonymous_identity="FAST", password="password",
+                         ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                         phase1="fast_provisioning=1",
+                         pac_file="blob://fast_pac",
+                         expect_failure=True)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+        if ev is None:
+            raise Exception("No EAP failure reported")
+        dev[0].wait_disconnected()
+        dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

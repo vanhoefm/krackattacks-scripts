@@ -532,13 +532,6 @@ int tls_connection_get_read_alerts(void *tls_ctx, struct tls_connection *conn);
 int tls_connection_get_write_alerts(void *tls_ctx,
 				    struct tls_connection *conn);
 
-/**
- * tls_capabilities - Get supported TLS capabilities
- * @tls_ctx: TLS context data from tls_init()
- * Returns: Bit field of supported TLS capabilities (TLS_CAPABILITY_*)
- */
-unsigned int tls_capabilities(void *tls_ctx);
-
 typedef int (*tls_session_ticket_cb)
 (void *ctx, const u8 *ticket, size_t len, const u8 *client_random,
  const u8 *server_random, u8 *master_secret);

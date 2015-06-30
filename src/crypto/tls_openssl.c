@@ -3633,12 +3633,6 @@ int tls_global_set_params(void *tls_ctx,
 }
 
 
-unsigned int tls_capabilities(void *tls_ctx)
-{
-	return 0;
-}
-
-
 #if defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC) || defined(EAP_SERVER_FAST)
 /* Pre-shared secred requires a patch to openssl, so this function is
  * commented out unless explicitly needed for EAP-FAST in order to be able to

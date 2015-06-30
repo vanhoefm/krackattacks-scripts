@@ -1476,12 +1476,6 @@ int tls_connection_get_write_alerts(void *ssl_ctx, struct tls_connection *conn)
 }
 
 
-unsigned int tls_capabilities(void *tls_ctx)
-{
-	return 0;
-}
-
-
 int tls_connection_set_session_ticket_cb(void *tls_ctx,
 					 struct tls_connection *conn,
 					 tls_session_ticket_cb cb, void *ctx)

@@ -3585,19 +3585,12 @@ int tls_global_set_params(void *tls_ctx,
 			   __func__, ERR_error_string(err, NULL));
 	}
 
-	if (tls_global_ca_cert(ssl_ctx, params->ca_cert))
-		return -1;
-
-	if (tls_global_client_cert(ssl_ctx, params->client_cert))
-		return -1;
-
-	if (tls_global_private_key(ssl_ctx, params->private_key,
-				   params->private_key_passwd))
-		return -1;
-
-	if (tls_global_dh(ssl_ctx, params->dh_file)) {
-		wpa_printf(MSG_INFO, "TLS: Failed to load DH file '%s'",
-			   params->dh_file);
+	if (tls_global_ca_cert(ssl_ctx, params->ca_cert) ||
+	    tls_global_client_cert(ssl_ctx, params->client_cert) ||
+	    tls_global_private_key(ssl_ctx, params->private_key,
+				   params->private_key_passwd) ||
+	    tls_global_dh(ssl_ctx, params->dh_file)) {
+		wpa_printf(MSG_INFO, "TLS: Failed to set global parameters");
 		return -1;
 	}
 

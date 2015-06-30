@@ -2409,7 +2409,32 @@ def int_eap_server_params():
                "server_cert": "auth_serv/server.pem",
                "private_key": "auth_serv/server.key" }
     return params
-    
+
+def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and invalid OCSP data"""
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = "auth_serv/ocsp-req.der"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   wait_connect=False, scan_freq="2412")
+    count = 0
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"])
+        if ev is None:
+            raise Exception("Timeout on EAP status")
+        if 'bad certificate status response' in ev:
+            break
+        count = count + 1
+        if count > 10:
+            raise Exception("Unexpected number of EAP status messages")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
 def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP response"""
     params = int_eap_server_params()

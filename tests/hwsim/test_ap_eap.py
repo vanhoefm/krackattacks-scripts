@@ -3317,3 +3317,18 @@ def test_ap_wpa2_eap_tls_macacl(dev, apdev):
     eap_connect(dev[1], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
                 client_cert="auth_serv/user.pem",
                 private_key="auth_serv/user.key")
+
+def test_ap_wpa2_eap_oom(dev, apdev):
+    """EAP server and OOM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+
+    with alloc_fail(hapd, 1, "eapol_auth_alloc"):
+        # The first attempt fails, but STA will send EAPOL-Start to retry and
+        # that succeeds.
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user", ca_cert="auth_serv/ca.pem",
+                       client_cert="auth_serv/user.pem",
+                       private_key="auth_serv/user.key",
+                       scan_freq="2412")

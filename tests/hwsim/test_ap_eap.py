@@ -2969,6 +2969,16 @@ def test_openssl_cipher_suite_config_wpas(dev, apdev):
                 openssl_ciphers="EXPORT",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
                 expect_failure=True)
+    dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="pap user", anonymous_identity="ttls",
+                   password="password",
+                   openssl_ciphers="FOO",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                   wait_connect=False)
+    ev = dev[2].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP failure after invalid openssl_ciphers not reported")
+    dev[2].request("DISCONNECT")
 
 def test_openssl_cipher_suite_config_hapd(dev, apdev):
     """OpenSSL cipher suite configuration on hostapd"""
@@ -2993,6 +3003,11 @@ def test_openssl_cipher_suite_config_hapd(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 openssl_ciphers="HIGH:!ADH",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+
+    params['openssl_ciphers'] = "FOO"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params, no_enable=True)
+    if "FAIL" not in hapd2.request("ENABLE"):
+        raise Exception("Invalid openssl_ciphers value accepted")
 
 def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     """Key lifetime in memory with WPA2-Enterprise using EAP-TTLS/PAP"""

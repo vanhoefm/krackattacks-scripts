@@ -1,9 +1,11 @@
 # IEEE 802.1X tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import hmac
 import logging
 import time
 
@@ -157,3 +159,54 @@ def test_ieee8021x_eapol_start(dev, apdev):
     finally:
         dev[0].request("SET EAPOL::startPeriod 30")
         dev[0].request("SET EAPOL::maxStart 3")
+
+def send_eapol_key(dev, bssid, signkey, frame_start, frame_end):
+    zero_sign = "00000000000000000000000000000000"
+    frame = frame_start + zero_sign + frame_end
+    hmac_obj = hmac.new(binascii.unhexlify(signkey))
+    hmac_obj.update(binascii.unhexlify(frame))
+    sign = hmac_obj.digest()
+    frame = frame_start + binascii.hexlify(sign) + frame_end
+    dev.request("EAPOL_RX " + bssid + " " + frame)
+
+def test_ieee8021x_eapol_key(dev, apdev):
+    """IEEE 802.1X connection and EAPOL-Key protocol tests"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-wep"
+    params["ieee8021x"] = "1"
+    params["wep_key_len_broadcast"] = "5"
+    params["wep_key_len_unicast"] = "5"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="VENDOR-TEST",
+                   identity="vendor-test", scan_freq="2412")
+
+    # Hardcoded MSK from VENDOR-TEST
+    encrkey = "1111111111111111111111111111111111111111111111111111111111111111"
+    signkey = "2222222222222222222222222222222222222222222222222222222222222222"
+
+    # EAPOL-Key replay counter does not increase
+    send_eapol_key(dev[0], bssid, signkey,
+                   "02030031" + "010005" + "0000000000000000" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
+                   "1c636a30a4")
+
+    # EAPOL-Key too large Key Length field value
+    send_eapol_key(dev[0], bssid, signkey,
+                   "02030031" + "010021" + "ffffffffffffffff" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
+                   "1c636a30a4")
+
+    # EAPOL-Key too much key data
+    send_eapol_key(dev[0], bssid, signkey,
+                   "0203004d" + "010005" + "ffffffffffffffff" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
+                   33*"ff")
+
+    # EAPOL-Key too little key data
+    send_eapol_key(dev[0], bssid, signkey,
+                   "02030030" + "010005" + "ffffffffffffffff" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
+                   "1c636a30")
+
+    # EAPOL-Key with no key data and too long WEP key length
+    send_eapol_key(dev[0], bssid, signkey,
+                   "0203002c" + "010020" + "ffffffffffffffff" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
+                   "")

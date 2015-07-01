@@ -1,5 +1,5 @@
 # Fast BSS Transition tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -770,3 +770,54 @@ def test_ap_ft_oom(dev, apdev):
         dev[0].roam(dst, fail_test=True)
     with fail_test(dev[0], 1, "os_get_random;wpa_ft_prepare_auth_request"):
         dev[0].roam(dst, fail_test=True)
+
+def test_ap_ft_over_ds_proto(dev, apdev):
+    """WPA2-PSK-FT AP over DS protocol testing"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    # FT Action Response while no FT-over-DS in progress
+    msg = {}
+    msg['fc'] = 13 << 4
+    msg['da'] = dev[0].own_addr()
+    msg['sa'] = apdev[0]['bssid']
+    msg['bssid'] = apdev[0]['bssid']
+    msg['payload'] = binascii.unhexlify("06020200000000000200000004000000")
+    hapd0.mgmt_tx(msg)
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+    hapd0.set("ext_mgmt_frame_handling", "1")
+    hapd0.dump_monitor()
+    dev[0].request("FT_DS " + apdev[1]['bssid'])
+    for i in range(0, 10):
+        req = hapd0.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out")
+        if req['subtype'] == 13:
+            break
+        req = None
+    if not req:
+        raise Exception("FT Action frame not received")
+
+    # FT Action Response for unexpected Target AP
+    msg['payload'] = binascii.unhexlify("0602020000000000" + "f20000000400" + "0000")
+    hapd0.mgmt_tx(msg)
+
+    # FT Action Response without MDIE
+    msg['payload'] = binascii.unhexlify("0602020000000000" + "020000000400" + "0000")
+    hapd0.mgmt_tx(msg)
+
+    # FT Action Response without FTIE
+    msg['payload'] = binascii.unhexlify("0602020000000000" + "020000000400" + "0000" + "3603a1b201")
+    hapd0.mgmt_tx(msg)
+
+    # FT Action Response with FTIE SNonce mismatch
+    msg['payload'] = binascii.unhexlify("0602020000000000" + "020000000400" + "0000" + "3603a1b201" + "3766000000000000000000000000000000000000c4e67ac1999bebd00ff4ae4d5dcaf87896bb060b469f7c78d49623fb395c3455ffffff6b693fe6f8d8c5dfac0a22344750775bd09437f98b238c9f87b97f790c0106000102030406030a6e6173312e77312e6669")
+    hapd0.mgmt_tx(msg)

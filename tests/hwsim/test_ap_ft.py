@@ -91,20 +91,24 @@ def ft_params2_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "12:00:00:00:03:00 10:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
-def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False, sae=False, eap=False, fail_test=False, roams=1):
+def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
+              sae=False, eap=False, fail_test=False, roams=1,
+              pairwise_cipher="CCMP", group_cipher="TKIP CCMP"):
     logger.info("Connect to first AP")
     if eap:
         dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
                     eap="GPSK", identity="gpsk user",
                     password="abcdefghijklmnop0123456789abcdef",
-                    scan_freq="2412")
+                    scan_freq="2412",
+                    pairwise=pairwise_cipher, group=group_cipher)
     else:
         if sae:
             key_mgmt="FT-SAE"
         else:
             key_mgmt="FT-PSK"
         dev.connect(ssid, psk=passphrase, key_mgmt=key_mgmt, proto="WPA2",
-                    ieee80211w="1", scan_freq="2412")
+                    ieee80211w="1", scan_freq="2412",
+                    pairwise=pairwise_cipher, group=group_cipher)
     if dev.get_status_field('bssid') == apdev[0]['bssid']:
         ap1 = apdev[0]
         ap2 = apdev[1]
@@ -724,3 +728,20 @@ def test_ap_ft_invalid_resp(dev, apdev):
 
         dev[0].request("RECONNECT")
         dev[0].wait_connected()
+
+def test_ap_ft_gcmp_256(dev, apdev):
+    """WPA2-PSK-FT AP with GCMP-256 cipher"""
+    if "GCMP-256" not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("Cipher GCMP-256 not supported")
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['rsn_pairwise'] = "GCMP-256"
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['rsn_pairwise'] = "GCMP-256"
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase,
+              pairwise_cipher="GCMP-256", group_cipher="GCMP-256")

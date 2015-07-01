@@ -127,3 +127,33 @@ def test_ieee8021x_proto(dev, apdev):
     for val in vals:
         if int(stop[val]) <= int(start[val]):
             raise Exception(val + " did not increase")
+
+def test_ieee8021x_eapol_start(dev, apdev):
+    """IEEE 802.1X and EAPOL-Start retransmissions"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-open"
+    params["ieee8021x"] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    hapd.set("ext_eapol_frame_io", "1")
+    try:
+        dev[0].request("SET EAPOL::startPeriod 1")
+        dev[0].request("SET EAPOL::maxStart 1")
+        dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                       eap="PSK", identity="psk.user@example.com",
+                       password_hex="0123456789abcdef0123456789abcdef",
+                       scan_freq="2412", wait_connect=False)
+        held = False
+        for i in range(30):
+            pae = dev[0].get_status_field('Supplicant PAE state')
+            if pae == "HELD":
+                held = True
+                break
+            time.sleep(0.25)
+        if not held:
+            raise Exception("PAE state HELD not reached")
+        dev[0].wait_disconnected()
+    finally:
+        dev[0].request("SET EAPOL::startPeriod 30")
+        dev[0].request("SET EAPOL::maxStart 3")

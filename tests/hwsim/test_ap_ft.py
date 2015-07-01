@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail, fail_test
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -745,3 +745,28 @@ def test_ap_ft_gcmp_256(dev, apdev):
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase,
               pairwise_cipher="GCMP-256", group_cipher="GCMP-256")
+
+def test_ap_ft_oom(dev, apdev):
+    """WPA2-PSK-FT and OOM"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    if dev[0].get_status_field('bssid') == apdev[0]['bssid']:
+        dst = apdev[1]['bssid']
+    else:
+        dst = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(dst, freq="2412")
+    with alloc_fail(dev[0], 1, "wpa_ft_gen_req_ies"):
+        dev[0].roam(dst)
+    with alloc_fail(dev[0], 1, "wpa_ft_mic"):
+        dev[0].roam(dst, fail_test=True)
+    with fail_test(dev[0], 1, "os_get_random;wpa_ft_prepare_auth_request"):
+        dev[0].roam(dst, fail_test=True)

@@ -966,8 +966,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 					p2p->cfg->cb_ctx, sa,
 					P2P_PROV_DISC_INFO_UNAVAILABLE,
 					adv_id, adv_mac, NULL);
-	} else if (msg.wps_config_methods != dev->req_config_methods ||
-		   status != P2P_SC_SUCCESS) {
+	} else if (status != P2P_SC_SUCCESS) {
 		p2p_dbg(p2p, "Peer rejected our Provision Discovery Request");
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,

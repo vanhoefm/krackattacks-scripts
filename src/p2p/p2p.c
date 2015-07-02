@@ -2679,13 +2679,14 @@ int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id)
 
 int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
 			const char *adv_str, u8 svc_state, u16 config_methods,
-			const char *svc_info)
+			const char *svc_info, const u8 *cpt_priority)
 {
 	struct p2ps_advertisement *adv_data, *tmp, **prev;
 	u8 buf[P2PS_HASH_LEN];
 	size_t adv_data_len, adv_len, info_len = 0;
+	int i;
 
-	if (!p2p || !adv_str || !adv_str[0])
+	if (!p2p || !adv_str || !adv_str[0] || !cpt_priority)
 		return -1;
 
 	if (!(config_methods & p2p->cfg->config_methods)) {
@@ -2713,6 +2714,11 @@ int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
 	adv_data->config_methods = config_methods & p2p->cfg->config_methods;
 	adv_data->auto_accept = (u8) auto_accept;
 	os_memcpy(adv_data->svc_name, adv_str, adv_len);
+
+	for (i = 0; cpt_priority[i] && i < P2PS_FEATURE_CAPAB_CPT_MAX; i++) {
+		adv_data->cpt_priority[i] = cpt_priority[i];
+		adv_data->cpt_mask |= cpt_priority[i];
+	}
 
 	if (svc_info && info_len) {
 		adv_data->svc_info = &adv_data->svc_name[adv_len + 1];
@@ -2752,8 +2758,9 @@ int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
 
 inserted:
 	p2p_dbg(p2p,
-		"Added ASP advertisement adv_id=0x%x config_methods=0x%x svc_state=0x%x adv_str='%s'",
-		adv_id, adv_data->config_methods, svc_state, adv_str);
+		"Added ASP advertisement adv_id=0x%x config_methods=0x%x svc_state=0x%x adv_str='%s' cpt_mask=0x%x",
+		adv_id, adv_data->config_methods, svc_state, adv_str,
+		adv_data->cpt_mask);
 
 	return 0;
 }

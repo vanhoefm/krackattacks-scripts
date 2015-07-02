@@ -1185,13 +1185,14 @@ int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id)
 int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s,
 			     int auto_accept, u32 adv_id,
 			     const char *adv_str, u8 svc_state,
-			     u16 config_methods, const char *svc_info)
+			     u16 config_methods, const char *svc_info,
+			     const u8 *cpt_priority)
 {
 	int ret;
 
 	ret = p2p_service_add_asp(wpa_s->global->p2p, auto_accept, adv_id,
 				  adv_str, svc_state, config_methods,
-				  svc_info);
+				  svc_info, cpt_priority);
 	if (ret == 0)
 		wpas_p2p_sd_service_update(wpa_s);
 	return ret;

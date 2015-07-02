@@ -4652,6 +4652,48 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static int p2ps_ctrl_parse_cpt_priority(const char *pos, u8 *cpt)
+{
+	const char *last = NULL;
+	const char *token;
+	long int token_len;
+	unsigned int i;
+
+	/* Expected predefined CPT names delimited by ':' */
+	for (i = 0; (token = cstr_token(pos, ": \t", &last)); i++) {
+		if (i >= P2PS_FEATURE_CAPAB_CPT_MAX) {
+			wpa_printf(MSG_ERROR,
+				   "P2PS: CPT name list is too long, expected up to %d names",
+				   P2PS_FEATURE_CAPAB_CPT_MAX);
+			cpt[0] = 0;
+			return -1;
+		}
+
+		token_len = last - token;
+
+		if (token_len  == 3 &&
+		    os_memcmp(token, "UDP", token_len) == 0) {
+			cpt[i] = P2PS_FEATURE_CAPAB_UDP_TRANSPORT;
+		} else if (token_len == 3 &&
+			   os_memcmp(token, "MAC", token_len) == 0) {
+			cpt[i] = P2PS_FEATURE_CAPAB_MAC_TRANSPORT;
+		} else {
+			wpa_printf(MSG_ERROR,
+				   "P2PS: Unsupported CPT name '%s'", token);
+			cpt[0] = 0;
+			return -1;
+		}
+
+		if (isblank(*last)) {
+			i++;
+			break;
+		}
+	}
+	cpt[i] = 0;
+	return 0;
+}
+
+
 static struct p2ps_provision * p2p_parse_asp_provision_cmd(const char *cmd)
 {
 	struct p2ps_provision *p2ps_prov;
@@ -5213,6 +5255,8 @@ static int p2p_ctrl_service_add_asp(struct wpa_supplicant *wpa_s,
 	char *adv_str;
 	u32 auto_accept, adv_id, svc_state, config_methods;
 	char *svc_info = NULL;
+	char *cpt_prio_str;
+	u8 cpt_prio[P2PS_FEATURE_CAPAB_CPT_MAX + 1];
 
 	pos = os_strchr(cmd, ' ');
 	if (pos == NULL)
@@ -5285,6 +5329,19 @@ static int p2p_ctrl_service_add_asp(struct wpa_supplicant *wpa_s,
 	if (pos != NULL)
 		*pos++ = '\0';
 
+	cpt_prio_str = (pos && pos[0]) ? os_strstr(pos, "cpt=") : NULL;
+	if (cpt_prio_str) {
+		pos = os_strchr(pos, ' ');
+		if (pos != NULL)
+			*pos++ = '\0';
+
+		if (p2ps_ctrl_parse_cpt_priority(cpt_prio_str + 4, cpt_prio))
+			return -1;
+	} else {
+		cpt_prio[0] = P2PS_FEATURE_CAPAB_UDP_TRANSPORT;
+		cpt_prio[1] = 0;
+	}
+
 	/* Service and Response Information are optional */
 	if (pos && pos[0]) {
 		size_t len;
@@ -5302,7 +5359,7 @@ static int p2p_ctrl_service_add_asp(struct wpa_supplicant *wpa_s,
 
 	return wpas_p2p_service_add_asp(wpa_s, auto_accept, adv_id, adv_str,
 					(u8) svc_state, (u16) config_methods,
-					svc_info);
+					svc_info, cpt_prio);
 }
 
 

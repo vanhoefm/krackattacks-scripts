@@ -21,6 +21,7 @@
 #define P2PS_WILD_HASH_STR "org.wi-fi.wfds"
 #define P2PS_HASH_LEN 6
 #define P2P_MAX_QUERY_HASH 6
+#define P2PS_FEATURE_CAPAB_CPT_MAX 2
 
 /**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
@@ -233,6 +234,23 @@ struct p2ps_advertisement {
 	 * hash - 6 octet Service Name has to match against incoming Probe Requests
 	 */
 	u8 hash[P2PS_HASH_LEN];
+
+	/**
+	 * cpt_mask - supported Coordination Protocol Transport mask
+	 *
+	 * A bitwise mask of supported ASP Coordination Protocol Transports.
+	 * This property is set together and corresponds with cpt_priority.
+	 */
+	u8 cpt_mask;
+
+	/**
+	 * cpt_priority - Coordination Protocol Transport priority list
+	 *
+	 * Priorities of supported ASP Coordinatin Protocol Transports.
+	 * This property is set together and corresponds with cpt_mask.
+	 * The CPT priority list is 0 terminated.
+	 */
+	u8 cpt_priority[P2PS_FEATURE_CAPAB_CPT_MAX + 1];
 
 	/**
 	 * svc_name - NULL Terminated UTF-8 Service Name, and svc_info storage
@@ -2251,7 +2269,8 @@ struct p2ps_advertisement *
 p2p_service_p2ps_id(struct p2p_data *p2p, u32 adv_id);
 int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
 			const char *adv_str, u8 svc_state,
-			u16 config_methods, const char *svc_info);
+			u16 config_methods, const char *svc_info,
+			const u8 *cpt_priority);
 int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id);
 void p2p_service_flush_asp(struct p2p_data *p2p);
 struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p);

@@ -1076,6 +1076,10 @@ enum p2p_attr_id {
 #define P2P_GROUP_CAPAB_GROUP_FORMATION BIT(6)
 #define P2P_GROUP_CAPAB_IP_ADDR_ALLOCATION BIT(7)
 
+/* P2PS Coordination Protocol Transport Bitmap */
+#define P2PS_FEATURE_CAPAB_UDP_TRANSPORT BIT(0)
+#define P2PS_FEATURE_CAPAB_MAC_TRANSPORT BIT(1)
+
 /* Invitation Flags */
 #define P2P_INVITATION_FLAGS_TYPE BIT(0)
 

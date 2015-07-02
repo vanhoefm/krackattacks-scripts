@@ -90,7 +90,8 @@ int wpas_p2p_service_del_upnp(struct wpa_supplicant *wpa_s, u8 version,
 			      const char *service);
 int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s, int auto_accept,
 			     u32 adv_id, const char *adv_str, u8 svc_state,
-			     u16 config_methods, const char *svc_info);
+			     u16 config_methods, const char *svc_info,
+			     const u8 *cpt_priority);
 int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id);
 void wpas_p2p_service_flush_asp(struct wpa_supplicant *wpa_s);
 int wpas_p2p_service_p2ps_id_exists(struct wpa_supplicant *wpa_s, u32 adv_id);

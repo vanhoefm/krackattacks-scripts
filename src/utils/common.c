@@ -973,6 +973,48 @@ int random_mac_addr_keep_oui(u8 *addr)
 
 
 /**
+ * cstr_token - Get next token from const char string
+ * @str: a constant string to tokenize
+ * @delim: a string of delimiters
+ * @last: a pointer to a character following the returned token
+ *      It has to be set to NULL for the first call and passed for any
+ *      futher call.
+ * Returns: a pointer to token position in str or NULL
+ *
+ * This function is similar to str_token, but it can be used with both
+ * char and const char strings. Differences:
+ * - The str buffer remains unmodified
+ * - The returned token is not a NULL terminated string, but a token
+ *   position in str buffer. If a return value is not NULL a size
+ *   of the returned token could be calculated as (last - token).
+ */
+const char * cstr_token(const char *str, const char *delim, const char **last)
+{
+	const char *end, *token = str;
+
+	if (!str || !delim || !last)
+		return NULL;
+
+	if (*last)
+		token = *last;
+
+	while (*token && os_strchr(delim, *token))
+		token++;
+
+	if (!*token)
+		return NULL;
+
+	end = token + 1;
+
+	while (*end && !os_strchr(delim, *end))
+		end++;
+
+	*last = end;
+	return token;
+}
+
+
+/**
  * str_token - Get next token from a string
  * @buf: String to tokenize. Note that the string might be modified.
  * @delim: String of delimiters
@@ -982,25 +1024,12 @@ int random_mac_addr_keep_oui(u8 *addr)
  */
 char * str_token(char *str, const char *delim, char **context)
 {
-	char *end, *pos = str;
+	char *token = (char *) cstr_token(str, delim, (const char **) context);
 
-	if (*context)
-		pos = *context;
+	if (token && **context)
+		*(*context)++ = '\0';
 
-	while (*pos && os_strchr(delim, *pos))
-		pos++;
-	if (!*pos)
-		return NULL;
-
-	end = pos + 1;
-	while (*end && !os_strchr(delim, *end))
-		end++;
-
-	if (*end)
-		*end++ = '\0';
-
-	*context = end;
-	return pos;
+	return token;
 }
 
 

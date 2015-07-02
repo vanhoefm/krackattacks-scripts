@@ -528,6 +528,7 @@ void bin_clear_free(void *bin, size_t len);
 int random_mac_addr(u8 *addr);
 int random_mac_addr_keep_oui(u8 *addr);
 
+const char * cstr_token(const char *str, const char *delim, const char **last);
 char * str_token(char *str, const char *delim, char **context);
 size_t utf8_escape(const char *inp, size_t in_size,
 		   char *outp, size_t out_size);

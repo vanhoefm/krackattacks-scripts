@@ -920,11 +920,9 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				msg.persistent_ssid_len, 1, 0, NULL);
 		}
 		p2ps_prov_free(p2p);
-	}
-
-	if (status != P2P_SC_SUCCESS &&
-	    status != P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
-	    status != P2P_SC_SUCCESS_DEFERRED && p2p->p2ps_prov) {
+	} else if (status != P2P_SC_SUCCESS &&
+		   status != P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
+		   status != P2P_SC_SUCCESS_DEFERRED && p2p->p2ps_prov) {
 		if (p2p->cfg->p2ps_prov_complete)
 			p2p->cfg->p2ps_prov_complete(
 				p2p->cfg->cb_ctx, status, sa, adv_mac,

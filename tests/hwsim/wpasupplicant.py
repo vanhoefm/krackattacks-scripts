@@ -138,8 +138,11 @@ class WpaSupplicant:
 
         iter = 0
         while iter < 60:
-            state = self.get_driver_status_field("scan_state")
-            if "SCAN_STARTED" in state or "SCAN_REQUESTED" in state:
+            state1 = self.get_driver_status_field("scan_state")
+            p2pdev = "p2p-dev-" + self.ifname
+            state2 = self.get_driver_status_field("scan_state", ifname=p2pdev)
+            states = str(state1) + " " + str(state2)
+            if "SCAN_STARTED" in states or "SCAN_REQUESTED" in states:
                 logger.info(self.ifname + ": Waiting for scan operation to complete before continuing")
                 time.sleep(1)
             else:
@@ -354,8 +357,11 @@ class WpaSupplicant:
             return vals[field]
         return None
 
-    def get_driver_status(self):
-        res = self.request("STATUS-DRIVER")
+    def get_driver_status(self, ifname=None):
+        if ifname is None:
+            res = self.request("STATUS-DRIVER")
+        else:
+            res = self.global_request("IFNAME=%s STATUS-DRIVER" % ifname)
         lines = res.splitlines()
         vals = dict()
         for l in lines:
@@ -367,8 +373,8 @@ class WpaSupplicant:
             vals[name] = value
         return vals
 
-    def get_driver_status_field(self, field):
-        vals = self.get_driver_status()
+    def get_driver_status_field(self, field, ifname=None):
+        vals = self.get_driver_status(ifname)
         if field in vals:
             return vals[field]
         return None

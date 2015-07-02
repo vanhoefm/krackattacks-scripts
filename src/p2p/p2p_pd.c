@@ -971,8 +971,8 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		p2p_dbg(p2p, "Peer rejected our Provision Discovery Request");
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
-						 P2P_PROV_DISC_REJECTED, 0,
-						 NULL, NULL);
+						 P2P_PROV_DISC_REJECTED,
+						 adv_id, adv_mac, NULL);
 		p2p_parse_free(&msg);
 		p2ps_prov_free(p2p);
 		goto out;

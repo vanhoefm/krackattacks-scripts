@@ -3738,16 +3738,26 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 	}
 
 	if (conncap == P2PS_SETUP_GROUP_OWNER) {
-		const char *go_ifname = NULL;
+		/*
+		 * We need to copy the interface name. Simply saving a
+		 * pointer isn't enough, since if we use pending_interface_name
+		 * it will be overwritten when the group is added.
+		 */
+		char go_ifname[100];
+
+		go_ifname[0] = '\0';
 		if (!go_wpa_s) {
 			wpa_s->global->pending_p2ps_group = 1;
 
 			if (!wpas_p2p_create_iface(wpa_s))
-				go_ifname = wpa_s->ifname;
+				os_memcpy(go_ifname, wpa_s->ifname,
+					  sizeof(go_ifname));
 			else if (wpa_s->pending_interface_name[0])
-				go_ifname = wpa_s->pending_interface_name;
+				os_memcpy(go_ifname,
+					  wpa_s->pending_interface_name,
+					  sizeof(go_ifname));
 
-			if (!go_ifname) {
+			if (!go_ifname[0]) {
 				wpas_p2ps_prov_complete(
 					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
 					dev, adv_mac, ses_mac,
@@ -3777,7 +3787,8 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 					MAC2STR(dev));
 			}
 		} else if (passwd_id == DEV_PW_P2PS_DEFAULT) {
-			go_ifname = go_wpa_s->ifname;
+			os_memcpy(go_ifname, go_wpa_s->ifname,
+				  sizeof(go_ifname));
 
 			wpa_dbg(go_wpa_s, MSG_DEBUG,
 				"P2P: Setting PIN-1 For " MACSTR, MAC2STR(dev));

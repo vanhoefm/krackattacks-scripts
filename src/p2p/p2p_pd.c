@@ -821,6 +821,10 @@ out:
 				dev->wps_prov_info = 0;
 				break;
 			}
+
+			if (msg.intended_addr)
+				os_memcpy(dev->interface_addr,
+					  msg.intended_addr, ETH_ALEN);
 		}
 	}
 	p2p_parse_free(&msg);
@@ -1120,6 +1124,8 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 	/* Store the provisioning info */
 	dev->wps_prov_info = msg.wps_config_methods;
+	if (msg.intended_addr)
+		os_memcpy(dev->interface_addr, msg.intended_addr, ETH_ALEN);
 
 	p2p_parse_free(&msg);
 	success = 1;

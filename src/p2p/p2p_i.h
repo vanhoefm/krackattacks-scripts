@@ -53,6 +53,9 @@ struct p2p_device {
 	 * from Beacon/Probe Response), the interface address is stored here.
 	 * p2p_device_addr must still be set in such a case to the unique
 	 * identifier for the P2P Device.
+	 *
+	 * This field is also used during P2PS PD to store the intended GO
+	 * address of the peer.
 	 */
 	u8 interface_addr[ETH_ALEN];
 

@@ -132,12 +132,12 @@ def p2ps_parse_event(ev, *args):
         ret += (m.group(1) if m is not None else None,)
     return ret
 
-def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000"):
+def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", adv_cpt=None, seeker_cpt=None):
     addr0 = seeker.p2p_dev_addr()
     addr1 = advertiser.p2p_dev_addr()
 
     seeker.asp_provision(addr1, adv_id=str(adv_id), adv_mac=addr1, session_id=1,
-                         session_mac=addr0, method=method)
+                         session_mac=addr0, method=method, cpt=seeker_cpt)
 
     if not auto_accept or method == "100":
         pin = None
@@ -178,7 +178,8 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000"):
 
         advertiser.asp_provision(peer, adv_id=advert_id, adv_mac=advert_mac,
                                  session_id=int(session, 0),
-                                 session_mac=session_mac, status=12)
+                                 session_mac=session_mac, status=12,
+                                 cpt=adv_cpt)
 
         ev1 = seeker.wait_global_event(["P2PS-PROV-DONE"], timeout=10)
         if ev1 is None:

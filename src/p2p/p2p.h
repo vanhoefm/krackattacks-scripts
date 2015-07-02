@@ -197,6 +197,23 @@ struct p2ps_provision {
 	u8 adv_mac[ETH_ALEN];
 
 	/**
+	 * cpt_mask - Supported Coordination Protocol Transport mask
+	 *
+	 * A bitwise mask of supported ASP Coordination Protocol Transports.
+	 * This property is set together and corresponds with cpt_priority.
+	 */
+	u8 cpt_mask;
+
+	/**
+	 * cpt_priority - Coordination Protocol Transport priority list
+	 *
+	 * Priorities of supported ASP Coordination Protocol Transports.
+	 * This property is set together and corresponds with cpt_mask.
+	 * The CPT priority list is 0 terminated.
+	 */
+	u8 cpt_priority[P2PS_FEATURE_CAPAB_CPT_MAX + 1];
+
+	/**
 	 * info - Vendor defined extra Provisioning information
 	 */
 	char info[0];

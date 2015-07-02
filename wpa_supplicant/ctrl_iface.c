@@ -4702,6 +4702,7 @@ static struct p2ps_provision * p2p_parse_asp_provision_cmd(const char *cmd)
 	char *info = NULL;
 	u8 role = P2PS_SETUP_NONE;
 	long long unsigned val;
+	int i;
 
 	pos = os_strstr(cmd, "info=");
 	if (pos) {
@@ -4759,6 +4760,18 @@ static struct p2ps_provision * p2p_parse_asp_provision_cmd(const char *cmd)
 	pos = os_strstr(cmd, "session_mac=");
 	if (!pos || hwaddr_aton(pos + 12, p2ps_prov->session_mac))
 		goto invalid_args;
+
+	pos = os_strstr(cmd, "cpt=");
+	if (pos) {
+		if (p2ps_ctrl_parse_cpt_priority(pos + 4,
+						 p2ps_prov->cpt_priority))
+			goto invalid_args;
+	} else {
+		p2ps_prov->cpt_priority[0] = P2PS_FEATURE_CAPAB_UDP_TRANSPORT;
+	}
+
+	for (i = 0; p2ps_prov->cpt_priority[i]; i++)
+		p2ps_prov->cpt_mask |= p2ps_prov->cpt_priority[i];
 
 	/* force conncap with tstCap (no sanity checks) */
 	pos = os_strstr(cmd, "tstCap=");

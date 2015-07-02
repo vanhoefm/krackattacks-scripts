@@ -87,6 +87,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	u8 go_dev_addr[ETH_ALEN];
+	u8 intended_addr[ETH_ALEN];
 
 	/* If we might be explicite group owner, add GO details */
 	if (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
@@ -101,7 +102,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	if (p2p->cfg->get_persistent_group) {
 		shared_group = p2p->cfg->get_persistent_group(
 			p2p->cfg->cb_ctx, dev->info.p2p_device_addr, NULL, 0,
-			go_dev_addr, ssid, &ssid_len);
+			go_dev_addr, ssid, &ssid_len, intended_addr);
 	}
 
 	/* Add Operating Channel if conncap includes GO */
@@ -149,9 +150,15 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	p2p_buf_add_feature_capability(buf, sizeof(feat_cap_mask),
 				       feat_cap_mask);
 
-	if (shared_group)
+	if (shared_group) {
 		p2p_buf_add_persistent_group_info(buf, go_dev_addr,
 						  ssid, ssid_len);
+		/* Add intended interface address if it is not added yet */
+		if ((prov->conncap == P2PS_SETUP_NONE ||
+		     prov->conncap == P2PS_SETUP_CLIENT) &&
+		    !is_zero_ether_addr(intended_addr))
+			p2p_buf_add_intended_addr(buf, intended_addr);
+	}
 }
 
 
@@ -296,15 +303,20 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 			u8 ssid[SSID_MAX_LEN];
 			size_t ssid_len;
 			u8 go_dev_addr[ETH_ALEN];
+			u8 intended_addr[ETH_ALEN];
 
 			persist = p2p->cfg->get_persistent_group(
 				p2p->cfg->cb_ctx,
 				dev->info.p2p_device_addr,
 				persist_ssid, persist_ssid_len, go_dev_addr,
-				ssid, &ssid_len);
-			if (persist)
+				ssid, &ssid_len, intended_addr);
+			if (persist) {
 				p2p_buf_add_persistent_group_info(
 					buf, go_dev_addr, ssid, ssid_len);
+				if (!is_zero_ether_addr(intended_addr))
+					p2p_buf_add_intended_addr(
+						buf, intended_addr);
+			}
 		}
 
 		if (!persist && (prov->conncap & P2PS_SETUP_GROUP_OWNER))

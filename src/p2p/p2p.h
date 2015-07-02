@@ -955,18 +955,21 @@ struct p2p_config {
 
 	/**
 	 * Determine if we have a persistent group we share with remote peer
+	 * and allocate interface for this group if needed
 	 * @ctx: Callback context from cb_ctx
 	 * @addr: Peer device address to search for
 	 * @ssid: Persistent group SSID or %NULL if any
 	 * @ssid_len: Length of @ssid
-	 * @go_dev_addr: Buffer for returning intended GO P2P Device Address
+	 * @go_dev_addr: Buffer for returning GO P2P Device Address
 	 * @ret_ssid: Buffer for returning group SSID
 	 * @ret_ssid_len: Buffer for returning length of @ssid
+	 * @intended_iface_addr: Buffer for returning intended iface address
 	 * Returns: 1 if a matching persistent group was found, 0 otherwise
 	 */
 	int (*get_persistent_group)(void *ctx, const u8 *addr, const u8 *ssid,
 				    size_t ssid_len, u8 *go_dev_addr,
-				    u8 *ret_ssid, size_t *ret_ssid_len);
+				    u8 *ret_ssid, size_t *ret_ssid_len,
+				    u8 *intended_iface_addr);
 
 	/**
 	 * Get information about a possible local GO role

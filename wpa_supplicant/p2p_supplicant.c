@@ -3508,7 +3508,8 @@ static void wpas_presence_resp(void *ctx, const u8 *src, u8 status,
 
 static int wpas_get_persistent_group(void *ctx, const u8 *addr, const u8 *ssid,
 				     size_t ssid_len, u8 *go_dev_addr,
-				     u8 *ret_ssid, size_t *ret_ssid_len)
+				     u8 *ret_ssid, size_t *ret_ssid_len,
+				     u8 *intended_iface_addr)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *s;
@@ -3518,6 +3519,19 @@ static int wpas_get_persistent_group(void *ctx, const u8 *addr, const u8 *ssid,
 		os_memcpy(ret_ssid, s->ssid, s->ssid_len);
 		*ret_ssid_len = s->ssid_len;
 		os_memcpy(go_dev_addr, s->bssid, ETH_ALEN);
+
+		if (s->mode != WPAS_MODE_P2P_GO) {
+			os_memset(intended_iface_addr, 0, ETH_ALEN);
+		} else if (wpas_p2p_create_iface(wpa_s)) {
+			if (wpas_p2p_add_group_interface(wpa_s, WPA_IF_P2P_GO))
+				return 0;
+
+			os_memcpy(intended_iface_addr,
+				  wpa_s->pending_interface_addr, ETH_ALEN);
+		} else {
+			os_memcpy(intended_iface_addr, wpa_s->own_addr,
+				  ETH_ALEN);
+		}
 		return 1;
 	}
 

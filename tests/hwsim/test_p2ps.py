@@ -22,25 +22,27 @@ from utils import HwsimSkip
 # ev0 -> Event generated at advertiser side
 # ev1 -> Event generated at Seeker side
 
-def p2ps_advertise(r_dev, r_role, svc_name, srv_info, rsp_info=None):
+def p2ps_advertise(r_dev, r_role, svc_name, srv_info, rsp_info=None, cpt=None):
     """P2PS Advertise function"""
     adv_id = random.randrange(1, 0xFFFFFFFF)
     advid = hex(adv_id)[2:]
 
+    cpt_param = (" cpt=" + cpt) if cpt is not None else ""
+
     if rsp_info is not None and srv_info is not None:
-        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + " svc_info='" + srv_info + "'" + " rsp_info=" + rsp_info + "'"):
+        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + cpt_param + " svc_info='" + srv_info + "'" + " rsp_info=" + rsp_info + "'"):
             raise Exception("P2P_SERVICE_ADD with response info and service info failed")
 
     if rsp_info is None and srv_info is not None:
-        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + " svc_info='" + srv_info + "'"):
+        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + cpt_param + " svc_info='" + srv_info + "'"):
             raise Exception("P2P_SERVICE_ADD with service info failed")
 
     if rsp_info is None and srv_info is None:
-        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + " "):
+        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(advid) + " 1 1108 " + svc_name + cpt_param):
             raise Exception("P2P_SERVICE_ADD without service info and without response info failed")
 
     if rsp_info is not None and srv_info is None:
-        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(adv_id) + " 1 1108 " + svc_name + " svc_info='" + " rsp_info=" + rsp_info + "'"):
+        if "OK" not in r_dev.global_request("P2P_SERVICE_ADD asp " + str(r_role) + " " + str(adv_id) + " 1 1108 " + svc_name + cpt_param + " svc_info='" + " rsp_info=" + rsp_info + "'"):
             raise Exception("P2P_SERVICE_ADD with response info failed")
 
     r_dev.p2p_listen()

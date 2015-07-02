@@ -823,6 +823,105 @@ out:
 }
 
 
+static int p2p_validate_p2ps_pd_resp(struct p2p_data *p2p,
+				     struct p2p_message *msg)
+{
+	u8 conn_cap_go = 0;
+	u8 conn_cap_cli = 0;
+	u32 session_id;
+	u32 adv_id;
+
+#define P2PS_PD_RESP_CHECK(_val, _attr) \
+	do { \
+		if ((_val) && !msg->_attr) { \
+			p2p_dbg(p2p, "P2PS PD Response missing " #_attr); \
+			return -1; \
+		} \
+	} while (0)
+
+	P2PS_PD_RESP_CHECK(1, status);
+	P2PS_PD_RESP_CHECK(1, adv_id);
+	P2PS_PD_RESP_CHECK(1, adv_mac);
+	P2PS_PD_RESP_CHECK(1, capability);
+	P2PS_PD_RESP_CHECK(1, p2p_device_info);
+	P2PS_PD_RESP_CHECK(1, session_id);
+	P2PS_PD_RESP_CHECK(1, session_mac);
+	P2PS_PD_RESP_CHECK(1, feature_cap);
+
+	session_id = WPA_GET_LE32(msg->session_id);
+	adv_id = WPA_GET_LE32(msg->adv_id);
+
+	if (p2p->p2ps_prov->session_id != session_id) {
+		p2p_dbg(p2p,
+			"Ignore PD Response with unexpected Session ID");
+		return -1;
+	}
+
+	if (os_memcmp(p2p->p2ps_prov->session_mac, msg->session_mac,
+		      ETH_ALEN)) {
+		p2p_dbg(p2p,
+			"Ignore PD Response with unexpected Session MAC");
+		return -1;
+	}
+
+	if (p2p->p2ps_prov->adv_id != adv_id) {
+		p2p_dbg(p2p,
+			"Ignore PD Response with unexpected Advertisement ID");
+		return -1;
+	}
+
+	if (os_memcmp(p2p->p2ps_prov->adv_mac, msg->adv_mac, ETH_ALEN) != 0) {
+		p2p_dbg(p2p,
+			"Ignore PD Response with unexpected Advertisement MAC");
+		return -1;
+	}
+
+	if (msg->listen_channel) {
+		p2p_dbg(p2p,
+			"Ignore malformed PD Response - unexpected Listen Channel");
+		return -1;
+	}
+
+	if (*msg->status == P2P_SC_SUCCESS &&
+	    !(!!msg->conn_cap ^ !!msg->persistent_dev)) {
+		p2p_dbg(p2p,
+			"Ignore malformed PD Response - either conn_cap or persistent group should be present");
+		return -1;
+	}
+
+	if (msg->persistent_dev && *msg->status != P2P_SC_SUCCESS) {
+		p2p_dbg(p2p,
+			"Ignore malformed PD Response - persistent group is present, but the status isn't success");
+		return -1;
+	}
+
+	if (msg->conn_cap) {
+		conn_cap_go = *msg->conn_cap == P2PS_SETUP_GROUP_OWNER;
+		conn_cap_cli = *msg->conn_cap == P2PS_SETUP_CLIENT;
+	}
+
+	P2PS_PD_RESP_CHECK(msg->persistent_dev || conn_cap_go || conn_cap_cli,
+			   channel_list);
+	P2PS_PD_RESP_CHECK(msg->persistent_dev || conn_cap_go || conn_cap_cli,
+			   config_timeout);
+
+	P2PS_PD_RESP_CHECK(conn_cap_go, group_id);
+	P2PS_PD_RESP_CHECK(conn_cap_go, intended_addr);
+	P2PS_PD_RESP_CHECK(conn_cap_go, operating_channel);
+	/*
+	 * TODO: Also validate that operating channel is present if the device
+	 * is a GO in a persistent group. We can't do it here since we don't
+	 * know what is the role of the peer. It should be probably done in
+	 * p2ps_prov_complete callback, but currently operating channel isn't
+	 * passed to it.
+	 */
+
+#undef P2PS_PD_RESP_CHECK
+
+	return 0;
+}
+
+
 void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				const u8 *data, size_t len)
 {
@@ -839,6 +938,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p_parse(data, len, &msg))
 		return;
+
+	if (p2p->p2ps_prov && p2p_validate_p2ps_pd_resp(p2p, &msg)) {
+		p2p_parse_free(&msg);
+		return;
+	}
 
 	/* Parse the P2PS members present */
 	if (msg.status)
@@ -944,7 +1048,6 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if ((msg.conn_cap || msg.persistent_dev) &&
-	    msg.adv_id &&
 	    (status == P2P_SC_SUCCESS || status == P2P_SC_SUCCESS_DEFERRED) &&
 	    p2p->p2ps_prov) {
 		if (p2p->cfg->p2ps_prov_complete) {

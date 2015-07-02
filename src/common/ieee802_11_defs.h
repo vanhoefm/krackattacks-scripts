@@ -1080,6 +1080,11 @@ enum p2p_attr_id {
 #define P2PS_FEATURE_CAPAB_UDP_TRANSPORT BIT(0)
 #define P2PS_FEATURE_CAPAB_MAC_TRANSPORT BIT(1)
 
+struct p2ps_feature_capab {
+	u8 cpt;
+	u8 reserved;
+} STRUCT_PACKED;
+
 /* Invitation Flags */
 #define P2P_INVITATION_FLAGS_TYPE BIT(0)
 

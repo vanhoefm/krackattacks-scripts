@@ -86,7 +86,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 				  struct wpabuf *buf, u16 config_methods)
 {
 	struct p2ps_provision *prov = p2p->p2ps_prov;
-	u8 feat_cap_mask[] = { 1, 0 };
+	struct p2ps_feature_capab fcap = { prov->cpt_mask, 0 };
 	int shared_group = 0;
 	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
@@ -151,8 +151,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 
 	p2p_buf_add_session_id(buf, prov->session_id, prov->session_mac);
 
-	p2p_buf_add_feature_capability(buf, sizeof(feat_cap_mask),
-				       feat_cap_mask);
+	p2p_buf_add_feature_capability(buf, sizeof(fcap), (const u8 *) &fcap);
 
 	if (shared_group) {
 		p2p_buf_add_persistent_group_info(buf, go_dev_addr,
@@ -243,7 +242,9 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 						const u8 *group_id,
 						size_t group_id_len,
 						const u8 *persist_ssid,
-						size_t persist_ssid_len)
+						size_t persist_ssid_len,
+						const u8 *fcap,
+						u16 fcap_len)
 {
 	struct wpabuf *buf;
 	size_t extra = 0;
@@ -281,7 +282,6 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 
 	/* Add P2P IE for P2PS */
 	if (p2p->p2ps_prov && p2p->p2ps_prov->adv_id == adv_id) {
-		u8 feat_cap_mask[] = { 1, 0 };
 		u8 *len = p2p_buf_add_ie_hdr(buf);
 		struct p2ps_provision *prov = p2p->p2ps_prov;
 		u8 group_capab;
@@ -360,8 +360,7 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		p2p_buf_add_session_id(buf, prov->session_id,
 				       prov->session_mac);
 
-		p2p_buf_add_feature_capability(buf, sizeof(feat_cap_mask),
-					       feat_cap_mask);
+		p2p_buf_add_feature_capability(buf, fcap_len, fcap);
 		p2p_buf_update_ie_hdr(buf, len);
 	} else if (status != P2P_SC_SUCCESS || adv_id) {
 		u8 *len = p2p_buf_add_ie_hdr(buf);
@@ -416,6 +415,18 @@ static int p2ps_setup_p2ps_prov(struct p2p_data *p2p, u32 adv_id,
 }
 
 
+static u8 p2ps_own_preferred_cpt(const u8 *cpt_priority, u8 req_cpt_mask)
+{
+	int i;
+
+	for (i = 0; cpt_priority[i]; i++)
+		if (req_cpt_mask & cpt_priority[i])
+			return cpt_priority[i];
+
+	return 0;
+}
+
+
 void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			       const u8 *data, size_t len, int rx_freq)
 {
@@ -435,6 +446,8 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	int passwd_id = DEV_PW_DEFAULT;
 	u16 config_methods;
 	u16 allowed_config_methods = WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+	struct p2ps_feature_capab resp_fcap = { 0, 0 };
+	struct p2ps_feature_capab *req_fcap;
 
 	if (p2p_parse(data, len, &msg))
 		return;
@@ -523,9 +536,22 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	os_memset(adv_mac, 0, ETH_ALEN);
 	os_memset(group_mac, 0, ETH_ALEN);
 
+	/* Note 1: A feature capability attribute structure can be changed
+	 * in the future. The assumption is that such modifications are
+	 * backwards compatible, therefore we allow processing of
+	 * msg.feature_cap exceeding the size of the p2ps_feature_capab
+	 * structure.
+	 * Note 2: Vverification of msg.feature_cap_len below has to be changed
+	 * to allow 2 byte feature capability processing if struct
+	 * p2ps_feature_capab is extended to include additional fields and it
+	 * affects the structure size.
+	 */
 	if (msg.adv_id && msg.session_id && msg.session_mac && msg.adv_mac &&
+	    msg.feature_cap && msg.feature_cap_len >= sizeof(*req_fcap) &&
 	    (msg.status || msg.conn_cap)) {
 		u8 remote_conncap;
+
+		req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
 
 		if (msg.intended_addr)
 			os_memcpy(group_mac, msg.intended_addr, ETH_ALEN);
@@ -553,9 +579,22 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
 				auto_accept, remote_conncap, conncap);
 
-			if (p2ps_adv->config_methods &&
-			    !(msg.wps_config_methods &
-			      p2ps_adv->config_methods)) {
+			resp_fcap.cpt =
+				p2ps_own_preferred_cpt(p2ps_adv->cpt_priority,
+						       req_fcap->cpt);
+
+			p2p_dbg(p2p,
+				"cpt: service:0x%x remote:0x%x result:0x%x",
+				p2ps_adv->cpt_mask, req_fcap->cpt,
+				resp_fcap.cpt);
+
+			if (!resp_fcap.cpt) {
+				p2p_dbg(p2p,
+					"Incompatible P2PS feature capability CPT bitmask");
+				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+			} else if (p2ps_adv->config_methods &&
+				   !(msg.wps_config_methods &
+				   p2ps_adv->config_methods)) {
 				p2p_dbg(p2p,
 					"Unsupported config methods in Provision Discovery Request (own=0x%x peer=0x%x)",
 					p2ps_adv->config_methods,
@@ -644,6 +683,15 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 					p2p->p2ps_prov->conncap,
 					remote_conncap, conncap);
 
+				resp_fcap.cpt = p2ps_own_preferred_cpt(
+					p2p->p2ps_prov->cpt_priority,
+					req_fcap->cpt);
+
+				p2p_dbg(p2p,
+					"cpt: local:0x%x remote:0x%x result:0x%x",
+					p2p->p2ps_prov->cpt_mask,
+					req_fcap->cpt, resp_fcap.cpt);
+
 				/*
 				 * Ensure that if we asked for PIN originally,
 				 * our method is consistent with original
@@ -654,14 +702,22 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 				else if (method & WPS_CONFIG_KEYPAD)
 					method = WPS_CONFIG_DISPLAY;
 
-				/* Reject this "Deferred Accept* if incompatible
-				 * conncap or method */
 				if (!conncap ||
-				    !(msg.wps_config_methods & method))
+				    !(msg.wps_config_methods & method)) {
+					/*
+					 * Reject this "Deferred Accept*
+					 * if incompatible conncap or method
+					 */
 					reject =
 						P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				else
+				} else if (!resp_fcap.cpt) {
+					p2p_dbg(p2p,
+						"Incompatible P2PS feature capability CPT bitmask");
+					reject =
+						P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+				} else {
 					reject = P2P_SC_SUCCESS;
+				}
 
 				p2p->p2ps_prov->status = reject;
 				p2p->p2ps_prov->conncap = conncap;
@@ -679,7 +735,9 @@ out:
 					config_methods, adv_id,
 					msg.group_id, msg.group_id_len,
 					msg.persistent_ssid,
-					msg.persistent_ssid_len);
+					msg.persistent_ssid_len,
+					(const u8 *) &resp_fcap,
+					sizeof(resp_fcap));
 	if (resp == NULL) {
 		p2p_parse_free(&msg);
 		return;

@@ -786,6 +786,26 @@ out:
 					msg.capability ? msg.capability[1] :
 					0,
 					msg.group_id, msg.group_id_len);
+
+		if (dev) {
+			switch (config_methods) {
+			case WPS_CONFIG_DISPLAY:
+				dev->wps_prov_info = WPS_CONFIG_KEYPAD;
+				break;
+			case WPS_CONFIG_KEYPAD:
+				dev->wps_prov_info = WPS_CONFIG_DISPLAY;
+				break;
+			case WPS_CONFIG_PUSHBUTTON:
+				dev->wps_prov_info = WPS_CONFIG_PUSHBUTTON;
+				break;
+			case WPS_CONFIG_P2PS:
+				dev->wps_prov_info = WPS_CONFIG_P2PS;
+				break;
+			default:
+				dev->wps_prov_info = 0;
+				break;
+			}
+		}
 	}
 	p2p_parse_free(&msg);
 }

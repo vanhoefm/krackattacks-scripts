@@ -3617,19 +3617,49 @@ static int wpas_remove_stale_groups(void *ctx, const u8 *peer, const u8 *go,
 }
 
 
+static void wpas_p2ps_get_feat_cap_str(char *buf, size_t buf_len,
+				       const u8 *feat_cap, size_t feat_cap_len)
+{
+	static const char pref[] = " feature_cap=";
+	int ret;
+
+	buf[0] = '\0';
+
+	/*
+	 * We expect a feature capability to contain at least one byte to be
+	 * reported. The string buffer provided by the caller function is
+	 * expected to be big enough to contain all bytes of the attribute for
+	 * known specifications. This function truncates the reported bytes if
+	 * the feature capability data exceeds the string buffer size.
+	 */
+	if (!feat_cap || !feat_cap_len || buf_len < sizeof(pref) + 2)
+		return;
+
+	os_memcpy(buf, pref, sizeof(pref));
+	ret = wpa_snprintf_hex(&buf[sizeof(pref) - 1],
+			       buf_len - sizeof(pref) + 1,
+			       feat_cap, feat_cap_len);
+
+	if (ret != (2 * (int) feat_cap_len))
+		wpa_printf(MSG_WARNING, "P2PS feature_cap bytes truncated");
+}
+
+
 static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				    const u8 *adv_mac, const u8 *ses_mac,
 				    const u8 *grp_mac, u32 adv_id, u32 ses_id,
 				    u8 conncap, int passwd_id,
 				    const u8 *persist_ssid,
 				    size_t persist_ssid_size, int response_done,
-				    int prov_start, const char *session_info)
+				    int prov_start, const char *session_info,
+				    const u8 *feat_cap, size_t feat_cap_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	u8 mac[ETH_ALEN];
 	struct wpa_ssid *persistent_go, *stale, *s;
 	int save_config = 0;
 	struct wpa_supplicant *go_wpa_s;
+	char feat_cap_str[256];
 
 	if (!dev)
 		return;
@@ -3642,6 +3672,9 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 	if (!grp_mac)
 		grp_mac = mac;
 
+	wpas_p2ps_get_feat_cap_str(feat_cap_str, sizeof(feat_cap_str),
+				   feat_cap, feat_cap_len);
+
 	if (prov_start) {
 		if (session_info == NULL) {
 			wpa_msg_global(wpa_s, MSG_INFO,
@@ -3649,22 +3682,22 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				       " adv_id=%x conncap=%x"
 				       " adv_mac=" MACSTR
 				       " session=%x mac=" MACSTR
-				       " dev_passwd_id=%d",
+				       " dev_passwd_id=%d%s",
 				       MAC2STR(dev), adv_id, conncap,
 				       MAC2STR(adv_mac),
 				       ses_id, MAC2STR(ses_mac),
-				       passwd_id);
+				       passwd_id, feat_cap_str);
 		} else {
 			wpa_msg_global(wpa_s, MSG_INFO,
 				       P2P_EVENT_P2PS_PROVISION_START MACSTR
 				       " adv_id=%x conncap=%x"
 				       " adv_mac=" MACSTR
 				       " session=%x mac=" MACSTR
-				       " dev_passwd_id=%d info='%s'",
+				       " dev_passwd_id=%d info='%s'%s",
 				       MAC2STR(dev), adv_id, conncap,
 				       MAC2STR(adv_mac),
 				       ses_id, MAC2STR(ses_mac),
-				       passwd_id, session_info);
+				       passwd_id, session_info, feat_cap_str);
 		}
 		return;
 	}
@@ -3686,10 +3719,10 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
 			       " status=%d"
 			       " adv_id=%x adv_mac=" MACSTR
-			       " session=%x mac=" MACSTR,
+			       " session=%x mac=" MACSTR "%s",
 			       MAC2STR(dev), status,
 			       adv_id, MAC2STR(adv_mac),
-			       ses_id, MAC2STR(ses_mac));
+			       ses_id, MAC2STR(ses_mac), feat_cap_str);
 		return;
 	}
 
@@ -3759,10 +3792,10 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			       " status=%d"
 			       " adv_id=%x adv_mac=" MACSTR
 			       " session=%x mac=" MACSTR
-			       " persist=%d",
+			       " persist=%d%s",
 			       MAC2STR(dev), status,
 			       adv_id, MAC2STR(adv_mac),
-			       ses_id, MAC2STR(ses_mac), s->id);
+			       ses_id, MAC2STR(ses_mac), s->id, feat_cap_str);
 		return;
 	}
 
@@ -3791,7 +3824,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
 					dev, adv_mac, ses_mac,
 					NULL, adv_id, ses_id, 0, 0,
-					NULL, 0, 0, 0, NULL);
+					NULL, 0, 0, 0, NULL, NULL, 0);
 				return;
 			}
 
@@ -3835,11 +3868,11 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			       " status=%d conncap=%x"
 			       " adv_id=%x adv_mac=" MACSTR
 			       " session=%x mac=" MACSTR
-			       " dev_passwd_id=%d go=%s",
+			       " dev_passwd_id=%d go=%s%s",
 			       MAC2STR(dev), status, conncap,
 			       adv_id, MAC2STR(adv_mac),
 			       ses_id, MAC2STR(ses_mac),
-			       passwd_id, go_ifname);
+			       passwd_id, go_ifname, feat_cap_str);
 		return;
 	}
 
@@ -3857,22 +3890,22 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			       " status=%d conncap=%x"
 			       " adv_id=%x adv_mac=" MACSTR
 			       " session=%x mac=" MACSTR
-			       " dev_passwd_id=%d join=" MACSTR,
+			       " dev_passwd_id=%d join=" MACSTR "%s",
 			       MAC2STR(dev), status, conncap,
 			       adv_id, MAC2STR(adv_mac),
 			       ses_id, MAC2STR(ses_mac),
-			       passwd_id, MAC2STR(grp_mac));
+			       passwd_id, MAC2STR(grp_mac), feat_cap_str);
 	} else {
 		wpa_msg_global(wpa_s, MSG_INFO,
 			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
 			       " status=%d conncap=%x"
 			       " adv_id=%x adv_mac=" MACSTR
 			       " session=%x mac=" MACSTR
-			       " dev_passwd_id=%d",
+			       " dev_passwd_id=%d%s",
 			       MAC2STR(dev), status, conncap,
 			       adv_id, MAC2STR(adv_mac),
 			       ses_id, MAC2STR(ses_mac),
-			       passwd_id);
+			       passwd_id, feat_cap_str);
 	}
 }
 

@@ -281,8 +281,6 @@ def set_no_group_iface(dev, enable):
 
 def test_p2ps_exact_search(dev):
     """P2PS exact service request"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
     p2ps_advertise(r_dev=dev[0], r_role='1', svc_name='org.wi-fi.wfds.send.rx',
                    srv_info='I can receive files upto size 2 GB')
     [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
@@ -294,8 +292,6 @@ def test_p2ps_exact_search(dev):
 
 def test_p2ps_exact_search_srvinfo(dev):
     """P2PS exact service request with service info"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
                    srv_info='I can receive files upto size 2 GB')
     [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
@@ -308,13 +304,11 @@ def test_p2ps_exact_search_srvinfo(dev):
 
 def test_p2ps_nonexact_search(dev):
     """P2PS nonexact seek request"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.play.rx',
                    srv_info='I support Miracast Mode ')
     ev_list = p2ps_nonexact_seek(i_dev=dev[1], r_dev=dev[0],
                                  svc_name='org.wi-fi.wfds.play*')
-    adv_id = ev_list[0].split(" ")[0]
+    adv_id = ev_list[0].split()[0]
 
     ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
     if ev0 is None:
@@ -322,14 +316,12 @@ def test_p2ps_nonexact_search(dev):
 
 def test_p2ps_nonexact_search_srvinfo(dev):
     """P2PS nonexact seek request with service info"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
                    srv_info='I can receive files upto size 2 GB')
     ev_list = p2ps_nonexact_seek(i_dev=dev[1], r_dev=dev[0],
                                  svc_name='org.wi-fi.wfds.send*',
                                  srv_info='2 GB')
-    adv_id = ev_list[0].split(" ")[0]
+    adv_id = ev_list[0].split()[0]
     ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")

@@ -418,6 +418,7 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	u8 group_mac[ETH_ALEN];
 	int passwd_id = DEV_PW_DEFAULT;
 	u16 config_methods;
+	u16 allowed_config_methods = WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
 
 	if (p2p_parse(data, len, &msg))
 		return;
@@ -441,9 +442,12 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
 	}
 
-	if (!(msg.wps_config_methods &
-	      (WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD |
-	       WPS_CONFIG_PUSHBUTTON | WPS_CONFIG_P2PS))) {
+	if (msg.adv_id)
+		allowed_config_methods |= WPS_CONFIG_P2PS;
+	else
+		allowed_config_methods |= WPS_CONFIG_PUSHBUTTON;
+
+	if (!(msg.wps_config_methods & allowed_config_methods)) {
 		p2p_dbg(p2p, "Unsupported Config Methods in Provision Discovery Request");
 		goto out;
 	}

@@ -606,7 +606,7 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 	 */
 	go_wpa_s = wpas_p2p_get_go_group(wpa_s);
 	persistent_go = wpas_p2p_get_persistent_go(wpa_s);
-	p2p_no_group_iface = wpa_s->conf->p2p_no_group_iface;
+	p2p_no_group_iface = !wpas_p2p_create_iface(wpa_s);
 
 	wpa_printf(MSG_DEBUG, "P2P: GO(iface)=%p persistent(ssid)=%p",
 		   go_wpa_s, persistent_go);
@@ -3742,7 +3742,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 		if (!go_wpa_s) {
 			wpa_s->global->pending_p2ps_group = 1;
 
-			if (wpa_s->conf->p2p_no_group_iface)
+			if (!wpas_p2p_create_iface(wpa_s))
 				go_ifname = wpa_s->ifname;
 			else if (wpa_s->pending_interface_name[0])
 				go_ifname = wpa_s->pending_interface_name;

@@ -57,7 +57,11 @@ static void p2ps_add_new_group_info(struct p2p_data *p2p, struct wpabuf *buf)
 	if (found) {
 		p2p_buf_add_group_id(buf, p2p->cfg->dev_addr,
 				     ssid, ssid_len);
-		p2p_buf_add_intended_addr(buf, intended_addr);
+
+		if (group_iface)
+			p2p_buf_add_intended_addr(buf, p2p->intended_addr);
+		else
+			p2p_buf_add_intended_addr(buf, intended_addr);
 	} else {
 		if (!p2p->ssid_set) {
 			p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);

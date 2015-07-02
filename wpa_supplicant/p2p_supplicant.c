@@ -3546,16 +3546,23 @@ static int wpas_get_go_info(void *ctx, u8 *intended_addr,
 	struct wpa_ssid *s;
 	u8 bssid[ETH_ALEN];
 
+	/*
+	 * group_iface will be set to 1 only if a dedicated interface for P2P
+	 * role is required. First, we try to reuse an active GO. However,
+	 * if it is not present, we will try to reactivate an existing
+	 * persistent group and set group_iface to 1, so the caller will know
+	 * that the pending interface should be used.
+	 */
+	*group_iface = 0;
 	s = wpas_p2p_group_go_ssid(wpa_s, bssid);
 	if (!s) {
 		s = wpas_p2p_get_persistent_go(wpa_s);
+		*group_iface = wpas_p2p_create_iface(wpa_s);
 		if (s)
 			os_memcpy(bssid, s->bssid, ETH_ALEN);
+		else
+			return 0;
 	}
-
-	*group_iface = wpas_p2p_create_iface(wpa_s);
-	if (!s)
-		return 0;
 
 	os_memcpy(intended_addr, bssid, ETH_ALEN);
 	os_memcpy(ssid, s->ssid, s->ssid_len);

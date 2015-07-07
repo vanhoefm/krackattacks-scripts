@@ -262,7 +262,7 @@ static inline void WPA_PUT_BE24(u8 *a, u32 val)
 
 static inline u32 WPA_GET_BE32(const u8 *a)
 {
-	return (a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
+	return ((u32) a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
 }
 
 static inline void WPA_PUT_BE32(u8 *a, u32 val)
@@ -275,7 +275,7 @@ static inline void WPA_PUT_BE32(u8 *a, u32 val)
 
 static inline u32 WPA_GET_LE32(const u8 *a)
 {
-	return (a[3] << 24) | (a[2] << 16) | (a[1] << 8) | a[0];
+	return ((u32) a[3] << 24) | (a[2] << 16) | (a[1] << 8) | a[0];
 }
 
 static inline void WPA_PUT_LE32(u8 *a, u32 val)

@@ -36,7 +36,7 @@ struct os_alloc_trace {
 	struct dl_list list;
 	size_t len;
 	WPA_TRACE_INFO
-};
+} __attribute__((aligned(16)));
 
 #endif /* WPA_TRACE */
 

@@ -244,7 +244,8 @@ SM_STATE(SUPP_PAE, DISCONNECTED)
 
 SM_STATE(SUPP_PAE, CONNECTING)
 {
-	int send_start = sm->SUPP_PAE_state == SUPP_PAE_CONNECTING;
+	int send_start = sm->SUPP_PAE_state == SUPP_PAE_CONNECTING ||
+		sm->SUPP_PAE_state == SUPP_PAE_HELD;
 	SM_ENTRY(SUPP_PAE, CONNECTING);
 
 	if (sm->eapTriggerStart)

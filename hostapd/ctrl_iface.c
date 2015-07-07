@@ -1528,7 +1528,7 @@ void hostapd_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 {
 	struct hostapd_data *hapd = ctx;
 	const struct ether_header *eth;
-	const struct iphdr *ip;
+	struct iphdr ip;
 	const u8 *pos;
 	unsigned int i;
 
@@ -1536,14 +1536,14 @@ void hostapd_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 		return;
 
 	eth = (const struct ether_header *) buf;
-	ip = (const struct iphdr *) (eth + 1);
-	pos = (const u8 *) (ip + 1);
+	os_memcpy(&ip, eth + 1, sizeof(ip));
+	pos = &buf[sizeof(*eth) + sizeof(ip)];
 
-	if (ip->ihl != 5 || ip->version != 4 ||
-	    ntohs(ip->tot_len) != HWSIM_IP_LEN)
+	if (ip.ihl != 5 || ip.version != 4 ||
+	    ntohs(ip.tot_len) != HWSIM_IP_LEN)
 		return;
 
-	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++) {
+	for (i = 0; i < HWSIM_IP_LEN - sizeof(ip); i++) {
 		if (*pos != (u8) i)
 			return;
 		pos++;
@@ -1599,7 +1599,7 @@ static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
 	int used;
 	long int val;
 	u8 tos;
-	u8 buf[HWSIM_PACKETLEN];
+	u8 buf[2 + HWSIM_PACKETLEN];
 	struct ether_header *eth;
 	struct iphdr *ip;
 	u8 *dpos;
@@ -1627,7 +1627,7 @@ static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
 		return -1;
 	tos = val;
 
-	eth = (struct ether_header *) buf;
+	eth = (struct ether_header *) &buf[2];
 	os_memcpy(eth->ether_dhost, dst, ETH_ALEN);
 	os_memcpy(eth->ether_shost, src, ETH_ALEN);
 	eth->ether_type = htons(ETHERTYPE_IP);
@@ -1646,7 +1646,7 @@ static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
 	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++)
 		*dpos++ = i;
 
-	if (l2_packet_send(hapd->l2_test, dst, ETHERTYPE_IP, buf,
+	if (l2_packet_send(hapd->l2_test, dst, ETHERTYPE_IP, &buf[2],
 			   HWSIM_PACKETLEN) < 0)
 		return -1;
 

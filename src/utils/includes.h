@@ -17,6 +17,7 @@
 #include "build_config.h"
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>

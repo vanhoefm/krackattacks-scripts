@@ -584,7 +584,7 @@ static int eap_peer_erp_reauth_start(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP: Valid ERP key found %s (SEQ=%u)",
 		   erp->keyname_nai, erp->next_seq);
 
-	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH,
+	msg = eap_msg_alloc(EAP_VENDOR_IETF, (EapType) EAP_ERP_TYPE_REAUTH,
 			    1 + 2 + 2 + os_strlen(erp->keyname_nai) + 1 + 16,
 			    EAP_CODE_INITIATE, hdr->identifier);
 	if (msg == NULL)

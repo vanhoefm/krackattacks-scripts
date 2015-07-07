@@ -96,7 +96,8 @@ static struct wpabuf * eap_sm_buildInitiateReauthStart(struct eap_sm *sm,
 		plen += 2 + domain_len;
 	}
 
-	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH_START, plen,
+	msg = eap_msg_alloc(EAP_VENDOR_IETF,
+			    (EapType) EAP_ERP_TYPE_REAUTH_START, plen,
 			    EAP_CODE_INITIATE, id);
 	if (msg == NULL)
 		return NULL;
@@ -714,8 +715,8 @@ static void erp_send_finish_reauth(struct eap_sm *sm,
 	plen = 1 + 2 + 2 + os_strlen(nai);
 	if (hash_len)
 		plen += 1 + hash_len;
-	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH, plen,
-			    EAP_CODE_FINISH, id);
+	msg = eap_msg_alloc(EAP_VENDOR_IETF, (EapType) EAP_ERP_TYPE_REAUTH,
+			    plen, EAP_CODE_FINISH, id);
 	if (msg == NULL)
 		return;
 	wpabuf_put_u8(msg, flags);
@@ -799,7 +800,7 @@ SM_STATE(EAP, INITIATE_RECEIVED)
 
 	sm->rxInitiate = FALSE;
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH,
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, (EapType) EAP_ERP_TYPE_REAUTH,
 			       sm->eap_if.eapRespData, &len);
 	if (pos == NULL) {
 		wpa_printf(MSG_INFO, "EAP-Initiate: Invalid frame");

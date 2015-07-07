@@ -4249,8 +4249,9 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 
 
 static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
-					    int total_flags,
-					    int flags_or, int flags_and)
+					    unsigned int total_flags,
+					    unsigned int flags_or,
+					    unsigned int flags_and)
 {
 	struct i802_bss *bss = priv;
 	struct nl_msg *msg;

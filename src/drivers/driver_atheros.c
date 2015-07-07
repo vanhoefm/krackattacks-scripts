@@ -430,7 +430,8 @@ atheros_set_sta_authorized(void *priv, const u8 *addr, int authorized)
 
 static int
 atheros_sta_set_flags(void *priv, const u8 *addr,
-		      int total_flags, int flags_or, int flags_and)
+		      unsigned int total_flags, unsigned int flags_or,
+		      unsigned int flags_and)
 {
 	/* For now, only support setting Authorized flag */
 	if (flags_or & WPA_STA_AUTHORIZED)

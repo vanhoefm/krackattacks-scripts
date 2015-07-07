@@ -329,7 +329,8 @@ static int hostap_send_eapol(void *priv, const u8 *addr, const u8 *data,
 
 
 static int hostap_sta_set_flags(void *priv, const u8 *addr,
-				int total_flags, int flags_or, int flags_and)
+				unsigned int total_flags, unsigned int flags_or,
+				unsigned int flags_and)
 {
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param param;

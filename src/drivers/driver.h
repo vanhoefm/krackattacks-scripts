@@ -2349,7 +2349,8 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*sta_set_flags)(void *priv, const u8 *addr,
-			     int total_flags, int flags_or, int flags_and);
+			     unsigned int total_flags, unsigned int flags_or,
+			     unsigned int flags_and);
 
 	/**
 	 * set_tx_queue_params - Set TX queue parameters

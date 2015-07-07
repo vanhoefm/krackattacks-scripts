@@ -894,7 +894,8 @@ bsd_commit(void *priv)
 
 static int
 bsd_set_sta_authorized(void *priv, const u8 *addr,
-		       int total_flags, int flags_or, int flags_and)
+		       unsigned int total_flags, unsigned int flags_or,
+		       unsigned int flags_and)
 {
 	int authorized = -1;
 

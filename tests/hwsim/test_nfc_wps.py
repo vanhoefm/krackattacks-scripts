@@ -559,7 +559,15 @@ def test_nfc_invalid_ndef_record(dev, apdev):
               "90000050",
               "9000005000",
               "9001013344",
-              "98010101334455" ]
+              "98010101334455",
+              "0017ffffffe3",
+              "0017ffffffe4",
+              "0017ffffffe9",
+              "0000fffffffa",
+              "0017ffffffe46170706c69636174696f6e2f766e642e7766612e777363",
+              "0017ffffffff6170706c69636174696f6e2f766e642e7766612e777363",
+              "0017000000006170706c69636174696f6e2f766e642e7766612e7773ff",
+              "080000000000" ]
     for test in tests:
         if "FAIL" not in dev[0].request("WPS_NFC_TAG_READ " + test):
             raise Exception("Invalid tag accepted: " + test)

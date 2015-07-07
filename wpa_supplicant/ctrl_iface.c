@@ -7466,8 +7466,8 @@ static int wpas_ctrl_iface_data_test_tx(struct wpa_supplicant *wpa_s, char *cmd)
 	ip->tos = tos;
 	ip->tot_len = htons(HWSIM_IP_LEN);
 	ip->protocol = 1;
-	ip->saddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 1);
-	ip->daddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 2);
+	ip->saddr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 1);
+	ip->daddr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 2);
 	ip->check = ipv4_hdr_checksum(ip, sizeof(*ip));
 	dpos = (u8 *) (ip + 1);
 	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++)

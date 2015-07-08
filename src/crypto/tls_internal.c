@@ -617,6 +617,14 @@ int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 }
 
 
+int tls_get_version(void *ssl_ctx, struct tls_connection *conn,
+		    char *buf, size_t buflen)
+{
+	/* TODO */
+	return -1;
+}
+
+
 int tls_get_cipher(void *tls_ctx, struct tls_connection *conn,
 		   char *buf, size_t buflen)
 {

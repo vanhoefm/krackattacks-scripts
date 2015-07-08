@@ -467,6 +467,19 @@ int __must_check tls_connection_set_cipher_list(void *tls_ctx,
 						u8 *ciphers);
 
 /**
+ * tls_get_version - Get the current TLS version number
+ * @tls_ctx: TLS context data from tls_init()
+ * @conn: Connection context data from tls_connection_init()
+ * @buf: Buffer for returning the TLS version number
+ * @buflen: buf size
+ * Returns: 0 on success, -1 on failure
+ *
+ * Get the currently used TLS version number.
+ */
+int __must_check tls_get_version(void *tls_ctx, struct tls_connection *conn,
+				 char *buf, size_t buflen);
+
+/**
  * tls_get_cipher - Get current cipher name
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()

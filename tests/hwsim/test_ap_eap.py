@@ -3332,3 +3332,28 @@ def test_ap_wpa2_eap_oom(dev, apdev):
                        client_cert="auth_serv/user.pem",
                        private_key="auth_serv/user.key",
                        scan_freq="2412")
+
+def check_tls_ver(dev, ap, phase1, expected):
+    eap_connect(dev, ap, "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key",
+                phase1=phase1)
+    ver = dev.get_status_field("eap_tls_version")
+    if ver != expected:
+        raise Exception("Unexpected TLS version (expected %s): %s" % (expected, ver))
+
+def test_ap_wpa2_eap_tls_versions(dev, apdev):
+    """EAP-TLS and TLS version configuration"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tls = dev[0].request("GET tls_library")
+    if tls.startswith("OpenSSL"):
+        if "build=OpenSSL 1.0.2" in tls and "run=OpenSSL 1.0.2" in tls:
+            check_tls_ver(dev[0], apdev[0],
+                          "tls_disable_tlsv1_0=1 tls_disable_tlsv1_1=1",
+                          "TLSv1.2")
+    check_tls_ver(dev[1], apdev[0],
+                  "tls_disable_tlsv1_0=1 tls_disable_tlsv1_2=1", "TLSv1.1")
+    check_tls_ver(dev[2], apdev[0],
+                  "tls_disable_tlsv1_1=1 tls_disable_tlsv1_2=1", "TLSv1")

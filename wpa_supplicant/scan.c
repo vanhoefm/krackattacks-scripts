@@ -1679,7 +1679,7 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 		snr_a_full = wa->snr;
 		snr_a = MIN(wa->snr, GREAT_SNR);
 		snr_b_full = wb->snr;
-		snr_b = MIN(wa->snr, GREAT_SNR);
+		snr_b = MIN(wb->snr, GREAT_SNR);
 	} else {
 		/* Level is not in dBm, so we can't calculate
 		 * SNR. Just use raw level (units unknown). */

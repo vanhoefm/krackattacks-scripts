@@ -68,6 +68,10 @@ static void eap_tls_params_flags(struct tls_connection_params *params,
 		params->flags |= TLS_CONN_DISABLE_SESSION_TICKET;
 	if (os_strstr(txt, "tls_disable_session_ticket=0"))
 		params->flags &= ~TLS_CONN_DISABLE_SESSION_TICKET;
+	if (os_strstr(txt, "tls_disable_tlsv1_0=1"))
+		params->flags |= TLS_CONN_DISABLE_TLSv1_0;
+	if (os_strstr(txt, "tls_disable_tlsv1_0=0"))
+		params->flags &= ~TLS_CONN_DISABLE_TLSv1_0;
 	if (os_strstr(txt, "tls_disable_tlsv1_1=1"))
 		params->flags |= TLS_CONN_DISABLE_TLSv1_1;
 	if (os_strstr(txt, "tls_disable_tlsv1_1=0"))

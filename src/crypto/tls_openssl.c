@@ -3544,6 +3544,12 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 #endif /* SSL_clear_options */
 #endif /*  SSL_OP_NO_TICKET */
 
+#ifdef SSL_OP_NO_TLSv1
+	if (params->flags & TLS_CONN_DISABLE_TLSv1_0)
+		SSL_set_options(conn->ssl, SSL_OP_NO_TLSv1);
+	else
+		SSL_clear_options(conn->ssl, SSL_OP_NO_TLSv1);
+#endif /* SSL_OP_NO_TLSv1 */
 #ifdef SSL_OP_NO_TLSv1_1
 	if (params->flags & TLS_CONN_DISABLE_TLSv1_1)
 		SSL_set_options(conn->ssl, SSL_OP_NO_TLSv1_1);

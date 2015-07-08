@@ -249,6 +249,17 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 					"RSN: the new PMK matches with the "
 					"PMKID");
 				abort_cached = 0;
+			} else if (sa && !sm->cur_pmksa && pmkid) {
+				/*
+				 * It looks like the authentication server
+				 * derived mismatching MSK. This should not
+				 * really happen, but bugs happen.. There is not
+				 * much we can do here without knowing what
+				 * exactly caused the server to misbehave.
+				 */
+				wpa_dbg(sm->ctx->msg_ctx, MSG_INFO,
+					"RSN: PMKID mismatch - authentication server may have derived different MSK?!");
+				return -1;
 			}
 
 			if (!sm->cur_pmksa)

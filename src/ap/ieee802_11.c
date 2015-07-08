@@ -316,7 +316,6 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 
 #ifdef CONFIG_SAE
 
-#define dot11RSNASAERetransPeriod 40	/* msec */
 #define dot11RSNASAESync 5		/* attempts */
 
 
@@ -499,12 +498,14 @@ static void auth_sae_retransmit_timer(void *eloop_ctx, void *eloop_data)
 	switch (sta->sae->state) {
 	case SAE_COMMITTED:
 		ret = auth_sae_send_commit(hapd, sta, hapd->own_addr, 0);
-		eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+		eloop_register_timeout(0,
+				       hapd->dot11RSNASAERetransPeriod * 1000,
 				       auth_sae_retransmit_timer, hapd, sta);
 		break;
 	case SAE_CONFIRMED:
 		ret = auth_sae_send_confirm(hapd, sta, hapd->own_addr);
-		eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+		eloop_register_timeout(0,
+				       hapd->dot11RSNASAERetransPeriod * 1000,
 				       auth_sae_retransmit_timer, hapd, sta);
 		break;
 	default:
@@ -530,7 +531,7 @@ static void sae_set_retransmit_timer(struct hostapd_data *hapd,
 		return;
 
 	eloop_cancel_timeout(auth_sae_retransmit_timer, hapd, sta);
-	eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+	eloop_register_timeout(0, hapd->dot11RSNASAERetransPeriod * 1000,
 			       auth_sae_retransmit_timer, hapd, sta);
 }
 

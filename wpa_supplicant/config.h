@@ -18,6 +18,11 @@
 #define DEFAULT_USER_MPM 1
 #define DEFAULT_MAX_PEER_LINKS 99
 #define DEFAULT_MESH_MAX_INACTIVITY 300
+/*
+ * The default dot11RSNASAERetransPeriod is defined as 40 ms in the standard,
+ * but use 1000 ms in practice to avoid issues on low power CPUs.
+ */
+#define DEFAULT_DOT11_RSNA_SAE_RETRANS_PERIOD 1000
 #define DEFAULT_FAST_REAUTH 1
 #define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_P2P_INTRA_BSS 1
@@ -1159,6 +1164,15 @@ struct wpa_config {
 	 * By default: 300 seconds.
 	 */
 	int mesh_max_inactivity;
+
+	/**
+	 * dot11RSNASAERetransPeriod - Timeout to retransmit SAE Auth frame
+	 *
+	 * This timeout value is used in mesh STA to retransmit
+	 * SAE Authentication frame.
+	 * By default: 1000 milliseconds.
+	 */
+	int dot11RSNASAERetransPeriod;
 
 	/**
 	 * passive_scan - Whether to force passive scan for network connection

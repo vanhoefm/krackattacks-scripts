@@ -1282,6 +1282,11 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "mesh_max_inactivity=%d\n",
 			config->mesh_max_inactivity);
 
+	if (config->dot11RSNASAERetransPeriod !=
+	    DEFAULT_DOT11_RSNA_SAE_RETRANS_PERIOD)
+		fprintf(f, "dot11RSNASAERetransPeriod=%d\n",
+			config->dot11RSNASAERetransPeriod);
+
 	if (config->passive_scan)
 		fprintf(f, "passive_scan=%d\n", config->passive_scan);
 

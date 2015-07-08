@@ -618,6 +618,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"eapol_version", "ap_scan", "bgscan",
 #ifdef CONFIG_MESH
 		"user_mpm", "max_peer_links", "mesh_max_inactivity",
+		"dot11RSNASAERetransPeriod",
 #endif /* CONFIG_MESH */
 		"disable_scan_offload", "fast_reauth", "opensc_engine_path",
 		"pkcs11_engine_path", "pkcs11_module_path", "openssl_ciphers",

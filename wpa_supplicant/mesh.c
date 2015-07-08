@@ -171,6 +171,8 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	ifmsh->conf = conf;
 
 	ifmsh->bss[0]->max_plinks = wpa_s->conf->max_peer_links;
+	ifmsh->bss[0]->dot11RSNASAERetransPeriod =
+		wpa_s->conf->dot11RSNASAERetransPeriod;
 	os_strlcpy(bss->conf->iface, wpa_s->ifname, sizeof(bss->conf->iface));
 
 	mconf = mesh_config_create(ssid);

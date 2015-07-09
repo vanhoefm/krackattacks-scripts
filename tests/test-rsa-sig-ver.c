@@ -59,6 +59,7 @@ static int cavp_rsa_sig_ver(const char *fname)
 			tmp_len = os_strlen(pos);
 			if (tmp_len > sizeof(msg) * 2) {
 				printf("Too long Msg\n");
+				fclose(f);
 				return -1;
 			}
 			msg_len = tmp_len / 2;
@@ -71,6 +72,7 @@ static int cavp_rsa_sig_ver(const char *fname)
 			tmp_len = os_strlen(pos);
 			if (tmp_len > sizeof(n) * 2) {
 				printf("Too long n\n");
+				fclose(f);
 				return -1;
 			}
 			n_len = tmp_len / 2;
@@ -83,6 +85,7 @@ static int cavp_rsa_sig_ver(const char *fname)
 			tmp_len = os_strlen(pos);
 			if (tmp_len > sizeof(e) * 2) {
 				printf("Too long e\n");
+				fclose(f);
 				return -1;
 			}
 			e_len = tmp_len / 2;
@@ -95,6 +98,7 @@ static int cavp_rsa_sig_ver(const char *fname)
 			tmp_len = os_strlen(pos);
 			if (tmp_len > sizeof(s) * 2) {
 				printf("Too long S\n");
+				fclose(f);
 				return -1;
 			}
 			s_len = tmp_len / 2;
@@ -105,8 +109,10 @@ static int cavp_rsa_sig_ver(const char *fname)
 			}
 		} else if (os_strncmp(buf, "EM", 2) == 0) {
 			tmp_len = os_strlen(pos);
-			if (tmp_len > sizeof(em) * 2)
+			if (tmp_len > sizeof(em) * 2) {
+				fclose(f);
 				return -1;
+			}
 			em_len = tmp_len / 2;
 			if (hexstr2bin(pos, em, em_len) < 0) {
 				printf("Invalid hex string '%s'\n", pos);
@@ -125,13 +131,17 @@ static int cavp_rsa_sig_ver(const char *fname)
 			addr[0] = msg;
 			len[0] = msg_len;
 			if (os_strcmp(sha_alg, "SHA1") == 0) {
-				if (sha1_vector(1, addr, len, hash) < 0)
+				if (sha1_vector(1, addr, len, hash) < 0) {
+					fclose(f);
 					return -1;
+				}
 				hash_len = 20;
 				alg = &asn1_sha1_oid;
 			} else if (os_strcmp(sha_alg, "SHA256") == 0) {
-				if (sha256_vector(1, addr, len, hash) < 0)
+				if (sha256_vector(1, addr, len, hash) < 0) {
+					fclose(f);
 					return -1;
+				}
 				hash_len = 32;
 				alg = &asn1_sha256_oid;
 			} else {

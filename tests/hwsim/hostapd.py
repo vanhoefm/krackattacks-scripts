@@ -226,7 +226,7 @@ class Hostapd:
         vals = dict()
         first = True
         for l in lines:
-            if first:
+            if first and '=' not in l:
                 vals['addr'] = l
                 first = False
             else:

@@ -335,3 +335,55 @@ def test_ieee8021x_set_conf(dev, apdev):
         raise Exception("EAP authentication did not succeed")
     time.sleep(0.1)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ieee8021x_auth_awhile(dev, apdev):
+    """IEEE 802.1X and EAPOL Authenticator aWhile handling"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-open"
+    params["ieee8021x"] = "1"
+    params['auth_server_port'] = "18129"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    addr0 = dev[0].own_addr()
+
+    params = {}
+    params['ssid'] = 'as'
+    params['beacon_int'] = '2000'
+    params['radius_server_clients'] = 'auth_serv/radius_clients.conf'
+    params['radius_server_auth_port'] = '18129'
+    params['eap_server'] = '1'
+    params['eap_user_file'] = 'auth_serv/eap_user.conf'
+    params['ca_cert'] = 'auth_serv/ca.pem'
+    params['server_cert'] = 'auth_serv/server.pem'
+    params['private_key'] = 'auth_serv/server.key'
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                   eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+    hapd1.disable()
+    if "OK" not in hapd.request("EAPOL_SET %s serverTimeout 1" % addr0):
+        raise Exception("Failed to set serverTimeout")
+    hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+
+    for i in range(40):
+        mib = hapd.get_sta(addr0, info="eapol")
+        val = int(mib['aWhile'])
+        if val > 0:
+            break
+        time.sleep(1)
+    if val == 0:
+        raise Exception("aWhile did not increase")
+
+    hapd.dump_monitor()
+    for i in range(40):
+        mib = hapd.get_sta(addr0, info="eapol")
+        val = int(mib['aWhile'])
+        if val < 5:
+            break
+        time.sleep(1)
+    ev = hapd.wait_event(["CTRL-EVENT-EAP-PROPOSED"], timeout=10)
+    if ev is None:
+        raise Exception("Authentication restart not seen")

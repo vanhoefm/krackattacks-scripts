@@ -137,6 +137,7 @@ def test_ieee8021x_eapol_start(dev, apdev):
     params["ieee8021x"] = "1"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
+    addr0 = dev[0].own_addr()
 
     hapd.set("ext_eapol_frame_io", "1")
     try:
@@ -150,6 +151,9 @@ def test_ieee8021x_eapol_start(dev, apdev):
         for i in range(30):
             pae = dev[0].get_status_field('Supplicant PAE state')
             if pae == "HELD":
+                mib = hapd.get_sta(addr0, info="eapol")
+                if mib['auth_pae_state'] != 'AUTHENTICATING':
+                    raise Exception("Unexpected Auth PAE state: " + mib['auth_pae_state'])
                 held = True
                 break
             time.sleep(0.25)

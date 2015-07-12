@@ -48,6 +48,14 @@ P2P_ATTR_INTERFACE = 16
 P2P_ATTR_OPERATING_CHANNEL = 17
 P2P_ATTR_INVITATION_FLAGS = 18
 P2P_ATTR_OOB_GO_NEG_CHANNEL = 19
+P2P_ATTR_SERVICE_HASH = 21
+P2P_ATTR_SESSION_INFORMATION_DATA = 22
+P2P_ATTR_CONNECTION_CAPABILITY = 23
+P2P_ATTR_ADVERTISEMENT_ID = 24
+P2P_ATTR_ADVERTISED_SERVICE = 25
+P2P_ATTR_SESSION_ID = 26
+P2P_ATTR_FEATURE_CAPABILITY = 27
+P2P_ATTR_PERSISTENT_GROUP = 28
 P2P_ATTR_VENDOR_SPECIFIC = 221
 
 P2P_SC_SUCCESS = 0
@@ -572,6 +580,67 @@ def test_p2p_msg_invitation_req(dev, apdev):
     msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
     attrs = struct.pack("<BHB", 99, 1, 1)
     attrs += struct.pack("<BHB", P2P_ATTR_OOB_GO_NEG_CHANNEL, 1, 1)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Service Hash attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH5B", P2P_ATTR_SERVICE_HASH, 5, 1, 2, 3, 4, 5)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Connection Capability attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH", P2P_ATTR_CONNECTION_CAPABILITY, 0)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Advertisement ID attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH9B", P2P_ATTR_ADVERTISEMENT_ID, 9, 1, 2, 3, 4, 5,
+                        6, 7, 8, 9)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Truncated and too short Service Instance attributes
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH8B", P2P_ATTR_ADVERTISED_SERVICE, 8, 1, 2, 3, 4, 5,
+                        6, 2, 8)
+    attrs += struct.pack("<BH7B", P2P_ATTR_ADVERTISED_SERVICE, 7, 1, 2, 3, 4, 5,
+                         6, 7)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Session ID attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH4B", P2P_ATTR_SESSION_ID, 4, 1, 2, 3, 4)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Feature Capability attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH", P2P_ATTR_FEATURE_CAPABILITY, 0)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too short Persistent Group attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH5B", P2P_ATTR_PERSISTENT_GROUP, 5, 1, 2, 3, 4, 5)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+
+    # Too long Persistent Group attribute
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = struct.pack("<BH9L3B", P2P_ATTR_PERSISTENT_GROUP, 6 + 32 + 1,
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3)
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
 

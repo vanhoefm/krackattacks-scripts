@@ -261,3 +261,25 @@ def test_ieee8021x_eapol_key(dev, apdev):
     send_eapol_key(dev[0], bssid, signkey,
                    "0203002c" + "010020" + "ffffffffffffffff" + "056c22d109f29d4d9fb9b9ccbad33283" + "02",
                    "")
+
+def test_ieee8021x_reauth(dev, apdev):
+    """IEEE 802.1X and EAPOL_REAUTH request"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-open"
+    params["ieee8021x"] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                   eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+
+    hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not succeed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd)

@@ -25,6 +25,7 @@
 #include "common/ieee802_11_defs.h"
 #include "crypto/tls.h"
 #include "drivers/driver.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
 #include "l2_packet/l2_packet.h"
@@ -1886,6 +1887,24 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 }
 
 
+static int hostapd_ctrl_iface_eapol_reauth(struct hostapd_data *hapd,
+					   const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !sta->eapol_sm)
+		return -1;
+
+	eapol_auth_reauthenticate(sta->eapol_sm);
+	return 0;
+}
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -2135,6 +2154,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 #ifdef RADIUS_SERVER
 		radius_server_erp_flush(hapd->radius_srv);
 #endif /* RADIUS_SERVER */
+	} else if (os_strncmp(buf, "EAPOL_REAUTH ", 13) == 0) {
+		if (hostapd_ctrl_iface_eapol_reauth(hapd, buf + 13))
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

@@ -1,6 +1,6 @@
 /*
  * IEEE 802.1X-2004 Authenticator - EAPOL state machine
- * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1077,6 +1077,15 @@ int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx)
 	eapol_auth_step(sm);
 
 	return 0;
+}
+
+
+void eapol_auth_reauthenticate(struct eapol_state_machine *sm)
+{
+	wpa_printf(MSG_DEBUG, "EAPOL: External reauthentication trigger for "
+		   MACSTR, MAC2STR(sm->addr));
+	sm->reAuthenticate = TRUE;
+	eapol_auth_step(sm);
 }
 
 

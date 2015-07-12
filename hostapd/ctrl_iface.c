@@ -1905,6 +1905,29 @@ static int hostapd_ctrl_iface_eapol_reauth(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_ctrl_iface_eapol_set(struct hostapd_data *hapd, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+	char *pos = cmd, *param;
+
+	if (hwaddr_aton(pos, addr) || pos[17] != ' ')
+		return -1;
+	pos += 18;
+	param = pos;
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return -1;
+	*pos++ = '\0';
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !sta->eapol_sm)
+		return -1;
+
+	return eapol_auth_set_conf(sta->eapol_sm, param, pos);
+}
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -2156,6 +2179,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 #endif /* RADIUS_SERVER */
 	} else if (os_strncmp(buf, "EAPOL_REAUTH ", 13) == 0) {
 		if (hostapd_ctrl_iface_eapol_reauth(hapd, buf + 13))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "EAPOL_SET ", 10) == 0) {
+		if (hostapd_ctrl_iface_eapol_set(hapd, buf + 10))
 			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

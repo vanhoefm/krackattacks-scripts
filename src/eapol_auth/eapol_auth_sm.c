@@ -1089,6 +1089,78 @@ void eapol_auth_reauthenticate(struct eapol_state_machine *sm)
 }
 
 
+int eapol_auth_set_conf(struct eapol_state_machine *sm, const char *param,
+			const char *value)
+{
+	wpa_printf(MSG_DEBUG, "EAPOL: External configuration operation for "
+		   MACSTR " - param=%s value=%s",
+		   MAC2STR(sm->addr), param, value);
+
+	if (os_strcasecmp(param, "AdminControlledDirections") == 0) {
+		if (os_strcmp(value, "Both") == 0)
+			sm->adminControlledDirections = Both;
+		else if (os_strcmp(value, "In") == 0)
+			sm->adminControlledDirections = In;
+		else
+			return -1;
+		eapol_auth_step(sm);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "AdminControlledPortControl") == 0) {
+		if (os_strcmp(value, "ForceAuthorized") == 0)
+			sm->portControl = ForceAuthorized;
+		else if (os_strcmp(value, "ForceUnauthorized") == 0)
+			sm->portControl = ForceUnauthorized;
+		else if (os_strcmp(value, "Auto") == 0)
+			sm->portControl = Auto;
+		else
+			return -1;
+		eapol_auth_step(sm);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "quietPeriod") == 0) {
+		sm->quietPeriod = atoi(value);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "serverTimeout") == 0) {
+		sm->serverTimeout = atoi(value);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "reAuthPeriod") == 0) {
+		sm->reAuthPeriod = atoi(value);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "reAuthEnabled") == 0) {
+		if (os_strcmp(value, "TRUE") == 0)
+			sm->reAuthEnabled = TRUE;
+		else if (os_strcmp(value, "FALSE") == 0)
+			sm->reAuthEnabled = FALSE;
+		else
+			return -1;
+		eapol_auth_step(sm);
+		return 0;
+	}
+
+	if (os_strcasecmp(param, "KeyTransmissionEnabled") == 0) {
+		if (os_strcmp(value, "TRUE") == 0)
+			sm->keyTxEnabled = TRUE;
+		else if (os_strcmp(value, "FALSE") == 0)
+			sm->keyTxEnabled = FALSE;
+		else
+			return -1;
+		eapol_auth_step(sm);
+		return 0;
+	}
+
+	return -1;
+}
+
+
 static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 				 struct eapol_auth_config *src)
 {

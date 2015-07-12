@@ -95,5 +95,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  size_t buflen);
 int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx);
 void eapol_auth_reauthenticate(struct eapol_state_machine *sm);
+int eapol_auth_set_conf(struct eapol_state_machine *sm, const char *param,
+			const char *value);
 
 #endif /* EAPOL_AUTH_SM_H */

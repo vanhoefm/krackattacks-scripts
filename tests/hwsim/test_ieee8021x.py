@@ -283,3 +283,55 @@ def test_ieee8021x_reauth(dev, apdev):
         raise Exception("EAP authentication did not succeed")
     time.sleep(0.1)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ieee8021x_set_conf(dev, apdev):
+    """IEEE 802.1X and EAPOL_SET command"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-open"
+    params["ieee8021x"] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                   eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+
+    addr0 = dev[0].own_addr()
+    tests = [ "EAPOL_SET 1",
+              "EAPOL_SET %sfoo bar" % addr0,
+              "EAPOL_SET %s foo" % addr0,
+              "EAPOL_SET %s foo bar" % addr0,
+              "EAPOL_SET %s AdminControlledDirections bar" % addr0,
+              "EAPOL_SET %s AdminControlledPortControl bar" % addr0,
+              "EAPOL_SET %s reAuthEnabled bar" % addr0,
+              "EAPOL_SET %s KeyTransmissionEnabled bar" % addr0,
+              "EAPOL_SET 11:22:33:44:55:66 AdminControlledDirections Both" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid EAPOL_SET command accepted: " + t)
+
+    tests = [ ("AdminControlledDirections", "adminControlledDirections", "In"),
+              ("AdminControlledDirections", "adminControlledDirections",
+               "Both"),
+              ("quietPeriod", "quietPeriod", "13"),
+              ("serverTimeout", "serverTimeout", "7"),
+              ("reAuthPeriod", "reAuthPeriod", "1234"),
+              ("reAuthEnabled", "reAuthEnabled", "FALSE"),
+              ("reAuthEnabled", "reAuthEnabled", "TRUE"),
+              ("KeyTransmissionEnabled", "keyTxEnabled", "TRUE"),
+              ("KeyTransmissionEnabled", "keyTxEnabled", "FALSE"),
+              ("AdminControlledPortControl", "portControl", "ForceAuthorized"),
+              ("AdminControlledPortControl", "portControl",
+               "ForceUnauthorized"),
+              ("AdminControlledPortControl", "portControl", "Auto") ]
+    for param,mibparam,val in tests:
+        if "OK" not in hapd.request("EAPOL_SET %s %s %s" % (addr0, param, val)):
+            raise Exception("Failed to set %s %s" % (param, val))
+        mib = hapd.get_sta(addr0, info="eapol")
+        if mib[mibparam] != val:
+            raise Exception("Unexpected %s value: %s (expected %s)" % (param, mib[mibparam], val))
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not succeed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd)

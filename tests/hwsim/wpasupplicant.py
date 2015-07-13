@@ -1104,3 +1104,16 @@ class WpaSupplicant:
             [name,value] = l.split('=', 1)
             vals[name] = value
         return vals
+
+    def asp_provision(self, peer, adv_id, adv_mac, session_id, session_mac,
+                      method="1000", info="", status=None):
+        if status is None:
+            cmd = "P2P_ASP_PROVISION"
+            params = "info='%s' method=%s" % (info, method)
+        else:
+            cmd = "P2P_ASP_PROVISION_RESP"
+            params = "status=%d" % status
+
+        if "OK" not in self.global_request("%s %s adv_id=%s adv_mac=%s session=%d session_mac=%s %s" %
+                                           (cmd, peer, adv_id, adv_mac, session_id, session_mac, params)):
+            raise Exception("%s request failed" % cmd)

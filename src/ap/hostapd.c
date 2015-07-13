@@ -2186,7 +2186,7 @@ hostapd_iface_alloc(struct hapd_interfaces *interfaces)
 
 static struct hostapd_config *
 hostapd_config_alloc(struct hapd_interfaces *interfaces, const char *ifname,
-		     const char *ctrl_iface)
+		     const char *ctrl_iface, const char *driver)
 {
 	struct hostapd_bss_config *bss;
 	struct hostapd_config *conf;
@@ -2199,6 +2199,21 @@ hostapd_config_alloc(struct hapd_interfaces *interfaces, const char *ifname,
 		return NULL;
 	}
 
+	if (driver) {
+		int j;
+
+		for (j = 0; wpa_drivers[j]; j++) {
+			if (os_strcmp(driver, wpa_drivers[j]->name) == 0) {
+				conf->driver = wpa_drivers[j];
+				goto skip;
+			}
+		}
+
+		wpa_printf(MSG_ERROR,
+			   "Invalid/unknown driver '%s' - registering the default driver",
+			   driver);
+	}
+
 	conf->driver = wpa_drivers[0];
 	if (conf->driver == NULL) {
 		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
@@ -2206,6 +2221,7 @@ hostapd_config_alloc(struct hapd_interfaces *interfaces, const char *ifname,
 		return NULL;
 	}
 
+skip:
 	bss = conf->last_bss = conf->bss[0];
 
 	os_strlcpy(bss->iface, ifname, sizeof(bss->iface));
@@ -2366,8 +2382,14 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		if (conf && conf->bss)
 			os_strlcpy(conf->bss[0]->iface, buf,
 				   sizeof(conf->bss[0]->iface));
-	} else
-		conf = hostapd_config_alloc(interfaces, buf, ptr);
+	} else {
+		char *driver = os_strchr(ptr, ' ');
+
+		if (driver)
+			*driver++ = '\0';
+		conf = hostapd_config_alloc(interfaces, buf, ptr, driver);
+	}
+
 	if (conf == NULL || conf->bss == NULL) {
 		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
 			   "for configuration", __func__);

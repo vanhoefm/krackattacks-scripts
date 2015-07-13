@@ -372,6 +372,138 @@ def p2ps_connect_pin(pin, i_dev, r_dev, initiator_method):
     if r_dev.p2p_dev_addr() not in ev1:
         raise Exception("Group formed with unknown Peer")
 
+def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None):
+    conf_methods_map = {"8": "p2ps", "1": "display", "5": "keypad"}
+    peer0 = ev0.split()[1]
+    peer1 = ev1.split()[1]
+    status0, conncap0, adv_id0, adv_mac0, mac0, session0, dev_passwd_id0, go0, join0, feature_cap0, persist0 =\
+        p2ps_parse_event(ev0, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist")
+    status1, conncap1, adv_id1, adv_mac1, mac1, session1, dev_passwd_id1, go1, join1, feature_cap1, persist1 =\
+        p2ps_parse_event(ev1, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist")
+
+    if status0 != "0" and status0 != "12":
+        raise Exception("PD failed on " + dev0.p2p_dev_addr())
+
+    if status1 != "0" and status1 != "12":
+        raise Exception("PD failed on " + dev1.p2p_dev_addr())
+
+    if status0 == "12" and status1 == "12":
+        raise Exception("Both sides have status 12 which doesn't make sense")
+
+    if adv_id0 != adv_id1 or adv_id0 is None:
+        raise Exception("Adv. IDs don't match")
+
+    if adv_mac0 != adv_mac1 or adv_mac0 is None:
+        raise Exception("Adv. MACs don't match")
+
+    if session0 != session1 or session0 is None:
+        raise Exception("Session IDs don't match")
+
+    if mac0 != mac1 or mac0 is None:
+        raise Exception("Session MACs don't match")
+
+    #TODO: Validate feature capability
+
+    if bool(persist0) != bool(persist1):
+        raise Exception("Only one peer has persistent group")
+
+    if persist0 is None and not all([conncap0, conncap1, dev_passwd_id0,
+                                     dev_passwd_id1]):
+        raise Exception("Persistent group not used but conncap/dev_passwd_id are missing")
+
+    if persist0 is not None and any([conncap0, conncap1, dev_passwd_id0,
+                                     dev_passwd_id1]):
+        raise Exception("Persistent group is used but conncap/dev_passwd_id are present")
+
+    # Persistent Connection (todo: handle frequency)
+    if persist0 is not None:
+        if "OK" not in dev0.global_request("P2P_GROUP_ADD persistent=" + persist0 + " freq=2412"):
+            raise Exception("Could not re-start persistent group")
+        ev0 = dev0.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev0 is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev0.p2p_dev_addr())
+        dev0.group_form_result(ev0)
+
+        if "OK" not in dev1.global_request("P2P_GROUP_ADD persistent=" + persist1 + " freq=2412"):
+            raise Exception("Could not re-start persistent group")
+        ev1 = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev1 is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev1.p2p_dev_addr())
+        dev1.group_form_result(ev1)
+        if "GO" in ev0:
+            ev = dev0.wait_global_event(["AP-STA-CONNECTED"], timeout=10)
+            if ev is None:
+                raise Exception("AP-STA-CONNECTED timeout on " + dev0.p2p_dev_addr())
+        else:
+            ev = dev1.wait_global_event(["AP-STA-CONNECTED"], timeout=10)
+            if ev is None:
+                raise Exception("AP-STA-CONNECTED timeout on " + dev1.p2p_dev_addr())
+    else:
+        try:
+            method0 = conf_methods_map[dev_passwd_id0]
+            method1 = conf_methods_map[dev_passwd_id1]
+        except KeyError:
+            raise Exception("Unsupported method")
+
+        if method0 == "p2ps":
+            pin = "12345670"
+        if pin is None:
+            raise Exception("Pin is not provided")
+
+        if conncap0 == "1" and conncap1 == "1": # NEW/NEW - GON
+            if any([join0, join1, go0, go1]):
+                raise Exception("Unexpected join/go PD attributes")
+            dev0.p2p_listen()
+            if "OK" not in dev0.global_request("P2P_CONNECT " + peer0 + " " + pin + " " + method0 + " persistent auth"):
+                raise Exception("P2P_CONNECT fails on " + dev0.p2p_dev_addr())
+            if "OK" not in dev1.global_request("P2P_CONNECT " + peer1 + " " + pin + " " + method1 + " persistent"):
+                raise Exception("P2P_CONNECT fails on " + dev1.p2p_dev_addr())
+            ev = dev0.wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
+            if ev is None:
+                raise Exception("GO Neg did not succeed on " + dev0.p2p_dev_addr())
+            ev = dev1.wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
+            if ev is None:
+                raise Exception("GO Neg did not succeed on " + dev1.p2p_dev_addr())
+            ev = dev0.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+            if ev is None:
+                raise Exception("P2P-GROUP-STARTED timeout on " + dev0.p2p_dev_addr())
+            dev0.group_form_result(ev)
+            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+            if ev is None:
+                raise Exception("P2P-GROUP-STARTED timeout on " + dev1.p2p_dev_addr())
+            dev1.group_form_result(ev)
+        else:
+            if conncap0 == "2" and conncap1 == "4":  # dev0 CLI, dev1 GO
+                dev_cli, dev_go, go_if, join_address, go_method, cli_method = dev0, dev1, go1, join0, method1, method0
+            elif conncap0 == "4" and conncap1 == "2":  # dev0 GO, dev1 CLI
+                dev_cli, dev_go, go_if, join_address, go_method, cli_method = dev1, dev0, go0, join1, method0, method1
+            else:
+                raise Exception("Bad connection capabilities")
+
+            if go_if is None:
+                raise Exception("Device " + dev_go.p2p_dev_addr() + " failed to become GO")
+            if join_address is None:
+                raise Exception("Device " + dev_cli.p2p_dev_addr() + " failed to become CLI")
+            ev = dev_go.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+            if ev is None:
+                raise Exception("P2P-GROUP-STARTED timeout on " + dev_go.p2p_dev_addr())
+            dev_go.group_form_result(ev)
+            if go_method != "p2ps":
+                ev = dev_go.group_request("WPS_PIN any " + pin)
+                if ev is None:
+                    raise Exception("Failed to initiate pin authorization on registrar side")
+            if "OK" not in dev_cli.global_request("P2P_CONNECT " + join_address + " " + pin + " " + cli_method + " persistent join"):
+                raise Exception("P2P_CONNECT failed on " + dev_cli.p2p_dev_addr())
+            ev = dev_cli.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+            if ev is None:
+                raise Exception("P2P-GROUP-STARTED timeout on " + dev_cli.p2p_dev_addr())
+            dev_cli.group_form_result(ev)
+            ev = dev_go.wait_global_event(["AP-STA-CONNECTED"], timeout=10)
+            if ev is None:
+                raise Exception("AP-STA-CONNECTED timeout on " + dev_go.p2p_dev_addr())
+
+    hwsim_utils.test_connectivity_p2p(dev0, dev1)
+
 def set_no_group_iface(dev, enable):
     if enable:
         res = dev.get_driver_status()

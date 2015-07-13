@@ -4180,18 +4180,17 @@ static char * wpa_cli_get_default_ifname(void)
 {
 	char *ifname = NULL;
 
+#ifdef ANDROID
+	char ifprop[PROPERTY_VALUE_MAX];
+	if (property_get("wifi.interface", ifprop, NULL) != 0) {
+		ifname = os_strdup(ifprop);
+		printf("Using interface '%s'\n", ifname ? ifname : "N/A");
+	}
+#else /* ANDROID */
 #ifdef CONFIG_CTRL_IFACE_UNIX
 	struct dirent *dent;
 	DIR *dir = opendir(ctrl_iface_dir);
 	if (!dir) {
-#ifdef ANDROID
-		char ifprop[PROPERTY_VALUE_MAX];
-		if (property_get("wifi.interface", ifprop, NULL) != 0) {
-			ifname = os_strdup(ifprop);
-			printf("Using interface '%s'\n", ifname);
-			return ifname;
-		}
-#endif /* ANDROID */
 		return NULL;
 	}
 	while ((dent = readdir(dir))) {
@@ -4235,6 +4234,7 @@ static char * wpa_cli_get_default_ifname(void)
 	}
 	wpa_ctrl_close(ctrl);
 #endif /* CONFIG_CTRL_IFACE_NAMED_PIPE */
+#endif /* ANDROID */
 
 	return ifname;
 }

@@ -502,6 +502,10 @@ static int wpa_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return wpa_ctrl_command(ctrl, "STATUS-WPS");
 	if (argc > 0 && os_strcmp(argv[0], "driver") == 0)
 		return wpa_ctrl_command(ctrl, "STATUS-DRIVER");
+#ifdef ANDROID
+	if (argc > 0 && os_strcmp(argv[0], "no_events") == 0)
+		return wpa_ctrl_command(ctrl, "STATUS-NO_EVENTS");
+#endif /* ANDROID */
 	return wpa_ctrl_command(ctrl, "STATUS");
 }
 

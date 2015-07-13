@@ -4651,6 +4651,9 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		case WPS_PBC:
 			method = WPS_CONFIG_PUSHBUTTON;
 			break;
+		case WPS_P2PS:
+			method = WPS_CONFIG_P2PS;
+			break;
 		default:
 			method = 0;
 			break;

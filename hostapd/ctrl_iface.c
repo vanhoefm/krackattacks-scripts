@@ -2581,6 +2581,40 @@ hostapd_global_ctrl_iface_fst_detach(struct hapd_interfaces *interfaces,
 
 #endif /* CONFIG_FST */
 
+static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
+					    const char *ifname,
+					    char *buf, char *reply,
+					    int reply_size,
+					    struct sockaddr_un *from,
+					    socklen_t fromlen)
+{
+	size_t i, j;
+	struct hostapd_data *hapd = NULL;
+
+	for (i = 0; hapd == NULL && i < interfaces->count; i++) {
+		struct hostapd_iface *iface = interfaces->iface[i];
+
+		for (j = 0; j < iface->num_bss; j++) {
+			hapd = iface->bss[j];
+			if (os_strcmp(ifname, hapd->conf->iface) == 0)
+				break;
+			hapd = NULL;
+		}
+	}
+
+	if (hapd == NULL) {
+		int res;
+
+		res = os_snprintf(reply, reply_size, "FAIL-NO-IFNAME-MATCH\n");
+		if (os_snprintf_error(reply_size, res))
+			return -1;
+		return res;
+	}
+
+	return hostapd_ctrl_iface_receive_process(hapd, buf, reply,reply_size,
+						  from, fromlen);
+}
+
 
 static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
@@ -2616,6 +2650,18 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 
 	os_memcpy(reply, "OK\n", 3);
 	reply_len = 3;
+
+	if (os_strncmp(buf, "IFNAME=", 7) == 0) {
+		char *pos = os_strchr(buf + 7, ' ');
+
+		if (pos) {
+			*pos++ = '\0';
+			reply_len = hostapd_global_ctrl_iface_ifname(
+				interfaces, buf + 7, pos, reply, reply_size,
+				&from, fromlen);
+			goto send_reply;
+		}
+	}
 
 	if (os_strcmp(buf, "PING") == 0) {
 		os_memcpy(reply, "PONG\n", 5);
@@ -2665,6 +2711,7 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_len = -1;
 	}
 
+send_reply:
 	if (reply_len < 0) {
 		os_memcpy(reply, "FAIL\n", 5);
 		reply_len = 5;

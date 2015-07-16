@@ -362,6 +362,8 @@ class WpaSupplicant:
             res = self.request("STATUS-DRIVER")
         else:
             res = self.global_request("IFNAME=%s STATUS-DRIVER" % ifname)
+            if res.startswith("FAIL"):
+                return dict()
         lines = res.splitlines()
         vals = dict()
         for l in lines:

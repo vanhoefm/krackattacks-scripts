@@ -277,6 +277,37 @@ def test_wpas_ctrl_dup_network(dev, apdev):
     if "OK" not in dev[0].request("DUP_NETWORK %d %d ssid" % (id, id)):
         raise Exception("Unexpected DUP_NETWORK failure")
 
+def test_wpas_ctrl_dup_network_global(dev, apdev):
+    """wpa_supplicant ctrl_iface DUP_NETWORK (global)"""
+    ssid = "target"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    src = dev[0].connect("another", psk=passphrase, scan_freq="2412",
+                         only_add_network=True)
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", ssid)
+    for f in [ "key_mgmt", "psk", "scan_freq" ]:
+        res = dev[0].global_request("DUP_NETWORK {} {} {} {} {}".format(dev[0].ifname, dev[0].ifname, src, id, f))
+        if "OK" not in res:
+            raise Exception("DUP_NETWORK failed")
+    dev[0].connect_network(id)
+
+    if "FAIL" not in dev[0].global_request("DUP_NETWORK "):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].global_request("DUP_NETWORK %s" % dev[0].ifname):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].global_request("DUP_NETWORK %s %s" % (dev[0].ifname, dev[0].ifname)):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].global_request("DUP_NETWORK %s %s %d" % (dev[0].ifname, dev[0].ifname, id)):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].global_request("DUP_NETWORK %s %s %d %d" % (dev[0].ifname, dev[0].ifname, id, id)):
+        raise Exception("Unexpected DUP_NETWORK success")
+    dev[0].request("DISCONNECT")
+    if "OK" not in dev[0].global_request("DUP_NETWORK %s %s %d %d ssid" % (dev[0].ifname, dev[0].ifname, id, id)):
+        raise Exception("Unexpected DUP_NETWORK failure")
+
 def add_cred(dev):
     id = dev.add_cred()
     ev = dev.wait_event(["CRED-ADDED"])

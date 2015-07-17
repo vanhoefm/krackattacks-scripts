@@ -365,13 +365,16 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 	struct fst_group *g;
 	u8 new_iface_peer_addr[ETH_ALEN];
 	struct wpabuf *peer_mbies;
+	size_t plen;
 
-	if (frame_len < sizeof(*req))  {
+	if (frame_len < IEEE80211_HDRLEN + 1 + sizeof(*req))  {
 		fst_printf_iface(iface, MSG_WARNING,
 				 "FST Request dropped: too short (%zu < %zu)",
-				 frame_len, sizeof(*req));
+				 frame_len,
+				 IEEE80211_HDRLEN + 1 + sizeof(*req));
 		return;
 	}
+	plen = frame_len - IEEE80211_HDRLEN - 1;
 
 	if (req->stie.new_band_id == req->stie.old_band_id) {
 		fst_printf_iface(iface, MSG_WARNING,
@@ -381,9 +384,9 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 
 	g = fst_iface_get_group(iface);
 
-	if (frame_len > sizeof(*req)) {
+	if (plen > sizeof(*req)) {
 		fst_iface_update_mb_ie(iface, mgmt->sa, (const u8 *) (req + 1),
-				       frame_len - sizeof(*req));
+				       plen - sizeof(*req));
 		fst_printf_iface(iface, MSG_INFO,
 				 "FST Request: MB IEs updated for " MACSTR,
 				 MAC2STR(mgmt->sa));
@@ -508,6 +511,7 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 {
 	const struct fst_setup_res *res =
 		(const struct fst_setup_res *) &mgmt->u.action.u.fst_action;
+	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	enum hostapd_hw_mode hw_mode;
 	u8 channel;
 	union fst_session_state_switch_extra evext = {
@@ -525,6 +529,12 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 		fst_printf_session(s, MSG_WARNING,
 				   "FST Response dropped due to wrong state: %s",
 				   fst_session_state_name(s->state));
+		return;
+	}
+
+	if (plen < sizeof(*res)) {
+		fst_printf_session(s, MSG_WARNING,
+				   "Too short FST Response dropped");
 		return;
 	}
 
@@ -596,6 +606,7 @@ static void fst_session_handle_tear_down(struct fst_session *s,
 {
 	const struct fst_tear_down *td =
 		(const struct fst_tear_down *) &mgmt->u.action.u.fst_action;
+	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	union fst_session_state_switch_extra evext = {
 		.to_initial = {
 			.reason = REASON_TEARDOWN,
@@ -605,6 +616,12 @@ static void fst_session_handle_tear_down(struct fst_session *s,
 
 	if (!fst_session_is_in_progress(s)) {
 		fst_printf_session(s, MSG_WARNING, "no FST Setup to tear down");
+		return;
+	}
+
+	if (plen < sizeof(*td)) {
+		fst_printf_session(s, MSG_WARNING,
+				   "Too short FST Tear Down dropped");
 		return;
 	}
 
@@ -628,6 +645,7 @@ static void fst_session_handle_ack_request(struct fst_session *s,
 {
 	const struct fst_ack_req *req =
 		(const struct fst_ack_req *) &mgmt->u.action.u.fst_action;
+	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	struct fst_ack_res res;
 	union fst_session_state_switch_extra evext = {
 		.to_initial = {
@@ -648,6 +666,12 @@ static void fst_session_handle_ack_request(struct fst_session *s,
 	if (iface != s->data.new_iface) {
 		fst_printf_siface(s, iface, MSG_ERROR,
 				  "Ack received on wrong interface");
+		return;
+	}
+
+	if (plen < sizeof(*req)) {
+		fst_printf_session(s, MSG_WARNING,
+				   "Too short FST Ack Request dropped");
 		return;
 	}
 
@@ -684,6 +708,7 @@ fst_session_handle_ack_response(struct fst_session *s,
 {
 	const struct fst_ack_res *res =
 		(const struct fst_ack_res *) &mgmt->u.action.u.fst_action;
+	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	union fst_session_state_switch_extra evext = {
 		.to_initial = {
 			.reason = REASON_SWITCH,
@@ -703,6 +728,12 @@ fst_session_handle_ack_response(struct fst_session *s,
 	if (iface != s->data.new_iface) {
 		fst_printf_siface(s, iface, MSG_ERROR,
 				  "Ack response received on wrong interface");
+		return;
+	}
+
+	if (plen < sizeof(*res)) {
+		fst_printf_session(s, MSG_WARNING,
+				   "Too short FST Ack Response dropped");
 		return;
 	}
 
@@ -1164,10 +1195,10 @@ void fst_session_on_action_rx(struct fst_iface *iface,
 {
 	struct fst_session *s;
 
-	if (mgmt->u.action.category != WLAN_ACTION_FST) {
+	if (len < IEEE80211_HDRLEN + 2 ||
+	    mgmt->u.action.category != WLAN_ACTION_FST) {
 		fst_printf_iface(iface, MSG_ERROR,
-				 "action frame of wrong category (%u) received!",
-				 mgmt->u.action.category);
+				 "invalid Action frame received");
 		return;
 	}
 

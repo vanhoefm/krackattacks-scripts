@@ -66,6 +66,8 @@ def test_ap_wps_init(dev, apdev):
     conf = hapd.request("GET_CONFIG")
     if "wps_state=configured" not in conf:
         raise Exception("AP not in WPS configured state")
+    if "wpa=3" not in conf:
+        raise Exception("AP not in WPA+WPA2 configuration")
     if "rsn_pairwise_cipher=CCMP TKIP" not in conf:
         raise Exception("Unexpected rsn_pairwise_cipher")
     if "wpa_pairwise_cipher=CCMP TKIP" not in conf:

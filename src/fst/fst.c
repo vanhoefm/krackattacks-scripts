@@ -95,7 +95,7 @@ struct fst_iface * fst_attach(const char *ifname, const u8 *own_addr,
 	}
 
 	fst_group_attach_iface(group, iface);
-	fst_group_update_ie(group, FALSE);
+	fst_group_update_ie(group);
 
 	foreach_fst_ctrl_call(on_iface_added, iface);
 
@@ -117,7 +117,7 @@ void fst_detach(struct fst_iface *iface)
 	foreach_fst_ctrl_call(on_iface_removed, iface);
 	fst_group_detach_iface(group, iface);
 	fst_iface_delete(iface);
-	fst_group_update_ie(group, FALSE);
+	fst_group_update_ie(group);
 	fst_group_delete_if_empty(group);
 }
 
@@ -194,7 +194,7 @@ void fst_notify_peer_connected(struct fst_iface *iface, const u8 *addr)
 		return;
 
 #ifndef HOSTAPD
-	fst_group_update_ie(fst_iface_get_group(iface), FALSE);
+	fst_group_update_ie(fst_iface_get_group(iface));
 #endif /* HOSTAPD */
 
 	fst_printf_iface(iface, MSG_DEBUG, MACSTR " became connected",
@@ -210,7 +210,7 @@ void fst_notify_peer_disconnected(struct fst_iface *iface, const u8 *addr)
 		return;
 
 #ifndef HOSTAPD
-	fst_group_update_ie(fst_iface_get_group(iface), FALSE);
+	fst_group_update_ie(fst_iface_get_group(iface));
 #endif /* HOSTAPD */
 
 	fst_printf_iface(iface, MSG_DEBUG, MACSTR " became disconnected",

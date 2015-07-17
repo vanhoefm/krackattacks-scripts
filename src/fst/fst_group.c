@@ -444,25 +444,18 @@ Boolean fst_group_delete_if_empty(struct fst_group *group)
 }
 
 
-void fst_group_update_ie(struct fst_group *g, Boolean cleaning_up)
+void fst_group_update_ie(struct fst_group *g)
 {
 	struct fst_iface *i;
 
 	foreach_fst_group_iface(g, i) {
-		if (!cleaning_up) {
-			struct wpabuf *mbie = fst_group_create_mb_ie(g, i);
+		struct wpabuf *mbie = fst_group_create_mb_ie(g, i);
 
-			if (!mbie)
-				fst_printf_iface(i, MSG_WARNING,
-						 "cannot create MB IE");
+		if (!mbie)
+			fst_printf_iface(i, MSG_WARNING, "cannot create MB IE");
 
-			fst_iface_attach_mbie(i, mbie);
-			fst_iface_set_ies(i, mbie);
-			fst_printf_iface(i, MSG_DEBUG,
-					 "multi-band IE set to %p", mbie);
-		} else {
-			fst_iface_attach_mbie(i, NULL);
-			fst_iface_set_ies(i, NULL);
-		}
+		fst_iface_attach_mbie(i, mbie);
+		fst_iface_set_ies(i, mbie);
+		fst_printf_iface(i, MSG_DEBUG, "multi-band IE set to %p", mbie);
 	}
 }

@@ -27,7 +27,7 @@ void fst_group_attach_iface(struct fst_group *g, struct fst_iface *i);
 void fst_group_detach_iface(struct fst_group *g, struct fst_iface *i);
 void fst_group_delete(struct fst_group *g);
 
-void fst_group_update_ie(struct fst_group *g, Boolean cleaning_up);
+void fst_group_update_ie(struct fst_group *g);
 
 static inline Boolean fst_group_has_ifaces(struct fst_group *g)
 {

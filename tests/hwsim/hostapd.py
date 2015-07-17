@@ -47,8 +47,11 @@ class HostapdGlobal:
     def request(self, cmd):
         return self.ctrl.request(cmd)
 
-    def add(self, ifname):
-        res = self.ctrl.request("ADD " + ifname + " " + hapd_ctrl)
+    def add(self, ifname, driver=None):
+        cmd = "ADD " + ifname + " " + hapd_ctrl
+        if driver:
+            cmd += " " + driver
+        res = self.ctrl.request(cmd)
         if not "OK" in res:
             raise Exception("Could not add hostapd interface " + ifname)
 

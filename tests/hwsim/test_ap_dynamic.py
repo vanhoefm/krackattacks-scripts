@@ -466,3 +466,20 @@ def test_ap_multi_bss(dev, apdev):
         raise Exception("sta0 did not report receiving packets")
     if 'rx_packets' not in sta1 or int(sta1['rx_packets']) < 1:
         raise Exception("sta1 did not report receiving packets")
+
+def test_ap_add_with_driver(dev, apdev):
+    """Add hostapd interface with driver specified"""
+    ifname = apdev[0]['ifname']
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.add(ifname, driver="nl80211")
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set("ssid", "dynamic")
+    hapd.enable()
+    ev = hapd.wait_event(["AP-ENABLED"], timeout=30)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    dev[0].connect("dynamic", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.disable()

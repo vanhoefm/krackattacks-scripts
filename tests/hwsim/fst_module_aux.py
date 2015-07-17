@@ -590,7 +590,7 @@ class FstAP (FstDevice):
         self.global_instance = hostapd.HostapdGlobal()
         FstDevice.__init__(self, iface, fst_group, fst_pri, fst_llt, rsn)
 
-    def start(self):
+    def start(self, return_early=False):
         """Starts AP the "standard" way as it was intended by hostapd tests.
         This will work only when FST supports fully dynamically loading
         parameters in hostapd."""
@@ -609,6 +609,8 @@ class FstAP (FstDevice):
             raise Exception("Could not ping FST hostapd")
         self.reg_ctrl.start()
         self.get_global_instance()
+        if return_early:
+            return self.hapd
         if len(self.fst_group) != 0:
             self.send_iface_attach_request(self.iface, self.fst_group,
                                            self.fst_llt, self.fst_pri)

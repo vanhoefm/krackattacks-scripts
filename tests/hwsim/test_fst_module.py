@@ -1925,3 +1925,21 @@ def test_fst_proto(dev, apdev, test_params):
             fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         except:
             pass
+
+def test_fst_ap_config_oom(dev, apdev, test_params):
+    """FST AP configuration and OOM"""
+    ap1 = fst_module_aux.FstAP(apdev[0]['ifname'], 'fst_11a', 'a',
+                               fst_test_common.fst_test_def_chan_a,
+                               fst_test_common.fst_test_def_group,
+                               fst_test_common.fst_test_def_prio_low)
+    hapd = ap1.start(return_early=True)
+    with alloc_fail(hapd, 1, "fst_group_create"):
+        res = ap1.grequest("FST-ATTACH %s %s" % (ap1.iface, ap1.fst_group))
+        if not res.startswith("FAIL"):
+            raise Exception("FST-ATTACH succeeded unexpectedly")
+
+    with alloc_fail(hapd, 1, "fst_group_create_mb_ie"):
+        res = ap1.grequest("FST-ATTACH %s %s" % (ap1.iface, ap1.fst_group))
+        # This is allowed to complete currently
+
+    ap1.stop()

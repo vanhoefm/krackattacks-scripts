@@ -48,27 +48,6 @@ fst_hw_mode_to_band(enum hostapd_hw_mode mode)
 #define IE_HEADER_SIZE               ((u8) (2 * sizeof(u8)))
 #define IE_BUFFER_LENGTH(ie_len_val) ((size_t) ((ie_len_val) + IE_HEADER_SIZE))
 
-static inline const u8 *
-fst_mbie_get_peer_addr(const struct multi_band_ie *mbie)
-{
-	const u8 *peer_addr = NULL;
-
-	switch (MB_CTRL_ROLE(mbie->mb_ctrl)) {
-	case MB_STA_ROLE_AP:
-		peer_addr = mbie->bssid;
-		break;
-	case MB_STA_ROLE_NON_PCP_NON_AP:
-		if (mbie->mb_ctrl & MB_CTRL_STA_MAC_PRESENT &&
-		    IE_BUFFER_LENGTH(mbie->len) >= sizeof(*mbie) + ETH_ALEN)
-			peer_addr = (const u8 *) &mbie[1];
-		break;
-	default:
-		break;
-	}
-
-	return peer_addr;
-}
-
 struct fst_ctrl_handle {
 	struct fst_ctrl ctrl;
 	struct dl_list global_ctrls_lentry;

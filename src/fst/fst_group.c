@@ -201,6 +201,27 @@ static struct wpabuf * fst_group_create_mb_ie(struct fst_group *g,
 }
 
 
+static const u8 * fst_mbie_get_peer_addr(const struct multi_band_ie *mbie)
+{
+	const u8 *peer_addr = NULL;
+
+	switch (MB_CTRL_ROLE(mbie->mb_ctrl)) {
+	case MB_STA_ROLE_AP:
+		peer_addr = mbie->bssid;
+		break;
+	case MB_STA_ROLE_NON_PCP_NON_AP:
+		if (mbie->mb_ctrl & MB_CTRL_STA_MAC_PRESENT &&
+		    IE_BUFFER_LENGTH(mbie->len) >= sizeof(*mbie) + ETH_ALEN)
+			peer_addr = (const u8 *) &mbie[1];
+		break;
+	default:
+		break;
+	}
+
+	return peer_addr;
+}
+
+
 static struct fst_iface *
 fst_group_get_new_iface_by_mbie_and_band_id(struct fst_group *g,
 					    const u8 *mb_ies_buff,

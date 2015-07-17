@@ -53,16 +53,6 @@ static inline unsigned int bswap_32(unsigned int v)
 }
 #endif /* __APPLE__ */
 
-#ifdef CONFIG_TI_COMPILER
-#define __BIG_ENDIAN 4321
-#define __LITTLE_ENDIAN 1234
-#ifdef __big_endian__
-#define __BYTE_ORDER __BIG_ENDIAN
-#else
-#define __BYTE_ORDER __LITTLE_ENDIAN
-#endif
-#endif /* CONFIG_TI_COMPILER */
-
 #ifdef CONFIG_NATIVE_WINDOWS
 #include <winsock.h>
 
@@ -109,22 +99,6 @@ typedef INT16 s16;
 typedef INT8 s8;
 #define WPA_TYPES_DEFINED
 #endif /* __vxworks */
-
-#ifdef CONFIG_TI_COMPILER
-#ifdef _LLONG_AVAILABLE
-typedef unsigned long long u64;
-#else
-/*
- * TODO: 64-bit variable not available. Using long as a workaround to test the
- * build, but this will likely not work for all operations.
- */
-typedef unsigned long u64;
-#endif
-typedef unsigned int u32;
-typedef unsigned short u16;
-typedef unsigned char u8;
-#define WPA_TYPES_DEFINED
-#endif /* CONFIG_TI_COMPILER */
 
 #ifndef WPA_TYPES_DEFINED
 #ifdef CONFIG_USE_INTTYPES_H

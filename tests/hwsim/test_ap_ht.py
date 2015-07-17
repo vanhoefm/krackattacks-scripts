@@ -17,7 +17,7 @@ from test_ap_csa import csa_supported
 
 def clear_scan_cache(ifname):
     subprocess.call(['ifconfig', ifname, 'up'])
-    subprocess.call(['iw', ifname, 'scan', 'freq', '2412', 'flush'])
+    subprocess.call(['iw', ifname, 'scan', 'trigger', 'freq', '2412', 'flush'])
     time.sleep(0.1)
     subprocess.call(['ifconfig', ifname, 'down'])
 
@@ -144,7 +144,9 @@ def test_ap_ht40_scan_not_affected(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     subprocess.call(['ifconfig', apdev[0]['ifname'], 'up'])
-    subprocess.call(['iw', apdev[0]['ifname'], 'scan', 'freq', '2462'],
+    subprocess.call(['iw', apdev[0]['ifname'], 'scan', 'trigger', 'freq', '2462'])
+    time.sleep(0.5)
+    subprocess.call(['iw', apdev[0]['ifname'], 'scan', 'dump'],
                     stdout=open('/dev/null', 'w'))
     time.sleep(0.1)
     subprocess.call(['ifconfig', apdev[0]['ifname'], 'down'])

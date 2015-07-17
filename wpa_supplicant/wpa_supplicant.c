@@ -3755,6 +3755,7 @@ static void wpas_fst_set_ies_cb(void *ctx, struct wpabuf *fst_ies)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
+	wpa_hexdump_buf(MSG_DEBUG, "FST: Set IEs", fst_ies);
 	wpa_s->fst_ies = fst_ies;
 }
 

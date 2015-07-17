@@ -22,7 +22,7 @@ lockdep_messages = [
   'suspicious RCU usage',
 ]
 lockdep = r'(\[\s*)?INFO: (%s)' % ('|'.join(lockdep_messages), )
-issue = re.compile('(\[[0-9 .]*\] )?(WARNING:|BUG:|%s).*' % lockdep)
+issue = re.compile('(\[[0-9 .]*\] )?(WARNING:|BUG:|%s|RTNL: assertion failed).*' % lockdep)
 
 def check_kernel(logfile):
     for line in open(logfile, 'r'):

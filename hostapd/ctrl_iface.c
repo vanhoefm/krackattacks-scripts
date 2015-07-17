@@ -2571,6 +2571,7 @@ hostapd_global_ctrl_iface_fst_detach(struct hapd_interfaces *interfaces,
 		if (hapd) {
 			if (!fst_iface_detach(ifname)) {
 				hapd->iface->fst = NULL;
+				hapd->iface->fst_ies = NULL;
 				return 0;
 			}
 		}

@@ -45,9 +45,6 @@ fst_hw_mode_to_band(enum hostapd_hw_mode mode)
 	}
 }
 
-#define IE_HEADER_SIZE               ((u8) (2 * sizeof(u8)))
-#define IE_BUFFER_LENGTH(ie_len_val) ((size_t) ((ie_len_val) + IE_HEADER_SIZE))
-
 struct fst_ctrl_handle {
 	struct fst_ctrl ctrl;
 	struct dl_list global_ctrls_lentry;

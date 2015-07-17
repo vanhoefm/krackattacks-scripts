@@ -41,11 +41,11 @@ static void fst_dump_mb_ies(const char *group_id, const char *ifname,
 	const u8 *p = wpabuf_head(mbies);
 	size_t s = wpabuf_len(mbies);
 
-	while (s >= offsetof(struct multi_band_ie, mb_ctrl)) {
+	while (s >= 2) {
 		const struct multi_band_ie *mbie =
 			(const struct multi_band_ie *) p;
 		WPA_ASSERT(mbie->eid == WLAN_EID_MULTI_BAND);
-		WPA_ASSERT(IE_BUFFER_LENGTH(mbie->len) >= sizeof(*mbie));
+		WPA_ASSERT(2 + mbie->len >= sizeof(*mbie));
 
 		fst_printf(MSG_WARNING,
 			   "%s: %s: mb_ctrl=%u band_id=%u op_class=%u chan=%u bssid="
@@ -61,8 +61,8 @@ static void fst_dump_mb_ies(const char *group_id, const char *ifname,
 			   mbie->mb_connection_capability,
 			   mbie->fst_session_tmout);
 
-		p += IE_BUFFER_LENGTH(mbie->len);
-		s -= IE_BUFFER_LENGTH(mbie->len);
+		p += 2 + mbie->len;
+		s -= 2 + mbie->len;
 	}
 }
 
@@ -81,7 +81,7 @@ static void fst_fill_mb_ie(struct wpabuf *buf, const u8 *bssid,
 	os_memset(mbie, 0, len);
 
 	mbie->eid = WLAN_EID_MULTI_BAND;
-	mbie->len = len - IE_HEADER_SIZE;
+	mbie->len = len - 2;
 #ifdef HOSTAPD
 	mbie->mb_ctrl = MB_STA_ROLE_AP;
 	mbie->mb_connection_capability = MB_CONNECTION_CAPABILITY_AP;
@@ -211,7 +211,7 @@ static const u8 * fst_mbie_get_peer_addr(const struct multi_band_ie *mbie)
 		break;
 	case MB_STA_ROLE_NON_PCP_NON_AP:
 		if (mbie->mb_ctrl & MB_CTRL_STA_MAC_PRESENT &&
-		    IE_BUFFER_LENGTH(mbie->len) >= sizeof(*mbie) + ETH_ALEN)
+		    (size_t) 2 + mbie->len >= sizeof(*mbie) + ETH_ALEN)
 			peer_addr = (const u8 *) &mbie[1];
 		break;
 	default:
@@ -229,12 +229,12 @@ fst_group_get_new_iface_by_mbie_and_band_id(struct fst_group *g,
 					    u8 band_id,
 					    u8 *iface_peer_addr)
 {
-	while (mb_ies_size >= offsetof(struct multi_band_ie, mb_ctrl)) {
+	while (mb_ies_size >= 2) {
 		const struct multi_band_ie *mbie =
 			(const struct multi_band_ie *) mb_ies_buff;
 
 		if (mbie->eid != WLAN_EID_MULTI_BAND ||
-		    IE_BUFFER_LENGTH(mbie->len) < sizeof(*mbie))
+		    (size_t) 2 + mbie->len < sizeof(*mbie))
 			break;
 
 		if (mbie->band_id == band_id) {
@@ -255,8 +255,8 @@ fst_group_get_new_iface_by_mbie_and_band_id(struct fst_group *g,
 			break;
 		}
 
-		mb_ies_buff += IE_BUFFER_LENGTH(mbie->len);
-		mb_ies_size -= IE_BUFFER_LENGTH(mbie->len);
+		mb_ies_buff += 2 + mbie->len;
+		mb_ies_size -= 2 + mbie->len;
 	}
 
 	return NULL;

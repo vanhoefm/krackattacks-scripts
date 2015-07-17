@@ -359,8 +359,7 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 					     size_t frame_len)
 {
 	struct fst_session *s;
-	const struct fst_setup_req *req =
-		(const struct fst_setup_req *) &mgmt->u.action.u.fst_action;
+	const struct fst_setup_req *req;
 	struct fst_iface *new_iface = NULL;
 	struct fst_group *g;
 	u8 new_iface_peer_addr[ETH_ALEN];
@@ -375,6 +374,8 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 		return;
 	}
 	plen = frame_len - IEEE80211_HDRLEN - 1;
+	req = (const struct fst_setup_req *)
+		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
 
 	if (req->stie.new_band_id == req->stie.old_band_id) {
 		fst_printf_iface(iface, MSG_WARNING,
@@ -509,8 +510,7 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 					      const struct ieee80211_mgmt *mgmt,
 					      size_t frame_len)
 {
-	const struct fst_setup_res *res =
-		(const struct fst_setup_res *) &mgmt->u.action.u.fst_action;
+	const struct fst_setup_res *res;
 	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	enum hostapd_hw_mode hw_mode;
 	u8 channel;
@@ -537,6 +537,8 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 				   "Too short FST Response dropped");
 		return;
 	}
+	res = (const struct fst_setup_res *)
+		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
 
 	if (res->dialog_token != s->data.pending_setup_req_dlgt)  {
 		fst_printf_session(s, MSG_WARNING,
@@ -604,8 +606,7 @@ static void fst_session_handle_tear_down(struct fst_session *s,
 					 const struct ieee80211_mgmt *mgmt,
 					 size_t frame_len)
 {
-	const struct fst_tear_down *td =
-		(const struct fst_tear_down *) &mgmt->u.action.u.fst_action;
+	const struct fst_tear_down *td;
 	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	union fst_session_state_switch_extra evext = {
 		.to_initial = {
@@ -624,6 +625,8 @@ static void fst_session_handle_tear_down(struct fst_session *s,
 				   "Too short FST Tear Down dropped");
 		return;
 	}
+	td = (const struct fst_tear_down *)
+		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
 
 	if (le_to_host32(td->fsts_id) != s->data.fsts_id) {
 		fst_printf_siface(s, iface, MSG_WARNING,
@@ -643,8 +646,7 @@ static void fst_session_handle_ack_request(struct fst_session *s,
 					   const struct ieee80211_mgmt *mgmt,
 					   size_t frame_len)
 {
-	const struct fst_ack_req *req =
-		(const struct fst_ack_req *) &mgmt->u.action.u.fst_action;
+	const struct fst_ack_req *req;
 	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	struct fst_ack_res res;
 	union fst_session_state_switch_extra evext = {
@@ -674,6 +676,8 @@ static void fst_session_handle_ack_request(struct fst_session *s,
 				   "Too short FST Ack Request dropped");
 		return;
 	}
+	req = (const struct fst_ack_req *)
+		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
 
 	if (le_to_host32(req->fsts_id) != s->data.fsts_id) {
 		fst_printf_siface(s, iface, MSG_WARNING,
@@ -706,8 +710,7 @@ fst_session_handle_ack_response(struct fst_session *s,
 				const struct ieee80211_mgmt *mgmt,
 				size_t frame_len)
 {
-	const struct fst_ack_res *res =
-		(const struct fst_ack_res *) &mgmt->u.action.u.fst_action;
+	const struct fst_ack_res *res;
 	size_t plen = frame_len - IEEE80211_HDRLEN - 1;
 	union fst_session_state_switch_extra evext = {
 		.to_initial = {
@@ -736,6 +739,8 @@ fst_session_handle_ack_response(struct fst_session *s,
 				   "Too short FST Ack Response dropped");
 		return;
 	}
+	res = (const struct fst_ack_res *)
+		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
 
 	if (le_to_host32(res->fsts_id) != s->data.fsts_id) {
 		fst_printf_siface(s, iface, MSG_ERROR,

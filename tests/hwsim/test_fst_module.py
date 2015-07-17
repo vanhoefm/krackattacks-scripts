@@ -1943,3 +1943,40 @@ def test_fst_ap_config_oom(dev, apdev, test_params):
         # This is allowed to complete currently
 
     ap1.stop()
+
+def test_fst_send_oom(dev, apdev, test_params):
+    """FST send action OOM"""
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    try:
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        hapd = ap1.get_instance()
+        sta = sta1.get_instance()
+        dst = sta.own_addr()
+        src = apdev[0]['bssid']
+
+        # Create session
+        initiator = ap1
+        responder = sta1
+        new_iface = ap2.ifname()
+        new_peer_addr = ap2.get_actual_peer_addr()
+        resp_newif = sta2.ifname()
+        peeraddr = None
+        initiator.add_peer(responder, peeraddr, new_peer_addr)
+        sid = initiator.add_session()
+        initiator.configure_session(sid, new_iface)
+        with alloc_fail(hapd, 1, "fst_session_send_action"):
+            res = initiator.grequest("FST-MANAGER SESSION_INITIATE " + sid)
+            if not res.startswith("FAIL"):
+                raise Exception("Unexpected SESSION_INITIATE result")
+
+        res = initiator.grequest("FST-MANAGER SESSION_INITIATE " + sid)
+        if not res.startswith("OK"):
+            raise Exception("SESSION_INITIATE failed")
+
+        with alloc_fail(hapd, 1, "fst_session_send_action"):
+            res = initiator.grequest("FST-MANAGER SESSION_TEARDOWN " + sid)
+            if not res.startswith("FAIL"):
+                raise Exception("Unexpected SESSION_TEARDOWN result")
+    finally:
+        fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)

@@ -1359,6 +1359,9 @@ int fst_test_req_send_fst_request(const char *params)
 	u8 channel;
 	char additional_param[FST_MAX_COMMAND_WORD_NAME_LENGTH];
 
+	if (params[0] != ' ')
+		return -EINVAL;
+	params++;
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return -EINVAL;
@@ -1410,6 +1413,9 @@ int fst_test_req_send_fst_response(const char *params)
 	char response[FST_MAX_COMMAND_WORD_NAME_LENGTH];
 	struct fst_session *_s;
 
+	if (params[0] != ' ')
+		return -EINVAL;
+	params++;
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return -EINVAL;
@@ -1476,6 +1482,9 @@ int fst_test_req_send_ack_request(const char *params)
 	struct fst_session s;
 	struct fst_group *g;
 
+	if (params[0] != ' ')
+		return -EINVAL;
+	params++;
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return -EINVAL;
@@ -1501,6 +1510,9 @@ int fst_test_req_send_ack_response(const char *params)
 	struct fst_session s;
 	struct fst_group *g;
 
+	if (params[0] != ' ')
+		return -EINVAL;
+	params++;
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return -EINVAL;
@@ -1526,6 +1538,9 @@ int fst_test_req_send_tear_down(const char *params)
 	struct fst_session s;
 	struct fst_group *g;
 
+	if (params[0] != ' ')
+		return -EINVAL;
+	params++;
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return -EINVAL;
@@ -1548,6 +1563,9 @@ u32 fst_test_req_get_fsts_id(const char *params)
 	char *endp;
 	struct fst_session *s;
 
+	if (params[0] != ' ')
+		return FST_FSTS_ID_NOT_FOUND;
+	params++;
 	sid = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
 		return FST_FSTS_ID_NOT_FOUND;
@@ -1567,6 +1585,9 @@ int fst_test_req_get_local_mbies(const char *request, char *buf, size_t buflen)
 	struct fst_group *g;
 	struct fst_iface *iface;
 
+	if (request[0] != ' ')
+		return -EINVAL;
+	request++;
 	if (fst_read_next_text_param(request, ifname, sizeof(ifname), &endp) ||
 	    !*ifname)
 		goto problem;

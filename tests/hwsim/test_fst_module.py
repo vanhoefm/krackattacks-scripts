@@ -2008,3 +2008,10 @@ def test_fst_session_oom(dev, apdev, test_params):
     finally:
         fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+
+def test_fst_attach_zero_llt(dev, apdev):
+    """FST attach with llt=0"""
+    sta1 = fst_module_aux.FstSTA('wlan5', fst_test_common.fst_test_def_group,
+                                 "100", "0")
+    sta1.start()
+    sta1.stop()

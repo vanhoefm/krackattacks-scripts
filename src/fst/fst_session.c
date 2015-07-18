@@ -615,11 +615,6 @@ static void fst_session_handle_tear_down(struct fst_session *s,
 		},
 	};
 
-	if (!fst_session_is_in_progress(s)) {
-		fst_printf_session(s, MSG_WARNING, "no FST Setup to tear down");
-		return;
-	}
-
 	if (plen < sizeof(*td)) {
 		fst_printf_session(s, MSG_WARNING,
 				   "Too short FST Tear Down dropped");

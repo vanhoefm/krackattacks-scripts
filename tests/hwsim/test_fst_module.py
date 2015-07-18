@@ -1792,6 +1792,14 @@ FST_ACTION_ACK_REQUEST = 3
 FST_ACTION_ACK_RESPONSE = 4
 FST_ACTION_ON_CHANNEL_TUNNEL = 5
 
+def hostapd_tx_and_status(hapd, msg):
+    hapd.set("ext_mgmt_frame_handling", "1")
+    hapd.mgmt_tx(msg)
+    ev = hapd.wait_event([ "MGMT-TX-STATUS" ], timeout=1)
+    if ev is None or "ok=1" not in ev:
+        raise Exception("No ACK")
+    hapd.set("ext_mgmt_frame_handling", "0")
+
 def test_fst_proto(dev, apdev, test_params):
     """FST protocol testing"""
     ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
@@ -1810,21 +1818,18 @@ def test_fst_proto(dev, apdev, test_params):
 
         # unknown FST Action (255) received!
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST, 255)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # FST Request dropped: too short
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # FST Request dropped: new and old band IDs are the same
         msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST, 0, 0,
                                      164, 11, 0, 0, 0, 0, 0, 0, 0, 0)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         ifaces = sta1.list_ifaces()
         id = int(ifaces[0]['name'].split('|')[1])
@@ -1832,13 +1837,12 @@ def test_fst_proto(dev, apdev, test_params):
         msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST, 0, 0,
                                      164, 11, 0, 0, id + 1, 0, 0, 0, 0, 0)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # FST Action 'Setup Response' dropped: no session in progress found
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_RESPONSE)
-        hapd.mgmt_tx(msg)
+        hostapd_tx_and_status(hapd, msg)
 
         # Create session
         initiator = ap1
@@ -1855,46 +1859,39 @@ def test_fst_proto(dev, apdev, test_params):
         # FST Response dropped due to wrong state: SETUP_COMPLETION
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_RESPONSE)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # Too short FST Tear Down dropped
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_TEAR_DOWN)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # tear down for wrong FST Setup ID (0)
         msg['payload'] = struct.pack("<BBL", ACTION_CATEG_FST,
                                      FST_ACTION_TEAR_DOWN, 0)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # Ack received on wrong interface
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_ACK_REQUEST)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # Ack Response in inappropriate session state (SETUP_COMPLETION)
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_ACK_RESPONSE)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # Unsupported FST Action frame (On channel tunnel)
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_ON_CHANNEL_TUNNEL)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         # FST Request dropped: new iface not found (new_band_id match)
         # FST Request dropped due to MAC comparison
         msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST, 0, 0,
                                      164, 11, 0, 0, id, 0, 0, 0, 0, 0)
-        hapd.mgmt_tx(msg)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd, msg)
 
         hapd2 = ap2.get_instance()
         dst2 = sta2.get_instance().own_addr()
@@ -1908,8 +1905,7 @@ def test_fst_proto(dev, apdev, test_params):
         # FST Response dropped: wlan6 is not the old iface
         msg2['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                       FST_ACTION_SETUP_RESPONSE)
-        hapd2.mgmt_tx(msg2)
-        time.sleep(0.1)
+        hostapd_tx_and_status(hapd2, msg2)
 
         sta.dump_monitor()
 
@@ -1924,7 +1920,7 @@ def test_fst_proto(dev, apdev, test_params):
         msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST, 0, 0,
                                      164, 11, 0, 0, id, 0, 0, 0, 0, 0)
-        hapd.mgmt_tx(msg)
+        hostapd_tx_and_status(hapd, msg)
     finally:
         fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         try:

@@ -2030,3 +2030,28 @@ def test_fst_attach_zero_llt(dev, apdev):
                                  "100", "0")
     sta1.start()
     sta1.stop()
+
+def test_fst_session_respond_fail(dev, apdev, test_params):
+    """FST-MANAGER SESSION_RESPOND failure"""
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    try:
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        sta1.add_peer(ap1, None, sta2.get_actual_peer_addr())
+        sid = sta1.add_session()
+        sta1.configure_session(sid, sta2.ifname())
+        sta1.send_session_setup_request(sid)
+        sta1.wait_for_session_event(5, [], ["EVENT_FST_SESSION_STATE"])
+        ev = ap1.wait_for_session_event(5, [], ['EVENT_FST_SETUP'])
+        if not 'id' in ev:
+            raise Exception("No session id in FST setup event")
+        # Disconnect STA to make SESSION_RESPOND fail due to no peer found
+        sta = sta1.get_instance()
+        sta.request("DISCONNECT")
+        sta.wait_disconnected()
+        req = "FST-MANAGER SESSION_RESPOND %s reject" % ev['id']
+        s = ap1.grequest(req)
+        if not s.startswith("FAIL"):
+            raise Exception("SESSION_RESPOND succeeded unexpectedly")
+    finally:
+        fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)

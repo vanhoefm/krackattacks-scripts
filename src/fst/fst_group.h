@@ -36,8 +36,6 @@ static inline Boolean fst_group_has_ifaces(struct fst_group *g)
 
 static inline struct fst_iface * fst_group_first_iface(struct fst_group *g)
 {
-	if (dl_list_empty(&g->ifaces))
-		return NULL;
 	return dl_list_first(&g->ifaces, struct fst_iface, group_lentry);
 }
 
@@ -70,10 +68,8 @@ extern struct dl_list fst_global_groups_list;
 
 static inline struct fst_group * fst_first_group(void)
 {
-	if (dl_list_empty(&fst_global_groups_list))
-		return NULL;
 	return dl_list_first(&fst_global_groups_list, struct fst_group,
-		global_groups_lentry);
+			     global_groups_lentry);
 }
 
 #endif /* FST_GROUP_H */

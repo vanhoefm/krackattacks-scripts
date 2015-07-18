@@ -134,17 +134,15 @@ int fst_global_init(void)
 void fst_global_deinit(void)
 {
 	struct fst_group *group;
+	struct fst_ctrl_handle *h;
 
 	fst_session_global_deinit();
 	while ((group = fst_first_group()) != NULL)
 		fst_group_delete(group);
-	while (!dl_list_empty(&fst_global_ctrls_list)) {
-		struct fst_ctrl_handle *h;
-
-		h = dl_list_first(&fst_global_ctrls_list,
-				  struct fst_ctrl_handle, global_ctrls_lentry);
+	while ((h = dl_list_first(&fst_global_ctrls_list,
+				  struct fst_ctrl_handle,
+				  global_ctrls_lentry)))
 		fst_global_del_ctrl(h);
-	}
 }
 
 

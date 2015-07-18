@@ -1938,6 +1938,11 @@ def test_fst_ap_config_oom(dev, apdev, test_params):
         if not res.startswith("FAIL"):
             raise Exception("FST-ATTACH succeeded unexpectedly")
 
+    with alloc_fail(hapd, 1, "fst_iface_create"):
+        res = ap1.grequest("FST-ATTACH %s %s" % (ap1.iface, ap1.fst_group))
+        if not res.startswith("FAIL"):
+            raise Exception("FST-ATTACH succeeded unexpectedly")
+
     with alloc_fail(hapd, 1, "fst_group_create_mb_ie"):
         res = ap1.grequest("FST-ATTACH %s %s" % (ap1.iface, ap1.fst_group))
         # This is allowed to complete currently

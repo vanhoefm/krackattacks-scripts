@@ -1928,6 +1928,67 @@ def test_fst_proto(dev, apdev, test_params):
         except:
             pass
 
+def test_fst_setup_response_proto(dev, apdev, test_params):
+    """FST protocol testing for Setup Response"""
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    try:
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        hapd = ap1.get_instance()
+        sta = sta1.get_instance()
+        dst = sta.own_addr()
+        src = apdev[0]['bssid']
+
+        sta1.add_peer(ap1, None, sta2.get_actual_peer_addr())
+        sta1.set_fst_parameters(llt='0')
+        sid = sta1.add_session()
+        sta1.configure_session(sid, sta2.ifname())
+        sta1.initiate_session(sid, "")
+
+        msg = {}
+        msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+        msg['da'] = dst
+        msg['sa'] = src
+        msg['bssid'] = src
+
+        # Too short FST Response dropped
+        msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Response dropped due to wrong dialog token
+        dialog_token = 123
+        status_code = 0
+        id = 0
+        msg['payload'] = struct.pack("<BBBBBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE, dialog_token,
+                                     status_code,
+                                     164, 11, 0, 0, id, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Response dropped due to wrong FST Session ID
+        dialog_token = 1
+        status_code = 0
+        id = 1
+        msg['payload'] = struct.pack("<BBBBBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE, dialog_token,
+                                     status_code,
+                                     164, 11, int(sid) + 123456,
+                                     0, id, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Response with non-zero status code
+        dialog_token = 1
+        status_code = 1
+        id = 1
+        msg['payload'] = struct.pack("<BBBBBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE, dialog_token,
+                                     status_code,
+                                     164, 11, int(sid), 0, id, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+    finally:
+        fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+
 def test_fst_ap_config_oom(dev, apdev, test_params):
     """FST AP configuration and OOM"""
     ap1 = fst_module_aux.FstAP(apdev[0]['ifname'], 'fst_11a', 'a',

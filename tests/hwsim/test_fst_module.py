@@ -1100,7 +1100,7 @@ def test_fst_dynamic_iface_attach(dev, apdev, test_params):
     ap2.start()
 
     sta1 = fst_module_aux.FstSTA('wlan5',
-                                 fst_module_aux.fst_test_common.fst_test_def_group,
+                                 fst_test_common.fst_test_def_group,
                                  fst_test_common.fst_test_def_prio_low,
                                  fst_test_common.fst_test_def_llt)
     sta1.start()
@@ -1111,13 +1111,13 @@ def test_fst_dynamic_iface_attach(dev, apdev, test_params):
         orig_sta2_mbies = sta2.get_local_mbies()
         orig_ap2_mbies = ap2.get_local_mbies()
         sta2.send_iface_attach_request(sta2.ifname(),
-                                       fst_module_aux.fst_test_common.fst_test_def_group,
+                                       fst_test_common.fst_test_def_group,
                                        '52', '27')
         event = sta2.wait_for_iface_event(5)
         if event['event_type'] != 'attached':
             raise Exception("Failure. Iface was not properly attached")
         ap2.send_iface_attach_request(ap2.ifname(),
-                                      fst_module_aux.fst_test_common.fst_test_def_group,
+                                      fst_test_common.fst_test_def_group,
                                       '102', '77')
         event = ap2.wait_for_iface_event(5)
         if event['event_type'] != 'attached':

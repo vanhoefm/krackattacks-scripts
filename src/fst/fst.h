@@ -89,7 +89,7 @@ struct fst_wpa_obj {
 	 * @addr: Address of the STA
 	 * Returns: MB IE buffer, %NULL if no MB IE received from the STA
 	 */
-	struct wpabuf * (*get_mb_ie)(void *ctx, const u8 *addr);
+	const struct wpabuf * (*get_mb_ie)(void *ctx, const u8 *addr);
 
 	/**
 	 * update_mb_ie - Update last MB IE received from STA

@@ -3772,7 +3772,7 @@ static int wpas_fst_send_action_cb(void *ctx, const u8 *da, struct wpabuf *data)
 }
 
 
-static struct wpabuf * wpas_fst_get_mb_ie_cb(void *ctx, const u8 *addr)
+static const struct wpabuf * wpas_fst_get_mb_ie_cb(void *ctx, const u8 *addr)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 

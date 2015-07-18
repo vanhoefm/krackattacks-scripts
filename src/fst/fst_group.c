@@ -314,21 +314,22 @@ fst_group_does_iface_appear_in_other_mbies(struct fst_group *g,
 
 	addr = fst_iface_get_peer_first(other, &ctx, TRUE);
 	for (; addr; addr = fst_iface_get_peer_next(other, &ctx, TRUE)) {
-		struct wpabuf *mbies = fst_iface_get_peer_mb_ie(other, addr);
+		const struct wpabuf *mbies;
+		u8 other_iface_peer_addr[ETH_ALEN];
+		struct fst_iface *other_new_iface;
 
-		if (mbies) {
-			u8 other_iface_peer_addr[ETH_ALEN];
-			struct fst_iface *other_new_iface =
-				fst_group_get_new_iface_by_mbie_and_band_id(
-					g,
-					wpabuf_head(mbies), wpabuf_len(mbies),
-					iface_band_id, other_iface_peer_addr);
-			if (other_new_iface == iface &&
-			    os_memcmp(iface_addr, other_iface_peer_addr,
-				      ETH_ALEN)) {
-				os_memcpy(peer_addr, addr, ETH_ALEN);
-				return TRUE;
-			}
+		mbies = fst_iface_get_peer_mb_ie(other, addr);
+		if (!mbies)
+			continue;
+
+		other_new_iface = fst_group_get_new_iface_by_mbie_and_band_id(
+			g, wpabuf_head(mbies), wpabuf_len(mbies),
+			iface_band_id, other_iface_peer_addr);
+		if (other_new_iface == iface &&
+		    os_memcmp(iface_addr, other_iface_peer_addr,
+			      ETH_ALEN) != 0) {
+			os_memcpy(peer_addr, addr, ETH_ALEN);
+			return TRUE;
 		}
 	}
 

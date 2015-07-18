@@ -1407,7 +1407,7 @@ static int fst_hostapd_send_action_cb(void *ctx, const u8 *da,
 }
 
 
-static struct wpabuf * fst_hostapd_get_mb_ie_cb(void *ctx, const u8 *addr)
+static const struct wpabuf * fst_hostapd_get_mb_ie_cb(void *ctx, const u8 *addr)
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = ap_get_sta(hapd, addr);

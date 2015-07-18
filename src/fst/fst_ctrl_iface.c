@@ -560,7 +560,7 @@ static int get_peer_mbies(const char *params, char *buf, size_t buflen)
 	u8 peer_addr[ETH_ALEN];
 	struct fst_group *g;
 	struct fst_iface *iface = NULL;
-	struct wpabuf *mbies;
+	const struct wpabuf *mbies;
 
 	if (fst_read_next_text_param(params, ifname, sizeof(ifname), &endp) ||
 	    !*ifname)
@@ -659,7 +659,7 @@ static const char * band_freq(enum mb_band_id band)
 static int print_band(unsigned num, struct fst_iface *iface, const u8 *addr,
 		      char *buf, size_t buflen)
 {
-	struct wpabuf *wpabuf;
+	const struct wpabuf *wpabuf;
 	enum hostapd_hw_mode hw_mode;
 	u8 channel;
 	int ret = 0;

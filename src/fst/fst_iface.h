@@ -96,8 +96,8 @@ static inline int fst_iface_send_action(struct fst_iface *i,
 	return i->iface_obj.send_action(i->iface_obj.ctx, addr, data);
 }
 
-static inline struct wpabuf * fst_iface_get_peer_mb_ie(struct fst_iface *i,
-						       const u8 *addr)
+static inline const struct wpabuf *
+fst_iface_get_peer_mb_ie(struct fst_iface *i, const u8 *addr)
 {
 	return i->iface_obj.get_mb_ie(i->iface_obj.ctx, addr);
 }

@@ -363,7 +363,7 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 	struct fst_iface *new_iface = NULL;
 	struct fst_group *g;
 	u8 new_iface_peer_addr[ETH_ALEN];
-	struct wpabuf *peer_mbies;
+	const struct wpabuf *peer_mbies;
 	size_t plen;
 
 	if (frame_len < IEEE80211_HDRLEN + 1 + sizeof(*req))  {

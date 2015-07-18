@@ -1989,6 +1989,73 @@ def test_fst_setup_response_proto(dev, apdev, test_params):
         fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
 
+def test_fst_ack_response_proto(dev, apdev, test_params):
+    """FST protocol testing for Ack Response"""
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    try:
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        hapd = ap2.get_instance()
+        sta = sta2.get_instance()
+        dst = sta.own_addr()
+        src = apdev[1]['bssid']
+
+        sta1.add_peer(ap1, None, sta2.get_actual_peer_addr())
+        sta1.set_fst_parameters(llt='0')
+        sid = sta1.add_session()
+        sta1.configure_session(sid, sta2.ifname())
+
+        s = sta1.grequest("FST-MANAGER SESSION_INITIATE "+ sid)
+        if not s.startswith('OK'):
+            raise Exception("Cannot initiate fst session: %s" % s)
+        ev = sta1.peer_obj.wait_gevent([ "FST-EVENT-SESSION" ], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION received")
+        event = fst_module_aux.parse_fst_session_event(ev)
+        if event == None:
+            raise Exception("Unrecognized FST event: " % ev)
+        if event['type'] != 'EVENT_FST_SETUP':
+            raise Exception("Expected FST_SETUP event, got: " + event['type'])
+        ev = sta1.peer_obj.wait_gevent(["FST-EVENT-SESSION"], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION received")
+        event = fst_module_aux.parse_fst_session_event(ev)
+        if event == None:
+            raise Exception("Unrecognized FST event: " % ev)
+        if event['type'] != 'EVENT_FST_SESSION_STATE':
+            raise Exception("Expected EVENT_FST_SESSION_STATE event, got: " + event['type'])
+        if event['new_state'] != "SETUP_COMPLETION":
+            raise Exception("Expected new state SETUP_COMPLETION, got: " + event['new_state'])
+
+        hapd.set("ext_mgmt_frame_handling", "1")
+        s = sta1.peer_obj.grequest("FST-MANAGER SESSION_RESPOND "+ event['id'] + " accept")
+        if not s.startswith('OK'):
+            raise Exception("Error session_respond: %s" % s)
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("No Ack Request seen")
+        msg = {}
+        msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+        msg['da'] = dst
+        msg['sa'] = src
+        msg['bssid'] = src
+
+        # Too short FST Ack Response dropped
+        msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
+                                     FST_ACTION_ACK_RESPONSE)
+        hapd.mgmt_tx(msg)
+        ev = hapd.wait_event([ "MGMT-TX-STATUS" ], timeout=1)
+        if ev is None or "ok=1" not in ev:
+            raise Exception("No ACK")
+
+        # Ack Response for wrong FSt Setup ID
+        msg['payload'] = struct.pack("<BBBL", ACTION_CATEG_FST,
+                                     FST_ACTION_ACK_RESPONSE,
+                                     0, int(sid) + 123456)
+        hostapd_tx_and_status(hapd, msg)
+    finally:
+        fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+
 def test_fst_ap_config_oom(dev, apdev, test_params):
     """FST AP configuration and OOM"""
     ap1 = fst_module_aux.FstAP(apdev[0]['ifname'], 'fst_11a', 'a',

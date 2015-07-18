@@ -406,7 +406,7 @@ class FstDevice:
     def get_fsts_id_by_sid(self, sid):
         s = self.grequest("FST-MANAGER TEST_REQUEST GET_FSTS_ID " + sid)
         if s == ' ' or s.startswith('FAIL'):
-            raise Exception("Cannot get fsts_id for sid == " % sid)
+            raise Exception("Cannot get fsts_id for sid == %s" % sid)
         return int(s)
 
     def wait_for_iface_event(self, timeout):

@@ -1479,6 +1479,12 @@ def test_fst_ap_ctrl_iface(dev, apdev, test_params):
         except Exception, e:
             if not str(e).startswith("Cannot attach"):
                 raise
+
+        try:
+            ap1.get_fsts_id_by_sid("123")
+        except Exception, e:
+            if not str(e).startswith("Cannot get fsts_id for sid"):
+                raise
     finally:
         fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)

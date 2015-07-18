@@ -32,16 +32,13 @@ static struct fst_group * get_fst_group_by_id(const char *id)
 
 
 /* notifications */
-Boolean format_session_state_extra(const union fst_event_extra *extra,
-				   char *buffer, int size)
+static Boolean format_session_state_extra(const union fst_event_extra *extra,
+					  char *buffer, size_t size)
 {
 	int len;
 	char reject_str[32] = FST_CTRL_PVAL_NONE;
 	const char *initiator = FST_CTRL_PVAL_NONE;
 	const struct fst_event_extra_session_state *ss;
-
-	if (!extra)
-		return TRUE;
 
 	ss = &extra->session_state;
 	if (ss->new_state != FST_SESSION_STATE_INITIAL)

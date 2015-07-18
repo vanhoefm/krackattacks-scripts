@@ -550,7 +550,7 @@ static int read_milenage(const char *fname)
 static void update_milenage_file(const char *fname)
 {
 	FILE *f, *f2;
-	char buf[500], *pos;
+	char name[500], buf[500], *pos;
 	char *end = buf + sizeof(buf);
 	struct milenage_parameters *m;
 	size_t imsi_len;
@@ -561,10 +561,10 @@ static void update_milenage_file(const char *fname)
 		return;
 	}
 
-	snprintf(buf, sizeof(buf), "%s.new", fname);
-	f2 = fopen(buf, "w");
+	snprintf(name, sizeof(name), "%s.new", fname);
+	f2 = fopen(name, "w");
 	if (f2 == NULL) {
-		printf("Could not write Milenage data file '%s'\n", buf);
+		printf("Could not write Milenage data file '%s'\n", name);
 		fclose(f);
 		return;
 	}
@@ -606,14 +606,14 @@ static void update_milenage_file(const char *fname)
 	fclose(f2);
 	fclose(f);
 
-	snprintf(buf, sizeof(buf), "%s.bak", fname);
-	if (rename(fname, buf) < 0) {
+	snprintf(name, sizeof(name), "%s.bak", fname);
+	if (rename(fname, name) < 0) {
 		perror("rename");
 		return;
 	}
 
-	snprintf(buf, sizeof(buf), "%s.new", fname);
-	if (rename(buf, fname) < 0) {
+	snprintf(name, sizeof(name), "%s.new", fname);
+	if (rename(name, fname) < 0) {
 		perror("rename");
 		return;
 	}

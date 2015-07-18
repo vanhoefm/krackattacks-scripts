@@ -2010,6 +2010,10 @@ def test_fst_session_oom(dev, apdev, test_params):
         resp_newif = sta2.ifname()
         peeraddr = None
         initiator.add_peer(responder, peeraddr, new_peer_addr)
+        with alloc_fail(hapd, 1, "fst_session_create"):
+            sid = initiator.grequest("FST-MANAGER SESSION_ADD " + initiator.fst_group)
+            if not sid.startswith("FAIL"):
+                raise Exception("Unexpected SESSION_ADD success")
         sid = initiator.add_session()
         initiator.configure_session(sid, new_iface)
         with alloc_fail(sta, 1, "fst_session_create"):

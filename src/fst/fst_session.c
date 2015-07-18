@@ -1571,7 +1571,6 @@ int fst_test_req_get_local_mbies(const char *request, char *buf, size_t buflen)
 	char ifname[FST_MAX_COMMAND_WORD_NAME_LENGTH];
 	struct fst_group *g;
 	struct fst_iface *iface;
-	int ret;
 
 	if (fst_read_next_text_param(request, ifname, sizeof(ifname), &endp) ||
 	    !*ifname)
@@ -1583,10 +1582,8 @@ int fst_test_req_get_local_mbies(const char *request, char *buf, size_t buflen)
 	iface = fst_group_get_iface_by_name(g, ifname);
 	if (!iface || !iface->mb_ie)
 		goto problem;
-	ret = print_mb_ies(iface->mb_ie, buf, buflen);
-	if ((size_t) ret != wpabuf_len(iface->mb_ie) * 2)
-		fst_printf(MSG_WARNING, "MB IEs copied only partially");
-	return ret;
+	return wpa_snprintf_hex(buf, buflen, wpabuf_head(iface->mb_ie),
+				wpabuf_len(iface->mb_ie));
 
 problem:
 	return os_snprintf(buf, buflen, "FAIL\n");

@@ -30,9 +30,6 @@ fst_ctrl_iface_mb_info(const u8 *addr, char *buf, size_t buflen)
 
 #endif /* CONFIG_FST */
 
-
-int print_mb_ies(struct wpabuf *mbies, char *buf, size_t buflen);
-
 int fst_read_next_int_param(const char *params, Boolean *valid, char **endp);
 int fst_read_next_text_param(const char *params, char *buf, size_t buflen,
 			     char **endp);

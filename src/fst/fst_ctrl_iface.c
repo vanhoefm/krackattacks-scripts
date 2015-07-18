@@ -561,7 +561,6 @@ static int get_peer_mbies(const char *params, char *buf, size_t buflen)
 	struct fst_group *g;
 	struct fst_iface *iface = NULL;
 	struct wpabuf *mbies;
-	int ret;
 
 	if (fst_read_next_text_param(params, ifname, sizeof(ifname), &endp) ||
 	    !*ifname)
@@ -584,11 +583,8 @@ static int get_peer_mbies(const char *params, char *buf, size_t buflen)
 	if (!mbies)
 		goto problem;
 
-	ret = print_mb_ies(mbies, buf, buflen);
-	if ((size_t) ret != wpabuf_len(mbies) * 2)
-		fst_printf(MSG_WARNING, "MB IEs copied only partially");
-
-	return ret;
+	return wpa_snprintf_hex(buf, buflen, wpabuf_head(mbies),
+				wpabuf_len(mbies));
 
 problem:
 	return os_snprintf(buf, buflen, "FAIL\n");
@@ -648,25 +644,6 @@ static int list_groups(const char *cmd, char *buf, size_t buflen)
 }
 
 
-int print_mb_ies(struct wpabuf *mbies, char *buf, size_t buflen)
-{
-	const u8 *p = wpabuf_head(mbies);
-	size_t s = wpabuf_len(mbies);
-	int ret = 0;
-
-	while ((size_t) ret < buflen && s--) {
-		int res;
-
-		res = os_snprintf(buf + ret, buflen - ret, "%02x", *p++);
-		if (os_snprintf_error(buflen - ret, res))
-			break;
-		ret += res;
-	}
-
-	return ret;
-}
-
-
 static const char * band_freq(enum mb_band_id band)
 {
 	static const char *band_names[] = {
@@ -697,7 +674,9 @@ static int print_band(unsigned num, struct fst_iface *iface, const u8 *addr,
 	if (wpabuf) {
 		ret += os_snprintf(buf + ret, buflen - ret, "band%u_mb_ies=",
 				   num);
-		ret += print_mb_ies(wpabuf, buf + ret, buflen - ret);
+		ret += wpa_snprintf_hex(buf + ret, buflen - ret,
+					wpabuf_head(wpabuf),
+					wpabuf_len(wpabuf));
 		ret += os_snprintf(buf + ret, buflen - ret, "\n");
 	}
 	ret += os_snprintf(buf + ret, buflen - ret, "band%u_fst_group_id=%s\n",

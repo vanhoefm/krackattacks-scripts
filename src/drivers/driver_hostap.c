@@ -140,7 +140,7 @@ static void handle_tx_callback(struct hostap_driver_data *drv, u8 *buf,
 static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 {
 	struct ieee80211_hdr *hdr;
-	u16 fc, extra_len, type, stype;
+	u16 fc, type, stype;
 	size_t data_len = len;
 	int ver;
 	union wpa_event_data event;
@@ -165,19 +165,10 @@ static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 
 	ver = fc & WLAN_FC_PVER;
 
-	/* protocol version 3 is reserved for indicating extra data after the
-	 * payload, version 2 for indicating ACKed frame (TX callbacks), and
-	 * version 1 for indicating failed frame (no ACK, TX callbacks) */
-	if (ver == 3) {
-		u8 *pos = buf + len - 2;
-		extra_len = WPA_GET_LE16(pos);
-		printf("extra data in frame (elen=%d)\n", extra_len);
-		if ((size_t) extra_len + 2 > len) {
-			printf("  extra data overflow\n");
-			return;
-		}
-		len -= extra_len + 2;
-	} else if (ver == 1 || ver == 2) {
+	/* protocol version 2 is reserved for indicating ACKed frame (TX
+	 * callbacks), and version 1 for indicating failed frame (no ACK, TX
+	 * callbacks) */
+	if (ver == 1 || ver == 2) {
 		handle_tx_callback(drv, buf, data_len, ver == 2 ? 1 : 0);
 		return;
 	} else if (ver != 0) {

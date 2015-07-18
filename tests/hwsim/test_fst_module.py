@@ -1978,6 +1978,12 @@ def test_fst_send_oom(dev, apdev, test_params):
         if not res.startswith("OK"):
             raise Exception("SESSION_INITIATE failed")
 
+        tests = [ "", "foo", sid, sid + " foo", sid + " foo=bar" ]
+        for t in tests:
+            res = initiator.grequest("FST-MANAGER SESSION_SET " + t)
+            if not res.startswith("FAIL"):
+                raise Exception("Invalid SESSION_SET accepted")
+
         with alloc_fail(hapd, 1, "fst_session_send_action"):
             res = initiator.grequest("FST-MANAGER SESSION_TEARDOWN " + sid)
             if not res.startswith("FAIL"):

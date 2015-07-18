@@ -1323,25 +1323,25 @@ static int get_group_fill_session(struct fst_group **g, struct fst_session *s)
 	*g = dl_list_first(&fst_global_groups_list,
 			   struct fst_group, global_groups_lentry);
 	if (!*g)
-		return EINVAL;
+		return -EINVAL;
 
 	s->data.new_iface = dl_list_first(&(*g)->ifaces, struct fst_iface,
 					  group_lentry);
 	if (!s->data.new_iface)
-		return EINVAL;
+		return -EINVAL;
 
 	s->data.old_iface = dl_list_entry(s->data.new_iface->group_lentry.next,
 					  struct fst_iface, group_lentry);
 	if (!s->data.old_iface)
-		return EINVAL;
+		return -EINVAL;
 
 	old_addr = fst_iface_get_peer_first(s->data.old_iface, &ctx, TRUE);
 	if (!old_addr)
-		return EINVAL;
+		return -EINVAL;
 
 	new_addr = fst_iface_get_peer_first(s->data.new_iface, &ctx, TRUE);
 	if (!new_addr)
-		return EINVAL;
+		return -EINVAL;
 
 	os_memcpy(s->data.old_peer_addr, old_addr, ETH_ALEN);
 	os_memcpy(s->data.new_peer_addr, new_addr, ETH_ALEN);
@@ -1366,10 +1366,10 @@ int fst_test_req_send_fst_request(const char *params)
 
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
-		return EINVAL;
+		return -EINVAL;
 
 	if (get_group_fill_session(&g, &s))
-		return EINVAL;
+		return -EINVAL;
 
 	req.action = FST_ACTION_SETUP_REQUEST;
 	req.dialog_token = g->dialog_token;
@@ -1417,10 +1417,10 @@ int fst_test_req_send_fst_response(const char *params)
 
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
-		return EINVAL;
+		return -EINVAL;
 
 	if (get_group_fill_session(&g, &s))
-		return EINVAL;
+		return -EINVAL;
 
 	status_code = WLAN_STATUS_SUCCESS;
 	if (!fst_read_next_text_param(endp, response, sizeof(response),
@@ -1483,10 +1483,10 @@ int fst_test_req_send_ack_request(const char *params)
 
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
-		return EINVAL;
+		return -EINVAL;
 
 	if (get_group_fill_session(&g, &s))
-		return EINVAL;
+		return -EINVAL;
 
 	os_memset(&req, 0, sizeof(req));
 	req.action = FST_ACTION_ACK_REQUEST;
@@ -1508,10 +1508,10 @@ int fst_test_req_send_ack_response(const char *params)
 
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
-		return EINVAL;
+		return -EINVAL;
 
 	if (get_group_fill_session(&g, &s))
-		return EINVAL;
+		return -EINVAL;
 
 	os_memset(&res, 0, sizeof(res));
 	res.action = FST_ACTION_ACK_RESPONSE;
@@ -1533,10 +1533,10 @@ int fst_test_req_send_tear_down(const char *params)
 
 	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
 	if (!is_valid)
-		return EINVAL;
+		return -EINVAL;
 
 	if (get_group_fill_session(&g, &s))
-		return EINVAL;
+		return -EINVAL;
 
 	os_memset(&td, 0, sizeof(td));
 	td.action = FST_ACTION_TEAR_DOWN;

@@ -842,13 +842,13 @@ int fst_read_next_text_param(const char *params, char *buf, size_t buflen,
 	char *cur_dest;
 
 	if (buflen <= 1)
-		return EINVAL;
+		return -EINVAL;
 
 	*endp = (char *) params;
 	while (isspace(**endp))
 		(*endp)++;
 	if (!**endp)
-		return EINVAL;
+		return -EINVAL;
 
 	max_chars_to_copy = buflen - 1;
 	/* We need 1 byte for the terminating zero */
@@ -895,7 +895,7 @@ int fst_parse_attach_command(const char *cmd, char *ifname, size_t ifname_size,
 	if (fst_read_next_text_param(cmd, ifname, ifname_size, &endp) ||
 	    fst_read_next_text_param(endp, cfg->group_id, sizeof(cfg->group_id),
 				     &endp))
-		return EINVAL;
+		return -EINVAL;
 
 	cfg->llt = FST_DEFAULT_LLT_CFG_VALUE;
 	cfg->priority = 0;
@@ -928,20 +928,17 @@ int fst_parse_detach_command(const char *cmd, char *ifname, size_t ifname_size)
 {
 	char *endp;
 
-	if (fst_read_next_text_param(cmd, ifname, ifname_size, &endp))
-		return EINVAL;
-
-	return 0;
+	return fst_read_next_text_param(cmd, ifname, ifname_size, &endp);
 }
 
 
-/* fst iface_detach */
 int fst_iface_detach(const char *ifname)
 {
 	struct fst_group *g;
-	struct fst_iface *f;
 
 	foreach_fst_group(g) {
+		struct fst_iface *f;
+
 		f = fst_group_get_iface_by_name(g, ifname);
 		if (f) {
 			fst_detach(f);
@@ -949,5 +946,5 @@ int fst_iface_detach(const char *ifname)
 		}
 	}
 
-	return EINVAL;
+	return -EINVAL;
 }

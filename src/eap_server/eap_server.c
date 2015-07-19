@@ -1247,6 +1247,17 @@ SM_STEP(EAP)
 			break;
 		}
 		SM_ENTER(EAP, SEND_REQUEST);
+		if (sm->eap_if.eapNoReq && !sm->eap_if.eapReq) {
+			/*
+			 * This transition is not mentioned in RFC 4137, but it
+			 * is needed to handle cleanly a case where EAP method
+			 * buildReq fails.
+			 */
+			wpa_printf(MSG_DEBUG,
+				   "EAP: Method did not return a request");
+			SM_ENTER(EAP, FAILURE);
+			break;
+		}
 		break;
 	case EAP_METHOD_RESPONSE:
 		/*

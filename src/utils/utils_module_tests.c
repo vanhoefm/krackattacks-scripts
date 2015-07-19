@@ -14,6 +14,7 @@
 #include "utils/ext_password.h"
 #include "utils/trace.h"
 #include "utils/base64.h"
+#include "utils/ip_addr.h"
 
 
 struct printf_test_data {
@@ -44,6 +45,7 @@ static int printf_encode_decode_tests(void)
 	char buf[100];
 	u8 bin[100];
 	int errors = 0;
+	int array[10];
 
 	wpa_printf(MSG_INFO, "printf encode/decode tests");
 
@@ -92,7 +94,22 @@ static int printf_encode_decode_tests(void)
 	if (printf_decode(bin, 3, "\\xa") != 1 || bin[0] != 10)
 		errors++;
 
+	if (printf_decode(bin, 3, "\\xq") != 1 || bin[0] != 'q')
+		errors++;
+
 	if (printf_decode(bin, 3, "\\a") != 1 || bin[0] != 'a')
+		errors++;
+
+	array[0] = 10;
+	array[1] = 10;
+	array[2] = 5;
+	array[3] = 10;
+	array[4] = 5;
+	array[5] = 0;
+	if (int_array_len(array) != 5)
+		errors++;
+	int_array_sort_unique(array);
+	if (int_array_len(array) != 2)
 		errors++;
 
 	if (errors) {
@@ -336,7 +353,7 @@ static int base64_tests(void)
 
 static int common_tests(void)
 {
-	char buf[3];
+	char buf[3], longbuf[100];
 	u8 addr[ETH_ALEN] = { 1, 2, 3, 4, 5, 6 };
 	u8 bin[3];
 	int errors = 0;
@@ -409,8 +426,165 @@ static int common_tests(void)
 		errors++;
 	}
 
+	if (wpa_snprintf_hex_sep(longbuf, 0, addr, ETH_ALEN, '-') != 0 ||
+	    wpa_snprintf_hex_sep(longbuf, 5, addr, ETH_ALEN, '-') != 3 ||
+	    os_strcmp(longbuf, "01-0") != 0)
+		errors++;
+
 	if (errors) {
 		wpa_printf(MSG_ERROR, "%d common test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int os_tests(void)
+{
+	int errors = 0;
+	void *ptr;
+	os_time_t t;
+
+	wpa_printf(MSG_INFO, "os tests");
+
+	ptr = os_calloc((size_t) -1, (size_t) -1);
+	if (ptr) {
+		errors++;
+		os_free(ptr);
+	}
+	ptr = os_calloc((size_t) 2, (size_t) -1);
+	if (ptr) {
+		errors++;
+		os_free(ptr);
+	}
+	ptr = os_calloc((size_t) -1, (size_t) 2);
+	if (ptr) {
+		errors++;
+		os_free(ptr);
+	}
+
+	ptr = os_realloc_array(NULL, (size_t) -1, (size_t) -1);
+	if (ptr) {
+		errors++;
+		os_free(ptr);
+	}
+
+	os_sleep(1, 1);
+
+	if (os_mktime(1969, 1, 1, 1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 0, 1, 1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 13, 1, 1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 0, 1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 32, 1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, -1, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 24, 1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 1, -1, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 1, 60, 1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 1, 1, -1, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 1, 1, 61, &t) == 0 ||
+	    os_mktime(1971, 1, 1, 1, 1, 1, &t) != 0 ||
+	    os_mktime(2020, 1, 2, 3, 4, 5, &t) != 0 ||
+	    os_mktime(2015, 12, 31, 23, 59, 59, &t) != 0)
+		errors++;
+
+	if (os_setenv("hwsim_test_env", "test value", 0) != 0 ||
+	    os_setenv("hwsim_test_env", "test value 2", 1) != 0 ||
+	    os_unsetenv("hwsim_test_env") != 0)
+		errors++;
+
+	if (os_file_exists("/this-file-does-not-exists-hwsim") != 0)
+		errors++;
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d os test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int wpabuf_tests(void)
+{
+	int errors = 0;
+	void *ptr;
+	struct wpabuf *buf;
+
+	wpa_printf(MSG_INFO, "wpabuf tests");
+
+	ptr = os_malloc(100);
+	if (ptr) {
+		buf = wpabuf_alloc_ext_data(ptr, 100);
+		if (buf) {
+			if (wpabuf_resize(&buf, 100) < 0)
+				errors++;
+			else
+				wpabuf_put(buf, 100);
+			wpabuf_free(buf);
+		} else {
+			errors++;
+			os_free(ptr);
+		}
+	} else {
+		errors++;
+	}
+
+	buf = wpabuf_alloc(100);
+	if (buf) {
+		struct wpabuf *buf2;
+
+		wpabuf_put(buf, 100);
+		if (wpabuf_resize(&buf, 100) < 0)
+			errors++;
+		else
+			wpabuf_put(buf, 100);
+		buf2 = wpabuf_concat(buf, NULL);
+		if (buf2 != buf)
+			errors++;
+		wpabuf_free(buf2);
+	} else {
+		errors++;
+	}
+
+	buf = NULL;
+	buf = wpabuf_zeropad(buf, 10);
+	if (buf != NULL)
+		errors++;
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d wpabuf test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int ip_addr_tests(void)
+{
+	int errors = 0;
+	struct hostapd_ip_addr addr;
+	char buf[100];
+
+	wpa_printf(MSG_INFO, "ip_addr tests");
+
+	if (hostapd_parse_ip_addr("1.2.3.4", &addr) != 0 ||
+	    addr.af != AF_INET ||
+	    hostapd_ip_txt(NULL, buf, sizeof(buf)) != NULL ||
+	    hostapd_ip_txt(&addr, buf, 1) != buf || buf[0] != '\0' ||
+	    hostapd_ip_txt(&addr, buf, 0) != NULL ||
+	    hostapd_ip_txt(&addr, buf, sizeof(buf)) != buf)
+		errors++;
+
+	if (hostapd_parse_ip_addr("::", &addr) != 0 ||
+	    addr.af != AF_INET6 ||
+	    hostapd_ip_txt(&addr, buf, 1) != buf || buf[0] != '\0' ||
+	    hostapd_ip_txt(&addr, buf, sizeof(buf)) != buf)
+		errors++;
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d ip_addr test(s) failed", errors);
 		return -1;
 	}
 
@@ -430,6 +604,9 @@ int utils_module_tests(void)
 	    bitfield_tests() < 0 ||
 	    base64_tests() < 0 ||
 	    common_tests() < 0 ||
+	    os_tests() < 0 ||
+	    wpabuf_tests() < 0 ||
+	    ip_addr_tests() < 0 ||
 	    int_array_tests() < 0)
 		ret = -1;
 

@@ -2589,6 +2589,29 @@ hostapd_global_ctrl_iface_fst_detach(struct hapd_interfaces *interfaces,
 
 #endif /* CONFIG_FST */
 
+
+static struct hostapd_data *
+hostapd_interfaces_get_hapd(struct hapd_interfaces *interfaces,
+			    const char *ifname)
+{
+	size_t i, j;
+
+	for (i = 0; i < interfaces->count; i++) {
+		struct hostapd_iface *iface = interfaces->iface[i];
+
+		for (j = 0; j < iface->num_bss; j++) {
+			struct hostapd_data *hapd;
+
+			hapd = iface->bss[j];
+			if (os_strcmp(ifname, hapd->conf->iface) == 0)
+				return hapd;
+		}
+	}
+
+	return NULL;
+}
+
+
 static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
 					    const char *ifname,
 					    char *buf, char *reply,
@@ -2596,20 +2619,9 @@ static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
-	size_t i, j;
-	struct hostapd_data *hapd = NULL;
+	struct hostapd_data *hapd;
 
-	for (i = 0; hapd == NULL && i < interfaces->count; i++) {
-		struct hostapd_iface *iface = interfaces->iface[i];
-
-		for (j = 0; j < iface->num_bss; j++) {
-			hapd = iface->bss[j];
-			if (os_strcmp(ifname, hapd->conf->iface) == 0)
-				break;
-			hapd = NULL;
-		}
-	}
-
+	hapd = hostapd_interfaces_get_hapd(interfaces, ifname);
 	if (hapd == NULL) {
 		int res;
 

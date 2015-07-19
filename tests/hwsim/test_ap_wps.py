@@ -2674,3 +2674,51 @@ def test_ap_wps_init_oom(dev, apdev):
 
     hapd.request("WPS_PIN any " + pin)
     dev[0].wait_connected(timeout=30)
+
+def test_ap_wps_er_oom(dev, apdev):
+    """WPS ER OOM in XML processing"""
+    try:
+        _test_ap_wps_er_oom(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+        dev[1].request("WPS_CANCEL")
+        dev[0].request("DISCONNECT")
+
+def _test_ap_wps_er_oom(dev, apdev):
+    ssid = "wps-er-ap-config"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+
+    dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+
+    with alloc_fail(dev[0], 1, "base64_decode;xml_get_base64_item"):
+        dev[0].request("WPS_ER_START ifname=lo")
+        ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=3)
+        if ev is not None:
+            raise Exception("Unexpected AP discovery")
+
+    dev[0].request("WPS_ER_STOP")
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    with alloc_fail(dev[0], 1, "base64_decode;xml_get_base64_item"):
+        dev[1].request("WPS_PBC " + apdev[0]['bssid'])
+        ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+        if ev is None:
+            raise Exception("PBC scan failed")
+        ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
+        if ev is None:
+            raise Exception("Enrollee discovery timed out")

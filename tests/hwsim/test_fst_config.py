@@ -158,7 +158,11 @@ class FstLauncher:
             raise Exception("No FST APs to start")
         pidfile = self.fst_logpath + '/' + 'myhostapd.pid'
         mylogfile = self.fst_logpath + '/' + 'fst-hostapd'
-        cmd = [ '../../hostapd/hostapd', '-B', '-ddd',
+        prg = os.path.join(self.fst_logpath,
+                           'alt-hostapd/hostapd/hostapd')
+        if not os.path.exists(prg):
+            prg = '../../hostapd/hostapd'
+        cmd = [ prg, '-B', '-ddd',
                 '-P', pidfile, '-f', mylogfile, '-g', self.hapd_fst_global]
         for i in range(0, len(self.cfgs_to_run)):
             cfg = self.cfgs_to_run[i]
@@ -181,7 +185,11 @@ class FstLauncher:
             raise Exception("No FST STAs to start")
         pidfile = self.fst_logpath + '/' + 'mywpa_supplicant.pid'
         mylogfile = self.fst_logpath + '/' + 'fst-wpa_supplicant'
-        cmd = [ '../../wpa_supplicant/wpa_supplicant', '-B', '-ddd',
+        prg = os.path.join(self.fst_logpath,
+                           'alt-wpa_supplicant/wpa_supplicant/wpa_supplicant')
+        if not os.path.exists(prg):
+            prg = '../../wpa_supplicant/wpa_supplicant'
+        cmd = [ prg, '-B', '-ddd',
                 '-P' + pidfile, '-f', mylogfile, '-g', self.wsup_fst_global ]
         sta_no = 0
         for i in range(0, len(self.cfgs_to_run)):

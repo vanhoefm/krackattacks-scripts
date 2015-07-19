@@ -6,11 +6,13 @@
 
 import logging
 logger = logging.getLogger()
+import os
 import subprocess
 import time
 
 import hostapd
 import hwsim_utils
+from hwsim import HWSimRadio
 from wpasupplicant import WpaSupplicant
 from utils import alloc_fail
 
@@ -1455,3 +1457,45 @@ def _test_wpas_ctrl_interface_add2(dev, apdev, ifname):
     del wpas
     dev[0].global_request("INTERFACE_REMOVE " + ifname)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_wpas_ctrl_wait(dev, apdev, test_params):
+    """wpa_supplicant control interface wait for client"""
+    logfile = os.path.join(test_params['logdir'], 'wpas_ctrl_wait.log-wpas')
+    pidfile = os.path.join(test_params['logdir'], 'wpas_ctrl_wait.pid-wpas')
+    conffile = os.path.join(test_params['logdir'], 'wpas_ctrl_wait.conf')
+    with open(conffile, 'w') as f:
+        f.write("ctrl_interface=DIR=/var/run/wpa_supplicant\n")
+
+    prg = os.path.join(test_params['logdir'],
+                       'alt-wpa_supplicant/wpa_supplicant/wpa_supplicant')
+    if not os.path.exists(prg):
+        prg = '../../wpa_supplicant/wpa_supplicant'
+    arg = [ prg ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE)
+    out = cmd.communicate()[0]
+    cmd.wait()
+    tracing = "Linux tracing" in out
+
+    with HWSimRadio() as (radio, iface):
+        arg = [ prg, '-BdddW', '-P', pidfile, '-f', logfile,
+                '-Dnl80211', '-c', conffile, '-i', iface ]
+        if tracing:
+            arg += [ '-T' ]
+        logger.info("Start wpa_supplicant: " + str(arg))
+        subprocess.call(arg)
+        wpas = WpaSupplicant(ifname=iface)
+        if "PONG" not in wpas.request("PING"):
+            raise Exception("Could not PING wpa_supplicant")
+        if not os.path.exists(pidfile):
+            raise Exception("PID file not created")
+        if "OK" not in wpas.request("TERMINATE"):
+            raise Exception("Could not TERMINATE")
+        ev = wpas.wait_event([ "CTRL-EVENT-TERMINATING" ], timeout=2)
+        if ev is None:
+            raise Exception("No termination event received")
+        for i in range(20):
+            if not os.path.exists(pidfile):
+                break
+            time.sleep(0.1)
+        if os.path.exists(pidfile):
+            raise Exception("PID file not removed")

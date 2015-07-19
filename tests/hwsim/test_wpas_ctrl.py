@@ -670,6 +670,19 @@ def test_wpas_ctrl_set_wps_params(dev):
         if "OK" not in dev[2].request("SET " + t):
             raise Exception("SET failed for: " + t)
 
+    ts = [ "uuid 12345678+9abc-def0-1234-56789abcdef0",
+           "uuid 12345678-qabc-def0-1234-56789abcdef0",
+           "uuid 12345678-9abc+def0-1234-56789abcdef0",
+           "uuid 12345678-9abc-qef0-1234-56789abcdef0",
+           "uuid 12345678-9abc-def0+1234-56789abcdef0",
+           "uuid 12345678-9abc-def0-q234-56789abcdef0",
+           "uuid 12345678-9abc-def0-1234+56789abcdef0",
+           "uuid 12345678-9abc-def0-1234-q6789abcdef0",
+           "uuid qwerty" ]
+    for t in ts:
+        if "FAIL" not in dev[2].request("SET " + t):
+            raise Exception("SET succeeded for: " + t)
+
 def test_wpas_ctrl_level(dev):
     """wpa_supplicant ctrl_iface LEVEL"""
     try:

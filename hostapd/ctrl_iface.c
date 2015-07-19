@@ -1058,6 +1058,97 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 #endif /* CONFIG_WNM */
 
 
+static int hostapd_ctrl_iface_get_key_mgmt(struct hostapd_data *hapd,
+					   char *buf, size_t buflen)
+{
+	int ret = 0;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	WPA_ASSERT(hapd->conf->wpa_key_mgmt);
+
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK) {
+		ret = os_snprintf(pos, end - pos, "WPA-PSK ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
+		ret = os_snprintf(pos, end - pos, "WPA-EAP ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#ifdef CONFIG_IEEE80211R
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_PSK) {
+		ret = os_snprintf(pos, end - pos, "FT-PSK ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
+		ret = os_snprintf(pos, end - pos, "FT-EAP ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#ifdef CONFIG_SAE
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_SAE) {
+		ret = os_snprintf(pos, end - pos, "FT-SAE ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SAE */
+#endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
+		ret = os_snprintf(pos, end - pos, "WPA-PSK-SHA256 ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		ret = os_snprintf(pos, end - pos, "WPA-EAP-SHA256 ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_SAE
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_SAE) {
+		ret = os_snprintf(pos, end - pos, "SAE ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SAE */
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
+		ret = os_snprintf(pos, end - pos, "WPA-EAP-SUITE-B ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (hapd->conf->wpa_key_mgmt &
+	    WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		ret = os_snprintf(pos, end - pos,
+				  "WPA-EAP-SUITE-B-192 ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (pos > buf && *(pos - 1) == ' ') {
+		*(pos - 1) = '\0';
+		pos--;
+	}
+
+	return pos - buf;
+}
+
+
 static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 					 char *buf, size_t buflen)
 {
@@ -1120,76 +1211,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			return pos - buf;
 		pos += ret;
 
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK) {
-			ret = os_snprintf(pos, end - pos, "WPA-PSK ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
-			ret = os_snprintf(pos, end - pos, "WPA-EAP ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-#ifdef CONFIG_IEEE80211R
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_PSK) {
-			ret = os_snprintf(pos, end - pos, "FT-PSK ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
-			ret = os_snprintf(pos, end - pos, "FT-EAP ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-#ifdef CONFIG_SAE
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_SAE) {
-			ret = os_snprintf(pos, end - pos, "FT-SAE ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-#endif /* CONFIG_SAE */
-#endif /* CONFIG_IEEE80211R */
-#ifdef CONFIG_IEEE80211W
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
-			ret = os_snprintf(pos, end - pos, "WPA-PSK-SHA256 ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
-			ret = os_snprintf(pos, end - pos, "WPA-EAP-SHA256 ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-#endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_SAE
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_SAE) {
-			ret = os_snprintf(pos, end - pos, "SAE ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-#endif /* CONFIG_SAE */
-		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
-			ret = os_snprintf(pos, end - pos, "WPA-EAP-SUITE-B ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_key_mgmt &
-		    WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
-			ret = os_snprintf(pos, end - pos,
-					  "WPA-EAP-SUITE-B-192 ");
-			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
-			pos += ret;
-		}
+		pos += hostapd_ctrl_iface_get_key_mgmt(hapd, pos, end - pos);
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (os_snprintf_error(end - pos, ret))

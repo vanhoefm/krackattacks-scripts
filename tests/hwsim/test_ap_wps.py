@@ -20,7 +20,7 @@ import StringIO
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -2658,3 +2658,19 @@ def test_ap_wps_priority(dev, apdev):
             raise Exception("Unexpected network priority: " + prio)
     finally:
         dev[0].request("SET wps_priority 0")
+
+def test_ap_wps_init_oom(dev, apdev):
+    """Initial AP configuration and OOM during PSK generation"""
+    ssid = "test-wps"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with alloc_fail(hapd, 1, "base64_encode;wps_build_cred"):
+        pin = dev[0].wps_read_pin()
+        hapd.request("WPS_PIN any " + pin)
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+        dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+        dev[0].wait_disconnected()
+
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].wait_connected(timeout=30)

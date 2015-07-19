@@ -231,6 +231,19 @@ def test_wpas_ctrl_network(dev):
         if "FAIL" not in dev[0].request("SET_NETWORK %d bssid_blacklist %s" % (id, val)):
             raise Exception("Invalid bssid_blacklist value accepted")
 
+def test_wpas_ctrl_network_oom(dev):
+    """wpa_supplicant ctrl_iface network OOM in string parsing"""
+    id = dev[0].add_network()
+
+    tests = [ ('"foo"', 1, 'dup_binstr;wpa_config_set'),
+              ('P"foo"', 1, 'dup_binstr;wpa_config_set'),
+              ('P"foo"', 2, 'wpa_config_set'),
+              ('112233', 1, 'wpa_config_set') ]
+    for val,count,func in tests:
+        with alloc_fail(dev[0], count, func):
+            if "FAIL" not in dev[0].request("SET_NETWORK " + str(id) + ' ssid ' + val):
+                raise Exception("Unexpected success for SET_NETWORK during OOM")
+
 def test_wpas_ctrl_many_networks(dev, apdev):
     """wpa_supplicant ctrl_iface LIST_NETWORKS with huge number of networks"""
     for i in range(1000):

@@ -449,3 +449,64 @@ def test_hapd_ctrl_global(dev, apdev):
     res = hapd_global.request("IFNAME=" + ifname + " GET version")
     if "FAIL" in res:
            raise Exception("Could not get hostapd version for " + ifname + " via global control interface")
+
+def dup_network(hapd_global, src, dst, param):
+    res = hapd_global.request("DUP_NETWORK %s %s %s" % (src, dst, param))
+    if "OK" not in res:
+        raise Exception("Could not dup %s param from %s to %s" % (param, src,
+                                                                  dst))
+
+def test_hapd_dup_network_global_wpa2(dev, apdev):
+    """hostapd and DUP_NETWORK command (WPA2"""
+    passphrase="12345678"
+    src_ssid = "hapd-ctrl-src"
+    dst_ssid = "hapd-ctrl-dst"
+
+    src_params = hostapd.wpa2_params(ssid=src_ssid, passphrase=passphrase)
+    src_ifname = apdev[0]['ifname']
+    src_hapd = hostapd.add_ap(src_ifname, src_params)
+
+    dst_params = { "ssid": dst_ssid }
+    dst_ifname = apdev[1]['ifname']
+    dst_hapd = hostapd.add_ap(dst_ifname, dst_params, no_enable=True)
+
+    hapd_global = hostapd.HostapdGlobal()
+
+    for param in [ "wpa", "wpa_passphrase", "wpa_key_mgmt", "rsn_pairwise" ]:
+        dup_network(hapd_global, src_ifname, dst_ifname, param)
+
+    dst_hapd.enable()
+
+    dev[0].connect(dst_ssid, psk=passphrase, proto="RSN", pairwise="CCMP",
+                   scan_freq="2412")
+    addr = dev[0].own_addr()
+    if "FAIL" in dst_hapd.request("STA " + addr):
+            raise Exception("Could not connect using duplicated wpa params")
+
+def test_hapd_dup_network_global_wpa(dev, apdev):
+    """hostapd and DUP_NETWORK command (WPA)"""
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    src_ssid = "hapd-ctrl-src"
+    dst_ssid = "hapd-ctrl-dst"
+
+    src_params = hostapd.wpa_params(ssid=src_ssid)
+    src_params['wpa_psk'] = psk
+    src_ifname = apdev[0]['ifname']
+    src_hapd = hostapd.add_ap(src_ifname, src_params)
+
+    dst_params = { "ssid": dst_ssid }
+    dst_ifname = apdev[1]['ifname']
+    dst_hapd = hostapd.add_ap(dst_ifname, dst_params, no_enable=True)
+
+    hapd_global = hostapd.HostapdGlobal()
+
+    for param in [ "wpa", "wpa_psk", "wpa_key_mgmt", "wpa_pairwise" ]:
+        dup_network(hapd_global, src_ifname, dst_ifname, param)
+
+    dst_hapd.enable()
+
+    dev[0].connect(dst_ssid, raw_psk=psk, proto="WPA", pairwise="TKIP",
+                   scan_freq="2412")
+    addr = dev[0].own_addr()
+    if "FAIL" in dst_hapd.request("STA " + addr):
+            raise Exception("Could not connect using duplicated wpa params")

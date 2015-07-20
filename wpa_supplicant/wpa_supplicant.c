@@ -4760,8 +4760,12 @@ static void wpas_periodic(void *eloop_ctx, void *timeout_ctx)
 		p2p_expire_peers(global->p2p);
 #endif /* CONFIG_P2P */
 
-	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		wpa_bss_flush_by_age(wpa_s, wpa_s->conf->bss_expiration_age);
+#ifdef CONFIG_AP
+		ap_periodic(wpa_s);
+#endif /* CONFIG_AP */
+	}
 }
 
 

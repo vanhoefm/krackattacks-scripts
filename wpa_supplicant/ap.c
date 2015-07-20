@@ -1369,3 +1369,10 @@ void wpas_event_dfs_cac_nop_finished(struct wpa_supplicant *wpa_s,
 				 radar->chan_width, radar->cf1, radar->cf2);
 }
 #endif /* NEED_AP_MLME */
+
+
+void ap_periodic(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->ap_iface)
+		hostapd_periodic_iface(wpa_s->ap_iface);
+}

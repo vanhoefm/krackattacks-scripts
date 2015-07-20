@@ -534,6 +534,28 @@ static int gen_uuid(const char *txt_addr)
 #endif /* CONFIG_WPS */
 
 
+#ifndef HOSTAPD_CLEANUP_INTERVAL
+#define HOSTAPD_CLEANUP_INTERVAL 10
+#endif /* HOSTAPD_CLEANUP_INTERVAL */
+
+static int hostapd_periodic_call(struct hostapd_iface *iface, void *ctx)
+{
+	hostapd_periodic_iface(iface);
+	return 0;
+}
+
+
+/* Periodic cleanup tasks */
+static void hostapd_periodic(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hapd_interfaces *interfaces = eloop_ctx;
+
+	eloop_register_timeout(HOSTAPD_CLEANUP_INTERVAL, 0,
+			       hostapd_periodic, interfaces, NULL);
+	hostapd_for_each_interface(interfaces, hostapd_periodic_call, NULL);
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
@@ -667,6 +689,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	eloop_register_timeout(HOSTAPD_CLEANUP_INTERVAL, 0,
+			       hostapd_periodic, &interfaces, NULL);
+
 	if (fst_global_init()) {
 		wpa_printf(MSG_ERROR,
 			   "Failed to initialize global FST context");
@@ -762,6 +787,7 @@ int main(int argc, char *argv[])
 	}
 	os_free(interfaces.iface);
 
+	eloop_cancel_timeout(hostapd_periodic, &interfaces, NULL);
 	hostapd_global_deinit(pid_file);
 	os_free(pid_file);
 

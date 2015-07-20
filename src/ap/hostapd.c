@@ -2922,3 +2922,8 @@ struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 }
 
 #endif /* NEED_AP_MLME */
+
+
+void hostapd_periodic_iface(struct hostapd_iface *iface)
+{
+}

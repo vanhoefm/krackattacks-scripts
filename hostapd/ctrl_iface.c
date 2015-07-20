@@ -49,6 +49,8 @@
 #include "ctrl_iface.h"
 
 
+#define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
+
 struct wpa_ctrl_dst {
 	struct wpa_ctrl_dst *next;
 	struct sockaddr_un addr;
@@ -2634,6 +2636,114 @@ hostapd_interfaces_get_hapd(struct hapd_interfaces *interfaces,
 }
 
 
+static int hostapd_ctrl_iface_dup_param(struct hostapd_data *src_hapd,
+					struct hostapd_data *dst_hapd,
+					char *param)
+{
+	int res;
+	char *value;
+
+	value = os_zalloc(HOSTAPD_CLI_DUP_VALUE_MAX_LEN);
+	if (!value) {
+		wpa_printf(MSG_ERROR,
+			   "DUP: cannot allocate buffer to stringify %s",
+			   param);
+		goto error_return;
+	}
+
+	if (os_strcmp(param, "wpa") == 0) {
+		os_snprintf(value, HOSTAPD_CLI_DUP_VALUE_MAX_LEN, "%d",
+			    src_hapd->conf->wpa);
+	} else if (os_strcmp(param, "wpa_key_mgmt") == 0 &&
+		   src_hapd->conf->wpa_key_mgmt) {
+		res = hostapd_ctrl_iface_get_key_mgmt(
+			src_hapd, value, HOSTAPD_CLI_DUP_VALUE_MAX_LEN);
+		if (os_snprintf_error(HOSTAPD_CLI_DUP_VALUE_MAX_LEN, res))
+			goto error_stringify;
+	} else if (os_strcmp(param, "wpa_pairwise") == 0 &&
+		   src_hapd->conf->wpa_pairwise) {
+		res = wpa_write_ciphers(value,
+					value + HOSTAPD_CLI_DUP_VALUE_MAX_LEN,
+					src_hapd->conf->wpa_pairwise, " ");
+		if (res < 0)
+			goto error_stringify;
+	} else if (os_strcmp(param, "rsn_pairwise") == 0 &&
+		   src_hapd->conf->rsn_pairwise) {
+		res = wpa_write_ciphers(value,
+					value + HOSTAPD_CLI_DUP_VALUE_MAX_LEN,
+					src_hapd->conf->rsn_pairwise, " ");
+		if (res < 0)
+			goto error_stringify;
+	} else if (os_strcmp(param, "wpa_passphrase") == 0 &&
+		   src_hapd->conf->ssid.wpa_passphrase) {
+		os_snprintf(value, HOSTAPD_CLI_DUP_VALUE_MAX_LEN, "%s",
+			    src_hapd->conf->ssid.wpa_passphrase);
+	} else if (os_strcmp(param, "wpa_psk") == 0 &&
+		   src_hapd->conf->ssid.wpa_psk_set) {
+		wpa_snprintf_hex(value, HOSTAPD_CLI_DUP_VALUE_MAX_LEN,
+			src_hapd->conf->ssid.wpa_psk->psk, PMK_LEN);
+	} else {
+		wpa_printf(MSG_WARNING, "DUP: %s cannot be duplicated", param);
+		goto error_return;
+	}
+
+	res = hostapd_set_iface(dst_hapd->iconf, dst_hapd->conf, param, value);
+	os_free(value);
+	return res;
+
+error_stringify:
+	wpa_printf(MSG_ERROR, "DUP: cannot stringify %s", param);
+error_return:
+	os_free(value);
+	return -1;
+}
+
+
+static int
+hostapd_global_ctrl_iface_dup_network(struct hapd_interfaces *interfaces,
+				      char *cmd)
+{
+	char *p_start = cmd, *p_end;
+	struct hostapd_data *src_hapd, *dst_hapd;
+
+	/* cmd: "<src ifname> <dst ifname> <variable name> */
+
+	p_end = os_strchr(p_start, ' ');
+	if (!p_end) {
+		wpa_printf(MSG_ERROR, "DUP: no src ifname found in cmd: '%s'",
+			   cmd);
+		return -1;
+	}
+
+	*p_end = '\0';
+	src_hapd = hostapd_interfaces_get_hapd(interfaces, p_start);
+	if (!src_hapd) {
+		wpa_printf(MSG_ERROR, "DUP: no src ifname found: '%s'",
+			   p_start);
+		return -1;
+	}
+
+	p_start = p_end + 1;
+	p_end = os_strchr(p_start, ' ');
+	if (!p_end) {
+		wpa_printf(MSG_ERROR, "DUP: no dst ifname found in cmd: '%s'",
+			   cmd);
+		return -1;
+	}
+
+	*p_end = '\0';
+	dst_hapd = hostapd_interfaces_get_hapd(interfaces, p_start);
+	if (!dst_hapd) {
+		wpa_printf(MSG_ERROR, "DUP: no dst ifname found: '%s'",
+			   p_start);
+		return -1;
+	}
+
+	p_start = p_end + 1;
+	return hostapd_ctrl_iface_dup_param(src_hapd, dst_hapd, p_start);
+}
+
+
 static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
 					    const char *ifname,
 					    char *buf, char *reply,
@@ -2747,6 +2857,12 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "FST-MANAGER ", 12) == 0) {
 		reply_len = fst_ctrl_iface_receive(buf + 12, reply, reply_size);
 #endif /* CONFIG_FST */
+	} else if (os_strncmp(buf, "DUP_NETWORK ", 12) == 0) {
+		if (!hostapd_global_ctrl_iface_dup_network(interfaces,
+							   buf + 12))
+			reply_len = os_snprintf(reply, reply_size, "OK\n");
+		else
+			reply_len = -1;
 	} else {
 		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
 			   "ignored");

@@ -2928,6 +2928,8 @@ void hostapd_periodic_iface(struct hostapd_iface *iface)
 {
 	size_t i;
 
+	ap_list_timer(iface);
+
 	for (i = 0; i < iface->num_bss; i++) {
 		struct hostapd_data *hapd = iface->bss[i];
 

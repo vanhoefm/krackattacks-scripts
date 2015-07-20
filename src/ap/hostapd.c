@@ -2926,4 +2926,16 @@ struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 
 void hostapd_periodic_iface(struct hostapd_iface *iface)
 {
+	size_t i;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		struct hostapd_data *hapd = iface->bss[i];
+
+		if (!hapd->started)
+			continue;
+
+#ifndef CONFIG_NO_RADIUS
+		hostapd_acl_expire(hapd);
+#endif /* CONFIG_NO_RADIUS */
+	}
 }

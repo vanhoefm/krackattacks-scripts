@@ -399,19 +399,15 @@ static void hostapd_acl_expire_queries(struct hostapd_data *hapd,
 
 /**
  * hostapd_acl_expire - ACL cache expiration callback
- * @eloop_ctx: struct hostapd_data *
- * @timeout_ctx: Not used
+ * @hapd: struct hostapd_data *
  */
-static void hostapd_acl_expire(void *eloop_ctx, void *timeout_ctx)
+void hostapd_acl_expire(struct hostapd_data *hapd)
 {
-	struct hostapd_data *hapd = eloop_ctx;
 	struct os_reltime now;
 
 	os_get_reltime(&now);
 	hostapd_acl_expire_cache(hapd, &now);
 	hostapd_acl_expire_queries(hapd, &now);
-
-	eloop_register_timeout(10, 0, hostapd_acl_expire, hapd, NULL);
 }
 
 
@@ -615,8 +611,6 @@ int hostapd_acl_init(struct hostapd_data *hapd)
 	if (radius_client_register(hapd->radius, RADIUS_AUTH,
 				   hostapd_acl_recv_radius, hapd))
 		return -1;
-
-	eloop_register_timeout(10, 0, hostapd_acl_expire, hapd, NULL);
 #endif /* CONFIG_NO_RADIUS */
 
 	return 0;
@@ -632,8 +626,6 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 	struct hostapd_acl_query_data *query, *prev;
 
 #ifndef CONFIG_NO_RADIUS
-	eloop_cancel_timeout(hostapd_acl_expire, hapd, NULL);
-
 	hostapd_acl_cache_free(hapd->acl_cache);
 #endif /* CONFIG_NO_RADIUS */
 

@@ -48,9 +48,8 @@ static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 #define P2P_PEER_EXPIRATION_AGE 60
 #endif /* P2P_PEER_EXPIRATION_AGE */
 
-#define P2P_PEER_EXPIRATION_INTERVAL (P2P_PEER_EXPIRATION_AGE / 2)
 
-static void p2p_expire_peers(struct p2p_data *p2p)
+void p2p_expire_peers(struct p2p_data *p2p)
 {
 	struct p2p_device *dev, *n;
 	struct os_reltime now;
@@ -100,15 +99,6 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 		dl_list_del(&dev->list);
 		p2p_device_free(p2p, dev);
 	}
-}
-
-
-static void p2p_expiration_timeout(void *eloop_ctx, void *timeout_ctx)
-{
-	struct p2p_data *p2p = eloop_ctx;
-	p2p_expire_peers(p2p);
-	eloop_register_timeout(P2P_PEER_EXPIRATION_INTERVAL, 0,
-			       p2p_expiration_timeout, p2p, NULL);
 }
 
 
@@ -2919,9 +2909,6 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 	dl_list_init(&p2p->devices);
 
-	eloop_register_timeout(P2P_PEER_EXPIRATION_INTERVAL, 0,
-			       p2p_expiration_timeout, p2p, NULL);
-
 	p2p->go_timeout = 100;
 	p2p->client_timeout = 20;
 	p2p->num_p2p_sd_queries = 0;
@@ -2950,7 +2937,6 @@ void p2p_deinit(struct p2p_data *p2p)
 	wpabuf_free(p2p->wfd_coupled_sink_info);
 #endif /* CONFIG_WIFI_DISPLAY */
 
-	eloop_cancel_timeout(p2p_expiration_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_ext_listen_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_go_neg_start, p2p, NULL);

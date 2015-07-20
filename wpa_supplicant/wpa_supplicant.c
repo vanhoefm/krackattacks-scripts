@@ -4742,6 +4742,29 @@ static const char * wpa_supplicant_msg_ifname_cb(void *ctx)
 #endif /* CONFIG_NO_WPA_MSG */
 
 
+#ifndef WPA_SUPPLICANT_CLEANUP_INTERVAL
+#define WPA_SUPPLICANT_CLEANUP_INTERVAL 10
+#endif /* WPA_SUPPLICANT_CLEANUP_INTERVAL */
+
+/* Periodic cleanup tasks */
+static void wpas_periodic(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_global *global = eloop_ctx;
+	struct wpa_supplicant *wpa_s;
+
+	eloop_register_timeout(WPA_SUPPLICANT_CLEANUP_INTERVAL, 0,
+			       wpas_periodic, global, NULL);
+
+#ifdef CONFIG_P2P
+	if (global->p2p)
+		p2p_expire_peers(global->p2p);
+#endif /* CONFIG_P2P */
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
+		wpa_bss_flush_by_age(wpa_s, wpa_s->conf->bss_expiration_age);
+}
+
+
 /**
  * wpa_supplicant_init - Initialize %wpa_supplicant
  * @params: Parameters for %wpa_supplicant
@@ -4865,6 +4888,9 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	}
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	eloop_register_timeout(WPA_SUPPLICANT_CLEANUP_INTERVAL, 0,
+			       wpas_periodic, global, NULL);
+
 	return global;
 }
 
@@ -4915,6 +4941,8 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 
 	if (global == NULL)
 		return;
+
+	eloop_cancel_timeout(wpas_periodic, global, NULL);
 
 #ifdef CONFIG_WIFI_DISPLAY
 	wifi_display_deinit(global);

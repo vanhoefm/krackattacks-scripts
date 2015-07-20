@@ -2256,4 +2256,13 @@ int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id);
 void p2p_service_flush_asp(struct p2p_data *p2p);
 struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p);
 
+/**
+ * p2p_expire_peers - Periodic cleanup function to expire peers
+ * @p2p: P2P module context from p2p_init()
+ *
+ * This is a cleanup function that the entity calling p2p_init() is
+ * expected to call periodically to clean up expired peer entries.
+ */
+void p2p_expire_peers(struct p2p_data *p2p);
+
 #endif /* P2P_H */

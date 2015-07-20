@@ -19,11 +19,6 @@
 #include "bss.h"
 
 
-/**
- * WPA_BSS_EXPIRATION_PERIOD - Period of expiration run in seconds
- */
-#define WPA_BSS_EXPIRATION_PERIOD 10
-
 #define WPA_BSS_FREQ_CHANGED_FLAG	BIT(0)
 #define WPA_BSS_SIGNAL_CHANGED_FLAG	BIT(1)
 #define WPA_BSS_PRIVACY_CHANGED_FLAG	BIT(2)
@@ -828,16 +823,6 @@ void wpa_bss_flush_by_age(struct wpa_supplicant *wpa_s, int age)
 }
 
 
-static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
-{
-	struct wpa_supplicant *wpa_s = eloop_ctx;
-
-	wpa_bss_flush_by_age(wpa_s, wpa_s->conf->bss_expiration_age);
-	eloop_register_timeout(WPA_BSS_EXPIRATION_PERIOD, 0,
-			       wpa_bss_timeout, wpa_s, NULL);
-}
-
-
 /**
  * wpa_bss_init - Initialize BSS table
  * @wpa_s: Pointer to wpa_supplicant data
@@ -850,8 +835,6 @@ int wpa_bss_init(struct wpa_supplicant *wpa_s)
 {
 	dl_list_init(&wpa_s->bss);
 	dl_list_init(&wpa_s->bss_id);
-	eloop_register_timeout(WPA_BSS_EXPIRATION_PERIOD, 0,
-			       wpa_bss_timeout, wpa_s, NULL);
 	return 0;
 }
 
@@ -883,7 +866,6 @@ void wpa_bss_flush(struct wpa_supplicant *wpa_s)
  */
 void wpa_bss_deinit(struct wpa_supplicant *wpa_s)
 {
-	eloop_cancel_timeout(wpa_bss_timeout, wpa_s, NULL);
 	wpa_bss_flush(wpa_s);
 }
 

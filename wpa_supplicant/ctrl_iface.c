@@ -28,6 +28,7 @@
 #include "rsn_supp/pmksa_cache.h"
 #include "l2_packet/l2_packet.h"
 #include "wps/wps.h"
+#include "fst/fst.h"
 #include "fst/fst_ctrl_iface.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"

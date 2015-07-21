@@ -153,6 +153,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_DCC_STATS_EVENT = 100,
 	QCA_NL80211_VENDOR_SUBCMD_LINK_PROPERTIES = 101,
 	QCA_NL80211_VENDOR_SUBCMD_GW_PARAM_CONFIG = 102,
+	QCA_NL80211_VENDOR_SUBCMD_GET_PREFERRED_FREQ_LIST = 103,
+	QCA_NL80211_VENDOR_SUBCMD_SET_PROBABLE_OPER_CHANNEL = 104,
 };
 
 
@@ -173,6 +175,13 @@ enum qca_wlan_vendor_attr {
 	/* used by QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES */
 	QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS = 7,
 	QCA_WLAN_VENDOR_ATTR_TEST = 8,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES */
+	/* Unsigned 32-bit value. */
+	QCA_WLAN_VENDOR_ATTR_CONCURRENCY_CAPA = 9,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_MAX_CONCURRENT_CHANNELS_2_4_BAND = 10,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_MAX_CONCURRENT_CHANNELS_5_0_BAND = 11,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -263,4 +272,46 @@ enum qca_wlan_vendor_attr_data_offload_ind {
 	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_MAX =
 	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_AFTER_LAST - 1
 };
+
+enum qca_vendor_attr_get_preferred_freq_list {
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_INVALID,
+	/* A 32-unsigned value; the interface type/mode for which the preferred
+	 * frequency list is requested (see enum qca_iface_type for possible
+	 * values); used in GET_PREFERRED_FREQ_LIST command from user-space to
+	 * kernel and in the kernel response back to user-space.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_IFACE_TYPE,
+	/* An array of 32-unsigned values; values are frequency (MHz); sent
+	 * from kernel space to user space.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_MAX =
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_AFTER_LAST - 1
+};
+
+enum qca_vendor_attr_probable_oper_channel {
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_INVALID,
+	/* 32-bit unsigned value; indicates the connection/iface type likely to
+	 * come on this channel (see enum qca_iface_type).
+	 */
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_IFACE_TYPE,
+	/* 32-bit unsigned value; the frequency (MHz) of the probable channel */
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_FREQ,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_MAX =
+	QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_AFTER_LAST - 1
+};
+
+enum qca_iface_type {
+	QCA_IFACE_TYPE_STA,
+	QCA_IFACE_TYPE_AP,
+	QCA_IFACE_TYPE_P2P_CLIENT,
+	QCA_IFACE_TYPE_P2P_GO,
+	QCA_IFACE_TYPE_IBSS,
+	QCA_IFACE_TYPE_TDLS,
+};
+
 #endif /* QCA_VENDOR_H */

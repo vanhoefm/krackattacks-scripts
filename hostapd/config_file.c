@@ -912,11 +912,11 @@ enum {
 	IEEE80211_TX_QUEUE_DATA3 = 3 /* used for EDCA AC_BK data */
 };
 
-static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
-				   char *val)
+static int hostapd_config_tx_queue(struct hostapd_config *conf,
+				   const char *name, const char *val)
 {
 	int num;
-	char *pos;
+	const char *pos;
 	struct hostapd_tx_queue_params *queue;
 
 	/* skip 'tx_queue_' prefix */
@@ -1936,7 +1936,7 @@ fail:
 
 static int hostapd_config_fill(struct hostapd_config *conf,
 			       struct hostapd_bss_config *bss,
-			       char *buf, char *pos, int line)
+			       const char *buf, char *pos, int line)
 {
 	if (os_strcmp(buf, "interface") == 0) {
 		os_strlcpy(conf->bss[0]->iface, pos,
@@ -3481,7 +3481,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 
 int hostapd_set_iface(struct hostapd_config *conf,
-		      struct hostapd_bss_config *bss, char *field, char *value)
+		      struct hostapd_bss_config *bss, const char *field,
+		      char *value)
 {
 	int errors;
 	size_t i;

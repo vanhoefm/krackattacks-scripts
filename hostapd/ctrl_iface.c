@@ -2638,7 +2638,7 @@ hostapd_interfaces_get_hapd(struct hapd_interfaces *interfaces,
 
 static int hostapd_ctrl_iface_dup_param(struct hostapd_data *src_hapd,
 					struct hostapd_data *dst_hapd,
-					char *param)
+					const char *param)
 {
 	int res;
 	char *value;

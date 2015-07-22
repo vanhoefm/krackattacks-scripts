@@ -3585,6 +3585,9 @@ static void wpa_cli_action_process(const char *msg)
 	const char *ifname = ctrl_ifname;
 	char ifname_buf[100];
 
+	if (eloop_terminated())
+		return;
+
 	pos = msg;
 	if (os_strncmp(pos, "IFNAME=", 7) == 0) {
 		const char *end;

@@ -6,6 +6,7 @@
 
 import os
 import time
+import stat
 import subprocess
 import logging
 logger = logging.getLogger()
@@ -2722,3 +2723,73 @@ def _test_ap_wps_er_oom(dev, apdev):
         ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
         if ev is None:
             raise Exception("Enrollee discovery timed out")
+
+def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
+    """WPS events and wpa_cli action script"""
+    pidfile = os.path.join(test_params['logdir'],
+                           'ap_wps_wpa_cli_action.wpa_cli.pid')
+    logfile = os.path.join(test_params['logdir'],
+                           'ap_wps_wpa_cli_action.wpa_cli.res')
+    actionfile = os.path.join(test_params['logdir'],
+                              'ap_wps_wpa_cli_action.wpa_cli.action.sh')
+
+    with open(actionfile, 'w') as f:
+        f.write('#!/bin/sh\n')
+        f.write('echo $* >> %s\n' % logfile)
+        # Kill the process and wait some time before returning to allow all the
+        # pending events to be processed with some of this happening after the
+        # eloop SIGALRM signal has been scheduled.
+        f.write('if [ $2 = "WPS-SUCCESS" -a -r %s ]; then kill `cat %s`; sleep 1; fi\n' % (pidfile, pidfile))
+
+    os.chmod(actionfile, stat.S_IREAD | stat.S_IEXEC)
+
+    ssid = "test-wps-conf"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    prg = os.path.join(test_params['logdir'],
+                       'alt-wpa_supplicant/wpa_supplicant/wpa_cli')
+    if not os.path.exists(prg):
+        prg = '../../wpa_supplicant/wpa_cli'
+    arg = [ prg, '-P', pidfile, '-B', '-i', dev[0].ifname, '-a', actionfile ]
+    subprocess.call(arg)
+
+    arg = [ 'ps', 'ax' ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE)
+    out = cmd.communicate()[0]
+    cmd.wait()
+    logger.debug("Processes:\n" + out)
+    if "wpa_cli -P %s -B -i %s" % (pidfile, dev[0].ifname) not in out:
+        raise Exception("Did not see wpa_cli running")
+
+    hapd.request("WPS_PIN any 12345670")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN " + apdev[0]['bssid'] + " 12345670")
+    dev[0].wait_connected(timeout=30)
+
+    for i in range(30):
+        if not os.path.exists(pidfile):
+            break
+        time.sleep(0.1)
+
+    if not os.path.exists(logfile):
+        raise Exception("wpa_cli action results file not found")
+    with open(logfile, 'r') as f:
+        res = f.read()
+    if "WPS-SUCCESS" not in res:
+        raise Exception("WPS-SUCCESS event not seen in action file")
+
+    arg = [ 'ps', 'ax' ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE)
+    out = cmd.communicate()[0]
+    cmd.wait()
+    logger.debug("Remaining processes:\n" + out)
+    if "wpa_cli -P %s -B -i %s" % (pidfile, dev[0].ifname) in out:
+        raise Exception("wpa_cli still running")
+
+    if os.path.exists(pidfile):
+        raise Exception("PID file not removed")

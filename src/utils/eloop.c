@@ -923,6 +923,20 @@ void eloop_run(void)
 	       (!dl_list_empty(&eloop.timeout) || eloop.readers.count > 0 ||
 		eloop.writers.count > 0 || eloop.exceptions.count > 0)) {
 		struct eloop_timeout *timeout;
+
+		if (eloop.pending_terminate) {
+			/*
+			 * This may happen in some corner cases where a signal
+			 * is received during a blocking operation. We need to
+			 * process the pending signals and exit if requested to
+			 * avoid hitting the SIGALRM limit if the blocking
+			 * operation took more than two seconds.
+			 */
+			eloop_process_pending_signals();
+			if (eloop.terminate)
+				break;
+		}
+
 		timeout = dl_list_first(&eloop.timeout, struct eloop_timeout,
 					list);
 		if (timeout) {
@@ -1073,7 +1087,7 @@ void eloop_destroy(void)
 
 int eloop_terminated(void)
 {
-	return eloop.terminate;
+	return eloop.terminate || eloop.pending_terminate;
 }
 
 

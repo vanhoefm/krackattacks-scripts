@@ -1404,6 +1404,16 @@ enum wpa_driver_if_type {
 	 * WPA_IF_MESH - Mesh interface
 	 */
 	WPA_IF_MESH,
+
+	/*
+	 * WPA_IF_TDLS - TDLS offchannel interface (used for pref freq only)
+	 */
+	WPA_IF_TDLS,
+
+	/*
+	 * WPA_IF_IBSS - IBSS interface (used for pref freq only)
+	 */
+	WPA_IF_IBSS,
 };
 
 struct wpa_init_params {
@@ -3403,6 +3413,20 @@ struct wpa_driver_ops {
 	 * Returns 0 on success, -1 on failure
 	 */
 	int (*set_band)(void *priv, enum set_band band);
+
+	/**
+	 * get_pref_freq_list - Get preferred frequency list for an interface
+	 * @priv: Private driver interface data
+	 * @if_type: Interface type
+	 * @num: Number of channels
+	 * @freq_list: Preferred channel frequency list encoded in MHz values
+	 * Returns 0 on success, -1 on failure
+	 *
+	 * This command can be used to query the preferred frequency list from
+	 * the driver specific to a particular interface type.
+	 */
+	int (*get_pref_freq_list)(void *priv, enum wpa_driver_if_type if_type,
+				  unsigned int *num, unsigned int *freq_list);
 
 	/**
 	 * set_prob_oper_freq - Indicate probable P2P operating channel

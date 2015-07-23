@@ -6654,6 +6654,53 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 
+static int wpas_ctrl_iface_get_pref_freq_list(
+	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
+{
+	unsigned int freq_list[100], num = 100, i;
+	int ret;
+	enum wpa_driver_if_type iface_type;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	/* buf: "<interface_type>" */
+	if (os_strcmp(cmd, "STATION") == 0)
+		iface_type = WPA_IF_STATION;
+	else if (os_strcmp(cmd, "AP") == 0)
+		iface_type = WPA_IF_AP_BSS;
+	else if (os_strcmp(cmd, "P2P_GO") == 0)
+		iface_type = WPA_IF_P2P_GO;
+	else if (os_strcmp(cmd, "P2P_CLIENT") == 0)
+		iface_type = WPA_IF_P2P_CLIENT;
+	else if (os_strcmp(cmd, "IBSS") == 0)
+		iface_type = WPA_IF_IBSS;
+	else if (os_strcmp(cmd, "TDLS") == 0)
+		iface_type = WPA_IF_TDLS;
+	else
+		return -1;
+
+	wpa_printf(MSG_DEBUG,
+		   "CTRL_IFACE: GET_PREF_FREQ_LIST iface_type=%d (%s)",
+		   iface_type, buf);
+
+	ret = wpa_drv_get_pref_freq_list(wpa_s, iface_type, &num, freq_list);
+	if (ret)
+		return -1;
+
+	for (i = 0; i < num; i++) {
+		ret = os_snprintf(pos, end - pos, "%s%u",
+				  i > 0 ? "," : "", freq_list[i]);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
+
 static int wpa_supplicant_pktcnt_poll(struct wpa_supplicant *wpa_s, char *buf,
 				      size_t buflen)
 {
@@ -8750,6 +8797,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "MAC_RAND_SCAN ", 14) == 0) {
 		if (wpas_ctrl_iface_mac_rand_scan(wpa_s, buf + 14))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "GET_PREF_FREQ_LIST ", 19) == 0) {
+		reply_len = wpas_ctrl_iface_get_pref_freq_list(
+			wpa_s, buf + 19, reply, reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

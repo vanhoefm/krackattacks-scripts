@@ -893,6 +893,17 @@ static inline int wpa_drv_setband(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->set_band(wpa_s->drv_priv, band);
 }
 
+static inline int wpa_drv_get_pref_freq_list(struct wpa_supplicant *wpa_s,
+					     enum wpa_driver_if_type if_type,
+					     unsigned int *num,
+					     unsigned int *freq_list)
+{
+	if (!wpa_s->driver->get_pref_freq_list)
+		return 0;
+	return wpa_s->driver->get_pref_freq_list(wpa_s->drv_priv, if_type,
+						 num, freq_list);
+}
+
 static inline int wpa_drv_set_prob_oper_freq(struct wpa_supplicant *wpa_s,
 					     unsigned int freq)
 {

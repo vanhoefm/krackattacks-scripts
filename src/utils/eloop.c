@@ -61,11 +61,8 @@ struct eloop_signal {
 struct eloop_sock_table {
 	int count;
 	struct eloop_sock *table;
-#ifdef CONFIG_ELOOP_EPOLL
 	eloop_event_type type;
-#else /* CONFIG_ELOOP_EPOLL */
 	int changed;
-#endif /* CONFIG_ELOOP_EPOLL */
 };
 
 struct eloop_data {
@@ -256,9 +253,7 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 	table->table = tmp;
 	eloop.max_sock = new_max_sock;
 	eloop.count++;
-#ifndef CONFIG_ELOOP_EPOLL
 	table->changed = 1;
-#endif /* CONFIG_ELOOP_EPOLL */
 	eloop_trace_sock_add_ref(table);
 
 #ifdef CONFIG_ELOOP_EPOLL
@@ -314,9 +309,7 @@ static void eloop_sock_table_remove_sock(struct eloop_sock_table *table,
 	}
 	table->count--;
 	eloop.count--;
-#ifndef CONFIG_ELOOP_EPOLL
 	table->changed = 1;
-#endif /* CONFIG_ELOOP_EPOLL */
 	eloop_trace_sock_add_ref(table);
 #ifdef CONFIG_ELOOP_EPOLL
 	if (epoll_ctl(eloop.epollfd, EPOLL_CTL_DEL, sock, NULL) < 0) {
@@ -523,6 +516,10 @@ static void eloop_sock_table_dispatch(struct epoll_event *events, int nfds)
 			continue;
 		table->handler(table->sock, table->eloop_data,
 			       table->user_data);
+		if (eloop.readers.changed ||
+		    eloop.writers.changed ||
+		    eloop.exceptions.changed)
+			break;
 	}
 }
 #endif /* CONFIG_ELOOP_EPOLL */
@@ -991,6 +988,11 @@ void eloop_run(void)
 				   , strerror(errno));
 			goto out;
 		}
+
+		eloop.readers.changed = 0;
+		eloop.writers.changed = 0;
+		eloop.exceptions.changed = 0;
+
 		eloop_process_pending_signals();
 
 		/* check if some registered timeouts have occurred */
@@ -1011,6 +1013,19 @@ void eloop_run(void)
 
 		if (res <= 0)
 			continue;
+
+		if (eloop.readers.changed ||
+		    eloop.writers.changed ||
+		    eloop.exceptions.changed) {
+			 /*
+			  * Sockets may have been closed and reopened with the
+			  * same FD in the signal or timeout handlers, so we
+			  * must skip the previous results and check again
+			  * whether any of the currently registered sockets have
+			  * events.
+			  */
+			continue;
+		}
 
 #ifdef CONFIG_ELOOP_POLL
 		eloop_sock_table_dispatch(&eloop.readers, &eloop.writers,

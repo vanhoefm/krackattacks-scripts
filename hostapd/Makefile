@@ -107,6 +107,14 @@ LIBS_h += -lrt
 LIBS_n += -lrt
 endif
 
+ifdef CONFIG_ELOOP_POLL
+CFLAGS += -DCONFIG_ELOOP_POLL
+endif
+
+ifdef CONFIG_ELOOP_EPOLL
+CFLAGS += -DCONFIG_ELOOP_EPOLL
+endif
+
 OBJS += ../src/utils/common.o
 OBJS_c += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o

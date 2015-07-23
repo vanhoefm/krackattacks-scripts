@@ -127,6 +127,15 @@ endif
 endif
 
 OBJS += src/utils/eloop.c
+
+ifdef CONFIG_ELOOP_POLL
+L_CFLAGS += -DCONFIG_ELOOP_POLL
+endif
+
+ifdef CONFIG_ELOOP_EPOLL
+L_CFLAGS += -DCONFIG_ELOOP_EPOLL
+endif
+
 OBJS += src/utils/common.c
 OBJS += src/utils/wpa_debug.c
 OBJS += src/utils/wpabuf.c

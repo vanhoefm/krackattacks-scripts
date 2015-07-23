@@ -15,6 +15,7 @@
 #include "utils/trace.h"
 #include "utils/base64.h"
 #include "utils/ip_addr.h"
+#include "utils/eloop.h"
 
 
 struct printf_test_data {
@@ -592,6 +593,251 @@ static int ip_addr_tests(void)
 }
 
 
+struct test_eloop {
+	unsigned int magic;
+	int close_in_timeout;
+	int pipefd1[2];
+	int pipefd2[2];
+};
+
+
+static void eloop_tests_start(int close_in_timeout);
+
+
+static void eloop_test_read_2(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct test_eloop *t = eloop_ctx;
+	ssize_t res;
+	char buf[10];
+
+	wpa_printf(MSG_INFO, "%s: sock=%d", __func__, sock);
+
+	if (t->magic != 0x12345678) {
+		wpa_printf(MSG_INFO, "%s: unexpected magic 0x%x",
+			   __func__, t->magic);
+	}
+
+	if (t->pipefd2[0] != sock) {
+		wpa_printf(MSG_INFO, "%s: unexpected sock %d != %d",
+			   __func__, sock, t->pipefd2[0]);
+	}
+
+	res = read(sock, buf, sizeof(buf));
+	wpa_printf(MSG_INFO, "%s: sock=%d --> res=%d",
+		   __func__, sock, (int) res);
+}
+
+
+static void eloop_test_read_2_wrong(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct test_eloop *t = eloop_ctx;
+
+	wpa_printf(MSG_INFO, "%s: sock=%d", __func__, sock);
+
+	if (t->magic != 0x12345678) {
+		wpa_printf(MSG_INFO, "%s: unexpected magic 0x%x",
+			   __func__, t->magic);
+	}
+
+	if (t->pipefd2[0] != sock) {
+		wpa_printf(MSG_INFO, "%s: unexpected sock %d != %d",
+			   __func__, sock, t->pipefd2[0]);
+	}
+
+	/*
+	 * This is expected to block due to the original socket with data having
+	 * been closed and no new data having been written to the new socket
+	 * with the same fd. To avoid blocking the process during test, skip the
+	 * read here.
+	 */
+	wpa_printf(MSG_ERROR, "%s: FAIL - should not have called this function",
+		   __func__);
+}
+
+
+static void reopen_pipefd2(struct test_eloop *t)
+{
+	if (t->pipefd2[0] < 0) {
+		wpa_printf(MSG_INFO, "pipefd2 had been closed");
+	} else {
+		int res;
+
+		wpa_printf(MSG_INFO, "close pipefd2");
+		eloop_unregister_read_sock(t->pipefd2[0]);
+		close(t->pipefd2[0]);
+		t->pipefd2[0] = -1;
+		close(t->pipefd2[1]);
+		t->pipefd2[1] = -1;
+
+		res = pipe(t->pipefd2);
+		if (res < 0) {
+			wpa_printf(MSG_INFO, "pipe: %s", strerror(errno));
+			t->pipefd2[0] = -1;
+			t->pipefd2[1] = -1;
+			return;
+		}
+
+		wpa_printf(MSG_INFO,
+			   "re-register pipefd2 with new sockets %d,%d",
+			   t->pipefd2[0], t->pipefd2[1]);
+		eloop_register_read_sock(t->pipefd2[0], eloop_test_read_2_wrong,
+					 t, NULL);
+	}
+}
+
+
+static void eloop_test_read_1(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct test_eloop *t = eloop_ctx;
+	ssize_t res;
+	char buf[10];
+
+	wpa_printf(MSG_INFO, "%s: sock=%d", __func__, sock);
+
+	if (t->magic != 0x12345678) {
+		wpa_printf(MSG_INFO, "%s: unexpected magic 0x%x",
+			   __func__, t->magic);
+	}
+
+	if (t->pipefd1[0] != sock) {
+		wpa_printf(MSG_INFO, "%s: unexpected sock %d != %d",
+			   __func__, sock, t->pipefd1[0]);
+	}
+
+	res = read(sock, buf, sizeof(buf));
+	wpa_printf(MSG_INFO, "%s: sock=%d --> res=%d",
+		   __func__, sock, (int) res);
+
+	if (!t->close_in_timeout)
+		reopen_pipefd2(t);
+}
+
+
+static void eloop_test_cb(void *eloop_data, void *user_ctx)
+{
+	struct test_eloop *t = eloop_data;
+
+	wpa_printf(MSG_INFO, "%s", __func__);
+
+	if (t->magic != 0x12345678) {
+		wpa_printf(MSG_INFO, "%s: unexpected magic 0x%x",
+			   __func__, t->magic);
+	}
+
+	if (t->close_in_timeout)
+		reopen_pipefd2(t);
+}
+
+
+static void eloop_test_timeout(void *eloop_data, void *user_ctx)
+{
+	struct test_eloop *t = eloop_data;
+	int next_run = 0;
+
+	wpa_printf(MSG_INFO, "%s", __func__);
+
+	if (t->magic != 0x12345678) {
+		wpa_printf(MSG_INFO, "%s: unexpected magic 0x%x",
+			   __func__, t->magic);
+	}
+
+	if (t->pipefd1[0] >= 0) {
+		wpa_printf(MSG_INFO, "pipefd1 had not been closed");
+		eloop_unregister_read_sock(t->pipefd1[0]);
+		close(t->pipefd1[0]);
+		t->pipefd1[0] = -1;
+		close(t->pipefd1[1]);
+		t->pipefd1[1] = -1;
+	}
+
+	if (t->pipefd2[0] >= 0) {
+		wpa_printf(MSG_INFO, "pipefd2 had not been closed");
+		eloop_unregister_read_sock(t->pipefd2[0]);
+		close(t->pipefd2[0]);
+		t->pipefd2[0] = -1;
+		close(t->pipefd2[1]);
+		t->pipefd2[1] = -1;
+	}
+
+	next_run = t->close_in_timeout;
+	t->magic = 0;
+	wpa_printf(MSG_INFO, "%s - free(%p)", __func__, t);
+	os_free(t);
+
+	if (next_run)
+		eloop_tests_start(0);
+}
+
+
+static void eloop_tests_start(int close_in_timeout)
+{
+	struct test_eloop *t;
+	int res;
+
+	t = os_zalloc(sizeof(*t));
+	if (!t)
+		return;
+	t->magic = 0x12345678;
+	t->close_in_timeout = close_in_timeout;
+
+	wpa_printf(MSG_INFO, "starting eloop tests (%p) (close_in_timeout=%d)",
+		   t, close_in_timeout);
+
+	res = pipe(t->pipefd1);
+	if (res < 0) {
+		wpa_printf(MSG_INFO, "pipe: %s", strerror(errno));
+		os_free(t);
+		return;
+	}
+
+	res = pipe(t->pipefd2);
+	if (res < 0) {
+		wpa_printf(MSG_INFO, "pipe: %s", strerror(errno));
+		close(t->pipefd1[0]);
+		close(t->pipefd1[1]);
+		os_free(t);
+		return;
+	}
+
+	wpa_printf(MSG_INFO, "pipe fds: %d,%d %d,%d",
+		   t->pipefd1[0], t->pipefd1[1],
+		   t->pipefd2[0], t->pipefd2[1]);
+
+	eloop_register_read_sock(t->pipefd1[0], eloop_test_read_1, t, NULL);
+	eloop_register_read_sock(t->pipefd2[0], eloop_test_read_2, t, NULL);
+	eloop_register_timeout(0, 0, eloop_test_cb, t, NULL);
+	eloop_register_timeout(0, 200000, eloop_test_timeout, t, NULL);
+
+	if (write(t->pipefd1[1], "HELLO", 5) < 0)
+		wpa_printf(MSG_INFO, "write: %s", strerror(errno));
+	if (write(t->pipefd2[1], "TEST", 4) < 0)
+		wpa_printf(MSG_INFO, "write: %s", strerror(errno));
+	os_sleep(0, 50000);
+	wpa_printf(MSG_INFO, "waiting for eloop callbacks");
+}
+
+
+static void eloop_tests_run(void *eloop_data, void *user_ctx)
+{
+	eloop_tests_start(1);
+}
+
+
+static int eloop_tests(void)
+{
+	wpa_printf(MSG_INFO, "schedule eloop tests to be run");
+
+	/*
+	 * Cannot return error from these without a significant design change,
+	 * so for now, run the tests from a scheduled timeout and require
+	 * separate verification of the results from the debug log.
+	 */
+	eloop_register_timeout(0, 0, eloop_tests_run, NULL, NULL);
+
+	return 0;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
@@ -607,6 +853,7 @@ int utils_module_tests(void)
 	    os_tests() < 0 ||
 	    wpabuf_tests() < 0 ||
 	    ip_addr_tests() < 0 ||
+	    eloop_tests() < 0 ||
 	    int_array_tests() < 0)
 		ret = -1;
 

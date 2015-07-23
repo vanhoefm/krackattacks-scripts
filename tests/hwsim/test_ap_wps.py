@@ -2726,12 +2726,10 @@ def _test_ap_wps_er_oom(dev, apdev):
 
 def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
     """WPS events and wpa_cli action script"""
-    pidfile = os.path.join(test_params['logdir'],
-                           'ap_wps_wpa_cli_action.wpa_cli.pid')
-    logfile = os.path.join(test_params['logdir'],
-                           'ap_wps_wpa_cli_action.wpa_cli.res')
-    actionfile = os.path.join(test_params['logdir'],
-                              'ap_wps_wpa_cli_action.wpa_cli.action.sh')
+    logdir = os.path.abspath(test_params['logdir'])
+    pidfile = os.path.join(logdir, 'ap_wps_wpa_cli_action.wpa_cli.pid')
+    logfile = os.path.join(logdir, 'ap_wps_wpa_cli_action.wpa_cli.res')
+    actionfile = os.path.join(logdir, 'ap_wps_wpa_cli_action.wpa_cli.action.sh')
 
     with open(actionfile, 'w') as f:
         f.write('#!/bin/sh\n')
@@ -2741,7 +2739,8 @@ def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
         # eloop SIGALRM signal has been scheduled.
         f.write('if [ $2 = "WPS-SUCCESS" -a -r %s ]; then kill `cat %s`; sleep 1; fi\n' % (pidfile, pidfile))
 
-    os.chmod(actionfile, stat.S_IREAD | stat.S_IEXEC)
+    os.chmod(actionfile, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC |
+             stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
 
     ssid = "test-wps-conf"
     hostapd.add_ap(apdev[0]['ifname'],

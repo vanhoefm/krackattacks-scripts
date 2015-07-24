@@ -769,6 +769,8 @@ void p2p_buf_add_persistent_group_info(struct wpabuf *buf, const u8 *dev_addr,
 				       const u8 *ssid, size_t ssid_len);
 int p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, int pw_id,
 		     int all_attr);
+void p2p_buf_add_pref_channel_list(struct wpabuf *buf,
+				   const u32 *preferred_freq_list, u32 size);
 
 /* p2p_sd.c */
 struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,

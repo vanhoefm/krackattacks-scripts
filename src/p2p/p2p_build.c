@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/qca-vendor.h"
 #include "wps/wps_i.h"
 #include "p2p_i.h"
 
@@ -106,6 +107,44 @@ void p2p_buf_add_operating_channel(struct wpabuf *buf, const char *country,
 	wpabuf_put_u8(buf, channel); /* Channel Number */
 	wpa_printf(MSG_DEBUG, "P2P: * Operating Channel: Regulatory Class %u "
 		   "Channel %u", reg_class, channel);
+}
+
+
+void p2p_buf_add_pref_channel_list(struct wpabuf *buf,
+				   const u32 *preferred_freq_list,
+				   unsigned int size)
+{
+	unsigned int i, count = 0;
+	u8 op_class, op_channel;
+
+	if (!size)
+		return;
+
+	/*
+	 * First, determine the number of P2P supported channels in the
+	 * pref_freq_list returned from driver. This is needed for calculations
+	 * of the vendor IE size.
+	 */
+	for (i = 0; i < size; i++) {
+		if (p2p_freq_to_channel(preferred_freq_list[i], &op_class,
+					&op_channel) == 0)
+			count++;
+	}
+
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(buf, 4 + count * sizeof(u16));
+	wpabuf_put_be24(buf, OUI_QCA);
+	wpabuf_put_u8(buf, QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST);
+	for (i = 0; i < size; i++) {
+		if (p2p_freq_to_channel(preferred_freq_list[i], &op_class,
+					&op_channel) < 0) {
+			wpa_printf(MSG_DEBUG, "Unsupported frequency %u MHz",
+				   preferred_freq_list[i]);
+			continue;
+		}
+		wpabuf_put_u8(buf, op_class);
+		wpabuf_put_u8(buf, op_channel);
+	}
 }
 
 

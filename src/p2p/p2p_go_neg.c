@@ -185,6 +185,9 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 				      p2p->op_reg_class, p2p->op_channel);
 	p2p_buf_update_ie_hdr(buf, len);
 
+	p2p_buf_add_pref_channel_list(buf, p2p->pref_freq_list,
+				      p2p->num_pref_freq);
+
 	/* WPS IE with Device Password ID attribute */
 	pw_id = p2p_wps_method_pw_id(peer->wps_method);
 	if (peer->oob_pw_id)

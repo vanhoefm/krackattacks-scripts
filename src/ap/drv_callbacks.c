@@ -43,10 +43,10 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	struct ieee802_11_elems elems;
 	const u8 *ie;
 	size_t ielen;
-#ifdef CONFIG_IEEE80211R
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)
 	u8 buf[sizeof(struct ieee80211_mgmt) + 1024];
 	u8 *p = buf;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
 	u16 reason = WLAN_REASON_UNSPECIFIED;
 	u16 status = WLAN_STATUS_SUCCESS;
 	const u8 *p2p_dev_addr = NULL;
@@ -256,14 +256,12 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			if (sta->sa_query_count == 0)
 				ap_sta_start_sa_query(hapd, sta);
 
-#ifdef CONFIG_IEEE80211R
 			status = WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY;
 
 			p = hostapd_eid_assoc_comeback_time(hapd, sta, p);
 
 			hostapd_sta_assoc(hapd, addr, reassoc, status, buf,
 					  p - buf);
-#endif /* CONFIG_IEEE80211R */
 			return 0;
 		}
 

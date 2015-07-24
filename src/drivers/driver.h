@@ -1297,6 +1297,13 @@ struct wpa_driver_capa {
  */
 #define WPA_DRIVER_FLAGS_TX_POWER_INSERTION		0x00000008
 	u32 rrm_flags;
+
+	/* Driver concurrency capabilities */
+	unsigned int conc_capab;
+	/* Maximum number of concurrent channels on 2.4 GHz */
+	unsigned int max_conc_chan_2_4;
+	/* Maximum number of concurrent channels on 5 GHz */
+	unsigned int max_conc_chan_5_0;
 };
 
 

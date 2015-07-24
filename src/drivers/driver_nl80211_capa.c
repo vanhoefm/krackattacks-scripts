@@ -751,6 +751,7 @@ static void qca_nl80211_check_dfs_capa(struct wpa_driver_nl80211_data *drv)
 struct features_info {
 	u8 *flags;
 	size_t flags_len;
+	struct wpa_driver_capa *capa;
 };
 
 
@@ -776,6 +777,19 @@ static int features_info_handler(struct nl_msg *msg, void *arg)
 			info->flags = nla_data(attr);
 			info->flags_len = nla_len(attr);
 		}
+		attr = tb_vendor[QCA_WLAN_VENDOR_ATTR_CONCURRENCY_CAPA];
+		if (attr)
+			info->capa->conc_capab = nla_get_u32(attr);
+
+		attr = tb_vendor[
+			QCA_WLAN_VENDOR_ATTR_MAX_CONCURRENT_CHANNELS_2_4_BAND];
+		if (attr)
+			info->capa->max_conc_chan_2_4 = nla_get_u32(attr);
+
+		attr = tb_vendor[
+			QCA_WLAN_VENDOR_ATTR_MAX_CONCURRENT_CHANNELS_5_0_BAND];
+		if (attr)
+			info->capa->max_conc_chan_5_0 = nla_get_u32(attr);
 	}
 
 	return NL_SKIP;
@@ -810,6 +824,7 @@ static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
 	}
 
 	os_memset(&info, 0, sizeof(info));
+	info.capa = &drv->capa;
 	ret = send_and_recv_msgs(drv, msg, features_info_handler, &info);
 	if (ret || !info.flags)
 		return;

@@ -548,6 +548,9 @@ int p2p_parse_ies(const u8 *data, size_t len, struct p2p_message *msg)
 	}
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	msg->pref_freq_list = elems.pref_freq_list;
+	msg->pref_freq_list_len = elems.pref_freq_list_len;
+
 	return 0;
 }
 

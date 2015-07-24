@@ -643,6 +643,9 @@ struct p2p_message {
 	const u8 *persistent_dev;
 	const u8 *persistent_ssid;
 	size_t persistent_ssid_len;
+
+	const u8 *pref_freq_list;
+	size_t pref_freq_list_len;
 };
 
 

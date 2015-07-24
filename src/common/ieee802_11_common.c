@@ -11,6 +11,7 @@
 #include "common.h"
 #include "defs.h"
 #include "wpa_common.h"
+#include "qca-vendor.h"
 #include "ieee802_11_defs.h"
 #include "ieee802_11_common.h"
 
@@ -142,6 +143,20 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			wpa_printf(MSG_EXCESSIVE, "Unknown Broadcom "
 				   "information element ignored "
 				   "(type=%d len=%lu)",
+				   pos[3], (unsigned long) elen);
+			return -1;
+		}
+		break;
+
+	case OUI_QCA:
+		switch (pos[3]) {
+		case QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST:
+			elems->pref_freq_list = pos;
+			elems->pref_freq_list_len = elen;
+			break;
+		default:
+			wpa_printf(MSG_EXCESSIVE,
+				   "Unknown QCA information element ignored (type=%d len=%lu)",
 				   pos[3], (unsigned long) elen);
 			return -1;
 		}

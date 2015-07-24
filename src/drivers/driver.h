@@ -3403,6 +3403,18 @@ struct wpa_driver_ops {
 	 * Returns 0 on success, -1 on failure
 	 */
 	int (*set_band)(void *priv, enum set_band band);
+
+	/**
+	 * set_prob_oper_freq - Indicate probable P2P operating channel
+	 * @priv: Private driver interface data
+	 * @freq: Channel frequency in MHz
+	 * Returns 0 on success, -1 on failure
+	 *
+	 * This command can be used to inform the driver of the operating
+	 * frequency that an ongoing P2P group formation is likely to come up
+	 * on. Local device is assuming P2P Client role.
+	 */
+	int (*set_prob_oper_freq)(void *priv, unsigned int freq);
 };
 
 

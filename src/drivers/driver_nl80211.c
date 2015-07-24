@@ -8509,6 +8509,52 @@ static int nl80211_set_band(void *priv, enum set_band band)
 }
 
 
+static int nl80211_set_prob_oper_freq(void *priv, unsigned int freq)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+	struct nlattr *params;
+
+	if (!drv->set_prob_oper_freq)
+		return -1;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Set P2P probable operating freq %u for ifindex %d",
+		   freq, bss->ifindex);
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_PROBABLE_OPER_CHANNEL) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u32(msg,
+			QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_IFACE_TYPE,
+			QCA_IFACE_TYPE_P2P_CLIENT) ||
+	    nla_put_u32(msg,
+			QCA_WLAN_VENDOR_ATTR_PROBABLE_OPER_CHANNEL_FREQ,
+			freq)) {
+		wpa_printf(MSG_ERROR,
+			   "%s: err in adding vendor_cmd and vendor_data",
+			   __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_ERROR, "%s: err in send_and_recv_msgs",
+			   __func__);
+		return ret;
+	}
+	nlmsg_free(msg);
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -8617,4 +8663,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.del_tx_ts = nl80211_del_ts,
 	.do_acs = wpa_driver_do_acs,
 	.set_band = nl80211_set_band,
+	.set_prob_oper_freq = nl80211_set_prob_oper_freq,
 };

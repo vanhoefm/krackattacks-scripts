@@ -2081,6 +2081,11 @@ static void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 		return;
 	}
 
+	if (!res->role_go) {
+		/* Inform driver of the operating channel of GO. */
+		wpa_drv_set_prob_oper_freq(wpa_s, res->freq);
+	}
+
 	if (wpa_s->p2p_go_ht40)
 		res->ht40 = 1;
 	if (wpa_s->p2p_go_vht)

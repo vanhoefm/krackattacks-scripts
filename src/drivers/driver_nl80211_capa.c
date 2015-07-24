@@ -589,6 +589,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				case QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES:
 					drv->get_features_vendor_cmd_avail = 1;
 					break;
+				case QCA_NL80211_VENDOR_SUBCMD_SET_PROBABLE_OPER_CHANNEL:
+					drv->set_prob_oper_freq = 1;
+					break;
 				case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
 					drv->capa.flags |=
 						WPA_DRIVER_FLAGS_ACS_OFFLOAD;

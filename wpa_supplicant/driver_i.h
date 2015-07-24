@@ -893,4 +893,12 @@ static inline int wpa_drv_setband(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->set_band(wpa_s->drv_priv, band);
 }
 
+static inline int wpa_drv_set_prob_oper_freq(struct wpa_supplicant *wpa_s,
+					     unsigned int freq)
+{
+	if (!wpa_s->driver->set_prob_oper_freq)
+		return 0;
+	return wpa_s->driver->set_prob_oper_freq(wpa_s->drv_priv, freq);
+}
+
 #endif /* DRIVER_I_H */

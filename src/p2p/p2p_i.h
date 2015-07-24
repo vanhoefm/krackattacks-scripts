@@ -538,6 +538,9 @@ struct p2p_data {
 	u16 authorized_oob_dev_pw_id;
 
 	struct wpabuf **vendor_elem;
+
+	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS];
+	unsigned int num_pref_freq;
 };
 
 /**

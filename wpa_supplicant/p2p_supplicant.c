@@ -4792,11 +4792,16 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
 
 
 static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
-				int *force_freq, int *pref_freq, int go)
+				int *force_freq, int *pref_freq, int go,
+				unsigned int *pref_freq_list,
+				unsigned int *num_pref_freq)
 {
 	struct wpa_used_freq_data *freqs;
 	int res, best_freq, num_unused;
-	unsigned int freq_in_use = 0, num, i;
+	unsigned int freq_in_use = 0, num, i, max_pref_freq;
+
+	max_pref_freq = *num_pref_freq;
+	*num_pref_freq = 0;
 
 	freqs = os_calloc(wpa_s->num_multichan_concurrent,
 			  sizeof(struct wpa_used_freq_data));
@@ -4860,6 +4865,47 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 	}
 
 	best_freq = wpas_p2p_pick_best_used_freq(wpa_s, freqs, num);
+
+	if (!wpa_s->conf->num_p2p_pref_chan && *pref_freq == 0) {
+		enum wpa_driver_if_type iface_type;
+
+		if (go)
+			iface_type = WPA_IF_P2P_GO;
+		else
+			iface_type = WPA_IF_P2P_CLIENT;
+
+		wpa_printf(MSG_DEBUG, "P2P: best_freq=%d, go=%d",
+			   best_freq, go);
+
+		res = wpa_drv_get_pref_freq_list(wpa_s, iface_type,
+						 &max_pref_freq,
+						 pref_freq_list);
+		if (!res && max_pref_freq > 0) {
+			*num_pref_freq = max_pref_freq;
+			i = 0;
+			while (wpas_p2p_disallowed_freq(wpa_s->global,
+							pref_freq_list[i]) &&
+			       i < *num_pref_freq) {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: preferred_freq_list[%d]=%d is disallowed",
+					   i, pref_freq_list[i]);
+				i++;
+			}
+			if (i != *num_pref_freq) {
+				best_freq = pref_freq_list[i];
+				wpa_printf(MSG_DEBUG,
+					   "P2P: Using preferred_freq_list[%d]=%d",
+					   i, best_freq);
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: All driver preferred frequencies are disallowed for P2P use");
+				*num_pref_freq = 0;
+			}
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: No preferred frequency list available");
+		}
+	}
 
 	/* We have a candidate frequency to use */
 	if (best_freq > 0) {
@@ -4925,6 +4971,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	enum wpa_driver_if_type iftype;
 	const u8 *if_addr;
 	struct wpa_ssid *ssid = NULL;
+	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS], size;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -5001,12 +5048,15 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		return ret;
 	}
 
+	size = P2P_MAX_PREF_CHANNELS;
 	res = wpas_p2p_setup_freqs(wpa_s, freq, &force_freq, &pref_freq,
-				   go_intent == 15);
+				   go_intent == 15, pref_freq_list, &size);
 	if (res)
 		return res;
 	wpas_p2p_set_own_freq_preference(wpa_s,
 					 force_freq ? force_freq : pref_freq);
+
+	p2p_set_own_pref_freq_list(wpa_s->global->p2p, pref_freq_list, size);
 
 	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
 
@@ -6190,6 +6240,7 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	int force_freq = 0;
 	int res;
 	int no_pref_freq_given = pref_freq == 0;
+	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS], size;
 
 	wpa_s->global->p2p_invite_group = NULL;
 	if (peer_addr)
@@ -6223,8 +6274,10 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	}
 	wpa_s->pending_invite_ssid_id = ssid->id;
 
+	size = P2P_MAX_PREF_CHANNELS;
 	res = wpas_p2p_setup_freqs(wpa_s, freq, &force_freq, &pref_freq,
-				   role == P2P_INVITE_ROLE_GO);
+				   role == P2P_INVITE_ROLE_GO,
+				   pref_freq_list, &size);
 	if (res)
 		return res;
 
@@ -6263,6 +6316,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 	int persistent;
 	int freq = 0, force_freq = 0, pref_freq = 0;
 	int res;
+	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS], size;
 
 	wpa_s->p2p_persistent_go_freq = 0;
 	wpa_s->p2p_go_ht40 = 0;
@@ -6314,8 +6368,10 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
+	size = P2P_MAX_PREF_CHANNELS;
 	res = wpas_p2p_setup_freqs(wpa_s, freq, &force_freq, &pref_freq,
-				   role == P2P_INVITE_ROLE_ACTIVE_GO);
+				   role == P2P_INVITE_ROLE_ACTIVE_GO,
+				   pref_freq_list, &size);
 	if (res)
 		return res;
 	wpas_p2p_set_own_freq_preference(wpa_s, force_freq);

@@ -24,6 +24,11 @@
 #define P2PS_FEATURE_CAPAB_CPT_MAX 2
 
 /**
+ * P2P_MAX_PREF_CHANNELS - Maximum number of preferred channels
+ */
+#define P2P_MAX_PREF_CHANNELS 100
+
+/**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
  */
 #define P2P_MAX_REG_CLASSES 10
@@ -2301,5 +2306,9 @@ struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p);
  * expected to call periodically to clean up expired peer entries.
  */
 void p2p_expire_peers(struct p2p_data *p2p);
+
+void p2p_set_own_pref_freq_list(struct p2p_data *p2p,
+				const unsigned int *pref_freq_list,
+				unsigned int size);
 
 #endif /* P2P_H */

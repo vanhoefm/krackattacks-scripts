@@ -3949,6 +3949,17 @@ static int wpas_prov_disc_resp_cb(void *ctx)
 }
 
 
+static int wpas_p2p_get_pref_freq_list(void *ctx, int go,
+				       unsigned int *len,
+				       unsigned int *freq_list)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	return wpa_drv_get_pref_freq_list(wpa_s, go ? WPA_IF_P2P_GO :
+					  WPA_IF_P2P_CLIENT, len, freq_list);
+}
+
+
 /**
  * wpas_p2p_init - Initialize P2P module for %wpa_supplicant
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -4002,6 +4013,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.p2ps_prov_complete = wpas_p2ps_prov_complete;
 	p2p.prov_disc_resp_cb = wpas_prov_disc_resp_cb;
 	p2p.p2ps_group_capability = p2ps_group_capability;
+	p2p.get_pref_freq_list = wpas_p2p_get_pref_freq_list;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);

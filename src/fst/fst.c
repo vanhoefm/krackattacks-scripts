@@ -183,6 +183,10 @@ void fst_rx_action(struct fst_iface *iface, const struct ieee80211_mgmt *mgmt,
 {
 	if (fst_iface_is_connected(iface, mgmt->sa))
 		fst_session_on_action_rx(iface, mgmt, len);
+	else
+		wpa_printf(MSG_DEBUG,
+			   "FST: Ignore FST Action frame - no FST connection with "
+			   MACSTR, MAC2STR(mgmt->sa));
 }
 
 

@@ -2122,6 +2122,9 @@ static int handle_action(struct hostapd_data *hapd,
 	case WLAN_ACTION_FST:
 		if (hapd->iface->fst)
 			fst_rx_action(hapd->iface->fst, mgmt, len);
+		else
+			wpa_printf(MSG_DEBUG,
+				   "FST: Ignore FST Action frame - no FST attached");
 		return 1;
 #endif /* CONFIG_FST */
 	case WLAN_ACTION_PUBLIC:

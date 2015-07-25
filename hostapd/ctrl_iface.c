@@ -2578,6 +2578,10 @@ hostapd_global_ctrl_iface_fst_attach(struct hapd_interfaces *interfaces,
 	if (!fst_parse_attach_command(cmd, ifname, sizeof(ifname), &cfg)) {
 		hapd = hostapd_get_iface(interfaces, ifname);
 		if (hapd) {
+			if (hapd->iface->fst) {
+				wpa_printf(MSG_INFO, "FST: Already attached");
+				return -1;
+			}
 			fst_hostapd_fill_iface_obj(hapd, &iface_obj);
 			hapd->iface->fst = fst_attach(ifname, hapd->own_addr,
 						      &iface_obj, &cfg);

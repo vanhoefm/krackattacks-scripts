@@ -1475,6 +1475,8 @@ def test_fst_ap_ctrl_iface(dev, apdev, test_params):
                   "GET_PEER_MBIES unknown unknown",
                   "GET_PEER_MBIES unknown  " + initiator.get_new_peer_addr(),
                   "GET_PEER_MBIES " + initiator.ifname() + " 01:ff:ff:ff:ff:ff",
+                  "GET_PEER_MBIES " + initiator.ifname() + " 00:ff:ff:ff:ff:ff",
+                  "GET_PEER_MBIES " + initiator.ifname() + " 00:00:00:00:00:00",
                   "IFACE_PEERS",
                   "IFACE_PEERS ",
                   "IFACE_PEERS unknown",

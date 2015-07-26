@@ -2552,3 +2552,144 @@ def _test_fst_setup_mbie_diff(dev, apdev, test_params):
     req = "1200011a060000"
     stie = "a40b0200000000020001040001"
     fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie)
+
+def test_fst_many_setup(dev, apdev, test_params):
+    """FST setup multiple times"""
+    try:
+        _test_fst_many_setup(dev, apdev, test_params)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_fst_many_setup(dev, apdev, test_params):
+    hglobal = hostapd.HostapdGlobal()
+    if "OK" not in hglobal.request("FST-MANAGER TEST_REQUEST IS_SUPPORTED"):
+        raise HwsimSkip("No FST testing support")
+
+    params = { "ssid": "fst_11a", "hw_mode": "a", "channel": "36",
+               "country_code": "US" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    group = "fstg0"
+    fst_attach_ap(hglobal, apdev[0]['ifname'], group)
+
+    cmd = "FST-ATTACH %s %s" % (apdev[0]['ifname'], group)
+    if "FAIL" not in hglobal.request(cmd):
+        raise Exception("Duplicated FST-ATTACH (AP) accepted")
+
+    params = { "ssid": "fst_11g", "hw_mode": "g", "channel": "1",
+               "country_code": "US" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    fst_attach_ap(hglobal, apdev[1]['ifname'], group)
+
+    sgroup = "fstg1"
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    fst_attach_sta(wpas, wpas.ifname, sgroup)
+
+    wpas.interface_add("wlan6", set_ifname=False)
+    wpas2 = WpaSupplicant(ifname="wlan6")
+    fst_attach_sta(wpas, wpas2.ifname, sgroup)
+
+    wpas.connect("fst_11a", key_mgmt="NONE", scan_freq="5180",
+                 wait_connect=False)
+    wpas.wait_connected()
+
+    fst_wait_event_peer_sta(wpas, "connected", wpas.ifname, apdev[0]['bssid'])
+    fst_wait_event_peer_ap(hglobal, "connected", apdev[0]['ifname'],
+                           wpas.own_addr())
+
+    wpas2.connect("fst_11g", key_mgmt="NONE", scan_freq="2412",
+                  wait_connect=False)
+    wpas2.wait_connected()
+
+    fst_wait_event_peer_sta(wpas, "connected", wpas2.ifname, apdev[1]['bssid'])
+    fst_wait_event_peer_ap(hglobal, "connected", apdev[1]['ifname'],
+                           wpas2.own_addr())
+
+    sid = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
+    if "FAIL" in sid:
+        raise Exception("FST-MANAGER SESSION_ADD (STA) failed")
+
+    fst_session_set(wpas, sid, "old_ifname", wpas.ifname)
+    fst_session_set(wpas, sid, "old_peer_addr", apdev[0]['bssid'])
+    fst_session_set(wpas, sid, "new_ifname", wpas2.ifname)
+    fst_session_set(wpas, sid, "new_peer_addr", apdev[1]['bssid'])
+
+    for i in range(257):
+        if "OK" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+            raise Exception("FST-MANAGER SESSION_INITIATE failed")
+
+        while True:
+            ev = hglobal.wait_event(['FST-EVENT-SESSION'], timeout=5)
+            if ev is None:
+                raise Exception("No FST-EVENT-SESSION (AP)")
+            if "new_state=SETUP_COMPLETION" in ev:
+                f = re.search("session_id=(\d+)", ev)
+                if f is None:
+                    raise Exception("No session_id in FST-EVENT-SESSION")
+                sid_ap = f.group(1)
+                cmd = "FST-MANAGER SESSION_RESPOND %s accept" % sid_ap
+                if "OK" not in hglobal.request(cmd):
+                    raise Exception("FST-MANAGER SESSION_RESPOND failed on AP")
+                break
+
+        ev = wpas.wait_global_event(["FST-EVENT-SESSION"], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (STA)")
+        if "new_state=SETUP_COMPLETION" not in ev:
+            raise Exception("Unexpected FST-EVENT-SESSION data: " + ev)
+
+        ev = wpas.wait_global_event(["FST-EVENT-SESSION"], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (STA)")
+        if "event_type=EVENT_FST_ESTABLISHED" not in ev:
+            raise Exception("Unexpected FST-EVENT-SESSION data: " + ev)
+
+        if "OK" not in wpas.global_request("FST-MANAGER SESSION_TEARDOWN " + sid):
+            raise Exception("FST-MANAGER SESSION_INITIATE failed")
+
+        if i == 0:
+            if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_TEARDOWN " + sid):
+                raise Exception("Duplicate FST-MANAGER SESSION_TEARDOWN accepted")
+
+        ev = wpas.wait_global_event(["FST-EVENT-SESSION"], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (STA teardown -->initial)")
+        if "new_state=INITIAL" not in ev:
+            raise Exception("Unexpected FST-EVENT-SESSION data (STA): " + ev)
+
+        ev = hglobal.wait_event(['FST-EVENT-SESSION'], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (AP teardown -->initial)")
+        if "new_state=INITIAL" not in ev:
+            raise Exception("Unexpected FST-EVENT-SESSION data (AP): " + ev)
+
+        if "OK" not in hglobal.request("FST-MANAGER SESSION_REMOVE " + sid_ap):
+            raise Exception("FST-MANAGER SESSION_REMOVE (AP) failed")
+
+    if "OK" not in wpas.global_request("FST-MANAGER SESSION_REMOVE " + sid):
+        raise Exception("FST-MANAGER SESSION_REMOVE failed")
+
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    fst_wait_event_peer_sta(wpas, "disconnected", wpas.ifname,
+                            apdev[0]['bssid'])
+    fst_wait_event_peer_ap(hglobal, "disconnected", apdev[0]['ifname'],
+                           wpas.own_addr())
+
+    wpas2.request("DISCONNECT")
+    wpas2.wait_disconnected()
+    fst_wait_event_peer_sta(wpas, "disconnected", wpas2.ifname,
+                            apdev[1]['bssid'])
+    fst_wait_event_peer_ap(hglobal, "disconnected", apdev[1]['ifname'],
+                           wpas2.own_addr())
+
+    fst_detach_ap(hglobal, apdev[0]['ifname'], group)
+    fst_detach_ap(hglobal, apdev[1]['ifname'], group)
+    hapd.disable()
+    hapd2.disable()
+
+    fst_detach_sta(wpas, wpas.ifname, sgroup)
+    fst_detach_sta(wpas, wpas2.ifname, sgroup)

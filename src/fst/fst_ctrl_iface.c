@@ -78,12 +78,11 @@ static Boolean format_session_state_extra(const union fst_event_extra *extra,
 }
 
 
-static void fst_ctrl_iface_notify(u32 session_id,
+static void fst_ctrl_iface_notify(struct fst_iface *f, u32 session_id,
 				  enum fst_event_type event_type,
 				  const union fst_event_extra *extra)
 {
 	struct fst_group *g;
-	struct fst_iface *f;
 	char extra_str[128] = "";
 	const struct fst_event_extra_session_state *ss;
 	const struct fst_event_extra_iface_state *is;
@@ -94,13 +93,15 @@ static void fst_ctrl_iface_notify(u32 session_id,
 	 * on global Control Interface, so we just pick the 1st one.
 	 */
 
-	g = fst_first_group();
-	if (!g)
-		return;
-
-	f = fst_group_first_iface(g);
-	if (!f)
-		return;
+	if (!f) {
+		foreach_fst_group(g) {
+			f = fst_group_first_iface(g);
+			if (f)
+				break;
+		}
+		if (!f)
+			return;
+	}
 
 	WPA_ASSERT(f->iface_obj.ctx);
 
@@ -702,7 +703,7 @@ static void fst_ctrl_iface_on_iface_state_changed(struct fst_iface *i,
 	os_strlcpy(extra.iface_state.group_id, fst_iface_get_group_id(i),
 		   sizeof(extra.iface_state.group_id));
 
-	fst_ctrl_iface_notify(FST_INVALID_SESSION_ID,
+	fst_ctrl_iface_notify(i, FST_INVALID_SESSION_ID,
 			      EVENT_FST_IFACE_STATE_CHANGED, &extra);
 }
 
@@ -726,7 +727,7 @@ static void fst_ctrl_iface_on_event(enum fst_event_type event_type,
 {
 	u32 session_id = s ? fst_session_get_id(s) : FST_INVALID_SESSION_ID;
 
-	fst_ctrl_iface_notify(session_id, event_type, extra);
+	fst_ctrl_iface_notify(i, session_id, event_type, extra);
 }
 
 

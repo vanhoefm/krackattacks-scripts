@@ -1839,6 +1839,18 @@ def test_fst_proto(dev, apdev, test_params):
                                      FST_ACTION_SETUP_REQUEST)
         hostapd_tx_and_status(hapd, msg)
 
+        # FST Request dropped: invalid STIE (EID)
+        msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_REQUEST, 0, 0,
+                                     163, 11, 0, 0, 0, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Request dropped: invalid STIE (Len)
+        msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_REQUEST, 0, 0,
+                                     164, 10, 0, 0, 0, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+
         # FST Request dropped: new and old band IDs are the same
         msg['payload'] = struct.pack("<BBBLBBLBBBBBBB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_REQUEST, 0, 0,
@@ -1967,6 +1979,26 @@ def test_fst_setup_response_proto(dev, apdev, test_params):
         # Too short FST Response dropped
         msg['payload'] = struct.pack("<BB", ACTION_CATEG_FST,
                                      FST_ACTION_SETUP_RESPONSE)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Response dropped: invalid STIE (EID)
+        dialog_token = 1
+        status_code = 0
+        id = 0
+        msg['payload'] = struct.pack("<BBBBBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE, dialog_token,
+                                     status_code,
+                                     163, 11, 0, 0, id, 0, 0, 0, 0, 0)
+        hostapd_tx_and_status(hapd, msg)
+
+        # FST Response dropped: invalid STIE (Len)
+        dialog_token = 1
+        status_code = 0
+        id = 0
+        msg['payload'] = struct.pack("<BBBBBBLBBBBBBB", ACTION_CATEG_FST,
+                                     FST_ACTION_SETUP_RESPONSE, dialog_token,
+                                     status_code,
+                                     164, 10, 0, 0, id, 0, 0, 0, 0, 0)
         hostapd_tx_and_status(hapd, msg)
 
         # FST Response dropped due to wrong dialog token

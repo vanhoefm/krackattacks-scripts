@@ -842,13 +842,10 @@ int fst_read_next_text_param(const char *params, char *buf, size_t buflen,
 	size_t max_chars_to_copy;
 	char *cur_dest;
 
-	if (buflen <= 1)
-		return -EINVAL;
-
 	*endp = (char *) params;
 	while (isspace(**endp))
 		(*endp)++;
-	if (!**endp)
+	if (!**endp || buflen <= 1)
 		return -EINVAL;
 
 	max_chars_to_copy = buflen - 1;

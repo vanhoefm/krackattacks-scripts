@@ -2703,3 +2703,16 @@ def _test_fst_many_setup(dev, apdev, test_params):
 
     fst_detach_sta(wpas, wpas.ifname, sgroup)
     fst_detach_sta(wpas, wpas2.ifname, sgroup)
+
+def test_fst_attach_wpas_error(dev, apdev, test_params):
+    """FST attach errors in wpa_supplicant"""
+    group = "fstg0"
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    fst_attach_sta(wpas, wpas.ifname, group)
+    if "FAIL" not in wpas.global_request("FST-ATTACH %s %s" % (wpas.ifname,
+                                                               group)):
+        raise Exception("Duplicated FST-ATTACH accepted")
+    if "FAIL" not in wpas.global_request("FST-ATTACH %s %s" % ("foofoo",
+                                                               group)):
+        raise Exception("FST-ATTACH for unknown interface accepted")

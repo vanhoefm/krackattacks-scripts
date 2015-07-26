@@ -289,6 +289,7 @@ def test_discovery_and_interface_disabled(dev):
 
 def test_discovery_auto(dev):
     """P2P device discovery and provision discovery with auto GO/dev selection"""
+    dev[0].flush_scan_cache()
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     addr2 = dev[2].p2p_dev_addr()

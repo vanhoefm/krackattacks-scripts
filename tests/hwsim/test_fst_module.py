@@ -2248,6 +2248,11 @@ def fst_session_set(dev, sid, param, value):
     if "OK" not in dev.global_request(cmd):
         raise Exception(cmd + " failed")
 
+def fst_session_set_ap(dev, sid, param, value):
+    cmd = "FST-MANAGER SESSION_SET %s %s=%s" % (sid, param, value)
+    if "OK" not in dev.request(cmd):
+        raise Exception(cmd + " failed")
+
 def fst_attach_ap(dev, ifname, group):
     cmd = "FST-ATTACH %s %s" % (ifname, group)
     if "OK" not in dev.request(cmd):
@@ -2640,3 +2645,164 @@ def test_fst_attach_wpas_error(dev, apdev, test_params):
     if "FAIL" not in wpas.global_request("FST-ATTACH %s %s" % ("foofoo",
                                                                group)):
         raise Exception("FST-ATTACH for unknown interface accepted")
+
+def test_fst_session_initiate_errors(dev, apdev, test_params):
+    """FST SESSION_INITIATE error cases"""
+    try:
+        _test_fst_session_initiate_errors(dev, apdev, test_params)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_fst_session_initiate_errors(dev, apdev, test_params):
+    group = "fstg0"
+    sgroup = "fstg1"
+    hglobal, wpas, wpas2, hapd, hapd2 = fst_start_and_connect(apdev, group, sgroup)
+
+    sid = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
+    if "FAIL" in sid:
+        raise Exception("FST-MANAGER SESSION_ADD (STA) failed")
+
+    # No old peer MAC address
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "old_peer_addr", "00:ff:ff:ff:ff:ff")
+    # No new peer MAC address
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "new_peer_addr", "00:ff:ff:ff:ff:fe")
+    # No old interface defined
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "old_ifname", wpas.ifname)
+    # No new interface defined
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "new_ifname", wpas.ifname)
+    # Same interface set as old and new
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "new_ifname", wpas2.ifname)
+    # The preset old peer address is not connected
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "old_peer_addr", apdev[0]['bssid'])
+    # The preset new peer address is not connected
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Invalid FST-MANAGER SESSION_INITIATE accepted")
+
+    fst_session_set(wpas, sid, "new_peer_addr", apdev[1]['bssid'])
+    # Initiate session setup
+    if "OK" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("FST-MANAGER SESSION_INITIATE failed")
+
+    # Session in progress
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("Duplicated FST-MANAGER SESSION_INITIATE accepted")
+
+    sid2 = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
+    if "FAIL" in sid:
+        raise Exception("FST-MANAGER SESSION_ADD (STA) failed")
+    fst_session_set(wpas, sid2, "old_ifname", wpas.ifname)
+    fst_session_set(wpas, sid2, "old_peer_addr", apdev[0]['bssid'])
+    fst_session_set(wpas, sid2, "new_ifname", wpas2.ifname)
+    fst_session_set(wpas, sid2, "new_peer_addr", apdev[1]['bssid'])
+
+    # There is another session in progress (old)
+    if "FAIL" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid2):
+        raise Exception("Duplicated FST-MANAGER SESSION_INITIATE accepted")
+
+    if "OK" not in wpas.global_request("FST-MANAGER SESSION_REMOVE " + sid):
+        raise Exception("FST-MANAGER SESSION_REMOVE failed")
+
+    while True:
+        ev = hglobal.wait_event(['FST-EVENT-SESSION'], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (AP)")
+        if "new_state=SETUP_COMPLETION" in ev:
+            f = re.search("session_id=(\d+)", ev)
+            if f is None:
+                raise Exception("No session_id in FST-EVENT-SESSION")
+            sid_ap = f.group(1)
+            break
+    if "OK" not in hglobal.request("FST-MANAGER SESSION_REMOVE " + sid_ap):
+        raise Exception("FST-MANAGER SESSION_REMOVE (AP) failed")
+
+    if "OK" not in wpas.global_request("FST-MANAGER SESSION_REMOVE " + sid2):
+        raise Exception("FST-MANAGER SESSION_REMOVE failed")
+
+def test_fst_session_respond_errors(dev, apdev, test_params):
+    """FST SESSION_RESPOND error cases"""
+    try:
+        _test_fst_session_respond_errors(dev, apdev, test_params)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_fst_session_respond_errors(dev, apdev, test_params):
+    group = "fstg0b"
+    sgroup = "fstg1b"
+    hglobal, wpas, wpas2, hapd, hapd2 = fst_start_and_connect(apdev, group, sgroup)
+
+    sid = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
+    if "FAIL" in sid:
+        raise Exception("FST-MANAGER SESSION_ADD (STA) failed")
+
+    fst_session_set(wpas, sid, "old_ifname", wpas.ifname)
+    fst_session_set(wpas, sid, "old_peer_addr", apdev[0]['bssid'])
+    fst_session_set(wpas, sid, "new_ifname", wpas2.ifname)
+    fst_session_set(wpas, sid, "new_peer_addr", apdev[1]['bssid'])
+
+    if "OK" not in wpas.global_request("FST-MANAGER SESSION_INITIATE " + sid):
+        raise Exception("FST-MANAGER SESSION_INITIATE failed")
+
+    while True:
+        ev = hglobal.wait_event(['FST-EVENT-SESSION'], timeout=5)
+        if ev is None:
+            raise Exception("No FST-EVENT-SESSION (AP)")
+        if "new_state=SETUP_COMPLETION" in ev:
+            f = re.search("session_id=(\d+)", ev)
+            if f is None:
+                raise Exception("No session_id in FST-EVENT-SESSION")
+            sid_ap = f.group(1)
+            break
+
+    # The preset peer address is not in the peer list
+    fst_session_set_ap(hglobal, sid_ap, "old_peer_addr", "00:00:00:00:00:01")
+    cmd = "FST-MANAGER SESSION_RESPOND %s accept" % sid_ap
+    if "FAIL" not in hglobal.request(cmd):
+        raise Exception("Invalid FST-MANAGER SESSION_RESPOND accepted")
+
+    # Same interface set as old and new
+    fst_session_set_ap(hglobal, sid_ap, "old_peer_addr", wpas.own_addr())
+    fst_session_set_ap(hglobal, sid_ap, "old_ifname", apdev[1]['ifname'])
+    cmd = "FST-MANAGER SESSION_RESPOND %s accept" % sid_ap
+    if "FAIL" not in hglobal.request(cmd):
+        raise Exception("Invalid FST-MANAGER SESSION_RESPOND accepted")
+
+    # valid command
+    fst_session_set_ap(hglobal, sid_ap, "old_ifname", apdev[0]['ifname'])
+    cmd = "FST-MANAGER SESSION_RESPOND %s accept" % sid_ap
+    if "OK" not in hglobal.request(cmd):
+        raise Exception("FST-MANAGER SESSION_RESPOND failed")
+
+    # incorrect state
+    cmd = "FST-MANAGER SESSION_RESPOND %s accept" % sid_ap
+    if "FAIL" not in hglobal.request(cmd):
+        raise Exception("Invalid FST-MANAGER SESSION_RESPOND accepted")
+
+    cmd = "FST-MANAGER SESSION_REMOVE " + sid
+    if "OK" not in wpas.global_request(cmd):
+        raise Exception("FST-MANAGER SESSION_REMOVE (STA) failed")
+
+    cmd = "FST-MANAGER SESSION_REMOVE %s" % sid_ap
+    if "OK" not in hglobal.request(cmd):
+        raise Exception("FST-MANAGER SESSION_REMOVE (AP) failed")

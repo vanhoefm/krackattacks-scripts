@@ -2304,13 +2304,15 @@ def fst_wait_event_peer_sta(dev, event, ifname, addr):
         if t not in ev:
             raise Exception("Unexpected FST-EVENT-PEER data (STA): " + ev)
 
-def fst_setup_req(dev, hglobal, freq, dst, req, stie, mbie=""):
+def fst_setup_req(dev, hglobal, freq, dst, req, stie, mbie="", no_wait=False):
     act = req + stie + mbie
     dev.request("MGMT_TX %s %s freq=%d action=%s" % (dst, dst, freq, act))
     ev = dev.wait_event(['MGMT-TX-STATUS'], timeout=5)
     if ev is None or "result=SUCCESS" not in ev:
         raise Exception("FST Action frame not ACKed")
 
+    if no_wait:
+        return
     while True:
         ev = hglobal.wait_event(['FST-EVENT-SESSION'], timeout=5)
         if ev is None:
@@ -2552,6 +2554,14 @@ def _test_fst_setup_mbie_diff(dev, apdev, test_params):
     req = "1200011a060000"
     stie = "a40b0200000000020001040001"
     fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie)
+
+    # MBIE update OOM on AP
+    req = "1200011a060000"
+    stie = "a40b0100000000020001040001"
+    mbie = "9e16040200010200000004000000000000000000000000ff"
+    with alloc_fail(hapd, 1, "mb_ies_by_info"):
+        fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie, mbie,
+                      no_wait=True)
 
 def test_fst_many_setup(dev, apdev, test_params):
     """FST setup multiple times"""

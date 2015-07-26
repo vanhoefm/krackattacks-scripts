@@ -28,22 +28,7 @@
 	fst_printf_group(fst_iface_get_group(iface), (level), "%s: " format, \
 			 fst_iface_get_name(iface), ##__VA_ARGS__)
 
-static inline enum mb_band_id
-fst_hw_mode_to_band(enum hostapd_hw_mode mode)
-{
-	switch (mode) {
-	case HOSTAPD_MODE_IEEE80211B:
-	case HOSTAPD_MODE_IEEE80211G:
-		return MB_BAND_ID_WIFI_2_4GHZ;
-	case HOSTAPD_MODE_IEEE80211A:
-		return MB_BAND_ID_WIFI_5GHZ;
-	case HOSTAPD_MODE_IEEE80211AD:
-		return MB_BAND_ID_WIFI_60GHZ;
-	default:
-		WPA_ASSERT(0);
-		return MB_BAND_ID_WIFI_2_4GHZ;
-	}
-}
+enum mb_band_id fst_hw_mode_to_band(enum hostapd_hw_mode mode);
 
 struct fst_ctrl_handle {
 	struct fst_ctrl ctrl;

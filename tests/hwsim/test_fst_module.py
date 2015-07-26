@@ -1406,6 +1406,13 @@ def test_fst_ap_remove_session_bad_session_id(dev, apdev, test_params):
 
 def test_fst_ap_ctrl_iface(dev, apdev, test_params):
     """FST control interface behavior"""
+    hglobal = hostapd.HostapdGlobal()
+    start_num_groups = 0
+    res = hglobal.request("FST-MANAGER LIST_GROUPS")
+    del hglobal
+    if "FAIL" not in res:
+        start_num_groups = len(res.splitlines())
+
     ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
     try:
         fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
@@ -1435,7 +1442,7 @@ def test_fst_ap_ctrl_iface(dev, apdev, test_params):
             raise Exception("Unexpected number of interfaces")
         res = initiator.list_groups()
         logger.info("Groups: " + str(res))
-        if len(res) != 1:
+        if len(res) != 1 + start_num_groups:
             raise Exception("Unexpected number of groups")
 
         tests = [ "LIST_IFACES unknown",

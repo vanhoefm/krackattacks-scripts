@@ -12,7 +12,7 @@
 struct fst_group {
 	char group_id[IFNAMSIZ + 1];
 	struct dl_list ifaces;
-	u32 dialog_token;
+	u8 dialog_token;
 	u32 fsts_id;
 	struct dl_list global_groups_lentry;
 };

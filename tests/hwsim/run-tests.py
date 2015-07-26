@@ -483,6 +483,9 @@ def main():
                 result = "FAIL"
                 hapd = None
             rename_log(args.logdir, 'hostapd', name, hapd)
+            if hapd:
+                del hapd
+                hapd = None
 
             wt = Wlantest()
             rename_log(args.logdir, 'hwsim0.pcapng', name, wt)

@@ -9194,6 +9194,10 @@ static int wpas_global_ctrl_iface_fst_attach(struct wpa_global *global,
 	if (!fst_parse_attach_command(cmd, ifname, sizeof(ifname), &cfg)) {
 		wpa_s = wpa_supplicant_get_iface(global, ifname);
 		if (wpa_s) {
+			if (wpa_s->fst) {
+				wpa_printf(MSG_INFO, "FST: Already attached");
+				return -1;
+			}
 			fst_wpa_supplicant_fill_iface_obj(wpa_s, &iface_obj);
 			wpa_s->fst = fst_attach(ifname, wpa_s->own_addr,
 						&iface_obj, &cfg);

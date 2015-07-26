@@ -34,19 +34,6 @@ static void fst_ctrl_iface_notify_peer_state_change(struct fst_iface *iface,
 }
 
 
-static struct fst_group * fst_find_group_by_iface(const char *ifname)
-{
-	struct fst_group *g;
-
-	foreach_fst_group(g) {
-		if (fst_group_get_iface_by_name(g, ifname))
-			return g;
-	}
-
-	return NULL;
-}
-
-
 struct fst_iface * fst_attach(const char *ifname, const u8 *own_addr,
 			      const struct fst_wpa_obj *iface_obj,
 			      const struct fst_iface_cfg *cfg)
@@ -59,14 +46,6 @@ struct fst_iface * fst_attach(const char *ifname, const u8 *own_addr,
 	WPA_ASSERT(ifname != NULL);
 	WPA_ASSERT(iface_obj != NULL);
 	WPA_ASSERT(cfg != NULL);
-
-	g = fst_find_group_by_iface(ifname);
-	if (g) {
-		fst_printf(MSG_ERROR,
-			   "%s: iface is already part of an FST group: %s",
-			   ifname, g->group_id);
-		return NULL;
-	}
 
 	foreach_fst_group(g) {
 		if (os_strcmp(cfg->group_id, fst_group_get_id(g)) == 0) {

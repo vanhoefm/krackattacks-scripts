@@ -893,7 +893,7 @@ int fst_session_initiate_setup(struct fst_session *s)
 	req.llt = host_to_le32(FST_LLT_MS_TO_VAL(s->data.llt_ms));
 	/* 8.4.2.147 Session Transition element */
 	req.stie.element_id = WLAN_EID_SESSION_TRANSITION;
-	req.stie.length = sizeof(req.stie);
+	req.stie.length = sizeof(req.stie) - 2;
 	req.stie.fsts_id = host_to_le32(fsts_id);
 	req.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 
@@ -968,9 +968,10 @@ int fst_session_respond(struct fst_session *s, u8 status_code)
 	res.dialog_token = s->data.pending_setup_req_dlgt;
 	res.status_code = status_code;
 
+	res.stie.element_id = WLAN_EID_SESSION_TRANSITION;
+	res.stie.length = sizeof(res.stie) - 2;
+
 	if (status_code == WLAN_STATUS_SUCCESS) {
-		res.stie.element_id = WLAN_EID_SESSION_TRANSITION;
-		res.stie.length = sizeof(res.stie);
 		res.stie.fsts_id = s->data.fsts_id;
 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 
@@ -1374,7 +1375,7 @@ int fst_test_req_send_fst_request(const char *params)
 	req.llt = host_to_le32(FST_LLT_MS_DEFAULT);
 	/* 8.4.2.147 Session Transition element */
 	req.stie.element_id = WLAN_EID_SESSION_TRANSITION;
-	req.stie.length = sizeof(req.stie);
+	req.stie.length = sizeof(req.stie) - 2;
 	req.stie.fsts_id = host_to_le32(fsts_id);
 	req.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 
@@ -1443,9 +1444,10 @@ int fst_test_req_send_fst_response(const char *params)
 		_s->data.pending_setup_req_dlgt : g->dialog_token;
 	res.status_code  = status_code;
 
+	res.stie.element_id = WLAN_EID_SESSION_TRANSITION;
+	res.stie.length = sizeof(res.stie) - 2;
+
 	if (res.status_code == WLAN_STATUS_SUCCESS) {
-		res.stie.element_id = WLAN_EID_SESSION_TRANSITION;
-		res.stie.length = sizeof(res.stie);
 		res.stie.fsts_id = fsts_id;
 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 

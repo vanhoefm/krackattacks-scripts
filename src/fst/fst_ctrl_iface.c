@@ -574,8 +574,8 @@ static int get_peer_mbies(const char *params, char *buf, size_t buflen)
 
 	foreach_fst_group(g) {
 		iface = fst_group_get_iface_by_name(g, ifname);
-		if (!iface)
-			continue;
+		if (iface)
+			break;
 	}
 	if (!iface)
 		goto problem;

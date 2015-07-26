@@ -376,6 +376,12 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 	plen = frame_len - IEEE80211_HDRLEN - 1;
 	req = (const struct fst_setup_req *)
 		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
+	if (req->stie.element_id != WLAN_EID_SESSION_TRANSITION ||
+	    req->stie.length < 11) {
+		fst_printf_iface(iface, MSG_WARNING,
+				 "FST Request dropped: invalid STIE");
+		return;
+	}
 
 	if (req->stie.new_band_id == req->stie.old_band_id) {
 		fst_printf_iface(iface, MSG_WARNING,
@@ -539,6 +545,12 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 	}
 	res = (const struct fst_setup_res *)
 		(((const u8 *) mgmt) + IEEE80211_HDRLEN + 1);
+	if (res->stie.element_id != WLAN_EID_SESSION_TRANSITION ||
+	    res->stie.length < 11) {
+		fst_printf_iface(iface, MSG_WARNING,
+				 "FST Response dropped: invalid STIE");
+		return;
+	}
 
 	if (res->dialog_token != s->data.pending_setup_req_dlgt)  {
 		fst_printf_session(s, MSG_WARNING,

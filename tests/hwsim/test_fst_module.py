@@ -2320,16 +2320,7 @@ def fst_setup_req(dev, hglobal, freq, dst, req, stie, mbie="", no_wait=False):
         if "new_state=SETUP_COMPLETION" in ev:
             break
 
-def test_fst_test_setup(dev, apdev, test_params):
-    """FST setup using separate commands"""
-    try:
-        _test_fst_test_setup(dev, apdev, test_params)
-    finally:
-        subprocess.call(['iw', 'reg', 'set', '00'])
-        dev[0].flush_scan_cache()
-        dev[1].flush_scan_cache()
-
-def _test_fst_test_setup(dev, apdev, test_params):
+def fst_start_and_connect(apdev, group, sgroup):
     hglobal = hostapd.HostapdGlobal()
     if "OK" not in hglobal.request("FST-MANAGER TEST_REQUEST IS_SUPPORTED"):
         raise HwsimSkip("No FST testing support")
@@ -2338,7 +2329,6 @@ def _test_fst_test_setup(dev, apdev, test_params):
                "country_code": "US" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
-    group = "fstg0"
     fst_attach_ap(hglobal, apdev[0]['ifname'], group)
 
     cmd = "FST-ATTACH %s %s" % (apdev[0]['ifname'], group)
@@ -2350,7 +2340,6 @@ def _test_fst_test_setup(dev, apdev, test_params):
     hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
     fst_attach_ap(hglobal, apdev[1]['ifname'], group)
 
-    sgroup = "fstg1"
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     fst_attach_sta(wpas, wpas.ifname, sgroup)
@@ -2374,6 +2363,21 @@ def _test_fst_test_setup(dev, apdev, test_params):
     fst_wait_event_peer_sta(wpas, "connected", wpas2.ifname, apdev[1]['bssid'])
     fst_wait_event_peer_ap(hglobal, "connected", apdev[1]['ifname'],
                            wpas2.own_addr())
+    return hglobal, wpas, wpas2, hapd, hapd2
+
+def test_fst_test_setup(dev, apdev, test_params):
+    """FST setup using separate commands"""
+    try:
+        _test_fst_test_setup(dev, apdev, test_params)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_fst_test_setup(dev, apdev, test_params):
+    group = "fstg0b"
+    sgroup = "fstg1b"
+    hglobal, wpas, wpas2, hapd, hapd2 = fst_start_and_connect(apdev, group, sgroup)
 
     sid = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
     if "FAIL" in sid:
@@ -2468,50 +2472,9 @@ def test_fst_setup_mbie_diff(dev, apdev, test_params):
         dev[1].flush_scan_cache()
 
 def _test_fst_setup_mbie_diff(dev, apdev, test_params):
-    hglobal = hostapd.HostapdGlobal()
-    if "OK" not in hglobal.request("FST-MANAGER TEST_REQUEST IS_SUPPORTED"):
-        raise HwsimSkip("No FST testing support")
-
-    params = { "ssid": "fst_11a", "hw_mode": "a", "channel": "36",
-               "country_code": "US" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    group = "fstg0"
-    fst_attach_ap(hglobal, apdev[0]['ifname'], group)
-
-    cmd = "FST-ATTACH %s %s" % (apdev[0]['ifname'], group)
-    if "FAIL" not in hglobal.request(cmd):
-        raise Exception("Duplicated FST-ATTACH (AP) accepted")
-
-    params = { "ssid": "fst_11g", "hw_mode": "g", "channel": "1",
-               "country_code": "US" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
-    fst_attach_ap(hglobal, apdev[1]['ifname'], group)
-
-    sgroup = "fstg1"
-    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
-    wpas.interface_add("wlan5")
-    fst_attach_sta(wpas, wpas.ifname, sgroup)
-
-    wpas.interface_add("wlan6", set_ifname=False)
-    wpas2 = WpaSupplicant(ifname="wlan6")
-    fst_attach_sta(wpas, wpas2.ifname, sgroup)
-
-    wpas.connect("fst_11a", key_mgmt="NONE", scan_freq="5180",
-                 wait_connect=False)
-    wpas.wait_connected()
-
-    fst_wait_event_peer_sta(wpas, "connected", wpas.ifname, apdev[0]['bssid'])
-    fst_wait_event_peer_ap(hglobal, "connected", apdev[0]['ifname'],
-                           wpas.own_addr())
-
-    wpas2.connect("fst_11g", key_mgmt="NONE", scan_freq="2412",
-                  wait_connect=False)
-    wpas2.wait_connected()
-
-    fst_wait_event_peer_sta(wpas, "connected", wpas2.ifname, apdev[1]['bssid'])
-    fst_wait_event_peer_ap(hglobal, "connected", apdev[1]['ifname'],
-                           wpas2.own_addr())
+    group = "fstg0c"
+    sgroup = "fstg1c"
+    hglobal, wpas, wpas2, hapd, hapd2 = fst_start_and_connect(apdev, group, sgroup)
 
     # FST Setup Request: Category, FST Action, Dialog Token (non-zero),
     # LLT (32 bits, see 10.32), Session Transition (see 8.4.2.147),
@@ -2573,50 +2536,9 @@ def test_fst_many_setup(dev, apdev, test_params):
         dev[1].flush_scan_cache()
 
 def _test_fst_many_setup(dev, apdev, test_params):
-    hglobal = hostapd.HostapdGlobal()
-    if "OK" not in hglobal.request("FST-MANAGER TEST_REQUEST IS_SUPPORTED"):
-        raise HwsimSkip("No FST testing support")
-
-    params = { "ssid": "fst_11a", "hw_mode": "a", "channel": "36",
-               "country_code": "US" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    group = "fstg0"
-    fst_attach_ap(hglobal, apdev[0]['ifname'], group)
-
-    cmd = "FST-ATTACH %s %s" % (apdev[0]['ifname'], group)
-    if "FAIL" not in hglobal.request(cmd):
-        raise Exception("Duplicated FST-ATTACH (AP) accepted")
-
-    params = { "ssid": "fst_11g", "hw_mode": "g", "channel": "1",
-               "country_code": "US" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
-    fst_attach_ap(hglobal, apdev[1]['ifname'], group)
-
-    sgroup = "fstg1"
-    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
-    wpas.interface_add("wlan5")
-    fst_attach_sta(wpas, wpas.ifname, sgroup)
-
-    wpas.interface_add("wlan6", set_ifname=False)
-    wpas2 = WpaSupplicant(ifname="wlan6")
-    fst_attach_sta(wpas, wpas2.ifname, sgroup)
-
-    wpas.connect("fst_11a", key_mgmt="NONE", scan_freq="5180",
-                 wait_connect=False)
-    wpas.wait_connected()
-
-    fst_wait_event_peer_sta(wpas, "connected", wpas.ifname, apdev[0]['bssid'])
-    fst_wait_event_peer_ap(hglobal, "connected", apdev[0]['ifname'],
-                           wpas.own_addr())
-
-    wpas2.connect("fst_11g", key_mgmt="NONE", scan_freq="2412",
-                  wait_connect=False)
-    wpas2.wait_connected()
-
-    fst_wait_event_peer_sta(wpas, "connected", wpas2.ifname, apdev[1]['bssid'])
-    fst_wait_event_peer_ap(hglobal, "connected", apdev[1]['ifname'],
-                           wpas2.own_addr())
+    group = "fstg0d"
+    sgroup = "fstg1d"
+    hglobal, wpas, wpas2, hapd, hapd2 = fst_start_and_connect(apdev, group, sgroup)
 
     sid = wpas.global_request("FST-MANAGER SESSION_ADD " + sgroup).strip()
     if "FAIL" in sid:

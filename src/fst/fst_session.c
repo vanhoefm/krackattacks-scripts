@@ -1328,13 +1328,11 @@ static int get_group_fill_session(struct fst_group **g, struct fst_session *s)
 	struct fst_get_peer_ctx *ctx;
 
 	os_memset(s, 0, sizeof(*s));
-	*g = dl_list_first(&fst_global_groups_list,
-			   struct fst_group, global_groups_lentry);
-	if (!*g)
-		return -EINVAL;
-
-	s->data.new_iface = dl_list_first(&(*g)->ifaces, struct fst_iface,
-					  group_lentry);
+	foreach_fst_group(*g) {
+		s->data.new_iface = fst_group_first_iface(*g);
+		if (s->data.new_iface)
+			break;
+	}
 	if (!s->data.new_iface)
 		return -EINVAL;
 

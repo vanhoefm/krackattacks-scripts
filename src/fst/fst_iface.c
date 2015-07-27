@@ -43,6 +43,7 @@ struct fst_iface * fst_iface_create(struct fst_group *g, const char *ifname,
 
 void fst_iface_delete(struct fst_iface *i)
 {
+	fst_iface_set_ies(i, NULL);
 	wpabuf_free(i->mb_ie);
 	os_free(i);
 }

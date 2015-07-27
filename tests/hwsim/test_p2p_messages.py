@@ -1309,7 +1309,7 @@ def test_p2p_msg_pd(dev, apdev):
         raise Exception("Unexpected PD result event")
 
 def check_p2p_response(hapd, dialog_token, status):
-    resp = hapd.mgmt_rx(timeout=1)
+    resp = hapd.mgmt_rx(timeout=2)
     if resp is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     p2p = parse_p2p_public_action(resp['payload'])
@@ -1388,7 +1388,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1405,7 +1405,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     #attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1422,7 +1422,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1439,7 +1439,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1456,7 +1456,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1474,7 +1474,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1493,7 +1493,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_status(status=P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE)
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response(1) " + str(dialog_token))
     time.sleep(0.1)
 
@@ -1513,7 +1513,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     hapd.mgmt_tx(msg)
     check_p2p_response(hapd, dialog_token,
                        P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE)
-    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=1)
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=2)
     if ev is None:
         raise Exception("Timeout on GO Neg event " + str(dialog_token))
 
@@ -1534,7 +1534,7 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
-    if hapd.mgmt_rx(timeout=1) is None:
+    if hapd.mgmt_rx(timeout=2) is None:
         raise Exception("No GO Neg Response " + str(dialog_token))
 
     # ready - invalid GO Intent GO Neg Req

@@ -2635,6 +2635,8 @@ def _test_fst_many_setup(dev, apdev, test_params):
 
 def test_fst_attach_wpas_error(dev, apdev, test_params):
     """FST attach errors in wpa_supplicant"""
+    if "OK" not in dev[0].global_request("FST-MANAGER TEST_REQUEST IS_SUPPORTED"):
+        raise HwsimSkip("No FST testing support")
     group = "fstg0"
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")

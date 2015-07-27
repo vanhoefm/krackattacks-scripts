@@ -12,6 +12,7 @@ import time
 
 import hostapd
 import hwsim_utils
+from utils import HwsimSkip
 from tshark import run_tshark
 from wpasupplicant import WpaSupplicant
 from hwsim import HWSimRadio
@@ -673,3 +674,239 @@ def test_p2p_channel_5ghz_165_169_us(dev):
             raise Exception("GO on channel 169 allowed unexpectedly")
     finally:
         set_country("00")
+
+def test_p2p_go_move_reg_change(dev, apdev, params):
+    """P2P GO move due to regulatory change [long]"""
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    try:
+        set_country("US")
+        dev[0].global_request("P2P_SET disallow_freq 2400-5000")
+        res = autogo(dev[0])
+        freq1 = int(res['freq'])
+        if freq1 < 5000:
+            raise Exception("Unexpected channel %d MHz" % freq1)
+
+        dev[0].global_request("P2P_SET disallow_freq ")
+
+        # GO move is not allowed while waiting for initial client connection
+        time.sleep(20)
+        set_country("00")
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+                                     timeout=10)
+        if ev is None:
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+
+        freq2 = dev[0].get_group_status_field('freq')
+        if freq1 == freq2:
+            raise Exception("Unexpected freq after group reform=" + freq2)
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("P2P_SET disallow_freq ")
+        set_country("00")
+
+def test_p2p_go_move_active(dev, apdev, params):
+    """P2P GO stays in freq although SCM is possible [long]"""
+    if dev[0].get_mcc() <= 1:
+        raise HwsimSkip("Skip due to MCC not being enabled")
+
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2430-6000")
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                                    "channel" : '11' })
+        dev[0].connect("ap-test", key_mgmt="NONE",
+                       scan_freq="2462")
+
+        res = autogo(dev[0])
+        freq = int(res['freq'])
+        if freq > 2430:
+            raise Exception("Unexpected channel %d MHz" % freq)
+
+        # GO move is not allowed while waiting for initial client connection
+        time.sleep(20)
+        dev[0].global_request("P2P_SET disallow_freq ")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+                                     timeout=10)
+        if ev is not None:
+            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP seen")
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("P2P_SET disallow_freq ")
+
+def test_p2p_go_move_scm(dev, apdev, params):
+    """P2P GO move due to SCM operation preference [long]"""
+    if dev[0].get_mcc() <= 1:
+        raise HwsimSkip("Skip due to MCC not being enabled")
+
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2430-6000")
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                                    "channel" : '11' })
+        dev[0].connect("ap-test", key_mgmt="NONE",
+                       scan_freq="2462")
+
+        dev[0].global_request("SET p2p_go_freq_change_policy 0")
+        res = autogo(dev[0])
+        freq = int(res['freq'])
+        if freq > 2430:
+            raise Exception("Unexpected channel %d MHz" % freq)
+
+        # GO move is not allowed while waiting for initial client connection
+        time.sleep(20)
+        dev[0].global_request("P2P_SET disallow_freq ")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        if ev is None:
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+
+        freq = dev[0].get_group_status_field('freq')
+        if freq != '2462':
+            raise Exception("Unexpected freq after group reform=" + freq)
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[0].global_request("SET p2p_go_freq_change_policy 2")
+
+def test_p2p_go_move_scm_peer_supports(dev, apdev, params):
+    """P2P GO move due to SCM operation preference (peer supports) [long]"""
+    if dev[0].get_mcc() <= 1:
+        raise HwsimSkip("Skip due to MCC not being enabled")
+
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    try:
+        dev[0].global_request("SET p2p_go_freq_change_policy 1")
+        set_country("US", dev[0])
+
+        dev[0].request("SET p2p_no_group_iface 0")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        freq = int(i_res['freq'])
+        if freq < 5000:
+            raise Exception("Unexpected channel %d MHz - did not follow 5 GHz preference" % freq)
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                                    "channel" : '11' })
+        logger.info('Connecting client to to an AP on channel 11');
+        dev[0].connect("ap-test", key_mgmt="NONE",
+                       scan_freq="2462")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        if ev is None:
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+
+        freq = dev[0].get_group_status_field('freq')
+        if freq != '2462':
+            raise Exception("Unexpected freq after group reform=" + freq)
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("SET p2p_go_freq_change_policy 2")
+        set_country("00")
+
+def test_p2p_go_move_scm_peer_does_not_support(dev, apdev, params):
+    """No P2P GO move due to SCM operation (peer does not supports) [long]"""
+    if dev[0].get_mcc() <= 1:
+        raise HwsimSkip("Skip due to MCC not being enabled")
+
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    try:
+        dev[0].global_request("SET p2p_go_freq_change_policy 1")
+        set_country("US", dev[0])
+
+        dev[0].request("SET p2p_no_group_iface 0")
+        if "OK" not in dev[1].request("DRIVER_EVENT AVOID_FREQUENCIES 2400-2500"):
+            raise Exception("Could not simulate driver event")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        freq = int(i_res['freq'])
+        if freq < 5000:
+            raise Exception("Unexpected channel %d MHz - did not follow 5 GHz preference" % freq)
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                                    "channel" : '11' })
+        logger.info('Connecting client to to an AP on channel 11');
+        dev[0].connect("ap-test", key_mgmt="NONE",
+                       scan_freq="2462")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+                                     timeout=10)
+        if ev is not None:
+            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP seen")
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("SET p2p_go_freq_change_policy 2")
+        set_country("00")
+
+def test_p2p_go_move_scm_multi(dev, apdev, params):
+    """P2P GO move due to SCM operation preference multiple times [long]"""
+    if dev[0].get_mcc() <= 1:
+        raise HwsimSkip("Skip due to MCC not being enabled")
+
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2430-6000")
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test-1',
+                                                    "channel" : '11' })
+        dev[0].connect("ap-test-1", key_mgmt="NONE",
+                       scan_freq="2462")
+
+        dev[0].global_request("SET p2p_go_freq_change_policy 0")
+        res = autogo(dev[0])
+        freq = int(res['freq'])
+        if freq > 2430:
+            raise Exception("Unexpected channel %d MHz" % freq)
+
+        # GO move is not allowed while waiting for initial client connection
+        time.sleep(20)
+        dev[0].global_request("P2P_SET disallow_freq ")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        if ev is None:
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+
+        freq = dev[0].get_group_status_field('freq')
+        if freq != '2462':
+            raise Exception("Unexpected freq after group reform=" + freq)
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test-2',
+                                                    "channel" : '6' })
+        dev[0].connect("ap-test-2", key_mgmt="NONE",
+                       scan_freq="2437")
+
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=5)
+        if ev is None:
+            raise Exception("(2) P2P-REMOVE-AND-REFORM-GROUP not seen")
+
+        freq = dev[0].get_group_status_field('freq')
+        if freq != '2437':
+            raise Exception("(2) Unexpected freq after group reform=" + freq)
+
+        dev[0].remove_group()
+    finally:
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[0].global_request("SET p2p_go_freq_change_policy 2")

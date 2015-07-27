@@ -63,7 +63,13 @@ long_tests = [ "ap_roam_open",
                "proxyarp_open",
                "ap_wps_iteration",
                "ap_wps_iteration_error",
-               "ap_wps_pbc_timeout" ]
+               "ap_wps_pbc_timeout",
+               "p2p_go_move_reg_change",
+               "p2p_go_move_active",
+               "p2p_go_move_scm",
+               "p2p_go_move_scm_peer_supports",
+               "p2p_go_move_scm_peer_does_not_support",
+               "p2p_go_move_scm_multi" ]
 
 def get_failed(vm):
     failed = []

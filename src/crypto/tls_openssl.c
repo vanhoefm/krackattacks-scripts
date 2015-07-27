@@ -116,6 +116,11 @@ struct tls_connection {
 	X509 *peer_cert;
 	X509 *peer_issuer;
 	X509 *peer_issuer_issuer;
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	unsigned char client_random[SSL3_RANDOM_SIZE];
+	unsigned char server_random[SSL3_RANDOM_SIZE];
+#endif
 };
 
 
@@ -2646,6 +2651,7 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 	if (conn == NULL || keys == NULL)
 		return -1;
 	ssl = conn->ssl;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (ssl == NULL || ssl->s3 == NULL || ssl->session == NULL)
 		return -1;
 
@@ -2654,6 +2660,18 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 	keys->client_random_len = SSL3_RANDOM_SIZE;
 	keys->server_random = ssl->s3->server_random;
 	keys->server_random_len = SSL3_RANDOM_SIZE;
+#else
+	if (ssl == NULL)
+		return -1;
+
+	os_memset(keys, 0, sizeof(*keys));
+	keys->client_random = conn->client_random;
+	keys->client_random_len = SSL_get_client_random(
+		ssl, conn->client_random, sizeof(conn->client_random));
+	keys->server_random = conn->server_random;
+	keys->server_random_len = SSL_get_server_random(
+		ssl, conn->server_random, sizeof(conn->server_random));
+#endif
 
 	return 0;
 #endif /* CONFIG_FIPS */

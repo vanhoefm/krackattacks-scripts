@@ -3387,6 +3387,14 @@ struct wpa_driver_ops {
 	 * indicates support for such offloading (WPA_DRIVER_FLAGS_ACS_OFFLOAD).
 	 */
 	int (*do_acs)(void *priv, struct drv_acs_params *params);
+
+	/**
+	 * set_band - Notify driver of band selection
+	 * @priv: Private driver interface data
+	 * @band: The selected band(s)
+	 * Returns 0 on success, -1 on failure
+	 */
+	int (*set_band)(void *priv, enum set_band band);
 };
 
 

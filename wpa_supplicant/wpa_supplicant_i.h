@@ -482,7 +482,7 @@ struct wpa_supplicant {
 	struct wpa_ssid_value *disallow_aps_ssid;
 	size_t disallow_aps_ssid_count;
 
-	enum { WPA_SETBAND_AUTO, WPA_SETBAND_5G, WPA_SETBAND_2G } setband;
+	enum set_band setband;
 
 	/* Preferred network for the next connection attempt */
 	struct wpa_ssid *next_ssid;

@@ -8435,6 +8435,53 @@ static int wpa_driver_do_acs(void *priv, struct drv_acs_params *params)
 }
 
 
+static int nl80211_set_band(void *priv, enum set_band band)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *data;
+	int ret;
+	enum qca_set_band qca_band;
+
+	if (!drv->setband_vendor_cmd_avail)
+		return -1;
+
+	switch (band) {
+	case WPA_SETBAND_AUTO:
+		qca_band = QCA_SETBAND_AUTO;
+		break;
+	case WPA_SETBAND_5G:
+		qca_band = QCA_SETBAND_5G;
+		break;
+	case WPA_SETBAND_2G:
+		qca_band = QCA_SETBAND_2G;
+		break;
+	default:
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SETBAND) ||
+	    !(data = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE, qca_band)) {
+		nlmsg_free(msg);
+		return -ENOBUFS;
+	}
+	nla_nest_end(msg, data);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Driver setband function failed: %s",
+			   strerror(errno));
+	}
+	return ret;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -8542,4 +8589,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.add_tx_ts = nl80211_add_ts,
 	.del_tx_ts = nl80211_del_ts,
 	.do_acs = wpa_driver_do_acs,
+	.set_band = nl80211_set_band,
 };

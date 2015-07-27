@@ -593,6 +593,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 					drv->capa.flags |=
 						WPA_DRIVER_FLAGS_ACS_OFFLOAD;
 					break;
+				case QCA_NL80211_VENDOR_SUBCMD_SETBAND:
+					drv->setband_vendor_cmd_avail = 1;
+					break;
 				}
 			}
 

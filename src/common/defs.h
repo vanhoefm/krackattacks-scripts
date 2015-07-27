@@ -328,4 +328,10 @@ enum mesh_plink_state {
 	PLINK_BLOCKED,
 };
 
+enum set_band {
+	WPA_SETBAND_AUTO,
+	WPA_SETBAND_5G,
+	WPA_SETBAND_2G
+};
+
 #endif /* DEFS_H */

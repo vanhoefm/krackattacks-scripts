@@ -286,6 +286,30 @@ static int wpas_ctrl_pno(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static int wpas_ctrl_set_band(struct wpa_supplicant *wpa_s, char *band)
+{
+	union wpa_event_data event;
+
+	if (os_strcmp(band, "AUTO") == 0)
+		wpa_s->setband = WPA_SETBAND_AUTO;
+	else if (os_strcmp(band, "5G") == 0)
+		wpa_s->setband = WPA_SETBAND_5G;
+	else if (os_strcmp(band, "2G") == 0)
+		wpa_s->setband = WPA_SETBAND_2G;
+	else
+		return -1;
+
+	if (wpa_drv_setband(wpa_s, wpa_s->setband) == 0) {
+		os_memset(&event, 0, sizeof(event));
+		event.channel_list_changed.initiator = REGDOM_SET_BY_USER;
+		event.channel_list_changed.type = REGDOM_TYPE_UNKNOWN;
+		wpa_supplicant_event(wpa_s, EVENT_CHANNEL_LIST_CHANGED, &event);
+	}
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -449,14 +473,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = wpas_ctrl_set_blob(wpa_s, value);
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	} else if (os_strcasecmp(cmd, "setband") == 0) {
-		if (os_strcmp(value, "AUTO") == 0)
-			wpa_s->setband = WPA_SETBAND_AUTO;
-		else if (os_strcmp(value, "5G") == 0)
-			wpa_s->setband = WPA_SETBAND_5G;
-		else if (os_strcmp(value, "2G") == 0)
-			wpa_s->setband = WPA_SETBAND_2G;
-		else
-			ret = -1;
+		ret = wpas_ctrl_set_band(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

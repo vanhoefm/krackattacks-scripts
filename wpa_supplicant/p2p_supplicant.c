@@ -2606,6 +2606,32 @@ static int freq_included(const struct p2p_channels *channels, unsigned int freq)
 }
 
 
+static void wpas_p2p_go_update_common_freqs(struct wpa_supplicant *wpa_s)
+{
+	unsigned int num = P2P_MAX_CHANNELS;
+	int *common_freqs;
+	int ret;
+
+	p2p_go_dump_common_freqs(wpa_s);
+	common_freqs = os_calloc(num, sizeof(int));
+	if (!common_freqs)
+		return;
+
+	ret = p2p_group_get_common_freqs(wpa_s->p2p_group, common_freqs, &num);
+	if (ret < 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P: Failed to get group common freqs");
+		os_free(common_freqs);
+		return;
+	}
+
+	os_free(wpa_s->p2p_group_common_freqs);
+	wpa_s->p2p_group_common_freqs = common_freqs;
+	wpa_s->p2p_group_common_freqs_num = num;
+	p2p_go_dump_common_freqs(wpa_s);
+}
+
+
 /*
  * Check if the given frequency is one of the possible operating frequencies
  * set after the completion of the GO Negotiation.
@@ -8345,6 +8371,8 @@ static void wpas_p2p_move_go(void *eloop_ctx, void *timeout_ctx)
 	if (!wpa_s->ap_iface || !wpa_s->current_ssid)
 		return;
 
+	wpas_p2p_go_update_common_freqs(wpa_s);
+
 	/*
 	 * First, try a channel switch flow. If it is not supported or fails,
 	 * take down the GO and bring it up again.
@@ -8372,6 +8400,8 @@ static void wpas_p2p_consider_moving_one_go(struct wpa_supplicant *wpa_s,
 	unsigned int i, invalid_freq = 0, policy_move = 0, flags = 0;
 	unsigned int timeout;
 	int freq;
+
+	wpas_p2p_go_update_common_freqs(wpa_s);
 
 	freq = wpa_s->current_ssid->frequency;
 	for (i = 0, invalid_freq = 0; i < num; i++) {

@@ -2325,4 +2325,14 @@ void p2p_set_own_pref_freq_list(struct p2p_data *p2p,
 				const unsigned int *pref_freq_list,
 				unsigned int size);
 
+/**
+ * p2p_group_get_common_freqs - Get the group common frequencies
+ * @group: P2P group context from p2p_group_init()
+ * @common_freqs: On return will hold the group common frequencies
+ * @num: On return will hold the number of group common frequencies
+ * Returns: 0 on success, -1 otherwise
+ */
+int p2p_group_get_common_freqs(struct p2p_group *group, int *common_freqs,
+			       unsigned int *num);
+
 #endif /* P2P_H */

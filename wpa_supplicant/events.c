@@ -2998,25 +2998,13 @@ static void wpa_supplicant_update_channel_list(
 	if (wpa_s->drv_priv == NULL)
 		return; /* Ignore event during drv initialization */
 
-	free_hw_features(wpa_s);
-	wpa_s->hw.modes = wpa_drv_get_hw_feature_data(
-		wpa_s, &wpa_s->hw.num_modes, &wpa_s->hw.flags);
-
-	wpas_p2p_update_channel_list(wpa_s);
-
-	/*
-	 * Check other interfaces to see if they share the same radio. If
-	 * so, they get updated with this same hw mode info.
-	 */
 	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
 			 radio_list) {
-		if (ifs != wpa_s) {
-			wpa_printf(MSG_DEBUG, "%s: Updating hw mode",
-				   ifs->ifname);
-			free_hw_features(ifs);
-			ifs->hw.modes = wpa_drv_get_hw_feature_data(
-				ifs, &ifs->hw.num_modes, &ifs->hw.flags);
-		}
+		wpa_printf(MSG_DEBUG, "%s: Updating hw mode",
+			   ifs->ifname);
+		free_hw_features(ifs);
+		ifs->hw.modes = wpa_drv_get_hw_feature_data(
+			ifs, &ifs->hw.num_modes, &ifs->hw.flags);
 	}
 
 	/* Restart sched_scan with updated channel list */
@@ -3026,6 +3014,8 @@ static void wpa_supplicant_update_channel_list(
 		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
+
+	wpas_p2p_update_channel_list(wpa_s);
 }
 
 

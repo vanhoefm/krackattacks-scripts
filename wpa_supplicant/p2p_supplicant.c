@@ -135,8 +135,14 @@ static int wpas_p2p_add_group_interface(struct wpa_supplicant *wpa_s,
 					enum wpa_driver_if_type type);
 static void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s,
 					    int already_deleted);
+static void wpas_p2p_optimize_listen_channel(struct wpa_supplicant *wpa_s,
+					     struct wpa_used_freq_data *freqs,
+					     unsigned int num);
 static void wpas_p2p_move_go(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_go_is_peer_freq(struct wpa_supplicant *wpa_s, int freq);
+static void wpas_p2p_consider_moving_gos(struct wpa_supplicant *wpa_s,
+					 struct wpa_used_freq_data *freqs,
+					 unsigned int num);
 
 
 /*
@@ -7065,10 +7071,17 @@ void wpas_p2p_pbc_overlap_cb(void *eloop_ctx, void *timeout_ctx)
 void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
 {
 	struct p2p_channels chan, cli_chan;
-	struct wpa_supplicant *ifs;
+	struct wpa_used_freq_data *freqs = NULL;
+	unsigned int num = wpa_s->num_multichan_concurrent;
 
 	if (wpa_s->global == NULL || wpa_s->global->p2p == NULL)
 		return;
+
+	freqs = os_calloc(num, sizeof(struct wpa_used_freq_data));
+	if (!freqs)
+		return;
+
+	num = get_shared_radio_freqs_data(wpa_s, freqs, num);
 
 	os_memset(&chan, 0, sizeof(chan));
 	os_memset(&cli_chan, 0, sizeof(cli_chan));
@@ -7080,27 +7093,17 @@ void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
 
 	p2p_update_channel_list(wpa_s->global->p2p, &chan, &cli_chan);
 
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		int freq;
-		if (!ifs->current_ssid ||
-		    !ifs->current_ssid->p2p_group ||
-		    (ifs->current_ssid->mode != WPAS_MODE_P2P_GO &&
-		     ifs->current_ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION))
-				continue;
-		freq = ifs->current_ssid->frequency;
-		if (freq_included(ifs, &chan, freq)) {
-			wpa_dbg(ifs, MSG_DEBUG,
-				"P2P GO operating frequency %d MHz in valid range",
-				freq);
-			continue;
-		}
+	wpas_p2p_optimize_listen_channel(wpa_s, freqs, num);
 
-		wpa_dbg(ifs, MSG_DEBUG,
-			"P2P GO operating in invalid frequency %d MHz",	freq);
-		/* TODO: Consider using CSA or removing the group within
-		 * wpa_supplicant */
-		wpa_msg(ifs, MSG_INFO, P2P_EVENT_REMOVE_AND_REFORM_GROUP);
-	}
+	/*
+	 * The used frequencies map changed, so it is possible that a GO is
+	 * using a channel that is no longer valid for P2P use. It is also
+	 * possible that due to policy consideration, it would be preferable to
+	 * move it to a frequency already used by other station interfaces.
+	 */
+	wpas_p2p_consider_moving_gos(wpa_s, freqs, num);
+
+	os_free(freqs);
 }
 
 
@@ -8360,6 +8363,16 @@ static void wpas_p2p_optimize_listen_channel(struct wpa_supplicant *wpa_s,
 	u8 curr_chan, cand, chan;
 	unsigned int i;
 
+	/*
+	 * If possible, optimize the Listen channel to be a channel that is
+	 * already used by one of the other interfaces.
+	 */
+	if (!wpa_s->conf->p2p_optimize_listen_chan)
+		return;
+
+	if (!wpa_s->current_ssid || wpa_s->wpa_state != WPA_COMPLETED)
+		return;
+
 	curr_chan = p2p_get_listen_channel(wpa_s->global->p2p);
 	for (i = 0, cand = 0; i < num; i++) {
 		ieee80211_freq_to_chan(freqs[i].freq, &chan);
@@ -8562,40 +8575,10 @@ static void wpas_p2p_consider_moving_gos(struct wpa_supplicant *wpa_s,
 
 void wpas_p2p_indicate_state_change(struct wpa_supplicant *wpa_s)
 {
-	struct wpa_used_freq_data *freqs;
-	unsigned int num = wpa_s->num_multichan_concurrent;
-
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 
-	/*
-	 * If possible, optimize the Listen channel to be a channel that is
-	 * already used by one of the other interfaces.
-	 */
-	if (!wpa_s->conf->p2p_optimize_listen_chan)
-		return;
-
-	if (!wpa_s->current_ssid || wpa_s->wpa_state != WPA_COMPLETED)
-		return;
-
-	freqs = os_calloc(num, sizeof(struct wpa_used_freq_data));
-	if (!freqs)
-		return;
-
-	num = get_shared_radio_freqs_data(wpa_s, freqs, num);
-
-	wpas_p2p_optimize_listen_channel(wpa_s, freqs, num);
-
-	/*
-	 * The used frequencies map changed, so it is possible that a GO is
-	 * using a channel that is no longer valid for P2P use. It is also
-	 * possible that due to policy consideration, it would be preferable to
-	 * move the group to a frequency already used by other station
-	 * interfaces.
-	 */
-	wpas_p2p_consider_moving_gos(wpa_s, freqs, num);
-
-	os_free(freqs);
+	wpas_p2p_update_channel_list(wpa_s);
 }
 
 

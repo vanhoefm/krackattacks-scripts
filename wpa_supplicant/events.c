@@ -3015,7 +3015,7 @@ static void wpa_supplicant_update_channel_list(
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
 
-	wpas_p2p_update_channel_list(wpa_s);
+	wpas_p2p_update_channel_list(wpa_s, WPAS_P2P_CHANNEL_UPDATE_DRIVER);
 }
 
 
@@ -3154,7 +3154,8 @@ static void wpa_supplicant_notify_avoid_freq(struct wpa_supplicant *wpa_s,
 		 * The update channel flow will also take care of moving a GO
 		 * from the unsafe frequency if needed.
 		 */
-		wpas_p2p_update_channel_list(wpa_s);
+		wpas_p2p_update_channel_list(wpa_s,
+					     WPAS_P2P_CHANNEL_UPDATE_AVOID);
 	}
 #endif /* CONFIG_P2P */
 

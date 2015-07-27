@@ -17,6 +17,15 @@ struct p2p_channels;
 struct wps_event_fail;
 struct p2ps_provision;
 
+enum wpas_p2p_channel_update_trig {
+	WPAS_P2P_CHANNEL_UPDATE_ANY,
+	WPAS_P2P_CHANNEL_UPDATE_DRIVER,
+	WPAS_P2P_CHANNEL_UPDATE_STATE_CHANGE,
+	WPAS_P2P_CHANNEL_UPDATE_AVOID,
+	WPAS_P2P_CHANNEL_UPDATE_DISALLOW,
+	WPAS_P2P_CHANNEL_UPDATE_CS,
+};
+
 int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
 				  const char *conf_p2p_dev);
 struct wpa_supplicant * wpas_get_p2p_go_iface(struct wpa_supplicant *wpa_s,
@@ -161,7 +170,10 @@ int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
 			  unsigned int rx_freq, int ssi_signal);
 void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			  int registrar);
-void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s);
+
+void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s,
+				  enum wpas_p2p_channel_update_trig trig);
+
 void wpas_p2p_update_best_channels(struct wpa_supplicant *wpa_s,
 				   int freq_24, int freq_5, int freq_overall);
 void wpas_p2p_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
@@ -222,7 +234,9 @@ static inline void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s,
 {
 }
 
-static inline void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
+static inline void
+wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s,
+			     enum wpas_p2p_channel_update_trig trig)
 {
 }
 

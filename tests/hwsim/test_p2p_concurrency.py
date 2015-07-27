@@ -20,6 +20,7 @@ from test_p2p_persistent import invite_from_cli
 from test_p2p_persistent import invite_from_go
 from test_p2p_persistent import invite
 from test_ap_ht import clear_scan_cache
+from utils import HwsimSkip
 
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
@@ -265,6 +266,9 @@ def test_concurrent_persistent_group(dev, apdev):
 
 def test_concurrent_invitation_channel_mismatch(dev, apdev):
     """P2P persistent group invitation and channel mismatch"""
+    if dev[0].get_mcc() > 1:
+        raise HwsimSkip("Skip due to MCC being enabled")
+
     form(dev[0], dev[1])
     dev[0].dump_monitor()
     dev[1].dump_monitor()

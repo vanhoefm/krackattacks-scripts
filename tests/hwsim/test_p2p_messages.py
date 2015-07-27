@@ -894,7 +894,7 @@ def test_p2p_msg_invitation_req_to_go(dev, apdev):
         raise Exception("Not a P2P Public Action frame " + str(dialog_token))
     if p2p['subtype'] != P2P_INVITATION_RESP:
         raise Exception("Unexpected subtype %d" % p2p['subtype'])
-    if p2p['p2p_status'] != 7:
+    if p2p['p2p_status'] != 7 and dev[1].get_mcc() <= 1:
         raise Exception("Unexpected status %d" % p2p['p2p_status'])
 
 def test_p2p_msg_invitation_req_unknown(dev, apdev):

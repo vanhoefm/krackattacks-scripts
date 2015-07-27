@@ -3143,9 +3143,6 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_notify_avoid_freq(struct wpa_supplicant *wpa_s,
 					     union wpa_event_data *event)
 {
-#ifdef CONFIG_P2P
-	struct wpa_supplicant *ifs;
-#endif /* CONFIG_P2P */
 	struct wpa_freq_range_list *list;
 	char *str = NULL;
 
@@ -3162,29 +3159,12 @@ static void wpa_supplicant_notify_avoid_freq(struct wpa_supplicant *wpa_s,
 			__func__);
 	} else {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Update channel list based on frequency avoid event");
+
+		/*
+		 * The update channel flow will also take care of moving a GO
+		 * from the unsafe frequency if needed.
+		 */
 		wpas_p2p_update_channel_list(wpa_s);
-	}
-
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		int freq;
-		if (!ifs->current_ssid ||
-		    !ifs->current_ssid->p2p_group ||
-		    (ifs->current_ssid->mode != WPAS_MODE_P2P_GO &&
-		     ifs->current_ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION))
-			continue;
-
-		freq = ifs->current_ssid->frequency;
-		if (!freq_range_list_includes(list, freq)) {
-			wpa_dbg(ifs, MSG_DEBUG, "P2P GO operating frequency %d MHz in safe range",
-				freq);
-			continue;
-		}
-
-		wpa_dbg(ifs, MSG_DEBUG, "P2P GO operating in unsafe frequency %d MHz",
-			freq);
-		/* TODO: Consider using CSA or removing the group within
-		 * wpa_supplicant */
-		wpa_msg(ifs, MSG_INFO, P2P_EVENT_REMOVE_AND_REFORM_GROUP);
 	}
 #endif /* CONFIG_P2P */
 

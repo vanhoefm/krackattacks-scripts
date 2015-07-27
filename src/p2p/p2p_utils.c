@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "common/defs.h"
 #include "common/ieee802_11_common.h"
 #include "p2p_i.h"
 
@@ -67,59 +68,11 @@ int p2p_channel_to_freq(int op_class, int channel)
  */
 int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel)
 {
-	/* TODO: more operating classes */
-	if (freq >= 2412 && freq <= 2472) {
-		if ((freq - 2407) % 5)
-			return -1;
+	if (ieee80211_freq_to_channel_ext(freq, 0, 0, op_class, channel) ==
+	    NUM_HOSTAPD_MODES)
+		return -1;
 
-		*op_class = 81; /* 2.407 GHz, channels 1..13 */
-		*channel = (freq - 2407) / 5;
-		return 0;
-	}
-
-	if (freq == 2484) {
-		*op_class = 82; /* channel 14 */
-		*channel = 14;
-		return 0;
-	}
-
-	if (freq >= 5180 && freq <= 5240) {
-		if ((freq - 5000) % 5)
-			return -1;
-
-		*op_class = 115; /* 5 GHz, channels 36..48 */
-		*channel = (freq - 5000) / 5;
-		return 0;
-	}
-
-	if (freq >= 5745 && freq <= 5805) {
-		if ((freq - 5000) % 5)
-			return -1;
-
-		*op_class = 124; /* 5 GHz, channels 149..161 */
-		*channel = (freq - 5000) / 5;
-		return 0;
-	}
-
-	if (freq >= 5745 && freq <= 5845) {
-		if ((freq - 5000) % 5)
-			return -1;
-
-		*op_class = 125; /* 5 GHz, channels 149..169 */
-		*channel = (freq - 5000) / 5;
-		return 0;
-	}
-
-	if (freq >= 58320 && freq <= 64800) {
-		if ((freq - 58320) % 2160)
-			return -1;
-
-		*op_class = 180; /* 60 GHz, channels 1..4 */
-		*channel = (freq - 56160) / 2160;
-		return 0;
-	}
-
-	return -1;
+	return 0;
 }
 
 

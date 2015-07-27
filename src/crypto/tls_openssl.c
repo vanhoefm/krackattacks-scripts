@@ -3690,6 +3690,7 @@ static int tls_sess_sec_cb(SSL *s, void *secret, int *secret_len,
 	struct tls_connection *conn = arg;
 	int ret;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (conn == NULL || conn->session_ticket_cb == NULL)
 		return 0;
 
@@ -3698,6 +3699,23 @@ static int tls_sess_sec_cb(SSL *s, void *secret, int *secret_len,
 				      conn->session_ticket_len,
 				      s->s3->client_random,
 				      s->s3->server_random, secret);
+#else
+	unsigned char client_random[SSL3_RANDOM_SIZE];
+	unsigned char server_random[SSL3_RANDOM_SIZE];
+
+	if (conn == NULL || conn->session_ticket_cb == NULL)
+		return 0;
+
+	SSL_get_client_random(s, client_random, sizeof(client_random));
+	SSL_get_server_random(s, server_random, sizeof(server_random));
+
+	ret = conn->session_ticket_cb(conn->session_ticket_cb_ctx,
+				      conn->session_ticket,
+				      conn->session_ticket_len,
+				      client_random,
+				      server_random, secret);
+#endif
+
 	os_free(conn->session_ticket);
 	conn->session_ticket = NULL;
 

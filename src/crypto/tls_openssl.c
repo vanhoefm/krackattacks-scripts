@@ -2795,7 +2795,7 @@ openssl_handshake(struct tls_connection *conn, const struct wpabuf *in_data,
 	 * Give TLS handshake data from the server (if available) to OpenSSL
 	 * for processing.
 	 */
-	if (in_data &&
+	if (in_data && wpabuf_len(in_data) > 0 &&
 	    BIO_write(conn->ssl_in, wpabuf_head(in_data), wpabuf_len(in_data))
 	    < 0) {
 		tls_show_errors(MSG_INFO, __func__,

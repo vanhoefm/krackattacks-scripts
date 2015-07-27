@@ -91,6 +91,12 @@
 
 #define P2P_MGMT_DEVICE_PREFIX		"p2p-dev-"
 
+/*
+ * How many seconds to wait to re-attempt to move GOs, in case previous attempt
+ * was not possible.
+ */
+#define P2P_RECONSIDER_GO_MOVE_DELAY 30
+
 enum p2p_group_removal_reason {
 	P2P_GROUP_REMOVAL_UNKNOWN,
 	P2P_GROUP_REMOVAL_SILENT,
@@ -143,6 +149,7 @@ static int wpas_p2p_go_is_peer_freq(struct wpa_supplicant *wpa_s, int freq);
 static void wpas_p2p_consider_moving_gos(struct wpa_supplicant *wpa_s,
 					 struct wpa_used_freq_data *freqs,
 					 unsigned int num);
+static void wpas_p2p_reconsider_moving_go(void *eloop_ctx, void *timeout_ctx);
 
 
 /*
@@ -892,6 +899,7 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 
 	wpa_s->p2p_in_invitation = 0;
 	eloop_cancel_timeout(wpas_p2p_move_go, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_p2p_reconsider_moving_go, wpa_s, NULL);
 
 	/*
 	 * Make sure wait for the first client does not remain active after the
@@ -8469,6 +8477,25 @@ static void wpas_p2p_move_go(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static void wpas_p2p_reconsider_moving_go(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wpa_used_freq_data *freqs = NULL;
+	unsigned int num = wpa_s->num_multichan_concurrent;
+
+	freqs = os_calloc(num, sizeof(struct wpa_used_freq_data));
+	if (!freqs)
+		return;
+
+	num = get_shared_radio_freqs_data(wpa_s, freqs, num);
+
+	/* Previous attempt to move a GO was not possible -- try again. */
+	wpas_p2p_consider_moving_gos(wpa_s, freqs, num);
+
+	os_free(freqs);
+}
+
+
 /*
  * Consider moving a GO from its currently used frequency:
  * 1. It is possible that due to regulatory consideration the frequency
@@ -8531,6 +8558,17 @@ static void wpas_p2p_consider_moving_one_go(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"P2P: Cancel a GO move from freq=%d MHz", freq);
 		eloop_cancel_timeout(wpas_p2p_move_go, wpa_s, NULL);
+
+		if (wpas_p2p_in_progress(wpa_s)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: GO move: policy CS is not allowed - setting timeout to re-consider GO move");
+			eloop_cancel_timeout(wpas_p2p_reconsider_moving_go,
+					     wpa_s, NULL);
+			eloop_register_timeout(P2P_RECONSIDER_GO_MOVE_DELAY, 0,
+					       wpas_p2p_reconsider_moving_go,
+					       wpa_s, NULL);
+			return;
+		}
 	}
 
 	if (!invalid_freq && (!policy_move || flags != 0)) {
@@ -8556,6 +8594,9 @@ static void wpas_p2p_consider_moving_gos(struct wpa_supplicant *wpa_s,
 					 unsigned int num)
 {
 	struct wpa_supplicant *ifs;
+
+	eloop_cancel_timeout(wpas_p2p_reconsider_moving_go, ELOOP_ALL_CTX,
+			     NULL);
 
 	/*
 	 * Travers all the radio interfaces, and for each GO interface, check

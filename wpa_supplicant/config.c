@@ -3522,6 +3522,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->fast_reauth = DEFAULT_FAST_REAUTH;
 	config->p2p_go_intent = DEFAULT_P2P_GO_INTENT;
 	config->p2p_intra_bss = DEFAULT_P2P_INTRA_BSS;
+	config->p2p_go_freq_change_policy = DEFAULT_P2P_GO_FREQ_MOVE;
 	config->p2p_go_max_inactivity = DEFAULT_P2P_GO_MAX_INACTIVITY;
 	config->p2p_optimize_listen_chan = DEFAULT_P2P_OPTIMIZE_LISTEN_CHAN;
 	config->p2p_go_ctwindow = DEFAULT_P2P_GO_CTWINDOW;
@@ -4176,6 +4177,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(persistent_reconnect, 0, 1), 0 },
 	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 	{ INT(p2p_group_idle), 0 },
+	{ INT_RANGE(p2p_go_freq_change_policy, 0, P2P_GO_FREQ_MOVE_MAX), 0 },
 	{ INT_RANGE(p2p_passphrase_len, 8, 63),
 	  CFG_CHANGED_P2P_PASSPHRASE_LEN },
 	{ FUNC(p2p_pref_chan), CFG_CHANGED_P2P_PREF_CHAN },

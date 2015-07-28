@@ -64,7 +64,7 @@ def read_pem(fname):
 
 def eap_connect(dev, ap, method, identity,
                 sha256=False, expect_failure=False, local_error_report=False,
-                **kwargs):
+                maybe_local_error=False, **kwargs):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -72,7 +72,8 @@ def eap_connect(dev, ap, method, identity,
                      **kwargs)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
-                   local_error_report=local_error_report)
+                   local_error_report=local_error_report,
+                   maybe_local_error=maybe_local_error)
     if expect_failure:
         return id
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -81,7 +82,8 @@ def eap_connect(dev, ap, method, identity,
     return id
 
 def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
-                   expect_failure=False, local_error_report=False):
+                   expect_failure=False, local_error_report=False,
+                   maybe_local_error=False):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -95,6 +97,8 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
         if ev is None:
             raise Exception("EAP failure timed out")
         ev = dev.wait_disconnected(timeout=10)
+        if maybe_local_error and "locally_generated=1" in ev:
+            return
         if not local_error_report:
             if "reason=23" not in ev:
                 raise Exception("Proper reason code for disconnection not reported")
@@ -3018,7 +3022,7 @@ def test_openssl_cipher_suite_config_wpas(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 openssl_ciphers="EXPORT",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
-                expect_failure=True)
+                expect_failure=True, maybe_local_error=True)
     dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="pap user", anonymous_identity="ttls",
                    password="password",

@@ -682,12 +682,18 @@ int eap_peer_tls_process_helper(struct eap_sm *sm, struct eap_ssl_data *data,
 	if (tls_connection_get_failed(data->ssl_ctx, data->conn)) {
 		/* TLS processing has failed - return error */
 		wpa_printf(MSG_DEBUG, "SSL: Failed - tls_out available to "
-			   "report error");
+			   "report error (len=%u)",
+			   (unsigned int) wpabuf_len(data->tls_out));
 		ret = -1;
 		/* TODO: clean pin if engine used? */
+		if (wpabuf_len(data->tls_out) == 0) {
+			wpabuf_free(data->tls_out);
+			data->tls_out = NULL;
+			return -1;
+		}
 	}
 
-	if (data->tls_out == NULL || wpabuf_len(data->tls_out) == 0) {
+	if (wpabuf_len(data->tls_out) == 0) {
 		/*
 		 * TLS negotiation should now be complete since all other cases
 		 * needing more data should have been caught above based on

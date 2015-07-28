@@ -3227,6 +3227,21 @@ int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 
 	wpa_printf(MSG_DEBUG, "OpenSSL: cipher suites: %s", buf + 1);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC) || defined(EAP_SERVER_FAST)
+	if (os_strstr(buf, ":ADH-")) {
+		/*
+		 * Need to drop to security level 0 to allow anonymous
+		 * cipher suites for EAP-FAST.
+		 */
+		SSL_set_security_level(conn->ssl, 0);
+	} else if (SSL_get_security_level(conn->ssl) == 0) {
+		/* Force at least security level 1 */
+		SSL_set_security_level(conn->ssl, 1);
+	}
+#endif /* EAP_FAST || EAP_FAST_DYNAMIC || EAP_SERVER_FAST */
+#endif
+
 	if (SSL_set_cipher_list(conn->ssl, buf + 1) != 1) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Cipher suite configuration failed");

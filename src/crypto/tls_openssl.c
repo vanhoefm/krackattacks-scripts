@@ -1,6 +1,6 @@
 /*
  * SSL/TLS interface functions for OpenSSL
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -33,6 +33,7 @@
 #include "common.h"
 #include "crypto.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "tls.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -2756,6 +2757,7 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	int skip = 0;
 	u8 *tmp_out = NULL;
 	u8 *_out = out;
+	const char *ver;
 
 	/*
 	 * TLS library did not support key generation, so get the needed TLS
@@ -2769,6 +2771,7 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	if (ssl == NULL || ssl->s3 == NULL || ssl->session == NULL ||
 	    ssl->session->master_key_length <= 0)
 		return -1;
+	ver = SSL_get_version(ssl);
 
 	if (skip_keyblock) {
 		skip = openssl_get_keyblock_size(ssl);
@@ -2796,13 +2799,18 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 			SSL3_RANDOM_SIZE);
 	}
 
-	/* TODO: TLSv1.2 may need another PRF. This could use something closer
-	 * to SSL_export_keying_material() design. */
-	if (tls_prf_sha1_md5(ssl->session->master_key,
-			     ssl->session->master_key_length,
-			     label, rnd, 2 * SSL3_RANDOM_SIZE,
-			     _out, skip + out_len) == 0)
+	if (os_strcmp(ver, "TLSv1.2") == 0) {
+		tls_prf_sha256(ssl->session->master_key,
+			       ssl->session->master_key_length,
+			       label, rnd, 2 * SSL3_RANDOM_SIZE,
+			       _out, skip + out_len);
 		ret = 0;
+	} else if (tls_prf_sha1_md5(ssl->session->master_key,
+				    ssl->session->master_key_length,
+				    label, rnd, 2 * SSL3_RANDOM_SIZE,
+				    _out, skip + out_len) == 0) {
+		ret = 0;
+	}
 	os_free(rnd);
 	if (ret == 0 && skip_keyblock)
 		os_memcpy(out, _out + skip, out_len);
@@ -2821,6 +2829,7 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	unsigned char server_random[SSL3_RANDOM_SIZE];
 	unsigned char master_key[64];
 	size_t master_key_len;
+	const char *ver;
 
 	/*
 	 * TLS library did not support key generation, so get the needed TLS
@@ -2833,8 +2842,9 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	ssl = conn->ssl;
 	if (ssl == NULL)
 		return -1;
+	ver = SSL_get_version(ssl);
 	sess = SSL_get_session(ssl);
-	if (!sess)
+	if (!ver || !sess)
 		return -1;
 
 	if (skip_keyblock) {
@@ -2868,12 +2878,16 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 			  SSL3_RANDOM_SIZE);
 	}
 
-	/* TODO: TLSv1.2 may need another PRF. This could use something closer
-	 * to SSL_export_keying_material() design. */
-	if (tls_prf_sha1_md5(master_key, master_key_len,
-			     label, rnd, 2 * SSL3_RANDOM_SIZE,
-			     _out, skip + out_len) == 0)
+	if (os_strcmp(ver, "TLSv1.2") == 0) {
+		tls_prf_sha256(master_key, master_key_len,
+			       label, rnd, 2 * SSL3_RANDOM_SIZE,
+			       _out, skip + out_len);
 		ret = 0;
+	} else if (tls_prf_sha1_md5(master_key, master_key_len,
+				    label, rnd, 2 * SSL3_RANDOM_SIZE,
+				    _out, skip + out_len) == 0) {
+		ret = 0;
+	}
 	os_memset(master_key, 0, sizeof(master_key));
 	os_free(rnd);
 	if (ret == 0 && skip_keyblock)

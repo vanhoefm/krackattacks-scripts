@@ -2680,6 +2680,7 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 
 static int openssl_get_keyblock_size(SSL *ssl)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	const EVP_CIPHER *c;
 	const EVP_MD *h;
 	int md_size;
@@ -2709,6 +2710,33 @@ static int openssl_get_keyblock_size(SSL *ssl)
 	return 2 * (EVP_CIPHER_key_length(c) +
 		    md_size +
 		    EVP_CIPHER_iv_length(c));
+#else
+	const SSL_CIPHER *ssl_cipher;
+	int cipher, digest;
+	const EVP_CIPHER *c;
+	const EVP_MD *h;
+
+	ssl_cipher = SSL_get_current_cipher(ssl);
+	if (!ssl_cipher)
+		return -1;
+	cipher = SSL_CIPHER_get_cipher_nid(ssl_cipher);
+	digest = SSL_CIPHER_get_digest_nid(ssl_cipher);
+	wpa_printf(MSG_DEBUG, "OpenSSL: cipher nid %d digest nid %d",
+		   cipher, digest);
+	if (cipher < 0 || digest < 0)
+		return -1;
+	c = EVP_get_cipherbynid(cipher);
+	h = EVP_get_digestbynid(digest);
+	if (!c || !h)
+		return -1;
+
+	wpa_printf(MSG_DEBUG,
+		   "OpenSSL: keyblock size: key_len=%d MD_size=%d IV_len=%d",
+		   EVP_CIPHER_key_length(c), EVP_MD_size(h),
+		   EVP_CIPHER_iv_length(c));
+	return 2 * (EVP_CIPHER_key_length(c) + EVP_MD_size(h) +
+		    EVP_CIPHER_iv_length(c));
+#endif
 }
 
 
@@ -2721,6 +2749,7 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 		   "mode");
 	return -1;
 #else /* CONFIG_FIPS */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL *ssl;
 	u8 *rnd;
 	int ret = -1;
@@ -2780,6 +2809,79 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	bin_clear_free(tmp_out, skip);
 
 	return ret;
+#else
+	SSL *ssl;
+	SSL_SESSION *sess;
+	u8 *rnd;
+	int ret = -1;
+	int skip = 0;
+	u8 *tmp_out = NULL;
+	u8 *_out = out;
+	unsigned char client_random[SSL3_RANDOM_SIZE];
+	unsigned char server_random[SSL3_RANDOM_SIZE];
+	unsigned char master_key[64];
+	size_t master_key_len;
+
+	/*
+	 * TLS library did not support key generation, so get the needed TLS
+	 * session parameters and use an internal implementation of TLS PRF to
+	 * derive the key.
+	 */
+
+	if (conn == NULL)
+		return -1;
+	ssl = conn->ssl;
+	if (ssl == NULL)
+		return -1;
+	sess = SSL_get_session(ssl);
+	if (!sess)
+		return -1;
+
+	if (skip_keyblock) {
+		skip = openssl_get_keyblock_size(ssl);
+		if (skip < 0)
+			return -1;
+		tmp_out = os_malloc(skip + out_len);
+		if (!tmp_out)
+			return -1;
+		_out = tmp_out;
+	}
+
+	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
+	if (!rnd) {
+		os_free(tmp_out);
+		return -1;
+	}
+
+	SSL_get_client_random(ssl, client_random, sizeof(client_random));
+	SSL_get_server_random(ssl, server_random, sizeof(server_random));
+	master_key_len = SSL_SESSION_get_master_key(sess, master_key,
+						    sizeof(master_key));
+
+	if (server_random_first) {
+		os_memcpy(rnd, server_random, SSL3_RANDOM_SIZE);
+		os_memcpy(rnd + SSL3_RANDOM_SIZE, client_random,
+			  SSL3_RANDOM_SIZE);
+	} else {
+		os_memcpy(rnd, client_random, SSL3_RANDOM_SIZE);
+		os_memcpy(rnd + SSL3_RANDOM_SIZE, server_random,
+			  SSL3_RANDOM_SIZE);
+	}
+
+	/* TODO: TLSv1.2 may need another PRF. This could use something closer
+	 * to SSL_export_keying_material() design. */
+	if (tls_prf_sha1_md5(master_key, master_key_len,
+			     label, rnd, 2 * SSL3_RANDOM_SIZE,
+			     _out, skip + out_len) == 0)
+		ret = 0;
+	os_memset(master_key, 0, sizeof(master_key));
+	os_free(rnd);
+	if (ret == 0 && skip_keyblock)
+		os_memcpy(out, _out + skip, out_len);
+	bin_clear_free(tmp_out, skip);
+
+	return ret;
+#endif
 #endif /* CONFIG_FIPS */
 }
 

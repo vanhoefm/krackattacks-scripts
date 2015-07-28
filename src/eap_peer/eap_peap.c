@@ -1011,6 +1011,13 @@ static struct wpabuf * eap_peap_process(struct eap_sm *sm, void *priv,
 						  data->peap_version, id, &msg,
 						  &resp);
 
+		if (res < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-PEAP: TLS processing failed");
+			ret->methodState = METHOD_DONE;
+			ret->decision = DECISION_FAIL;
+			return resp;
+		}
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 			char *label;
 			wpa_printf(MSG_DEBUG,

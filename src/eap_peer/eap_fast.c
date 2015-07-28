@@ -1572,6 +1572,13 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 						  EAP_TYPE_FAST,
 						  data->fast_version, id, &msg,
 						  &resp);
+		if (res < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-FAST: TLS processing failed");
+			ret->methodState = METHOD_DONE;
+			ret->decision = DECISION_FAIL;
+			return resp;
+		}
 
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 			char cipher[80];

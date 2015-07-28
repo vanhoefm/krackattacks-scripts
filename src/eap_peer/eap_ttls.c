@@ -1394,6 +1394,12 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 	res = eap_peer_tls_process_helper(sm, &data->ssl, EAP_TYPE_TTLS,
 					  data->ttls_version, identifier,
 					  in_data, out_data);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "EAP-TTLS: TLS processing failed");
+		ret->methodState = METHOD_DONE;
+		ret->decision = DECISION_FAIL;
+		return -1;
+	}
 
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: TLS done, proceed to "

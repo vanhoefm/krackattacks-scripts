@@ -545,6 +545,10 @@ NEED_SHA256=y
 NEED_TLS_PRF_SHA256=y
 LIBS += -lcrypto
 LIBS_h += -lcrypto
+ifdef CONFIG_TLS_ADD_DL
+LIBS += -ldl
+LIBS_h += -ldl
+endif
 endif
 
 ifeq ($(CONFIG_TLS), gnutls)

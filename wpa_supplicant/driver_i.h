@@ -899,7 +899,7 @@ static inline int wpa_drv_get_pref_freq_list(struct wpa_supplicant *wpa_s,
 					     unsigned int *freq_list)
 {
 	if (!wpa_s->driver->get_pref_freq_list)
-		return 0;
+		return -1;
 	return wpa_s->driver->get_pref_freq_list(wpa_s->drv_priv, if_type,
 						 num, freq_list);
 }

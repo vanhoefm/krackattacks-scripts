@@ -894,3 +894,72 @@ def test_p2ps_many_services_in_probe(dev):
     for name in [ long2, long3, long4, long5 ]:
         if name not in events:
             raise Exception("Service missing from peer events")
+
+def p2ps_test_feature_capability_cpt(dev, adv_cpt, seeker_cpt, adv_role,
+                                     result):
+    p2ps_advertise(r_dev=dev[0], r_role=adv_role,
+                   svc_name='org.wi-fi.wfds.send.rx',
+                   srv_info='I can receive files upto size 2 GB', cpt=adv_cpt)
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              srv_info='2 GB')
+    auto_accept = adv_role != "0"
+    ev1, ev0, pin = p2ps_provision(dev[1], dev[0], adv_id,
+                                   auto_accept=auto_accept, adv_cpt=adv_cpt,
+                                   seeker_cpt=seeker_cpt, method="8")
+
+    status0, fcap0 = p2ps_parse_event(ev0, "status", "feature_cap")
+    status1, fcap1 = p2ps_parse_event(ev0, "status", "feature_cap")
+
+    if fcap0 is None:
+        raise Exception("Bad feature capability on Seeker side")
+    if fcap1 is None:
+        raise Exception("Bad feature capability on Advertiser side")
+    if fcap0 != fcap1:
+        raise Exception("Incompatible feature capability values")
+
+    if status0 not in ("0", "12") or status1 not in ("0", "12"):
+        raise Exception("Unexpected PD result status")
+
+    if result == "UDP" and fcap0[1] != "1":
+        raise Exception("Unexpected CPT feature capability value (expected: UDP)")
+    elif result == "MAC" and fcap0[1] != "2":
+        raise Exception("Unexpected CPT feature capability value (expected: MAC)")
+
+    ev = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+    if ev is None:
+        raise Exception("Unable to remove the advertisement instance")
+
+def test_p2ps_feature_capability_mac_autoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser MAC, seeker UDP:MAC, autoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC", seeker_cpt="UDP:MAC",
+                                     adv_role="4", result="MAC")
+
+def test_p2ps_feature_capability_mac_nonautoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser:MAC, seeker UDP:MAC, nonautoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC", seeker_cpt="UDP:MAC",
+                                     adv_role="0", result="MAC")
+
+def test_p2ps_feature_capability_mac_udp_autoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser MAC:UDP, seeker UDP:MAC, autoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC:UDP",
+                                     seeker_cpt="UDP:MAC", adv_role="2",
+                                     result="MAC")
+
+def test_p2ps_feature_capability_mac_udp_nonautoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser MAC:UDP, seeker UDP:MAC, nonautoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC:UDP",
+                                     seeker_cpt="UDP:MAC", adv_role="0",
+                                     result="UDP")
+
+def test_p2ps_feature_capability_udp_mac_autoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser UDP:MAC, seeker MAC:UDP, autoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="UDP:MAC",
+                                     seeker_cpt="MAC:UDP", adv_role="2",
+                                     result="UDP")
+
+def test_p2ps_feature_capability_udp_mac_nonautoaccept(dev):
+    """P2PS PD Feature Capability CPT: advertiser UDP:MAC, seeker MAC:UDP,  nonautoaccept"""
+    p2ps_test_feature_capability_cpt(dev, adv_cpt="UDP:MAC",
+                                     seeker_cpt="MAC:UDP", adv_role="0",
+                                     result="MAC")

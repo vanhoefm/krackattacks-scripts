@@ -1033,8 +1033,6 @@ def get_ifnames():
     return ifnames
 
 def p2ps_connect_p2ps_method(dev, keep_group=False):
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
     dev[0].flush_scan_cache()
     dev[1].flush_scan_cache()
     p2ps_advertise(r_dev=dev[0], r_role='2', svc_name='org.wi-fi.wfds.send.rx',
@@ -1042,37 +1040,12 @@ def p2ps_connect_p2ps_method(dev, keep_group=False):
     [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
                                               svc_name='org.wi-fi.wfds.send.rx',
                                               srv_info='2 GB')
-    if "OK" not in dev[1].global_request("P2P_ASP_PROVISION " + addr0 + " adv_id=" + str(adv_id) + " adv_mac=" + addr0 + " session=1 session_mac=" + addr1 + " info='test-session-info-data' method=1000"):
-        raise Exception("Failed to request provisioning on seeker")
-
-    ev0 = dev[0].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
-    if ev0 is None:
-        raise Exception("P2PS-PROV-DONE timeout on advertiser side")
-    if "join=" not in ev0:
-        raise Exception("join parameter missing from P2PS-PROV-DONE")
-
-    ev1 = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=5)
-    if ev1 is None:
-        raise Exception("Provisioning failed on seeker side")
-
-    ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
-    if ev1 is None:
-        raise Exception("P2P-GROUP-STARTED timeout on seeker side")
-    res1 = dev[1].group_form_result(ev1)
+    ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
     ifnames = get_ifnames()
+    p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
 
-    if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " 12345670 p2ps persistent join"):
-        raise Exception("P2P_CONNECT failed on seeker side")
-
-    ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
-    if ev0 is None:
-        raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
-    res0 = dev[0].group_form_result(ev0)
-
-    ev1 = dev[1].wait_global_event(["AP-STA-CONNECTED"], timeout=5)
-    if ev1 is None:
-        raise Exception("Group formation failed")
-
+    grp_ifname0 = dev[0].get_group_ifname()
+    grp_ifname1 = dev[1].get_group_ifname()
     if not keep_group:
         ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
         if ev0 is None:
@@ -1081,7 +1054,7 @@ def p2ps_connect_p2ps_method(dev, keep_group=False):
         remove_group(dev[0], dev[1])
         ifnames = ifnames + get_ifnames()
 
-    return (res0, res1, ifnames)
+    return grp_ifname0, grp_ifname1, ifnames
 
 def has_string_prefix(vals, prefix):
     for val in vals:
@@ -1094,14 +1067,14 @@ def test_p2ps_connect_p2ps_method_1(dev):
     set_no_group_iface(dev[0], 1)
     set_no_group_iface(dev[1], 1)
 
-    (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
-    if res0['ifname'] != dev[0].ifname:
-        raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
-    if res1['ifname'] != dev[1].ifname:
-        raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
-    if has_string_prefix(ifnames, 'p2p-' + res0['ifname']):
+    (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev)
+    if grp_ifname0 != dev[0].ifname:
+        raise Exception("unexpected dev0 group ifname: " + grp_ifname0)
+    if grp_ifname1 != dev[1].ifname:
+        raise Exception("unexpected dev1 group ifname: " + grp_ifname1)
+    if has_string_prefix(ifnames, 'p2p-' + grp_ifname0):
         raise Exception("dev0 group interface unexpectedly present")
-    if has_string_prefix(ifnames, 'p2p-' + res1['ifname']):
+    if has_string_prefix(ifnames, 'p2p-' + grp_ifname1):
         raise Exception("dev1 group interface unexpectedly present")
 
 def test_p2ps_connect_p2ps_method_2(dev):
@@ -1109,12 +1082,12 @@ def test_p2ps_connect_p2ps_method_2(dev):
     set_no_group_iface(dev[0], 0)
     set_no_group_iface(dev[1], 1)
 
-    (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
-    if not res0['ifname'].startswith('p2p-' + dev[0].ifname + '-'):
-        raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
-    if res1['ifname'] != dev[1].ifname:
-        raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
-    if has_string_prefix(ifnames, 'p2p-' + res0['ifname']):
+    (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev)
+    if not grp_ifname0.startswith('p2p-' + dev[0].ifname + '-'):
+        raise Exception("unexpected dev0 group ifname: " + grp_ifname0)
+    if grp_ifname1 != dev[1].ifname:
+        raise Exception("unexpected dev1 group ifname: " + grp_ifname1)
+    if has_string_prefix(ifnames, 'p2p-' + grp_ifname0):
         raise Exception("dev0 group interface unexpectedly present")
 
 def test_p2ps_connect_p2ps_method_3(dev):
@@ -1122,12 +1095,12 @@ def test_p2ps_connect_p2ps_method_3(dev):
     set_no_group_iface(dev[0], 1)
     set_no_group_iface(dev[1], 0)
 
-    (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
-    if res0['ifname'] != dev[0].ifname:
-        raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
-    if not res1['ifname'].startswith('p2p-' + dev[1].ifname + '-'):
-        raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
-    if has_string_prefix(ifnames, 'p2p-' + res0['ifname']):
+    (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev)
+    if grp_ifname0 != dev[0].ifname:
+        raise Exception("unexpected dev0 group ifname: " + grp_ifname0)
+    if not grp_ifname1.startswith('p2p-' + dev[1].ifname + '-'):
+        raise Exception("unexpected dev1 group ifname: " + grp_ifname1)
+    if has_string_prefix(ifnames, 'p2p-' + grp_ifname0):
         raise Exception("dev0 group interface unexpectedly present")
 
 def test_p2ps_connect_p2ps_method_4(dev):
@@ -1135,10 +1108,10 @@ def test_p2ps_connect_p2ps_method_4(dev):
     set_no_group_iface(dev[0], 0)
     set_no_group_iface(dev[1], 0)
 
-    (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
-    if not res0['ifname'].startswith('p2p-' + dev[0].ifname + '-'):
+    (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev)
+    if not grp_ifname0.startswith('p2p-' + dev[0].ifname + '-'):
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
-    if not res1['ifname'].startswith('p2p-' + dev[1].ifname + '-'):
+    if not grp_ifname1.startswith('p2p-' + dev[1].ifname + '-'):
         raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
 
 def test_p2ps_connect_adv_go_persistent(dev):

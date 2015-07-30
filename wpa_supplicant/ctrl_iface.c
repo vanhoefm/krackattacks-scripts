@@ -4836,6 +4836,8 @@ static int p2p_ctrl_asp_provision(struct wpa_supplicant *wpa_s, char *cmd)
 	if (!p2ps_prov)
 		return -1;
 
+	p2ps_prov->pd_seeker = 1;
+
 	return wpas_p2p_prov_disc(wpa_s, addr, NULL, WPAS_P2P_PD_FOR_ASP,
 				  p2ps_prov);
 }

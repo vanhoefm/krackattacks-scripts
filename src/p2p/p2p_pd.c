@@ -857,8 +857,38 @@ out:
 		}
 	}
 
-	if (reject == P2P_SC_SUCCESS && p2p->cfg->prov_disc_req) {
+	/*
+	 * prov_disc_req callback is used to generate P2P-PROV-DISC-ENTER-PIN,
+	 * P2P-PROV-DISC-SHOW-PIN, and P2P-PROV-DISC-PBC-REQ events.
+	 * Call it either on legacy P2P PD or on P2PS PD only if we need to
+	 * enter/show PIN.
+	 *
+	 * The callback is called in the following cases:
+	 * 1. Legacy P2P PD request, response status SUCCESS
+	 * 2. P2PS advertiser, method: DISPLAY, autoaccept: TRUE,
+	 *    response status: SUCCESS
+	 * 3. P2PS advertiser, method  DISPLAY, autoaccept: FALSE,
+	 *    response status: INFO_CURRENTLY_UNAVAILABLE
+	 * 4. P2PS advertiser, method: KEYPAD, autoaccept==any,
+	 *    response status: INFO_CURRENTLY_UNAVAILABLE
+	 * 5. P2PS follow-on with SUCCESS_DEFERRED,
+	 *    advertiser role: DISPLAY, autoaccept: FALSE,
+	 *    seeker: KEYPAD, response status: SUCCESS
+	 */
+	if (p2p->cfg->prov_disc_req &&
+	    ((reject == P2P_SC_SUCCESS && !msg.adv_id) ||
+	     (!msg.status &&
+	     (reject == P2P_SC_SUCCESS ||
+	      reject == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) &&
+	      passwd_id == DEV_PW_USER_SPECIFIED) ||
+	     (!msg.status &&
+	      reject == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
+	      passwd_id == DEV_PW_REGISTRAR_SPECIFIED) ||
+	     (reject == P2P_SC_SUCCESS &&
+	      msg.status && *msg.status == P2P_SC_SUCCESS_DEFERRED &&
+	       passwd_id == DEV_PW_REGISTRAR_SPECIFIED))) {
 		const u8 *dev_addr = sa;
+
 		if (msg.p2p_device_addr)
 			dev_addr = msg.p2p_device_addr;
 		p2p->cfg->prov_disc_req(p2p->cfg->cb_ctx, sa,
@@ -869,30 +899,30 @@ out:
 					msg.capability ? msg.capability[1] :
 					0,
 					msg.group_id, msg.group_id_len);
+	}
 
-		if (dev) {
-			switch (config_methods) {
-			case WPS_CONFIG_DISPLAY:
-				dev->wps_prov_info = WPS_CONFIG_KEYPAD;
-				break;
-			case WPS_CONFIG_KEYPAD:
-				dev->wps_prov_info = WPS_CONFIG_DISPLAY;
-				break;
-			case WPS_CONFIG_PUSHBUTTON:
-				dev->wps_prov_info = WPS_CONFIG_PUSHBUTTON;
-				break;
-			case WPS_CONFIG_P2PS:
-				dev->wps_prov_info = WPS_CONFIG_P2PS;
-				break;
-			default:
-				dev->wps_prov_info = 0;
-				break;
-			}
-
-			if (msg.intended_addr)
-				os_memcpy(dev->interface_addr,
-					  msg.intended_addr, ETH_ALEN);
+	if (dev && reject == P2P_SC_SUCCESS) {
+		switch (config_methods) {
+		case WPS_CONFIG_DISPLAY:
+			dev->wps_prov_info = WPS_CONFIG_KEYPAD;
+			break;
+		case WPS_CONFIG_KEYPAD:
+			dev->wps_prov_info = WPS_CONFIG_DISPLAY;
+			break;
+		case WPS_CONFIG_PUSHBUTTON:
+			dev->wps_prov_info = WPS_CONFIG_PUSHBUTTON;
+			break;
+		case WPS_CONFIG_P2PS:
+			dev->wps_prov_info = WPS_CONFIG_P2PS;
+			break;
+		default:
+			dev->wps_prov_info = 0;
+			break;
 		}
+
+		if (msg.intended_addr)
+			os_memcpy(dev->interface_addr, msg.intended_addr,
+				  ETH_ALEN);
 	}
 	p2p_parse_free(&msg);
 }
@@ -1004,12 +1034,12 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	struct p2p_device *dev;
 	u16 report_config_methods = 0, req_config_methods;
 	u8 status = P2P_SC_SUCCESS;
-	int success = 0;
 	u32 adv_id = 0;
 	u8 conncap = P2PS_SETUP_NEW;
 	u8 adv_mac[ETH_ALEN];
 	u8 group_mac[ETH_ALEN];
 	int passwd_id = DEV_PW_DEFAULT;
+	int p2ps_seeker;
 
 	if (p2p_parse(data, len, &msg))
 		return;
@@ -1073,6 +1103,8 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
 		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	}
+
+	p2ps_seeker = p2p->p2ps_prov && p2p->p2ps_prov->pd_seeker;
 
 	/*
 	 * Use a local copy of the requested config methods since
@@ -1196,7 +1228,6 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		os_memcpy(dev->interface_addr, msg.intended_addr, ETH_ALEN);
 
 	p2p_parse_free(&msg);
-	success = 1;
 
 out:
 	dev->req_config_methods = 0;
@@ -1208,7 +1239,28 @@ out:
 		p2p_connect_send(p2p, dev);
 		return;
 	}
-	if (success && p2p->cfg->prov_disc_resp)
+
+	/*
+	 * prov_disc_resp callback is used to generate P2P-PROV-DISC-ENTER-PIN,
+	 * P2P-PROV-DISC-SHOW-PIN, and P2P-PROV-DISC-PBC-REQ events.
+	 * Call it only for a legacy P2P PD or for P2PS PD scenarios where
+	 * show/enter PIN events are needed.
+	 *
+	 * The callback is called in the following cases:
+	 * 1. Legacy P2P PD response with a status SUCCESS
+	 * 2. P2PS, advertiser method: DISPLAY, autoaccept: true,
+	 *    response status: SUCCESS, local method KEYPAD
+	 * 3. P2PS, advertiser method: KEYPAD,Seeker side,
+	 *    response status: INFO_CURRENTLY_UNAVAILABLE,
+	 *    local method: DISPLAY
+	 */
+	if (p2p->cfg->prov_disc_resp &&
+	    ((status == P2P_SC_SUCCESS && !adv_id) ||
+	     (p2ps_seeker && status == P2P_SC_SUCCESS &&
+	      passwd_id == DEV_PW_REGISTRAR_SPECIFIED) ||
+	     (p2ps_seeker &&
+	      status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
+	      passwd_id == DEV_PW_USER_SPECIFIED)))
 		p2p->cfg->prov_disc_resp(p2p->cfg->cb_ctx, sa,
 					 report_config_methods);
 

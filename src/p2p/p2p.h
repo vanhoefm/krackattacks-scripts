@@ -162,6 +162,11 @@ struct p2p_go_neg_results {
 
 struct p2ps_provision {
 	/**
+	 * pd_seeker - P2PS provision discovery seeker role
+	 */
+	unsigned int pd_seeker:1;
+
+	/**
 	 * status - Remote returned provisioning status code
 	 */
 	int status;

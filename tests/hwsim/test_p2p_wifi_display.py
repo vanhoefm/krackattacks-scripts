@@ -101,7 +101,8 @@ def test_wifi_display(dev):
 
     pin = dev[0].wps_read_pin()
     dev[0].p2p_go_neg_auth(dev[1].p2p_dev_addr(), pin, 'display')
-    res1 = dev[1].p2p_go_neg_init(dev[0].p2p_dev_addr(), pin, 'enter', timeout=20, go_intent=15)
+    res1 = dev[1].p2p_go_neg_init(dev[0].p2p_dev_addr(), pin, 'enter',
+                                  timeout=20, go_intent=15, freq=2437)
     res2 = dev[0].p2p_go_neg_auth_result()
 
     bss = dev[0].get_bss("p2p_dev_addr=" + dev[1].p2p_dev_addr())

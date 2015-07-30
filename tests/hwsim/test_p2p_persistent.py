@@ -184,7 +184,8 @@ def test_persistent_group_per_sta_psk(dev):
     logger.info("Join another client to the group")
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    c_res = dev[2].p2p_connect_group(addr0, pin, timeout=60, social=True,
+    social = int(i_res['freq']) in [ 2412, 2437, 2462 ]
+    c_res = dev[2].p2p_connect_group(addr0, pin, timeout=60, social=social,
                                      freq=i_res['freq'])
     if not c_res['persistent']:
         raise Exception("Joining client did not recognize persistent group")

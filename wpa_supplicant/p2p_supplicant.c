@@ -1714,14 +1714,22 @@ static void p2p_go_configured(void *ctx, void *data)
 				       params->persistent_group, "");
 		wpa_s->group_formation_reported = 1;
 
-		if (wpa_s->parent->p2ps_join_addr_valid) {
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"P2PS: Setting default PIN for " MACSTR,
-				MAC2STR(wpa_s->parent->p2ps_join_addr));
-			wpa_supplicant_ap_wps_pin(wpa_s,
-						  wpa_s->parent->p2ps_join_addr,
-						  "12345670", NULL, 0, 0);
-			wpa_s->parent->p2ps_join_addr_valid = 0;
+		if (wpa_s->parent->p2ps_method_config_any) {
+			if (is_zero_ether_addr(wpa_s->parent->p2ps_join_addr)) {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"P2PS: Setting default PIN for ANY");
+				wpa_supplicant_ap_wps_pin(wpa_s, NULL,
+							  "12345670", NULL, 0,
+							  0);
+			} else {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"P2PS: Setting default PIN for " MACSTR,
+					MAC2STR(wpa_s->parent->p2ps_join_addr));
+				wpa_supplicant_ap_wps_pin(
+					wpa_s, wpa_s->parent->p2ps_join_addr,
+					"12345670", NULL, 0, 0);
+			}
+			wpa_s->parent->p2ps_method_config_any = 0;
 		}
 
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
@@ -3922,25 +3930,31 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			}
 
 			if (passwd_id == DEV_PW_P2PS_DEFAULT) {
-				os_memcpy(wpa_s->p2ps_join_addr, dev, ETH_ALEN);
-				wpa_s->p2ps_join_addr_valid = 1;
-				wpa_dbg(wpa_s, MSG_DEBUG,
-					"P2PS: Saving PIN for " MACSTR,
-					MAC2STR(dev));
+				os_memcpy(wpa_s->p2ps_join_addr, grp_mac,
+					  ETH_ALEN);
+				wpa_s->p2ps_method_config_any = 1;
 			}
 		} else if (passwd_id == DEV_PW_P2PS_DEFAULT) {
 			os_memcpy(go_ifname, go_wpa_s->ifname,
 				  sizeof(go_ifname));
 
-			wpa_dbg(go_wpa_s, MSG_DEBUG,
-				"P2P: Setting PIN-1 For " MACSTR, MAC2STR(dev));
-			wpa_supplicant_ap_wps_pin(go_wpa_s, dev, "12345670",
-						  NULL, 0, 0);
+			if (is_zero_ether_addr(grp_mac)) {
+				wpa_dbg(go_wpa_s, MSG_DEBUG,
+					"P2P: Setting PIN-1 for ANY");
+				wpa_supplicant_ap_wps_pin(go_wpa_s, NULL,
+							  "12345670", NULL, 0,
+							  0);
+			} else {
+				wpa_dbg(go_wpa_s, MSG_DEBUG,
+					"P2P: Setting PIN-1 for " MACSTR,
+					MAC2STR(grp_mac));
+				wpa_supplicant_ap_wps_pin(go_wpa_s, grp_mac,
+							  "12345670", NULL, 0,
+							  0);
+			}
 
-			os_memcpy(wpa_s->p2ps_join_addr, dev, ETH_ALEN);
-			wpa_s->p2ps_join_addr_valid = 1;
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"P2PS: Saving PIN for " MACSTR, MAC2STR(dev));
+			os_memcpy(wpa_s->p2ps_join_addr, grp_mac, ETH_ALEN);
+			wpa_s->p2ps_method_config_any = 1;
 		}
 
 		wpa_msg_global(wpa_s, MSG_INFO,
@@ -5075,6 +5089,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	wpa_s->global->p2p_fail_on_wps_complete = 0;
 	wpa_s->global->pending_p2ps_group = 0;
+	wpa_s->p2ps_method_config_any = 0;
 
 	if (go_intent < 0)
 		go_intent = wpa_s->conf->p2p_go_intent;

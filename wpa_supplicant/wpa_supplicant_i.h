@@ -820,7 +820,7 @@ struct wpa_supplicant {
 	unsigned int p2p_nfc_tag_enabled:1;
 	unsigned int p2p_peer_oob_pk_hash_known:1;
 	unsigned int p2p_disable_ip_addr_req:1;
-	unsigned int p2ps_join_addr_valid:1;
+	unsigned int p2ps_method_config_any:1;
 	unsigned int p2p_cli_probe:1;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;

@@ -4164,8 +4164,8 @@ static const struct global_parse_data global_fields[] = {
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ FUNC(sec_device_type), CFG_CHANGED_SEC_DEVICE_TYPE },
-	{ INT(p2p_listen_reg_class), 0 },
-	{ INT(p2p_listen_channel), 0 },
+	{ INT(p2p_listen_reg_class), CFG_CHANGED_P2P_LISTEN_CHANNEL },
+	{ INT(p2p_listen_channel), CFG_CHANGED_P2P_LISTEN_CHANNEL },
 	{ INT(p2p_oper_reg_class), CFG_CHANGED_P2P_OPER_CHANNEL },
 	{ INT(p2p_oper_channel), CFG_CHANGED_P2P_OPER_CHANNEL },
 	{ INT_RANGE(p2p_go_intent, 0, 15), 0 },

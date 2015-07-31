@@ -225,7 +225,7 @@ struct wpa_params {
 	 * This can also be %NULL. In such a case, if a P2P Device dedicated
 	 * interfaces is created, the main configuration file will be used.
 	 */
-	const char *conf_p2p_dev;
+	char *conf_p2p_dev;
 #endif /* CONFIG_P2P */
 
 };

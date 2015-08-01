@@ -551,7 +551,7 @@ static void p2p_check_pref_chan_no_recv(struct p2p_data *p2p, int go,
 					unsigned freq_list[], unsigned int size)
 {
 	u8 op_class, op_channel;
-	unsigned int oper_freq, i, j;
+	unsigned int oper_freq = 0, i, j;
 	int found = 0;
 
 	p2p_dbg(p2p,
@@ -614,7 +614,7 @@ static void p2p_check_pref_chan_recv(struct p2p_data *p2p, int go,
 				     unsigned freq_list[], unsigned int size)
 {
 	u8 op_class, op_channel;
-	unsigned int oper_freq, i, j;
+	unsigned int oper_freq = 0, i, j;
 	int found = 0;
 
 	/*

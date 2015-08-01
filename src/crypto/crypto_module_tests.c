@@ -1573,6 +1573,7 @@ static int test_sha256(void)
 
 static int test_ms_funcs(void)
 {
+#ifndef CONFIG_FIPS
 	/* Test vector from RFC2759 example */
 	char *username = "User";
 	char *password = "clientPass";
@@ -1665,6 +1666,10 @@ static int test_ms_funcs(void)
 		wpa_printf(MSG_INFO, "ms_funcs test cases passed");
 
 	return errors;
+#else /* CONFIG_FIPS */
+	wpa_printf(MSG_INFO, "ms_funcs test cases skipped due to CONFIG_FIPS");
+	return 0;
+#endif /* CONFIG_FIPS */
 }
 
 

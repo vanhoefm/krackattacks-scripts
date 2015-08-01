@@ -1,5 +1,5 @@
 # WPS tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -21,7 +21,7 @@ import StringIO
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail
+from utils import HwsimSkip, alloc_fail, skip_with_fips
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -609,6 +609,7 @@ def test_ap_wps_reg_config_ext_processing(dev, apdev):
 
 def test_ap_wps_reg_config_tkip(dev, apdev):
     """WPS registrar configuring AP to use TKIP and AP upgrading to TKIP+CCMP"""
+    skip_with_fips(dev[0])
     ssid = "test-wps-init-ap"
     appin = "12345670"
     hostapd.add_ap(apdev[0]['ifname'],

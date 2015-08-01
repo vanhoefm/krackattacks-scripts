@@ -17,7 +17,7 @@ import subprocess
 import time
 
 import hostapd
-from utils import HwsimSkip, fail_test
+from utils import HwsimSkip, fail_test, skip_with_fips
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 
@@ -162,6 +162,7 @@ def test_ap_wpa2_sha256_ptk_rekey_ap(dev, apdev):
 
 def test_ap_wpa_ptk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by station"""
+    skip_with_fips(dev[0])
     ssid = "test-wpa-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
@@ -176,6 +177,7 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
 
 def test_ap_wpa_ptk_rekey_ap(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by AP"""
+    skip_with_fips(dev[0])
     ssid = "test-wpa-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
@@ -294,6 +296,7 @@ def test_ap_wpa2_gtk_rekey(dev, apdev):
 
 def test_ap_wpa_gtk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and GTK rekey enforced by AP"""
+    skip_with_fips(dev[0])
     ssid = "test-wpa-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
@@ -1917,6 +1920,7 @@ def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
 
 def test_ap_wpa_ie_parsing(dev, apdev):
     """WPA IE parsing"""
+    skip_with_fips(dev[0])
     ssid = "test-wpa-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)

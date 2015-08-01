@@ -1,5 +1,5 @@
 # PeerKey tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,6 +10,7 @@ import time
 
 import hwsim_utils
 import hostapd
+from utils import skip_with_fips
 from wlantest import Wlantest
 
 def test_peerkey(dev, apdev):
@@ -48,6 +49,7 @@ def test_peerkey_unknown_peer(dev, apdev):
 
 def test_peerkey_pairwise_mismatch(dev, apdev):
     """RSN TKIP+CCMP AP and PeerKey between two STAs using different ciphers"""
+    skip_with_fips(dev[0])
     wt = Wlantest()
     wt.flush()
     wt.add_passphrase("12345678")

@@ -1,5 +1,5 @@
 # Test cases for automatic channel selection with hostapd
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import hostapd
+from utils import skip_with_fips
 from test_ap_ht import clear_scan_cache
 
 def force_prev_ap_on_24g(ap):
@@ -89,6 +90,7 @@ def test_ap_acs_chanlist(dev, apdev):
 
 def test_ap_multi_bss_acs(dev, apdev):
     """hostapd start with a multi-BSS configuration file using ACS"""
+    skip_with_fips(dev[0])
     ifname = apdev[0]['ifname']
     force_prev_ap_on_24g(apdev[0])
 

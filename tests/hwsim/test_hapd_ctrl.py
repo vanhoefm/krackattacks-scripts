@@ -5,6 +5,7 @@
 # See README for more details.
 
 import hostapd
+from utils import skip_with_fips
 
 def test_hapd_ctrl_status(dev, apdev):
     """hostapd ctrl_iface STATUS commands"""
@@ -485,6 +486,7 @@ def test_hapd_dup_network_global_wpa2(dev, apdev):
 
 def test_hapd_dup_network_global_wpa(dev, apdev):
     """hostapd and DUP_NETWORK command (WPA)"""
+    skip_with_fips(dev[0])
     psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
     src_ssid = "hapd-ctrl-src"
     dst_ssid = "hapd-ctrl-dst"

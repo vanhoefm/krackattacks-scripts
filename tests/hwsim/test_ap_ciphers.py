@@ -1,5 +1,5 @@
 # Cipher suite tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -11,7 +11,7 @@ import os.path
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, skip_with_fips
 from wlantest import Wlantest
 
 def check_cipher(dev, ap, cipher):
@@ -63,10 +63,12 @@ def check_group_mgmt_cipher(dev, ap, cipher):
 
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
+    skip_with_fips(dev[0])
     check_cipher(dev[0], apdev[0], "TKIP")
 
 def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by AP)"""
+    skip_with_fips(dev[0])
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (dev[0].get_driver_status_field("phyname"), dev[0].ifname)
     if not os.path.exists(testfile):
         raise HwsimSkip("tkip_mic_test not supported in mac80211")
@@ -100,6 +102,7 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
 
 def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by STA)"""
+    skip_with_fips(dev[0])
     params = { "ssid": "tkip-countermeasures",
                "wpa_passphrase": "12345678",
                "wpa": "1",
@@ -149,6 +152,7 @@ def test_ap_cipher_gcmp_256(dev, apdev):
 
 def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
     """WPA2-PSK/CCMP/ and WPA-PSK/TKIP mixed configuration"""
+    skip_with_fips(dev[0])
     ssid = "test-wpa-wpa2-psk"
     passphrase = "12345678"
     params = { "ssid": ssid,

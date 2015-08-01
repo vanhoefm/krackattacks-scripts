@@ -160,6 +160,7 @@ def check_probe_resp(wt, bssid_unexpected, bssid_expected):
 
 def test_ap_anqp_sharing(dev, apdev):
     """ANQP sharing within ESS and explicit unshare"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     dev[0].flush_scan_cache()
 
     bssid = apdev[0]['bssid']
@@ -211,6 +212,7 @@ def test_ap_anqp_sharing(dev, apdev):
 
 def test_ap_nai_home_realm_query(dev, apdev):
     """NAI Home Realm Query"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
@@ -478,6 +480,7 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
 
 def test_ap_hs20_username(dev, apdev):
     """Hotspot 2.0 connection in username/password credential"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -507,6 +510,7 @@ def test_ap_hs20_username(dev, apdev):
 
 def test_ap_hs20_connect_api(dev, apdev):
     """Hotspot 2.0 connection with connect API"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -534,6 +538,7 @@ def test_ap_hs20_connect_api(dev, apdev):
 
 def test_ap_hs20_auto_interworking(dev, apdev):
     """Hotspot 2.0 connection with auto_interworking=1"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -644,10 +649,12 @@ def test_ap_hs20_eap_unknown(dev, apdev):
 
 def test_ap_hs20_eap_peap_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with PEAP/MSCHAPV2"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     eap_test(dev[0], apdev[0], "25[3:26]", "PEAP", "user")
 
 def test_ap_hs20_eap_peap_default(dev, apdev):
     """Hotspot 2.0 connection with PEAP/MSCHAPV2 (as default)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     eap_test(dev[0], apdev[0], "25", "PEAP", "user")
 
 def test_ap_hs20_eap_peap_gtc(dev, apdev):
@@ -677,6 +684,7 @@ def test_ap_hs20_eap_ttls_mschap(dev, apdev):
 
 def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with TTLS/EAP-MSCHAPv2"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     eap_test(dev[0], apdev[0], "21[3:26][6:7][99:99]", "TTLS", "user")
 
 def test_ap_hs20_eap_ttls_eap_unknown(dev, apdev):
@@ -824,6 +832,7 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
 
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
@@ -845,6 +854,7 @@ def test_ap_hs20_username_roaming(dev, apdev):
 
 def test_ap_hs20_username_unknown(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (no domain in cred)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -861,6 +871,7 @@ def test_ap_hs20_username_unknown(dev, apdev):
 
 def test_ap_hs20_username_unknown2(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (no domain advertized)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -879,6 +890,7 @@ def test_ap_hs20_username_unknown2(dev, apdev):
 
 def test_ap_hs20_gas_while_associated(dev, apdev):
     """Hotspot 2.0 connection with GAS query while associated"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -902,6 +914,7 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
 
 def test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
     """Hotspot 2.0 connection with GAS query while associated and using PMF"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_gas_while_associated_with_pmf(dev, apdev)
     finally:
@@ -938,6 +951,7 @@ def _test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
 
 def test_ap_hs20_gas_frag_while_associated(dev, apdev):
     """Hotspot 2.0 connection with fragmented GAS query while associated"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -963,6 +977,7 @@ def test_ap_hs20_gas_frag_while_associated(dev, apdev):
 
 def test_ap_hs20_multiple_connects(dev, apdev):
     """Hotspot 2.0 connection through multiple network selections"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -1100,6 +1115,7 @@ def default_cred(domain=None, user="hs20-test"):
 
 def test_ap_hs20_prefer_home(dev, apdev):
     """Hotspot 2.0 required roaming consortium"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     params['domain_name'] = "example.org"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1117,6 +1133,7 @@ def test_ap_hs20_prefer_home(dev, apdev):
 
 def test_ap_hs20_req_roaming_consortium(dev, apdev):
     """Hotspot 2.0 required roaming consortium"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
 
@@ -1141,6 +1158,7 @@ def test_ap_hs20_req_roaming_consortium(dev, apdev):
 
 def test_ap_hs20_excluded_ssid(dev, apdev):
     """Hotspot 2.0 exclusion based on SSID"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     params['roaming_consortium'] = [ "223344" ]
     params['anqp_3gpp_cell_net'] = "555,444"
@@ -1184,6 +1202,7 @@ def test_ap_hs20_excluded_ssid(dev, apdev):
 
 def test_ap_hs20_roam_to_higher_prio(dev, apdev):
     """Hotspot 2.0 and roaming from current to higher priority network"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params(ssid="test-hs20-visited")
     params['domain_name'] = "visited.example.org"
@@ -1222,6 +1241,7 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
 
 def test_ap_hs20_domain_suffix_match_full(dev, apdev):
     """Hotspot 2.0 and domain_suffix_match"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1251,6 +1271,7 @@ def test_ap_hs20_domain_suffix_match_full(dev, apdev):
 
 def test_ap_hs20_domain_suffix_match(dev, apdev):
     """Hotspot 2.0 and domain_suffix_match"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     check_domain_match_full(dev[0])
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
@@ -1269,6 +1290,7 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
 
 def test_ap_hs20_roaming_partner_preference(dev, apdev):
     """Hotspot 2.0 and roaming partner preference"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     params['domain_name'] = "roaming.example.org"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1293,6 +1315,7 @@ def test_ap_hs20_roaming_partner_preference(dev, apdev):
 
 def test_ap_hs20_max_bss_load(dev, apdev):
     """Hotspot 2.0 and maximum BSS load"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     params['bss_load_test'] = "12:200:20000"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1328,6 +1351,7 @@ def test_ap_hs20_max_bss_load(dev, apdev):
 
 def test_ap_hs20_max_bss_load2(dev, apdev):
     """Hotspot 2.0 and maximum BSS load with one AP not advertising"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = hs20_ap_params()
     params['bss_load_test'] = "12:200:20000"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1351,6 +1375,7 @@ def test_ap_hs20_max_bss_load2(dev, apdev):
 
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_multi_cred_sp_prio(dev, apdev)
     finally:
@@ -1394,6 +1419,7 @@ def _test_ap_hs20_multi_cred_sp_prio(dev, apdev):
 
 def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority with two BSSes"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_multi_cred_sp_prio2(dev, apdev)
     finally:
@@ -1470,6 +1496,7 @@ def conn_capab_cred(domain=None, req_conn_capab=None):
 
 def test_ap_hs20_req_conn_capab(dev, apdev):
     """Hotspot 2.0 network selection with req_conn_capab"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1524,6 +1551,7 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
 
 def test_ap_hs20_req_conn_capab_and_roaming_partner_preference(dev, apdev):
     """Hotspot 2.0 and req_conn_capab with roaming partner preference"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['domain_name'] = "roaming.example.org"
@@ -1575,6 +1603,7 @@ def bw_cred(domain=None, dl_home=None, ul_home=None, dl_roaming=None, ul_roaming
 
 def test_ap_hs20_min_bandwidth_home(dev, apdev):
     """Hotspot 2.0 network selection with min bandwidth (home)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1610,6 +1639,7 @@ def test_ap_hs20_min_bandwidth_home(dev, apdev):
 
 def test_ap_hs20_min_bandwidth_home_hidden_ssid_in_scan_res(dev, apdev):
     """Hotspot 2.0 network selection with min bandwidth (home) while hidden SSID is included in scan results"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
@@ -1656,6 +1686,7 @@ def test_ap_hs20_min_bandwidth_home_hidden_ssid_in_scan_res(dev, apdev):
 
 def test_ap_hs20_min_bandwidth_roaming(dev, apdev):
     """Hotspot 2.0 network selection with min bandwidth (roaming)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1691,6 +1722,7 @@ def test_ap_hs20_min_bandwidth_roaming(dev, apdev):
 
 def test_ap_hs20_min_bandwidth_and_roaming_partner_preference(dev, apdev):
     """Hotspot 2.0 and minimum bandwidth with roaming partner preference"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['domain_name'] = "roaming.example.org"
@@ -1729,6 +1761,7 @@ def test_ap_hs20_min_bandwidth_no_wan_metrics(dev, apdev):
 
 def test_ap_hs20_deauth_req_ess(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for ESS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_deauth_req_ess(dev, apdev)
     finally:
@@ -1758,6 +1791,7 @@ def _test_ap_hs20_deauth_req_ess(dev, apdev):
 
 def test_ap_hs20_deauth_req_bss(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for BSS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_deauth_req_bss(dev, apdev)
     finally:
@@ -1789,6 +1823,7 @@ def _test_ap_hs20_deauth_req_bss(dev, apdev):
 
 def test_ap_hs20_deauth_req_from_radius(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request from RADIUS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_deauth_req_from_radius(dev, apdev)
     finally:
@@ -1817,6 +1852,7 @@ def _test_ap_hs20_deauth_req_from_radius(dev, apdev):
 
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_remediation_required(dev, apdev)
     finally:
@@ -1843,6 +1879,7 @@ def _test_ap_hs20_remediation_required(dev, apdev):
 
 def test_ap_hs20_remediation_required_ctrl(dev, apdev):
     """Hotspot 2.0 connection and subrem from ctrl_iface"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_remediation_required_ctrl(dev, apdev)
     finally:
@@ -1884,6 +1921,7 @@ def _test_ap_hs20_remediation_required_ctrl(dev, apdev):
 
 def test_ap_hs20_session_info(dev, apdev):
     """Hotspot 2.0 connection and session information from RADIUS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_session_info(dev, apdev)
     finally:
@@ -1953,6 +1991,7 @@ def test_ap_hs20_osen(dev, apdev):
 
 def test_ap_hs20_network_preference(dev, apdev):
     """Hotspot 2.0 network selection with preferred home network"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1993,6 +2032,7 @@ def test_ap_hs20_network_preference(dev, apdev):
 
 def test_ap_hs20_network_preference2(dev, apdev):
     """Hotspot 2.0 network selection with preferred credential"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid2 = apdev[1]['bssid']
     params = hostapd.wpa2_params(ssid="home", passphrase="12345678")
     hostapd.add_ap(apdev[1]['ifname'], params)
@@ -2033,6 +2073,7 @@ def test_ap_hs20_network_preference2(dev, apdev):
 
 def test_ap_hs20_network_preference3(dev, apdev):
     """Hotspot 2.0 network selection with two credential (one preferred)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2073,6 +2114,7 @@ def test_ap_hs20_network_preference3(dev, apdev):
 
 def test_ap_hs20_network_preference4(dev, apdev):
     """Hotspot 2.0 network selection with username vs. SIM credential"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2115,6 +2157,7 @@ def test_ap_hs20_network_preference4(dev, apdev):
 
 def test_ap_hs20_interworking_select_blocking_scan(dev, apdev):
     """Ongoing INTERWORKING_SELECT blocking SCAN"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2310,6 +2353,7 @@ def test_ap_hs20_fetch_osu_stop(dev, apdev):
 
 def test_ap_hs20_ft(dev, apdev):
     """Hotspot 2.0 connection with FT"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['wpa_key_mgmt'] = "FT-EAP"
@@ -2331,6 +2375,7 @@ def test_ap_hs20_ft(dev, apdev):
 
 def test_ap_hs20_remediation_sql(dev, apdev, params):
     """Hotspot 2.0 connection and remediation required using SQLite for user DB"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         import sqlite3
     except ImportError:
@@ -2394,6 +2439,7 @@ def test_ap_hs20_remediation_sql(dev, apdev, params):
 
 def test_ap_hs20_external_selection(dev, apdev):
     """Hotspot 2.0 connection using external network selection and creation"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -2410,6 +2456,7 @@ def test_ap_hs20_external_selection(dev, apdev):
 
 def test_ap_hs20_random_mac_addr(dev, apdev):
     """Hotspot 2.0 connection with random MAC address"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -2445,6 +2492,7 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
 
 def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
     """Multiple networks and cred removal"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,25[3:26]"]
@@ -2480,6 +2528,7 @@ def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
 
 def test_ap_hs20_interworking_add_network(dev, apdev):
     """Hotspot 2.0 connection using INTERWORKING_ADD_NETWORK"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,21[3:26][6:7][99:99]" ]
@@ -2580,6 +2629,7 @@ def _test_ap_hs20_proxyarp(dev, apdev):
 
 def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
     """Hotspot 2.0 connection with hidden SSId in scan results"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
@@ -2612,6 +2662,7 @@ def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
 
 def test_ap_hs20_proxyarp(dev, apdev):
     """Hotspot 2.0 and ProxyARP"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_proxyarp(dev, apdev)
     finally:
@@ -2708,6 +2759,7 @@ def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
 
 def test_ap_hs20_proxyarp_disable_dgaf(dev, apdev):
     """Hotspot 2.0 and ProxyARP with DGAF disabled"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_proxyarp_dgaf(dev, apdev, True)
     finally:
@@ -2718,6 +2770,7 @@ def test_ap_hs20_proxyarp_disable_dgaf(dev, apdev):
 
 def test_ap_hs20_proxyarp_enable_dgaf(dev, apdev):
     """Hotspot 2.0 and ProxyARP with DGAF enabled"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     try:
         _test_ap_hs20_proxyarp_dgaf(dev, apdev, False)
     finally:
@@ -3483,6 +3536,7 @@ def test_proxyarp_open_ebtables(dev, apdev, params):
 
 def test_ap_hs20_connect_deinit(dev, apdev):
     """Hotspot 2.0 connection interrupted with deinit"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid

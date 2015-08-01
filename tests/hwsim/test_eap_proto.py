@@ -1,5 +1,5 @@
 # EAP protocol tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -14,6 +14,7 @@ import time
 
 import hostapd
 from utils import HwsimSkip
+from test_ap_eap import check_eap_capa
 
 EAP_CODE_REQUEST = 1
 EAP_CODE_RESPONSE = 2
@@ -141,6 +142,7 @@ def start_ap(ifname):
 
 def test_eap_proto(dev, apdev):
     """EAP protocol tests"""
+    check_eap_capa(dev[0], "MD5")
     def eap_handler(ctx, req):
         logger.info("eap_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:
@@ -722,6 +724,8 @@ def test_eap_proto_leap(dev, apdev):
 
 def test_eap_proto_md5(dev, apdev):
     """EAP-MD5 protocol tests"""
+    check_eap_capa(dev[0], "MD5")
+
     def md5_handler(ctx, req):
         logger.info("md5_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:

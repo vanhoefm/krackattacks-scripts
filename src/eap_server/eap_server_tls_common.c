@@ -133,10 +133,10 @@ u8 * eap_server_tls_derive_session_id(struct eap_sm *sm,
 				      struct eap_ssl_data *data, u8 eap_type,
 				      size_t *len)
 {
-	struct tls_keys keys;
+	struct tls_random keys;
 	u8 *out;
 
-	if (tls_connection_get_keys(sm->ssl_ctx, data->conn, &keys))
+	if (tls_connection_get_random(sm->ssl_ctx, data->conn, &keys))
 		return NULL;
 
 	if (keys.client_random == NULL || keys.server_random == NULL)

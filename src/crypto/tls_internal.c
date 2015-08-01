@@ -338,16 +338,16 @@ int tls_connection_set_verify(void *tls_ctx, struct tls_connection *conn,
 }
 
 
-int tls_connection_get_keys(void *tls_ctx, struct tls_connection *conn,
-			    struct tls_keys *keys)
+int tls_connection_get_random(void *tls_ctx, struct tls_connection *conn,
+			      struct tls_random *data)
 {
 #ifdef CONFIG_TLS_INTERNAL_CLIENT
 	if (conn->client)
-		return tlsv1_client_get_keys(conn->client, keys);
+		return tlsv1_client_get_random(conn->client, data);
 #endif /* CONFIG_TLS_INTERNAL_CLIENT */
 #ifdef CONFIG_TLS_INTERNAL_SERVER
 	if (conn->server)
-		return tlsv1_server_get_keys(conn->server, keys);
+		return tlsv1_server_get_random(conn->server, data);
 #endif /* CONFIG_TLS_INTERNAL_SERVER */
 	return -1;
 }

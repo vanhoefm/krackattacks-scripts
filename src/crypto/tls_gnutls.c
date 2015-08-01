@@ -722,8 +722,8 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
-int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
-			    struct tls_keys *keys)
+int tls_connection_get_random(void *ssl_ctx, struct tls_connection *conn,
+			    struct tls_random *keys)
 {
 #if GNUTLS_VERSION_NUMBER >= 0x030012
 	gnutls_datum_t client, server;

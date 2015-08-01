@@ -11,7 +11,7 @@
 
 struct tls_connection;
 
-struct tls_keys {
+struct tls_random {
 	const u8 *client_random;
 	size_t client_random_len;
 	const u8 *server_random;
@@ -312,15 +312,15 @@ int __must_check tls_connection_set_verify(void *tls_ctx,
 					   int verify_peer);
 
 /**
- * tls_connection_get_keys - Get random data from TLS connection
+ * tls_connection_get_random - Get random data from TLS connection
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()
- * @keys: Structure of client/server random data (filled on success)
+ * @data: Structure of client/server random data (filled on success)
  * Returns: 0 on success, -1 on failure
  */
-int __must_check tls_connection_get_keys(void *tls_ctx,
+int __must_check tls_connection_get_random(void *tls_ctx,
 					 struct tls_connection *conn,
-					 struct tls_keys *keys);
+					 struct tls_random *data);
 
 /**
  * tls_connection_prf - Use TLS-PRF to derive keying material
@@ -334,14 +334,11 @@ int __must_check tls_connection_get_keys(void *tls_ctx,
  * @out_len: Length of the output buffer
  * Returns: 0 on success, -1 on failure
  *
- * This function is optional to implement if tls_connection_get_keys() provides
- * access to master secret and server/client random values. If these values are
- * not exported from the TLS library, tls_connection_prf() is required so that
- * further keying material can be derived from the master secret. If not
- * implemented, the function will still need to be defined, but it can just
- * return -1. Example implementation of this function is in tls_prf_sha1_md5()
- * when it is called with seed set to client_random|server_random (or
- * server_random|client_random).
+ * tls_connection_prf() is required so that further keying material can be
+ * derived from the master secret. Example implementation of this function is in
+ * tls_prf_sha1_md5() when it is called with seed set to
+ * client_random|server_random (or server_random|client_random). For TLSv1.2 and
+ * newer, a different PRF is needed, though.
  */
 int __must_check  tls_connection_prf(void *tls_ctx,
 				     struct tls_connection *conn,

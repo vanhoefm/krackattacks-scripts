@@ -2639,8 +2639,8 @@ static int tls_global_dh(SSL_CTX *ssl_ctx, const char *dh_file)
 }
 
 
-int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
-			    struct tls_keys *keys)
+int tls_connection_get_random(void *ssl_ctx, struct tls_connection *conn,
+			      struct tls_random *keys)
 {
 	SSL *ssl;
 

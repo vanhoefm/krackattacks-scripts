@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # TNC tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -43,6 +43,7 @@ def test_tnc_peap_soh(dev, apdev):
 
 def test_tnc_ttls(dev, apdev):
     """TNC TTLS"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = int_eap_server_params()
     params["tnc"] = "1"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -60,6 +61,7 @@ def test_tnc_ttls(dev, apdev):
 
 def test_tnc_ttls_fragmentation(dev, apdev):
     """TNC TTLS with fragmentation"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = int_eap_server_params()
     params["tnc"] = "1"
     params["fragment_size"] = "150"

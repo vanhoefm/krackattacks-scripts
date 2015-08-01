@@ -14,7 +14,7 @@ import struct
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail
+from utils import alloc_fail, skip_with_fips
 
 def hs20_ap_params():
     params = hostapd.wpa2_params(ssid="test-gas")
@@ -175,6 +175,7 @@ def test_gas_concurrent_scan(dev, apdev):
 
 def test_gas_concurrent_connect(dev, apdev):
     """Generic GAS queries with concurrent connection operation"""
+    skip_with_fips(dev[0])
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid

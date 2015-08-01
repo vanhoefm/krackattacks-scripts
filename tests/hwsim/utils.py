@@ -66,3 +66,8 @@ def iface_is_in_bridge(bridge, ifname):
     if bridge == truebridge:
         return True
     return False
+
+def skip_with_fips(dev, reason="Not supported in FIPS mode"):
+    res = dev.get_capability("fips")
+    if res and 'FIPS' in res:
+        raise HwsimSkip(reason)

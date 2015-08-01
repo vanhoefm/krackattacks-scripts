@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 
 import hostapd
+from utils import skip_with_fips
 from wpasupplicant import WpaSupplicant
 from test_ap_hs20 import hs20_ap_params
 from test_ap_hs20 import interworking_select
@@ -64,6 +65,7 @@ def test_ext_password_eap(dev, apdev):
 
 def test_ext_password_interworking(dev, apdev):
     """External password storage for Interworking network selection"""
+    skip_with_fips(dev[0])
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)

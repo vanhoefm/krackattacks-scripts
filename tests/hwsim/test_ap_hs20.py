@@ -16,7 +16,7 @@ import socket
 import subprocess
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, skip_with_fips
 import hwsim_utils
 from tshark import run_tshark
 from wlantest import Wlantest
@@ -667,10 +667,12 @@ def test_ap_hs20_eap_peap_unknown(dev, apdev):
 
 def test_ap_hs20_eap_ttls_chap(dev, apdev):
     """Hotspot 2.0 connection with TTLS/CHAP"""
+    skip_with_fips(dev[0])
     eap_test(dev[0], apdev[0], "21[2:2]", "TTLS", "chap user")
 
 def test_ap_hs20_eap_ttls_mschap(dev, apdev):
     """Hotspot 2.0 connection with TTLS/MSCHAP"""
+    skip_with_fips(dev[0])
     eap_test(dev[0], apdev[0], "21[2:3]", "TTLS", "mschap user")
 
 def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):

@@ -122,6 +122,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
+#ifndef CONFIG_NO_RC4
 int rc4_skip(const u8 *key, size_t keylen, size_t skip,
 	     u8 *data, size_t data_len)
 {
@@ -157,6 +158,7 @@ out:
 	return res;
 #endif /* OPENSSL_NO_RC4 */
 }
+#endif /* CONFIG_NO_RC4 */
 
 
 #ifndef CONFIG_FIPS
@@ -438,11 +440,13 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 		return NULL;
 
 	switch (alg) {
+#ifndef CONFIG_NO_RC4
 #ifndef OPENSSL_NO_RC4
 	case CRYPTO_CIPHER_ALG_RC4:
 		cipher = EVP_rc4();
 		break;
 #endif /* OPENSSL_NO_RC4 */
+#endif /* CONFIG_NO_RC4 */
 #ifndef OPENSSL_NO_AES
 	case CRYPTO_CIPHER_ALG_AES:
 		switch (key_len) {

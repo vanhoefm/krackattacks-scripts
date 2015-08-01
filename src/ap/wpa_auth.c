@@ -1540,6 +1540,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			else
 				WPA_PUT_BE16(key->key_data_length,
 					     key_data_len);
+#ifndef CONFIG_NO_RC4
 		} else if (sm->PTK.kek_len == 16) {
 			u8 ek[32];
 			os_memcpy(key->key_iv,
@@ -1555,6 +1556,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			else
 				WPA_PUT_BE16(key->key_data_length,
 					     key_data_len);
+#endif /* CONFIG_NO_RC4 */
 		} else {
 			os_free(hdr);
 			os_free(buf);

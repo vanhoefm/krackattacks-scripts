@@ -192,6 +192,7 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd)
 }
 
 
+#ifndef CONFIG_NO_RC4
 static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 auth_transaction, const u8 *challenge,
 			   int iswep)
@@ -245,6 +246,7 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 
 	return 0;
 }
+#endif /* CONFIG_NO_RC4 */
 
 
 static void send_auth_reply(struct hostapd_data *hapd,
@@ -926,6 +928,16 @@ static void handle_auth(struct hostapd_data *hapd,
 		   challenge ? " challenge" : "",
 		   seq_ctrl, (fc & WLAN_FC_RETRY) ? " retry" : "");
 
+#ifdef CONFIG_NO_RC4
+	if (auth_alg == WLAN_AUTH_SHARED_KEY) {
+		wpa_printf(MSG_INFO,
+			   "Unsupported authentication algorithm (%d)",
+			   auth_alg);
+		resp = WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG;
+		goto fail;
+	}
+#endif /* CONFIG_NO_RC4 */
+
 	if (hapd->tkip_countermeasures) {
 		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
 		goto fail;
@@ -1073,6 +1085,7 @@ static void handle_auth(struct hostapd_data *hapd,
 		sta->auth_alg = WLAN_AUTH_OPEN;
 		mlme_authenticate_indication(hapd, sta);
 		break;
+#ifndef CONFIG_NO_RC4
 	case WLAN_AUTH_SHARED_KEY:
 		resp = auth_shared_key(hapd, sta, auth_transaction, challenge,
 				       fc & WLAN_FC_ISWEP);
@@ -1086,6 +1099,7 @@ static void handle_auth(struct hostapd_data *hapd,
 			resp_ies_len = 2 + WLAN_AUTH_CHALLENGE_LEN;
 		}
 		break;
+#endif /* CONFIG_NO_RC4 */
 #ifdef CONFIG_IEEE80211R
 	case WLAN_AUTH_FT:
 		sta->auth_alg = WLAN_AUTH_FT;

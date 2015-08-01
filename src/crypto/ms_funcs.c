@@ -412,6 +412,8 @@ int get_asymetric_start_key(const u8 *master_key, u8 *session_key,
 }
 
 
+#ifndef CONFIG_NO_RC4
+
 #define PWBLOCK_LEN 516
 
 /**
@@ -476,6 +478,8 @@ int new_password_encrypted_with_old_nt_password_hash(
 		return -1;
 	return 0;
 }
+
+#endif /* CONFIG_NO_RC4 */
 
 
 /**

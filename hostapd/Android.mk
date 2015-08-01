@@ -779,9 +779,15 @@ OBJS += src/crypto/des-internal.c
 endif
 endif
 
+ifdef CONFIG_NO_RC4
+L_CFLAGS += -DCONFIG_NO_RC4
+endif
+
 ifdef NEED_RC4
 ifdef CONFIG_INTERNAL_RC4
+ifndef CONFIG_NO_RC4
 OBJS += src/crypto/rc4.c
+endif
 endif
 endif
 

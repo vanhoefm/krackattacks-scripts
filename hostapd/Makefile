@@ -761,9 +761,15 @@ OBJS += ../src/crypto/des-internal.o
 endif
 endif
 
+ifdef CONFIG_NO_RC4
+CFLAGS += -DCONFIG_NO_RC4
+endif
+
 ifdef NEED_RC4
 ifdef CONFIG_INTERNAL_RC4
+ifndef CONFIG_NO_RC4
 OBJS += ../src/crypto/rc4.o
+endif
 endif
 endif
 
@@ -989,7 +995,9 @@ NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS)
 NOBJS += ../src/utils/common.o
 ifdef NEED_RC4
 ifdef CONFIG_INTERNAL_RC4
+ifndef CONFIG_NO_RC4
 NOBJS += ../src/crypto/rc4.o
+endif
 endif
 endif
 ifdef CONFIG_INTERNAL_MD5

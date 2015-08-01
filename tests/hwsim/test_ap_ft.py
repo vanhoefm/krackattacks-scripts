@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail, fail_test
+from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -748,6 +748,7 @@ def test_ap_ft_gcmp_256(dev, apdev):
 
 def test_ap_ft_oom(dev, apdev):
     """WPA2-PSK-FT and OOM"""
+    skip_with_fips(dev[0])
     ssid = "test-ft"
     passphrase="12345678"
 

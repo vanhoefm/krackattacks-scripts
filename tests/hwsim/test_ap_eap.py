@@ -2142,6 +2142,7 @@ def test_ap_wpa2_eap_psk(dev, apdev):
 
 def test_ap_wpa2_eap_psk_oom(dev, apdev):
     """WPA2-Enterprise connection using EAP-PSK and OOM"""
+    skip_with_fips(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     tests = [ (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt"),

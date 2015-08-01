@@ -93,10 +93,12 @@ static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 }
 
 
+#ifndef CONFIG_FIPS
 int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return openssl_digest_vector(EVP_md4(), num_elem, addr, len, mac);
 }
+#endif /* CONFIG_FIPS */
 
 
 void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)

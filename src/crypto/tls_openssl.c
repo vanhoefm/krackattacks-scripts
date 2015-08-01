@@ -2679,6 +2679,7 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
+#ifndef CONFIG_FIPS
 static int openssl_get_keyblock_size(SSL *ssl)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -2739,6 +2740,7 @@ static int openssl_get_keyblock_size(SSL *ssl)
 		    EVP_CIPHER_iv_length(c));
 #endif
 }
+#endif /* CONFIG_FIPS */
 
 
 static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,

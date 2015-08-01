@@ -3961,6 +3961,15 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 	}
 #endif /* CONFIG_EPR */
 
+#ifdef CONFIG_FIPS
+	if (os_strcmp(field, "fips") == 0) {
+		res = os_snprintf(buf, buflen, "FIPS");
+		if (os_snprintf_error(buflen, res))
+			return -1;
+		return res;
+	}
+#endif /* CONFIG_FIPS */
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown GET_CAPABILITY field '%s'",
 		   field);
 

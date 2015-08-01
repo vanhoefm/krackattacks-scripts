@@ -288,6 +288,12 @@ eap_pwd_perform_id_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	}
 
 	if (id->prep == EAP_PWD_PREP_MS) {
+#ifdef CONFIG_FIPS
+		wpa_printf(MSG_ERROR,
+			   "EAP-PWD (peer): MS password hash not supported in FIPS mode");
+		eap_pwd_state(data, FAILURE);
+		return;
+#else /* CONFIG_FIPS */
 		if (data->password_hash) {
 			res = hash_nt_password_hash(data->password, pwhashhash);
 		} else {
@@ -307,6 +313,7 @@ eap_pwd_perform_id_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 
 		password = pwhashhash;
 		password_len = sizeof(pwhashhash);
+#endif /* CONFIG_FIPS */
 	} else {
 		password = data->password;
 		password_len = data->password_len;

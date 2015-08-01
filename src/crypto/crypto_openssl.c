@@ -297,6 +297,8 @@ void aes_decrypt_deinit(void *ctx)
 }
 
 
+#ifndef CONFIG_FIPS
+
 int aes_wrap(const u8 *kek, size_t kek_len, int n, const u8 *plain, u8 *cipher)
 {
 	AES_KEY actx;
@@ -322,6 +324,8 @@ int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
 	OPENSSL_cleanse(&actx, sizeof(actx));
 	return res <= 0 ? -1 : 0;
 }
+
+#endif /* CONFIG_FIPS */
 
 
 int aes_128_cbc_encrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)

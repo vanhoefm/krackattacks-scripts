@@ -1148,6 +1148,15 @@ AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o
 endif
 
 ifneq ($(CONFIG_TLS), openssl)
+NEED_INTERNAL_AES_WRAP=y
+endif
+ifdef CONFIG_FIPS
+# Have to use internal AES key wrap routines to use OpenSSL EVP since the
+# OpenSSL AES_wrap_key()/AES_unwrap_key() API is not available in FIPS mode.
+NEED_INTERNAL_AES_WRAP=y
+endif
+
+ifdef NEED_INTERNAL_AES_WRAP
 AESOBJS += ../src/crypto/aes-unwrap.o
 endif
 ifdef NEED_AES_EAX
@@ -1173,7 +1182,7 @@ AESOBJS += ../src/crypto/aes-siv.o
 endif
 ifdef NEED_AES_WRAP
 NEED_AES_ENC=y
-ifneq ($(CONFIG_TLS), openssl)
+ifdef NEED_INTERNAL_AES_WRAP
 AESOBJS += ../src/crypto/aes-wrap.o
 endif
 endif

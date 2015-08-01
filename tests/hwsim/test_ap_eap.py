@@ -1839,6 +1839,7 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
 def test_ap_wpa2_eap_pwd_nthash(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd and NTHash"""
     check_eap_capa(dev[0], "PWD")
+    skip_with_fips(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "PWD", "pwd-hash", password="secret password")

@@ -157,10 +157,12 @@ out:
 }
 
 
+#ifndef CONFIG_FIPS
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return openssl_digest_vector(EVP_md5(), num_elem, addr, len, mac);
 }
+#endif /* CONFIG_FIPS */
 
 
 int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)

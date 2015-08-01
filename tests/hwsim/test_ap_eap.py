@@ -87,9 +87,14 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
-    ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD",
+                         "CTRL-EVENT-EAP-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("EAP method selection timed out")
+    if "CTRL-EVENT-EAP-FAILURE" in ev:
+        if maybe_local_error:
+            return
+        raise Exception("Could not select EAP method")
     if method not in ev:
         raise Exception("Unexpected EAP method")
     if expect_failure:

@@ -72,4 +72,7 @@ if [ $use_lcov -eq 1 ]; then
 fi
 
 make clean > /dev/null
+if [ -z $FIPSLD_CC ]; then
+export FIPSLD_CC=gcc
+fi
 make QUIET=1 -j8

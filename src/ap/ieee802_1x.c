@@ -204,7 +204,7 @@ static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 }
 
 
-void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
+static void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct eapol_authenticator *eapol = hapd->eapol_auth;
 	struct eapol_state_machine *sm = sta->eapol_sm;

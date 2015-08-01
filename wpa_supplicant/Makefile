@@ -425,9 +425,11 @@ CFLAGS += -DEAP_TTLS
 OBJS += ../src/eap_peer/eap_ttls.o
 OBJS_h += ../src/eap_server/eap_server_ttls.o
 endif
-MS_FUNCS=y
 TLS_FUNCS=y
+ifndef CONFIG_FIPS
+MS_FUNCS=y
 CHAP=y
+endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
 

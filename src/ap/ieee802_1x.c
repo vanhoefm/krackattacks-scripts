@@ -125,6 +125,8 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 }
 
 
+#ifndef CONFIG_FIPS
+
 static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 				  struct sta_info *sta,
 				  int idx, int broadcast,
@@ -258,6 +260,8 @@ static void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 		os_free(ikey);
 	}
 }
+
+#endif /* CONFIG_FIPS */
 
 
 const char *radius_mode_txt(struct hostapd_data *hapd)
@@ -2023,9 +2027,11 @@ static void _ieee802_1x_abort_auth(void *ctx, void *sta_ctx)
 
 static void _ieee802_1x_tx_key(void *ctx, void *sta_ctx)
 {
+#ifndef CONFIG_FIPS
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = sta_ctx;
 	ieee802_1x_tx_key(hapd, sta);
+#endif /* CONFIG_FIPS */
 }
 
 

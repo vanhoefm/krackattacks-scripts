@@ -3551,6 +3551,7 @@ def test_eap_proto_sim(dev, apdev):
 
 def test_eap_proto_ikev2(dev, apdev):
     """EAP-IKEv2 protocol tests"""
+    check_eap_capa(dev[0], "IKEV2")
     def ikev2_handler(ctx, req):
         logger.info("ikev2_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:

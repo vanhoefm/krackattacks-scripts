@@ -2030,6 +2030,7 @@ def test_ap_wpa2_eap_eke_server_oom(dev, apdev):
 
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""
+    check_eap_capa(dev[0], "IKEV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
@@ -2046,6 +2047,7 @@ def test_ap_wpa2_eap_ikev2(dev, apdev):
 
 def test_ap_wpa2_eap_ikev2_as_frag(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2 with server fragmentation"""
+    check_eap_capa(dev[0], "IKEV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
@@ -2058,6 +2060,7 @@ def test_ap_wpa2_eap_ikev2_as_frag(dev, apdev):
 
 def test_ap_wpa2_eap_ikev2_oom(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2 and OOM"""
+    check_eap_capa(dev[0], "IKEV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
 

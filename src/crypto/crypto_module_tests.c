@@ -733,6 +733,7 @@ static int test_key_wrap(void)
 
 static int test_md5(void)
 {
+#ifndef CONFIG_FIPS
 	struct {
 		char *data;
 		char *hash;
@@ -811,6 +812,10 @@ static int test_md5(void)
 		wpa_printf(MSG_INFO, "MD5 test cases passed");
 
 	return errors;
+#else /* CONFIG_FIPS */
+	wpa_printf(MSG_INFO, "MD5 test cases skipped due to CONFIG_FIPS");
+	return 0;
+#endif /* CONFIG_FIPS */
 }
 
 

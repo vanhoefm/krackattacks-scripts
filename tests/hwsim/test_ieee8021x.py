@@ -11,11 +11,13 @@ import time
 
 import hostapd
 import hwsim_utils
+from utils import skip_with_fips
 
 logger = logging.getLogger()
 
 def test_ieee8021x_wep104(dev, apdev):
     """IEEE 802.1X connection using dynamic WEP104"""
+    skip_with_fips(dev[0])
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-wep"
     params["ieee8021x"] = "1"
@@ -31,6 +33,7 @@ def test_ieee8021x_wep104(dev, apdev):
 
 def test_ieee8021x_wep40(dev, apdev):
     """IEEE 802.1X connection using dynamic WEP40"""
+    skip_with_fips(dev[0])
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-wep"
     params["ieee8021x"] = "1"
@@ -222,6 +225,7 @@ def send_eapol_key(dev, bssid, signkey, frame_start, frame_end):
 
 def test_ieee8021x_eapol_key(dev, apdev):
     """IEEE 802.1X connection and EAPOL-Key protocol tests"""
+    skip_with_fips(dev[0])
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-wep"
     params["ieee8021x"] = "1"

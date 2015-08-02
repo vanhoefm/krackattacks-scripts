@@ -946,6 +946,8 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	else
 		wpa_drv_deinit_p2p_cli(wpa_s);
 
+	os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
+
 	return 0;
 }
 
@@ -1780,6 +1782,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	wpa_s->show_group_started = 0;
 	wpa_s->p2p_go_group_formation_completed = 0;
 	wpa_s->group_formation_reported = 0;
+	os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
 
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
@@ -3391,12 +3394,7 @@ struct wpa_supplicant * wpas_get_p2p_client_iface(struct wpa_supplicant *wpa_s,
 {
 	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		struct wpa_ssid *ssid = wpa_s->current_ssid;
-		if (ssid == NULL)
-			continue;
-		if (ssid->mode != WPAS_MODE_INFRA)
-			continue;
-		if (wpa_s->wpa_state != WPA_COMPLETED &&
-		    wpa_s->wpa_state != WPA_GROUP_HANDSHAKE)
+		if (ssid && (ssid->mode != WPAS_MODE_INFRA || !ssid->p2p_group))
 			continue;
 		if (os_memcmp(wpa_s->go_dev_addr, peer_dev_addr, ETH_ALEN) == 0)
 			return wpa_s;
@@ -5084,8 +5082,10 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		}
 
 		if_addr = wpa_s->pending_interface_addr;
-	} else
+	} else {
 		if_addr = wpa_s->own_addr;
+		os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
+	}
 
 	if (auth) {
 		if (wpas_p2p_auth_go_neg(wpa_s, peer_addr, wps_method,
@@ -5609,6 +5609,7 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return -1;
+	os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->proto = WPA_PROTO_RSN;

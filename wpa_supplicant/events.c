@@ -287,9 +287,6 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	sme_clear_on_disassoc(wpa_s);
-#ifdef CONFIG_P2P
-	os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
-#endif /* CONFIG_P2P */
 	wpa_s->current_bss = NULL;
 	wpa_s->assoc_freq = 0;
 

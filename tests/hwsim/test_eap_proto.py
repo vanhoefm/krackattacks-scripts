@@ -558,6 +558,7 @@ def test_eap_proto_sake(dev, apdev):
 
 def test_eap_proto_leap(dev, apdev):
     """EAP-LEAP protocol tests"""
+    check_eap_capa(dev[0], "LEAP")
     def leap_handler(ctx, req):
         logger.info("leap_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:

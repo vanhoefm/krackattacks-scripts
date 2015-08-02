@@ -18,10 +18,18 @@ def check_suite_b_capa(dev):
         raise HwsimSkip("BIP-GMAC-128 not supported")
     if "WPA-EAP-SUITE-B" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("WPA-EAP-SUITE-B not supported")
+    check_suite_b_tls_lib(dev)
+
+def check_suite_b_tls_lib(dev):
     tls = dev[0].request("GET tls_library")
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("TLS library not supported for Suite B: " + tls);
-    if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
+    supported = False
+    for ver in [ '1.0.2', '1.1.0' ]:
+        if "build=OpenSSL " + ver in tls and "run=OpenSSL " + ver in tls:
+            supported = True
+            break
+    if not supported:
         raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
 
 def test_suite_b(dev, apdev):
@@ -121,11 +129,7 @@ def check_suite_b_192_capa(dev):
         raise HwsimSkip("BIP-GMAC-256 not supported")
     if "WPA-EAP-SUITE-B-192" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("WPA-EAP-SUITE-B-192 not supported")
-    tls = dev[0].request("GET tls_library")
-    if not tls.startswith("OpenSSL"):
-        raise HwsimSkip("TLS library not supported for Suite B: " + tls);
-    if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
-        raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
+    check_suite_b_tls_lib(dev)
 
 def test_suite_b_192(dev, apdev):
     """WPA2/GCMP-256 connection at Suite B 192-bit level"""

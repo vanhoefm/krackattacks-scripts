@@ -1039,6 +1039,25 @@ static int hostapd_cli_cmd_erp_flush(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_log_level(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	res = os_snprintf(cmd, sizeof(cmd), "LOG_LEVEL%s%s%s%s",
+			  argc >= 1 ? " " : "",
+			  argc >= 1 ? argv[0] : "",
+			  argc == 2 ? " " : "",
+			  argc == 2 ? argv[1] : "");
+	if (os_snprintf_error(sizeof(cmd), res)) {
+		printf("Too long option\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1096,6 +1115,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "reload", hostapd_cli_cmd_reload },
 	{ "disable", hostapd_cli_cmd_disable },
 	{ "erp_flush", hostapd_cli_cmd_erp_flush },
+	{ "log_level", hostapd_cli_cmd_log_level },
 	{ NULL, NULL }
 };
 

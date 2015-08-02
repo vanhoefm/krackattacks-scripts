@@ -153,6 +153,10 @@ def test_erp_radius(dev, apdev):
         dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
 def erp_test(dev, hapd, **kwargs):
+    res = dev.get_capability("eap")
+    if kwargs['eap'] not in res:
+        logger.info("Skip ERP test with %s due to missing support" % kwargs['eap'])
+        return
     hapd.dump_monitor()
     dev.dump_monitor()
     dev.request("ERP_FLUSH")
@@ -176,6 +180,7 @@ def erp_test(dev, hapd, **kwargs):
 def test_erp_radius_eap_methods(dev, apdev):
     """ERP enabled on RADIUS server and peer"""
     check_erp_capa(dev[0])
+    eap_methods = dev[0].get_capability("eap")
     start_erp_as(apdev[1])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "18128"
@@ -190,7 +195,7 @@ def test_erp_radius_eap_methods(dev, apdev):
              password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
     erp_test(dev[0], hapd, eap="EKE", identity="erp-eke@example.com",
              password="hello")
-    if "FAST" in dev[0].get_capability("eap"):
+    if "FAST" in eap_methods:
         erp_test(dev[0], hapd, eap="FAST", identity="erp-fast@example.com",
                  password="password", ca_cert="auth_serv/ca.pem",
                  phase2="auth=GTC",
@@ -203,12 +208,13 @@ def test_erp_radius_eap_methods(dev, apdev):
     erp_test(dev[0], hapd, eap="PAX", identity="erp-pax@example.com",
              password_hex="0123456789abcdef0123456789abcdef")
     # TODO: PEAP (EMSK)
-    #erp_test(dev[0], hapd, eap="PEAP", identity="erp-peap@example.com",
-    #         password="password", ca_cert="auth_serv/ca.pem",
-    #         phase2="auth=MSCHAPV2")
+    #if "MSCHAPV2" in eap_methods:
+    #    erp_test(dev[0], hapd, eap="PEAP", identity="erp-peap@example.com",
+    #             password="password", ca_cert="auth_serv/ca.pem",
+    #             phase2="auth=MSCHAPV2")
     erp_test(dev[0], hapd, eap="PSK", identity="erp-psk@example.com",
              password_hex="0123456789abcdef0123456789abcdef")
-    if "PWD" in dev[0].get_capability("eap"):
+    if "PWD" in eap_methods:
         erp_test(dev[0], hapd, eap="PWD", identity="erp-pwd@example.com",
                  password="secret password")
     erp_test(dev[0], hapd, eap="SAKE", identity="erp-sake@example.com",

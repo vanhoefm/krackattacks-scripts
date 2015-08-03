@@ -4438,6 +4438,7 @@ def test_dbus_p2p_two_groups(dev, apdev):
             self.go = None
             self.group1 = None
             self.group2 = None
+            self.groups_removed = False
 
         def __enter__(self):
             gobject.timeout_add(1, self.run_test)
@@ -4542,6 +4543,8 @@ def test_dbus_p2p_two_groups(dev, apdev):
 
         def peerJoined(self, peer):
             logger.debug("peerJoined: " + peer)
+            if self.groups_removed:
+                return
             self.check_results()
 
             dev2 = WpaSupplicant('wlan2', '/tmp/wpas-wlan2')
@@ -4557,6 +4560,7 @@ def test_dbus_p2p_two_groups(dev, apdev):
             group_p2p = dbus.Interface(self.g1_if_obj,
                                        WPAS_DBUS_IFACE_P2PDEVICE)
             group_p2p.Disconnect()
+            self.groups_removed = True
 
         def check_results(self):
             logger.info("Check results with two concurrent groups in operation")

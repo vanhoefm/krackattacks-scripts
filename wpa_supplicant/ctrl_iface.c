@@ -2136,45 +2136,6 @@ static int wpa_supplicant_ctrl_iface_blacklist(struct wpa_supplicant *wpa_s,
 }
 
 
-static const char * debug_level_str(int level)
-{
-	switch (level) {
-	case MSG_EXCESSIVE:
-		return "EXCESSIVE";
-	case MSG_MSGDUMP:
-		return "MSGDUMP";
-	case MSG_DEBUG:
-		return "DEBUG";
-	case MSG_INFO:
-		return "INFO";
-	case MSG_WARNING:
-		return "WARNING";
-	case MSG_ERROR:
-		return "ERROR";
-	default:
-		return "?";
-	}
-}
-
-
-static int str_to_debug_level(const char *s)
-{
-	if (os_strcasecmp(s, "EXCESSIVE") == 0)
-		return MSG_EXCESSIVE;
-	if (os_strcasecmp(s, "MSGDUMP") == 0)
-		return MSG_MSGDUMP;
-	if (os_strcasecmp(s, "DEBUG") == 0)
-		return MSG_DEBUG;
-	if (os_strcasecmp(s, "INFO") == 0)
-		return MSG_INFO;
-	if (os_strcasecmp(s, "WARNING") == 0)
-		return MSG_WARNING;
-	if (os_strcasecmp(s, "ERROR") == 0)
-		return MSG_ERROR;
-	return -1;
-}
-
-
 static int wpa_supplicant_ctrl_iface_log_level(struct wpa_supplicant *wpa_s,
 					       char *cmd, char *buf,
 					       size_t buflen)

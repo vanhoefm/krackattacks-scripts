@@ -364,4 +364,7 @@ static inline void wpa_debug_close_linux_tracing(void)
 #define WPA_ASSERT(a) do { } while (0)
 #endif
 
+const char * debug_level_str(int level);
+int str_to_debug_level(const char *s);
+
 #endif /* WPA_DEBUG_H */

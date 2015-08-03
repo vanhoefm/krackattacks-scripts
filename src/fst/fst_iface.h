@@ -85,7 +85,7 @@ static inline int fst_iface_get_hw_modes(struct fst_iface *i,
 }
 
 static inline void fst_iface_set_ies(struct fst_iface *i,
-				     struct wpabuf *fst_ies)
+				     const struct wpabuf *fst_ies)
 {
 	i->iface_obj.set_ies(i->iface_obj.ctx, fst_ies);
 }

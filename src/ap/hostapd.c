@@ -1385,7 +1385,7 @@ static void fst_hostapd_get_channel_info_cb(void *ctx,
 }
 
 
-static void fst_hostapd_set_ies_cb(void *ctx, struct wpabuf *fst_ies)
+static void fst_hostapd_set_ies_cb(void *ctx, const struct wpabuf *fst_ies)
 {
 	struct hostapd_data *hapd = ctx;
 

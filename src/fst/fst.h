@@ -70,9 +70,9 @@ struct fst_wpa_obj {
 	/**
 	 * set_ies - Set interface's MB IE
 	 * @ctx: User context %ctx
-	 * @fst_ies: MB IE buffer
+	 * @fst_ies: MB IE buffer (owned by FST module)
 	 */
-	void (*set_ies)(void *ctx, struct wpabuf *fst_ies);
+	void (*set_ies)(void *ctx, const struct wpabuf *fst_ies);
 
 	/**
 	 * send_action - Send FST Action frame via the interface

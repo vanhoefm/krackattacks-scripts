@@ -312,7 +312,7 @@ struct hostapd_iface {
 	unsigned int cac_started:1;
 #ifdef CONFIG_FST
 	struct fst_iface *fst;
-	struct wpabuf *fst_ies;
+	const struct wpabuf *fst_ies;
 #endif /* CONFIG_FST */
 
 	/*

@@ -3751,7 +3751,7 @@ static int wpas_fst_get_hw_modes(void *ctx, struct hostapd_hw_modes **modes)
 }
 
 
-static void wpas_fst_set_ies_cb(void *ctx, struct wpabuf *fst_ies)
+static void wpas_fst_set_ies_cb(void *ctx, const struct wpabuf *fst_ies)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 

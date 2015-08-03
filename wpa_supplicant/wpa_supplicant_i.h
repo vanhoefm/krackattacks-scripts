@@ -980,7 +980,7 @@ struct wpa_supplicant {
 
 #ifdef CONFIG_FST
 	struct fst_iface *fst;
-	struct wpabuf *fst_ies;
+	const struct wpabuf *fst_ies;
 	struct wpabuf *received_mb_ies;
 #endif /* CONFIG_FST */
 };

@@ -116,7 +116,7 @@ for i in 0 1 2; do
 done
 sudo $(printf -- "$VALGRIND_WPAS" 5) $WPAS -g /tmp/wpas-wlan5 -G$GROUP \
     -ddKt$TRACE -f $LOGDIR/log5 &
-sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt -f $LOGDIR/hostapd &
+sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -f $LOGDIR/hostapd &
 
 if [ -x $HLR_AUC_GW ]; then
     cp $DIR/auth_serv/hlr_auc_gw.milenage_db $LOGDIR/hlr_auc_gw.milenage_db

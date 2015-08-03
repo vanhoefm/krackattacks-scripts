@@ -4237,7 +4237,7 @@ def test_dbus_p2p_group_termination_by_go(dev, apdev):
                 return
             if len(changed_properties["Groups"]) > 0:
                 self.peer_group_added = True
-            if len(changed_properties["Groups"]) == 0:
+            if len(changed_properties["Groups"]) == 0 and self.peer_group_added:
                 self.peer_group_removed = True
                 self.loop.quit()
 

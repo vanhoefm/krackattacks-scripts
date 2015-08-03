@@ -512,3 +512,46 @@ def test_hapd_dup_network_global_wpa(dev, apdev):
     addr = dev[0].own_addr()
     if "FAIL" in dst_hapd.request("STA " + addr):
             raise Exception("Could not connect using duplicated wpa params")
+
+def test_hapd_ctrl_log_level(dev, apdev):
+    """hostapd ctrl_iface LOG_LEVEL"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    level = hapd.request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(1): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(1): " + level)
+
+    if "OK" not in hapd.request("LOG_LEVEL  MSGDUMP  0"):
+        raise Exception("LOG_LEVEL failed")
+    level = hapd.request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(2): " + level)
+    if "Timestamp: 0" not in level:
+        raise Exception("Unexpected timestamp(2): " + level)
+
+    if "OK" not in hapd.request("LOG_LEVEL  MSGDUMP  1"):
+        raise Exception("LOG_LEVEL failed")
+    level = hapd.request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(3): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(3): " + level)
+
+    if "FAIL" not in hapd.request("LOG_LEVEL FOO"):
+        raise Exception("Invalid LOG_LEVEL accepted")
+
+    for lev in [ "EXCESSIVE", "MSGDUMP", "DEBUG", "INFO", "WARNING", "ERROR" ]:
+        if "OK" not in hapd.request("LOG_LEVEL " + lev):
+            raise Exception("LOG_LEVEL failed for " + lev)
+        level = hapd.request("LOG_LEVEL")
+        if "Current level: " + lev not in level:
+            raise Exception("Unexpected debug level: " + level)
+
+    if "OK" not in hapd.request("LOG_LEVEL  MSGDUMP  1"):
+        raise Exception("LOG_LEVEL failed")
+    level = hapd.request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(3): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(3): " + level)

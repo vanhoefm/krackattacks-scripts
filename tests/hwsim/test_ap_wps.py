@@ -166,6 +166,15 @@ def test_ap_wps_init_through_wps_config(dev, apdev):
     dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
                    pairwise="CCMP", group="CCMP")
 
+def test_ap_wps_invalid_wps_config_passphrase(dev, apdev):
+    """AP configuration using wps_config command with invalid passphrase"""
+    ssid = "test-wps-init-config"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    if "FAIL" not in hapd.request("WPS_CONFIG " + ssid.encode("hex") + " WPA2PSK CCMP " + "1234567".encode("hex")):
+        raise Exception("Invalid WPS_CONFIG command accepted")
+
 def test_ap_wps_conf(dev, apdev):
     """WPS PBC provisioning with configured AP"""
     ssid = "test-wps-conf"

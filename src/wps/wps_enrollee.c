@@ -799,6 +799,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 				     struct wpabuf *attrs, int wps2)
 {
 	struct wps_credential cred;
+	int ret = 0;
 
 	if (!wps->wps->ap)
 		return 0;
@@ -877,10 +878,10 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 	if (wps->wps->cred_cb) {
 		cred.cred_attr = wpabuf_head(attrs);
 		cred.cred_attr_len = wpabuf_len(attrs);
-		wps->wps->cred_cb(wps->wps->cb_ctx, &cred);
+		ret = wps->wps->cred_cb(wps->wps->cb_ctx, &cred);
 	}
 
-	return 0;
+	return ret;
 }
 
 

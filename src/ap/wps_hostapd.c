@@ -452,6 +452,11 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 		os_free(hapd->wps->network_key);
 		hapd->wps->network_key = NULL;
 		hapd->wps->network_key_len = 0;
+	} else if ((cred->auth_type & (WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK)) &&
+		   (cred->key_len < 8 || cred->key_len > 2 * PMK_LEN)) {
+		wpa_printf(MSG_INFO, "WPS: Invalid key length %lu for WPA/WPA2",
+			   (unsigned long) cred->key_len);
+		return -1;
 	} else {
 		if (hapd->wps->network_key == NULL ||
 		    hapd->wps->network_key_len < cred->key_len) {

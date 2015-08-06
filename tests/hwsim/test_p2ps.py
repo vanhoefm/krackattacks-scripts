@@ -528,6 +528,24 @@ def test_p2ps_connect_adv_go_p2ps_method(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+def test_p2ps_connect_adv_go_p2ps_method_group_iface(dev):
+    """P2PS auto-accept connection with advertisement as GO and P2PS method using separate group interface"""
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+    p2ps_advertise(r_dev=dev[0], r_role='4', svc_name='org.wi-fi.wfds.send.rx',
+                   srv_info='I can receive files upto size 2 GB')
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              srv_info='2 GB')
+
+    ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
+    p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+
+    ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+    if ev0 is None:
+        raise Exception("Unable to remove the advertisement instance")
+    remove_group(dev[0], dev[1])
+
 def test_p2ps_connect_adv_client_p2ps_method(dev):
     """P2PS auto-accept connection with advertisement as Client and P2PS method"""
     p2ps_advertise(r_dev=dev[0], r_role='2', svc_name='org.wi-fi.wfds.send.rx',

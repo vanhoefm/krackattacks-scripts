@@ -174,7 +174,7 @@ enum wpa_states {
 	/**
 	 * WPA_INTERFACE_DISABLED - Interface disabled
 	 *
-	 * This stat eis entered if the network interface is disabled, e.g.,
+	 * This state is entered if the network interface is disabled, e.g.,
 	 * due to rfkill. wpa_supplicant refuses any new operations that would
 	 * use the radio until the interface has been enabled.
 	 */

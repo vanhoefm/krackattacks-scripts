@@ -3811,7 +3811,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				    persist_ssid_size);
 
 	if (persist_ssid && s && s->mode != WPAS_MODE_P2P_GO &&
-	    os_memcmp(grp_mac, mac, ETH_ALEN) == 0) {
+	    is_zero_ether_addr(grp_mac)) {
 		wpa_dbg(wpa_s, MSG_ERROR,
 			"P2P: Peer device is a GO in a persistent group, but it did not provide the intended MAC address");
 		return;
@@ -3903,7 +3903,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				wpas_p2ps_prov_complete(
 					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
 					dev, adv_mac, ses_mac,
-					NULL, adv_id, ses_id, 0, 0,
+					grp_mac, adv_id, ses_id, 0, 0,
 					NULL, 0, 0, 0, NULL, NULL, 0);
 				return;
 			}

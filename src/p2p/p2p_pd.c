@@ -442,7 +442,7 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	u32 session_id = 0;
 	u8 session_mac[ETH_ALEN];
 	u8 adv_mac[ETH_ALEN];
-	u8 group_mac[ETH_ALEN];
+	const u8 *group_mac;
 	int passwd_id = DEV_PW_DEFAULT;
 	u16 config_methods;
 	u16 allowed_config_methods = WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
@@ -455,6 +455,7 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	p2p_dbg(p2p, "Received Provision Discovery Request from " MACSTR
 		" with config methods 0x%x (freq=%d)",
 		MAC2STR(sa), msg.wps_config_methods, rx_freq);
+	group_mac = msg.intended_addr;
 
 	dev = p2p_get_device(p2p, sa);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
@@ -534,7 +535,6 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 
 	os_memset(session_mac, 0, ETH_ALEN);
 	os_memset(adv_mac, 0, ETH_ALEN);
-	os_memset(group_mac, 0, ETH_ALEN);
 
 	/* Note 1: A feature capability attribute structure can be changed
 	 * in the future. The assumption is that such modifications are
@@ -552,9 +552,6 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		u8 remote_conncap;
 
 		req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
-
-		if (msg.intended_addr)
-			os_memcpy(group_mac, msg.intended_addr, ETH_ALEN);
 
 		os_memcpy(session_mac, msg.session_mac, ETH_ALEN);
 		os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
@@ -1037,7 +1034,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	u32 adv_id = 0;
 	u8 conncap = P2PS_SETUP_NEW;
 	u8 adv_mac[ETH_ALEN];
-	u8 group_mac[ETH_ALEN];
+	const u8 *group_mac;
 	int passwd_id = DEV_PW_DEFAULT;
 	int p2ps_seeker;
 
@@ -1053,10 +1050,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	if (msg.status)
 		status = *msg.status;
 
-	if (msg.intended_addr)
-		os_memcpy(group_mac, msg.intended_addr, ETH_ALEN);
-	else
-		os_memset(group_mac, 0, ETH_ALEN);
+	group_mac = msg.intended_addr;
 
 	if (msg.adv_mac)
 		os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);

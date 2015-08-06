@@ -100,12 +100,42 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 {
 	struct wpa_ptk ptk;
 
-	if (wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
-			   "Pairwise key expansion",
-			   bss->bssid, sta->addr, sta->anonce, sta->snonce,
-			   &ptk, sta->key_mgmt, sta->pairwise_cipher) < 0 ||
-	    check_mic(ptk.kck, ptk.kck_len, sta->key_mgmt, ver, data, len) < 0)
+	if (wpa_key_mgmt_ft(sta->key_mgmt)) {
+		u8 pmk_r0[PMK_LEN];
+		u8 pmk_r0_name[WPA_PMK_NAME_LEN];
+		u8 pmk_r1[PMK_LEN];
+		u8 pmk_r1_name[WPA_PMK_NAME_LEN];
+		u8 ptk_name[WPA_PMK_NAME_LEN];
+
+		wpa_derive_pmk_r0(pmk->pmk, sizeof(pmk->pmk),
+				  bss->ssid, bss->ssid_len, bss->mdid,
+				  bss->r0kh_id, bss->r0kh_id_len,
+				  sta->addr, pmk_r0, pmk_r0_name);
+		wpa_hexdump(MSG_DEBUG, "FT: PMK-R0", pmk_r0, PMK_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: PMKR0Name", pmk_r0_name,
+			    WPA_PMK_NAME_LEN);
+		wpa_derive_pmk_r1(pmk_r0, pmk_r0_name, bss->r1kh_id,
+				  sta->addr, pmk_r1, pmk_r1_name);
+		wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", pmk_r1, PMK_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", pmk_r1_name,
+			    WPA_PMK_NAME_LEN);
+		if (wpa_pmk_r1_to_ptk(pmk_r1, sta->snonce, sta->anonce,
+				      sta->addr,
+				      bss->bssid, pmk_r1_name, &ptk, ptk_name,
+				      sta->key_mgmt,
+				      sta->pairwise_cipher) < 0 ||
+		    check_mic(ptk.kck, ptk.kck_len, sta->key_mgmt, ver, data,
+			      len) < 0)
+			return -1;
+	} else if (wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
+				  "Pairwise key expansion",
+				  bss->bssid, sta->addr, sta->anonce,
+				  sta->snonce, &ptk, sta->key_mgmt,
+				  sta->pairwise_cipher) < 0 ||
+		   check_mic(ptk.kck, ptk.kck_len, sta->key_mgmt, ver, data,
+			     len) < 0) {
 		return -1;
+	}
 
 	sta->tk_len = wpa_cipher_key_len(sta->pairwise_cipher);
 	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR,

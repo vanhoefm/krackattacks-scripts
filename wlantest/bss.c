@@ -217,6 +217,9 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 			  elems->wpa_ie_len + 2);
 	}
 
+	if (elems->mdie)
+		os_memcpy(bss->mdid, elems->mdie, 2);
+
 	if (!update)
 		return;
 

@@ -314,6 +314,9 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 	u16 capab, status, aid;
+	const u8 *ies;
+	size_t ies_len;
+	struct wpa_ft_ies parse;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -329,6 +332,9 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
+	ies = mgmt->u.assoc_resp.variable;
+	ies_len = len - (mgmt->u.assoc_resp.variable - data);
+
 	capab = le_to_host16(mgmt->u.assoc_resp.capab_info);
 	status = le_to_host16(mgmt->u.assoc_resp.status_code);
 	aid = le_to_host16(mgmt->u.assoc_resp.aid);
@@ -340,8 +346,6 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 
 	if (status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
 		struct ieee802_11_elems elems;
-		const u8 *ies = mgmt->u.assoc_resp.variable;
-		size_t ies_len = len - (mgmt->u.assoc_resp.variable - data);
 		if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) ==
 		    ParseFailed) {
 			add_note(wt, MSG_INFO, "Failed to parse IEs in "
@@ -381,6 +385,16 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 			 " moved to State 3 with " MACSTR,
 			 MAC2STR(sta->addr), MAC2STR(bss->bssid));
 		sta->state = STATE3;
+	}
+
+	if (wpa_ft_parse_ies(ies, ies_len, &parse) == 0) {
+		if (parse.r0kh_id) {
+			os_memcpy(bss->r0kh_id, parse.r0kh_id,
+				  parse.r0kh_id_len);
+			bss->r0kh_id_len = parse.r0kh_id_len;
+		}
+		if (parse.r1kh_id)
+			os_memcpy(bss->r1kh_id, parse.r1kh_id, FT_R1KH_ID_LEN);
 	}
 }
 

@@ -151,6 +151,10 @@ struct wlantest_bss {
 	u8 ipn[6][6];
 	u32 counters[NUM_WLANTEST_BSS_COUNTER];
 	struct dl_list tdls; /* struct wlantest_tdls */
+	u8 mdid[2];
+	u8 r0kh_id[FT_R0KH_ID_MAX_LEN];
+	size_t r0kh_id_len;
+	u8 r1kh_id[FT_R1KH_ID_LEN];
 };
 
 struct wlantest_radius {

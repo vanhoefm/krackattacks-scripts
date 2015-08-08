@@ -92,6 +92,13 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 #ifdef CONFIG_TESTING_OPTIONS
 	wconf->corrupt_gtk_rekey_mic_probability =
 		iconf->corrupt_gtk_rekey_mic_probability;
+	if (conf->own_ie_override &&
+	    wpabuf_len(conf->own_ie_override) <= MAX_OWN_IE_OVERRIDE) {
+		wconf->own_ie_override_len = wpabuf_len(conf->own_ie_override);
+		os_memcpy(wconf->own_ie_override,
+			  wpabuf_head(conf->own_ie_override),
+			  wconf->own_ie_override_len);
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_P2P
 	os_memcpy(wconf->ip_addr_go, conf->ip_addr_go, 4);

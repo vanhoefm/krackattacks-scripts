@@ -1,6 +1,6 @@
 /*
  * hostapd - IEEE 802.11i-2004 / WPA Authenticator
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -13,6 +13,8 @@
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
 #include "common/ieee802_11_defs.h"
+
+#define MAX_OWN_IE_OVERRIDE 256
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -164,6 +166,8 @@ struct wpa_auth_config {
 	int ap_mlme;
 #ifdef CONFIG_TESTING_OPTIONS
 	double corrupt_gtk_rekey_mic_probability;
+	u8 own_ie_override[MAX_OWN_IE_OVERRIDE];
+	size_t own_ie_override_len;
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_P2P
 	u8 ip_addr_go[4];

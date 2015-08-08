@@ -561,6 +561,10 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 
 	os_free(conf->server_id);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	wpabuf_free(conf->own_ie_override);
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	os_free(conf);
 }
 

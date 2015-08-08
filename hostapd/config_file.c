@@ -3268,6 +3268,24 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->bss_load_test_set = 1;
 	} else if (os_strcmp(buf, "radio_measurements") == 0) {
 		bss->radio_measurements = atoi(pos);
+	} else if (os_strcmp(buf, "own_ie_override") == 0) {
+		struct wpabuf *tmp;
+		size_t len = os_strlen(pos) / 2;
+
+		tmp = wpabuf_alloc(len);
+		if (!tmp)
+			return 1;
+
+		if (hexstr2bin(pos, wpabuf_put(tmp, len), len)) {
+			wpabuf_free(tmp);
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid own_ie_override '%s'",
+				   line, pos);
+			return 1;
+		}
+
+		wpabuf_free(bss->own_ie_override);
+		bss->own_ie_override = tmp;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
 		struct wpabuf *elems;

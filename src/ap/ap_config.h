@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration definitions and helpers functions
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -544,6 +544,7 @@ struct hostapd_bss_config {
 #ifdef CONFIG_TESTING_OPTIONS
 	u8 bss_load_test[5];
 	u8 bss_load_test_set;
+	struct wpabuf *own_ie_override;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #define MESH_ENABLED BIT(0)

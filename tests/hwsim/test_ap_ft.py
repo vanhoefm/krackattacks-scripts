@@ -913,3 +913,71 @@ def test_ap_ft_rrb(dev, apdev):
     pkt = ehdr + '\x01' + '\xc9' + '\x5a\x00' + _src_ll + '\x06\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' + 76*'\00'
     if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
+
+def test_rsn_ie_proto_ft_psk_sta(dev, apdev):
+    """RSN element protocol testing for FT-PSK + PMF cases on STA side"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "1";
+    # This is the RSN element used normally by hostapd
+    params['own_ie_override'] = '30140100000fac040100000fac040100000fac048c00' + '3603a1b201'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                        ieee80211w="1", scan_freq="2412",
+                        pairwise="CCMP", group="CCMP")
+
+    tests = [ ('PMKIDCount field included',
+               '30160100000fac040100000fac040100000fac048c000000' + '3603a1b201'),
+              ('Extra IE before RSNE',
+               'dd0400000000' + '30140100000fac040100000fac040100000fac048c00' + '3603a1b201'),
+              ('PMKIDCount and Group Management Cipher suite fields included',
+               '301a0100000fac040100000fac040100000fac048c000000000fac06' + '3603a1b201'),
+              ('Extra octet after defined fields (future extensibility)',
+               '301b0100000fac040100000fac040100000fac048c000000000fac0600' + '3603a1b201'),
+              ('No RSN Capabilities field (PMF disabled in practice)',
+               '30120100000fac040100000fac040100000fac04' + '3603a1b201') ]
+    for txt,ie in tests:
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        logger.info(txt)
+        hapd.disable()
+        hapd.set('own_ie_override', ie)
+        hapd.enable()
+        dev[0].request("BSS_FLUSH 0")
+        dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    logger.info('Invalid RSNE causing internal hostapd error')
+    hapd.disable()
+    hapd.set('own_ie_override', '30130100000fac040100000fac040100000fac048c' + '3603a1b201')
+    hapd.enable()
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
+    dev[0].select_network(id, freq=2412)
+    # hostapd fails to generate EAPOL-Key msg 3/4, so this connection cannot
+    # complete.
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")
+
+    logger.info('Unexpected PMKID causing internal hostapd error')
+    hapd.disable()
+    hapd.set('own_ie_override', '30260100000fac040100000fac040100000fac048c000100ffffffffffffffffffffffffffffffff' + '3603a1b201')
+    hapd.enable()
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
+    dev[0].select_network(id, freq=2412)
+    # hostapd fails to generate EAPOL-Key msg 3/4, so this connection cannot
+    # complete.
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")

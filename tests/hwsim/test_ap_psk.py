@@ -1993,3 +1993,42 @@ def test_ap_wpa2_psk_no_random(dev, apdev):
         dev[0].request("DISCONNECT")
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
+
+def test_rsn_ie_proto_psk_sta(dev, apdev):
+    """RSN element protocol testing for PSK cases on STA side"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    # This is the RSN element used normally by hostapd
+    params['own_ie_override'] = '30140100000fac040100000fac040100000fac020c00'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    if "FAIL" not in hapd.request("SET own_ie_override qwerty"):
+        raise Exception("Invalid own_ie_override value accepted")
+    id = dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+
+    tests = [ ('No RSN Capabilities field',
+               '30120100000fac040100000fac040100000fac02'),
+              ('Reserved RSN Capabilities bits set',
+               '30140100000fac040100000fac040100000fac023cff'),
+              ('Extra pairwise cipher suite (unsupported)',
+               '30180100000fac040200ffffffff000fac040100000fac020c00'),
+              ('Extra AKM suite (unsupported)',
+               '30180100000fac040100000fac040200ffffffff000fac020c00'),
+              ('PMKIDCount field included',
+               '30160100000fac040100000fac040100000fac020c000000'),
+              ('Unexpected Group Management Cipher Suite with PMF disabled',
+               '301a0100000fac040100000fac040100000fac020c000000000fac06'),
+              ('Extra octet after defined fields (future extensibility)',
+               '301b0100000fac040100000fac040100000fac020c000000000fac0600') ]
+    for txt,ie in tests:
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        logger.info(txt)
+        hapd.disable()
+        hapd.set('own_ie_override', ie)
+        hapd.enable()
+        dev[0].request("BSS_FLUSH 0")
+        dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()

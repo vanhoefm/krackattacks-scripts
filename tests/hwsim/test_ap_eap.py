@@ -3408,3 +3408,35 @@ def test_ap_wpa2_eap_tls_versions(dev, apdev):
                   "tls_disable_tlsv1_0=1 tls_disable_tlsv1_2=1", "TLSv1.1")
     check_tls_ver(dev[2], apdev[0],
                   "tls_disable_tlsv1_1=1 tls_disable_tlsv1_2=1", "TLSv1")
+
+def test_rsn_ie_proto_eap_sta(dev, apdev):
+    """RSN element protocol testing for EAP cases on STA side"""
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    # This is the RSN element used normally by hostapd
+    params['own_ie_override'] = '30140100000fac040100000fac040100000fac010c00'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                        identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412")
+
+    tests = [ ('No RSN Capabilities field',
+               '30120100000fac040100000fac040100000fac01'),
+              ('No AKM Suite fields',
+               '300c0100000fac040100000fac04'),
+              ('No Pairwise Cipher Suite fields',
+               '30060100000fac04'),
+              ('No Group Data Cipher Suite field',
+               '30020100') ]
+    for txt,ie in tests:
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        logger.info(txt)
+        hapd.disable()
+        hapd.set('own_ie_override', ie)
+        hapd.enable()
+        dev[0].request("BSS_FLUSH 0")
+        dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()

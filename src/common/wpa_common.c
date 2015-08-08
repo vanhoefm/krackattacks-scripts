@@ -1292,6 +1292,9 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 		os_memmove(rpos + 2, rpos, end - rpos);
 		*rpos++ = 0;
 		*rpos++ = 0;
+		added += 2;
+		start[1] += 2;
+		rend = rpos;
 	} else {
 		/* Skip RSN Capabilities */
 		rpos += 2;
@@ -1304,7 +1307,7 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 
 	if (rpos == rend) {
 		/* No PMKID-Count field included; add it */
-		os_memmove(rpos + 2 + PMKID_LEN, rpos, end - rpos);
+		os_memmove(rpos + 2 + PMKID_LEN, rpos, end + added - rpos);
 		WPA_PUT_LE16(rpos, 1);
 		rpos += 2;
 		os_memcpy(rpos, pmkid, PMKID_LEN);
@@ -1319,7 +1322,7 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 		}
 		WPA_PUT_LE16(rpos, 1);
 		rpos += 2;
-		os_memmove(rpos + PMKID_LEN, rpos, end - rpos);
+		os_memmove(rpos + PMKID_LEN, rpos, end + added - rpos);
 		os_memcpy(rpos, pmkid, PMKID_LEN);
 		added += PMKID_LEN;
 		start[1] += PMKID_LEN;

@@ -257,12 +257,14 @@ def test_gas_fragment(dev, apdev):
         raise Exception("Unexpected ANQP result: " + ev)
 
 def test_gas_comeback_delay(dev, apdev):
-    """GAS fragmentation"""
+    """GAS comeback delay"""
     hapd = start_ap(apdev[0])
     hapd.set("gas_comeback_delay", "500")
 
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     dev[0].request("FETCH_ANQP")
+    if "FAIL-BUSY" not in dev[0].request("SCAN"):
+        raise Exception("SCAN accepted during FETCH_ANQP")
     for i in range(0, 6):
         ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
         if ev is None:

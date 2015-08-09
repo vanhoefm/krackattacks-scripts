@@ -108,7 +108,7 @@ if [ ! -z "$BUILD" ]; then
     fi
 fi
 
-if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
+if ! ./start.sh $VALGRIND $TRACE channels=$NUM_CH; then
 	if ! [ -z "$LOGBASEDIR" ] ; then
 		echo "Could not start test environment" > $LOGDIR/run
 	fi

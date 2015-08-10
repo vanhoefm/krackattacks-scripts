@@ -5322,6 +5322,38 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 {
 	unsigned int r;
 
+	if (!wpa_s->conf->num_p2p_pref_chan && !freq) {
+		unsigned int i, size = P2P_MAX_PREF_CHANNELS;
+		unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS];
+		int res;
+
+		res = wpa_drv_get_pref_freq_list(wpa_s, WPA_IF_P2P_GO,
+						 &size, pref_freq_list);
+		if (!res && size > 0) {
+			i = 0;
+			while (wpas_p2p_disallowed_freq(wpa_s->global,
+							pref_freq_list[i]) &&
+			       i < size) {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: preferred_freq_list[%d]=%d is disallowed",
+					   i, pref_freq_list[i]);
+				i++;
+			}
+			if (i != size) {
+				freq = pref_freq_list[i];
+				wpa_printf(MSG_DEBUG,
+					   "P2P: Using preferred_freq_list[%d]=%d",
+					   i, freq);
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: All driver preferred frequencies are disallowed for P2P use");
+			}
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: No preferred frequency list available");
+		}
+	}
+
 	if (freq == 2) {
 		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
 			   "band");

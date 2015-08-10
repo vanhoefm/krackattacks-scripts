@@ -598,7 +598,8 @@ static void sme_auth_start_cb(struct wpa_radio_work *work, int deinit)
 	wpa_s->connect_work = work;
 
 	if (cwork->bss_removed ||
-	    !wpas_valid_bss_ssid(wpa_s, cwork->bss, cwork->ssid)) {
+	    !wpas_valid_bss_ssid(wpa_s, cwork->bss, cwork->ssid) ||
+	    wpas_network_disabled(wpa_s, cwork->ssid)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME: BSS/SSID entry for authentication not valid anymore - drop connection attempt");
 		wpas_connect_work_done(wpa_s);
 		return;

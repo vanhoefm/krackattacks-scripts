@@ -1341,11 +1341,18 @@ def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
 
-    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
-                private_key="auth_serv/user2.pkcs12",
-                private_key_passwd="whatever")
-    dev[0].request("REMOVE_NETWORK all")
-    dev[0].wait_disconnected()
+    # Run this twice to verify certificate chain handling with OpenSSL. Use two
+    # different files to cover both cases of the extra certificate being the
+    # one that signed the client certificate and it being unrelated to the
+    # client certificate.
+    for pkcs12 in "auth_serv/user2.pkcs12", "auth_serv/user3.pkcs12":
+        for i in range(2):
+            eap_connect(dev[0], apdev[0], "TLS", "tls user",
+                        ca_cert="auth_serv/ca.pem",
+                        private_key=pkcs12,
+                        private_key_passwd="whatever")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
 
 def test_ap_wpa2_eap_tls_pkcs12_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12 from configuration blob"""

@@ -2112,6 +2112,35 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 	}
 
 	if (certs) {
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+		SSL_clear_chain_certs(ssl);
+		while ((cert = sk_X509_pop(certs)) != NULL) {
+			X509_NAME_oneline(X509_get_subject_name(cert), buf,
+					  sizeof(buf));
+			wpa_printf(MSG_DEBUG, "TLS: additional certificate"
+				   " from PKCS12: subject='%s'", buf);
+			if (SSL_add1_chain_cert(ssl, cert) != 1) {
+				res = -1;
+				break;
+			}
+		}
+		sk_X509_free(certs);
+		res = SSL_build_cert_chain(ssl,
+					   SSL_BUILD_CHAIN_FLAG_CHECK |
+					   SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR);
+		if (!res) {
+			tls_show_errors(MSG_DEBUG, __func__,
+					"Failed to build certificate chain");
+		} else if (res == 2) {
+			wpa_printf(MSG_DEBUG,
+				   "TLS: Ignore certificate chain verification error when building chain with PKCS#12 extra certificates");
+		}
+		/*
+		 * Try to continue regardless of result since it is possible for
+		 * the extra certificates not to be required.
+		 */
+		res = 0;
+#else /* OPENSSL_VERSION_NUMBER >= 0x10002000L */
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
 		SSL_CTX_clear_extra_chain_certs(ssl_ctx);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10001000L */
@@ -2130,6 +2159,7 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 			}
 		}
 		sk_X509_free(certs);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10002000L */
 	}
 
 	PKCS12_free(p12);

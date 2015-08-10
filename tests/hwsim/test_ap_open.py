@@ -444,3 +444,41 @@ def test_ap_open_disable_enable(dev, apdev):
         hapd.request("ENABLE")
         dev[0].wait_connected()
         hwsim_utils.test_connectivity(dev[0], hapd)
+
+def sta_enable_disable(dev, bssid):
+    dev.scan_for_bss(bssid, freq=2412)
+    work_id = dev.request("RADIO_WORK add block-work")
+    ev = dev.wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    id = dev.connect("open", key_mgmt="NONE", scan_freq="2412",
+                     only_add_network=True)
+    dev.request("ENABLE_NETWORK %d" % id)
+    if "connect@" not in dev.request("RADIO_WORK show"):
+        raise Exception("connect radio work missing")
+    dev.request("DISABLE_NETWORK %d" % id)
+    dev.request("RADIO_WORK done " + work_id)
+
+    ok = False
+    for i in range(30):
+        if "connect@" not in dev.request("RADIO_WORK show"):
+            ok = True
+            break
+        time.sleep(0.1)
+    if not ok:
+        raise Exception("connect radio work not completed")
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+    dev.request("DISCONNECT")
+
+def test_ap_open_sta_enable_disable(dev, apdev):
+    """AP with open mode and wpa_supplicant ENABLE/DISABLE_NETWORK"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    bssid = apdev[0]['bssid']
+
+    sta_enable_disable(dev[0], bssid)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    sta_enable_disable(wpas, bssid)

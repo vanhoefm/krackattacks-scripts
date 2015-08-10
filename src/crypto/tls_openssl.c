@@ -2112,6 +2112,9 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 	}
 
 	if (certs) {
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+		SSL_CTX_clear_extra_chain_certs(ssl_ctx);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10001000L */
 		while ((cert = sk_X509_pop(certs)) != NULL) {
 			X509_NAME_oneline(X509_get_subject_name(cert), buf,
 					  sizeof(buf));

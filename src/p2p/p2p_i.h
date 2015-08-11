@@ -803,6 +803,8 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev);
 u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method);
 void p2p_reselect_channel(struct p2p_data *p2p,
 			  struct p2p_channels *intersection);
+void p2p_check_pref_chan(struct p2p_data *p2p, int go,
+			 struct p2p_device *dev, struct p2p_message *msg);
 
 /* p2p_pd.c */
 void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,

@@ -673,8 +673,8 @@ static void p2p_check_pref_chan_recv(struct p2p_data *p2p, int go,
 }
 
 
-static void p2p_check_pref_chan(struct p2p_data *p2p, int go,
-				struct p2p_device *dev, struct p2p_message *msg)
+void p2p_check_pref_chan(struct p2p_data *p2p, int go,
+			 struct p2p_device *dev, struct p2p_message *msg)
 {
 	unsigned int freq_list[P2P_MAX_PREF_CHANNELS], size;
 	unsigned int i;
@@ -725,7 +725,7 @@ static void p2p_check_pref_chan(struct p2p_data *p2p, int go,
 
 	/*
 	  Check if peer's preferred channel list is
-	  * _not_ included in the GO Negotiation Request.
+	  * _not_ included in the GO Negotiation Request or Invitation Request.
 	  */
 	if (msg->pref_freq_list_len == 0)
 		p2p_check_pref_chan_no_recv(p2p, go, dev, msg, freq_list, size);

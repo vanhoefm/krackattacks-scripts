@@ -6488,6 +6488,7 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 				   pref_freq_list, &size);
 	if (res)
 		return res;
+	p2p_set_own_pref_freq_list(wpa_s->global->p2p, pref_freq_list, size);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;

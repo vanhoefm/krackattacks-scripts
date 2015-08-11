@@ -221,6 +221,9 @@ int wpa_driver_nl80211_scan(struct i802_bss *bss,
 	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: scan request");
 	drv->scan_for_auth = 0;
 
+	if (TEST_FAIL())
+		return -1;
+
 	msg = nl80211_scan_common(bss, NL80211_CMD_TRIGGER_SCAN, params);
 	if (!msg)
 		return -1;

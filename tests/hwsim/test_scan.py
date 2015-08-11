@@ -12,7 +12,7 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip
+from utils import HwsimSkip, fail_test
 from tshark import run_tshark
 
 def check_scan(dev, params, other_started=False, test_busy=False):
@@ -805,3 +805,50 @@ def test_scan_specify_ssid(dev, apdev):
 
     if "FAIL" not in dev[0].request("SCAN ssid foo"):
         raise Exception("Invalid SCAN command accepted")
+
+def test_scan_ap_scan_2_ap_mode(dev, apdev):
+    """AP_SCAN 2 AP mode and scan()"""
+    try:
+        _test_scan_ap_scan_2_ap_mode(dev, apdev)
+    finally:
+        dev[0].request("AP_SCAN 1")
+
+def _test_scan_ap_scan_2_ap_mode(dev, apdev):
+    if "OK" not in dev[0].request("AP_SCAN 2"):
+        raise Exception("Failed to set AP_SCAN 2")
+
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].set_network(id, "disabled", "0")
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("AP failed to start")
+
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_scan"):
+        if "OK" not in dev[0].request("SCAN freq=2412"):
+            raise Exception("SCAN command failed unexpectedly")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED",
+                                "AP-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("CTRL-EVENT-SCAN-FAILED not seen")
+        if "AP-DISABLED" in ev:
+            raise Exception("Unexpected AP-DISABLED event")
+        if "retry=1" in ev:
+            # Wait for the retry to scan happen
+            ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED",
+                                    "AP-DISABLED"], timeout=5)
+            if ev is None:
+                raise Exception("CTRL-EVENT-SCAN-FAILED not seen - retry")
+            if "AP-DISABLED" in ev:
+                raise Exception("Unexpected AP-DISABLED event - retry")
+
+    dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

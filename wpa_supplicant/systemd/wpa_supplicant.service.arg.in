@@ -2,6 +2,8 @@
 Description=WPA supplicant daemon (interface-specific version)
 Requires=sys-subsystem-net-devices-%i.device
 After=sys-subsystem-net-devices-%i.device
+Before=network.target
+Wants=network.target
 
 # NetworkManager users will probably want the dbus version instead.
 

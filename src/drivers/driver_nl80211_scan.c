@@ -586,6 +586,11 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 		r->flags |= WPA_SCAN_LEVEL_INVALID | WPA_SCAN_QUAL_INVALID;
 	if (bss[NL80211_BSS_TSF])
 		r->tsf = nla_get_u64(bss[NL80211_BSS_TSF]);
+	if (bss[NL80211_BSS_BEACON_TSF]) {
+		u64 tsf = nla_get_u64(bss[NL80211_BSS_BEACON_TSF]);
+		if (tsf > r->tsf)
+			r->tsf = tsf;
+	}
 	if (bss[NL80211_BSS_SEEN_MS_AGO])
 		r->age = nla_get_u32(bss[NL80211_BSS_SEEN_MS_AGO]);
 	r->ie_len = ie_len;

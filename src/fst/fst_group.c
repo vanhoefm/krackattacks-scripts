@@ -18,22 +18,6 @@
 
 struct dl_list fst_global_groups_list;
 
-#ifndef HOSTAPD
-static Boolean fst_has_fst_peer(struct fst_iface *iface, Boolean *has_peer)
-{
-	const u8 *bssid;
-
-	bssid = fst_iface_get_bssid(iface);
-	if (!bssid) {
-		*has_peer = FALSE;
-		return FALSE;
-	}
-
-	*has_peer = TRUE;
-	return fst_iface_get_peer_mb_ie(iface, bssid) != NULL;
-}
-#endif /* HOSTAPD */
-
 
 static void fst_dump_mb_ies(const char *group_id, const char *ifname,
 			    struct wpabuf *mbies)
@@ -147,16 +131,6 @@ static struct wpabuf * fst_group_create_mb_ie(struct fst_group *g,
 	struct fst_iface *f;
 	unsigned int nof_mbies = 0;
 	unsigned int nof_ifaces_added = 0;
-#ifndef HOSTAPD
-	Boolean has_peer;
-	Boolean has_fst_peer;
-
-	foreach_fst_group_iface(g, f) {
-		has_fst_peer = fst_has_fst_peer(f, &has_peer);
-		if (has_peer && !has_fst_peer)
-			return NULL;
-	}
-#endif /* HOSTAPD */
 
 	foreach_fst_group_iface(g, f) {
 		if (f == i)

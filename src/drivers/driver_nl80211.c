@@ -3258,7 +3258,7 @@ static int wpa_driver_nl80211_set_acl(void *priv,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
-	struct nlattr *acl;
+	struct nl_msg *acl;
 	unsigned int i;
 	int ret;
 
@@ -3271,23 +3271,26 @@ static int wpa_driver_nl80211_set_acl(void *priv,
 	wpa_printf(MSG_DEBUG, "nl80211: Set %s ACL (num_mac_acl=%u)",
 		   params->acl_policy ? "Accept" : "Deny", params->num_mac_acl);
 
-	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_MAC_ACL)) ||
-	    nla_put_u32(msg, NL80211_ATTR_ACL_POLICY, params->acl_policy ?
-			NL80211_ACL_POLICY_DENY_UNLESS_LISTED :
-			NL80211_ACL_POLICY_ACCEPT_UNLESS_LISTED) ||
-	    (acl = nla_nest_start(msg, NL80211_ATTR_MAC_ADDRS)) == NULL) {
-		nlmsg_free(msg);
+	acl = nlmsg_alloc();
+	if (!acl)
 		return -ENOMEM;
-	}
-
 	for (i = 0; i < params->num_mac_acl; i++) {
-		if (nla_put(msg, i + 1, ETH_ALEN, params->mac_acl[i].addr)) {
-			nlmsg_free(msg);
+		if (nla_put(acl, i + 1, ETH_ALEN, params->mac_acl[i].addr)) {
+			nlmsg_free(acl);
 			return -ENOMEM;
 		}
 	}
 
-	nla_nest_end(msg, acl);
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_MAC_ACL)) ||
+	    nla_put_u32(msg, NL80211_ATTR_ACL_POLICY, params->acl_policy ?
+			NL80211_ACL_POLICY_DENY_UNLESS_LISTED :
+			NL80211_ACL_POLICY_ACCEPT_UNLESS_LISTED) ||
+	    nla_put_nested(msg, NL80211_ATTR_MAC_ADDRS, acl)) {
+		nlmsg_free(msg);
+		nlmsg_free(acl);
+		return -ENOMEM;
+	}
+	nlmsg_free(acl);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {

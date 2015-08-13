@@ -86,6 +86,30 @@ def test_scan(dev, apdev):
     logger.info("Active single-channel scan on AP's operating channel")
     check_scan_retry(dev[0], "freq=2412 passive=0 use_id=1", bssid)
 
+def test_scan_tsf(dev, apdev):
+    """Scan and TSF updates from Beacon/Probe Response frames"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
+                                         'beacon_int': "100" })
+    bssid = apdev[0]['bssid']
+
+    tsf = []
+    for passive in [ 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1 ]:
+        check_scan(dev[0], "freq=2412 passive=%d use_id=1" % passive)
+        bss = dev[0].get_bss(bssid)
+        if bss:
+            tsf.append(int(bss['tsf']))
+            logger.info("TSF: " + bss['tsf'])
+    if tsf[-3] <= tsf[-4]:
+        # For now, only write this in the log without failing the test case
+        # since mac80211_hwsim does not yet update the Timestamp field in
+        # Probe Response frames.
+        logger.info("Probe Response did not update TSF")
+        #raise Exception("Probe Response did not update TSF")
+    if tsf[-1] <= tsf[-3]:
+        raise Exception("Beacon did not update TSF")
+    if 0 in tsf:
+        raise Exception("0 TSF reported")
+
 def test_scan_only(dev, apdev):
     """Control interface behavior on scan parameters with type=only"""
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })

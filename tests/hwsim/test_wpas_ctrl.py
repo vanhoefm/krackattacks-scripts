@@ -7,6 +7,7 @@
 import logging
 logger = logging.getLogger()
 import os
+import socket
 import subprocess
 import time
 
@@ -1671,3 +1672,88 @@ def _test_wpas_ctrl_oom(dev):
             res = dev[0].global_request(cmd)
             if exp and exp not in res:
                 raise Exception("Unexpected success for '%s' during OOM" % cmd)
+
+def test_wpas_ctrl_socket_full(dev, apdev, test_params):
+    """wpa_supplicant control socket and full send buffer"""
+    if not dev[0].ping():
+        raise Exception("Could not ping wpa_supplicant at the beginning of the test")
+    dev[0].get_status()
+
+    counter = 0
+
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    local = "/tmp/wpa_ctrl_test_%d-%d" % (os.getpid(), counter)
+    counter += 1
+    s.bind(local)
+    s.connect("/var/run/wpa_supplicant/wlan0")
+    for i in range(20):
+        logger.debug("Command %d" % i)
+        try:
+            s.send("MIB")
+        except Exception, e:
+            logger.info("Could not send command %d: %s" % (i, str(e)))
+            break
+        # Close without receiving response
+        time.sleep(0.01)
+
+    if not dev[0].ping():
+        raise Exception("Could not ping wpa_supplicant in the middle of the test")
+    dev[0].get_status()
+
+    s2 = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    local2 = "/tmp/wpa_ctrl_test_%d-%d" % (os.getpid(), counter)
+    counter += 1
+    s2.bind(local2)
+    s2.connect("/var/run/wpa_supplicant/wlan0")
+    for i in range(10):
+        logger.debug("Command %d [2]" % i)
+        try:
+            s2.send("MIB")
+        except Exception, e:
+            logger.info("Could not send command %d [2]: %s" % (i, str(e)))
+            break
+        # Close without receiving response
+        time.sleep(0.01)
+
+    s.close()
+    os.unlink(local)
+
+    for i in range(10):
+        logger.debug("Command %d [3]" % i)
+        try:
+            s2.send("MIB")
+        except Exception, e:
+            logger.info("Could not send command %d [3]: %s" % (i, str(e)))
+            break
+        # Close without receiving response
+        time.sleep(0.01)
+
+    s2.close()
+    os.unlink(local2)
+
+    if not dev[0].ping():
+        raise Exception("Could not ping wpa_supplicant in the middle of the test [2]")
+    dev[0].get_status()
+
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    local = "/tmp/wpa_ctrl_test_%d-%d" % (os.getpid(), counter)
+    counter += 1
+    s.bind(local)
+    s.connect("/var/run/wpa_supplicant/wlan0")
+    s.send("ATTACH")
+    res = s.recv(100)
+    if "OK" not in res:
+        raise Exception("Could not attach a test socket")
+
+    for i in range(5):
+        dev[0].scan(freq=2412)
+
+    s.close()
+    os.unlink(local)
+
+    for i in range(5):
+        dev[0].scan(freq=2412)
+
+    if not dev[0].ping():
+        raise Exception("Could not ping wpa_supplicant at the end of the test")
+    dev[0].get_status()

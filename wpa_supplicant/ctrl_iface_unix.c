@@ -13,6 +13,10 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __linux__
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
+#endif /* __linux__ */
 #ifdef ANDROID
 #include <cutils/sockets.h>
 #endif /* ANDROID */
@@ -70,6 +74,32 @@ static int wpas_ctrl_iface_reinit(struct wpa_supplicant *wpa_s,
 				  struct ctrl_iface_priv *priv);
 static int wpas_ctrl_iface_global_reinit(struct wpa_global *global,
 					 struct ctrl_iface_global_priv *priv);
+
+
+static void wpas_ctrl_sock_debug(const char *title, int sock, const char *buf,
+				 size_t len)
+{
+#ifdef __linux__
+	socklen_t optlen;
+	int sndbuf, outq;
+	int level = MSG_DEBUG;
+
+	if (len >= 5 && os_strncmp(buf, "PONG\n", 5) == 0)
+		level = MSG_EXCESSIVE;
+
+	optlen = sizeof(sndbuf);
+	sndbuf = 0;
+	if (getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen) < 0)
+		sndbuf = -1;
+
+	if (ioctl(sock, SIOCOUTQ, &outq) < 0)
+		outq = -1;
+
+	wpa_printf(level,
+		   "CTRL-DEBUG: %s: sock=%d sndbuf=%d outq=%d send_len=%d",
+		   title, sock, sndbuf, outq, (int) len);
+#endif /* __linux__ */
+}
 
 
 static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
@@ -215,6 +245,8 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 	}
 
 	if (reply) {
+		wpas_ctrl_sock_debug("ctrl_sock-sendto", sock, reply,
+				     reply_len);
 		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 			   fromlen) < 0) {
 			int _errno = errno;
@@ -716,6 +748,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 			      offsetof(struct sockaddr_un, sun_path));
 		msg.msg_name = (void *) &dst->addr;
 		msg.msg_namelen = dst->addrlen;
+		wpas_ctrl_sock_debug("ctrl_sock-sendmsg", sock, buf, len);
 		if (sendmsg(sock, &msg, MSG_DONTWAIT) >= 0) {
 			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor sent successfully to %s",
 				   addr_txt);
@@ -872,6 +905,8 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	}
 
 	if (reply) {
+		wpas_ctrl_sock_debug("global_ctrl_sock-sendto",
+				     sock, reply, reply_len);
 		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 			   fromlen) < 0) {
 			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",

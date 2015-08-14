@@ -259,6 +259,21 @@ def test_grpform3_c(dev):
     if r_res['ifname'] in utils.get_ifnames():
         raise Exception("Group interface netdev was not removed")
 
+def test_grpform4(dev):
+    """P2P group formation response during p2p_find"""
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[0].discover_peer(addr1)
+    dev[1].p2p_find(social=True)
+    time.sleep(0.4)
+    dev[0].global_request("P2P_CONNECT " + addr1 + " 12345670 display")
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    if ev is None:
+        raise Exception("GO Negotiation RX timed out")
+    time.sleep(0.5)
+    dev[1].p2p_stop_find()
+    dev[0].p2p_stop_find()
+
 def test_grpform_pbc(dev):
     """P2P group formation using PBC and re-init GO Negotiation"""
     [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)

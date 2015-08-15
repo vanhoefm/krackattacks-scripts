@@ -17,11 +17,12 @@ import urlparse
 import urllib
 import xml.etree.ElementTree as ET
 import StringIO
+import SocketServer
 
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail, skip_with_fips
+from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -981,6 +982,93 @@ def _test_ap_wps_er_add_enrollee(dev, apdev):
         time.sleep(0.1)
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not removed")
+
+def test_ap_wps_er_add_enrollee_uuid(dev, apdev):
+    """WPS ER adding a new enrollee identified by UUID"""
+    try:
+        _test_ap_wps_er_add_enrollee_uuid(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_add_enrollee_uuid(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+    logger.info("WPS configuration step")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+
+    logger.info("Start ER")
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    logger.info("Learn AP configuration through UPnP")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not in settings")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL after AP learn timed out")
+    time.sleep(0.1)
+
+    logger.info("Add a specific Enrollee using ER (PBC/UUID)")
+    addr1 = dev[1].p2p_interface_addr()
+    dev[0].dump_monitor()
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[1].dump_monitor()
+    dev[1].request("WPS_PBC %s" % apdev[0]['bssid'])
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee not seen")
+    if addr1 not in ev:
+        raise Exception("Unexpected Enrollee MAC address")
+    uuid = ev.split(' ')[1]
+    dev[0].request("WPS_ER_PBC " + uuid)
+    dev[1].wait_connected(timeout=30)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
+    logger.info("Add a specific Enrollee using ER (PIN/UUID)")
+    pin = dev[2].wps_read_pin()
+    addr2 = dev[2].p2p_interface_addr()
+    dev[0].dump_monitor()
+    dev[2].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[2].dump_monitor()
+    dev[2].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee not seen")
+    if addr2 not in ev:
+        raise Exception("Unexpected Enrollee MAC address")
+    uuid = ev.split(' ')[1]
+    dev[0].request("WPS_ER_PIN " + uuid + " " + pin)
+    dev[2].wait_connected(timeout=30)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
+    logger.info("Stop ER")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_STOP")
 
 def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     """WPS ER connected to AP and adding a new enrollee using PBC"""
@@ -2753,6 +2841,30 @@ def _test_ap_wps_er_oom(dev, apdev):
         if ev is None:
             raise Exception("Enrollee discovery timed out")
 
+def test_ap_wps_er_init_oom(dev, apdev):
+    """WPS ER and OOM during init"""
+    try:
+        _test_ap_wps_er_init_oom(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_init_oom(dev, apdev):
+    with alloc_fail(dev[0], 1, "wps_er_init"):
+        if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
+            raise Exception("WPS_ER_START succeeded during OOM")
+    with alloc_fail(dev[0], 1, "http_server_init"):
+        if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
+            raise Exception("WPS_ER_START succeeded during OOM")
+    with alloc_fail(dev[0], 2, "http_server_init"):
+        if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
+            raise Exception("WPS_ER_START succeeded during OOM")
+    with alloc_fail(dev[0], 1, "eloop_register_sock;wps_er_ssdp_init"):
+        if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
+            raise Exception("WPS_ER_START succeeded during OOM")
+    with fail_test(dev[0], 1, "os_get_random;wps_er_init"):
+        if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
+            raise Exception("WPS_ER_START succeeded during os_get_random failure")
+
 def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
     """WPS events and wpa_cli action script"""
     logdir = os.path.abspath(test_params['logdir'])
@@ -2821,3 +2933,267 @@ def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
 
     if os.path.exists(pidfile):
         raise Exception("PID file not removed")
+
+def test_ap_wps_er_ssdp_proto(dev, apdev):
+    """WPS ER SSDP protocol testing"""
+    try:
+        _test_ap_wps_er_ssdp_proto(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_ssdp_proto(dev, apdev):
+    socket.setdefaulttimeout(1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("239.255.255.250", 1900))
+    if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo foo"):
+        raise Exception("Invalid filter accepted")
+    if "OK" not in dev[0].request("WPS_ER_START ifname=lo 1.2.3.4"):
+        raise Exception("WPS_ER_START with filter failed")
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received SSDP message from %s: %s" % (str(addr), msg))
+    if "M-SEARCH" not in msg:
+        raise Exception("Not an M-SEARCH")
+    sock.sendto("FOO", addr)
+    time.sleep(0.1)
+    dev[0].request("WPS_ER_STOP")
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received SSDP message from %s: %s" % (str(addr), msg))
+    if "M-SEARCH" not in msg:
+        raise Exception("Not an M-SEARCH")
+    sock.sendto("FOO", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nFOO\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nNTS:foo\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nNTS:ssdp:byebye\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\ncache-control:   foo=1\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\ncache-control:   max-age=1\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nusn:\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nusn:foo\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nusn:   uuid:\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nusn:   uuid:     \r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nusn:   uuid:     foo\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nNTS:ssdp:byebye\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:foo\r\n\r\n", addr)
+    with alloc_fail(dev[0], 1, "wps_er_ap_add"):
+        sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:foo\r\ncache-control:max-age=1\r\n\r\n", addr)
+        time.sleep(0.1)
+    with alloc_fail(dev[0], 2, "wps_er_ap_add"):
+        sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:foo\r\ncache-control:max-age=1\r\n\r\n", addr)
+        time.sleep(0.1)
+
+    # Add an AP with bogus URL
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:foo\r\ncache-control:max-age=1\r\n\r\n", addr)
+    # Update timeout on AP without updating URL
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:http://127.0.0.1:12345/foo.xml\r\ncache-control:max-age=1\r\n\r\n", addr)
+    ev = dev[0].wait_event(["WPS-ER-AP-REMOVE"], timeout=5)
+    if ev is None:
+        raise Exception("No WPS-ER-AP-REMOVE event on max-age timeout")
+
+    # Add an AP with a valid URL (but no server listing to it)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:http://127.0.0.1:12345/foo.xml\r\ncache-control:max-age=1\r\n\r\n", addr)
+    ev = dev[0].wait_event(["WPS-ER-AP-REMOVE"], timeout=5)
+    if ev is None:
+        raise Exception("No WPS-ER-AP-REMOVE event on max-age timeout")
+
+    sock.close()
+
+wps_event_url = None
+
+class WPSAPHTTPServer(SocketServer.StreamRequestHandler):
+    def handle(self):
+        data = self.rfile.readline().strip()
+        logger.info("HTTP server received: " + data)
+        while True:
+            hdr = self.rfile.readline().strip()
+            if len(hdr) == 0:
+                break
+            logger.info("HTTP header: " + hdr)
+            if "CALLBACK:" in hdr:
+                global wps_event_url
+                wps_event_url = hdr.split(' ')[1].strip('<>')
+
+        if "GET /foo.xml" in data:
+            payload = '''<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+<specVersion>
+<major>1</major>
+<minor>0</minor>
+</specVersion>
+<device>
+<deviceType>urn:schemas-wifialliance-org:device:WFADevice:1</deviceType>
+<friendlyName>WPS Access Point</friendlyName>
+<manufacturer>Company</manufacturer>
+<modelName>WAP</modelName>
+<modelNumber>123</modelNumber>
+<serialNumber>12345</serialNumber>
+<UDN>uuid:27ea801a-9e5c-4e73-bd82-f89cbcd10d7e</UDN>
+<serviceList>
+<service>
+<serviceType>urn:schemas-wifialliance-org:service:WFAWLANConfig:1</serviceType>
+<serviceId>urn:wifialliance-org:serviceId:WFAWLANConfig1</serviceId>
+<SCPDURL>wps_scpd.xml</SCPDURL>
+<controlURL>wps_control</controlURL>
+<eventSubURL>wps_event</eventSubURL>
+</service>
+</serviceList>
+</device>
+</root>
+'''
+            hdr = 'HTTP/1.1 200 OK\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+
+        if "POST /wps_control" in data:
+            payload = '''<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<s:Body>
+<u:GetDeviceInfoResponse xmlns:u="urn:schemas-wifialliance-org:service:WFAWLANConfig:1">
+<NewDeviceInfo>EEoAARAQIgABBBBHABAn6oAanlxOc72C+Jy80Q1+ECAABgIAAAADABAaABCJZ7DPtbU3Ust9
+Z3wJF07WEDIAwH45D3i1OqB7eJGwTzqeapS71h3KyXncK2xJZ+xqScrlorNEg6LijBJzG2Ca
++FZli0iliDJd397yAx/jk4nFXco3q5ylBSvSw9dhJ5u1xBKSnTilKGlUHPhLP75PUqM3fot9
+7zwtFZ4bx6x1sBA6oEe2d0aUJmLumQGCiKEIWlnxs44zego/2tAe81bDzdPBM7o5HH/FUhD+
+KoGzFXp51atP+1n9Vta6AkI0Vye99JKLcC6Md9dMJltSVBgd4Xc4lRAEAAIAIxAQAAIADRAN
+AAEBEAgAAgAEEEQAAQIQIQAHQ29tcGFueRAjAANXQVAQJAADMTIzEEIABTEyMzQ1EFQACAAG
+AFDyBAABEBEAC1dpcmVsZXNzIEFQEDwAAQEQAgACAAAQEgACAAAQCQACAAAQLQAEgQIDABBJ
+AAYANyoAASA=
+</NewDeviceInfo>
+</u:GetDeviceInfoResponse>
+</s:Body>
+</s:Envelope>
+'''
+            hdr = 'HTTP/1.1 200 OK\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+
+        if "SUBSCRIBE /wps_event" in data:
+            payload = ""
+            hdr = 'HTTP/1.1 200 OK\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'SID: uuid:7eb3342a-8a5f-47fe-a585-0785bfec6d8a\r\n' + \
+                  'Timeout: Second-1801\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+
+def test_ap_wps_er_http_proto(dev, apdev):
+    """WPS ER HTTP protocol testing"""
+    try:
+        _test_ap_wps_er_http_proto(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_http_proto(dev, apdev):
+    uuid = '27ea801a-9e5c-4e73-bd82-f89cbcd10d7e'
+    socket.setdefaulttimeout(1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("239.255.255.250", 1900))
+    dev[0].request("WPS_ER_START ifname=lo")
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received SSDP message from %s: %s" % (str(addr), msg))
+    if "M-SEARCH" not in msg:
+        raise Exception("Not an M-SEARCH")
+
+    # Add an AP with a valid URL and server listing to it
+    server = SocketServer.TCPServer(("127.0.0.1", 12345), WPSAPHTTPServer)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:http://127.0.0.1:12345/foo.xml\r\ncache-control:max-age=1\r\n\r\n", addr)
+    server.timeout = 1
+    global wps_event_url
+    wps_event_url = None
+    server.handle_request()
+    server.handle_request()
+    server.handle_request()
+    server.server_close()
+    if wps_event_url is None:
+        raise Exception("Did not get event URL")
+    logger.info("Event URL: " + wps_event_url)
+
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("No WPS-ER-AP-ADD event")
+    if uuid not in ev:
+        raise Exception("UUID mismatch")
+
+    sock.close()
+
+    logger.info("Valid Probe Request notification")
+    url = urlparse.urlparse(wps_event_url)
+    conn = httplib.HTTPConnection(url.netloc)
+    payload = '''<?xml version="1.0" encoding="utf-8"?>
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+<e:property><STAStatus>1</STAStatus></e:property>
+<e:property><APStatus>1</APStatus></e:property>
+<e:property><WLANEvent>ATAyOjAwOjAwOjAwOjAwOjAwEEoAARAQOgABAhAIAAIxSBBHABA2LbR7pTpRkYj7VFi5hrLk
+EFQACAAAAAAAAAAAEDwAAQMQAgACAAAQCQACAAAQEgACAAAQIQABIBAjAAEgECQAASAQEQAI
+RGV2aWNlIEEQSQAGADcqAAEg
+</WLANEvent></e:property>
+</e:propertyset>
+'''
+    headers = { "Content-type": 'text/xml; charset="utf-8"',
+                "Server": "Unspecified, UPnP/1.0, Unspecified",
+                "HOST": url.netloc,
+                "NT": "upnp:event",
+                "SID": "uuid:" + uuid,
+                "SEQ": "0",
+                "Content-Length": str(len(payload)) }
+    conn.request("NOTIFY", url.path, payload, headers)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=5)
+    if ev is None:
+        raise Exception("No WPS-ER-ENROLLEE-ADD event")
+    if "362db47b-a53a-5191-88fb-5458b986b2e4" not in ev:
+        raise Exception("No Enrollee UUID match")
+
+    logger.info("Incorrect event URL AP id")
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("NOTIFY", url.path + '123', payload, headers)
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    logger.info("Missing AP id")
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("NOTIFY", '/event/' + url.path.split('/')[2],
+                 payload, headers)
+    time.sleep(0.1)
+
+    logger.info("Incorrect event URL event id")
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("NOTIFY", '/event/123456789/123', payload, headers)
+    time.sleep(0.1)
+
+    logger.info("Incorrect event URL prefix")
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("NOTIFY", '/foobar/123456789/123', payload, headers)
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    logger.info("Unsupported request")
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("FOOBAR", '/foobar/123456789/123', payload, headers)
+    resp = conn.getresponse()
+    if resp.status != 501:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    logger.info("Unsupported request and OOM")
+    with alloc_fail(dev[0], 1, "wps_er_http_req"):
+        conn = httplib.HTTPConnection(url.netloc)
+        conn.request("FOOBAR", '/foobar/123456789/123', payload, headers)
+        time.sleep(0.5)

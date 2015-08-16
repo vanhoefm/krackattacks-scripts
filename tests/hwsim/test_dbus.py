@@ -3051,6 +3051,7 @@ def test_dbus_p2p_autogo(dev, apdev):
             TestDbus.__init__(self, bus)
             self.first = True
             self.waiting_end = False
+            self.exceptions = False
             self.deauthorized = False
             self.done = False
 
@@ -3087,14 +3088,17 @@ def test_dbus_p2p_autogo(dev, apdev):
             role = self.g_if_obj.Get(WPAS_DBUS_IFACE_P2PDEVICE, "Role",
                                      dbus_interface=dbus.PROPERTIES_IFACE)
             if role != "GO":
+                self.exceptions = True
                 raise Exception("Unexpected role reported: " + role)
             group = self.g_if_obj.Get(WPAS_DBUS_IFACE_P2PDEVICE, "Group",
                                       dbus_interface=dbus.PROPERTIES_IFACE)
             if group != properties['group_object']:
+                self.exceptions = True
                 raise Exception("Unexpected Group reported: " + str(group))
             go = self.g_if_obj.Get(WPAS_DBUS_IFACE_P2PDEVICE, "PeerGO",
                                    dbus_interface=dbus.PROPERTIES_IFACE)
             if go != '/':
+                self.exceptions = True
                 raise Exception("Unexpected PeerGO value: " + str(go))
             if self.first:
                 self.first = False
@@ -3152,9 +3156,11 @@ def test_dbus_p2p_autogo(dev, apdev):
             wps = dbus.Interface(self.g_if_obj, WPAS_DBUS_IFACE_WPS)
             try:
                 wps.Start(params)
+                self.exceptions = True
                 raise Exception("Invalid WPS.Start() accepted")
             except dbus.exceptions.DBusException, e:
                 if "InvalidArgs" not in str(e):
+                    self.exceptions = True
                     raise Exception("Unexpected error message: " + str(e))
             params = { 'Role': 'registrar',
                        'P2PDeviceAddress': self.peer['DeviceAddress'],
@@ -3169,9 +3175,12 @@ def test_dbus_p2p_autogo(dev, apdev):
             res = peer_obj.GetAll(WPAS_DBUS_P2P_PEER,
                                   dbus_interface=dbus.PROPERTIES_IFACE,
                                   byte_arrays=True)
+            logger.debug("Peer properties: " + str(res))
             if 'Groups' not in res or len(res['Groups']) != 1:
+                self.exceptions = True
                 raise Exception("Unexpected number of peer Groups entries")
             if res['Groups'][0] != self.group:
+                self.exceptions = True
                 raise Exception("Unexpected peer Groups[0] value")
 
             g_obj = bus.get_object(WPAS_DBUS_SERVICE, self.group)
@@ -3180,6 +3189,7 @@ def test_dbus_p2p_autogo(dev, apdev):
                                byte_arrays=True)
             logger.debug("Group properties: " + str(res))
             if 'Members' not in res or len(res['Members']) != 1:
+                self.exceptions = True
                 raise Exception("Unexpected number of group members")
 
             ext = dbus.ByteArray("\x11\x22\x33\x44")
@@ -3197,8 +3207,10 @@ def test_dbus_p2p_autogo(dev, apdev):
                                dbus_interface=dbus.PROPERTIES_IFACE,
                                byte_arrays=True)
             if len(res) != 1:
+                self.exceptions = True
                 raise Exception("Unexpected number of vendor extensions")
             if res[0] != ext:
+                self.exceptions = True
                 raise Exception("Vendor extension value changed")
 
             # And now verify that the more appropriate encoding is accepted as
@@ -3210,8 +3222,10 @@ def test_dbus_p2p_autogo(dev, apdev):
                              dbus_interface=dbus.PROPERTIES_IFACE,
                              byte_arrays=True)
             if len(res) != 2:
+                self.exceptions = True
                 raise Exception("Unexpected number of vendor extensions")
             if res[0] != res2[0] or res[1] != res2[1]:
+                self.exceptions = True
                 raise Exception("Vendor extension value changed")
 
             for i in range(10):
@@ -3219,36 +3233,44 @@ def test_dbus_p2p_autogo(dev, apdev):
             try:
                 g_obj.Set(WPAS_DBUS_GROUP, 'WPSVendorExtensions', res,
                           dbus_interface=dbus.PROPERTIES_IFACE)
+                self.exceptions = True
                 raise Exception("Invalid Set(WPSVendorExtensions) accepted")
             except dbus.exceptions.DBusException, e:
                 if "Error.Failed" not in str(e):
+                    self.exceptions = True
                     raise Exception("Unexpected error message for invalid Set(WPSVendorExtensions): " + str(e))
 
             vals = dbus.Dictionary({ 'Foo': [ ext ]}, signature='sv')
             try:
                 g_obj.Set(WPAS_DBUS_GROUP, 'WPSVendorExtensions', vals,
                           dbus_interface=dbus.PROPERTIES_IFACE)
+                self.exceptions = True
                 raise Exception("Invalid Set(WPSVendorExtensions) accepted")
             except dbus.exceptions.DBusException, e:
                 if "InvalidArgs" not in str(e):
+                    self.exceptions = True
                     raise Exception("Unexpected error message for invalid Set(WPSVendorExtensions): " + str(e))
 
             vals = [ "foo" ]
             try:
                 g_obj.Set(WPAS_DBUS_GROUP, 'WPSVendorExtensions', vals,
                           dbus_interface=dbus.PROPERTIES_IFACE)
+                self.exceptions = True
                 raise Exception("Invalid Set(WPSVendorExtensions) accepted")
             except dbus.exceptions.DBusException, e:
                 if "Error.Failed" not in str(e):
+                    self.exceptions = True
                     raise Exception("Unexpected error message for invalid Set(WPSVendorExtensions): " + str(e))
 
             vals = [ [ "foo" ] ]
             try:
                 g_obj.Set(WPAS_DBUS_GROUP, 'WPSVendorExtensions', vals,
                           dbus_interface=dbus.PROPERTIES_IFACE)
+                self.exceptions = True
                 raise Exception("Invalid Set(WPSVendorExtensions) accepted")
             except dbus.exceptions.DBusException, e:
                 if "Error.Failed" not in str(e):
+                    self.exceptions = True
                     raise Exception("Unexpected error message for invalid Set(WPSVendorExtensions): " + str(e))
 
             p2p.RemoveClient({ 'peer': self.peer_path })
@@ -3271,7 +3293,7 @@ def test_dbus_p2p_autogo(dev, apdev):
             return False
 
         def success(self):
-            return self.done and self.deauthorized
+            return self.done and self.deauthorized and not self.exceptions
 
     with TestDbusP2p(bus) as t:
         if not t.success():

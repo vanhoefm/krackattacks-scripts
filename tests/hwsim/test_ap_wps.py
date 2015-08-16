@@ -2670,6 +2670,25 @@ def test_ap_wps_priority(dev, apdev):
     finally:
         dev[0].request("SET wps_priority 0")
 
+def test_ap_wps_and_non_wps(dev, apdev):
+    """WPS and non-WPS AP in single hostapd process"""
+    params = { "ssid": "wps", "eap_server": "1", "wps_state": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = { "ssid": "no wps" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    appin = hapd.request("WPS_AP_PIN random")
+    if "FAIL" in appin:
+        raise Exception("Could not generate random AP PIN")
+    if appin not in hapd.request("WPS_AP_PIN get"):
+        raise Exception("Could not fetch current AP PIN")
+
+    if "FAIL" in hapd.request("WPS_PBC"):
+        raise Exception("WPS_PBC failed")
+    if "FAIL" in hapd.request("WPS_CANCEL"):
+        raise Exception("WPS_CANCEL failed")
+
 def test_ap_wps_init_oom(dev, apdev):
     """Initial AP configuration and OOM during PSK generation"""
     ssid = "test-wps"

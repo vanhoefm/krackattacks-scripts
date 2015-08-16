@@ -1074,10 +1074,6 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 						     sta->addr);
 	}
 #endif /* CONFIG_FST */
-
-	if (hapd->sta_authorized_cb)
-		hapd->sta_authorized_cb(hapd->sta_authorized_cb_ctx,
-					sta->addr, authorized, dev_addr);
 }
 
 

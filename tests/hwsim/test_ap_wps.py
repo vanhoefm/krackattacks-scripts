@@ -2011,12 +2011,12 @@ def test_ap_wps_upnp(dev, apdev):
     conn.request("POST", "hello", "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 404:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     conn.request("UNKNOWN", "hello", "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 501:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     headers = { "Content-type": 'text/xml; charset="utf-8"',
                 "SOAPAction": '"urn:some-unknown-action#GetDeviceInfo"' }
@@ -2024,13 +2024,13 @@ def test_ap_wps_upnp(dev, apdev):
     conn.request("POST", ctrlurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 401:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("GetDeviceInfo without SOAPAction header")
     resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo",
                             include_soap_action=False)
     if resp.status != 401:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("GetDeviceInfo with invalid SOAPAction header")
     for act in [ "foo",
@@ -2041,11 +2041,11 @@ def test_ap_wps_upnp(dev, apdev):
                                 include_soap_action=False,
                                 soap_action_override=act)
         if resp.status != 401:
-            raise Exception("Unexpected HTTP response: %s" % resp.status)
+            raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     dev = resp.read()
     if "NewDeviceInfo" not in dev:
         raise Exception("Unexpected GetDeviceInfo response")
@@ -2053,22 +2053,22 @@ def test_ap_wps_upnp(dev, apdev):
     logger.debug("PutMessage without required parameters")
     resp = upnp_soap_action(conn, ctrlurl.path, "PutMessage")
     if resp.status != 600:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("PutWLANResponse without required parameters")
     resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse")
     if resp.status != 600:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("SetSelectedRegistrar from unregistered ER")
     resp = upnp_soap_action(conn, ctrlurl.path, "SetSelectedRegistrar")
     if resp.status != 501:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Unknown action")
     resp = upnp_soap_action(conn, ctrlurl.path, "Unknown")
     if resp.status != 401:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
 def test_ap_wps_upnp_subscribe(dev, apdev):
     """WPS AP and UPnP event subscription"""
@@ -2087,19 +2087,19 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", "hello", "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     headers = { "NT": "upnp:event",
                 "timeout": "Second-1234" }
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     headers = { "callback": '<http://127.0.0.1:12345/event>',
                 "NT": "upnp:foobar",
@@ -2107,7 +2107,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Valid subscription")
     headers = { "callback": '<http://127.0.0.1:12345/event>',
@@ -2116,7 +2116,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     sid = resp.getheader("sid")
     logger.debug("Subscription SID " + sid)
 
@@ -2127,7 +2127,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid re-subscription")
     headers = { "NT": "upnp:event",
@@ -2136,7 +2136,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid re-subscription")
     headers = { "callback": '<http://127.0.0.1:12345/event>',
@@ -2146,7 +2146,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("SID mismatch in re-subscription")
     headers = { "NT": "upnp:event",
@@ -2155,7 +2155,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Valid re-subscription")
     headers = { "NT": "upnp:event",
@@ -2164,7 +2164,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     sid2 = resp.getheader("sid")
     logger.debug("Subscription SID " + sid2)
 
@@ -2178,47 +2178,47 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid unsubscription")
     headers = { "sid": sid }
     conn.request("UNSUBSCRIBE", "/hello", "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     headers = { "foo": "bar" }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Valid unsubscription")
     headers = { "sid": sid }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Unsubscription for not existing SID")
     headers = { "sid": sid }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 412:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid unsubscription")
     headers = { "sid": " \t \tfoo" }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid unsubscription")
     headers = { "sid": "uuid:\t \tfoo" }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Invalid unsubscription")
     headers = { "NT": "upnp:event",
@@ -2226,13 +2226,13 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     headers = { "callback": '<http://127.0.0.1:12345/event>',
                 "sid": sid }
     conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 400:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
 
     logger.debug("Valid subscription with multiple callbacks")
     headers = { "callback": '<http://127.0.0.1:12345/event> <http://127.0.0.1:12345/event>\t<http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event><http://127.0.0.1:12345/event>',
@@ -2241,7 +2241,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
     resp = conn.getresponse()
     if resp.status != 200:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     sid = resp.getheader("sid")
     logger.debug("Subscription SID " + sid)
 
@@ -2334,7 +2334,7 @@ def test_ap_wps_upnp_http_proto(dev, apdev):
     conn.request("POST", "hello", 5000 * 'A' + "\r\n\r\n")
     resp = conn.getresponse()
     if resp.status != 404:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     conn.close()
 
     conn.request("POST", "hello", 60000 * 'A' + "\r\n\r\n")
@@ -2361,7 +2361,7 @@ def test_ap_wps_upnp_http_proto_chunked(dev, apdev):
                  headers)
     resp = conn.getresponse()
     if resp.status != 404:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     conn.close()
 
     conn.putrequest("POST", "hello")
@@ -2373,7 +2373,7 @@ def test_ap_wps_upnp_http_proto_chunked(dev, apdev):
     conn.send("0\r\n\r\n")
     resp = conn.getresponse()
     if resp.status != 404:
-        raise Exception("Unexpected HTTP response: %s" % resp.status)
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
     conn.close()
 
     conn.putrequest("POST", "hello")

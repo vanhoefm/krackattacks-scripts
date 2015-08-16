@@ -761,6 +761,7 @@ def test_fst_sta_connect_to_non_fst_ap(dev, apdev, test_params):
         finally:
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_sta_connect_to_fst_ap(dev, apdev, test_params):
     """FST STA connecting to FST AP"""
@@ -848,7 +849,7 @@ def test_fst_second_sta_connect_to_non_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
-
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_second_sta_connect_to_fst_ap(dev, apdev, test_params):
     """FST STA 2nd connecting to FST AP"""
@@ -879,6 +880,7 @@ def test_fst_second_sta_connect_to_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_disconnect_1_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
     """FST disconnect 1 of 2 STAs from non-FST AP"""
@@ -910,7 +912,7 @@ def test_fst_disconnect_1_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
-
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_disconnect_1_of_2_stas_from_fst_ap(dev, apdev, test_params):
     """FST disconnect 1 of 2 STAs from FST AP"""
@@ -942,6 +944,7 @@ def test_fst_disconnect_1_of_2_stas_from_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_disconnect_2_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
     """FST disconnect 2 of 2 STAs from non-FST AP"""
@@ -975,6 +978,7 @@ def test_fst_disconnect_2_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_disconnect_2_of_2_stas_from_fst_ap(dev, apdev, test_params):
     """FST disconnect 2 of 2 STAs from FST AP"""
@@ -1025,6 +1029,7 @@ def test_fst_disconnect_2_of_2_stas_from_fst_ap(dev, apdev, test_params):
             sta1.disconnect()
             sta2.disconnect_from_external_ap()
             fst_module_aux.stop_two_ap_sta_pairs(fst_ap1, fst_ap2, sta1, sta2)
+            hostapd.HostapdGlobal().remove(iface)
 
 def test_fst_disconnect_non_fst_sta(dev, apdev, test_params):
     """FST disconnect non-FST STA"""

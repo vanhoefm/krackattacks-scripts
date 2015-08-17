@@ -1142,7 +1142,7 @@ int tls_connection_shutdown(void *ssl_ctx, struct tls_connection *conn)
 	 * and "close notify" shutdown alert would confuse AS. */
 	SSL_set_quiet_shutdown(conn->ssl, 1);
 	SSL_shutdown(conn->ssl);
-	return 0;
+	return SSL_clear(conn->ssl) == 1 ? 0 : -1;
 }
 
 

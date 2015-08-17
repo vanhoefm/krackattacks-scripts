@@ -2076,6 +2076,8 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 	pkey = NULL;
 	cert = NULL;
 	certs = NULL;
+	if (!passwd)
+		passwd = "";
 	if (!PKCS12_parse(p12, passwd, &pkey, &cert, &certs)) {
 		tls_show_errors(MSG_DEBUG, __func__,
 				"Failed to parse PKCS12 file");

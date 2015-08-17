@@ -1140,6 +1140,11 @@ endif
 ifneq ($(CONFIG_TLS), openssl)
 NEED_INTERNAL_AES_WRAP=y
 endif
+ifdef CONFIG_OPENSSL_INTERNAL_AES_WRAP
+# Seems to be needed at least with BoringSSL
+NEED_INTERNAL_AES_WRAP=y
+L_CFLAGS += -DCONFIG_OPENSSL_INTERNAL_AES_WRAP
+endif
 ifdef CONFIG_FIPS
 # Have to use internal AES key wrap routines to use OpenSSL EVP since the
 # OpenSSL AES_wrap_key()/AES_unwrap_key() API is not available in FIPS mode.

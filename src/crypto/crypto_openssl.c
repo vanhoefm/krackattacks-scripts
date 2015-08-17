@@ -304,6 +304,7 @@ void aes_decrypt_deinit(void *ctx)
 
 
 #ifndef CONFIG_FIPS
+#ifndef CONFIG_OPENSSL_INTERNAL_AES_WRAP
 
 int aes_wrap(const u8 *kek, size_t kek_len, int n, const u8 *plain, u8 *cipher)
 {
@@ -331,6 +332,7 @@ int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
 	return res <= 0 ? -1 : 0;
 }
 
+#endif /* CONFIG_OPENSSL_INTERNAL_AES_WRAP */
 #endif /* CONFIG_FIPS */
 
 

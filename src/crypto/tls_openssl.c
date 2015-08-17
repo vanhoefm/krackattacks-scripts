@@ -3082,8 +3082,14 @@ openssl_connection_handshake(struct tls_connection *conn,
 		return NULL;
 	}
 
-	if (SSL_is_init_finished(conn->ssl) && appl_data && in_data)
-		*appl_data = openssl_get_appl_data(conn, wpabuf_len(in_data));
+	if (SSL_is_init_finished(conn->ssl)) {
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: Handshake finished - resumed=%d",
+			   tls_connection_resumed(conn->ssl_ctx, conn));
+		if (appl_data && in_data)
+			*appl_data = openssl_get_appl_data(conn,
+							   wpabuf_len(in_data));
+	}
 
 	if (conn->invalid_hb_used) {
 		wpa_printf(MSG_INFO, "TLS: Heartbeat attack detected - do not send response");

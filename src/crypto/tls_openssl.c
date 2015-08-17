@@ -3788,6 +3788,16 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		SSL_CTX_set_tlsext_status_cb(ssl_ctx, ocsp_resp_cb);
 		SSL_CTX_set_tlsext_status_arg(ssl_ctx, conn);
 	}
+#else /* HAVE_OCSP */
+	if (params->flags & TLS_CONN_REQUIRE_OCSP) {
+		wpa_printf(MSG_INFO,
+			   "OpenSSL: No OCSP support included - reject configuration");
+		return -1;
+	}
+	if (params->flags & TLS_CONN_REQUEST_OCSP) {
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: No OCSP support included - allow optional OCSP case to continue");
+	}
 #endif /* HAVE_OCSP */
 
 	conn->flags = params->flags;

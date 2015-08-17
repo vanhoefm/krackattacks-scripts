@@ -2125,6 +2125,7 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 			}
 		}
 		sk_X509_free(certs);
+#ifndef OPENSSL_IS_BORINGSSL
 		res = SSL_build_cert_chain(ssl,
 					   SSL_BUILD_CHAIN_FLAG_CHECK |
 					   SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR);
@@ -2135,6 +2136,7 @@ static int tls_parse_pkcs12(SSL_CTX *ssl_ctx, SSL *ssl, PKCS12 *p12,
 			wpa_printf(MSG_DEBUG,
 				   "TLS: Ignore certificate chain verification error when building chain with PKCS#12 extra certificates");
 		}
+#endif /* OPENSSL_IS_BORINGSSL */
 		/*
 		 * Try to continue regardless of result since it is possible for
 		 * the extra certificates not to be required.

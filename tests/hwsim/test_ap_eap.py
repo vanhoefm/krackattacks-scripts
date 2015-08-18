@@ -1864,6 +1864,7 @@ def test_ap_wpa2_eap_pwd_nthash(dev, apdev):
 def test_ap_wpa2_eap_pwd_groups(dev, apdev):
     """WPA2-Enterprise connection using various EAP-pwd groups"""
     check_eap_capa(dev[0], "PWD")
+    tls = dev[0].request("GET tls_library")
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
                "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf" }
@@ -1871,7 +1872,16 @@ def test_ap_wpa2_eap_pwd_groups(dev, apdev):
         params['pwd_group'] = str(i)
         hostapd.add_ap(apdev[0]['ifname'], params)
         dev[0].request("REMOVE_NETWORK all")
-        eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
+        try:
+            eap_connect(dev[0], apdev[0], "PWD", "pwd user",
+                        password="secret password")
+        except:
+            if "BoringSSL" in tls and i in [ 25 ]:
+                logger.info("Ignore connection failure with group %d with BoringSSL" % i)
+                dev[0].request("DISCONNECT")
+                time.sleep(0.1)
+                continue
+            raise
 
 def test_ap_wpa2_eap_pwd_invalid_group(dev, apdev):
     """WPA2-Enterprise connection using invalid EAP-pwd group"""

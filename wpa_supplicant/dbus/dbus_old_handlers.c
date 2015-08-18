@@ -812,7 +812,7 @@ out:
 static const char * const dont_quote[] = {
 	"key_mgmt", "proto", "pairwise", "auth_alg", "group", "eap",
 	"opensc_engine_path", "pkcs11_engine_path", "pkcs11_module_path",
-	"bssid", NULL
+	"bssid", "scan_freq", "freq_list", NULL
 };
 
 

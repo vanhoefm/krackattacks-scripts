@@ -48,6 +48,11 @@ def check_cert_probe_support(dev):
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("Certificate probing not supported with this TLS library: " + tls)
 
+def check_ocsp_support(dev):
+    tls = dev.request("GET tls_library")
+    if "BoringSSL" in tls:
+        raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -2453,6 +2458,7 @@ def test_ap_wpa2_eap_fast_server_oom(dev, apdev):
 
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
+    check_ocsp_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
@@ -2470,6 +2476,7 @@ def int_eap_server_params():
 
 def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP data"""
+    check_ocsp_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-req.der"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2495,6 +2502,7 @@ def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
 
 def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP response"""
+    check_ocsp_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-server-cache.der-invalid"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2520,6 +2528,7 @@ def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
 
 def test_ap_wpa2_eap_tls_ocsp_unknown_sign(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and unknown OCSP signer"""
+    check_ocsp_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-server-cache.der-unknown-sign"
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -2545,6 +2554,7 @@ def test_ap_wpa2_eap_tls_ocsp_unknown_sign(dev, apdev):
 
 def test_ap_wpa2_eap_ttls_ocsp_revoked(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-TTLS and OCSP status revoked"""
+    check_ocsp_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-server-cache-revoked.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -2575,6 +2585,7 @@ def test_ap_wpa2_eap_ttls_ocsp_revoked(dev, apdev, params):
 
 def test_ap_wpa2_eap_ttls_ocsp_unknown(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-TTLS and OCSP status revoked"""
+    check_ocsp_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-server-cache-unknown.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")

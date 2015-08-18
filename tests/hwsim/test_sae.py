@@ -159,7 +159,14 @@ def test_sae_groups(dev, apdev):
                 continue
             logger.info("Connection with heavy SAE group " + g)
         else:
-            dev[0].wait_connected(timeout=10, error="Connection timed out with group " + g)
+            ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+            if ev is None:
+                if "BoringSSL" in tls and int(g) in [ 25 ]:
+                    logger.info("Ignore connection failure with group " + g + " with BoringSSL")
+                    dev[0].remove_network(id)
+                    dev[0].dump_monitor()
+                    continue
+                raise Exception("Connection timed out with group " + g)
         if dev[0].get_status_field('sae_group') != g:
             raise Exception("Expected SAE group not used")
         dev[0].remove_network(id)

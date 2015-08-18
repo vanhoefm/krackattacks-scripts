@@ -386,6 +386,9 @@ def test_sae_oom_wpas(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].request("SET sae_groups 25")
+    tls = dev[0].request("GET tls_library")
+    if "BoringSSL" in tls:
+        dev[0].request("SET sae_groups 26")
     with alloc_fail(dev[0], 1, "sae_set_group"):
         dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")

@@ -516,6 +516,7 @@ static int test_key_wrap(void)
 		0xAE, 0xF3, 0x4B, 0xD8, 0xFB, 0x5A, 0x7B, 0x82,
 		0x9D, 0x3E, 0x86, 0x23, 0x71, 0xD2, 0xCF, 0xE5
 	};
+#ifndef CONFIG_BORINGSSL
 	/* RFC 3394 - Test vector 4.2 */
 	u8 kek42[] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -531,6 +532,7 @@ static int test_key_wrap(void)
 		0xF9, 0x2B, 0x5B, 0x97, 0xC0, 0x50, 0xAE, 0xD2,
 		0x46, 0x8A, 0xB8, 0xA1, 0x7A, 0xD8, 0x4E, 0x5D
 	};
+#endif /* CONFIG_BORINGSSL */
 	/* RFC 3394 - Test vector 4.3 */
 	u8 kek43[] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -547,6 +549,7 @@ static int test_key_wrap(void)
 		0x63, 0xE9, 0x77, 0x79, 0x05, 0x81, 0x8A, 0x2A,
 		0x93, 0xC8, 0x19, 0x1E, 0x7D, 0x6E, 0x8A, 0xE7,
 	};
+#ifndef CONFIG_BORINGSSL
 	/* RFC 3394 - Test vector 4.4 */
 	u8 kek44[] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -564,6 +567,7 @@ static int test_key_wrap(void)
 		0xE1, 0xC6, 0xC7, 0xDD, 0xEE, 0x72, 0x5A, 0x93,
 		0x6B, 0xA8, 0x14, 0x91, 0x5C, 0x67, 0x62, 0xD2
 	};
+#endif /* CONFIG_BORINGSSL */
 	/* RFC 3394 - Test vector 4.5 */
 	u8 kek45[] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -624,6 +628,7 @@ static int test_key_wrap(void)
 		ret++;
 	}
 
+#ifndef CONFIG_BORINGSSL
 	wpa_printf(MSG_INFO, "RFC 3394 - Test vector 4.2");
 	if (aes_wrap(kek42, sizeof(kek42), sizeof(plain42) / 8, plain42,
 		     result)) {
@@ -643,6 +648,7 @@ static int test_key_wrap(void)
 		wpa_printf(MSG_ERROR, "AES-UNWRAP-192 failed");
 		ret++;
 	}
+#endif /* CONFIG_BORINGSSL */
 
 	wpa_printf(MSG_INFO, "RFC 3394 - Test vector 4.3");
 	if (aes_wrap(kek43, sizeof(kek43), sizeof(plain43) / 8, plain43,
@@ -664,6 +670,7 @@ static int test_key_wrap(void)
 		ret++;
 	}
 
+#ifndef CONFIG_BORINGSSL
 	wpa_printf(MSG_INFO, "RFC 3394 - Test vector 4.4");
 	if (aes_wrap(kek44, sizeof(kek44), sizeof(plain44) / 8, plain44,
 		     result)) {
@@ -683,6 +690,7 @@ static int test_key_wrap(void)
 		wpa_printf(MSG_ERROR, "AES-UNWRAP-192 failed");
 		ret++;
 	}
+#endif /* CONFIG_BORINGSSL */
 
 	wpa_printf(MSG_INFO, "RFC 3394 - Test vector 4.5");
 	if (aes_wrap(kek45, sizeof(kek45), sizeof(plain45) / 8, plain45,

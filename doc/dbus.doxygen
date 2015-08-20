@@ -1533,6 +1533,16 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
       </dd>
     </dl>
   </li>
+
+  <li>
+    <h3>GroupFormationFailure ( s : reason )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>s : reason</dt>
+      <dd>Reason for failure or empty string if not known.</dd>
+    </dl>
+  </li>
 </ul>
 
 \section dbus_bss fi.w1.wpa_supplicant1.BSS

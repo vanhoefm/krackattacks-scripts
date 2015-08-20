@@ -1857,6 +1857,41 @@ void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 	dbus_message_unref(msg);
 }
 
+
+/**
+ * wpas_dbus_signal_p2p_group_formation_failure - Signals GroupFormationFailure event
+ * @wpa_s: %wpa_supplicant network interface data
+ * @reason: indicates the reason code for group formation failure
+ *
+ * Sends Event dbus signal and string reason code when available.
+ */
+void wpas_dbus_signal_p2p_group_formation_failure(struct wpa_supplicant *wpa_s,
+						  const char *reason)
+{
+	DBusMessage *msg;
+	struct wpas_dbus_priv *iface;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+				      "GroupFormationFailure");
+	if (msg == NULL)
+		return;
+
+	if (dbus_message_append_args(msg, DBUS_TYPE_STRING, &reason,
+				     DBUS_TYPE_INVALID))
+		dbus_connection_send(iface->con, msg, NULL);
+	else
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+
+	dbus_message_unref(msg);
+}
+
 #endif /* CONFIG_P2P */
 
 
@@ -3169,6 +3204,12 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "GroupStarted", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "GroupFormationFailure", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  { "reason", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

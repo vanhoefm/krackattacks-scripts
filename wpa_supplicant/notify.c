@@ -657,6 +657,14 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_p2p_group_formation_failure(struct wpa_supplicant *wpa_s,
+					     const char *reason)
+{
+	/* Notify a group formation failed */
+	wpas_dbus_signal_p2p_group_formation_failure(wpa_s, reason);
+}
+
+
 void wpas_notify_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 				struct wps_event_fail *fail)
 {

@@ -911,7 +911,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 static void wpa_init_conf(struct eapol_test_data *e,
 			  struct wpa_supplicant *wpa_s, const char *authsrv,
 			  int port, const char *secret,
-			  const char *cli_addr)
+			  const char *cli_addr, const char *ifname)
 {
 	struct hostapd_radius_server *as;
 	int res;
@@ -919,7 +919,7 @@ static void wpa_init_conf(struct eapol_test_data *e,
 	wpa_s->bssid[5] = 1;
 	os_memcpy(wpa_s->own_addr, e->own_addr, ETH_ALEN);
 	e->own_ip_addr.s_addr = htonl((127 << 24) | 1);
-	os_strlcpy(wpa_s->ifname, "test", sizeof(wpa_s->ifname));
+	os_strlcpy(wpa_s->ifname, ifname, sizeof(wpa_s->ifname));
 
 	e->radius_conf = os_zalloc(sizeof(struct hostapd_radius_servers));
 	assert(e->radius_conf != NULL);
@@ -1161,7 +1161,7 @@ static void usage(void)
 	       "           [-M<client MAC address>] [-o<server cert file] \\\n"
 	       "           [-N<attr spec>] [-R<PC/SC reader>] "
 	       "[-P<PC/SC PIN>] \\\n"
-	       "           [-A<client IP>]\n"
+	       "           [-A<client IP>] [-i<ifname>]\n"
 	       "eapol_test scard\n"
 	       "eapol_test sim <PIN> <num triplets> [debug]\n"
 	       "\n");
@@ -1216,6 +1216,7 @@ int main(int argc, char *argv[])
 	int timeout = 30;
 	char *pos;
 	struct extra_radius_attr *p = NULL, *p1;
+	const char *ifname = "test";
 
 	if (os_program_init())
 		return -1;
@@ -1231,7 +1232,7 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:A:c:C:eM:nN:o:p:P:r:R:s:St:W");
+		c = getopt(argc, argv, "a:A:c:C:ei:M:nN:o:p:P:r:R:s:St:W");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1249,6 +1250,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'e':
 			eapol_test.req_eap_key_name = 1;
+			break;
+		case 'i':
+			ifname = optarg;
 			break;
 		case 'M':
 			if (hwaddr_aton(optarg, eapol_test.own_addr)) {
@@ -1374,7 +1378,7 @@ int main(int argc, char *argv[])
 	}
 
 	wpa_init_conf(&eapol_test, &wpa_s, as_addr, as_port, as_secret,
-		      cli_addr);
+		      cli_addr, ifname);
 	wpa_s.ctrl_iface = wpa_supplicant_ctrl_iface_init(&wpa_s);
 	if (wpa_s.ctrl_iface == NULL) {
 		printf("Failed to initialize control interface '%s'.\n"

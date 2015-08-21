@@ -2168,7 +2168,7 @@ static int wpa_supplicant_ctrl_iface_log_level(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (cmd && os_strlen(cmd)) {
+	if (os_strlen(cmd)) {
 		int level = str_to_debug_level(cmd);
 		if (level < 0)
 			return -1;

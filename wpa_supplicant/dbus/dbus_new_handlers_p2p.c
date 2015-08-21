@@ -1918,7 +1918,7 @@ dbus_bool_t wpas_dbus_getter_persistent_group_properties(DBusMessageIter *iter,
 
 
 /**
- * wpas_dbus_setter_persistent_group_properties - Get options for a persistent
+ * wpas_dbus_setter_persistent_group_properties - Set options for a persistent
  *	group
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

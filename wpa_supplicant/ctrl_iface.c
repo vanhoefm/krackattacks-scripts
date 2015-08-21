@@ -2744,6 +2744,8 @@ static int wpa_supplicant_ctrl_iface_select_network(
 		}
 	}
 
+	wpa_s->scan_min_time.sec = 0;
+	wpa_s->scan_min_time.usec = 0;
 	wpa_supplicant_select_network(wpa_s, ssid);
 
 	return 0;
@@ -2781,6 +2783,8 @@ static int wpa_supplicant_ctrl_iface_enable_network(
 			return 0;
 		}
 	}
+	wpa_s->scan_min_time.sec = 0;
+	wpa_s->scan_min_time.usec = 0;
 	wpa_supplicant_enable_network(wpa_s, ssid);
 
 	return 0;
@@ -5599,7 +5603,7 @@ static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
 	}
 
 	return wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq, 0, ht40, vht,
-					     NULL, 0);
+					     NULL, 0, 0);
 }
 
 

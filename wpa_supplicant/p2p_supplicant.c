@@ -2890,7 +2890,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 			int go = s->mode == WPAS_MODE_P2P_GO;
 			wpas_p2p_group_add_persistent(
 				wpa_s, s, go, 0, op_freq, 0, 0, NULL,
-				go ? P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0);
+				go ? P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0,
+				1);
 		} else if (bssid) {
 			wpa_s->user_initiated_pd = 0;
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
@@ -3077,7 +3078,7 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 				      channels,
 				      ssid->mode == WPAS_MODE_P2P_GO ?
 				      P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE :
-				      0);
+				      0, 1);
 }
 
 
@@ -3924,7 +3925,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 					persistent_go->mode ==
 					WPAS_MODE_P2P_GO ?
 					P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE :
-					0);
+					0, 0);
 			} else if (response_done) {
 				wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
 			}
@@ -4029,7 +4030,7 @@ static int wpas_prov_disc_resp_cb(void *ctx)
 		wpas_p2p_group_add_persistent(
 			wpa_s, persistent_go, 0, 0, 0, 0, 0, NULL,
 			persistent_go->mode == WPAS_MODE_P2P_GO ?
-			P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0);
+			P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0, 0);
 	} else {
 		wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
 	}
@@ -5793,13 +5794,15 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 
 static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *params, int addr_allocated,
-				 int freq)
+				 int freq, int force_scan)
 {
 	struct wpa_ssid *ssid;
 
 	wpa_s = wpas_p2p_get_group_iface(wpa_s, addr_allocated, 0);
 	if (wpa_s == NULL)
 		return -1;
+	if (force_scan)
+		os_get_reltime(&wpa_s->scan_min_time);
 	wpa_s->p2p_last_4way_hs_fail = NULL;
 
 	wpa_supplicant_ap_deinit(wpa_s);
@@ -5849,7 +5852,7 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid, int addr_allocated,
 				  int force_freq, int neg_freq, int ht40,
 				  int vht, const struct p2p_channels *channels,
-				  int connection_timeout)
+				  int connection_timeout, int force_scan)
 {
 	struct p2p_go_neg_results params;
 	int go = 0, freq;
@@ -5916,7 +5919,8 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				freq = 0;
 		}
 
-		return wpas_start_p2p_client(wpa_s, ssid, addr_allocated, freq);
+		return wpas_start_p2p_client(wpa_s, ssid, addr_allocated, freq,
+					     force_scan);
 	} else {
 		return -1;
 	}

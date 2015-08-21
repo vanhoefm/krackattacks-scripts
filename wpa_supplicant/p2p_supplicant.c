@@ -2171,18 +2171,22 @@ static void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 		wpa_s->pending_interface_name[0] = '\0';
 		group_wpa_s->p2p_in_provisioning = 1;
 
-		if (res->role_go)
+		if (res->role_go) {
 			wpas_start_wps_go(group_wpa_s, res, 1);
-		else
+		} else {
+			os_get_reltime(&group_wpa_s->scan_min_time);
 			wpas_start_wps_enrollee(group_wpa_s, res);
+		}
 	} else {
 		wpa_s->p2p_in_provisioning = 1;
 		wpa_s->global->p2p_group_formation = wpa_s;
 
-		if (res->role_go)
+		if (res->role_go) {
 			wpas_start_wps_go(wpa_s, res, 1);
-		else
+		} else {
+			os_get_reltime(&wpa_s->scan_min_time);
 			wpas_start_wps_enrollee(ctx, res);
+		}
 	}
 
 	wpa_s->p2p_long_listen = 0;

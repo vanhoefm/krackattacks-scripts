@@ -3468,3 +3468,336 @@ def test_rsn_ie_proto_eap_sta(dev, apdev):
         dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
+
+def check_tls_session_resumption_capa(dev, hapd):
+    tls = hapd.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("hostapd TLS library is not OpenSSL: " + tls)
+
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("Session resumption not supported with this TLS library: " + tls)
+
+def test_eap_ttls_pap_session_resumption(dev, apdev):
+    """EAP-TTLS/PAP session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", eap_workaround='0',
+                phase2="auth=PAP")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_ttls_chap_session_resumption(dev, apdev):
+    """EAP-TTLS/CHAP session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_ttls_mschap_session_resumption(dev, apdev):
+    """EAP-TTLS/MSCHAP session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TTLS", "mschap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                domain_suffix_match="server.w1.fi")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_ttls_mschapv2_session_resumption(dev, apdev):
+    """EAP-TTLS/MSCHAPv2 session resumption"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                domain_suffix_match="server.w1.fi")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_ttls_eap_gtc_session_resumption(dev, apdev):
+    """EAP-TTLS/EAP-GTC session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=GTC")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_ttls_no_session_resumption(dev, apdev):
+    """EAP-TTLS session resumption disabled on server"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '0'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", eap_workaround='0',
+                phase2="auth=PAP")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the second connection")
+
+def test_eap_peap_session_resumption(dev, apdev):
+    """EAP-PEAP session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_peap_no_session_resumption(dev, apdev):
+    """EAP-PEAP session resumption disabled on server"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the second connection")
+
+def test_eap_tls_session_resumption(dev, apdev):
+    """EAP-TLS session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the third connection")
+
+def test_eap_tls_session_resumption_expiration(dev, apdev):
+    """EAP-TLS session resumption"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    # Allow multiple attempts since OpenSSL may not expire the cached entry
+    # immediately.
+    for i in range(10):
+        time.sleep(1.2)
+
+        dev[0].request("REAUTHENTICATE")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("EAP success timed out")
+        ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+        if ev is None:
+            raise Exception("Key handshake with the AP timed out")
+        if dev[0].get_status_field("tls_session_reused") == '0':
+            break
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Session resumption used after lifetime expiration")
+
+def test_eap_tls_no_session_resumption(dev, apdev):
+    """EAP-TLS session resumption disabled on server"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the second connection")
+
+def test_eap_tls_session_resumption_radius(dev, apdev):
+    """EAP-TLS session resumption (RADIUS)"""
+    params = { "ssid": "as", "beacon_int": "2000",
+               "radius_server_clients": "auth_serv/radius_clients.conf",
+               "radius_server_auth_port": '18128',
+               "eap_server": "1",
+               "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/ca.pem",
+               "server_cert": "auth_serv/server.pem",
+               "private_key": "auth_serv/server.key",
+               "tls_session_lifetime": "60" }
+    authsrv = hostapd.add_ap(apdev[1]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], authsrv)
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "18128"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
+def test_eap_tls_no_session_resumption_radius(dev, apdev):
+    """EAP-TLS session resumption disabled (RADIUS)"""
+    params = { "ssid": "as", "beacon_int": "2000",
+               "radius_server_clients": "auth_serv/radius_clients.conf",
+               "radius_server_auth_port": '18128',
+               "eap_server": "1",
+               "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/ca.pem",
+               "server_cert": "auth_serv/server.pem",
+               "private_key": "auth_serv/server.key",
+               "tls_session_lifetime": "0" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "18128"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the second connection")

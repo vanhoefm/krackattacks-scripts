@@ -74,6 +74,7 @@ static BIO * BIO_from_keystore(const char *key)
 #endif /* ANDROID */
 
 static int tls_openssl_ref_count = 0;
+static int tls_ex_idx_session = -1;
 
 struct tls_context {
 	void (*event_cb)(void *ctx, enum tls_event ev,
@@ -88,6 +89,7 @@ static struct tls_context *tls_global = NULL;
 
 struct tls_data {
 	SSL_CTX *ssl;
+	unsigned int tls_session_lifetime;
 };
 
 struct tls_connection {
@@ -113,6 +115,7 @@ struct tls_connection {
 	unsigned int cert_probe:1;
 	unsigned int server_cert_only:1;
 	unsigned int invalid_hb_used:1;
+	unsigned int success_data:1;
 
 	u8 srv_cert_hash[32];
 
@@ -748,6 +751,24 @@ static int tls_engine_load_dynamic_opensc(const char *opensc_so_path)
 #endif /* OPENSSL_NO_ENGINE */
 
 
+static void remove_session_cb(SSL_CTX *ctx, SSL_SESSION *sess)
+{
+	struct wpabuf *buf;
+
+	if (tls_ex_idx_session < 0)
+		return;
+	buf = SSL_SESSION_get_ex_data(sess, tls_ex_idx_session);
+	if (!buf)
+		return;
+	wpa_printf(MSG_DEBUG,
+		   "OpenSSL: Free application session data %p (sess %p)",
+		   buf, sess);
+	wpabuf_free(buf);
+
+	SSL_SESSION_set_ex_data(sess, tls_ex_idx_session, NULL);
+}
+
+
 void * tls_init(const struct tls_config *conf)
 {
 	struct tls_data *data;
@@ -831,12 +852,36 @@ void * tls_init(const struct tls_config *conf)
 		return NULL;
 	}
 	data->ssl = ssl;
+	if (conf)
+		data->tls_session_lifetime = conf->tls_session_lifetime;
 
 	SSL_CTX_set_options(ssl, SSL_OP_NO_SSLv2);
 	SSL_CTX_set_options(ssl, SSL_OP_NO_SSLv3);
 
 	SSL_CTX_set_info_callback(ssl, ssl_info_cb);
 	SSL_CTX_set_app_data(ssl, context);
+	if (data->tls_session_lifetime > 0) {
+		SSL_CTX_set_quiet_shutdown(ssl, 1);
+		/*
+		 * Set default context here. In practice, this will be replaced
+		 * by the per-EAP method context in tls_connection_set_verify().
+		 */
+		SSL_CTX_set_session_id_context(ssl, (u8 *) "hostapd", 7);
+		SSL_CTX_set_session_cache_mode(ssl, SSL_SESS_CACHE_SERVER);
+		SSL_CTX_set_timeout(ssl, data->tls_session_lifetime);
+		SSL_CTX_sess_set_remove_cb(ssl, remove_session_cb);
+	} else {
+		SSL_CTX_set_session_cache_mode(ssl, SSL_SESS_CACHE_OFF);
+	}
+
+	if (tls_ex_idx_session < 0) {
+		tls_ex_idx_session = SSL_SESSION_get_ex_new_index(
+			0, NULL, NULL, NULL, NULL);
+		if (tls_ex_idx_session < 0) {
+			tls_deinit(data);
+			return NULL;
+		}
+	}
 
 #ifndef OPENSSL_NO_ENGINE
 	wpa_printf(MSG_DEBUG, "ENGINE: Loading dynamic engine");
@@ -878,6 +923,8 @@ void tls_deinit(void *ssl_ctx)
 	struct tls_context *context = SSL_CTX_get_app_data(ssl);
 	if (context != tls_global)
 		os_free(context);
+	if (data->tls_session_lifetime > 0)
+		SSL_CTX_flush_sessions(ssl, 0);
 	SSL_CTX_free(ssl);
 
 	tls_openssl_ref_count--;
@@ -1129,6 +1176,14 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 {
 	if (conn == NULL)
 		return;
+	if (conn->success_data) {
+		/*
+		 * Make sure ssl_clear_bad_session() does not remove this
+		 * session.
+		 */
+		SSL_set_quiet_shutdown(conn->ssl, 1);
+		SSL_shutdown(conn->ssl);
+	}
 	SSL_free(conn->ssl);
 	tls_engine_deinit(conn);
 	os_free(conn->subject_match);
@@ -1980,6 +2035,7 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 			      const u8 *session_ctx, size_t session_ctx_len)
 {
 	static int counter = 0;
+	struct tls_data *data = ssl_ctx;
 
 	if (conn == NULL)
 		return -1;
@@ -1999,18 +2055,20 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 
 	SSL_set_accept_state(conn->ssl);
 
-	/*
-	 * Set session id context in order to avoid fatal errors when client
-	 * tries to resume a session. However, set the context to a unique
-	 * value in order to effectively disable session resumption for now
-	 * since not all areas of the server code are ready for it (e.g.,
-	 * EAP-TTLS needs special handling for Phase 2 after abbreviated TLS
-	 * handshake).
-	 */
-	counter++;
-	SSL_set_session_id_context(conn->ssl,
-				   (const unsigned char *) &counter,
-				   sizeof(counter));
+	if (data->tls_session_lifetime == 0) {
+		/*
+		 * Set session id context to a unique value to make sure
+		 * session resumption cannot be used either through session
+		 * caching or TLS ticket extension.
+		 */
+		counter++;
+		SSL_set_session_id_context(conn->ssl,
+					   (const unsigned char *) &counter,
+					   sizeof(counter));
+	} else if (session_ctx) {
+		SSL_set_session_id_context(conn->ssl, session_ctx,
+					   session_ctx_len);
+	}
 
 	return 0;
 }
@@ -4018,21 +4076,65 @@ int tls_get_library_version(char *buf, size_t buf_len)
 void tls_connection_set_success_data(struct tls_connection *conn,
 				     struct wpabuf *data)
 {
+	SSL_SESSION *sess;
+	struct wpabuf *old;
+
+	if (tls_ex_idx_session < 0)
+		goto fail;
+	sess = SSL_get_session(conn->ssl);
+	if (!sess)
+		goto fail;
+	old = SSL_SESSION_get_ex_data(sess, tls_ex_idx_session);
+	if (old) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Replacing old success data %p",
+			   old);
+		wpabuf_free(old);
+	}
+	if (SSL_SESSION_set_ex_data(sess, tls_ex_idx_session, data) != 1)
+		goto fail;
+
+	wpa_printf(MSG_DEBUG, "OpenSSL: Stored success data %p", data);
+	conn->success_data = 1;
+	return;
+
+fail:
+	wpa_printf(MSG_INFO, "OpenSSL: Failed to store success data");
+	wpabuf_free(data);
 }
 
 
 void tls_connection_set_success_data_resumed(struct tls_connection *conn)
 {
+	wpa_printf(MSG_DEBUG,
+		   "OpenSSL: Success data accepted for resumed session");
+	conn->success_data = 1;
 }
 
 
 const struct wpabuf *
 tls_connection_get_success_data(struct tls_connection *conn)
 {
-	return NULL;
+	SSL_SESSION *sess;
+
+	if (tls_ex_idx_session < 0 ||
+	    !(sess = SSL_get_session(conn->ssl)))
+		return NULL;
+	return SSL_SESSION_get_ex_data(sess, tls_ex_idx_session);
 }
 
 
 void tls_connection_remove_session(struct tls_connection *conn)
 {
+	SSL_SESSION *sess;
+
+	sess = SSL_get_session(conn->ssl);
+	if (!sess)
+		return;
+
+	if (SSL_CTX_remove_session(conn->ssl_ctx, sess) != 1)
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: Session was not cached");
+	else
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: Removed cached session to disable session resumption");
 }

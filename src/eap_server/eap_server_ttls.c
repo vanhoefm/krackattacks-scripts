@@ -71,6 +71,36 @@ static void eap_ttls_state(struct eap_ttls_data *data, int state)
 		   eap_ttls_state_txt(data->state),
 		   eap_ttls_state_txt(state));
 	data->state = state;
+	if (state == FAILURE)
+		tls_connection_remove_session(data->ssl.conn);
+}
+
+
+static void eap_ttls_valid_session(struct eap_sm *sm,
+				   struct eap_ttls_data *data)
+{
+	struct wpabuf *buf;
+
+	if (!sm->tls_session_lifetime)
+		return;
+
+	buf = wpabuf_alloc(1 + 1 + sm->identity_len);
+	if (!buf)
+		return;
+	wpabuf_put_u8(buf, EAP_TYPE_TTLS);
+	if (sm->identity) {
+		u8 id_len;
+
+		if (sm->identity_len <= 255)
+			id_len = sm->identity_len;
+		else
+			id_len = 255;
+		wpabuf_put_u8(buf, id_len);
+		wpabuf_put_data(buf, sm->identity, id_len);
+	} else {
+		wpabuf_put_u8(buf, 0);
+	}
+	tls_connection_set_success_data(data->ssl.conn, buf);
 }
 
 
@@ -518,6 +548,7 @@ static void eap_ttls_process_phase2_pap(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-TTLS/PAP: Correct user password");
 	eap_ttls_state(data, SUCCESS);
+	eap_ttls_valid_session(sm, data);
 }
 
 
@@ -576,6 +607,7 @@ static void eap_ttls_process_phase2_chap(struct eap_sm *sm,
 	    0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/CHAP: Correct user password");
 		eap_ttls_state(data, SUCCESS);
+		eap_ttls_valid_session(sm, data);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/CHAP: Invalid user password");
 		eap_ttls_state(data, FAILURE);
@@ -643,6 +675,7 @@ static void eap_ttls_process_phase2_mschap(struct eap_sm *sm,
 	if (os_memcmp_const(nt_response, response + 2 + 24, 24) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP: Correct response");
 		eap_ttls_state(data, SUCCESS);
+		eap_ttls_valid_session(sm, data);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP: Invalid NT-Response");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-TTLS/MSCHAP: Received",
@@ -906,6 +939,7 @@ static void eap_ttls_process_phase2_eap_response(struct eap_sm *sm,
 		break;
 	case PHASE2_METHOD:
 		eap_ttls_state(data, SUCCESS);
+		eap_ttls_valid_session(sm, data);
 		break;
 	case FAILURE:
 		break;
@@ -1129,6 +1163,7 @@ static void eap_ttls_process_msg(struct eap_sm *sm, void *priv,
 			wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Peer "
 				   "acknowledged response");
 			eap_ttls_state(data, SUCCESS);
+			eap_ttls_valid_session(sm, data);
 		} else if (!data->mschapv2_resp_ok) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Peer "
 				   "acknowledged error");
@@ -1155,10 +1190,64 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 			     struct wpabuf *respData)
 {
 	struct eap_ttls_data *data = priv;
+	const struct wpabuf *buf;
+	const u8 *pos;
+	u8 id_len;
+
 	if (eap_server_tls_process(sm, &data->ssl, respData, data,
 				   EAP_TYPE_TTLS, eap_ttls_process_version,
-				   eap_ttls_process_msg) < 0)
+				   eap_ttls_process_msg) < 0) {
 		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	if (!tls_connection_established(sm->ssl_ctx, data->ssl.conn) ||
+	    !tls_connection_resumed(sm->ssl_ctx, data->ssl.conn))
+		return;
+
+	buf = tls_connection_get_success_data(data->ssl.conn);
+	if (!buf || wpabuf_len(buf) < 1) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-TTLS: No success data in resumed session - reject attempt");
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	pos = wpabuf_head(buf);
+	if (*pos != EAP_TYPE_TTLS) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-TTLS: Resumed session for another EAP type (%u) - reject attempt",
+			   *pos);
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	pos++;
+	id_len = *pos++;
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP-TTLS: Identity from cached session",
+			  pos, id_len);
+	os_free(sm->identity);
+	sm->identity = os_malloc(id_len ? id_len : 1);
+	if (!sm->identity) {
+		sm->identity_len = 0;
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	os_memcpy(sm->identity, pos, id_len);
+	sm->identity_len = id_len;
+
+	if (eap_user_get(sm, sm->identity, sm->identity_len, 1) != 0) {
+		wpa_hexdump_ascii(MSG_DEBUG, "EAP-TTLS: Phase2 Identity not found in the user database",
+				  sm->identity, sm->identity_len);
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "EAP-TTLS: Resuming previous session - skip Phase2");
+	eap_ttls_state(data, SUCCESS);
+	tls_connection_set_success_data_resumed(data->ssl.conn);
 }
 
 

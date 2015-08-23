@@ -46,6 +46,7 @@ static void eap_server_tls_log_cb(void *ctx, const char *msg)
 int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			    int verify_peer, int eap_type)
 {
+	u8 session_ctx[8];
 	unsigned int flags = 0;
 
 	if (sm->ssl_ctx == NULL) {
@@ -72,8 +73,11 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 
 	if (eap_type != EAP_TYPE_FAST)
 		flags |= TLS_CONN_DISABLE_SESSION_TICKET;
+	os_memcpy(session_ctx, "hostapd", 7);
+	session_ctx[7] = (u8) eap_type;
 	if (tls_connection_set_verify(sm->ssl_ctx, data->conn, verify_peer,
-				      flags, NULL, 0)) {
+				      flags, session_ctx,
+				      sizeof(session_ctx))) {
 		wpa_printf(MSG_INFO, "SSL: Failed to configure verification "
 			   "of TLS peer certificate");
 		tls_connection_deinit(sm->ssl_ctx, data->conn);

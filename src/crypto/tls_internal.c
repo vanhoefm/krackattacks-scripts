@@ -328,7 +328,8 @@ int tls_global_set_verify(void *tls_ctx, int check_crl)
 
 
 int tls_connection_set_verify(void *tls_ctx, struct tls_connection *conn,
-			      int verify_peer)
+			      int verify_peer, unsigned int flags,
+			      const u8 *session_ctx, size_t session_ctx_len)
 {
 #ifdef CONFIG_TLS_INTERNAL_SERVER
 	if (conn->server)

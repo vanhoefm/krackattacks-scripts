@@ -1944,7 +1944,8 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 
 
 int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
-			      int verify_peer)
+			      int verify_peer, unsigned int flags,
+			      const u8 *session_ctx, size_t session_ctx_len)
 {
 	static int counter = 0;
 

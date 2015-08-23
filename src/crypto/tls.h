@@ -305,11 +305,17 @@ int __must_check tls_global_set_verify(void *tls_ctx, int check_crl);
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()
  * @verify_peer: 1 = verify peer certificate
+ * @flags: Connection flags (TLS_CONN_*)
+ * @session_ctx: Session caching context or %NULL to use default
+ * @session_ctx_len: Length of @session_ctx in bytes.
  * Returns: 0 on success, -1 on failure
  */
 int __must_check tls_connection_set_verify(void *tls_ctx,
 					   struct tls_connection *conn,
-					   int verify_peer);
+					   int verify_peer,
+					   unsigned int flags,
+					   const u8 *session_ctx,
+					   size_t session_ctx_len);
 
 /**
  * tls_connection_get_random - Get random data from TLS connection

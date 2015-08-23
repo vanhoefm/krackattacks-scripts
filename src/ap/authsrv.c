@@ -132,6 +132,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 #endif /* CONFIG_HS20 */
 	srv.erp = conf->eap_server_erp;
 	srv.erp_domain = conf->erp_domain;
+	srv.tls_session_lifetime = conf->tls_session_lifetime;
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {
@@ -151,9 +152,12 @@ int authsrv_init(struct hostapd_data *hapd)
 	if (hapd->conf->eap_server &&
 	    (hapd->conf->ca_cert || hapd->conf->server_cert ||
 	     hapd->conf->private_key || hapd->conf->dh_file)) {
+		struct tls_config conf;
 		struct tls_connection_params params;
 
-		hapd->ssl_ctx = tls_init(NULL);
+		os_memset(&conf, 0, sizeof(conf));
+		conf.tls_session_lifetime = hapd->conf->tls_session_lifetime;
+		hapd->ssl_ctx = tls_init(&conf);
 		if (hapd->ssl_ctx == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to initialize TLS");
 			authsrv_deinit(hapd);

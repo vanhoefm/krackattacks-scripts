@@ -1865,6 +1865,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->server_id = conf->server_id;
 	sm->server_id_len = conf->server_id_len;
 	sm->erp = conf->erp;
+	sm->tls_session_lifetime = conf->tls_session_lifetime;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	sm->tls_test_flags = conf->tls_test_flags;

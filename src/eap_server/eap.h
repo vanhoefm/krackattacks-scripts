@@ -131,6 +131,7 @@ struct eap_config {
 	const u8 *server_id;
 	size_t server_id_len;
 	int erp;
+	unsigned int tls_session_lifetime;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	u32 tls_test_flags;

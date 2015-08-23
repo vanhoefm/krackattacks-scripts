@@ -210,6 +210,7 @@ struct eap_sm {
 	Boolean initiate_reauth_start_sent;
 	Boolean try_initiate_reauth;
 	int erp;
+	unsigned int tls_session_lifetime;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	u32 tls_test_flags;

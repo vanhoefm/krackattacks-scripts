@@ -2079,6 +2079,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->private_key_passwd = os_strdup(pos);
 	} else if (os_strcmp(buf, "check_crl") == 0) {
 		bss->check_crl = atoi(pos);
+	} else if (os_strcmp(buf, "tls_session_lifetime") == 0) {
+		bss->tls_session_lifetime = atoi(pos);
 	} else if (os_strcmp(buf, "ocsp_stapling_response") == 0) {
 		os_free(bss->ocsp_stapling_response);
 		bss->ocsp_stapling_response = os_strdup(pos);

@@ -60,7 +60,7 @@ static void * eap_tls_init(struct eap_sm *sm)
 		return NULL;
 	data->state = START;
 
-	if (eap_server_tls_ssl_init(sm, &data->ssl, 1)) {
+	if (eap_server_tls_ssl_init(sm, &data->ssl, 1, EAP_TYPE_TLS)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to initialize SSL.");
 		eap_tls_reset(sm, data);
 		return NULL;
@@ -82,7 +82,7 @@ static void * eap_unauth_tls_init(struct eap_sm *sm)
 		return NULL;
 	data->state = START;
 
-	if (eap_server_tls_ssl_init(sm, &data->ssl, 0)) {
+	if (eap_server_tls_ssl_init(sm, &data->ssl, 0, EAP_UNAUTH_TLS_TYPE)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to initialize SSL.");
 		eap_tls_reset(sm, data);
 		return NULL;
@@ -104,7 +104,8 @@ static void * eap_wfa_unauth_tls_init(struct eap_sm *sm)
 		return NULL;
 	data->state = START;
 
-	if (eap_server_tls_ssl_init(sm, &data->ssl, 0)) {
+	if (eap_server_tls_ssl_init(sm, &data->ssl, 0,
+				    EAP_WFA_UNAUTH_TLS_TYPE)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to initialize SSL.");
 		eap_tls_reset(sm, data);
 		return NULL;

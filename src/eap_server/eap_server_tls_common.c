@@ -44,7 +44,7 @@ static void eap_server_tls_log_cb(void *ctx, const char *msg)
 
 
 int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
-			    int verify_peer)
+			    int verify_peer, int eap_type)
 {
 	unsigned int flags = 0;
 
@@ -70,6 +70,8 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 #endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_TLS_INTERNAL */
 
+	if (eap_type != EAP_TYPE_FAST)
+		flags |= TLS_CONN_DISABLE_SESSION_TICKET;
 	if (tls_connection_set_verify(sm->ssl_ctx, data->conn, verify_peer,
 				      flags, NULL, 0)) {
 		wpa_printf(MSG_INFO, "SSL: Failed to configure verification "

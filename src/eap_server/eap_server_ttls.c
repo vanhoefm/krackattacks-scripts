@@ -317,7 +317,7 @@ static void * eap_ttls_init(struct eap_sm *sm)
 	data->ttls_version = EAP_TTLS_VERSION;
 	data->state = START;
 
-	if (eap_server_tls_ssl_init(sm, &data->ssl, 0)) {
+	if (eap_server_tls_ssl_init(sm, &data->ssl, 0, EAP_TYPE_TTLS)) {
 		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to initialize SSL.");
 		eap_ttls_reset(sm, data);
 		return NULL;

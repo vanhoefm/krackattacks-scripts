@@ -1943,6 +1943,38 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 }
 
 
+static void tls_set_conn_flags(SSL *ssl, unsigned int flags)
+{
+#ifdef SSL_OP_NO_TICKET
+	if (flags & TLS_CONN_DISABLE_SESSION_TICKET)
+		SSL_set_options(ssl, SSL_OP_NO_TICKET);
+#ifdef SSL_clear_options
+	else
+		SSL_clear_options(ssl, SSL_OP_NO_TICKET);
+#endif /* SSL_clear_options */
+#endif /* SSL_OP_NO_TICKET */
+
+#ifdef SSL_OP_NO_TLSv1
+	if (flags & TLS_CONN_DISABLE_TLSv1_0)
+		SSL_set_options(ssl, SSL_OP_NO_TLSv1);
+	else
+		SSL_clear_options(ssl, SSL_OP_NO_TLSv1);
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (flags & TLS_CONN_DISABLE_TLSv1_1)
+		SSL_set_options(ssl, SSL_OP_NO_TLSv1_1);
+	else
+		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_1);
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (flags & TLS_CONN_DISABLE_TLSv1_2)
+		SSL_set_options(ssl, SSL_OP_NO_TLSv1_2);
+	else
+		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_2);
+#endif /* SSL_OP_NO_TLSv1_2 */
+}
+
+
 int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 			      int verify_peer, unsigned int flags,
 			      const u8 *session_ctx, size_t session_ctx_len)
@@ -1961,6 +1993,9 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 		conn->ca_cert_verify = 0;
 		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
 	}
+
+	tls_set_conn_flags(conn->ssl, flags);
+	conn->flags = flags;
 
 	SSL_set_accept_state(conn->ssl);
 
@@ -3779,33 +3814,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-#ifdef SSL_OP_NO_TICKET
-	if (params->flags & TLS_CONN_DISABLE_SESSION_TICKET)
-		SSL_set_options(conn->ssl, SSL_OP_NO_TICKET);
-#ifdef SSL_clear_options
-	else
-		SSL_clear_options(conn->ssl, SSL_OP_NO_TICKET);
-#endif /* SSL_clear_options */
-#endif /*  SSL_OP_NO_TICKET */
-
-#ifdef SSL_OP_NO_TLSv1
-	if (params->flags & TLS_CONN_DISABLE_TLSv1_0)
-		SSL_set_options(conn->ssl, SSL_OP_NO_TLSv1);
-	else
-		SSL_clear_options(conn->ssl, SSL_OP_NO_TLSv1);
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
-	if (params->flags & TLS_CONN_DISABLE_TLSv1_1)
-		SSL_set_options(conn->ssl, SSL_OP_NO_TLSv1_1);
-	else
-		SSL_clear_options(conn->ssl, SSL_OP_NO_TLSv1_1);
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
-	if (params->flags & TLS_CONN_DISABLE_TLSv1_2)
-		SSL_set_options(conn->ssl, SSL_OP_NO_TLSv1_2);
-	else
-		SSL_clear_options(conn->ssl, SSL_OP_NO_TLSv1_2);
-#endif /* SSL_OP_NO_TLSv1_2 */
+	tls_set_conn_flags(conn->ssl, params->flags);
 
 #ifdef HAVE_OCSP
 	if (params->flags & TLS_CONN_REQUEST_OCSP) {

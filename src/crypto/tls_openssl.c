@@ -4013,3 +4013,26 @@ int tls_get_library_version(char *buf, size_t buf_len)
 			   OPENSSL_VERSION_TEXT,
 			   SSLeay_version(SSLEAY_VERSION));
 }
+
+
+void tls_connection_set_success_data(struct tls_connection *conn,
+				     struct wpabuf *data)
+{
+}
+
+
+void tls_connection_set_success_data_resumed(struct tls_connection *conn)
+{
+}
+
+
+const struct wpabuf *
+tls_connection_get_success_data(struct tls_connection *conn)
+{
+	return NULL;
+}
+
+
+void tls_connection_remove_session(struct tls_connection *conn)
+{
+}

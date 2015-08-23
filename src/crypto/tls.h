@@ -575,4 +575,14 @@ void tls_connection_set_test_flags(struct tls_connection *conn, u32 flags);
 
 int tls_get_library_version(char *buf, size_t buf_len);
 
+void tls_connection_set_success_data(struct tls_connection *conn,
+				     struct wpabuf *data);
+
+void tls_connection_set_success_data_resumed(struct tls_connection *conn);
+
+const struct wpabuf *
+tls_connection_get_success_data(struct tls_connection *conn);
+
+void tls_connection_remove_session(struct tls_connection *conn);
+
 #endif /* TLS_H */

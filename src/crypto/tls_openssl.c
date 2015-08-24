@@ -2237,9 +2237,14 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 			wpa_printf(MSG_DEBUG, "TLS: additional certificate"
 				   " from PKCS12: subject='%s'", buf);
 			if (SSL_add1_chain_cert(ssl, cert) != 1) {
+				tls_show_errors(MSG_DEBUG, __func__,
+						"Failed to add additional certificate");
 				res = -1;
 				break;
 			}
+		}
+		if (!res) {
+			/* Try to continue anyway */
 		}
 		sk_X509_free(certs);
 #ifndef OPENSSL_IS_BORINGSSL

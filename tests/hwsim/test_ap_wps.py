@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import base64
 import os
 import time
 import stat
@@ -1323,6 +1324,85 @@ def _test_ap_wps_er_config_ap(dev, apdev):
         raise Exception("WPS_ER_STOP failed")
     if "OK" not in dev[0].request("WPS_ER_STOP"):
         raise Exception("WPS_ER_STOP failed")
+
+def test_ap_wps_er_cache_ap_settings(dev, apdev):
+    """WPS ER caching AP settings"""
+    try:
+        _test_ap_wps_er_cache_ap_settings(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_cache_ap_settings(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+    id = int(dev[0].list_networks()[0]['id'])
+    dev[0].set_network(id, "scan_freq", "2412")
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL after AP learn timed out")
+    time.sleep(0.1)
+
+    hapd.disable()
+
+    for i in range(2):
+        ev = dev[0].wait_event([ "WPS-ER-AP-REMOVE",
+                                 "CTRL-EVENT-DISCONNECTED" ],
+                               timeout=15)
+        if ev is None:
+            raise Exception("AP removal or disconnection timed out")
+
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    for i in range(2):
+        ev = dev[0].wait_event([ "WPS-ER-AP-ADD", "CTRL-EVENT-CONNECTED" ],
+                               timeout=15)
+        if ev is None:
+            raise Exception("AP discovery or connection timed out")
+
+    pin = dev[1].wps_read_pin()
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_PIN any " + pin + " " + dev[1].p2p_interface_addr())
+
+    time.sleep(0.2)
+
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[1].dump_monitor()
+    dev[1].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=30)
+    if ev is None:
+        raise Exception("Enrollee did not report success")
+    dev[1].wait_connected(timeout=15)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_STOP")
 
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
@@ -3002,7 +3082,8 @@ def _test_ap_wps_er_ssdp_proto(dev, apdev):
 
 wps_event_url = None
 
-def gen_upnp_info(eventSubURL='wps_event'):
+def gen_upnp_info(eventSubURL='wps_event', controlURL='wps_control',
+                  udn='uuid:27ea801a-9e5c-4e73-bd82-f89cbcd10d7e'):
     payload = '''<?xml version="1.0"?>
 <root xmlns="urn:schemas-upnp-org:device-1-0">
 <specVersion>
@@ -3016,16 +3097,19 @@ def gen_upnp_info(eventSubURL='wps_event'):
 <modelName>WAP</modelName>
 <modelNumber>123</modelNumber>
 <serialNumber>12345</serialNumber>
-<UDN>uuid:27ea801a-9e5c-4e73-bd82-f89cbcd10d7e</UDN>
-<serviceList>
+'''
+    if udn:
+        payload += '<UDN>' + udn + '</UDN>'
+    payload += '''<serviceList>
 <service>
 <serviceType>urn:schemas-wifialliance-org:service:WFAWLANConfig:1</serviceType>
 <serviceId>urn:wifialliance-org:serviceId:WFAWLANConfig1</serviceId>
 <SCPDURL>wps_scpd.xml</SCPDURL>
-<controlURL>wps_control</controlURL>
 '''
+    if controlURL:
+        payload += '<controlURL>' + controlURL + '</controlURL>\n'
     if eventSubURL:
-        payload += '<eventSubURL>' + eventSubURL + '</eventSubURL>'
+        payload += '<eventSubURL>' + eventSubURL + '</eventSubURL>\n'
     payload += '''</service>
 </serviceList>
 </device>
@@ -3039,7 +3123,7 @@ def gen_upnp_info(eventSubURL='wps_event'):
           'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
     return hdr + payload
 
-def gen_wps_control():
+def gen_wps_control(payload_override=None):
     payload = '''<?xml version="1.0"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
 <s:Body>
@@ -3057,6 +3141,8 @@ AAYANyoAASA=
 </s:Body>
 </s:Envelope>
 '''
+    if payload_override:
+        payload = payload_override
     hdr = 'HTTP/1.1 200 OK\r\n' + \
           'Content-Type: text/xml; charset="utf-8"\r\n' + \
           'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
@@ -3065,15 +3151,16 @@ AAYANyoAASA=
           'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
     return hdr + payload
 
-def gen_wps_event():
+def gen_wps_event(sid='uuid:7eb3342a-8a5f-47fe-a585-0785bfec6d8a'):
     payload = ""
     hdr = 'HTTP/1.1 200 OK\r\n' + \
           'Content-Type: text/xml; charset="utf-8"\r\n' + \
           'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
           'Connection: close\r\n' + \
-          'Content-Length: ' + str(len(payload)) + '\r\n' + \
-          'SID: uuid:7eb3342a-8a5f-47fe-a585-0785bfec6d8a\r\n' + \
-          'Timeout: Second-1801\r\n' + \
+          'Content-Length: ' + str(len(payload)) + '\r\n'
+    if sid:
+        hdr += 'SID: ' + sid + '\r\n'
+    hdr += 'Timeout: Second-1801\r\n' + \
           'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
     return hdr + payload
 
@@ -3091,20 +3178,27 @@ class WPSAPHTTPServer(SocketServer.StreamRequestHandler):
                 wps_event_url = hdr.split(' ')[1].strip('<>')
 
         if "GET /foo.xml" in data:
-            self.wfile.write(gen_upnp_info())
+            self.handle_upnp_info()
+        elif "POST /wps_control" in data:
+            self.handle_wps_control()
+        elif "SUBSCRIBE /wps_event" in data:
+            self.handle_wps_event()
 
-        if "POST /wps_control" in data:
-            self.wfile.write(gen_wps_control())
+    def handle_upnp_info(self):
+        self.wfile.write(gen_upnp_info())
 
-        if "SUBSCRIBE /wps_event" in data:
-            self.wfile.write(gen_wps_event())
+    def handle_wps_control(self):
+        self.wfile.write(gen_wps_control())
+
+    def handle_wps_event(self):
+        self.wfile.write(gen_wps_event())
 
 class MyTCPServer(SocketServer.TCPServer):
     def __init__(self, addr, handler):
         self.allow_reuse_address = True
         SocketServer.TCPServer.__init__(self, addr, handler)
 
-def wps_er_start(dev, http_server):
+def wps_er_start(dev, http_server, max_age=1):
     socket.setdefaulttimeout(1)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -3117,7 +3211,7 @@ def wps_er_start(dev, http_server):
 
     # Add an AP with a valid URL and server listing to it
     server = MyTCPServer(("127.0.0.1", 12345), http_server)
-    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:http://127.0.0.1:12345/foo.xml\r\ncache-control:max-age=1\r\n\r\n", addr)
+    sock.sendto("HTTP/1.1 200 OK\r\nST: urn:schemas-wifialliance-org:device:WFADevice:1\r\nlocation:http://127.0.0.1:12345/foo.xml\r\ncache-control:max-age=%d\r\n\r\n" % max_age, addr)
     server.timeout = 1
     return server,sock
 
@@ -3141,6 +3235,47 @@ def wps_er_stop(dev, sock, server, on_alloc_fail=False):
             raise Exception("No WPS-ER-AP-REMOVE event on max-age timeout")
     dev.request("WPS_ER_STOP")
 
+def run_wps_er_proto_test(dev, handler, no_event_url=False):
+    try:
+        uuid = '27ea801a-9e5c-4e73-bd82-f89cbcd10d7e'
+        server,sock = wps_er_start(dev, handler)
+        global wps_event_url
+        wps_event_url = None
+        server.handle_request()
+        server.handle_request()
+        server.handle_request()
+        server.server_close()
+        if no_event_url:
+            if wps_event_url:
+                raise Exception("Received event URL unexpectedly")
+            return
+        if wps_event_url is None:
+            raise Exception("Did not get event URL")
+        logger.info("Event URL: " + wps_event_url)
+    finally:
+        dev.request("WPS_ER_STOP")
+
+def send_wlanevent(url, uuid, data):
+    conn = httplib.HTTPConnection(url.netloc)
+    payload = '''<?xml version="1.0" encoding="utf-8"?>
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+<e:property><STAStatus>1</STAStatus></e:property>
+<e:property><APStatus>1</APStatus></e:property>
+<e:property><WLANEvent>'''
+    payload += base64.b64encode(data)
+    payload += '</WLANEvent></e:property></e:propertyset>'
+    headers = { "Content-type": 'text/xml; charset="utf-8"',
+                "Server": "Unspecified, UPnP/1.0, Unspecified",
+                "HOST": url.netloc,
+                "NT": "upnp:event",
+                "SID": "uuid:" + uuid,
+                "SEQ": "0",
+                "Content-Length": str(len(payload)) }
+    conn.request("NOTIFY", url.path, payload, headers)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
 def test_ap_wps_er_http_proto(dev, apdev):
     """WPS ER HTTP protocol testing"""
     try:
@@ -3150,7 +3285,7 @@ def test_ap_wps_er_http_proto(dev, apdev):
 
 def _test_ap_wps_er_http_proto(dev, apdev):
     uuid = '27ea801a-9e5c-4e73-bd82-f89cbcd10d7e'
-    server,sock = wps_er_start(dev[0], WPSAPHTTPServer)
+    server,sock = wps_er_start(dev[0], WPSAPHTTPServer, max_age=15)
     global wps_event_url
     wps_event_url = None
     server.handle_request()
@@ -3238,63 +3373,182 @@ RGV2aWNlIEEQSQAGADcqAAEg
         conn.request("FOOBAR", '/foobar/123456789/123', payload, headers)
         time.sleep(0.5)
 
-class WPSAPHTTPServer2(SocketServer.StreamRequestHandler):
-    def handle(self):
-        data = self.rfile.readline().strip()
-        logger.info("HTTP server received: " + data)
-        while True:
-            hdr = self.rfile.readline().strip()
-            if len(hdr) == 0:
-                break
-            logger.info("HTTP header: " + hdr)
+    logger.info("Too short WLANEvent")
+    data = '\x00'
+    send_wlanevent(url, uuid, data)
 
-        if "GET /foo.xml" in data:
-            self.wfile.write(gen_upnp_info(eventSubURL=None))
+    logger.info("Invalid WLANEventMAC")
+    data = '\x00qwertyuiopasdfghjklzxcvbnm'
+    send_wlanevent(url, uuid, data)
 
-        if "POST /wps_control" in data:
-            self.wfile.write(gen_wps_control())
+    logger.info("Unknown WLANEventType")
+    data = '\xff02:00:00:00:00:00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("Probe Request notification without any attributes")
+    data = '\x0102:00:00:00:00:00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("Probe Request notification with invalid attribute")
+    data = '\x0102:00:00:00:00:00\xff'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message without any attributes")
+    data = '\x0202:00:00:00:00:00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message with invalid attribute")
+    data = '\x0202:00:00:00:00:00\xff'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message from new STA and not M1")
+    data = '\x0202:ff:ff:ff:ff:ff' + '\x10\x22\x00\x01\x05'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1")
+    data = '\x0202:00:00:00:00:00'
+    data += '\x10\x22\x00\x01\x04'
+    data += '\x10\x47\x00\x10' + 16*'\x00'
+    data += '\x10\x20\x00\x06\x02\x00\x00\x00\x00\x00'
+    data += '\x10\x1a\x00\x10' + 16*'\x00'
+    data += '\x10\x32\x00\xc0' + 192*'\x00'
+    data += '\x10\x04\x00\x02\x00\x00'
+    data += '\x10\x10\x00\x02\x00\x00'
+    data += '\x10\x0d\x00\x01\x00'
+    data += '\x10\x08\x00\x02\x00\x00'
+    data += '\x10\x44\x00\x01\x00'
+    data += '\x10\x21\x00\x00'
+    data += '\x10\x23\x00\x00'
+    data += '\x10\x24\x00\x00'
+    data += '\x10\x42\x00\x00'
+    data += '\x10\x54\x00\x08' + 8*'\x00'
+    data += '\x10\x11\x00\x00'
+    data += '\x10\x3c\x00\x01\x00'
+    data += '\x10\x02\x00\x02\x00\x00'
+    data += '\x10\x12\x00\x02\x00\x00'
+    data += '\x10\x09\x00\x02\x00\x00'
+    data += '\x10\x2d\x00\x04\x00\x00\x00\x00'
+    m1 = data
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: WSC_ACK")
+    data = '\x0202:00:00:00:00:00' + '\x10\x22\x00\x01\x0d'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1")
+    send_wlanevent(url, uuid, m1)
+
+    logger.info("EAP message: WSC_NACK")
+    data = '\x0202:00:00:00:00:00' + '\x10\x22\x00\x01\x0e'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 - Too long attribute values")
+    data = '\x0202:00:00:00:00:00'
+    data += '\x10\x11\x00\x21' + 33*'\x00'
+    data += '\x10\x45\x00\x21' + 33*'\x00'
+    data += '\x10\x42\x00\x21' + 33*'\x00'
+    data += '\x10\x24\x00\x21' + 33*'\x00'
+    data += '\x10\x23\x00\x21' + 33*'\x00'
+    data += '\x10\x21\x00\x41' + 65*'\x00'
+    data += '\x10\x49\x00\x09\x00\x37\x2a\x05\x02\x00\x00\x05\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing UUID-E")
+    data = '\x0202:00:00:00:00:00'
+    data += '\x10\x22\x00\x01\x04'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing MAC Address")
+    data += '\x10\x47\x00\x10' + 16*'\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Enrollee Nonce")
+    data += '\x10\x20\x00\x06\x02\x00\x00\x00\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Public Key")
+    data += '\x10\x1a\x00\x10' + 16*'\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Authentication Type flags")
+    data += '\x10\x32\x00\xc0' + 192*'\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Encryption Type Flags")
+    data += '\x10\x04\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Connection Type flags")
+    data += '\x10\x10\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Config Methods")
+    data += '\x10\x0d\x00\x01\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Wi-Fi Protected Setup State")
+    data += '\x10\x08\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Manufacturer")
+    data += '\x10\x44\x00\x01\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Model Name")
+    data += '\x10\x21\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Model Number")
+    data += '\x10\x23\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Serial Number")
+    data += '\x10\x24\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Primary Device Type")
+    data += '\x10\x42\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Device Name")
+    data += '\x10\x54\x00\x08' + 8*'\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing RF Bands")
+    data += '\x10\x11\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Association State")
+    data += '\x10\x3c\x00\x01\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Device Password ID")
+    data += '\x10\x02\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing Configuration Error")
+    data += '\x10\x12\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
+
+    logger.info("EAP message: M1 missing OS Version")
+    data += '\x10\x09\x00\x02\x00\x00'
+    send_wlanevent(url, uuid, data)
 
 def test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev):
     """WPS ER HTTP protocol testing - no eventSubURL"""
-    try:
-        _test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev)
-    finally:
-        dev[0].request("WPS_ER_STOP")
-
-def _test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev):
-    server,sock = wps_er_start(dev[0], WPSAPHTTPServer2)
-    server.handle_request()
-    server.handle_request()
-    wps_er_stop(dev[0], sock, server)
-
-class WPSAPHTTPServer3(SocketServer.StreamRequestHandler):
-    def handle(self):
-        data = self.rfile.readline().strip()
-        logger.info("HTTP server received: " + data)
-        while True:
-            hdr = self.rfile.readline().strip()
-            if len(hdr) == 0:
-                break
-            logger.info("HTTP header: " + hdr)
-
-        if "GET /foo.xml" in data:
-            self.wfile.write(gen_upnp_info(eventSubURL='http://example.com/wps_event'))
-
-        if "POST /wps_control" in data:
-            self.wfile.write(gen_wps_control())
+    class WPSAPHTTPServer_no_event_sub_url(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            self.wfile.write(gen_upnp_info(eventSubURL=None))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_no_event_sub_url,
+                          no_event_url=True)
 
 def test_ap_wps_er_http_proto_event_sub_url_dns(dev, apdev):
     """WPS ER HTTP protocol testing - DNS name in eventSubURL"""
-    try:
-        _test_ap_wps_er_http_proto_event_sub_url_dns(dev, apdev)
-    finally:
-        dev[0].request("WPS_ER_STOP")
-
-def _test_ap_wps_er_http_proto_event_sub_url_dns(dev, apdev):
-    server,sock = wps_er_start(dev[0], WPSAPHTTPServer3)
-    server.handle_request()
-    server.handle_request()
-    wps_er_stop(dev[0], sock, server)
+    class WPSAPHTTPServer_event_sub_url_dns(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            self.wfile.write(gen_upnp_info(eventSubURL='http://example.com/wps_event'))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_event_sub_url_dns,
+                          no_event_url=True)
 
 def test_ap_wps_er_http_proto_subscribe_oom(dev, apdev):
     """WPS ER HTTP protocol testing - subscribe OOM"""
@@ -3315,3 +3569,137 @@ def _test_ap_wps_er_http_proto_subscribe_oom(dev, apdev):
             server.handle_request()
             server.handle_request()
             wps_er_stop(dev[0], sock, server, on_alloc_fail=True)
+
+def test_ap_wps_er_http_proto_no_sid(dev, apdev):
+    """WPS ER HTTP protocol testing - no SID"""
+    class WPSAPHTTPServer_no_sid(WPSAPHTTPServer):
+        def handle_wps_event(self):
+            self.wfile.write(gen_wps_event(sid=None))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_no_sid)
+
+def test_ap_wps_er_http_proto_invalid_sid_no_uuid(dev, apdev):
+    """WPS ER HTTP protocol testing - invalid SID - no UUID"""
+    class WPSAPHTTPServer_invalid_sid_no_uuid(WPSAPHTTPServer):
+        def handle_wps_event(self):
+            self.wfile.write(gen_wps_event(sid='FOO'))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_invalid_sid_no_uuid)
+
+def test_ap_wps_er_http_proto_invalid_sid_uuid(dev, apdev):
+    """WPS ER HTTP protocol testing - invalid SID UUID"""
+    class WPSAPHTTPServer_invalid_sid_uuid(WPSAPHTTPServer):
+        def handle_wps_event(self):
+            self.wfile.write(gen_wps_event(sid='uuid:FOO'))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_invalid_sid_uuid)
+
+def test_ap_wps_er_http_proto_subscribe_failing(dev, apdev):
+    """WPS ER HTTP protocol testing - SUBSCRIBE failing"""
+    class WPSAPHTTPServer_fail_subscribe(WPSAPHTTPServer):
+        def handle_wps_event(self):
+            payload = ""
+            hdr = 'HTTP/1.1 404 Not Found\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Timeout: Second-1801\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_fail_subscribe)
+
+def test_ap_wps_er_http_proto_subscribe_invalid_response(dev, apdev):
+    """WPS ER HTTP protocol testing - SUBSCRIBE and invalid response"""
+    class WPSAPHTTPServer_subscribe_invalid_response(WPSAPHTTPServer):
+        def handle_wps_event(self):
+            payload = ""
+            hdr = 'HTTP/1.1 FOO\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Timeout: Second-1801\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_subscribe_invalid_response)
+
+def test_ap_wps_er_http_proto_subscribe_invalid_response(dev, apdev):
+    """WPS ER HTTP protocol testing - SUBSCRIBE and invalid response"""
+    class WPSAPHTTPServer_invalid_m1(WPSAPHTTPServer):
+        def handle_wps_control(self):
+            payload = '''<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<s:Body>
+<u:GetDeviceInfoResponse xmlns:u="urn:schemas-wifialliance-org:service:WFAWLANConfig:1">
+<NewDeviceInfo>Rk9P</NewDeviceInfo>
+</u:GetDeviceInfoResponse>
+</s:Body>
+</s:Envelope>
+'''
+            self.wfile.write(gen_wps_control(payload_override=payload))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_invalid_m1, no_event_url=True)
+
+def test_ap_wps_er_http_proto_upnp_info_no_device(dev, apdev):
+    """WPS ER HTTP protocol testing - No device in UPnP info"""
+    class WPSAPHTTPServer_no_device(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            payload = '''<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+<specVersion>
+<major>1</major>
+<minor>0</minor>
+</specVersion>
+</root>
+'''
+            hdr = 'HTTP/1.1 200 OK\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_no_device, no_event_url=True)
+
+def test_ap_wps_er_http_proto_upnp_info_no_device_type(dev, apdev):
+    """WPS ER HTTP protocol testing - No deviceType in UPnP info"""
+    class WPSAPHTTPServer_no_device(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            payload = '''<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+<specVersion>
+<major>1</major>
+<minor>0</minor>
+</specVersion>
+<device>
+</device>
+</root>
+'''
+            hdr = 'HTTP/1.1 200 OK\r\n' + \
+                  'Content-Type: text/xml; charset="utf-8"\r\n' + \
+                  'Server: Unspecified, UPnP/1.0, Unspecified\r\n' + \
+                  'Connection: close\r\n' + \
+                  'Content-Length: ' + str(len(payload)) + '\r\n' + \
+                  'Date: Sat, 15 Aug 2015 18:55:08 GMT\r\n\r\n'
+            self.wfile.write(hdr + payload)
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_no_device, no_event_url=True)
+
+def test_ap_wps_er_http_proto_upnp_info_invalid_udn_uuid(dev, apdev):
+    """WPS ER HTTP protocol testing - Invalid UDN UUID"""
+    class WPSAPHTTPServer_invalid_udn_uuid(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            self.wfile.write(gen_upnp_info(udn='uuid:foo'))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_invalid_udn_uuid)
+
+def test_ap_wps_er_http_proto_no_control_url(dev, apdev):
+    """WPS ER HTTP protocol testing - no controlURL"""
+    class WPSAPHTTPServer_no_control_url(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            self.wfile.write(gen_upnp_info(controlURL=None))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_no_control_url,
+                          no_event_url=True)
+
+def test_ap_wps_er_http_proto_control_url_dns(dev, apdev):
+    """WPS ER HTTP protocol testing - DNS name in controlURL"""
+    class WPSAPHTTPServer_control_url_dns(WPSAPHTTPServer):
+        def handle_upnp_info(self):
+            self.wfile.write(gen_upnp_info(controlURL='http://example.com/wps_control'))
+    run_wps_er_proto_test(dev[0], WPSAPHTTPServer_control_url_dns,
+                          no_event_url=True)

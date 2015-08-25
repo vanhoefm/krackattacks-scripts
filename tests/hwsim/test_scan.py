@@ -876,3 +876,32 @@ def _test_scan_ap_scan_2_ap_mode(dev, apdev):
     dev[1].wait_disconnected()
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_scan_bss_expiration_on_ssid_change(dev, apdev):
+    """BSS entry expiration when AP changes SSID"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+
+    hapd.request("DISABLE")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    if "OK" not in dev[0].request("BSS_EXPIRE_COUNT 3"):
+        raise Exception("BSS_EXPIRE_COUNT failed")
+    dev[0].scan(freq="2412")
+    dev[0].scan(freq="2412")
+    if "OK" not in dev[0].request("BSS_EXPIRE_COUNT 2"):
+        raise Exception("BSS_EXPIRE_COUNT failed")
+    res = dev[0].request("SCAN_RESULTS")
+    if "test-scan" not in res:
+        raise Exception("The first SSID not in scan results")
+    if "open" not in res:
+        raise Exception("The second SSID not in scan results")
+    dev[0].connect("open", key_mgmt="NONE")
+
+    dev[0].request("BSS_FLUSH 0")
+    res = dev[0].request("SCAN_RESULTS")
+    if "test-scan" in res:
+        raise Exception("The BSS entry with the old SSID was not removed")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

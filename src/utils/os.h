@@ -247,6 +247,13 @@ char * os_readfile(const char *name, size_t *len);
 int os_file_exists(const char *fname);
 
 /**
+ * os_fdatasync - Sync a file's (for a given stream) state with storage device
+ * @stream: the stream to be flushed
+ * Returns: 0 if the operation succeeded or -1 on failure
+ */
+int os_fdatasync(FILE *stream);
+
+/**
  * os_zalloc - Allocate and zero memory
  * @size: Number of bytes to allocate
  * Returns: Pointer to allocated and zeroed memory or %NULL on failure

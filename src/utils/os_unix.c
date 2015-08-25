@@ -418,6 +418,14 @@ int os_file_exists(const char *fname)
 }
 
 
+int os_fdatasync(FILE *stream)
+{
+	if (!fflush(stream))
+		return fdatasync(fileno(stream));
+	return -1;
+}
+
+
 #ifndef WPA_TRACE
 void * os_zalloc(size_t size)
 {

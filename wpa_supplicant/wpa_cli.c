@@ -76,6 +76,7 @@ static int wpa_cli_last_id = 0;
 #define CONFIG_CTRL_IFACE_DIR "/var/run/wpa_supplicant"
 #endif /* CONFIG_CTRL_IFACE_DIR */
 static const char *ctrl_iface_dir = CONFIG_CTRL_IFACE_DIR;
+static const char *client_socket_dir = NULL;
 static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
 static const char *action_file = NULL;
@@ -107,7 +108,9 @@ static void usage(void)
 {
 	printf("wpa_cli [-p<path to ctrl sockets>] [-i<ifname>] [-hvB] "
 	       "[-a<action file>] \\\n"
-	       "        [-P<pid file>] [-g<global ctrl>] [-G<ping interval>]  "
+	       "        [-P<pid file>] [-g<global ctrl>] [-G<ping interval>] "
+	       "\\\n"
+	       "        [-s<wpa_client_socket_file_path>] "
 	       "[command..]\n"
 	       "  -h = help (show this usage text)\n"
 	       "  -v = shown version information\n"
@@ -330,6 +333,13 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 	}
 #endif /* ANDROID */
 
+	if (client_socket_dir && client_socket_dir[0] &&
+	    access(client_socket_dir, F_OK) < 0) {
+		perror(client_socket_dir);
+		os_free(cfile);
+		return -1;
+	}
+
 	if (cfile == NULL) {
 		flen = os_strlen(ctrl_iface_dir) + os_strlen(ifname) + 2;
 		cfile = os_malloc(flen);
@@ -343,14 +353,14 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 		}
 	}
 
-	ctrl_conn = wpa_ctrl_open(cfile);
+	ctrl_conn = wpa_ctrl_open2(cfile, client_socket_dir);
 	if (ctrl_conn == NULL) {
 		os_free(cfile);
 		return -1;
 	}
 
 	if (attach && interactive)
-		mon_conn = wpa_ctrl_open(cfile);
+		mon_conn = wpa_ctrl_open2(cfile, client_socket_dir);
 	else
 		mon_conn = NULL;
 	os_free(cfile);
@@ -4255,7 +4265,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:Bg:G:hi:p:P:v");
+		c = getopt(argc, argv, "a:Bg:G:hi:p:P:s:v");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -4286,6 +4296,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'P':
 			pid_file = optarg;
+			break;
+		case 's':
+			client_socket_dir = optarg;
 			break;
 		default:
 			usage();

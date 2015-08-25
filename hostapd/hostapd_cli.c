@@ -97,6 +97,7 @@ static int hostapd_cli_attached = 0;
 #define CONFIG_CTRL_IFACE_DIR "/var/run/hostapd"
 #endif /* CONFIG_CTRL_IFACE_DIR */
 static const char *ctrl_iface_dir = CONFIG_CTRL_IFACE_DIR;
+static const char *client_socket_dir = NULL;
 
 static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
@@ -119,6 +120,8 @@ static void usage(void)
 		"   -v           shown version information\n"
 		"   -p<path>     path to find control sockets (default: "
 		"/var/run/hostapd)\n"
+		"   -s<dir_path> dir path to open client sockets (default: "
+		CONFIG_CTRL_IFACE_DIR ")\n"
 		"   -a<file>     run in daemon mode executing the action file "
 		"based on events\n"
 		"                from hostapd\n"
@@ -145,7 +148,14 @@ static struct wpa_ctrl * hostapd_cli_open_connection(const char *ifname)
 		return NULL;
 	snprintf(cfile, flen, "%s/%s", ctrl_iface_dir, ifname);
 
-	ctrl_conn = wpa_ctrl_open(cfile);
+	if (client_socket_dir && client_socket_dir[0] &&
+	    access(client_socket_dir, F_OK) < 0) {
+		perror(client_socket_dir);
+		free(cfile);
+		return NULL;
+	}
+
+	ctrl_conn = wpa_ctrl_open2(cfile, client_socket_dir);
 	free(cfile);
 	return ctrl_conn;
 }
@@ -1337,7 +1347,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:BhG:i:p:P:v");
+		c = getopt(argc, argv, "a:BhG:i:p:P:s:v");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1365,6 +1375,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'P':
 			pid_file = optarg;
+			break;
+		case 's':
+			client_socket_dir = optarg;
 			break;
 		default:
 			usage();

@@ -190,7 +190,8 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr)
 static void mesh_rsn_deinit(struct mesh_rsn *rsn)
 {
 	os_memset(rsn->mgtk, 0, sizeof(rsn->mgtk));
-	wpa_deinit(rsn->auth);
+	if (rsn->auth)
+		wpa_deinit(rsn->auth);
 }
 
 

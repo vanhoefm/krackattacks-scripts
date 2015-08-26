@@ -210,6 +210,7 @@ struct mesh_rsn *mesh_rsn_auth_init(struct wpa_supplicant *wpa_s,
 
 	if (__mesh_rsn_auth_init(mesh_rsn, wpa_s->own_addr) < 0) {
 		mesh_rsn_deinit(mesh_rsn);
+		os_free(mesh_rsn);
 		return NULL;
 	}
 

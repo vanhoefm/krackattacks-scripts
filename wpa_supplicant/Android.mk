@@ -1282,6 +1282,7 @@ OBJS += $(SHA256OBJS)
 endif
 ifdef NEED_SHA384
 L_CFLAGS += -DCONFIG_SHA384
+OBJS += src/crypto/sha384-prf.c
 endif
 
 ifdef NEED_DH_GROUPS

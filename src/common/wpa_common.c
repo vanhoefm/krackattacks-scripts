@@ -170,6 +170,12 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 	ptk->tk_len = wpa_cipher_key_len(cipher);
 	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len;
 
+#ifdef CONFIG_SUITEB192
+	if (wpa_key_mgmt_sha384(akmp))
+		sha384_prf(pmk, pmk_len, label, data, sizeof(data),
+			   tmp, ptk_len);
+	else
+#endif /* CONFIG_SUITEB192 */
 #ifdef CONFIG_IEEE80211W
 	if (wpa_key_mgmt_sha256(akmp))
 		sha256_prf(pmk, pmk_len, label, data, sizeof(data),

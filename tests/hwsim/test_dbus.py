@@ -1500,6 +1500,25 @@ def test_dbus_network(dev, apdev):
                              'scan_freq': dbus.UInt32(2412) },
                            signature='sv')
     netw = iface.AddNetwork(args)
+    id = int(dev[0].list_networks()[0]['id'])
+    val = dev[0].get_network(id, "scan_freq")
+    if val != "2412":
+        raise Exception("Invalid scan_freq value: " + str(val))
+    iface.RemoveNetwork(netw)
+
+    args = dbus.Dictionary({ 'ssid': "foo",
+                             'key_mgmt': 'NONE',
+                             'scan_freq': "2412 2432",
+                             'freq_list': "2412 2417 2432" },
+                           signature='sv')
+    netw = iface.AddNetwork(args)
+    id = int(dev[0].list_networks()[0]['id'])
+    val = dev[0].get_network(id, "scan_freq")
+    if val != "2412 2432":
+        raise Exception("Invalid scan_freq value (2): " + str(val))
+    val = dev[0].get_network(id, "freq_list")
+    if val != "2412 2417 2432":
+        raise Exception("Invalid freq_list value: " + str(val))
     iface.RemoveNetwork(netw)
     try:
         iface.RemoveNetwork(netw)

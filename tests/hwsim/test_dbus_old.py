@@ -467,6 +467,20 @@ def test_dbus_old_connect(dev, apdev):
                                'scan_freq': dbus.UInt32(2412) },
                              signature='sv')
     netw_obj.set(params, dbus_interface=WPAS_DBUS_OLD_NETWORK)
+    id = int(dev[0].list_networks()[0]['id'])
+    val = dev[0].get_network(id, "scan_freq")
+    if val != "2412":
+        raise Exception("Invalid scan_freq value: " + str(val))
+    params = dbus.Dictionary({ 'scan_freq': "2412 2432",
+                               'freq_list': "2412 2417 2432" },
+                             signature='sv')
+    netw_obj.set(params, dbus_interface=WPAS_DBUS_OLD_NETWORK)
+    val = dev[0].get_network(id, "scan_freq")
+    if val != "2412 2432":
+        raise Exception("Invalid scan_freq value (2): " + str(val))
+    val = dev[0].get_network(id, "freq_list")
+    if val != "2412 2417 2432":
+        raise Exception("Invalid freq_list value: " + str(val))
     if_obj.removeNetwork(npath, dbus_interface=WPAS_DBUS_OLD_IFACE)
 
     class TestDbusConnect(TestDbus):

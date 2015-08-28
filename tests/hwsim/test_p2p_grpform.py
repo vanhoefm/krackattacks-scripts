@@ -973,6 +973,8 @@ def test_invalid_p2p_connect_command(dev):
 
     if "FAIL-INVALID-PIN" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 1234567"):
         raise Exception("Invalid PIN was not rejected")
+    if "FAIL-INVALID-PIN" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 12345678a"):
+        raise Exception("Invalid PIN was not rejected")
 
     if "FAIL-CHANNEL-UNSUPPORTED" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 pin freq=3000"):
         raise Exception("Unsupported channel not reported")

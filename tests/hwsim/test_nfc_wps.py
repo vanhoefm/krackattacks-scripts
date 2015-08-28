@@ -11,6 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import alloc_fail, fail_test
 
 def check_wpa2_connection(sta, ap, hapd, ssid, mixed=False):
     status = sta.get_status()
@@ -72,6 +73,11 @@ def test_nfc_wps_config_token(dev, apdev):
         raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
     dev[0].wait_connected(timeout=15)
     check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
+
+    with alloc_fail(hapd, 1, "wps_get_oob_cred"):
+        conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
+        if "FAIL" not in conf:
+            raise Exception("Unexpected configuration token received during OOM")
 
 def test_nfc_wps_config_token_init(dev, apdev):
     """NFC tag with configuration token from AP with auto configuration"""
@@ -139,6 +145,13 @@ def test_nfc_wps_password_token_ap(dev, apdev):
     if "FAIL" in hapd.request("WPS_NFC_TOKEN WPS"):
         raise Exception("Unexpected WPS_NFC_TOKEN WPS failure")
 
+    with fail_test(hapd, 1, "os_get_random;wps_nfc_token_gen"):
+        if "FAIL" not in hapd.request("WPS_NFC_TOKEN WPS"):
+            raise Exception("Unexpected WPS_NFC_TOKEN success")
+    with fail_test(hapd, 2, "os_get_random;wps_nfc_token_gen"):
+        if "FAIL" not in hapd.request("WPS_NFC_TOKEN WPS"):
+            raise Exception("Unexpected WPS_NFC_TOKEN success")
+
 def test_nfc_wps_handover_init(dev, apdev):
     """Connect to WPS AP with NFC connection handover and move to configured state"""
     dev[0].request("SET ignore_old_scan_res 1")
@@ -162,6 +175,10 @@ def test_nfc_wps_handover_init(dev, apdev):
         raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
     dev[0].wait_connected(timeout=15)
     check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
+
+    with alloc_fail(hapd, 1, "wps_build_nfc_handover_sel"):
+        if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR"):
+            raise Exception("Unexpected NFC_GET_HANDOVER_SEL success during OOM")
 
 def test_nfc_wps_handover_errors(dev, apdev):
     """WPS AP NFC handover report error cases"""

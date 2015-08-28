@@ -79,6 +79,10 @@ def test_discovery(dev):
         raise Exception("P2P_FIND with invalid dev_id accepted")
     if "FAIL" not in dev[0].p2p_find(dev_type="foo"):
         raise Exception("P2P_FIND with invalid dev_type accepted")
+    if "FAIL" not in dev[0].p2p_find(dev_type="1-foo-2"):
+        raise Exception("P2P_FIND with invalid dev_type accepted")
+    if "FAIL" not in dev[0].p2p_find(dev_type="1-11223344"):
+        raise Exception("P2P_FIND with invalid dev_type accepted")
 
     if "FAIL" not in dev[0].global_request("P2P_PROV_DISC foo pbc"):
         raise Exception("Invalid P2P_PROV_DISC accepted")

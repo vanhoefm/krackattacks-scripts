@@ -256,12 +256,12 @@ void wpa_auth_sta_deinit(struct wpa_state_machine *sm);
 void wpa_receive(struct wpa_authenticator *wpa_auth,
 		 struct wpa_state_machine *sm,
 		 u8 *data, size_t data_len);
-typedef enum {
+enum wpa_event {
 	WPA_AUTH, WPA_ASSOC, WPA_DISASSOC, WPA_DEAUTH, WPA_REAUTH,
 	WPA_REAUTH_EAPOL, WPA_ASSOC_FT
-} wpa_event;
+};
 void wpa_remove_ptk(struct wpa_state_machine *sm);
-int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event);
+int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event);
 void wpa_auth_sm_notify(struct wpa_state_machine *sm);
 void wpa_gtk_rekey(struct wpa_authenticator *wpa_auth);
 int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen);

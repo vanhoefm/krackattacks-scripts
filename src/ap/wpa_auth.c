@@ -1671,7 +1671,7 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 }
 
 
-int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
+int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event)
 {
 	int remove_ptk = 1;
 

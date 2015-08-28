@@ -198,6 +198,18 @@ SM_STATE(AUTH_PAE, INITIALIZE)
 {
 	SM_ENTRY_MA(AUTH_PAE, INITIALIZE, auth_pae);
 	sm->portMode = Auto;
+
+	/*
+	 * Clearing keyRun here is not specified in IEEE Std 802.1X-2004, but
+	 * it looks like this would be logical thing to do here since the
+	 * EAPOL-Key exchange is not possible in this state. It is possible to
+	 * get here on disconnection event without advancing to the
+	 * AUTHENTICATING state to clear keyRun before the IEEE 802.11 RSN
+	 * authenticator state machine runs and that may advance from
+	 * AUTHENTICATION2 to INITPMK if keyRun = TRUE has been left from the
+	 * last association. This can be avoided by clearing keyRun here.
+	 */
+	sm->keyRun = FALSE;
 }
 
 

@@ -278,8 +278,6 @@ static int httpread_hdr_analyze(struct httpread *h)
 			}
 		}
 		*uri = 0;       /* null terminate */
-		while (isgraph(*hbp))
-			hbp++;
 		while (*hbp == ' ' || *hbp == '\t')
 			hbp++;
 		/* get version */

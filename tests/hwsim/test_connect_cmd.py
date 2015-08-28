@@ -138,3 +138,16 @@ def test_connect_cmd_disconnect_event(dev, apdev):
     # testing purposes. Anyway, wait some time to allow the debug log to capture
     # the following NL80211_CMD_DISCONNECT event.
     time.sleep(0.1)
+
+def test_connect_cmd_roam(dev, apdev):
+    """cfg80211 connect command to trigger roam"""
+    params = { "ssid": "sta-connect" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    wpas.scan_for_bss(apdev[1]['bssid'], freq=2412)
+    wpas.roam(apdev[1]['bssid'])

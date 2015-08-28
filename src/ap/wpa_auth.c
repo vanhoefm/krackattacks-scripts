@@ -1759,6 +1759,14 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 			wpa_remove_ptk(sm);
 	}
 
+	if (sm->in_step_loop) {
+		/*
+		 * wpa_sm_step() is already running - avoid recursive call to
+		 * it by making the existing loop process the new update.
+		 */
+		sm->changed = TRUE;
+		return 0;
+	}
 	return wpa_sm_step(sm);
 }
 

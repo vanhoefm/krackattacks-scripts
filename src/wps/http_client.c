@@ -146,24 +146,20 @@ struct http_client * http_client_addr(struct sockaddr_in *dst,
 	c->cb_ctx = cb_ctx;
 
 	c->sd = socket(AF_INET, SOCK_STREAM, 0);
-	if (c->sd < 0) {
-		http_client_free(c);
-		return NULL;
-	}
+	if (c->sd < 0)
+		goto fail;
 
 	if (fcntl(c->sd, F_SETFL, O_NONBLOCK) != 0) {
 		wpa_printf(MSG_DEBUG, "HTTP: fnctl(O_NONBLOCK) failed: %s",
 			   strerror(errno));
-		http_client_free(c);
-		return NULL;
+		goto fail;
 	}
 
 	if (connect(c->sd, (struct sockaddr *) dst, sizeof(*dst))) {
 		if (errno != EINPROGRESS) {
 			wpa_printf(MSG_DEBUG, "HTTP: Failed to connect: %s",
 				   strerror(errno));
-			http_client_free(c);
-			return NULL;
+			goto fail;
 		}
 
 		/*
@@ -173,20 +169,18 @@ struct http_client * http_client_addr(struct sockaddr_in *dst,
 	}
 
 	if (eloop_register_sock(c->sd, EVENT_TYPE_WRITE, http_client_tx_ready,
-				c, NULL)) {
-		http_client_free(c);
-		return NULL;
-	}
-
-	if (eloop_register_timeout(HTTP_CLIENT_TIMEOUT_SEC, 0,
-				   http_client_timeout, c, NULL)) {
-		http_client_free(c);
-		return NULL;
-	}
+				c, NULL) ||
+	    eloop_register_timeout(HTTP_CLIENT_TIMEOUT_SEC, 0,
+				   http_client_timeout, c, NULL))
+		goto fail;
 
 	c->req = req;
 
 	return c;
+
+fail:
+	http_client_free(c);
+	return NULL;
 }
 
 

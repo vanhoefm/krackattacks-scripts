@@ -85,15 +85,16 @@ static void http_client_tx_ready(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct http_client *c = eloop_ctx;
 	int res;
+	size_t send_len;
 
+	send_len = wpabuf_len(c->req) - c->req_pos;
 	wpa_printf(MSG_DEBUG, "HTTP: Send client request to %s:%d (%lu of %lu "
 		   "bytes remaining)",
 		   inet_ntoa(c->dst.sin_addr), ntohs(c->dst.sin_port),
 		   (unsigned long) wpabuf_len(c->req),
-		   (unsigned long) wpabuf_len(c->req) - c->req_pos);
+		   (unsigned long) send_len);
 
-	res = send(c->sd, wpabuf_head_u8(c->req) + c->req_pos,
-		   wpabuf_len(c->req) - c->req_pos, 0);
+	res = send(c->sd, wpabuf_head_u8(c->req) + c->req_pos, send_len, 0);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "HTTP: Failed to send buffer: %s",
 			   strerror(errno));
@@ -102,12 +103,11 @@ static void http_client_tx_ready(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	if ((size_t) res < wpabuf_len(c->req) - c->req_pos) {
+	if ((size_t) res < send_len) {
 		wpa_printf(MSG_DEBUG, "HTTP: Sent %d of %lu bytes; %lu bytes "
 			   "remaining",
 			   res, (unsigned long) wpabuf_len(c->req),
-			   (unsigned long) wpabuf_len(c->req) - c->req_pos -
-			   res);
+			   (unsigned long) send_len - res);
 		c->req_pos += res;
 		return;
 	}

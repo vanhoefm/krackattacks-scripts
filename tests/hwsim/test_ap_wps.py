@@ -1827,17 +1827,111 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
             pass
 
 def test_ap_wps_pbc_timeout(dev, apdev, params):
-    """wpa_supplicant PBC walk time [long]"""
+    """wpa_supplicant PBC walk time and WPS ER SelReg timeout [long]"""
     if not params['long']:
         raise HwsimSkip("Skip test case with long duration due to --long not specified")
-    ssid = "test-wps"
-    hostapd.add_ap(apdev[0]['ifname'],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    location = ssdp_get_location(ap_uuid)
+    urls = upnp_get_urls(location)
+    eventurl = urlparse.urlparse(urls['event_sub_url'])
+    ctrlurl = urlparse.urlparse(urls['control_url'])
+
+    url = urlparse.urlparse(location)
+    conn = httplib.HTTPConnection(url.netloc)
+
+    class WPSERHTTPServer(SocketServer.StreamRequestHandler):
+        def handle(self):
+            data = self.rfile.readline().strip()
+            logger.debug(data)
+            self.wfile.write(gen_wps_event())
+
+    server = MyTCPServer(("127.0.0.1", 12345), WPSERHTTPServer)
+    server.timeout = 1
+
+    headers = { "callback": '<http://127.0.0.1:12345/event>',
+                "NT": "upnp:event",
+                "timeout": "Second-1234" }
+    conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+    sid = resp.getheader("sid")
+    logger.debug("Subscription SID " + sid)
+
+    msg = '''<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<s:Body>
+<u:SetSelectedRegistrar xmlns:u="urn:schemas-wifialliance-org:service:WFAWLANConfig:1">
+<NewMessage>EEoAARAQQQABARASAAIAABBTAAIxSBBJAA4ANyoAASABBv///////xBIABA2LbR7pTpRkYj7
+VFi5hrLk
+</NewMessage>
+</u:SetSelectedRegistrar>
+</s:Body>
+</s:Envelope>'''
+    headers = { "Content-type": 'text/xml; charset="utf-8"' }
+    headers["SOAPAction"] = '"urn:schemas-wifialliance-org:service:WFAWLANConfig:1#%s"' % "SetSelectedRegistrar"
+    conn.request("POST", ctrlurl.path, msg, headers)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    server.handle_request()
+
     logger.info("Start WPS_PBC and wait for PBC walk time expiration")
     if "OK" not in dev[0].request("WPS_PBC"):
         raise Exception("WPS_PBC failed")
-    ev = dev[0].wait_event(["WPS-TIMEOUT"], timeout=150)
+
+    start = os.times()[4]
+
+    server.handle_request()
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True,
+                        only_new=True)
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    logger.debug("BSS: " + str(bss))
+    if '[WPS-AUTH]' not in bss['flags']:
+        raise Exception("WPS not indicated authorized")
+
+    server.handle_request()
+
+    wps_timeout_seen = False
+
+    while True:
+        hapd.dump_monitor()
+        dev[1].dump_monitor()
+        if not wps_timeout_seen:
+            ev = dev[0].wait_event(["WPS-TIMEOUT"], timeout=0)
+            if ev is not None:
+                logger.info("PBC timeout seen")
+                wps_timeout_seen = True
+        else:
+            dev[0].dump_monitor()
+        now = os.times()[4]
+        if now - start > 130:
+            raise Exception("Selected registration information not removed")
+        dev[1].request("BSS_FLUSH 0")
+        dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True,
+                            only_new=True)
+        bss = dev[1].get_bss(apdev[0]['bssid'])
+        logger.debug("BSS: " + str(bss))
+        if '[WPS-AUTH]' not in bss['flags']:
+            break
+        server.handle_request()
+
+    server.server_close()
+
+    if wps_timeout_seen:
+        return
+
+    now = os.times()[4]
+    if now < start + 150:
+        dur = start + 150 - now
+    else:
+        dur = 1
+    logger.info("Continue waiting for PBC timeout (%d sec)" % dur)
+    ev = dev[0].wait_event(["WPS-TIMEOUT"], timeout=dur)
     if ev is None:
         raise Exception("WPS-TIMEOUT not reported")
 

@@ -5,6 +5,7 @@
 # See README for more details.
 
 import base64
+import binascii
 import os
 import time
 import stat
@@ -4785,3 +4786,61 @@ def test_ap_wps_config_methods(dev, apdev):
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                "config_methods": "display push_button" }
     hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+def test_ap_wps_set_selected_registrar_proto(dev, apdev):
+    """WPS UPnP SetSelectedRegistrar protocol testing"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    location = ssdp_get_location(ap_uuid)
+    urls = upnp_get_urls(location)
+    eventurl = urlparse.urlparse(urls['event_sub_url'])
+    ctrlurl = urlparse.urlparse(urls['control_url'])
+    url = urlparse.urlparse(location)
+    conn = httplib.HTTPConnection(url.netloc)
+
+    class WPSERHTTPServer(SocketServer.StreamRequestHandler):
+        def handle(self):
+            data = self.rfile.readline().strip()
+            logger.debug(data)
+            self.wfile.write(gen_wps_event())
+
+    server = MyTCPServer(("127.0.0.1", 12345), WPSERHTTPServer)
+    server.timeout = 1
+
+    headers = { "callback": '<http://127.0.0.1:12345/event>',
+                "NT": "upnp:event",
+                "timeout": "Second-1234" }
+    conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+    sid = resp.getheader("sid")
+    logger.debug("Subscription SID " + sid)
+    server.handle_request()
+
+    tests = [ (500, "10"),
+              (200, "104a000110" + "1041000101" + "101200020000" +
+               "105300023148" +
+               "1049002c00372a0001200124111111111111222222222222333333333333444444444444555555555555666666666666" +
+               "10480010362db47ba53a519188fb5458b986b2e4"),
+              (200, "104a000110" + "1041000100" + "101200020000" +
+               "105300020000"),
+              (200, "104a000110" + "1041000100"),
+              (200, "104a000110") ]
+    for status,test in tests:
+        tlvs = binascii.unhexlify(test)
+        newmsg = base64.b64encode(tlvs)
+        msg = '<?xml version="1.0"?>\n'
+        msg += '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+        msg += '<s:Body>'
+        msg += '<u:SetSelectedRegistrar xmlns:u="urn:schemas-wifialliance-org:service:WFAWLANConfig:1">'
+        msg += '<NewMessage>'
+        msg += newmsg
+        msg += "</NewMessage></u:SetSelectedRegistrar></s:Body></s:Envelope>"
+        headers = { "Content-type": 'text/xml; charset="utf-8"' }
+        headers["SOAPAction"] = '"urn:schemas-wifialliance-org:service:WFAWLANConfig:1#%s"' % "SetSelectedRegistrar"
+        conn.request("POST", ctrlurl.path, msg, headers)
+        resp = conn.getresponse()
+        if resp.status != status:
+            raise Exception("Unexpected HTTP response: %d (expected %d)" % (resp.status, status))

@@ -1003,6 +1003,8 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 				ret = HTTP_INTERNAL_SERVER_ERROR;
 				goto error;
 			}
+			if (len > 0 && callback_urls[len - 1] == '\r')
+				callback_urls[len - 1] = '\0';
 			continue;
 		}
 		/* SID is only for renewal */

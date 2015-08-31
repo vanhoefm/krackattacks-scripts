@@ -1214,18 +1214,25 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 	}
 
 	if (got_uuid) {
+		char str[80];
+
+		uuid_bin2str(uuid, str, sizeof(str));
+
 		s = subscription_find(sm, uuid);
 		if (s) {
 			struct subscr_addr *sa;
 			sa = dl_list_first(&s->addr_list, struct subscr_addr,
 					   list);
-			wpa_printf(MSG_DEBUG, "WPS UPnP: Unsubscribing %p %s",
-				   s, (sa && sa->domain_and_port) ?
+			wpa_printf(MSG_DEBUG,
+				   "WPS UPnP: Unsubscribing %p (SID %s) %s",
+				   s, str, (sa && sa->domain_and_port) ?
 				   sa->domain_and_port : "-null-");
 			dl_list_del(&s->list);
 			subscription_destroy(s);
 		} else {
-			wpa_printf(MSG_INFO, "WPS UPnP: Could not find matching subscription to unsubscribe");
+			wpa_printf(MSG_INFO,
+				   "WPS UPnP: Could not find matching subscription to unsubscribe (SID %s)",
+				   str);
 			ret = HTTP_PRECONDITION_FAILED;
 			goto send_msg;
 		}

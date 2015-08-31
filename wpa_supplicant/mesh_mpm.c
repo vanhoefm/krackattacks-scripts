@@ -239,6 +239,9 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 			   2 + 22;  /* HT operation */
 	}
 #endif /* CONFIG_IEEE80211N */
+	if (type != PLINK_CLOSE)
+		buf_len += conf->rsn_ie_len; /* RSN IE */
+
 	buf = wpabuf_alloc(buf_len);
 	if (!buf)
 		return;
@@ -261,6 +264,9 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		pos = hostapd_eid_supp_rates(bss, supp_rates);
 		pos = hostapd_eid_ext_supp_rates(bss, pos);
 		wpabuf_put_data(buf, supp_rates, pos - supp_rates);
+
+		/* IE: RSN IE */
+		wpabuf_put_data(buf, conf->rsn_ie, conf->rsn_ie_len);
 
 		/* IE: Mesh ID */
 		wpabuf_put_u8(buf, WLAN_EID_MESH_ID);

@@ -4626,7 +4626,7 @@ def wps_ext_eap_wsc(dst, src, src_addr, msg):
     if "OK" not in res:
         raise Exception("EAPOL_RX failed")
 
-def wps_start_ext(apdev, dev):
+def wps_start_ext(apdev, dev, pbc=False):
     addr = dev.own_addr()
     bssid = apdev['bssid']
     ssid = "test-wps-conf"
@@ -4635,13 +4635,19 @@ def wps_start_ext(apdev, dev):
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"}
     hapd = hostapd.add_ap(apdev['ifname'], params)
 
-    pin = dev.wps_read_pin()
-    hapd.request("WPS_PIN any " + pin)
+    if pbc:
+        hapd.request("WPS_PBC")
+    else:
+        pin = dev.wps_read_pin()
+        hapd.request("WPS_PIN any " + pin)
     dev.scan_for_bss(bssid, freq="2412")
     hapd.request("SET ext_eapol_frame_io 1")
     dev.request("SET ext_eapol_frame_io 1")
 
-    dev.request("WPS_PIN " + bssid + " " + pin)
+    if pbc:
+        dev.request("WPS_PBC " + bssid)
+    else:
+        dev.request("WPS_PIN " + bssid + " " + pin)
     return addr,bssid,hapd
 
 def wps_auth_corrupt(dst, src, addr):
@@ -4791,6 +4797,423 @@ def test_ap_wps_authenticator_missing_m2(dev, apdev):
     if "OK" not in res:
         raise Exception("EAPOL_RX failed")
     wps_fail_finish(hapd, dev[0], "msg=5")
+
+def test_ap_wps_m2_dev_passwd_id_p2p(dev, apdev):
+    """WPS and M2 with different Device Password ID (P2P)"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0])
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[722:730] != '10120002':
+        raise Exception("Could not find Device Password ID attribute")
+    # Replace Device Password ID value. This will fail Authenticator check, but
+    # allows the code path in wps_process_dev_pw_id() to be checked from debug
+    # log.
+    msg = msg[0:730] + "0005" + msg[734:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    wps_fail_finish(hapd, dev[0], "msg=5")
+
+def test_ap_wps_m2_dev_passwd_id_change_pin_to_pbc(dev, apdev):
+    """WPS and M2 with different Device Password ID (PIN to PBC)"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0])
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[722:730] != '10120002':
+        raise Exception("Could not find Device Password ID attribute")
+    # Replace Device Password ID value (PIN --> PBC). This will be rejected.
+    msg = msg[0:730] + "0004" + msg[734:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    wps_fail_finish(hapd, dev[0], "msg=5")
+
+def test_ap_wps_m2_dev_passwd_id_change_pbc_to_pin(dev, apdev):
+    """WPS and M2 with different Device Password ID (PBC to PIN)"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[722:730] != '10120002':
+        raise Exception("Could not find Device Password ID attribute")
+    # Replace Device Password ID value. This will fail Authenticator check, but
+    # allows the code path in wps_process_dev_pw_id() to be checked from debug
+    # log.
+    msg = msg[0:730] + "0000" + msg[734:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    wps_fail_finish(hapd, dev[0], "msg=5")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_missing_dev_passwd_id(dev, apdev):
+    """WPS and M2 without Device Password ID"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0])
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[722:730] != '10120002':
+        raise Exception("Could not find Device Password ID attribute")
+    # Remove Device Password ID value. This will fail Authenticator check, but
+    # allows the code path in wps_process_dev_pw_id() to be checked from debug
+    # log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 6)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:722] + msg[734:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    wps_fail_finish(hapd, dev[0], "msg=5")
+
+def test_ap_wps_m2_missing_registrar_nonce(dev, apdev):
+    """WPS and M2 without Registrar Nonce"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[96:104] != '10390010':
+        raise Exception("Could not find Registrar Nonce attribute")
+    # Remove Registrar Nonce. This will fail Authenticator check, but
+    # allows the code path in wps_process_registrar_nonce() to be checked from
+    # the debug log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 20)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:96] + msg[136:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_missing_enrollee_nonce(dev, apdev):
+    """WPS and M2 without Enrollee Nonce"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[56:64] != '101a0010':
+        raise Exception("Could not find enrollee Nonce attribute")
+    # Remove Enrollee Nonce. This will fail Authenticator check, but
+    # allows the code path in wps_process_enrollee_nonce() to be checked from
+    # the debug log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 20)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:56] + msg[96:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_missing_uuid_r(dev, apdev):
+    """WPS and M2 without UUID-R"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[136:144] != '10480010':
+        raise Exception("Could not find enrollee Nonce attribute")
+    # Remove UUID-R. This will fail Authenticator check, but allows the code
+    # path in wps_process_uuid_r() to be checked from the debug log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 20)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:136] + msg[176:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_invalid(dev, apdev):
+    """WPS and M2 parsing failure"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[136:144] != '10480010':
+        raise Exception("Could not find enrollee Nonce attribute")
+    # Remove UUID-R. This will fail Authenticator check, but allows the code
+    # path in wps_process_uuid_r() to be checked from the debug log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 1)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:-2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_missing_msg_type(dev, apdev):
+    """WPS and M2 without Message Type"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[46:54] != '10220001':
+        raise Exception("Could not find Message Type attribute")
+    # Remove Message Type. This will fail Authenticator check, but allows the
+    # code path in wps_process_wsc_msg() to be checked from the debug log.
+    mlen = "%04x" % (int(msg[4:8], 16) - 5)
+    msg = msg[0:4] + mlen + msg[8:12] + mlen + msg[16:46] + msg[56:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_unknown_msg_type(dev, apdev):
+    """WPS and M2 but unknown Message Type"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[46:54] != '10220001':
+        raise Exception("Could not find Message Type attribute")
+    # Replace Message Type value. This will be rejected.
+    msg = msg[0:54] + "00" + msg[56:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECT"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnect event not seen")
+    dev[0].request("WPS_CANCEL")
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_unknown_opcode(dev, apdev):
+    """WPS and M2 but unknown opcode"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    # Replace opcode. This will be discarded in EAP-WSC processing.
+    msg = msg[0:32] + "00" + msg[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_unknown_opcode2(dev, apdev):
+    """WPS and M2 but unknown opcode (WSC_Start)"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    # Replace opcode. This will be discarded in EAP-WSC processing.
+    msg = msg[0:32] + "01" + msg[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_ap_wps_m2_unknown_opcode3(dev, apdev):
+    """WPS and M2 but unknown opcode (WSC_Done)"""
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev[0], addr, "M1")
+    logger.debug("M2")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    # Replace opcode. This will be discarded in WPS Enrollee processing.
+    msg = msg[0:32] + "05" + msg[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def wps_m2_but_other(dev, apdev, title, msgtype):
+    addr,bssid,hapd = wps_start_ext(apdev, dev)
+    wps_ext_eap_identity_req(dev, hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev, addr)
+    wps_ext_eap_wsc(dev, hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev, addr, "M1")
+    logger.debug(title)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev.request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[46:54] != '10220001':
+        raise Exception("Could not find Message Type attribute")
+    # Replace Message Type value. This will be rejected.
+    msg = msg[0:54] + msgtype + msg[56:]
+    res = dev.request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = dev.wait_event(["WPS-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("WPS-FAIL event not seen")
+    dev.request("WPS_CANCEL")
+    dev.wait_disconnected()
+
+def wps_m4_but_other(dev, apdev, title, msgtype):
+    addr,bssid,hapd = wps_start_ext(apdev, dev)
+    wps_ext_eap_identity_req(dev, hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev, addr)
+    wps_ext_eap_wsc(dev, hapd, bssid, "EAP-WSC/Start")
+    wps_ext_eap_wsc(hapd, dev, addr, "M1")
+    wps_ext_eap_wsc(dev, hapd, bssid, "M2")
+    wps_ext_eap_wsc(hapd, dev, addr, "M3")
+    logger.debug(title)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev.request("SET ext_eapol_frame_io 0")
+    msg = ev.split(' ')[2]
+    if msg[46:54] != '10220001':
+        raise Exception("Could not find Message Type attribute")
+    # Replace Message Type value. This will be rejected.
+    msg = msg[0:54] + msgtype + msg[56:]
+    res = dev.request("EAPOL_RX " + bssid + " " + msg)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+    ev = hapd.wait_event(["WPS-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("WPS-FAIL event not seen")
+    dev.request("WPS_CANCEL")
+    dev.wait_disconnected()
+
+def test_ap_wps_m2_msg_type_m4(dev, apdev):
+    """WPS and M2 but Message Type M4"""
+    wps_m2_but_other(dev[0], apdev[0], "M2/M4", "08")
+
+def test_ap_wps_m2_msg_type_m6(dev, apdev):
+    """WPS and M2 but Message Type M6"""
+    wps_m2_but_other(dev[0], apdev[0], "M2/M6", "0a")
+
+def test_ap_wps_m2_msg_type_m8(dev, apdev):
+    """WPS and M2 but Message Type M8"""
+    wps_m2_but_other(dev[0], apdev[0], "M2/M8", "0c")
+
+def test_ap_wps_m4_msg_type_m2(dev, apdev):
+    """WPS and M4 but Message Type M2"""
+    wps_m4_but_other(dev[0], apdev[0], "M4/M2", "05")
+
+def test_ap_wps_m4_msg_type_m2d(dev, apdev):
+    """WPS and M4 but Message Type M2D"""
+    wps_m4_but_other(dev[0], apdev[0], "M4/M2D", "06")
 
 def test_ap_wps_config_methods(dev, apdev):
     """WPS configuration method parsing"""

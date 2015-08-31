@@ -33,8 +33,8 @@ struct mesh_conf {
 	u8 mesh_sp_id;
 	/* Authentication Protocol Identifier */
 	u8 mesh_auth_id;
-	u8 *ies;
-	int ie_len;
+	u8 *rsn_ie;
+	int rsn_ie_len;
 #define MESH_CONF_SEC_NONE BIT(0)
 #define MESH_CONF_SEC_AUTH BIT(1)
 #define MESH_CONF_SEC_AMPE BIT(2)

@@ -47,8 +47,8 @@ void wpa_supplicant_mesh_iface_deinit(struct wpa_supplicant *wpa_s,
 
 	if (ifmsh->mconf) {
 		mesh_mpm_deinit(wpa_s, ifmsh);
-		if (ifmsh->mconf->ies) {
-			ifmsh->mconf->ies = NULL;
+		if (ifmsh->mconf->rsn_ie) {
+			ifmsh->mconf->rsn_ie = NULL;
 			/* We cannot free this struct
 			 * because wpa_authenticator on
 			 * hostapd side is also using it
@@ -352,8 +352,8 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	}
 
 	if (wpa_s->ifmsh) {
-		params.ies = wpa_s->ifmsh->mconf->ies;
-		params.ie_len = wpa_s->ifmsh->mconf->ie_len;
+		params.ies = wpa_s->ifmsh->mconf->rsn_ie;
+		params.ie_len = wpa_s->ifmsh->mconf->rsn_ie_len;
 		params.basic_rates = wpa_s->ifmsh->basic_rates;
 	}
 

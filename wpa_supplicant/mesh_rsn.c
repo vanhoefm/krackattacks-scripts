@@ -215,8 +215,8 @@ struct mesh_rsn *mesh_rsn_auth_init(struct wpa_supplicant *wpa_s,
 	bss->wpa_auth = mesh_rsn->auth;
 
 	ie = wpa_auth_get_wpa_ie(mesh_rsn->auth, &ie_len);
-	conf->ies = (u8 *) ie;
-	conf->ie_len = ie_len;
+	conf->rsn_ie = (u8 *) ie;
+	conf->rsn_ie_len = ie_len;
 
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 

@@ -139,7 +139,7 @@ next_advertisement(struct upnp_wps_device_sm *sm,
 	uuid_bin2str(iface->wps->uuid, uuid_string, sizeof(uuid_string));
 	msg = wpabuf_alloc(800); /* more than big enough */
 	if (msg == NULL)
-		goto fail;
+		return NULL;
 	switch (a->type) {
 	case ADVERTISE_UP:
 	case ADVERTISE_DOWN:
@@ -213,10 +213,6 @@ next_advertisement(struct upnp_wps_device_sm *sm,
 		*islast = 1;
 
 	return msg;
-
-fail:
-	wpabuf_free(msg);
-	return NULL;
 }
 
 

@@ -1966,7 +1966,7 @@ def ssdp_send(msg, no_recv=False):
         return None
     return sock.recv(1000)
 
-def ssdp_send_msearch(st):
+def ssdp_send_msearch(st, no_recv=False):
     msg = '\r\n'.join([
             'M-SEARCH * HTTP/1.1',
             'HOST: 239.255.255.250:1900',
@@ -1974,7 +1974,7 @@ def ssdp_send_msearch(st):
             'MAN: "ssdp:discover"',
             'ST: ' + st,
             '', ''])
-    return ssdp_send(msg)
+    return ssdp_send(msg, no_recv=no_recv)
 
 def test_ap_wps_ssdp_msearch(dev, apdev):
     """WPS AP and SSDP M-SEARCH messages"""
@@ -4844,3 +4844,26 @@ def test_ap_wps_set_selected_registrar_proto(dev, apdev):
         resp = conn.getresponse()
         if resp.status != status:
             raise Exception("Unexpected HTTP response: %d (expected %d)" % (resp.status, status))
+
+def test_ap_wps_adv_oom(dev, apdev):
+    """WPS AP and advertisement OOM"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    with alloc_fail(hapd, 1, "=msearchreply_state_machine_start"):
+        ssdp_send_msearch("urn:schemas-wifialliance-org:service:WFAWLANConfig:1",
+                          no_recv=True)
+        time.sleep(0.2)
+
+    with alloc_fail(hapd, 1, "eloop_register_timeout;msearchreply_state_machine_start"):
+        ssdp_send_msearch("urn:schemas-wifialliance-org:service:WFAWLANConfig:1",
+                          no_recv=True)
+        time.sleep(0.2)
+
+    with alloc_fail(hapd, 1,
+                    "next_advertisement;advertisement_state_machine_stop"):
+        hapd.disable()
+
+    with alloc_fail(hapd, 1, "ssdp_listener_start"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE succeeded during OOM")

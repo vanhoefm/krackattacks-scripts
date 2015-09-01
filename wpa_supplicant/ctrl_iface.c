@@ -2437,6 +2437,39 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 	}
 #endif /* CONFIG_SUITEB192 */
 
+#ifdef CONFIG_FILS
+	if (data.key_mgmt & WPA_KEY_MGMT_FILS_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sFILS-SHA256",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+	if (data.key_mgmt & WPA_KEY_MGMT_FILS_SHA384) {
+		ret = os_snprintf(pos, end - pos, "%sFILS-SHA384",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+#ifdef CONFIG_IEEE80211R
+	if (data.key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sFT-FILS-SHA256",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+	if (data.key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA384) {
+		ret = os_snprintf(pos, end - pos, "%sFT-FILS-SHA384",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_FILS */
+
 	if (data.key_mgmt & WPA_KEY_MGMT_OSEN) {
 		ret = os_snprintf(pos, end - pos, "%sOSEN",
 				  pos == start ? "" : "+");
@@ -2608,6 +2641,14 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 		pos += ret;
 	}
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_FILS
+	if (wpa_bss_get_ie(bss, WLAN_EID_FILS_INDICATION)) {
+		ret = os_snprintf(pos, end - pos, "[FILS]");
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+#endif /* CONFIG_FILS */
 #ifdef CONFIG_FST
 	if (wpa_bss_get_ie(bss, WLAN_EID_MULTI_BAND)) {
 		ret = os_snprintf(pos, end - pos, "[FST]");
@@ -4245,6 +4286,14 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			pos += ret;
 		}
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_FILS
+		if (wpa_bss_get_ie(bss, WLAN_EID_FILS_INDICATION)) {
+			ret = os_snprintf(pos, end - pos, "[FILS]");
+			if (os_snprintf_error(end - pos, ret))
+				return 0;
+			pos += ret;
+		}
+#endif /* CONFIG_FILS */
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (os_snprintf_error(end - pos, ret))

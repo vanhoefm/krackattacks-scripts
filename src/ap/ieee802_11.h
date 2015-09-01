@@ -135,4 +135,6 @@ void ap_copy_sta_supp_op_classes(struct sta_info *sta,
 				 const u8 *supp_op_classes,
 				 size_t supp_op_classes_len);
 
+u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid);
+
 #endif /* IEEE802_11_H */

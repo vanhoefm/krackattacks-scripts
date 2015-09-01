@@ -584,3 +584,45 @@ void ap_copy_sta_supp_op_classes(struct sta_info *sta,
 	os_memcpy(sta->supp_op_classes + 1, supp_op_classes,
 		  supp_op_classes_len);
 }
+
+
+u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
+{
+	u8 *pos = eid;
+#ifdef CONFIG_FILS
+	u8 *len;
+	u16 fils_info = 0;
+
+	if (!(hapd->conf->wpa & WPA_PROTO_RSN) ||
+	    !wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt))
+		return pos;
+
+	*pos++ = WLAN_EID_FILS_INDICATION;
+	len = pos++;
+	/* TODO: B0..B2: Number of Public Key Identifiers */
+	/* TODO: B3..B5: Number of Realm Identifiers */
+	/* TODO: B6: FILS IP Address Configuration */
+	if (hapd->conf->fils_cache_id_set)
+		fils_info |= BIT(7);
+	if (hessid && !is_zero_ether_addr(hapd->conf->hessid))
+		fils_info |= BIT(8); /* HESSID Included */
+	/* FILS Shared Key Authentication without PFS Supported */
+	fils_info |= BIT(9);
+	/* TODO: B10: FILS Shared Key Authentication with PFS Supported */
+	/* TODO: B11: FILS Public Key Authentication Supported */
+	/* B12..B15: Reserved */
+	WPA_PUT_LE16(pos, fils_info);
+	pos += 2;
+	if (hapd->conf->fils_cache_id_set) {
+		os_memcpy(pos, hapd->conf->fils_cache_id, FILS_CACHE_ID_LEN);
+		pos += FILS_CACHE_ID_LEN;
+	}
+	if (hessid && !is_zero_ether_addr(hapd->conf->hessid)) {
+		os_memcpy(pos, hapd->conf->hessid, ETH_ALEN);
+		pos += ETH_ALEN;
+	}
+	*len = pos - len - 1;
+#endif /* CONFIG_FILS */
+
+	return pos;
+}

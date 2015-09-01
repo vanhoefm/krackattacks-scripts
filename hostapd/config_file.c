@@ -710,6 +710,18 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 		else if (os_strcmp(start, "WPA-EAP-SUITE-B-192") == 0)
 			val |= WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
 #endif /* CONFIG_SUITEB192 */
+#ifdef CONFIG_FILS
+		else if (os_strcmp(start, "FILS-SHA256") == 0)
+			val |= WPA_KEY_MGMT_FILS_SHA256;
+		else if (os_strcmp(start, "FILS-SHA384") == 0)
+			val |= WPA_KEY_MGMT_FILS_SHA384;
+#ifdef CONFIG_IEEE80211R
+		else if (os_strcmp(start, "FT-FILS-SHA256") == 0)
+			val |= WPA_KEY_MGMT_FT_FILS_SHA256;
+		else if (os_strcmp(start, "FT-FILS-SHA384") == 0)
+			val |= WPA_KEY_MGMT_FT_FILS_SHA384;
+#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_FILS */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);
@@ -3493,6 +3505,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->ftm_responder = atoi(pos);
 	} else if (os_strcmp(buf, "ftm_initiator") == 0) {
 		bss->ftm_initiator = atoi(pos);
+#ifdef CONFIG_FILS
+	} else if (os_strcmp(buf, "fils_cache_id") == 0) {
+		if (hexstr2bin(pos, bss->fils_cache_id, FILS_CACHE_ID_LEN)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid fils_cache_id '%s'",
+				   line, pos);
+			return 1;
+		}
+		bss->fils_cache_id_set = 1;
+#endif /* CONFIG_FILS */
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

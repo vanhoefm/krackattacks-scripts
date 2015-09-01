@@ -343,3 +343,8 @@ CONFIG_IPV6=y
 # a client, from which a signature can be produced which can identify the model
 # of client device like "Nexus 6P" or "iPhone 5s".
 #CONFIG_TAXONOMY=y
+
+# Fast Initial Link Setup (FILS) (IEEE 802.11ai)
+# Note: This is an experimental and not yet complete implementation. This
+# should not be enabled for production use.
+#CONFIG_FILS=y

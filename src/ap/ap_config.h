@@ -596,6 +596,11 @@ struct hostapd_bss_config {
 
 	int ftm_responder;
 	int ftm_initiator;
+
+#ifdef CONFIG_FILS
+	u8 fils_cache_id[FILS_CACHE_ID_LEN];
+	int fils_cache_id_set;
+#endif /* CONFIG_FILS */
 };
 
 

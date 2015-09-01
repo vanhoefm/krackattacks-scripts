@@ -22,25 +22,49 @@
 
 static unsigned int wpa_kck_len(int akmp)
 {
-	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+	switch (akmp) {
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
 		return 24;
-	return 16;
+	case WPA_KEY_MGMT_FILS_SHA256:
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
+	case WPA_KEY_MGMT_FILS_SHA384:
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return 0;
+	default:
+		return 16;
+	}
 }
 
 
 static unsigned int wpa_kek_len(int akmp)
 {
-	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+	switch (akmp) {
+	case WPA_KEY_MGMT_FILS_SHA384:
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return 64;
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
+	case WPA_KEY_MGMT_FILS_SHA256:
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
 		return 32;
-	return 16;
+	default:
+		return 16;
+	}
 }
 
 
 unsigned int wpa_mic_len(int akmp)
 {
-	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+	switch (akmp) {
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
 		return 24;
-	return 16;
+	case WPA_KEY_MGMT_FILS_SHA256:
+	case WPA_KEY_MGMT_FILS_SHA384:
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return 0;
+	default:
+		return 16;
+	}
 }
 
 
@@ -512,6 +536,14 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 		return WPA_KEY_MGMT_IEEE8021X_SUITE_B;
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192)
 		return WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FILS_SHA256)
+		return WPA_KEY_MGMT_FILS_SHA256;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FILS_SHA384)
+		return WPA_KEY_MGMT_FILS_SHA384;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FT_FILS_SHA256)
+		return WPA_KEY_MGMT_FT_FILS_SHA256;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FT_FILS_SHA384)
+		return WPA_KEY_MGMT_FT_FILS_SHA384;
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_OSEN)
 		return WPA_KEY_MGMT_OSEN;
 	return 0;
@@ -1214,6 +1246,14 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 		return "WPA2-EAP-SUITE-B";
 	case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
 		return "WPA2-EAP-SUITE-B-192";
+	case WPA_KEY_MGMT_FILS_SHA256:
+		return "FILS-SHA256";
+	case WPA_KEY_MGMT_FILS_SHA384:
+		return "FILS-SHA384";
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
+		return "FT-FILS-SHA256";
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return "FT-FILS-SHA384";
 	default:
 		return "UNKNOWN";
 	}
@@ -1244,6 +1284,14 @@ u32 wpa_akm_to_suite(int akm)
 		return WLAN_AKM_SUITE_8021X_SUITE_B;
 	if (akm & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
 		return WLAN_AKM_SUITE_8021X_SUITE_B_192;
+	if (akm & WPA_KEY_MGMT_FILS_SHA256)
+		return WLAN_AKM_SUITE_FILS_SHA256;
+	if (akm & WPA_KEY_MGMT_FILS_SHA384)
+		return WLAN_AKM_SUITE_FILS_SHA384;
+	if (akm & WPA_KEY_MGMT_FT_FILS_SHA256)
+		return WLAN_AKM_SUITE_FT_FILS_SHA256;
+	if (akm & WPA_KEY_MGMT_FT_FILS_SHA384)
+		return WLAN_AKM_SUITE_FT_FILS_SHA384;
 	return 0;
 }
 

@@ -218,11 +218,19 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 		if (hapd->conf->ssid.utf8_ssid)
 			*pos |= 0x01; /* Bit 48 - UTF-8 SSID */
 		break;
+	case 7: /* Bits 56-63 */
+		break;
 	case 8: /* Bits 64-71 */
 		if (hapd->conf->ftm_responder)
 			*pos |= 0x40; /* Bit 70 - FTM responder */
 		if (hapd->conf->ftm_initiator)
 			*pos |= 0x80; /* Bit 71 - FTM initiator */
+	case 9: /* Bits 72-79 */
+#ifdef CONFIG_FILS
+		if ((hapd->conf->wpa & WPA_PROTO_RSN) &&
+		    wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt))
+			*pos |= 0x01;
+#endif /* CONFIG_FILS */
 		break;
 	}
 }
@@ -258,6 +266,11 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	if (hapd->conf->mbo_enabled && len < 6)
 		len = 6;
 #endif /* CONFIG_MBO */
+#ifdef CONFIG_FILS
+	if ((!(hapd->conf->wpa & WPA_PROTO_RSN) ||
+	     !wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt)) && len < 10)
+		len = 10;
+#endif /* CONFIG_FILS */
 	if (len < hapd->iface->extended_capa_len)
 		len = hapd->iface->extended_capa_len;
 	if (len == 0)

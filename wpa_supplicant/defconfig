@@ -548,3 +548,8 @@ CONFIG_PEERKEY=y
 
 # Support Multi Band Operation
 #CONFIG_MBO=y
+
+# Fast Initial Link Setup (FILS) (IEEE 802.11ai)
+# Note: This is an experimental and not yet complete implementation. This
+# should not be enabled for production use.
+#CONFIG_FILS=y

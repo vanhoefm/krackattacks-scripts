@@ -271,6 +271,12 @@ NEED_ECC=y
 NEED_DH_GROUPS=y
 endif
 
+ifdef CONFIG_FILS
+CFLAGS += -DCONFIG_FILS
+NEED_CRC32=y
+NEED_SHA384=y
+endif
+
 ifdef CONFIG_WNM
 CFLAGS += -DCONFIG_WNM
 OBJS += wnm_sta.o
@@ -1328,6 +1334,10 @@ endif
 
 ifdef NEED_ECC
 CFLAGS += -DCONFIG_ECC
+endif
+
+ifdef NEED_CRC32
+OBJS += ../src/utils/crc32.o
 endif
 
 ifdef CONFIG_NO_RANDOM_POOL

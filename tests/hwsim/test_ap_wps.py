@@ -1093,6 +1093,10 @@ def _test_ap_wps_er_add_enrollee_uuid(dev, apdev):
     if ev is None:
         raise Exception("WPS ER did not report success")
 
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-REMOVE"], timeout=15)
+    if ev is None:
+        raise Exception("No Enrollee STA entry timeout seen")
+
     logger.info("Stop ER")
     dev[0].dump_monitor()
     dev[0].request("WPS_ER_STOP")

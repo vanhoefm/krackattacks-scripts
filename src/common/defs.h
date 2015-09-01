@@ -160,6 +160,7 @@ static inline int wpa_key_mgmt_cckm(int akm)
 #define WPA_AUTH_ALG_LEAP BIT(2)
 #define WPA_AUTH_ALG_FT BIT(3)
 #define WPA_AUTH_ALG_SAE BIT(4)
+#define WPA_AUTH_ALG_FILS BIT(5)
 
 
 enum wpa_alg {

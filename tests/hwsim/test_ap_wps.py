@@ -175,6 +175,21 @@ def test_ap_wps_init_through_wps_config(dev, apdev):
     dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
                    pairwise="CCMP", group="CCMP")
 
+def test_ap_wps_init_through_wps_config_2(dev, apdev):
+    """AP configuration using wps_config and wps_cred_processing=2"""
+    ssid = "test-wps-init-config"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1",
+                     "wps_cred_processing": "2" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    if "FAIL" in hapd.request("WPS_CONFIG " + ssid.encode("hex") + " WPA2PSK CCMP " + "12345678".encode("hex")):
+        raise Exception("WPS_CONFIG command failed")
+    ev = hapd.wait_event(["WPS-NEW-AP-SETTINGS"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on WPS-NEW-AP-SETTINGS events")
+    if "100e" not in ev:
+        raise Exception("WPS-NEW-AP-SETTINGS did not include Credential")
+
 def test_ap_wps_invalid_wps_config_passphrase(dev, apdev):
     """AP configuration using wps_config command with invalid passphrase"""
     ssid = "test-wps-init-config"

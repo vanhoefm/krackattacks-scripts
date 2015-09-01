@@ -1466,6 +1466,11 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 		if (wpa_s->conf->ftm_initiator)
 			*pos |= 0x80; /* Bit 71 - FTM initiator */
 		break;
+	case 9: /* Bits 72-79 */
+#ifdef CONFIG_FILS
+		*pos |= 0x01;
+#endif /* CONFIG_FILS */
+		break;
 	}
 }
 
@@ -1473,11 +1478,8 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf, size_t buflen)
 {
 	u8 *pos = buf;
-	u8 len = 6, i;
+	u8 len = 10, i;
 
-	if (len < 9 &&
-	    (wpa_s->conf->ftm_initiator || wpa_s->conf->ftm_responder))
-		len = 9;
 	if (len < wpa_s->extended_capa_len)
 		len = wpa_s->extended_capa_len;
 	if (buflen < (size_t) len + 2) {

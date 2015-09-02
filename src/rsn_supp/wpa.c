@@ -129,7 +129,9 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info = WPA_KEY_INFO_REQUEST | ver;
 	if (sm->ptk_set)
-		key_info |= WPA_KEY_INFO_MIC | WPA_KEY_INFO_SECURE;
+		key_info |= WPA_KEY_INFO_SECURE;
+	if (sm->ptk_set && mic_len)
+		key_info |= WPA_KEY_INFO_MIC;
 	if (error)
 		key_info |= WPA_KEY_INFO_ERROR;
 	if (pairwise)
@@ -339,6 +341,7 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	struct wpa_eapol_key *reply;
 	u8 *rbuf, *key_mic;
 	u8 *rsn_ie_buf = NULL;
+	u16 key_info;
 
 	if (wpa_ie == NULL) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING, "WPA: No wpa_ie set - "
@@ -391,8 +394,10 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	reply->type = (sm->proto == WPA_PROTO_RSN ||
 		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
-	WPA_PUT_BE16(reply->key_info,
-		     ver | WPA_KEY_INFO_KEY_TYPE | WPA_KEY_INFO_MIC);
+	key_info = ver | WPA_KEY_INFO_KEY_TYPE;
+	if (mic_len)
+		key_info |= WPA_KEY_INFO_MIC;
+	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
 	else
@@ -1149,7 +1154,9 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info &= WPA_KEY_INFO_SECURE;
-	key_info |= ver | WPA_KEY_INFO_KEY_TYPE | WPA_KEY_INFO_MIC;
+	key_info |= ver | WPA_KEY_INFO_KEY_TYPE;
+	if (mic_len)
+		key_info |= WPA_KEY_INFO_MIC;
 	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
@@ -1453,7 +1460,9 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info &= WPA_KEY_INFO_KEY_INDEX_MASK;
-	key_info |= ver | WPA_KEY_INFO_MIC | WPA_KEY_INFO_SECURE;
+	key_info |= ver | WPA_KEY_INFO_SECURE;
+	if (mic_len)
+		key_info |= WPA_KEY_INFO_MIC;
 	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);

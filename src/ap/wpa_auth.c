@@ -989,6 +989,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			if (wpa_use_aes_cmac(sm) &&
 			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN &&
 			    !wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
+			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
 			    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1243,11 +1244,21 @@ continue_processing:
 		return;
 	}
 
-	if (!(key_info & WPA_KEY_INFO_MIC)) {
+	if (!wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
+	    !(key_info & WPA_KEY_INFO_MIC)) {
 		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 				"received invalid EAPOL-Key: Key MIC not set");
 		return;
 	}
+
+#ifdef CONFIG_FILS
+	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
+	    (key_info & WPA_KEY_INFO_MIC)) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
+				"received invalid EAPOL-Key: Key MIC set");
+		return;
+	}
+#endif /* CONFIG_FILS */
 
 	sm->MICVerified = FALSE;
 	if (sm->PTK_valid && !sm->update_snonce) {

@@ -889,12 +889,15 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
 		return;
+	wpa_hexdump(MSG_MSGDUMP, "WPA: RX EAPOL data", data, data_len);
 
 	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
 	keyhdrlen = sizeof(*key) + mic_len + 2;
 
-	if (data_len < sizeof(*hdr) + keyhdrlen)
+	if (data_len < sizeof(*hdr) + keyhdrlen) {
+		wpa_printf(MSG_DEBUG, "WPA: Ignore too short EAPOL-Key frame");
 		return;
+	}
 
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
@@ -903,8 +906,14 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	key_data = mic + mic_len + 2;
 	key_data_length = WPA_GET_BE16(mic + mic_len);
 	wpa_printf(MSG_DEBUG, "WPA: Received EAPOL-Key from " MACSTR
-		   " key_info=0x%x type=%u key_data_length=%u",
-		   MAC2STR(sm->addr), key_info, key->type, key_data_length);
+		   " key_info=0x%x type=%u mic_len=%u key_data_length=%u",
+		   MAC2STR(sm->addr), key_info, key->type,
+		   (unsigned int) mic_len, key_data_length);
+	wpa_hexdump(MSG_MSGDUMP,
+		    "WPA: EAPOL-Key header (ending before Key MIC)",
+		    key, sizeof(*key));
+	wpa_hexdump(MSG_MSGDUMP, "WPA: EAPOL-Key Key MIC",
+		    mic, mic_len);
 	if (key_data_length > data_len - sizeof(*hdr) - keyhdrlen) {
 		wpa_printf(MSG_INFO, "WPA: Invalid EAPOL-Key frame - "
 			   "key_data overflow (%d > %lu)",

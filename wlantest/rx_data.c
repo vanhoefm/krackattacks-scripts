@@ -59,7 +59,7 @@ static void rx_data_eth(struct wlantest *wt, const u8 *bssid,
 {
 	switch (ethertype) {
 	case ETH_P_PAE:
-		rx_data_eapol(wt, dst, src, data, len, prot);
+		rx_data_eapol(wt, bssid, sta_addr, dst, src, data, len, prot);
 		break;
 	case ETH_P_IP:
 		rx_data_ip(wt, bssid, sta_addr, dst, src, data, len,

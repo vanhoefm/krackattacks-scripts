@@ -97,9 +97,8 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 {
 	size_t mic_len, hdrlen, rlen;
 	struct wpa_eapol_key *reply;
-	struct wpa_eapol_key_192 *reply192;
 	int key_info, ver;
-	u8 bssid[ETH_ALEN], *rbuf, *key_mic;
+	u8 bssid[ETH_ALEN], *rbuf, *key_mic, *mic;
 
 	if (sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
 	    wpa_key_mgmt_suite_b(sm->key_mgmt))
@@ -119,12 +118,11 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 	}
 
 	mic_len = wpa_mic_len(sm->key_mgmt);
-	hdrlen = mic_len == 24 ? sizeof(*reply192) : sizeof(*reply);
+	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
 	if (rbuf == NULL)
 		return;
-	reply192 = (struct wpa_eapol_key_192 *) reply;
 
 	reply->type = (sm->proto == WPA_PROTO_RSN ||
 		       sm->proto == WPA_PROTO_OSEN) ?
@@ -142,14 +140,12 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 		  WPA_REPLAY_COUNTER_LEN);
 	inc_byte_array(sm->request_counter, WPA_REPLAY_COUNTER_LEN);
 
-	if (mic_len == 24)
-		WPA_PUT_BE16(reply192->key_data_length, 0);
-	else
-		WPA_PUT_BE16(reply->key_data_length, 0);
+	mic = (u8 *) (reply + 1);
+	WPA_PUT_BE16(mic + mic_len, 0);
 	if (!(key_info & WPA_KEY_INFO_MIC))
 		key_mic = NULL;
 	else
-		key_mic = reply192->key_mic; /* same offset in reply */
+		key_mic = mic;
 
 	wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 		"WPA: Sending EAPOL-Key Request (error=%d "
@@ -341,7 +337,6 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 {
 	size_t mic_len, hdrlen, rlen;
 	struct wpa_eapol_key *reply;
-	struct wpa_eapol_key_192 *reply192;
 	u8 *rbuf, *key_mic;
 	u8 *rsn_ie_buf = NULL;
 
@@ -384,7 +379,7 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	wpa_hexdump(MSG_DEBUG, "WPA: WPA IE for msg 2/4", wpa_ie, wpa_ie_len);
 
 	mic_len = wpa_mic_len(sm->key_mgmt);
-	hdrlen = mic_len == 24 ? sizeof(*reply192) : sizeof(*reply);
+	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY,
 				  NULL, hdrlen + wpa_ie_len,
 				  &rlen, (void *) &reply);
@@ -392,7 +387,6 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		os_free(rsn_ie_buf);
 		return -1;
 	}
-	reply192 = (struct wpa_eapol_key_192 *) reply;
 
 	reply->type = (sm->proto == WPA_PROTO_RSN ||
 		       sm->proto == WPA_PROTO_OSEN) ?
@@ -408,14 +402,9 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	wpa_hexdump(MSG_DEBUG, "WPA: Replay Counter", reply->replay_counter,
 		    WPA_REPLAY_COUNTER_LEN);
 
-	key_mic = reply192->key_mic; /* same offset for reply and reply192 */
-	if (mic_len == 24) {
-		WPA_PUT_BE16(reply192->key_data_length, wpa_ie_len);
-		os_memcpy(reply192 + 1, wpa_ie, wpa_ie_len);
-	} else {
-		WPA_PUT_BE16(reply->key_data_length, wpa_ie_len);
-		os_memcpy(reply + 1, wpa_ie, wpa_ie_len);
-	}
+	key_mic = (u8 *) (reply + 1);
+	WPA_PUT_BE16(key_mic + mic_len, wpa_ie_len); /* Key Data Length */
+	os_memcpy(key_mic + mic_len + 2, wpa_ie, wpa_ie_len); /* Key Data */
 	os_free(rsn_ie_buf);
 
 	os_memcpy(reply->key_nonce, nonce, WPA_NONCE_LEN);
@@ -1147,16 +1136,14 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 {
 	size_t mic_len, hdrlen, rlen;
 	struct wpa_eapol_key *reply;
-	struct wpa_eapol_key_192 *reply192;
 	u8 *rbuf, *key_mic;
 
 	mic_len = wpa_mic_len(sm->key_mgmt);
-	hdrlen = mic_len == 24 ? sizeof(*reply192) : sizeof(*reply);
+	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
 	if (rbuf == NULL)
 		return -1;
-	reply192 = (struct wpa_eapol_key_192 *) reply;
 
 	reply->type = (sm->proto == WPA_PROTO_RSN ||
 		       sm->proto == WPA_PROTO_OSEN) ?
@@ -1171,11 +1158,8 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	os_memcpy(reply->replay_counter, key->replay_counter,
 		  WPA_REPLAY_COUNTER_LEN);
 
-	key_mic = reply192->key_mic; /* same offset for reply and reply192 */
-	if (mic_len == 24)
-		WPA_PUT_BE16(reply192->key_data_length, 0);
-	else
-		WPA_PUT_BE16(reply->key_data_length, 0);
+	key_mic = (u8 *) (reply + 1);
+	WPA_PUT_BE16(key_mic + mic_len, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 4/4");
 	return wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst,
@@ -1456,16 +1440,14 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 {
 	size_t mic_len, hdrlen, rlen;
 	struct wpa_eapol_key *reply;
-	struct wpa_eapol_key_192 *reply192;
 	u8 *rbuf, *key_mic;
 
 	mic_len = wpa_mic_len(sm->key_mgmt);
-	hdrlen = mic_len == 24 ? sizeof(*reply192) : sizeof(*reply);
+	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
 	if (rbuf == NULL)
 		return -1;
-	reply192 = (struct wpa_eapol_key_192 *) reply;
 
 	reply->type = (sm->proto == WPA_PROTO_RSN ||
 		       sm->proto == WPA_PROTO_OSEN) ?
@@ -1480,11 +1462,8 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 	os_memcpy(reply->replay_counter, key->replay_counter,
 		  WPA_REPLAY_COUNTER_LEN);
 
-	key_mic = reply192->key_mic; /* same offset for reply and reply192 */
-	if (mic_len == 24)
-		WPA_PUT_BE16(reply192->key_data_length, 0);
-	else
-		WPA_PUT_BE16(reply->key_data_length, 0);
+	key_mic = (u8 *) (reply + 1);
+	WPA_PUT_BE16(key_mic + mic_len, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 2/2");
 	return wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver,
@@ -1564,7 +1543,7 @@ failed:
 
 
 static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
-					       struct wpa_eapol_key_192 *key,
+					       struct wpa_eapol_key *key,
 					       u16 ver,
 					       const u8 *buf, size_t len)
 {
@@ -1572,12 +1551,12 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 	int ok = 0;
 	size_t mic_len = wpa_mic_len(sm->key_mgmt);
 
-	os_memcpy(mic, key->key_mic, mic_len);
+	os_memcpy(mic, key + 1, mic_len);
 	if (sm->tptk_set) {
-		os_memset(key->key_mic, 0, mic_len);
+		os_memset(key + 1, 0, mic_len);
 		wpa_eapol_key_mic(sm->tptk.kck, sm->tptk.kck_len, sm->key_mgmt,
-				  ver, buf, len, key->key_mic);
-		if (os_memcmp_const(mic, key->key_mic, mic_len) != 0) {
+				  ver, buf, len, (u8 *) (key + 1));
+		if (os_memcmp_const(mic, key + 1, mic_len) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC "
 				"when using TPTK - ignoring TPTK");
@@ -1591,10 +1570,10 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 	}
 
 	if (!ok && sm->ptk_set) {
-		os_memset(key->key_mic, 0, mic_len);
+		os_memset(key + 1, 0, mic_len);
 		wpa_eapol_key_mic(sm->ptk.kck, sm->ptk.kck_len, sm->key_mgmt,
-				  ver, buf, len, key->key_mic);
-		if (os_memcmp_const(mic, key->key_mic, mic_len) != 0) {
+				  ver, buf, len, (u8 *) (key + 1));
+		if (os_memcmp_const(mic, key + 1, mic_len) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC - "
 				"dropping packet");
@@ -1619,7 +1598,8 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 
 /* Decrypt RSN EAPOL-Key key data (RC4 or AES-WRAP) */
 static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
-					   struct wpa_eapol_key *key, u16 ver,
+					   struct wpa_eapol_key *key,
+					   size_t mic_len, u16 ver,
 					   u8 *key_data, size_t *key_data_len)
 {
 	wpa_hexdump(MSG_DEBUG, "RSN: encrypted key data",
@@ -1678,7 +1658,7 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		}
 		os_memcpy(key_data, buf, *key_data_len);
 		bin_clear_free(buf, *key_data_len);
-		WPA_PUT_BE16(key->key_data_length, *key_data_len);
+		WPA_PUT_BE16(((u8 *) (key + 1)) + mic_len, *key_data_len);
 	} else {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Unsupported key_info type %d", ver);
@@ -1763,12 +1743,11 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	size_t plen, data_len, key_data_len;
 	const struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	struct wpa_eapol_key_192 *key192;
 	u16 key_info, ver;
 	u8 *tmp = NULL;
 	int ret = -1;
 	struct wpa_peerkey *peerkey = NULL;
-	u8 *key_data;
+	u8 *mic, *key_data;
 	size_t mic_len, keyhdrlen;
 
 #ifdef CONFIG_IEEE80211R
@@ -1776,7 +1755,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 #endif /* CONFIG_IEEE80211R */
 
 	mic_len = wpa_mic_len(sm->key_mgmt);
-	keyhdrlen = mic_len == 24 ? sizeof(*key192) : sizeof(*key);
+	keyhdrlen = sizeof(*key) + mic_len + 2;
 
 	if (len < sizeof(*hdr) + keyhdrlen) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
@@ -1828,12 +1807,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		goto out;
 	os_memcpy(tmp, buf, data_len);
 	key = (struct wpa_eapol_key *) (tmp + sizeof(struct ieee802_1x_hdr));
-	key192 = (struct wpa_eapol_key_192 *)
-		(tmp + sizeof(struct ieee802_1x_hdr));
-	if (mic_len == 24)
-		key_data = (u8 *) (key192 + 1);
-	else
-		key_data = (u8 *) (key + 1);
+	mic = (u8 *) (key + 1);
+	key_data = mic + mic_len + 2;
 
 	if (key->type != EAPOL_KEY_TYPE_WPA && key->type != EAPOL_KEY_TYPE_RSN)
 	{
@@ -1844,11 +1819,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		goto out;
 	}
 
-	if (mic_len == 24)
-		key_data_len = WPA_GET_BE16(key192->key_data_length);
-	else
-		key_data_len = WPA_GET_BE16(key->key_data_length);
-	wpa_eapol_key_dump(sm, key, key_data_len, key192->key_mic, mic_len);
+	key_data_len = WPA_GET_BE16(mic + mic_len);
+	wpa_eapol_key_dump(sm, key, key_data_len, mic, mic_len);
 
 	if (key_data_len > plen - keyhdrlen) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Invalid EAPOL-Key "
@@ -2004,19 +1976,20 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 	if ((key_info & WPA_KEY_INFO_MIC) && !peerkey &&
-	    wpa_supplicant_verify_eapol_key_mic(sm, key192, ver, tmp, data_len))
+	    wpa_supplicant_verify_eapol_key_mic(sm, key, ver, tmp, data_len))
 		goto out;
 
 #ifdef CONFIG_PEERKEY
 	if ((key_info & WPA_KEY_INFO_MIC) && peerkey &&
-	    peerkey_verify_eapol_key_mic(sm, peerkey, key192, ver, tmp,
+	    peerkey_verify_eapol_key_mic(sm, peerkey, key, ver, tmp,
 					 data_len))
 		goto out;
 #endif /* CONFIG_PEERKEY */
 
 	if ((sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) &&
 	    (key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
-		if (wpa_supplicant_decrypt_key_data(sm, key, ver, key_data,
+		if (wpa_supplicant_decrypt_key_data(sm, key, mic_len,
+						    ver, key_data,
 						    &key_data_len))
 			goto out;
 	}

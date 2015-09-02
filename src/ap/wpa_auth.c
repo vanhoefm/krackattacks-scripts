@@ -877,7 +877,6 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	struct wpa_eapol_key_192 *key192;
 	u16 key_info, key_data_length;
 	enum { PAIRWISE_2, PAIRWISE_4, GROUP_2, REQUEST,
 	       SMK_M1, SMK_M3, SMK_ERROR } msg;
@@ -886,27 +885,23 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	int ft;
 	const u8 *eapol_key_ie, *key_data;
 	size_t eapol_key_ie_len, keyhdrlen, mic_len;
+	u8 *mic;
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
 		return;
 
 	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
-	keyhdrlen = mic_len == 24 ? sizeof(*key192) : sizeof(*key);
+	keyhdrlen = sizeof(*key) + mic_len + 2;
 
 	if (data_len < sizeof(*hdr) + keyhdrlen)
 		return;
 
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
-	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
+	mic = (u8 *) (key + 1);
 	key_info = WPA_GET_BE16(key->key_info);
-	if (mic_len == 24) {
-		key_data = (const u8 *) (key192 + 1);
-		key_data_length = WPA_GET_BE16(key192->key_data_length);
-	} else {
-		key_data = (const u8 *) (key + 1);
-		key_data_length = WPA_GET_BE16(key->key_data_length);
-	}
+	key_data = mic + mic_len + 2;
+	key_data_length = WPA_GET_BE16(mic + mic_len);
 	wpa_printf(MSG_DEBUG, "WPA: Received EAPOL-Key from " MACSTR
 		   " key_info=0x%x type=%u key_data_length=%u",
 		   MAC2STR(sm->addr), key_info, key->type, key_data_length);
@@ -1412,17 +1407,16 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	struct wpa_eapol_key_192 *key192;
 	size_t len, mic_len, keyhdrlen;
 	int alg;
 	int key_data_len, pad_len = 0;
 	u8 *buf, *pos;
 	int version, pairwise;
 	int i;
-	u8 *key_data;
+	u8 *key_mic, *key_data;
 
 	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
-	keyhdrlen = mic_len == 24 ? sizeof(*key192) : sizeof(*key);
+	keyhdrlen = sizeof(*key) + mic_len + 2;
 
 	len = sizeof(struct ieee802_1x_hdr) + keyhdrlen;
 
@@ -1471,7 +1465,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	hdr->type = IEEE802_1X_TYPE_EAPOL_KEY;
 	hdr->length = host_to_be16(len  - sizeof(*hdr));
 	key = (struct wpa_eapol_key *) (hdr + 1);
-	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
+	key_mic = (u8 *) (key + 1);
 	key_data = ((u8 *) (hdr + 1)) + keyhdrlen;
 
 	key->type = sm->wpa == WPA_VERSION_WPA2 ?
@@ -1510,10 +1504,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	if (kde && !encr) {
 		os_memcpy(key_data, kde, kde_len);
-		if (mic_len == 24)
-			WPA_PUT_BE16(key192->key_data_length, kde_len);
-		else
-			WPA_PUT_BE16(key->key_data_length, kde_len);
+		WPA_PUT_BE16(key_mic + mic_len, kde_len);
 	} else if (encr && kde) {
 		buf = os_zalloc(key_data_len);
 		if (buf == NULL) {
@@ -1539,12 +1530,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 				os_free(buf);
 				return;
 			}
-			if (mic_len == 24)
-				WPA_PUT_BE16(key192->key_data_length,
-					     key_data_len);
-			else
-				WPA_PUT_BE16(key->key_data_length,
-					     key_data_len);
+			WPA_PUT_BE16(key_mic + mic_len, key_data_len);
 #ifndef CONFIG_NO_RC4
 		} else if (sm->PTK.kek_len == 16) {
 			u8 ek[32];
@@ -1555,12 +1541,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			os_memcpy(ek + 16, sm->PTK.kek, sm->PTK.kek_len);
 			os_memcpy(key_data, buf, key_data_len);
 			rc4_skip(ek, 32, 256, key_data, key_data_len);
-			if (mic_len == 24)
-				WPA_PUT_BE16(key192->key_data_length,
-					     key_data_len);
-			else
-				WPA_PUT_BE16(key->key_data_length,
-					     key_data_len);
+			WPA_PUT_BE16(key_mic + mic_len, key_data_len);
 #endif /* CONFIG_NO_RC4 */
 		} else {
 			os_free(hdr);
@@ -1571,8 +1552,6 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	}
 
 	if (key_info & WPA_KEY_INFO_MIC) {
-		u8 *key_mic;
-
 		if (!sm->PTK_valid) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
 					"PTK not valid when sending EAPOL-Key "
@@ -1581,7 +1560,6 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			return;
 		}
 
-		key_mic = key192->key_mic; /* same offset for key and key192 */
 		wpa_eapol_key_mic(sm->PTK.kck, sm->PTK.kck_len,
 				  sm->wpa_key_mgmt, version,
 				  (u8 *) hdr, len, key_mic);
@@ -1641,10 +1619,9 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	struct wpa_eapol_key_192 *key192;
 	u16 key_info;
 	int ret = 0;
-	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
+	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN], *mic_pos;
 	size_t mic_len = wpa_mic_len(akmp);
 
 	if (data_len < sizeof(*hdr) + sizeof(*key))
@@ -1652,16 +1629,16 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
-	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
+	mic_pos = (u8 *) (key + 1);
 	key_info = WPA_GET_BE16(key->key_info);
-	os_memcpy(mic, key192->key_mic, mic_len);
-	os_memset(key192->key_mic, 0, mic_len);
+	os_memcpy(mic, mic_pos, mic_len);
+	os_memset(mic_pos, 0, mic_len);
 	if (wpa_eapol_key_mic(PTK->kck, PTK->kck_len, akmp,
 			      key_info & WPA_KEY_INFO_TYPE_MASK,
-			      data, data_len, key192->key_mic) ||
-	    os_memcmp_const(mic, key192->key_mic, mic_len) != 0)
+			      data, data_len, mic_pos) ||
+	    os_memcmp_const(mic, mic_pos, mic_len) != 0)
 		ret = -1;
-	os_memcpy(key192->key_mic, mic, mic_len);
+	os_memcpy(mic_pos, mic, mic_len);
 	return ret;
 }
 

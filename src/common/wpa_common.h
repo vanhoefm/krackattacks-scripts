@@ -183,24 +183,9 @@ struct wpa_eapol_key {
 	u8 key_iv[16];
 	u8 key_rsc[WPA_KEY_RSC_LEN];
 	u8 key_id[8]; /* Reserved in IEEE 802.11i/RSN */
-	u8 key_mic[16];
-	u8 key_data_length[2]; /* big endian */
-	/* followed by key_data_length bytes of key_data */
-} STRUCT_PACKED;
-
-struct wpa_eapol_key_192 {
-	u8 type;
-	/* Note: key_info, key_length, and key_data_length are unaligned */
-	u8 key_info[2]; /* big endian */
-	u8 key_length[2]; /* big endian */
-	u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
-	u8 key_nonce[WPA_NONCE_LEN];
-	u8 key_iv[16];
-	u8 key_rsc[WPA_KEY_RSC_LEN];
-	u8 key_id[8]; /* Reserved in IEEE 802.11i/RSN */
-	u8 key_mic[24];
-	u8 key_data_length[2]; /* big endian */
-	/* followed by key_data_length bytes of key_data */
+	/* variable length Key MIC field */
+	/* big endian 2-octet Key Data Length field */
+	/* followed by Key Data Length bytes of Key Data */
 } STRUCT_PACKED;
 
 #define WPA_EAPOL_KEY_MIC_MAX_LEN 24

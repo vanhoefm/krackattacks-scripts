@@ -237,7 +237,6 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_80211(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_wired(struct wlantest *wt, const u8 *data, size_t len);
-u32 crc32(const u8 *frame, size_t frame_len);
 int monitor_init(struct wlantest *wt, const char *ifname);
 int monitor_init_wired(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);

@@ -69,7 +69,6 @@ OBJS += rx_ip.o
 OBJS += rx_tdls.o
 OBJS += bss.o
 OBJS += sta.o
-OBJS += crc32.o
 OBJS += ccmp.o
 OBJS += tkip.o
 OBJS += ctrl.o
@@ -81,7 +80,6 @@ OBJS += gcmp.o
 LIBS += -lpcap
 
 TOBJS += test_vectors.o
-TOBJS += crc32.o
 TOBJS += ccmp.o
 TOBJS += tkip.o
 TOBJS += wep.o

@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/crc32.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "wlantest.h"

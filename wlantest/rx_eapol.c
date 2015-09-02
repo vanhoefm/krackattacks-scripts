@@ -1122,9 +1122,12 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *bssid,
 			break;
 		case WPA_KEY_INFO_SECURE | WPA_KEY_INFO_MIC |
 			WPA_KEY_INFO_ACK | WPA_KEY_INFO_INSTALL:
+		case WPA_KEY_INFO_SECURE |
+			WPA_KEY_INFO_ACK | WPA_KEY_INFO_INSTALL:
 			rx_data_eapol_key_3_of_4(wt, dst, src, data, len);
 			break;
 		case WPA_KEY_INFO_SECURE | WPA_KEY_INFO_MIC:
+		case WPA_KEY_INFO_SECURE:
 			if (key_data_length == 0)
 				rx_data_eapol_key_4_of_4(wt, dst, src, data,
 							 len);
@@ -1143,9 +1146,11 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *bssid,
 				    WPA_KEY_INFO_ACK)) {
 		case WPA_KEY_INFO_SECURE | WPA_KEY_INFO_MIC |
 			WPA_KEY_INFO_ACK:
+		case WPA_KEY_INFO_SECURE | WPA_KEY_INFO_ACK:
 			rx_data_eapol_key_1_of_2(wt, dst, src, data, len);
 			break;
 		case WPA_KEY_INFO_SECURE | WPA_KEY_INFO_MIC:
+		case WPA_KEY_INFO_SECURE:
 			rx_data_eapol_key_2_of_2(wt, dst, src, data, len);
 			break;
 		default:

@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "utils/crc32.h"
 #include "crypto/md5.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
@@ -1755,3 +1756,25 @@ int wpa_select_ap_group_cipher(int wpa, int wpa_pairwise, int rsn_pairwise)
 		return WPA_CIPHER_CCMP_256;
 	return WPA_CIPHER_CCMP;
 }
+
+
+#ifdef CONFIG_FILS
+u16 fils_domain_name_hash(const char *domain)
+{
+	char buf[255], *wpos = buf;
+	const char *pos = domain;
+	size_t len;
+	u32 crc;
+
+	for (len = 0; len < sizeof(buf) && *pos; len++) {
+		if (isalpha(*pos) && isupper(*pos))
+			*wpos++ = tolower(*pos);
+		else
+			*wpos++ = *pos;
+		pos++;
+	}
+
+	crc = crc32((const u8 *) buf, len);
+	return crc & 0xffff;
+}
+#endif /* CONFIG_FILS */

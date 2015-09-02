@@ -613,7 +613,11 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 	*pos++ = WLAN_EID_FILS_INDICATION;
 	len = pos++;
 	/* TODO: B0..B2: Number of Public Key Identifiers */
-	/* TODO: B3..B5: Number of Realm Identifiers */
+	if (hapd->conf->erp_domain) {
+		/* TODO: Support for setting multiple domain identifiers */
+		/* B3..B5: Number of Realm Identifiers */
+		fils_info |= BIT(3);
+	}
 	/* TODO: B6: FILS IP Address Configuration */
 	if (hapd->conf->fils_cache_id_set)
 		fils_info |= BIT(7);
@@ -633,6 +637,13 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 	if (hessid && !is_zero_ether_addr(hapd->conf->hessid)) {
 		os_memcpy(pos, hapd->conf->hessid, ETH_ALEN);
 		pos += ETH_ALEN;
+	}
+	if (hapd->conf->erp_domain) {
+		u16 hash;
+
+		hash = fils_domain_name_hash(hapd->conf->erp_domain);
+		WPA_PUT_LE16(pos, hash);
+		pos += 2;
 	}
 	*len = pos - len - 1;
 #endif /* CONFIG_FILS */

@@ -64,7 +64,7 @@ int wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
 				MAC2STR(dest));
 		}
 	}
-	if (key_mic &&
+	if (key_mic && mic_len &&
 	    wpa_eapol_key_mic(kck, kck_len, sm->key_mgmt, ver, msg, msg_len,
 			      key_mic)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,

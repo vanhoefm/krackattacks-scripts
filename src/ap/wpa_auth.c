@@ -1432,7 +1432,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	if (force_version)
 		version = force_version;
 	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
-		 wpa_key_mgmt_suite_b(sm->wpa_key_mgmt))
+		 wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
+		 wpa_key_mgmt_fils(sm->wpa_key_mgmt))
 		version = WPA_KEY_INFO_TYPE_AKM_DEFINED;
 	else if (wpa_use_aes_cmac(sm))
 		version = WPA_KEY_INFO_TYPE_AES_128_CMAC;

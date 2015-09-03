@@ -2187,14 +2187,15 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		peerkey_rx_eapol_smk(sm, src_addr, key, key_data_len, key_info,
 				     ver);
 	} else {
-		if (key_info & WPA_KEY_INFO_MIC) {
+		if ((mic_len && (key_info & WPA_KEY_INFO_MIC)) ||
+		    (!mic_len && (key_info & WPA_KEY_INFO_ENCR_KEY_DATA))) {
 			/* 1/2 Group Key Handshake */
 			wpa_supplicant_process_1_of_2(sm, src_addr, key,
 						      key_data, key_data_len,
 						      ver);
 		} else {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
-				"WPA: EAPOL-Key (Group) without Mic bit - "
+				"WPA: EAPOL-Key (Group) without Mic/Encr bit - "
 				"dropped");
 		}
 	}

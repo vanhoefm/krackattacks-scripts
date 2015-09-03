@@ -10,9 +10,11 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/aes.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
 #include "crypto/random.h"
+#include "crypto/aes_siv.h"
 #include "common/ieee802_11_defs.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa.h"
@@ -63,17 +65,87 @@ int wpa_eapol_key_send(struct wpa_sm *sm, struct wpa_ptk *ptk,
 				MAC2STR(dest));
 		}
 	}
-	if (key_mic && mic_len && ptk &&
-	    wpa_eapol_key_mic(ptk->kck, ptk->kck_len, sm->key_mgmt, ver, msg,
-			      msg_len, key_mic)) {
-		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
-			"WPA: Failed to generate EAPOL-Key version %d key_mgmt 0x%x MIC",
-			ver, sm->key_mgmt);
-		goto out;
-	}
-	if (ptk)
+
+	if (mic_len) {
+		if (key_mic && (!ptk || !ptk->kck_len))
+			goto out;
+
+		if (key_mic &&
+		    wpa_eapol_key_mic(ptk->kck, ptk->kck_len, sm->key_mgmt, ver,
+				      msg, msg_len, key_mic)) {
+			wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
+				"WPA: Failed to generate EAPOL-Key version %d key_mgmt 0x%x MIC",
+				ver, sm->key_mgmt);
+			goto out;
+		}
 		wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", ptk->kck, ptk->kck_len);
-	wpa_hexdump(MSG_DEBUG, "WPA: Derived Key MIC", key_mic, mic_len);
+		wpa_hexdump(MSG_DEBUG, "WPA: Derived Key MIC",
+			    key_mic, mic_len);
+	} else {
+#ifdef CONFIG_FILS
+		/* AEAD cipher - Key MIC field not used */
+		struct ieee802_1x_hdr *s_hdr, *hdr;
+		struct wpa_eapol_key *s_key, *key;
+		u8 *buf, *s_key_data, *key_data;
+		size_t buf_len = msg_len + AES_BLOCK_SIZE;
+		size_t key_data_len;
+		u16 eapol_len;
+		const u8 *aad[1];
+		size_t aad_len[1];
+
+		if (!ptk || !ptk->kek_len)
+			goto out;
+
+		key_data_len = msg_len - sizeof(struct ieee802_1x_hdr) -
+			sizeof(struct wpa_eapol_key) - 2;
+
+		buf = os_malloc(buf_len);
+		if (!buf)
+			goto out;
+
+		os_memcpy(buf, msg, msg_len);
+		hdr = (struct ieee802_1x_hdr *) buf;
+		key = (struct wpa_eapol_key *) (hdr + 1);
+		key_data = ((u8 *) (key + 1)) + 2;
+
+		/* Update EAPOL header to include AES-SIV overhead */
+		eapol_len = be_to_host16(hdr->length);
+		eapol_len += AES_BLOCK_SIZE;
+		hdr->length = host_to_be16(eapol_len);
+
+		/* Update Key Data Length field to include AES-SIV overhead */
+		WPA_PUT_BE16((u8 *) (key + 1), AES_BLOCK_SIZE + key_data_len);
+
+		s_hdr = (struct ieee802_1x_hdr *) msg;
+		s_key = (struct wpa_eapol_key *) (s_hdr + 1);
+		s_key_data = ((u8 *) (s_key + 1)) + 2;
+
+		wpa_hexdump_key(MSG_DEBUG, "WPA: Plaintext Key Data",
+				s_key_data, key_data_len);
+
+		wpa_hexdump_key(MSG_DEBUG, "WPA: KEK", ptk->kek, ptk->kek_len);
+		 /* AES-SIV AAD from EAPOL protocol version field (inclusive) to
+		  * to Key Data (exclusive). */
+		aad[0] = buf;
+		aad_len[0] = key_data - buf;
+		if (aes_siv_encrypt(ptk->kek, ptk->kek_len,
+				    s_key_data, key_data_len,
+				    1, aad, aad_len, key_data) < 0) {
+			os_free(buf);
+			goto out;
+		}
+
+		wpa_hexdump(MSG_DEBUG, "WPA: Encrypted Key Data from SIV",
+			    key_data, AES_BLOCK_SIZE + key_data_len);
+
+		os_free(msg);
+		msg = buf;
+		msg_len = buf_len;
+#else /* CONFIG_FILS */
+		goto out;
+#endif /* CONFIG_FILS */
+	}
+
 	wpa_hexdump(MSG_MSGDUMP, "WPA: TX EAPOL-Key", msg, msg_len);
 	ret = wpa_sm_ether_send(sm, dest, proto, msg, msg_len);
 	eapol_sm_notify_tx_eapol_key(sm->eapol);
@@ -397,6 +469,8 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	key_info = ver | WPA_KEY_INFO_KEY_TYPE;
 	if (mic_len)
 		key_info |= WPA_KEY_INFO_MIC;
+	else
+		key_info |= WPA_KEY_INFO_ENCR_KEY_DATA;
 	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
@@ -1157,6 +1231,8 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	key_info |= ver | WPA_KEY_INFO_KEY_TYPE;
 	if (mic_len)
 		key_info |= WPA_KEY_INFO_MIC;
+	else
+		key_info |= WPA_KEY_INFO_ENCR_KEY_DATA;
 	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);

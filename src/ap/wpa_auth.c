@@ -13,7 +13,9 @@
 #include "utils/state_machine.h"
 #include "utils/bitfield.h"
 #include "common/ieee802_11_defs.h"
+#include "crypto/aes.h"
 #include "crypto/aes_wrap.h"
+#include "crypto/aes_siv.h"
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
@@ -882,9 +884,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	       SMK_M1, SMK_M3, SMK_ERROR } msg;
 	char *msgtxt;
 	struct wpa_eapol_ie_parse kde;
-	int ft;
-	const u8 *eapol_key_ie, *key_data;
-	size_t eapol_key_ie_len, keyhdrlen, mic_len;
+	const u8 *key_data;
+	size_t keyhdrlen, mic_len;
 	u8 *mic;
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
@@ -972,7 +973,9 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	} else if (!(key_info & WPA_KEY_INFO_KEY_TYPE)) {
 		msg = GROUP_2;
 		msgtxt = "2/2 Group";
-	} else if (key_data_length == 0) {
+	} else if (key_data_length == 0 ||
+		   (mic_len == 0 && (key_info & WPA_KEY_INFO_ENCR_KEY_DATA) &&
+		    key_data_length == AES_BLOCK_SIZE)) {
 		msg = PAIRWISE_4;
 		msgtxt = "4/4 Pairwise";
 	} else {
@@ -1097,6 +1100,15 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	}
 
 continue_processing:
+#ifdef CONFIG_FILS
+	if (sm->wpa == WPA_VERSION_WPA2 && mic_len == 0 &&
+	    !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
+		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
+				 "WPA: Encr Key Data bit not set even though AEAD cipher is supposed to be used - drop frame");
+		return;
+	}
+#endif /* CONFIG_FILS */
+
 	switch (msg) {
 	case PAIRWISE_2:
 		if (sm->wpa_ptk_state != WPA_PTK_PTKSTART &&
@@ -1127,67 +1139,6 @@ continue_processing:
 			wpa_sta_disconnect(wpa_auth, sm->addr);
 			return;
 		}
-		if (wpa_parse_kde_ies(key_data, key_data_length, &kde) < 0) {
-			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
-					 "received EAPOL-Key msg 2/4 with "
-					 "invalid Key Data contents");
-			return;
-		}
-		if (kde.rsn_ie) {
-			eapol_key_ie = kde.rsn_ie;
-			eapol_key_ie_len = kde.rsn_ie_len;
-		} else if (kde.osen) {
-			eapol_key_ie = kde.osen;
-			eapol_key_ie_len = kde.osen_len;
-		} else {
-			eapol_key_ie = kde.wpa_ie;
-			eapol_key_ie_len = kde.wpa_ie_len;
-		}
-		ft = sm->wpa == WPA_VERSION_WPA2 &&
-			wpa_key_mgmt_ft(sm->wpa_key_mgmt);
-		if (sm->wpa_ie == NULL ||
-		    wpa_compare_rsn_ie(ft,
-				       sm->wpa_ie, sm->wpa_ie_len,
-				       eapol_key_ie, eapol_key_ie_len)) {
-			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
-					"WPA IE from (Re)AssocReq did not "
-					"match with msg 2/4");
-			if (sm->wpa_ie) {
-				wpa_hexdump(MSG_DEBUG, "WPA IE in AssocReq",
-					    sm->wpa_ie, sm->wpa_ie_len);
-			}
-			wpa_hexdump(MSG_DEBUG, "WPA IE in msg 2/4",
-				    eapol_key_ie, eapol_key_ie_len);
-			/* MLME-DEAUTHENTICATE.request */
-			wpa_sta_disconnect(wpa_auth, sm->addr);
-			return;
-		}
-#ifdef CONFIG_IEEE80211R
-		if (ft && ft_check_msg_2_of_4(wpa_auth, sm, &kde) < 0) {
-			wpa_sta_disconnect(wpa_auth, sm->addr);
-			return;
-		}
-#endif /* CONFIG_IEEE80211R */
-#ifdef CONFIG_P2P
-		if (kde.ip_addr_req && kde.ip_addr_req[0] &&
-		    wpa_auth->ip_pool && WPA_GET_BE32(sm->ip_addr) == 0) {
-			int idx;
-			wpa_printf(MSG_DEBUG, "P2P: IP address requested in "
-				   "EAPOL-Key exchange");
-			idx = bitfield_get_first_zero(wpa_auth->ip_pool);
-			if (idx >= 0) {
-				u32 start = WPA_GET_BE32(wpa_auth->conf.
-							 ip_addr_start);
-				bitfield_set(wpa_auth->ip_pool, idx);
-				WPA_PUT_BE32(sm->ip_addr, start + idx);
-				wpa_printf(MSG_DEBUG, "P2P: Assigned IP "
-					   "address %u.%u.%u.%u to " MACSTR,
-					   sm->ip_addr[0], sm->ip_addr[1],
-					   sm->ip_addr[2], sm->ip_addr[3],
-					   MAC2STR(sm->addr));
-			}
-		}
-#endif /* CONFIG_P2P */
 		break;
 	case PAIRWISE_4:
 		if (sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING ||
@@ -1262,7 +1213,8 @@ continue_processing:
 
 	sm->MICVerified = FALSE;
 	if (sm->PTK_valid && !sm->update_snonce) {
-		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &sm->PTK, data,
+		if (mic_len &&
+		    wpa_verify_key_mic(sm->wpa_key_mgmt, &sm->PTK, data,
 				       data_len) &&
 		    (msg != PAIRWISE_4 || !sm->alt_snonce_valid ||
 		     wpa_try_alt_snonce(sm, data, data_len))) {
@@ -2040,16 +1992,83 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 }
 
 
+#ifdef CONFIG_FILS
+static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
+			    u16 *_key_data_len)
+{
+	struct ieee802_1x_hdr *hdr;
+	struct wpa_eapol_key *key;
+	u8 *pos;
+	u16 key_data_len;
+	u8 *tmp;
+	const u8 *aad[1];
+	size_t aad_len[1];
+
+	hdr = (struct ieee802_1x_hdr *) sm->last_rx_eapol_key;
+	key = (struct wpa_eapol_key *) (hdr + 1);
+	pos = (u8 *) (key + 1);
+	key_data_len = WPA_GET_BE16(pos);
+	if (key_data_len < AES_BLOCK_SIZE ||
+	    key_data_len > buf_len - sizeof(*hdr) - sizeof(*key) - 2) {
+		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,
+				"No room for AES-SIV data in the frame");
+		return -1;
+	}
+	pos += 2; /* Pointing at the Encrypted Key Data field */
+
+	tmp = os_malloc(key_data_len);
+	if (!tmp)
+		return -1;
+
+	/* AES-SIV AAD from EAPOL protocol version field (inclusive) to
+	 * to Key Data (exclusive). */
+	aad[0] = sm->last_rx_eapol_key;
+	aad_len[0] = pos - sm->last_rx_eapol_key;
+	if (aes_siv_decrypt(ptk->kek, ptk->kek_len, pos, key_data_len,
+			    1, aad, aad_len, tmp) < 0) {
+		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,
+				"Invalid AES-SIV data in the frame");
+		bin_clear_free(tmp, key_data_len);
+		return -1;
+	}
+
+	/* AEAD decryption and validation completed successfully */
+	key_data_len -= AES_BLOCK_SIZE;
+	wpa_hexdump_key(MSG_DEBUG, "WPA: Decrypted Key Data",
+			tmp, key_data_len);
+
+	/* Replace Key Data field with the decrypted version */
+	os_memcpy(pos, tmp, key_data_len);
+	pos -= 2; /* Key Data Length field */
+	WPA_PUT_BE16(pos, key_data_len);
+	bin_clear_free(tmp, key_data_len);
+	if (_key_data_len)
+		*_key_data_len = key_data_len;
+	return 0;
+}
+#endif /* CONFIG_FILS */
+
+
 SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 {
+	struct wpa_authenticator *wpa_auth = sm->wpa_auth;
 	struct wpa_ptk PTK;
 	int ok = 0, psk_found = 0;
 	const u8 *pmk = NULL;
 	unsigned int pmk_len;
+	int ft;
+	const u8 *eapol_key_ie, *key_data, *mic;
+	u16 key_data_length;
+	size_t mic_len, eapol_key_ie_len;
+	struct ieee802_1x_hdr *hdr;
+	struct wpa_eapol_key *key;
+	struct wpa_eapol_ie_parse kde;
 
 	SM_ENTRY_MA(WPA_PTK, PTKCALCNEGOTIATING, wpa_ptk);
 	sm->EAPOLKeyReceived = FALSE;
 	sm->update_snonce = FALSE;
+
+	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
 
 	/* WPA with IEEE 802.1X: use the derived PMK from EAP
 	 * WPA-PSK: iterate through possible PSKs and select the one matching
@@ -2069,12 +2088,20 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 
 		wpa_derive_ptk(sm, sm->SNonce, pmk, pmk_len, &PTK);
 
-		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,
+		if (mic_len &&
+		    wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,
 				       sm->last_rx_eapol_key,
 				       sm->last_rx_eapol_key_len) == 0) {
 			ok = 1;
 			break;
 		}
+
+#ifdef CONFIG_FILS
+		if (!mic_len && wpa_aead_decrypt(sm, &PTK, NULL) == 0) {
+			ok = 1;
+			break;
+		}
+#endif /* CONFIG_FILS */
 
 		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt))
 			break;
@@ -2087,6 +2114,76 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 			wpa_auth_psk_failure_report(sm->wpa_auth, sm->addr);
 		return;
 	}
+
+	/*
+	 * Note: last_rx_eapol_key length fields have already been validated in
+	 * wpa_receive().
+	 */
+	hdr = (struct ieee802_1x_hdr *) sm->last_rx_eapol_key;
+	key = (struct wpa_eapol_key *) (hdr + 1);
+	mic = (u8 *) (key + 1);
+	key_data = mic + mic_len + 2;
+	key_data_length = WPA_GET_BE16(mic + mic_len);
+	if (key_data_length > sm->last_rx_eapol_key_len - sizeof(*hdr) -
+	    sizeof(*key) - mic_len - 2)
+		return;
+
+	if (wpa_parse_kde_ies(key_data, key_data_length, &kde) < 0) {
+		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
+				 "received EAPOL-Key msg 2/4 with invalid Key Data contents");
+		return;
+	}
+	if (kde.rsn_ie) {
+		eapol_key_ie = kde.rsn_ie;
+		eapol_key_ie_len = kde.rsn_ie_len;
+	} else if (kde.osen) {
+		eapol_key_ie = kde.osen;
+		eapol_key_ie_len = kde.osen_len;
+	} else {
+		eapol_key_ie = kde.wpa_ie;
+		eapol_key_ie_len = kde.wpa_ie_len;
+	}
+	ft = sm->wpa == WPA_VERSION_WPA2 && wpa_key_mgmt_ft(sm->wpa_key_mgmt);
+	if (sm->wpa_ie == NULL ||
+	    wpa_compare_rsn_ie(ft, sm->wpa_ie, sm->wpa_ie_len,
+			       eapol_key_ie, eapol_key_ie_len)) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
+				"WPA IE from (Re)AssocReq did not match with msg 2/4");
+		if (sm->wpa_ie) {
+			wpa_hexdump(MSG_DEBUG, "WPA IE in AssocReq",
+				    sm->wpa_ie, sm->wpa_ie_len);
+		}
+		wpa_hexdump(MSG_DEBUG, "WPA IE in msg 2/4",
+			    eapol_key_ie, eapol_key_ie_len);
+		/* MLME-DEAUTHENTICATE.request */
+		wpa_sta_disconnect(wpa_auth, sm->addr);
+		return;
+	}
+#ifdef CONFIG_IEEE80211R
+	if (ft && ft_check_msg_2_of_4(wpa_auth, sm, &kde) < 0) {
+		wpa_sta_disconnect(wpa_auth, sm->addr);
+		return;
+	}
+#endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_P2P
+	if (kde.ip_addr_req && kde.ip_addr_req[0] &&
+	    wpa_auth->ip_pool && WPA_GET_BE32(sm->ip_addr) == 0) {
+		int idx;
+		wpa_printf(MSG_DEBUG,
+			   "P2P: IP address requested in EAPOL-Key exchange");
+		idx = bitfield_get_first_zero(wpa_auth->ip_pool);
+		if (idx >= 0) {
+			u32 start = WPA_GET_BE32(wpa_auth->conf.ip_addr_start);
+			bitfield_set(wpa_auth->ip_pool, idx);
+			WPA_PUT_BE32(sm->ip_addr, start + idx);
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Assigned IP address %u.%u.%u.%u to "
+				   MACSTR, sm->ip_addr[0], sm->ip_addr[1],
+				   sm->ip_addr[2], sm->ip_addr[3],
+				   MAC2STR(sm->addr));
+		}
+	}
+#endif /* CONFIG_P2P */
 
 #ifdef CONFIG_IEEE80211R
 	if (sm->wpa == WPA_VERSION_WPA2 && wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {

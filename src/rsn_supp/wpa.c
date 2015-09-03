@@ -1806,6 +1806,76 @@ static void wpa_eapol_key_dump(struct wpa_sm *sm,
 }
 
 
+#ifdef CONFIG_FILS
+static int wpa_supp_aead_decrypt(struct wpa_sm *sm, u8 *buf, size_t buf_len,
+				 size_t *key_data_len)
+{
+	struct wpa_ptk *ptk;
+	struct ieee802_1x_hdr *hdr;
+	struct wpa_eapol_key *key;
+	u8 *pos, *tmp;
+	const u8 *aad[1];
+	size_t aad_len[1];
+
+	if (*key_data_len < AES_BLOCK_SIZE) {
+		wpa_printf(MSG_INFO, "No room for AES-SIV data in the frame");
+		return -1;
+	}
+
+	if (sm->tptk_set)
+		ptk = &sm->tptk;
+	else if (sm->ptk_set)
+		ptk = &sm->ptk;
+	else
+		return -1;
+
+	hdr = (struct ieee802_1x_hdr *) buf;
+	key = (struct wpa_eapol_key *) (hdr + 1);
+	pos = (u8 *) (key + 1);
+	pos += 2; /* Pointing at the Encrypted Key Data field */
+
+	tmp = os_malloc(*key_data_len);
+	if (!tmp)
+		return -1;
+
+	/* AES-SIV AAD from EAPOL protocol version field (inclusive) to
+	 * to Key Data (exclusive). */
+	aad[0] = buf;
+	aad_len[0] = pos - buf;
+	if (aes_siv_decrypt(ptk->kek, ptk->kek_len, pos, *key_data_len,
+			    1, aad, aad_len, tmp) < 0) {
+		wpa_printf(MSG_INFO, "Invalid AES-SIV data in the frame");
+		bin_clear_free(tmp, *key_data_len);
+		return -1;
+	}
+
+	/* AEAD decryption and validation completed successfully */
+	(*key_data_len) -= AES_BLOCK_SIZE;
+	wpa_hexdump_key(MSG_DEBUG, "WPA: Decrypted Key Data",
+			tmp, *key_data_len);
+
+	/* Replace Key Data field with the decrypted version */
+	os_memcpy(pos, tmp, *key_data_len);
+	pos -= 2; /* Key Data Length field */
+	WPA_PUT_BE16(pos, *key_data_len);
+	bin_clear_free(tmp, *key_data_len);
+
+	if (sm->tptk_set) {
+		sm->tptk_set = 0;
+		sm->ptk_set = 1;
+		os_memcpy(&sm->ptk, &sm->tptk, sizeof(sm->ptk));
+		os_memset(&sm->tptk, 0, sizeof(sm->tptk));
+	}
+
+	os_memcpy(sm->rx_replay_counter, key->replay_counter,
+		  WPA_REPLAY_COUNTER_LEN);
+	sm->rx_replay_counter_set = 1;
+
+	return 0;
+}
+#endif /* CONFIG_FILS */
+
+
 /**
  * wpa_sm_rx_eapol - Process received WPA EAPOL frames
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
@@ -2075,8 +2145,15 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		goto out;
 #endif /* CONFIG_PEERKEY */
 
+#ifdef CONFIG_FILS
+	if (!mic_len && (key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
+		if (wpa_supp_aead_decrypt(sm, tmp, data_len, &key_data_len))
+			goto out;
+	}
+#endif /* CONFIG_FILS */
+
 	if ((sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) &&
-	    (key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
+	    (key_info & WPA_KEY_INFO_ENCR_KEY_DATA) && mic_len) {
 		if (wpa_supplicant_decrypt_key_data(sm, key, mic_len,
 						    ver, key_data,
 						    &key_data_len))
@@ -2094,7 +2171,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 			/* PeerKey 4-Way Handshake */
 			peerkey_rx_eapol_4way(sm, peerkey, key, key_info, ver,
 					      key_data, key_data_len);
-		} else if (key_info & WPA_KEY_INFO_MIC) {
+		} else if (key_info & (WPA_KEY_INFO_MIC |
+				       WPA_KEY_INFO_ENCR_KEY_DATA)) {
 			/* 3/4 4-Way Handshake */
 			wpa_supplicant_process_3_of_4(sm, key, ver, key_data,
 						      key_data_len);

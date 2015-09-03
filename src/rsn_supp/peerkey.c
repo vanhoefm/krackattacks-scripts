@@ -113,8 +113,8 @@ static int wpa_supplicant_send_smk_error(struct wpa_sm *sm, const u8 *dst,
 			   "(mui %d error_type %d)", mui, error_type);
 	}
 
-	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, dst,
-			   ETH_P_EAPOL, rbuf, rlen, mic);
+	wpa_eapol_key_send(sm, &sm->ptk, ver, dst, ETH_P_EAPOL, rbuf, rlen,
+			   mic);
 
 	return 0;
 }
@@ -166,8 +166,8 @@ static int wpa_supplicant_send_smk_m3(struct wpa_sm *sm,
 	wpa_add_kde(pos, RSN_KEY_DATA_NONCE, peerkey->inonce, WPA_NONCE_LEN);
 
 	wpa_printf(MSG_DEBUG, "RSN: Sending EAPOL-Key SMK M3");
-	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, src_addr,
-			   ETH_P_EAPOL, rbuf, rlen, mic);
+	wpa_eapol_key_send(sm, &sm->ptk, ver, src_addr, ETH_P_EAPOL, rbuf, rlen,
+			   mic);
 
 	return 0;
 }
@@ -370,7 +370,7 @@ static void wpa_supplicant_send_stk_1_of_4(struct wpa_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "RSN: Sending EAPOL-Key STK 1/4 to " MACSTR,
 		   MAC2STR(peerkey->addr));
-	wpa_eapol_key_send(sm, NULL, 0, ver, peerkey->addr, ETH_P_EAPOL,
+	wpa_eapol_key_send(sm, NULL, ver, peerkey->addr, ETH_P_EAPOL,
 			   mbuf, mlen, NULL);
 }
 
@@ -426,8 +426,8 @@ static void wpa_supplicant_send_stk_3_of_4(struct wpa_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "RSN: Sending EAPOL-Key STK 3/4 to " MACSTR,
 		   MAC2STR(peerkey->addr));
-	wpa_eapol_key_send(sm, peerkey->stk.kck, peerkey->stk.kck_len, ver,
-			   peerkey->addr, ETH_P_EAPOL, mbuf, mlen, mic);
+	wpa_eapol_key_send(sm, &peerkey->stk, ver, peerkey->addr, ETH_P_EAPOL,
+			   mbuf, mlen, mic);
 }
 
 
@@ -1087,8 +1087,8 @@ int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 
 	wpa_printf(MSG_INFO, "RSN: Sending EAPOL-Key SMK M1 Request (peer "
 		   MACSTR ")", MAC2STR(peer));
-	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, bssid,
-			   ETH_P_EAPOL, rbuf, rlen, mic);
+	wpa_eapol_key_send(sm, &sm->ptk, ver, bssid, ETH_P_EAPOL, rbuf, rlen,
+			   mic);
 
 	peerkey->next = sm->peerkey;
 	sm->peerkey = peerkey;

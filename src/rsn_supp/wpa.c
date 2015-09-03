@@ -30,8 +30,7 @@ static const u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 /**
  * wpa_eapol_key_send - Send WPA/RSN EAPOL-Key message
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
- * @kck: Key Confirmation Key (KCK, part of PTK)
- * @kck_len: KCK length in octets
+ * @ptk: PTK for Key Confirmation/Encryption Key
  * @ver: Version field from Key Info
  * @dest: Destination address for the frame
  * @proto: Ethertype (usually ETH_P_EAPOL)
@@ -40,7 +39,7 @@ static const u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
  * @key_mic: Pointer to the buffer to which the EAPOL-Key MIC is written
  * Returns: >= 0 on success, < 0 on failure
  */
-int wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
+int wpa_eapol_key_send(struct wpa_sm *sm, struct wpa_ptk *ptk,
 		       int ver, const u8 *dest, u16 proto,
 		       u8 *msg, size_t msg_len, u8 *key_mic)
 {
@@ -64,15 +63,16 @@ int wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
 				MAC2STR(dest));
 		}
 	}
-	if (key_mic && mic_len &&
-	    wpa_eapol_key_mic(kck, kck_len, sm->key_mgmt, ver, msg, msg_len,
-			      key_mic)) {
+	if (key_mic && mic_len && ptk &&
+	    wpa_eapol_key_mic(ptk->kck, ptk->kck_len, sm->key_mgmt, ver, msg,
+			      msg_len, key_mic)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
 			"WPA: Failed to generate EAPOL-Key version %d key_mgmt 0x%x MIC",
 			ver, sm->key_mgmt);
 		goto out;
 	}
-	wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", kck, kck_len);
+	if (ptk)
+		wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", ptk->kck, ptk->kck_len);
 	wpa_hexdump(MSG_DEBUG, "WPA: Derived Key MIC", key_mic, mic_len);
 	wpa_hexdump(MSG_MSGDUMP, "WPA: TX EAPOL-Key", msg, msg_len);
 	ret = wpa_sm_ether_send(sm, dest, proto, msg, msg_len);
@@ -153,8 +153,8 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 		"WPA: Sending EAPOL-Key Request (error=%d "
 		"pairwise=%d ptk_set=%d len=%lu)",
 		error, pairwise, sm->ptk_set, (unsigned long) rlen);
-	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, bssid,
-			   ETH_P_EAPOL, rbuf, rlen, key_mic);
+	wpa_eapol_key_send(sm, &sm->ptk, ver, bssid, ETH_P_EAPOL, rbuf, rlen,
+			   key_mic);
 }
 
 
@@ -415,8 +415,8 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	os_memcpy(reply->key_nonce, nonce, WPA_NONCE_LEN);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 2/4");
-	return wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst,
-				  ETH_P_EAPOL, rbuf, rlen, key_mic);
+	return wpa_eapol_key_send(sm, ptk, ver, dst, ETH_P_EAPOL, rbuf, rlen,
+				  key_mic);
 }
 
 
@@ -1169,8 +1169,8 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	WPA_PUT_BE16(key_mic + mic_len, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 4/4");
-	return wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst,
-				  ETH_P_EAPOL, rbuf, rlen, key_mic);
+	return wpa_eapol_key_send(sm, ptk, ver, dst, ETH_P_EAPOL, rbuf, rlen,
+				  key_mic);
 }
 
 
@@ -1475,8 +1475,8 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 	WPA_PUT_BE16(key_mic + mic_len, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 2/2");
-	return wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver,
-				  sm->bssid, ETH_P_EAPOL, rbuf, rlen, key_mic);
+	return wpa_eapol_key_send(sm, &sm->ptk, ver, sm->bssid, ETH_P_EAPOL,
+				  rbuf, rlen, key_mic);
 }
 
 

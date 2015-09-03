@@ -37,6 +37,10 @@ static void wpa_send_eapol_timeout(void *eloop_ctx, void *timeout_ctx);
 static int wpa_sm_step(struct wpa_state_machine *sm);
 static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 			      size_t data_len);
+#ifdef CONFIG_FILS
+static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
+			    u8 *buf, size_t buf_len, u16 *_key_data_len);
+#endif /* CONFIG_FILS */
 static void wpa_sm_call_step(void *eloop_ctx, void *timeout_ctx);
 static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 			      struct wpa_group *group);
@@ -1223,6 +1227,15 @@ continue_processing:
 					"received EAPOL-Key with invalid MIC");
 			return;
 		}
+#ifdef CONFIG_FILS
+		if (!mic_len &&
+		    wpa_aead_decrypt(sm, &sm->PTK, data, data_len,
+				     &key_data_length) < 0) {
+			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
+					"received EAPOL-Key with invalid MIC");
+			return;
+		}
+#endif /* CONFIG_FILS */
 		sm->MICVerified = TRUE;
 		eloop_cancel_timeout(wpa_send_eapol_timeout, wpa_auth, sm);
 		sm->pending_1_of_4_timeout = 0;
@@ -2021,7 +2034,7 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 
 #ifdef CONFIG_FILS
 static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
-			    u16 *_key_data_len)
+			    u8 *buf, size_t buf_len, u16 *_key_data_len)
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
@@ -2031,7 +2044,7 @@ static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 	const u8 *aad[1];
 	size_t aad_len[1];
 
-	hdr = (struct ieee802_1x_hdr *) sm->last_rx_eapol_key;
+	hdr = (struct ieee802_1x_hdr *) buf;
 	key = (struct wpa_eapol_key *) (hdr + 1);
 	pos = (u8 *) (key + 1);
 	key_data_len = WPA_GET_BE16(pos);
@@ -2049,8 +2062,8 @@ static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 
 	/* AES-SIV AAD from EAPOL protocol version field (inclusive) to
 	 * to Key Data (exclusive). */
-	aad[0] = sm->last_rx_eapol_key;
-	aad_len[0] = pos - sm->last_rx_eapol_key;
+	aad[0] = buf;
+	aad_len[0] = pos - buf;
 	if (aes_siv_decrypt(ptk->kek, ptk->kek_len, pos, key_data_len,
 			    1, aad, aad_len, tmp) < 0) {
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,
@@ -2125,7 +2138,9 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		}
 
 #ifdef CONFIG_FILS
-		if (!mic_len && wpa_aead_decrypt(sm, &PTK, NULL) == 0) {
+		if (!mic_len &&
+		    wpa_aead_decrypt(sm, &PTK, sm->last_rx_eapol_key,
+				     sm->last_rx_eapol_key_len, NULL) == 0) {
 			ok = 1;
 			break;
 		}

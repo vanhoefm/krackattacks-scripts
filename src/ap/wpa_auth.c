@@ -1008,6 +1008,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			}
 
 			if (!wpa_use_aes_cmac(sm) &&
+			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
 			    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1017,7 +1018,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			}
 		}
 
-		if (wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
+		if ((wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
+		     wpa_key_mgmt_fils(sm->wpa_key_mgmt)) &&
 		    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_WARNING,
 					"did not use EAPOL-Key descriptor version 0 as required for AKM-defined cases");

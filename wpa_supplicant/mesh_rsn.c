@@ -333,7 +333,7 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 			return -1;
 	}
 
-	pmksa = wpa_auth_pmksa_get(hapd->wpa_auth, sta->addr);
+	pmksa = wpa_auth_pmksa_get(hapd->wpa_auth, sta->addr, NULL);
 	if (pmksa) {
 		if (!sta->wpa_sm)
 			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
@@ -611,7 +611,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	if (!sta->sae) {
 		struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 
-		if (!wpa_auth_pmksa_get(hapd->wpa_auth, sta->addr)) {
+		if (!wpa_auth_pmksa_get(hapd->wpa_auth, sta->addr, NULL)) {
 			wpa_printf(MSG_INFO,
 				   "Mesh RSN: SAE is not prepared yet");
 			return -1;

@@ -1135,7 +1135,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	 */
 	if (!sta && action_field == PLINK_OPEN &&
 	    (!(mconf->security & MESH_CONF_SEC_AMPE) ||
-	     wpa_auth_pmksa_get(hapd->wpa_auth, mgmt->sa)))
+	     wpa_auth_pmksa_get(hapd->wpa_auth, mgmt->sa, NULL)))
 		sta = mesh_mpm_add_peer(wpa_s, mgmt->sa, &elems);
 
 	if (!sta) {

@@ -303,7 +303,8 @@ int wpa_auth_pmksa_list(struct wpa_authenticator *wpa_auth, char *buf,
 			size_t len);
 void wpa_auth_pmksa_flush(struct wpa_authenticator *wpa_auth);
 struct rsn_pmksa_cache_entry *
-wpa_auth_pmksa_get(struct wpa_authenticator *wpa_auth, const u8 *sta_addr);
+wpa_auth_pmksa_get(struct wpa_authenticator *wpa_auth, const u8 *sta_addr,
+		   const u8 *pmkid);
 void wpa_auth_pmksa_set_to_sm(struct rsn_pmksa_cache_entry *pmksa,
 			      struct wpa_state_machine *sm,
 			      struct wpa_authenticator *wpa_auth,

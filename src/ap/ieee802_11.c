@@ -980,6 +980,30 @@ int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta)
 #endif /* CONFIG_SAE */
 
 
+static u16 wpa_res_to_status_code(int res)
+{
+	if (res == WPA_INVALID_GROUP)
+		return WLAN_STATUS_GROUP_CIPHER_NOT_VALID;
+	if (res == WPA_INVALID_PAIRWISE)
+		return WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID;
+	if (res == WPA_INVALID_AKMP)
+		return WLAN_STATUS_AKMP_NOT_VALID;
+	if (res == WPA_ALLOC_FAIL)
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+#ifdef CONFIG_IEEE80211W
+	if (res == WPA_MGMT_FRAME_PROTECTION_VIOLATION)
+		return WLAN_STATUS_ROBUST_MGMT_FRAME_POLICY_VIOLATION;
+	if (res == WPA_INVALID_MGMT_GROUP_CIPHER)
+		return WLAN_STATUS_ROBUST_MGMT_FRAME_POLICY_VIOLATION;
+#endif /* CONFIG_IEEE80211W */
+	if (res == WPA_INVALID_MDIE)
+		return WLAN_STATUS_INVALID_MDIE;
+	if (res != WPA_IE_OK)
+		return WLAN_STATUS_INVALID_IE;
+	return WLAN_STATUS_SUCCESS;
+}
+
+
 static void handle_auth(struct hostapd_data *hapd,
 			const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -1645,24 +1669,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 					  wpa_ie, wpa_ie_len,
 					  elems.mdie, elems.mdie_len);
-		if (res == WPA_INVALID_GROUP)
-			resp = WLAN_STATUS_GROUP_CIPHER_NOT_VALID;
-		else if (res == WPA_INVALID_PAIRWISE)
-			resp = WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID;
-		else if (res == WPA_INVALID_AKMP)
-			resp = WLAN_STATUS_AKMP_NOT_VALID;
-		else if (res == WPA_ALLOC_FAIL)
-			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-#ifdef CONFIG_IEEE80211W
-		else if (res == WPA_MGMT_FRAME_PROTECTION_VIOLATION)
-			resp = WLAN_STATUS_ROBUST_MGMT_FRAME_POLICY_VIOLATION;
-		else if (res == WPA_INVALID_MGMT_GROUP_CIPHER)
-			resp = WLAN_STATUS_ROBUST_MGMT_FRAME_POLICY_VIOLATION;
-#endif /* CONFIG_IEEE80211W */
-		else if (res == WPA_INVALID_MDIE)
-			resp = WLAN_STATUS_INVALID_MDIE;
-		else if (res != WPA_IE_OK)
-			resp = WLAN_STATUS_INVALID_IE;
+		resp = wpa_res_to_status_code(res);
 		if (resp != WLAN_STATUS_SUCCESS)
 			return resp;
 #ifdef CONFIG_IEEE80211W

@@ -406,6 +406,11 @@ struct wpa_config {
 	 * one by one until the driver reports successful association; each
 	 * network block should have explicit security policy (i.e., only one
 	 * option in the lists) for key_mgmt, pairwise, group, proto variables.
+	 *
+	 * Note: ap_scan=2 should not be used with the nl80211 driver interface
+	 * (the current Linux interface). ap_scan=1 is optimized work working
+	 * with nl80211. For finding networks using hidden SSID, scan_ssid=1 in
+	 * the network block can be used with nl80211.
 	 */
 	int ap_scan;
 

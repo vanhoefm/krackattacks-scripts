@@ -2790,6 +2790,11 @@ int wpa_supplicant_set_ap_scan(struct wpa_supplicant *wpa_s, int ap_scan)
 	if (ap_scan < 0 || ap_scan > 2)
 		return -1;
 
+	if (ap_scan == 2 && os_strcmp(wpa_s->driver->name, "nl80211") == 0) {
+		wpa_printf(MSG_INFO,
+			   "Note: nl80211 driver interface is not designed to be used with ap_scan=2; this can result in connection failures");
+	}
+
 #ifdef ANDROID
 	if (ap_scan == 2 && ap_scan != wpa_s->conf->ap_scan &&
 	    wpa_s->wpa_state >= WPA_ASSOCIATING &&
@@ -3293,6 +3298,12 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 				wpa_s->bridge_ifname);
 			return -1;
 		}
+	}
+
+	if (wpa_s->conf->ap_scan == 2 &&
+	    os_strcmp(wpa_s->driver->name, "nl80211") == 0) {
+		wpa_printf(MSG_INFO,
+			   "Note: nl80211 driver interface is not designed to be used with ap_scan=2; this can result in connection failures");
 	}
 
 	wpa_clear_keys(wpa_s, NULL);

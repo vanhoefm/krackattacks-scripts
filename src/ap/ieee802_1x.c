@@ -589,9 +589,9 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 }
 
 
-static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
-					  struct sta_info *sta,
-					  const u8 *eap, size_t len)
+void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
+				   struct sta_info *sta,
+				   const u8 *eap, size_t len)
 {
 	struct radius_msg *msg;
 	struct eapol_state_machine *sm = sta->eapol_sm;
@@ -846,7 +846,7 @@ static void handle_eap(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
-static struct eapol_state_machine *
+struct eapol_state_machine *
 ieee802_1x_alloc_eapol_sm(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	int flags = 0;

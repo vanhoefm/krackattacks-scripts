@@ -316,6 +316,7 @@ static void ieee802_1x_learn_identity(struct hostapd_data *hapd,
 	     hdr->code != EAP_CODE_INITIATE))
 		return;
 
+	eap_erp_update_identity(sm->eap, eap, len);
 	identity = eap_get_identity(sm->eap, &identity_len);
 	if (identity == NULL)
 		return;

@@ -153,5 +153,6 @@ void eap_server_clear_identity(struct eap_sm *sm);
 void eap_server_mschap_rx_callback(struct eap_sm *sm, const char *source,
 				   const u8 *username, size_t username_len,
 				   const u8 *challenge, const u8 *response);
+void eap_erp_update_identity(struct eap_sm *sm, const u8 *eap, size_t len);
 
 #endif /* EAP_H */

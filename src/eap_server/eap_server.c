@@ -1968,6 +1968,44 @@ const u8 * eap_get_identity(struct eap_sm *sm, size_t *len)
 }
 
 
+void eap_erp_update_identity(struct eap_sm *sm, const u8 *eap, size_t len)
+{
+#ifdef CONFIG_ERP
+	const struct eap_hdr *hdr;
+	const u8 *pos, *end;
+	struct erp_tlvs parse;
+
+	if (len < sizeof(*hdr) + 1)
+		return;
+	hdr = (const struct eap_hdr *) eap;
+	end = eap + len;
+	pos = (const u8 *) (hdr + 1);
+	if (hdr->code != EAP_CODE_INITIATE || *pos != EAP_ERP_TYPE_REAUTH)
+		return;
+	pos++;
+	if (pos + 3 > end)
+		return;
+
+	/* Skip Flags and SEQ */
+	pos += 3;
+
+	if (erp_parse_tlvs(pos, end, &parse, 1) < 0 || !parse.keyname)
+		return;
+	wpa_hexdump_ascii(MSG_DEBUG,
+			  "EAP: Update identity based on EAP-Initiate/Re-auth keyName-NAI",
+			  parse.keyname, parse.keyname_len);
+	os_free(sm->identity);
+	sm->identity = os_malloc(parse.keyname_len);
+	if (sm->identity) {
+		os_memcpy(sm->identity, parse.keyname, parse.keyname_len);
+		sm->identity_len = parse.keyname_len;
+	} else {
+		sm->identity_len = 0;
+	}
+#endif /* CONFIG_ERP */
+}
+
+
 /**
  * eap_get_interface - Get pointer to EAP-EAPOL interface data
  * @sm: Pointer to EAP state machine allocated with eap_server_sm_init()

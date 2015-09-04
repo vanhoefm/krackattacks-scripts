@@ -732,6 +732,15 @@ int hostapd_check_ht_capab(struct hostapd_iface *iface)
 	int ret;
 	if (!iface->conf->ieee80211n)
 		return 0;
+
+	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211B &&
+	    iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G &&
+	    (iface->conf->ht_capab & HT_CAP_INFO_DSSS_CCK40MHZ)) {
+		wpa_printf(MSG_DEBUG,
+			   "Disable HT capability [DSSS_CCK-40] on 5 GHz band");
+		iface->conf->ht_capab &= ~HT_CAP_INFO_DSSS_CCK40MHZ;
+	}
+
 	if (!ieee80211n_supported_ht_capab(iface))
 		return -1;
 #ifdef CONFIG_IEEE80211AC

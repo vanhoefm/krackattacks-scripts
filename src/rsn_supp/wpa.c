@@ -3199,3 +3199,91 @@ void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf)
 	sm->test_assoc_ie = buf;
 }
 #endif /* CONFIG_TESTING_OPTIONS */
+
+
+#ifdef CONFIG_FILS
+
+struct wpabuf * fils_build_auth(struct wpa_sm *sm)
+{
+	struct wpabuf *buf = NULL;
+	struct wpabuf *erp_msg;
+
+	erp_msg = eapol_sm_build_erp_reauth_start(sm->eapol);
+	if (!erp_msg && !sm->cur_pmksa) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Neither ERP EAP-Initiate/Re-auth nor PMKSA cache entry is available - skip FILS");
+		goto fail;
+	}
+
+	wpa_printf(MSG_DEBUG, "FILS: Try to use FILS (erp=%d pmksa_cache=%d)",
+		   erp_msg != NULL, sm->cur_pmksa != NULL);
+
+	if (!sm->assoc_wpa_ie) {
+		wpa_printf(MSG_INFO, "FILS: No own RSN IE set for FILS");
+		goto fail;
+	}
+
+	if (random_get_bytes(sm->fils_nonce, FILS_NONCE_LEN) < 0 ||
+	    random_get_bytes(sm->fils_session, FILS_SESSION_LEN) < 0)
+		goto fail;
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Generated FILS Nonce",
+		    sm->fils_nonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: Generated FILS Session",
+		    sm->fils_session, FILS_SESSION_LEN);
+
+	buf = wpabuf_alloc(1000 + sm->assoc_wpa_ie_len);
+	if (!buf)
+		goto fail;
+
+	/* Fields following the Authentication algorithm number field */
+
+	/* Authentication Transaction seq# */
+	wpabuf_put_le16(buf, 1);
+
+	/* Status Code */
+	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
+
+	/* TODO: Finite Cyclic Group when using PK or PFS */
+	/* TODO: Element when using PK or PFS */
+
+	/* RSNE */
+	wpa_hexdump(MSG_DEBUG, "FILS: RSNE in FILS Authentication frame",
+		    sm->assoc_wpa_ie, sm->assoc_wpa_ie_len);
+	wpabuf_put_data(buf, sm->assoc_wpa_ie, sm->assoc_wpa_ie_len);
+
+	/* TODO: MDE when using FILS for FT initial association */
+	/* TODO: FTE when using FILS for FT initial association */
+
+	/* FILS Nonce */
+	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(buf, 1 + FILS_NONCE_LEN); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_NONCE);
+	wpabuf_put_data(buf, sm->fils_nonce, FILS_NONCE_LEN);
+
+	/* FILS Session */
+	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(buf, 1 + FILS_SESSION_LEN); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_SESSION);
+	wpabuf_put_data(buf, sm->fils_session, FILS_SESSION_LEN);
+
+	/* FILS Wrapped Data */
+	if (erp_msg) {
+		wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+		wpabuf_put_u8(buf, 1 + wpabuf_len(erp_msg)); /* Length */
+		/* Element ID Extension */
+		wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_WRAPPED_DATA);
+		wpabuf_put_buf(buf, erp_msg);
+	}
+
+	wpa_hexdump_buf(MSG_DEBUG, "RSN: FILS fields for Authentication frame",
+			buf);
+
+fail:
+	wpabuf_free(erp_msg);
+	return buf;
+}
+
+#endif /* CONFIG_FILS */

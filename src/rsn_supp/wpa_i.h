@@ -138,6 +138,11 @@ struct wpa_sm {
 #ifdef CONFIG_TESTING_OPTIONS
 	struct wpabuf *test_assoc_ie;
 #endif /* CONFIG_TESTING_OPTIONS */
+
+#ifdef CONFIG_FILS
+	u8 fils_nonce[FILS_NONCE_LEN];
+	u8 fils_session[FILS_SESSION_LEN];
+#endif /* CONFIG_FILS */
 };
 
 

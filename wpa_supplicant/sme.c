@@ -549,6 +549,31 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_SAE */
 
+	old_ssid = wpa_s->current_ssid;
+	wpa_s->current_ssid = ssid;
+	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
+	wpa_supplicant_initiate_eapol(wpa_s);
+
+#ifdef CONFIG_FILS
+	/* TODO: FILS operations can in some cases be done between different
+	 * network_ctx (i.e., same credentials can be used with multiple
+	 * networks). */
+	if (params.auth_alg == WPA_AUTH_ALG_OPEN &&
+	    wpa_key_mgmt_fils(ssid->key_mgmt)) {
+		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
+					    ssid, 0) == 0)
+			wpa_printf(MSG_DEBUG,
+				   "SME: Try to use FILS with PMKSA caching");
+		resp = fils_build_auth(wpa_s->wpa);
+		if (resp) {
+			params.auth_alg = WPA_AUTH_ALG_FILS;
+			params.auth_data = wpabuf_head(resp);
+			params.auth_data_len = wpabuf_len(resp);
+			wpa_s->sme.auth_alg = WPA_AUTH_ALG_FILS;
+		}
+	}
+#endif /* CONFIG_FILS */
+
 	wpa_supplicant_cancel_sched_scan(wpa_s);
 	wpa_supplicant_cancel_scan(wpa_s);
 
@@ -558,10 +583,6 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 
 	wpa_clear_keys(wpa_s, bss->bssid);
 	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
-	old_ssid = wpa_s->current_ssid;
-	wpa_s->current_ssid = ssid;
-	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
-	wpa_supplicant_initiate_eapol(wpa_s);
 	if (old_ssid != wpa_s->current_ssid)
 		wpas_notify_network_changed(wpa_s);
 

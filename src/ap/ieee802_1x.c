@@ -31,6 +31,8 @@
 #include "ap_drv_ops.h"
 #include "wps_hostapd.h"
 #include "hs20.h"
+/* FIX: Not really a good thing to require ieee802_11.h here.. (FILS) */
+#include "ieee802_11.h"
 #include "ieee802_1x.h"
 
 
@@ -1837,6 +1839,19 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	ieee802_1x_decapsulate_radius(hapd, sta);
 	if (override_eapReq)
 		sm->eap_if->aaaEapReq = FALSE;
+
+#ifdef CONFIG_FILS
+#ifdef NEED_AP_MLME
+	if (sta->flags & WLAN_STA_PENDING_FILS_ERP) {
+		/* TODO: Add a PMKSA entry on success? */
+		ieee802_11_finish_fils_auth(
+			hapd, sta, hdr->code == RADIUS_CODE_ACCESS_ACCEPT,
+			sm->eap_if->aaaEapReqData,
+			sm->eap_if->aaaEapKeyData,
+			sm->eap_if->aaaEapKeyDataLen);
+	}
+#endif /* NEED_AP_MLME */
+#endif /* CONFIG_FILS */
 
 	eapol_auth_step(sm);
 

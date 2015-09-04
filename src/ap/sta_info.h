@@ -17,6 +17,7 @@
 
 #include "list.h"
 #include "vlan.h"
+#include "common/ieee802_11_defs.h"
 
 /* STA flags */
 #define WLAN_STA_AUTH BIT(0)
@@ -38,6 +39,7 @@
 #define WLAN_STA_WNM_SLEEP_MODE BIT(19)
 #define WLAN_STA_VHT_OPMODE_ENABLED BIT(20)
 #define WLAN_STA_VENDOR_VHT BIT(21)
+#define WLAN_STA_PENDING_FILS_ERP BIT(22)
 #define WLAN_STA_PENDING_DISASSOC_CB BIT(29)
 #define WLAN_STA_PENDING_DEAUTH_CB BIT(30)
 #define WLAN_STA_NONERP BIT(31)
@@ -218,6 +220,11 @@ struct sta_info {
 	struct wpabuf *probe_ie_taxonomy;
 	struct wpabuf *assoc_ie_taxonomy;
 #endif /* CONFIG_TAXONOMY */
+
+#ifdef CONFIG_FILS
+	u8 fils_snonce[FILS_NONCE_LEN];
+	u8 fils_session[FILS_SESSION_LEN];
+#endif /* CONFIG_FILS */
 };
 
 

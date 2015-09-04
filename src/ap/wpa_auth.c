@@ -2035,6 +2035,32 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 
 
 #ifdef CONFIG_FILS
+
+int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
+			 size_t pmk_len, const u8 *snonce, const u8 *anonce)
+{
+	u8 ick[FILS_ICK_MAX_LEN];
+	size_t ick_len;
+	int res;
+
+	res = fils_pmk_to_ptk(pmk, pmk_len, sm->addr, sm->wpa_auth->addr,
+			      snonce, anonce, &sm->PTK, ick, &ick_len,
+			      sm->wpa_key_mgmt, sm->pairwise);
+	if (res < 0)
+		return res;
+	sm->PTK_valid = TRUE;
+
+	res = fils_key_auth_sk(ick, ick_len, snonce, anonce,
+			       sm->addr, sm->wpa_auth->addr,
+			       NULL, 0, NULL, 0, /* TODO: SK+PFS */
+			       sm->wpa_key_mgmt, sm->fils_key_auth_sta,
+			       sm->fils_key_auth_ap,
+			       &sm->fils_key_auth_len);
+	os_memset(ick, 0, sizeof(ick));
+	return res;
+}
+
+
 static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 			    u8 *buf, size_t buf_len, u16 *_key_data_len)
 {

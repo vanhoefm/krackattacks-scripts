@@ -1004,6 +1004,294 @@ static u16 wpa_res_to_status_code(int res)
 }
 
 
+#ifdef CONFIG_FILS
+
+static void handle_auth_fils_finish(struct hostapd_data *hapd,
+				    struct sta_info *sta, u16 resp,
+				    struct rsn_pmksa_cache_entry *pmksa,
+				    struct wpabuf *erp_resp,
+				    const u8 *msk, size_t msk_len);
+
+static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
+			    const struct ieee80211_mgmt *mgmt, size_t len,
+			    u16 auth_transaction, u16 status_code)
+{
+	u16 resp = WLAN_STATUS_SUCCESS;
+	const u8 *pos, *end;
+	struct ieee802_11_elems elems;
+	int res;
+	struct wpa_ie_data rsn;
+	struct rsn_pmksa_cache_entry *pmksa = NULL;
+
+	if (auth_transaction != 1 || status_code != WLAN_STATUS_SUCCESS)
+		return;
+
+	pos = mgmt->u.auth.variable;
+	end = ((const u8 *) mgmt) + len;
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Authentication frame fields",
+		    pos, end - pos);
+
+	/* TODO: Finite Cyclic Group when using PK or PFS */
+	/* TODO: Element when using PK or PFS */
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Remaining IEs", pos, end - pos);
+	if (ieee802_11_parse_elems(pos, end - pos, &elems, 1) == ParseFailed) {
+		wpa_printf(MSG_DEBUG, "FILS: Could not parse elements");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+
+	/* RSNE */
+	wpa_hexdump(MSG_DEBUG, "FILS: RSN element",
+		    elems.rsn_ie, elems.rsn_ie_len);
+	if (!elems.rsn_ie ||
+	    wpa_parse_wpa_ie_rsn(elems.rsn_ie - 2, elems.rsn_ie_len + 2,
+				 &rsn) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: No valid RSN element");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+
+	if (!sta->wpa_sm)
+		sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth, sta->addr,
+						NULL);
+	if (!sta->wpa_sm) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Failed to initialize RSN state machine");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+
+	res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
+				  elems.rsn_ie - 2, elems.rsn_ie_len + 2,
+				  elems.mdie, elems.mdie_len);
+	resp = wpa_res_to_status_code(res);
+	if (resp != WLAN_STATUS_SUCCESS)
+		goto fail;
+
+	/* TODO: MDE when using FILS+FT */
+	/* TODO: FTE when using FILS+FT */
+
+	if (!elems.fils_nonce) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Nonce field");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "FILS: SNonce", elems.fils_nonce,
+		    FILS_NONCE_LEN);
+	os_memcpy(sta->fils_snonce, elems.fils_nonce, FILS_NONCE_LEN);
+
+	/* PMKID List */
+	if (rsn.pmkid && rsn.num_pmkid > 0) {
+		u8 num;
+		const u8 *pmkid;
+
+		wpa_hexdump(MSG_DEBUG, "FILS: PMKID List",
+			    rsn.pmkid, rsn.num_pmkid * PMKID_LEN);
+
+		pmkid = rsn.pmkid;
+		num = rsn.num_pmkid;
+		while (num) {
+			wpa_hexdump(MSG_DEBUG, "FILS: PMKID", pmkid, PMKID_LEN);
+			pmksa = wpa_auth_pmksa_get(hapd->wpa_auth, sta->addr,
+						   pmkid);
+			if (pmksa)
+				break;
+			pmkid += PMKID_LEN;
+			num--;
+		}
+	}
+	if (pmksa && wpa_auth_sta_key_mgmt(sta->wpa_sm) != pmksa->akmp) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Matching PMKSA cache entry has different AKMP (0x%x != 0x%x) - ignore",
+			   wpa_auth_sta_key_mgmt(sta->wpa_sm), pmksa->akmp);
+		pmksa = NULL;
+	}
+	if (pmksa)
+		wpa_printf(MSG_DEBUG, "FILS: Found matching PMKSA cache entry");
+
+	/* FILS Session */
+	if (!elems.fils_session) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Session element");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "FILS: FILS Session", elems.fils_session,
+		    FILS_SESSION_LEN);
+	os_memcpy(sta->fils_session, elems.fils_session, FILS_SESSION_LEN);
+
+	/* FILS Wrapped Data */
+	if (elems.fils_wrapped_data) {
+		wpa_hexdump(MSG_DEBUG, "FILS: Wrapped Data",
+			    elems.fils_wrapped_data,
+			    elems.fils_wrapped_data_len);
+		if (!pmksa) {
+#ifndef CONFIG_NO_RADIUS
+			if (!sta->eapol_sm) {
+				sta->eapol_sm =
+					ieee802_1x_alloc_eapol_sm(hapd, sta);
+			}
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Forward EAP-Identity/Re-auth Start to authentication server");
+			ieee802_1x_encapsulate_radius(
+				hapd, sta, elems.fils_wrapped_data,
+				elems.fils_wrapped_data_len);
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Will send Authentication frame once the response from authentication server is available");
+			sta->flags |= WLAN_STA_PENDING_FILS_ERP;
+			return;
+#else /* CONFIG_NO_RADIUS */
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+#endif /* CONFIG_NO_RADIUS */
+		}
+	}
+
+fail:
+	handle_auth_fils_finish(hapd, sta, resp, pmksa, NULL, NULL, 0);
+}
+
+
+static void handle_auth_fils_finish(struct hostapd_data *hapd,
+				    struct sta_info *sta, u16 resp,
+				    struct rsn_pmksa_cache_entry *pmksa,
+				    struct wpabuf *erp_resp,
+				    const u8 *msk, size_t msk_len)
+{
+	u8 fils_nonce[FILS_NONCE_LEN];
+	size_t ielen;
+	struct wpabuf *data = NULL;
+	const u8 *ie;
+	u8 *ie_buf = NULL;
+	const u8 *pmk = NULL;
+	size_t pmk_len = 0;
+
+	if (resp != WLAN_STATUS_SUCCESS)
+		goto fail;
+
+	ie = wpa_auth_get_wpa_ie(hapd->wpa_auth, &ielen);
+	if (!ie) {
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	if (pmksa) {
+		/* Add PMKID of the selected PMKSA into RSNE */
+		ie_buf = os_malloc(ielen + 2 + 2 + PMKID_LEN);
+		if (!ie_buf) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		os_memcpy(ie_buf, ie, ielen);
+		if (wpa_insert_pmkid(ie_buf, &ielen, pmksa->pmkid) < 0) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		ie = ie_buf;
+	}
+
+	if (random_get_bytes(fils_nonce, FILS_NONCE_LEN) < 0) {
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "RSN: Generated FILS Nonce",
+		    fils_nonce, FILS_NONCE_LEN);
+
+	data = wpabuf_alloc(1000 + ielen);
+	if (!data) {
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+
+	/* TODO: Finite Cyclic Group when using PK or PFS */
+	/* TODO: Element when using PK or PFS */
+
+	/* RSNE */
+	wpabuf_put_data(data, ie, ielen);
+
+	/* TODO: MDE when using FILS+FT */
+	/* TODO: FTE when using FILS+FT */
+
+	/* FILS Nonce */
+	wpabuf_put_u8(data, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(data, 1 + FILS_NONCE_LEN); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(data, WLAN_EID_EXT_FILS_NONCE);
+	wpabuf_put_data(data, fils_nonce, FILS_NONCE_LEN);
+
+	/* FILS Session */
+	wpabuf_put_u8(data, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(data, 1 + FILS_SESSION_LEN); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(data, WLAN_EID_EXT_FILS_SESSION);
+	wpabuf_put_data(data, sta->fils_session, FILS_SESSION_LEN);
+
+	/* FILS Wrapped Data */
+	if (!pmksa && erp_resp) {
+		wpabuf_put_u8(data, WLAN_EID_EXTENSION); /* Element ID */
+		wpabuf_put_u8(data, 1 + wpabuf_len(erp_resp)); /* Length */
+		/* Element ID Extension */
+		wpabuf_put_u8(data, WLAN_EID_EXT_FILS_WRAPPED_DATA);
+		wpabuf_put_buf(data, erp_resp);
+
+		pmk = msk;
+		pmk_len = msk_len > PMK_LEN ? PMK_LEN : msk_len;
+	} else if (pmksa) {
+		pmk = pmksa->pmk;
+		pmk_len = pmksa->pmk_len;
+	}
+
+	if (!pmk) {
+		wpa_printf(MSG_DEBUG, "FILS: No PMK available");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		wpabuf_free(data);
+		data = NULL;
+		goto fail;
+	}
+
+	if (fils_auth_pmk_to_ptk(sta->wpa_sm, pmk, pmk_len,
+				 sta->fils_snonce, fils_nonce) < 0) {
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		wpabuf_free(data);
+		data = NULL;
+		goto fail;
+	}
+
+fail:
+	send_auth_reply(hapd, sta->addr, hapd->own_addr, WLAN_AUTH_FILS_SK, 2,
+			resp,
+			data ? wpabuf_head(data) : (u8 *) "",
+			data ? wpabuf_len(data) : 0);
+	wpabuf_free(data);
+
+	if (resp == WLAN_STATUS_SUCCESS) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "authentication OK (FILS)");
+		sta->flags |= WLAN_STA_AUTH;
+		wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
+		sta->auth_alg = WLAN_AUTH_FILS_SK;
+		mlme_authenticate_indication(hapd, sta);
+	}
+
+	os_free(ie_buf);
+}
+
+
+void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
+				 struct sta_info *sta, int success,
+				 struct wpabuf *erp_resp,
+				 const u8 *msk, size_t msk_len)
+{
+	sta->flags &= ~WLAN_STA_PENDING_FILS_ERP;
+	handle_auth_fils_finish(hapd, sta, success ? WLAN_STATUS_SUCCESS :
+				WLAN_STATUS_UNSPECIFIED_FAILURE, NULL,
+				erp_resp, msk, msk_len);
+}
+
+#endif /* CONFIG_FILS */
+
+
 static void handle_auth(struct hostapd_data *hapd,
 			const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -1085,6 +1373,10 @@ static void handle_auth(struct hostapd_data *hapd,
 	      (hapd->conf->wpa && wpa_key_mgmt_sae(hapd->conf->wpa_key_mgmt) &&
 	       auth_alg == WLAN_AUTH_SAE) ||
 #endif /* CONFIG_SAE */
+#ifdef CONFIG_FILS
+	      (hapd->conf->wpa && wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt) &&
+	       auth_alg == WLAN_AUTH_FILS_SK) ||
+#endif /* CONFIG_FILS */
 	      ((hapd->conf->auth_algs & WPA_AUTH_ALG_SHARED) &&
 	       auth_alg == WLAN_AUTH_SHARED_KEY))) {
 		wpa_printf(MSG_INFO, "Unsupported authentication algorithm (%d)",
@@ -1186,6 +1478,7 @@ static void handle_auth(struct hostapd_data *hapd,
 
 	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta) {
+		sta->flags &= ~WLAN_STA_PENDING_FILS_ERP;
 		if ((fc & WLAN_FC_RETRY) &&
 		    sta->last_seq_ctrl != WLAN_INVALID_MGMT_SEQ &&
 		    sta->last_seq_ctrl == seq_ctrl &&
@@ -1381,6 +1674,12 @@ static void handle_auth(struct hostapd_data *hapd,
 				status_code);
 		return;
 #endif /* CONFIG_SAE */
+#ifdef CONFIG_FILS
+	case WLAN_AUTH_FILS_SK:
+		handle_auth_fils(hapd, sta, mgmt, len, auth_transaction,
+				 status_code);
+		return;
+#endif /* CONFIG_FILS */
 	}
 
  fail:

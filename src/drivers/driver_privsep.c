@@ -703,6 +703,10 @@ static int wpa_driver_privsep_get_capa(void *priv,
 	res = wpa_priv_cmd(drv, PRIVSEP_CMD_GET_CAPA, NULL, 0, capa, &len);
 	if (res < 0 || len != sizeof(*capa))
 		return -1;
+	/* For now, no support for passing extended_capa pointers */
+	capa->extended_capa = NULL;
+	capa->extended_capa_mask = NULL;
+	capa->extended_capa_len = 0;
 	return 0;
 }
 

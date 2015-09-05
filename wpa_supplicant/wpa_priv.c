@@ -330,6 +330,10 @@ static void wpa_priv_cmd_get_capa(struct wpa_priv_interface *iface,
 	    iface->driver->get_capa(iface->drv_priv, &capa) < 0)
 		goto fail;
 
+	/* For now, no support for passing extended_capa pointers */
+	capa.extended_capa = NULL;
+	capa.extended_capa_mask = NULL;
+	capa.extended_capa_len = 0;
 	sendto(iface->fd, &capa, sizeof(capa), 0, (struct sockaddr *) from,
 	       sizeof(*from));
 	return;

@@ -982,20 +982,20 @@ int main(int argc, char *argv[])
 			break;
 		default:
 			usage();
-			goto out;
+			goto out2;
 		}
 	}
 
 	if (optind >= argc) {
 		usage();
-		goto out;
+		goto out2;
 	}
 
 	wpa_printf(MSG_DEBUG, "wpa_priv control directory: '%s'", ctrl_dir);
 
 	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
-		goto out;
+		goto out2;
 	}
 
 	for (i = optind; i < argc; i++) {
@@ -1025,7 +1025,9 @@ out:
 
 	eloop_destroy();
 
-	os_daemonize_terminate(pid_file);
+out2:
+	if (daemonize)
+		os_daemonize_terminate(pid_file);
 	os_free(pid_file);
 	os_program_deinit();
 

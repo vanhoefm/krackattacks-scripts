@@ -393,8 +393,9 @@ static struct wpa_bss * wpa_bss_add(struct wpa_supplicant *wpa_s,
 	dl_list_add_tail(&wpa_s->bss_id, &bss->list_id);
 	wpa_s->num_bss++;
 	wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR
-		" SSID '%s'",
-		bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
+		" SSID '%s' freq %d",
+		bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len),
+		bss->freq);
 	wpas_notify_bss_added(wpa_s, bss->bssid, bss->id);
 	return bss;
 }
@@ -537,6 +538,9 @@ wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	u32 changes;
 
 	changes = wpa_bss_compare_res(bss, res);
+	if (changes & WPA_BSS_FREQ_CHANGED_FLAG)
+		wpa_printf(MSG_DEBUG, "BSS: " MACSTR " changed freq %d --> %d",
+			   MAC2STR(bss->bssid), bss->freq, res->freq);
 	bss->scan_miss_count = 0;
 	bss->last_update_idx = wpa_s->bss_update_idx;
 	wpa_bss_copy_res(bss, res, fetch_time);

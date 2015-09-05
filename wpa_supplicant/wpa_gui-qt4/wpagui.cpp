@@ -639,7 +639,7 @@ void WpaGui::updateStatus()
 
 void WpaGui::updateNetworks()
 {
-	char buf[2048], *start, *end, *id, *ssid, *bssid, *flags;
+	char buf[4096], *start, *end, *id, *ssid, *bssid, *flags;
 	size_t len;
 	int first_active = -1;
 	int was_selected = -1;

@@ -356,7 +356,8 @@ static void wpa_priv_cmd_l2_register(struct wpa_priv_interface *iface,
 	}
 
 	proto = reg_cmd[0];
-	if (proto != ETH_P_EAPOL && proto != ETH_P_RSN_PREAUTH) {
+	if (proto != ETH_P_EAPOL && proto != ETH_P_RSN_PREAUTH &&
+	    proto != ETH_P_80211_ENCAP) {
 		wpa_printf(MSG_DEBUG, "Refused l2_packet connection for "
 			   "ethertype 0x%x", proto);
 		return;

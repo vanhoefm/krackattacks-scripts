@@ -2335,6 +2335,9 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		return 0;
 	}
 
+	if (hapd->iconf->track_sta_max_num)
+		sta_track_add(hapd->iface, mgmt->sa);
+
 	switch (stype) {
 	case WLAN_FC_STYPE_AUTH:
 		wpa_printf(MSG_DEBUG, "mgmt::auth");

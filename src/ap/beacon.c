@@ -592,7 +592,7 @@ static struct hostapd_sta_info * sta_track_get(struct hostapd_iface *iface,
 }
 
 
-static void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
+void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
 {
 	struct hostapd_sta_info *info;
 

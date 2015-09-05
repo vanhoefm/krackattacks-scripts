@@ -468,6 +468,9 @@ static void wpa_driver_privsep_receive(int sock, void *eloop_ctx,
 	case PRIVSEP_EVENT_SCAN_RESULTS:
 		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
 		break;
+	case PRIVSEP_EVENT_SCAN_STARTED:
+		wpa_supplicant_event(drv->ctx, EVENT_SCAN_STARTED, NULL);
+		break;
 	case PRIVSEP_EVENT_ASSOC:
 		wpa_driver_privsep_event_assoc(drv->ctx, EVENT_ASSOC,
 					       event_buf, event_len);

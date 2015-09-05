@@ -879,6 +879,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				    &data->michael_mic_failure.unicast,
 				    sizeof(int));
 		break;
+	case EVENT_SCAN_STARTED:
+		wpa_priv_send_event(iface, PRIVSEP_EVENT_SCAN_STARTED, NULL,
+				    0);
+		break;
 	case EVENT_SCAN_RESULTS:
 		wpa_priv_send_event(iface, PRIVSEP_EVENT_SCAN_RESULTS, NULL,
 				    0);

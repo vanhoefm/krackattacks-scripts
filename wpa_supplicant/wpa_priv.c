@@ -903,8 +903,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_priv_send_ft_response(iface, data);
 		break;
 	default:
-		wpa_printf(MSG_DEBUG, "Unsupported driver event %d - TODO",
-			   event);
+		wpa_printf(MSG_DEBUG, "Unsupported driver event %d (%s) - TODO",
+			   event, event_to_string(event));
 		break;
 	}
 }

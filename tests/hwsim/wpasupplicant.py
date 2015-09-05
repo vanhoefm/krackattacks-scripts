@@ -858,7 +858,7 @@ class WpaSupplicant:
 
         not_quoted = [ "proto", "key_mgmt", "ieee80211w", "pairwise",
                        "group", "wep_key0", "wep_key1", "wep_key2", "wep_key3",
-                       "wep_tx_keyidx", "scan_freq", "eap",
+                       "wep_tx_keyidx", "scan_freq", "freq_list", "eap",
                        "eapol_flags", "fragment_size", "scan_ssid", "auth_alg",
                        "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid",
                        "disable_max_amsdu", "ampdu_factor", "ampdu_density",

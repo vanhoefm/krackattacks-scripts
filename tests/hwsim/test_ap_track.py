@@ -112,3 +112,117 @@ def _test_ap_track_sta_no_probe_resp(dev, apdev):
 
     if dev[0].get_bss(bssid):
         raise Exception("2.4 GHz AP found unexpectedly")
+
+def test_ap_track_sta_no_auth(dev, apdev):
+    """Dualband AP rejecting authentication from dualband STA on 2.4 GHz"""
+    try:
+        _test_ap_track_sta_no_auth(dev, apdev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_ap_track_sta_no_auth(dev, apdev):
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "g",
+               "channel": "6",
+               "track_sta_max_num": "100",
+               "no_auth_if_seen_on": apdev[1]['ifname'] }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "40",
+               "track_sta_max_num": "100" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
+    dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)
+    dev[1].scan_for_bss(bssid, freq=2437, force_scan=True)
+
+    dev[1].connect("track", key_mgmt="NONE", scan_freq="2437")
+
+    dev[0].connect("track", key_mgmt="NONE", scan_freq="2437",
+                   freq_list="2437", wait_connect=False)
+    dev[1].request("DISCONNECT")
+    ev = dev[0].wait_event([ "CTRL-EVENT-CONNECTED",
+                             "CTRL-EVENT-AUTH-REJECT" ], timeout=10)
+    if ev is None:
+        raise Exception("Unknown connection result")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection")
+    if "status_code=82" not in ev:
+        raise Exception("Unexpected rejection reason: " + ev)
+    if "ie=34" not in ev:
+        raise Exception("No Neighbor Report element: " + ev)
+    dev[0].request("DISCONNECT")
+
+def test_ap_track_sta_force_5ghz(dev, apdev):
+    """Dualband AP forcing dualband STA to connect on 5 GHz"""
+    try:
+        _test_ap_track_sta_force_5ghz(dev, apdev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_ap_track_sta_force_5ghz(dev, apdev):
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "g",
+               "channel": "6",
+               "no_probe_resp_if_seen_on": apdev[1]['ifname'],
+               "no_auth_if_seen_on": apdev[1]['ifname'] }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "40",
+               "track_sta_max_num": "100" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
+    dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)
+
+    dev[0].connect("track", key_mgmt="NONE", scan_freq="2437 5200")
+    freq = dev[0].get_status_field('freq')
+    if freq != '5200':
+        raise Exception("Unexpected operating channel")
+    dev[0].request("DISCONNECT")
+
+def test_ap_track_sta_force_2ghz(dev, apdev):
+    """Dualband AP forcing dualband STA to connect on 2.4 GHz"""
+    try:
+        _test_ap_track_sta_force_2ghz(dev, apdev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_ap_track_sta_force_2ghz(dev, apdev):
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "g",
+               "channel": "6",
+               "track_sta_max_num": "100" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "40",
+               "no_probe_resp_if_seen_on": apdev[0]['ifname'],
+               "no_auth_if_seen_on": apdev[0]['ifname'] }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)
+    dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
+
+    dev[0].connect("track", key_mgmt="NONE", scan_freq="2437 5200")
+    freq = dev[0].get_status_field('freq')
+    if freq != '2437':
+        raise Exception("Unexpected operating channel")
+    dev[0].request("DISCONNECT")

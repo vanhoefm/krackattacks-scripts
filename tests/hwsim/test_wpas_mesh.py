@@ -12,7 +12,7 @@ import subprocess
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
 
 def check_mesh_support(dev, secure=False):
     if "MESH" not in dev.get_capability("modes"):
@@ -599,3 +599,14 @@ def test_wpas_mesh_password_mismatch_retry(dev, apdev, params):
     ev = dev[1].wait_event(["MESH-SAE-AUTH-BLOCKED"], timeout=10)
     if ev is None:
         raise Exception("dev1 did not report auth blocked")
+
+def test_mesh_wpa_auth_init_oom(dev, apdev):
+    """Secure mesh network setup failing due to wpa_init() OOM"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    with alloc_fail(dev[0], 1, "wpa_init"):
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+        ev = dev[0].wait_event(["MESH-GROUP-STARTED"], timeout=0.2)
+        if ev is not None:
+            raise Exception("Unexpected mesh group start during OOM")

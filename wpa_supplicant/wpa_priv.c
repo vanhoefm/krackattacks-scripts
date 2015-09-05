@@ -944,8 +944,9 @@ static void usage(void)
 	       "contributors\n"
 	       "\n"
 	       "usage:\n"
-	       "  wpa_priv [-Bdd] [-P<pid file>] <driver:ifname> "
-	       "[driver:ifname ...]\n");
+	       "  wpa_priv [-Bdd] [-c<ctrl dir>] [-P<pid file>] "
+	       "<driver:ifname> \\\n"
+	       "           [driver:ifname ...]\n");
 }
 
 

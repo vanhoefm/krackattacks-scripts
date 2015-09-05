@@ -5309,3 +5309,16 @@ def test_ap_wps_adv_oom(dev, apdev):
     with alloc_fail(hapd, 1, "ssdp_listener_start"):
         if "FAIL" not in hapd.request("ENABLE"):
             raise Exception("ENABLE succeeded during OOM")
+
+def test_wps_config_methods(dev):
+    """WPS config method update"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    if "OK" not in wpas.request("SET config_methods display label"):
+        raise Exception("Failed to set config_methods")
+    if wpas.request("GET config_methods").strip() != "display label":
+        raise Exception("config_methods were not updated")
+    if "OK" not in wpas.request("SET config_methods "):
+        raise Exception("Failed to clear config_methods")
+    if wpas.request("GET config_methods").strip() != "":
+        raise Exception("config_methods were not cleared")

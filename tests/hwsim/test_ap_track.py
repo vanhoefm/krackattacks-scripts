@@ -77,3 +77,38 @@ def _test_ap_track_sta(dev, apdev):
         raise Exception("Unexpected number of entries: %d" % len(track.splitlines()))
     if addr1 not in track or addr2 not in track:
         raise Exception("Station missing from 2.4 GHz tracking (max limit)")
+
+def test_ap_track_sta_no_probe_resp(dev, apdev):
+    """Dualband AP not replying to probes from dualband STA on 2.4 GHz"""
+    try:
+        _test_ap_track_sta_no_probe_resp(dev, apdev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_ap_track_sta_no_probe_resp(dev, apdev):
+    dev[0].flush_scan_cache()
+
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "g",
+               "channel": "6",
+               "beacon_int": "10000",
+               "no_probe_resp_if_seen_on": apdev[1]['ifname'] }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    params = { "ssid": "track",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "40",
+               "track_sta_max_num": "100" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)
+    dev[1].scan_for_bss(bssid, freq=2437, force_scan=True)
+    dev[0].scan(freq=2437, type="ONLY")
+    dev[0].scan(freq=2437, type="ONLY")
+
+    if dev[0].get_bss(bssid):
+        raise Exception("2.4 GHz AP found unexpectedly")

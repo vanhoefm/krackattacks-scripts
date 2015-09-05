@@ -528,7 +528,7 @@ u16 wps_config_methods_str2bin(const char *str)
 {
 	u16 methods = 0;
 
-	if (str == NULL) {
+	if (str == NULL || str[0] == '\0') {
 		/* Default to enabling methods based on build configuration */
 		methods |= WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
 		methods |= WPS_CONFIG_VIRT_DISPLAY;

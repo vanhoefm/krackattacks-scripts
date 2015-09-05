@@ -817,8 +817,22 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 #endif /* CONFIG_SAE */
 
 	if (data->auth.status_code != WLAN_STATUS_SUCCESS) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication failed (status "
-			"code %d)", data->auth.status_code);
+		char *ie_txt = NULL;
+
+		if (data->auth.ies && data->auth.ies_len) {
+			size_t buflen = 2 * data->auth.ies_len + 1;
+			ie_txt = os_malloc(buflen);
+			if (ie_txt) {
+				wpa_snprintf_hex(ie_txt, buflen, data->auth.ies,
+						 data->auth.ies_len);
+			}
+		}
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_AUTH_REJECT MACSTR
+			" auth_type=%u auth_transaction=%u status_code=%u ie=%s",
+			MAC2STR(data->auth.peer), data->auth.auth_type,
+			data->auth.auth_transaction, data->auth.status_code,
+			ie_txt);
+		os_free(ie_txt);
 
 		if (data->auth.status_code !=
 		    WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG ||

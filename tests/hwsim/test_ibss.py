@@ -11,6 +11,7 @@ import re
 import subprocess
 
 import hwsim_utils
+from utils import alloc_fail
 
 def connect_ibss_cmd(dev, id, freq=2412):
     dev.dump_monitor()
@@ -386,3 +387,11 @@ def _test_ibss_5ghz(dev):
     dev[1].request("DISCONNECT")
     dev[0].dump_monitor()
     dev[1].dump_monitor()
+
+def test_ibss_rsn_oom(dev):
+    """IBSS RSN OOM during wpa_init"""
+    with alloc_fail(dev[0], 1, "wpa_init"):
+        ssid="ibss-rsn"
+        id = add_ibss_rsn(dev[0], ssid)
+        connect_ibss_cmd(dev[0], id)
+        bssid0 = wait_ibss_connection(dev[0])

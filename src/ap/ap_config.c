@@ -172,6 +172,7 @@ struct hostapd_config * hostapd_config_defaults(void)
 
 	conf->ap_table_max_size = 255;
 	conf->ap_table_expiration_time = 60;
+	conf->track_sta_max_age = 180;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	conf->ignore_probe_probability = 0.0;

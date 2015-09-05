@@ -21,5 +21,6 @@ int ieee802_11_update_beacons(struct hostapd_iface *iface);
 int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 			       struct wpa_driver_ap_params *params);
 void ieee802_11_free_ap_params(struct wpa_driver_ap_params *params);
+void sta_track_expire(struct hostapd_iface *iface, int force);
 
 #endif /* BEACON_H */

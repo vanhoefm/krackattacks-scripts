@@ -281,6 +281,12 @@ struct hostapd_data {
 };
 
 
+struct hostapd_sta_info {
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
+	struct os_reltime last_seen;
+};
+
 /**
  * struct hostapd_iface - hostapd per-interface data structure
  */
@@ -409,6 +415,9 @@ struct hostapd_iface {
 
 	void (*scan_cb)(struct hostapd_iface *iface);
 	int num_ht40_scan_tries;
+
+	struct dl_list sta_seen; /* struct hostapd_sta_info */
+	unsigned int num_sta_seen;
 };
 
 /* hostapd.c */

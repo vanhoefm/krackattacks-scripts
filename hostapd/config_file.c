@@ -3399,6 +3399,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 		conf->fst_cfg.llt = (u32) val;
 #endif /* CONFIG_FST */
+	} else if (os_strcmp(buf, "track_sta_max_num") == 0) {
+		conf->track_sta_max_num = atoi(pos);
+	} else if (os_strcmp(buf, "track_sta_max_age") == 0) {
+		conf->track_sta_max_age = atoi(pos);
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

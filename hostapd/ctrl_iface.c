@@ -2007,6 +2007,39 @@ static int hostapd_ctrl_iface_log_level(struct hostapd_data *hapd, char *cmd,
 }
 
 
+#ifdef NEED_AP_MLME
+static int hostapd_ctrl_iface_track_sta_list(struct hostapd_data *hapd,
+					     char *buf, size_t buflen)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	char *pos, *end;
+	struct hostapd_sta_info *info;
+	struct os_reltime now;
+
+	sta_track_expire(iface, 0);
+
+	pos = buf;
+	end = buf + buflen;
+
+	os_get_reltime(&now);
+	dl_list_for_each_reverse(info, &iface->sta_seen,
+				 struct hostapd_sta_info, list) {
+		struct os_reltime age;
+		int ret;
+
+		os_reltime_sub(&now, &info->last_seen, &age);
+		ret = os_snprintf(pos, end - pos, MACSTR " %u\n",
+				  MAC2STR(info->addr), (unsigned int) age.sec);
+		if (os_snprintf_error(end - pos, ret))
+			break;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+#endif /* NEED_AP_MLME */
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2238,6 +2271,11 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "LOG_LEVEL", 9) == 0) {
 		reply_len = hostapd_ctrl_iface_log_level(
 			hapd, buf + 9, reply, reply_size);
+#ifdef NEED_AP_MLME
+	} else if (os_strcmp(buf, "TRACK_STA_LIST") == 0) {
+		reply_len = hostapd_ctrl_iface_track_sta_list(
+			hapd, reply, reply_size);
+#endif /* NEED_AP_MLME */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

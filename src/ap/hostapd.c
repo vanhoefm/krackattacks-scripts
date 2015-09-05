@@ -355,6 +355,22 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 }
 
 
+static void sta_track_deinit(struct hostapd_iface *iface)
+{
+	struct hostapd_sta_info *info;
+
+	if (!iface->num_sta_seen)
+		return;
+
+	while ((info = dl_list_first(&iface->sta_seen, struct hostapd_sta_info,
+				     list))) {
+		dl_list_del(&info->list);
+		iface->num_sta_seen--;
+		os_free(info);
+	}
+}
+
+
 static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
 {
 	wpa_printf(MSG_DEBUG, "%s(%p)", __func__, iface);
@@ -370,6 +386,7 @@ static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
 	os_free(iface->basic_rates);
 	iface->basic_rates = NULL;
 	ap_list_deinit(iface);
+	sta_track_deinit(iface);
 }
 
 
@@ -1623,6 +1640,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	hostapd_tx_queue_params(iface);
 
 	ap_list_init(iface);
+	dl_list_init(&iface->sta_seen);
 
 	hostapd_set_acl(hapd);
 

@@ -552,6 +552,76 @@ static enum ssid_match_result ssid_match(struct hostapd_data *hapd,
 }
 
 
+void sta_track_expire(struct hostapd_iface *iface, int force)
+{
+	struct os_reltime now;
+	struct hostapd_sta_info *info;
+
+	if (!iface->num_sta_seen)
+		return;
+
+	os_get_reltime(&now);
+	while ((info = dl_list_first(&iface->sta_seen, struct hostapd_sta_info,
+				     list))) {
+		if (!force &&
+		    !os_reltime_expired(&now, &info->last_seen,
+					iface->conf->track_sta_max_age))
+			break;
+		force = 0;
+
+		wpa_printf(MSG_MSGDUMP, "%s: Expire STA tracking entry for "
+			   MACSTR, iface->bss[0]->conf->iface,
+			   MAC2STR(info->addr));
+		dl_list_del(&info->list);
+		iface->num_sta_seen--;
+		os_free(info);
+	}
+}
+
+
+static struct hostapd_sta_info * sta_track_get(struct hostapd_iface *iface,
+					       const u8 *addr)
+{
+	struct hostapd_sta_info *info;
+
+	dl_list_for_each(info, &iface->sta_seen, struct hostapd_sta_info, list)
+		if (os_memcmp(addr, info->addr, ETH_ALEN) == 0)
+			return info;
+
+	return NULL;
+}
+
+
+static void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
+{
+	struct hostapd_sta_info *info;
+
+	info = sta_track_get(iface, addr);
+	if (info) {
+		/* Move the most recent entry to the end of the list */
+		dl_list_del(&info->list);
+		dl_list_add_tail(&iface->sta_seen, &info->list);
+		os_get_reltime(&info->last_seen);
+		return;
+	}
+
+	/* Add a new entry */
+	info = os_zalloc(sizeof(*info));
+	os_memcpy(info->addr, addr, ETH_ALEN);
+	os_get_reltime(&info->last_seen);
+
+	if (iface->num_sta_seen >= iface->conf->track_sta_max_num) {
+		/* Expire oldest entry to make room for a new one */
+		sta_track_expire(iface, 1);
+	}
+
+	wpa_printf(MSG_MSGDUMP, "%s: Add STA tracking entry for "
+		   MACSTR, iface->bss[0]->conf->iface, MAC2STR(addr));
+	dl_list_add_tail(&iface->sta_seen, &info->list);
+	iface->num_sta_seen++;
+}
+
+
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len,
 		      int ssi_signal)
@@ -567,6 +637,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
 		return;
+	if (hapd->iconf->track_sta_max_num)
+		sta_track_add(hapd->iface, mgmt->sa);
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)

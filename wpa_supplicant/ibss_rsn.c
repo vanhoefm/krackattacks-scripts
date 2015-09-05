@@ -697,7 +697,8 @@ void ibss_rsn_deinit(struct ibss_rsn *ibss_rsn)
 		ibss_rsn_free(prev);
 	}
 
-	wpa_deinit(ibss_rsn->auth_group);
+	if (ibss_rsn->auth_group)
+		wpa_deinit(ibss_rsn->auth_group);
 	os_free(ibss_rsn);
 
 }

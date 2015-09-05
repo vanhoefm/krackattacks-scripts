@@ -740,11 +740,9 @@ int ssdp_listener_open(void)
 	int sd;
 
 	sd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sd < 0)
-		goto fail;
-	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0)
-		goto fail;
-	if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
+	if (sd < 0 ||
+	    fcntl(sd, F_SETFL, O_NONBLOCK) != 0 ||
+	    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
 		goto fail;
 	os_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -756,9 +754,8 @@ int ssdp_listener_open(void)
 	mcast_addr.imr_interface.s_addr = htonl(INADDR_ANY);
 	mcast_addr.imr_multiaddr.s_addr = inet_addr(UPNP_MULTICAST_ADDRESS);
 	if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-		       (char *) &mcast_addr, sizeof(mcast_addr)))
-		goto fail;
-	if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL,
+		       (char *) &mcast_addr, sizeof(mcast_addr)) ||
+	    setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL,
 		       &ttl, sizeof(ttl)))
 		goto fail;
 

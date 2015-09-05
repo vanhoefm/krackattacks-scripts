@@ -220,6 +220,56 @@ static int wpa_driver_privsep_set_key(const char *ifname, void *priv,
 }
 
 
+static int wpa_driver_privsep_authenticate(
+	void *priv, struct wpa_driver_auth_params *params)
+{
+	struct wpa_driver_privsep_data *drv = priv;
+	struct privsep_cmd_authenticate *data;
+	int i, res;
+	size_t buflen;
+	u8 *pos;
+
+	wpa_printf(MSG_DEBUG, "%s: priv=%p freq=%d bssid=" MACSTR
+		   " auth_alg=%d local_state_change=%d p2p=%d",
+		   __func__, priv, params->freq, MAC2STR(params->bssid),
+		   params->auth_alg, params->local_state_change, params->p2p);
+
+	buflen = sizeof(*data) + params->ie_len + params->sae_data_len;
+	data = os_zalloc(buflen);
+	if (data == NULL)
+		return -1;
+
+	data->freq = params->freq;
+	os_memcpy(data->bssid, params->bssid, ETH_ALEN);
+	os_memcpy(data->ssid, params->ssid, params->ssid_len);
+	data->ssid_len = params->ssid_len;
+	data->auth_alg = params->auth_alg;
+	data->ie_len = params->ie_len;
+	for (i = 0; i < 4; i++) {
+		if (params->wep_key[i])
+			os_memcpy(data->wep_key[i], params->wep_key[i],
+				  params->wep_key_len[i]);
+		data->wep_key_len[i] = params->wep_key_len[i];
+	}
+	data->wep_tx_keyidx = params->wep_tx_keyidx;
+	data->local_state_change = params->local_state_change;
+	data->p2p = params->p2p;
+	pos = (u8 *) (data + 1);
+	if (params->ie_len) {
+		os_memcpy(pos, params->ie, params->ie_len);
+		pos += params->ie_len;
+	}
+	if (params->sae_data_len)
+		os_memcpy(pos, params->sae_data, params->sae_data_len);
+
+	res = wpa_priv_cmd(drv, PRIVSEP_CMD_AUTHENTICATE, data, buflen,
+			   NULL, NULL);
+	os_free(data);
+
+	return res;
+}
+
+
 static int wpa_driver_privsep_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
@@ -306,6 +356,32 @@ static int wpa_driver_privsep_deauthenticate(void *priv, const u8 *addr,
 		   __func__, MAC2STR(addr), reason_code);
 	wpa_printf(MSG_DEBUG, "%s - TODO", __func__);
 	return 0;
+}
+
+
+static void wpa_driver_privsep_event_auth(void *ctx, u8 *buf, size_t len)
+{
+	union wpa_event_data data;
+	struct privsep_event_auth *auth;
+
+	os_memset(&data, 0, sizeof(data));
+	if (len < sizeof(*auth))
+		return;
+	auth = (struct privsep_event_auth *) buf;
+	if (len < sizeof(*auth) + auth->ies_len)
+		return;
+
+	os_memcpy(data.auth.peer, auth->peer, ETH_ALEN);
+	os_memcpy(data.auth.bssid, auth->bssid, ETH_ALEN);
+	data.auth.auth_type = auth->auth_type;
+	data.auth.auth_transaction = auth->auth_transaction;
+	data.auth.status_code = auth->status_code;
+	if (auth->ies_len) {
+		data.auth.ies = (u8 *) (auth + 1);
+		data.auth.ies_len = auth->ies_len;
+	}
+
+	wpa_supplicant_event(ctx, EVENT_AUTH, &data);
 }
 
 
@@ -505,6 +581,9 @@ static void wpa_driver_privsep_receive(int sock, void *eloop_ctx,
 	case PRIVSEP_EVENT_RX_EAPOL:
 		wpa_driver_privsep_event_rx_eapol(drv->ctx, event_buf,
 						  event_len);
+		break;
+	case PRIVSEP_EVENT_AUTH:
+		wpa_driver_privsep_event_auth(drv->ctx, event_buf, event_len);
 		break;
 	}
 
@@ -742,6 +821,7 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	.set_param = wpa_driver_privsep_set_param,
 	.scan2 = wpa_driver_privsep_scan,
 	.deauthenticate = wpa_driver_privsep_deauthenticate,
+	.authenticate = wpa_driver_privsep_authenticate,
 	.associate = wpa_driver_privsep_associate,
 	.get_capa = wpa_driver_privsep_get_capa,
 	.get_mac_addr = wpa_driver_privsep_get_mac_addr,

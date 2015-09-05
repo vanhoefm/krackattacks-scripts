@@ -3403,6 +3403,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		conf->track_sta_max_num = atoi(pos);
 	} else if (os_strcmp(buf, "track_sta_max_age") == 0) {
 		conf->track_sta_max_age = atoi(pos);
+	} else if (os_strcmp(buf, "no_probe_resp_if_seen_on") == 0) {
+		os_free(bss->no_probe_resp_if_seen_on);
+		bss->no_probe_resp_if_seen_on = os_strdup(pos);
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

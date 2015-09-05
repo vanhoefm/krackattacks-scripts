@@ -622,6 +622,29 @@ static void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
 }
 
 
+static int sta_track_seen_on(struct hostapd_iface *iface, const u8 *addr,
+			     const char *ifname)
+{
+	struct hapd_interfaces *interfaces = iface->interfaces;
+	size_t i, j;
+
+	for (i = 0; i < interfaces->count; i++) {
+		iface = interfaces->iface[i];
+		for (j = 0; j < iface->num_bss; j++) {
+			struct hostapd_data *hapd = iface->bss[j];
+
+			if (os_strcmp(ifname, hapd->conf->iface) == 0)
+				break;
+		}
+
+		if (j < iface->num_bss && sta_track_get(iface, addr))
+			return 1;
+	}
+
+	return 0;
+}
+
+
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len,
 		      int ssi_signal)
@@ -786,6 +809,18 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */
+
+	if (hapd->conf->no_probe_resp_if_seen_on &&
+	    is_multicast_ether_addr(mgmt->da) &&
+	    is_multicast_ether_addr(mgmt->bssid) &&
+	    sta_track_seen_on(hapd->iface, mgmt->sa,
+			      hapd->conf->no_probe_resp_if_seen_on)) {
+		wpa_printf(MSG_MSGDUMP, "%s: Ignore Probe Request from " MACSTR
+			   " since STA has been seen on %s",
+			   hapd->conf->iface, MAC2STR(mgmt->sa),
+			   hapd->conf->no_probe_resp_if_seen_on);
+		return;
+	}
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->iconf->ignore_probe_probability > 0.0 &&

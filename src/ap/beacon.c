@@ -622,26 +622,29 @@ static void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
 }
 
 
-static int sta_track_seen_on(struct hostapd_iface *iface, const u8 *addr,
-			     const char *ifname)
+struct hostapd_data *
+sta_track_seen_on(struct hostapd_iface *iface, const u8 *addr,
+		  const char *ifname)
 {
 	struct hapd_interfaces *interfaces = iface->interfaces;
 	size_t i, j;
 
 	for (i = 0; i < interfaces->count; i++) {
+		struct hostapd_data *hapd = NULL;
+
 		iface = interfaces->iface[i];
 		for (j = 0; j < iface->num_bss; j++) {
-			struct hostapd_data *hapd = iface->bss[j];
-
+			hapd = iface->bss[j];
 			if (os_strcmp(ifname, hapd->conf->iface) == 0)
 				break;
+			hapd = NULL;
 		}
 
-		if (j < iface->num_bss && sta_track_get(iface, addr))
-			return 1;
+		if (hapd && sta_track_get(iface, addr))
+			return hapd;
 	}
 
-	return 0;
+	return NULL;
 }
 
 

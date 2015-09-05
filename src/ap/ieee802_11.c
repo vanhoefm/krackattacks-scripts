@@ -39,6 +39,7 @@
 #include "p2p_hostapd.h"
 #include "ap_drv_ops.h"
 #include "wnm_ap.h"
+#include "hw_features.h"
 #include "ieee802_11.h"
 #include "dfs.h"
 
@@ -975,6 +976,61 @@ static void handle_auth(struct hostapd_data *hapd,
 			   MAC2STR(mgmt->sa));
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
+	}
+
+	if (hapd->conf->no_auth_if_seen_on) {
+		struct hostapd_data *other;
+
+		other = sta_track_seen_on(hapd->iface, mgmt->sa,
+					  hapd->conf->no_auth_if_seen_on);
+		if (other) {
+			u8 *pos;
+			u32 info;
+			u8 op_class, channel, phytype;
+
+			wpa_printf(MSG_DEBUG, "%s: Reject authentication from "
+				   MACSTR " since STA has been seen on %s",
+				   hapd->conf->iface, MAC2STR(mgmt->sa),
+				   hapd->conf->no_auth_if_seen_on);
+
+			resp = WLAN_STATUS_REJECTED_WITH_SUGGESTED_BSS_TRANSITION;
+			pos = &resp_ies[0];
+			*pos++ = WLAN_EID_NEIGHBOR_REPORT;
+			*pos++ = 13;
+			os_memcpy(pos, other->own_addr, ETH_ALEN);
+			pos += ETH_ALEN;
+			info = 0; /* TODO: BSSID Information */
+			WPA_PUT_LE32(pos, info);
+			pos += 4;
+			if (other->iconf->hw_mode == HOSTAPD_MODE_IEEE80211AD)
+				phytype = 8; /* dmg */
+			else if (other->iconf->ieee80211ac)
+				phytype = 9; /* vht */
+			else if (other->iconf->ieee80211n)
+				phytype = 7; /* ht */
+			else if (other->iconf->hw_mode ==
+				 HOSTAPD_MODE_IEEE80211A)
+				phytype = 4; /* ofdm */
+			else if (other->iconf->hw_mode ==
+				 HOSTAPD_MODE_IEEE80211G)
+				phytype = 6; /* erp */
+			else
+				phytype = 5; /* hrdsss */
+			if (ieee80211_freq_to_channel_ext(
+				    hostapd_hw_get_freq(other,
+							other->iconf->channel),
+				    other->iconf->secondary_channel,
+				    other->iconf->ieee80211ac,
+				    &op_class, &channel) == NUM_HOSTAPD_MODES) {
+				op_class = 0;
+				channel = other->iconf->channel;
+			}
+			*pos++ = op_class;
+			*pos++ = channel;
+			*pos++ = phytype;
+			resp_ies_len = pos - &resp_ies[0];
+			goto fail;
+		}
 	}
 
 	res = hostapd_allowed_address(hapd, mgmt->sa, (u8 *) mgmt, len,

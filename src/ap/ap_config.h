@@ -556,6 +556,7 @@ struct hostapd_bss_config {
 	int vendor_vht;
 
 	char *no_probe_resp_if_seen_on;
+	char *no_auth_if_seen_on;
 };
 
 

@@ -567,6 +567,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	os_free(conf->no_probe_resp_if_seen_on);
+	os_free(conf->no_auth_if_seen_on);
 
 	os_free(conf);
 }

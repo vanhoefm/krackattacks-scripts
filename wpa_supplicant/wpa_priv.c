@@ -31,6 +31,7 @@ struct wpa_priv_interface {
 
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
+	void *drv_global_priv;
 	struct sockaddr_un drv_addr;
 	int wpas_registered;
 
@@ -48,6 +49,10 @@ static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 		if (iface->driver->deinit)
 			iface->driver->deinit(iface->drv_priv);
 		iface->drv_priv = NULL;
+		if (iface->drv_global_priv) {
+			iface->driver->global_deinit(iface->drv_global_priv);
+			iface->drv_global_priv = NULL;
+		}
 		iface->wpas_registered = 0;
 	}
 
@@ -58,10 +63,24 @@ static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 		iface->l2 = NULL;
 	}
 
-	if (iface->driver->init == NULL)
+	if (iface->driver->init2) {
+		if (iface->driver->global_init) {
+			iface->drv_global_priv = iface->driver->global_init();
+			if (!iface->drv_global_priv) {
+				wpa_printf(MSG_INFO,
+					   "Failed to initialize driver global context");
+				return;
+			}
+		} else {
+			iface->drv_global_priv = NULL;
+		}
+		iface->drv_priv = iface->driver->init2(iface, iface->ifname,
+						       iface->drv_global_priv);
+	} else if (iface->driver->init) {
+		iface->drv_priv = iface->driver->init(iface, iface->ifname);
+	} else {
 		return;
-
-	iface->drv_priv = iface->driver->init(iface, iface->ifname);
+	}
 	if (iface->drv_priv == NULL) {
 		wpa_printf(MSG_DEBUG, "Failed to initialize driver wrapper");
 		return;
@@ -87,6 +106,10 @@ static void wpa_priv_cmd_unregister(struct wpa_priv_interface *iface,
 		if (iface->driver->deinit)
 			iface->driver->deinit(iface->drv_priv);
 		iface->drv_priv = NULL;
+		if (iface->drv_global_priv) {
+			iface->driver->global_deinit(iface->drv_global_priv);
+			iface->drv_global_priv = NULL;
+		}
 		iface->wpas_registered = 0;
 	}
 }

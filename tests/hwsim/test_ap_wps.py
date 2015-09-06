@@ -6,6 +6,9 @@
 
 import base64
 import binascii
+from Crypto.Cipher import AES
+import hashlib
+import hmac
 import os
 import time
 import stat
@@ -14,6 +17,7 @@ import logging
 logger = logging.getLogger()
 import re
 import socket
+import struct
 import httplib
 import urlparse
 import urllib
@@ -512,6 +516,38 @@ def test_ap_wps_reg_connect_mixed_mode(dev, apdev):
         raise Exception("Unexpected encryption configuration")
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
+
+def test_ap_wps_reg_override_ap_settings(dev, apdev):
+    """WPS registrar and ap_settings override"""
+    ap_settings = "/tmp/ap_wps_reg_override_ap_settings"
+    try:
+        os.remove(ap_settings)
+    except:
+        pass
+    # Override AP Settings with values that point to another AP
+    data = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
+    data += build_wsc_attr(ATTR_SSID, "test")
+    data += build_wsc_attr(ATTR_AUTH_TYPE, '\x00\x01')
+    data += build_wsc_attr(ATTR_ENCR_TYPE, '\x00\x01')
+    data += build_wsc_attr(ATTR_NETWORK_KEY, '')
+    data += build_wsc_attr(ATTR_MAC_ADDR, binascii.unhexlify(apdev[1]['bssid'].replace(':', '')))
+    with open(ap_settings, "w") as f:
+        f.write(data)
+    ssid = "test-wps-reg-ap-pin"
+    appin = "12345670"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "ap_pin": appin, "ap_settings": ap_settings })
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test" })
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], appin)
+    ev = hapd2.wait_event(['AP-STA-CONNECTED'], timeout=10)
+    os.remove(ap_settings)
+    if ev is None:
+        raise Exception("No connection with the other AP")
 
 def check_wps_reg_failure(dev, ap, appin):
     dev.request("WPS_REG " + ap['bssid'] + " " + appin)
@@ -4794,7 +4830,7 @@ def wps_ext_eap_wsc(dst, src, src_addr, msg):
     if "OK" not in res:
         raise Exception("EAPOL_RX failed")
 
-def wps_start_ext(apdev, dev, pbc=False):
+def wps_start_ext(apdev, dev, pbc=False, pin=None):
     addr = dev.own_addr()
     bssid = apdev['bssid']
     ssid = "test-wps-conf"
@@ -4806,7 +4842,8 @@ def wps_start_ext(apdev, dev, pbc=False):
     if pbc:
         hapd.request("WPS_PBC")
     else:
-        pin = dev.wps_read_pin()
+        if pin is None:
+            pin = dev.wps_read_pin()
         hapd.request("WPS_PIN any " + pin)
     dev.scan_for_bss(bssid, freq="2412")
     hapd.request("SET ext_eapol_frame_io 1")
@@ -5490,3 +5527,3210 @@ def test_wps_config_methods(dev):
         raise Exception("Failed to clear config_methods")
     if wpas.request("GET config_methods").strip() != "":
         raise Exception("config_methods were not cleared")
+
+WPS_VENDOR_ID_WFA = 14122
+WPS_VENDOR_TYPE = 1
+
+# EAP-WSC Op-Code values
+WSC_Start = 0x01
+WSC_ACK = 0x02
+WSC_NACK = 0x03
+WSC_MSG = 0x04
+WSC_Done = 0x05
+WSC_FRAG_ACK = 0x06
+
+ATTR_AP_CHANNEL = 0x1001
+ATTR_ASSOC_STATE = 0x1002
+ATTR_AUTH_TYPE = 0x1003
+ATTR_AUTH_TYPE_FLAGS = 0x1004
+ATTR_AUTHENTICATOR = 0x1005
+ATTR_CONFIG_METHODS = 0x1008
+ATTR_CONFIG_ERROR = 0x1009
+ATTR_CONFIRM_URL4 = 0x100a
+ATTR_CONFIRM_URL6 = 0x100b
+ATTR_CONN_TYPE = 0x100c
+ATTR_CONN_TYPE_FLAGS = 0x100d
+ATTR_CRED = 0x100e
+ATTR_ENCR_TYPE = 0x100f
+ATTR_ENCR_TYPE_FLAGS = 0x1010
+ATTR_DEV_NAME = 0x1011
+ATTR_DEV_PASSWORD_ID = 0x1012
+ATTR_E_HASH1 = 0x1014
+ATTR_E_HASH2 = 0x1015
+ATTR_E_SNONCE1 = 0x1016
+ATTR_E_SNONCE2 = 0x1017
+ATTR_ENCR_SETTINGS = 0x1018
+ATTR_ENROLLEE_NONCE = 0x101a
+ATTR_FEATURE_ID = 0x101b
+ATTR_IDENTITY = 0x101c
+ATTR_IDENTITY_PROOF = 0x101d
+ATTR_KEY_WRAP_AUTH = 0x101e
+ATTR_KEY_ID = 0x101f
+ATTR_MAC_ADDR = 0x1020
+ATTR_MANUFACTURER = 0x1021
+ATTR_MSG_TYPE = 0x1022
+ATTR_MODEL_NAME = 0x1023
+ATTR_MODEL_NUMBER = 0x1024
+ATTR_NETWORK_INDEX = 0x1026
+ATTR_NETWORK_KEY = 0x1027
+ATTR_NETWORK_KEY_INDEX = 0x1028
+ATTR_NEW_DEVICE_NAME = 0x1029
+ATTR_NEW_PASSWORD = 0x102a
+ATTR_OOB_DEVICE_PASSWORD = 0x102c
+ATTR_OS_VERSION = 0x102d
+ATTR_POWER_LEVEL = 0x102f
+ATTR_PSK_CURRENT = 0x1030
+ATTR_PSK_MAX = 0x1031
+ATTR_PUBLIC_KEY = 0x1032
+ATTR_RADIO_ENABLE = 0x1033
+ATTR_REBOOT = 0x1034
+ATTR_REGISTRAR_CURRENT = 0x1035
+ATTR_REGISTRAR_ESTABLISHED = 0x1036
+ATTR_REGISTRAR_LIST = 0x1037
+ATTR_REGISTRAR_MAX = 0x1038
+ATTR_REGISTRAR_NONCE = 0x1039
+ATTR_REQUEST_TYPE = 0x103a
+ATTR_RESPONSE_TYPE = 0x103b
+ATTR_RF_BANDS = 0x103c
+ATTR_R_HASH1 = 0x103d
+ATTR_R_HASH2 = 0x103e
+ATTR_R_SNONCE1 = 0x103f
+ATTR_R_SNONCE2 = 0x1040
+ATTR_SELECTED_REGISTRAR = 0x1041
+ATTR_SERIAL_NUMBER = 0x1042
+ATTR_WPS_STATE = 0x1044
+ATTR_SSID = 0x1045
+ATTR_TOTAL_NETWORKS = 0x1046
+ATTR_UUID_E = 0x1047
+ATTR_UUID_R = 0x1048
+ATTR_VENDOR_EXT = 0x1049
+ATTR_VERSION = 0x104a
+ATTR_X509_CERT_REQ = 0x104b
+ATTR_X509_CERT = 0x104c
+ATTR_EAP_IDENTITY = 0x104d
+ATTR_MSG_COUNTER = 0x104e
+ATTR_PUBKEY_HASH = 0x104f
+ATTR_REKEY_KEY = 0x1050
+ATTR_KEY_LIFETIME = 0x1051
+ATTR_PERMITTED_CFG_METHODS = 0x1052
+ATTR_SELECTED_REGISTRAR_CONFIG_METHODS = 0x1053
+ATTR_PRIMARY_DEV_TYPE = 0x1054
+ATTR_SECONDARY_DEV_TYPE_LIST = 0x1055
+ATTR_PORTABLE_DEV = 0x1056
+ATTR_AP_SETUP_LOCKED = 0x1057
+ATTR_APPLICATION_EXT = 0x1058
+ATTR_EAP_TYPE = 0x1059
+ATTR_IV = 0x1060
+ATTR_KEY_PROVIDED_AUTO = 0x1061
+ATTR_802_1X_ENABLED = 0x1062
+ATTR_APPSESSIONKEY = 0x1063
+ATTR_WEPTRANSMITKEY = 0x1064
+ATTR_REQUESTED_DEV_TYPE = 0x106a
+
+# Message Type
+WPS_Beacon = 0x01
+WPS_ProbeRequest = 0x02
+WPS_ProbeResponse = 0x03
+WPS_M1 = 0x04
+WPS_M2 = 0x05
+WPS_M2D = 0x06
+WPS_M3 = 0x07
+WPS_M4 = 0x08
+WPS_M5 = 0x09
+WPS_M6 = 0x0a
+WPS_M7 = 0x0b
+WPS_M8 = 0x0c
+WPS_WSC_ACK = 0x0d
+WPS_WSC_NACK = 0x0e
+WPS_WSC_DONE = 0x0f
+
+def get_wsc_msg(dev):
+    ev = dev.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX")
+    data = binascii.unhexlify(ev.split(' ')[2])
+    msg = {}
+
+    # Parse EAPOL header
+    if len(data) < 4:
+        raise Exception("No room for EAPOL header")
+    version,type,length = struct.unpack('>BBH', data[0:4])
+    msg['eapol_version'] = version
+    msg['eapol_type'] = type
+    msg['eapol_length'] = length
+    data = data[4:]
+    if length != len(data):
+        raise Exception("EAPOL header length mismatch (%d != %d)" % (length, len(data)))
+    if type != 0:
+        raise Exception("Unexpected EAPOL header type: %d" % type)
+
+    # Parse EAP header
+    if len(data) < 4:
+        raise Exception("No room for EAP header")
+    code,identifier,length = struct.unpack('>BBH', data[0:4])
+    msg['eap_code'] = code
+    msg['eap_identifier'] = identifier
+    msg['eap_length'] = length
+    data = data[4:]
+    if msg['eapol_length'] != msg['eap_length']:
+        raise Exception("EAP header length mismatch (%d != %d)" % (msg['eapol_length'], length))
+
+    # Parse EAP expanded header
+    if len(data) < 1:
+        raise Exception("No EAP type included")
+    msg['eap_type'], = struct.unpack('B', data[0])
+    data = data[1:]
+
+    if msg['eap_type'] == 254:
+        if len(data) < 3 + 4:
+            raise Exception("Truncated EAP expanded header")
+        msg['eap_vendor_id'], msg['eap_vendor_type'] = struct.unpack('>LL', '\0' + data[0:7])
+        data = data[7:]
+    else:
+        raise Exception("Unexpected EAP type")
+
+    if msg['eap_vendor_id'] != WPS_VENDOR_ID_WFA:
+        raise Exception("Unexpected Vendor-Id")
+    if msg['eap_vendor_type'] != WPS_VENDOR_TYPE:
+        raise Exception("Unexpected Vendor-Type")
+
+    # Parse EAP-WSC header
+    if len(data) < 2:
+        raise Exception("Truncated EAP-WSC header")
+    msg['wsc_opcode'], msg['wsc_flags'] = struct.unpack('BB', data[0:2])
+    data = data[2:]
+
+    # Parse WSC attributes
+    msg['raw_attrs'] = data
+    attrs = {}
+    while len(data) > 0:
+        if len(data) < 4:
+            raise Exception("Truncated attribute header")
+        attr,length = struct.unpack('>HH', data[0:4])
+        data = data[4:]
+        if length > len(data):
+            raise Exception("Truncated attribute 0x%04x" % attr)
+        attrs[attr] = data[0:length]
+        data = data[length:]
+    msg['wsc_attrs'] = attrs
+
+    if ATTR_MSG_TYPE in attrs:
+        msg['wsc_msg_type'], = struct.unpack('B', attrs[ATTR_MSG_TYPE])
+
+    return msg
+
+def recv_wsc_msg(dev, opcode, msg_type):
+    msg = get_wsc_msg(dev)
+    if msg['wsc_opcode'] != opcode or msg['wsc_msg_type'] != msg_type:
+        raise Exception("Unexpected Op-Code/MsgType")
+    return msg, msg['wsc_attrs'], msg['raw_attrs']
+
+def build_wsc_attr(attr, payload):
+    return struct.pack('>HH', attr, len(payload)) + payload
+
+def build_attr_msg_type(msg_type):
+    return build_wsc_attr(ATTR_MSG_TYPE, struct.pack('B', msg_type))
+
+def build_eap_wsc(eap_code, eap_id, payload, opcode=WSC_MSG):
+    length = 4 + 8 + 2 + len(payload)
+    # EAPOL header
+    msg = struct.pack('>BBH', 2, 0, length)
+    # EAP header
+    msg += struct.pack('>BBH', eap_code, eap_id, length)
+    # EAP expanded header for EAP-WSC
+    msg += struct.pack('B', 254)
+    msg += struct.pack('>L', WPS_VENDOR_ID_WFA)[1:4]
+    msg += struct.pack('>L', WPS_VENDOR_TYPE)
+    # EAP-WSC header
+    msg += struct.pack('BB', opcode, 0)
+    # WSC attributes
+    msg += payload
+    return msg
+
+def build_eap_success(eap_id):
+    length = 4
+    # EAPOL header
+    msg = struct.pack('>BBH', 2, 0, length)
+    # EAP header
+    msg += struct.pack('>BBH', 3, eap_id, length)
+    return msg
+
+def build_eap_failure(eap_id):
+    length = 4
+    # EAPOL header
+    msg = struct.pack('>BBH', 2, 0, length)
+    # EAP header
+    msg += struct.pack('>BBH', 4, eap_id, length)
+    return msg
+
+def send_wsc_msg(dev, src, msg):
+    res = dev.request("EAPOL_RX " + src + " " + binascii.hexlify(msg))
+    if "OK" not in res:
+        raise Exception("EAPOL_RX failed")
+
+group_5_prime = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF
+group_5_generator = 2
+
+def wsc_kdf(key, label, bits):
+    result = ''
+    i = 1
+    while len(result) * 8 < bits:
+        data = struct.pack('>L', i) + label + struct.pack('>L', bits)
+        m = hmac.new(key, data, hashlib.sha256)
+        result += m.digest()
+        i += 1
+    return result[0:bits / 8]
+
+def wsc_keys(kdk):
+    keys = wsc_kdf(kdk, "Wi-Fi Easy and Secure Key Derivation", 640)
+    authkey = keys[0:32]
+    keywrapkey = keys[32:48]
+    emsk = keys[48:80]
+    return authkey,keywrapkey,emsk
+
+def wsc_dev_pw_half_psk(authkey, dev_pw):
+    m = hmac.new(authkey, dev_pw, hashlib.sha256)
+    return m.digest()[0:16]
+
+def wsc_dev_pw_psk(authkey, dev_pw):
+    dev_pw_1 = dev_pw[0:len(dev_pw) / 2]
+    dev_pw_2 = dev_pw[len(dev_pw) / 2:]
+    psk1 = wsc_dev_pw_half_psk(authkey, dev_pw_1)
+    psk2 = wsc_dev_pw_half_psk(authkey, dev_pw_2)
+    return psk1,psk2
+
+def build_attr_authenticator(authkey, prev_msg, curr_msg):
+    m = hmac.new(authkey, prev_msg + curr_msg, hashlib.sha256)
+    auth = m.digest()[0:8]
+    return build_wsc_attr(ATTR_AUTHENTICATOR, auth)
+
+def build_attr_encr_settings(authkey, keywrapkey, data):
+    m = hmac.new(authkey, data, hashlib.sha256)
+    kwa = m.digest()[0:8]
+    data += build_wsc_attr(ATTR_KEY_WRAP_AUTH, kwa)
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = pad_len * struct.pack('B', pad_len)
+    data += ps
+    wrapped = aes.encrypt(data)
+    return build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+
+def decrypt_attr_encr_settings(authkey, keywrapkey, data):
+    if len(data) < 32 or len(data) % 16 != 0:
+        raise Exception("Unexpected Encrypted Settings length: %d" % len(data))
+    iv = data[0:16]
+    encr = data[16:]
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    decrypted = aes.decrypt(encr)
+    pad_len, = struct.unpack('B', decrypted[-1])
+    if pad_len > len(decrypted):
+        raise Exception("Invalid padding in Encrypted Settings")
+    for i in range(-pad_len, -1):
+        if decrypted[i] != decrypted[-1]:
+            raise Exception("Invalid PS value in Encrypted Settings")
+    
+    decrypted = decrypted[0:len(decrypted) - pad_len]
+    if len(decrypted) < 12:
+        raise Exception("Truncated Encrypted Settings plaintext")
+    kwa = decrypted[-12:]
+    attr,length = struct.unpack(">HH", kwa[0:4])
+    if attr != ATTR_KEY_WRAP_AUTH or length != 8:
+        raise Exception("Invalid KWA header")
+    kwa = kwa[4:]
+    decrypted = decrypted[0:len(decrypted) - 12]
+
+    m = hmac.new(authkey, decrypted, hashlib.sha256)
+    calc_kwa = m.digest()[0:8]
+    if kwa != calc_kwa:
+        raise Exception("KWA mismatch")
+
+    return decrypted
+
+def zeropad_str(val, pad_len):
+    while len(val) < pad_len * 2:
+        val = '0' + val
+    return val
+
+def wsc_dh_init():
+    # For now, use a hardcoded private key. In theory, this is supposed to be
+    # randomly selected.
+    own_private = 0x123456789
+    own_public = pow(group_5_generator, own_private, group_5_prime)
+    pk = binascii.unhexlify(zeropad_str(format(own_public, '02x'), 192))
+    return own_private, pk
+
+def wsc_dh_kdf(peer_pk, own_private, mac_addr, e_nonce, r_nonce):
+    peer_public = long(binascii.hexlify(peer_pk), 16)
+    if peer_public < 2 or peer_public >= group_5_prime:
+        raise Exception("Invalid peer public key")
+    if pow(peer_public, (group_5_prime - 1) / 2, group_5_prime) != 1:
+        raise Exception("Unexpected Legendre symbol for peer public key")
+
+    shared_secret = pow(peer_public, own_private, group_5_prime)
+    ss = zeropad_str(format(shared_secret, "02x"), 192)
+    logger.debug("DH shared secret: " + ss)
+
+    dhkey = hashlib.sha256(binascii.unhexlify(ss)).digest()
+    logger.debug("DHKey: " + binascii.hexlify(dhkey))
+
+    m = hmac.new(dhkey, e_nonce + mac_addr + r_nonce, hashlib.sha256)
+    kdk = m.digest()
+    logger.debug("KDK: " + binascii.hexlify(kdk))
+    authkey,keywrapkey,emsk = wsc_keys(kdk)
+    logger.debug("AuthKey: " + binascii.hexlify(authkey))
+    logger.debug("KeyWrapKey: " + binascii.hexlify(keywrapkey))
+    logger.debug("EMSK: " + binascii.hexlify(emsk))
+    return authkey,keywrapkey
+
+def wsc_dev_pw_hash(authkey, dev_pw, e_pk, r_pk):
+    psk1,psk2 = wsc_dev_pw_psk(authkey, dev_pw)
+    logger.debug("PSK1: " + binascii.hexlify(psk1))
+    logger.debug("PSK2: " + binascii.hexlify(psk2))
+
+    # Note: Secret values are supposed to be random, but hardcoded values are
+    # fine for testing.
+    s1 = 16*'\x77'
+    m = hmac.new(authkey, s1 + psk1 + e_pk + r_pk, hashlib.sha256)
+    hash1 = m.digest()
+    logger.debug("Hash1: " + binascii.hexlify(hash1))
+
+    s2 = 16*'\x88'
+    m = hmac.new(authkey, s2 + psk2 + e_pk + r_pk, hashlib.sha256)
+    hash2 = m.digest()
+    logger.debug("Hash2: " + binascii.hexlify(hash2))
+    return s1,s2,hash1,hash2
+
+def build_m1(eap_id, uuid_e, mac_addr, e_nonce, e_pk,
+             manufacturer='', model_name='', config_methods='\x00\x00'):
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M1)
+    attrs += build_wsc_attr(ATTR_UUID_E, uuid_e)
+    attrs += build_wsc_attr(ATTR_MAC_ADDR, mac_addr)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_PUBLIC_KEY, e_pk)
+    attrs += build_wsc_attr(ATTR_AUTH_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_ENCR_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONN_TYPE_FLAGS, '\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_METHODS, config_methods)
+    attrs += build_wsc_attr(ATTR_WPS_STATE, '\x00')
+    attrs += build_wsc_attr(ATTR_MANUFACTURER, manufacturer)
+    attrs += build_wsc_attr(ATTR_MODEL_NAME, model_name)
+    attrs += build_wsc_attr(ATTR_MODEL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_SERIAL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_PRIMARY_DEV_TYPE, 8*'\x00')
+    attrs += build_wsc_attr(ATTR_DEV_NAME, '')
+    attrs += build_wsc_attr(ATTR_RF_BANDS, '\x00')
+    attrs += build_wsc_attr(ATTR_ASSOC_STATE, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_DEV_PASSWORD_ID, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_ERROR, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_OS_VERSION, '\x00\x00\x00\x00')
+    m1 = build_eap_wsc(2, eap_id, attrs)
+    return m1, attrs
+
+def build_m2(authkey, m1, eap_id, e_nonce, r_nonce, uuid_r, r_pk,
+             dev_pw_id='\x00\x00', eap_code=1):
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M2)
+    if e_nonce:
+        attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    if r_nonce:
+        attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_UUID_R, uuid_r)
+    if r_pk:
+        attrs += build_wsc_attr(ATTR_PUBLIC_KEY, r_pk)
+    attrs += build_wsc_attr(ATTR_AUTH_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_ENCR_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONN_TYPE_FLAGS, '\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_METHODS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_MANUFACTURER, '')
+    attrs += build_wsc_attr(ATTR_MODEL_NAME, '')
+    attrs += build_wsc_attr(ATTR_MODEL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_SERIAL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_PRIMARY_DEV_TYPE, 8*'\x00')
+    attrs += build_wsc_attr(ATTR_DEV_NAME, '')
+    attrs += build_wsc_attr(ATTR_RF_BANDS, '\x00')
+    attrs += build_wsc_attr(ATTR_ASSOC_STATE, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_ERROR, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_DEV_PASSWORD_ID, dev_pw_id)
+    attrs += build_wsc_attr(ATTR_OS_VERSION, '\x00\x00\x00\x00')
+    attrs += build_attr_authenticator(authkey, m1, attrs)
+    m2 = build_eap_wsc(eap_code, eap_id, attrs)
+    return m2, attrs
+
+def build_m2d(m1, eap_id, e_nonce, r_nonce, uuid_r, dev_pw_id=None, eap_code=1):
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M2D)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_UUID_R, uuid_r)
+    attrs += build_wsc_attr(ATTR_AUTH_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_ENCR_TYPE_FLAGS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONN_TYPE_FLAGS, '\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_METHODS, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_MANUFACTURER, '')
+    attrs += build_wsc_attr(ATTR_MODEL_NAME, '')
+    #attrs += build_wsc_attr(ATTR_MODEL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_SERIAL_NUMBER, '')
+    attrs += build_wsc_attr(ATTR_PRIMARY_DEV_TYPE, 8*'\x00')
+    attrs += build_wsc_attr(ATTR_DEV_NAME, '')
+    attrs += build_wsc_attr(ATTR_RF_BANDS, '\x00')
+    attrs += build_wsc_attr(ATTR_ASSOC_STATE, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_CONFIG_ERROR, '\x00\x00')
+    attrs += build_wsc_attr(ATTR_OS_VERSION, '\x00\x00\x00\x00')
+    if dev_pw_id:
+        attrs += build_wsc_attr(ATTR_DEV_PASSWORD_ID, dev_pw_id)
+    m2d = build_eap_wsc(eap_code, eap_id, attrs)
+    return m2d, attrs
+
+def build_ack(eap_id, e_nonce, r_nonce, msg_type=WPS_WSC_ACK, eap_code=1):
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    if msg_type is not None:
+        attrs += build_attr_msg_type(msg_type)
+    if e_nonce:
+        attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    if r_nonce:
+        attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    msg = build_eap_wsc(eap_code, eap_id, attrs, opcode=WSC_ACK)
+    return msg, attrs
+
+def build_nack(eap_id, e_nonce, r_nonce, config_error='\x00\x00',
+               msg_type=WPS_WSC_NACK, eap_code=1):
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    if msg_type is not None:
+        attrs += build_attr_msg_type(msg_type)
+    if e_nonce:
+        attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    if r_nonce:
+        attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    if config_error:
+        attrs += build_wsc_attr(ATTR_CONFIG_ERROR, config_error)
+    msg = build_eap_wsc(eap_code, eap_id, attrs, opcode=WSC_NACK)
+    return msg, attrs
+
+def test_wps_ext(dev, apdev):
+    """WPS against external implementation"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+    wsc_start_id = msg['eap_identifier']
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+
+    authkey,keywrapkey = wsc_dh_kdf(m2_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, e_nonce,
+                                    m2_attrs[ATTR_REGISTRAR_NONCE])
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk,
+                                                m2_attrs[ATTR_PUBLIC_KEY])
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE,
+                            m2_attrs[ATTR_REGISTRAR_NONCE])
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE,
+                            m2_attrs[ATTR_REGISTRAR_NONCE])
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    logger.debug("Receive M6 from AP")
+    msg, m6_attrs, raw_m6_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M6)
+
+    logger.debug("Send M7 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE,
+                            m2_attrs[ATTR_REGISTRAR_NONCE])
+    data = build_wsc_attr(ATTR_E_SNONCE2, e_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m6_attrs, attrs)
+    m7 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    raw_m7_attrs = attrs
+    send_wsc_msg(hapd, addr, m7)
+
+    logger.debug("Receive M8 from AP")
+    msg, m8_attrs, raw_m8_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M8)
+    m8_cred = decrypt_attr_encr_settings(authkey, keywrapkey,
+                                         m8_attrs[ATTR_ENCR_SETTINGS])
+    logger.debug("M8 Credential: " + binascii.hexlify(m8_cred))
+
+    logger.debug("Prepare WSC_Done")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_WSC_DONE)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE,
+                            m2_attrs[ATTR_REGISTRAR_NONCE])
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    # Do not send WSC_Done yet to allow exchangw with STA complete before the
+    # AP disconnects.
+
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+
+    eap_id = wsc_start_id
+    logger.debug("Send WSC/Start to STA")
+    wsc_start = build_eap_wsc(1, eap_id, "", opcode=WSC_Start)
+    send_wsc_msg(dev[0], bssid, wsc_start)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    raw_m4_attrs = attrs
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 from STA")
+    msg, m5_attrs, raw_m5_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M5)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE,
+                            m1_attrs[ATTR_ENROLLEE_NONCE])
+    data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m5_attrs, attrs)
+    raw_m6_attrs = attrs
+    m6 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m6)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M7 from STA")
+    msg, m7_attrs, raw_m7_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M7)
+
+    logger.debug("Send M8 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M8)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE,
+                            m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_attr_encr_settings(authkey, keywrapkey, m8_cred)
+    attrs += build_attr_authenticator(authkey, raw_m7_attrs, attrs)
+    raw_m8_attrs = attrs
+    m8 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m8)
+    eap_id = (eap_id + 1) % 256
+
+    ev = dev[0].wait_event(["WPS-CRED-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("wpa_supplicant did not report credential")
+
+    logger.debug("Receive WSC_Done from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_Done or msg['wsc_msg_type'] != WPS_WSC_DONE:
+        raise Exception("Unexpected Op-Code/MsgType for WSC_Done")
+
+    logger.debug("Send WSC_Done to AP")
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    send_wsc_msg(hapd, addr, wsc_done)
+
+    ev = hapd.wait_event(["WPS-REG-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("hostapd did not report WPS success")
+
+    dev[0].wait_connected()
+
+def wps_start_kwa(dev, apdev):
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+
+    return r_s1, keywrapkey, authkey, raw_m3_attrs, eap_id, bssid, attrs
+
+def wps_stop_kwa(dev, bssid, attrs, authkey, raw_m3_attrs, eap_id):
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_kwa_proto_no_kwa(dev, apdev):
+    """WPS and KWA error: No KWA attribute"""
+    r_s1,keywrapkey,authkey,raw_m3_attrs,eap_id,bssid,attrs = wps_start_kwa(dev, apdev)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    # Encrypted Settings without KWA
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = pad_len * struct.pack('B', pad_len)
+    data += ps
+    wrapped = aes.encrypt(data)
+    attrs += build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+    wps_stop_kwa(dev, bssid, attrs, authkey, raw_m3_attrs, eap_id)
+
+def test_wps_ext_kwa_proto_data_after_kwa(dev, apdev):
+    """WPS and KWA error: Data after KWA"""
+    r_s1,keywrapkey,authkey,raw_m3_attrs,eap_id,bssid,attrs = wps_start_kwa(dev, apdev)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    # Encrypted Settings and data after KWA
+    m = hmac.new(authkey, data, hashlib.sha256)
+    kwa = m.digest()[0:8]
+    data += build_wsc_attr(ATTR_KEY_WRAP_AUTH, kwa)
+    data += build_wsc_attr(ATTR_VENDOR_EXT, "1234567890")
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = pad_len * struct.pack('B', pad_len)
+    data += ps
+    wrapped = aes.encrypt(data)
+    attrs += build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+    wps_stop_kwa(dev, bssid, attrs, authkey, raw_m3_attrs, eap_id)
+
+def test_wps_ext_kwa_proto_kwa_mismatch(dev, apdev):
+    """WPS and KWA error: KWA mismatch"""
+    r_s1,keywrapkey,authkey,raw_m3_attrs,eap_id,bssid,attrs = wps_start_kwa(dev, apdev)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    # Encrypted Settings and KWA with incorrect value
+    data += build_wsc_attr(ATTR_KEY_WRAP_AUTH, 8*'\x00')
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = pad_len * struct.pack('B', pad_len)
+    data += ps
+    wrapped = aes.encrypt(data)
+    attrs += build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+    wps_stop_kwa(dev, bssid, attrs, authkey, raw_m3_attrs, eap_id)
+
+def wps_run_cred_proto(dev, apdev, m8_cred, connect=False, no_connect=False):
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    raw_m4_attrs = attrs
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 from STA")
+    msg, m5_attrs, raw_m5_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M5)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE,
+                            m1_attrs[ATTR_ENROLLEE_NONCE])
+    data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m5_attrs, attrs)
+    raw_m6_attrs = attrs
+    m6 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m6)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M7 from STA")
+    msg, m7_attrs, raw_m7_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M7)
+
+    logger.debug("Send M8 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M8)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE,
+                            m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_attr_encr_settings(authkey, keywrapkey, m8_cred)
+    attrs += build_attr_authenticator(authkey, raw_m7_attrs, attrs)
+    raw_m8_attrs = attrs
+    m8 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m8)
+    eap_id = (eap_id + 1) % 256
+
+    if no_connect:
+        logger.debug("Receive WSC_Done from STA")
+        msg = get_wsc_msg(dev[0])
+        if msg['wsc_opcode'] != WSC_Done or msg['wsc_msg_type'] != WPS_WSC_DONE:
+            raise Exception("Unexpected Op-Code/MsgType for WSC_Done")
+
+        hapd.request("SET ext_eapol_frame_io 0")
+        dev[0].request("SET ext_eapol_frame_io 0")
+
+        send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+
+        dev[0].wait_disconnected()
+        dev[0].request("REMOVE_NETWORK all")
+    elif connect:
+        logger.debug("Receive WSC_Done from STA")
+        msg = get_wsc_msg(dev[0])
+        if msg['wsc_opcode'] != WSC_Done or msg['wsc_msg_type'] != WPS_WSC_DONE:
+            raise Exception("Unexpected Op-Code/MsgType for WSC_Done")
+
+        hapd.request("SET ext_eapol_frame_io 0")
+        dev[0].request("SET ext_eapol_frame_io 0")
+
+        send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+
+        dev[0].wait_connected()
+    else:
+        # Verify STA NACK's the credential
+        msg = get_wsc_msg(dev[0])
+        if msg['wsc_opcode'] != WSC_NACK:
+            raise Exception("Unexpected message - expected WSC_Nack")
+        dev[0].request("WPS_CANCEL")
+        send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+        dev[0].wait_disconnected()
+
+def build_cred(nw_idx='\x01', ssid='test-wps-conf', auth_type='\x00\x20',
+               encr_type='\x00\x08', nw_key="12345678",
+               mac_addr='\x00\x00\x00\x00\x00\x00'):
+    attrs = ''
+    if nw_idx is not None:
+        attrs += build_wsc_attr(ATTR_NETWORK_INDEX, nw_idx)
+    if ssid is not None:
+        attrs += build_wsc_attr(ATTR_SSID, ssid)
+    if auth_type is not None:
+        attrs += build_wsc_attr(ATTR_AUTH_TYPE, auth_type)
+    if encr_type is not None:
+        attrs += build_wsc_attr(ATTR_ENCR_TYPE, encr_type)
+    if nw_key is not None:
+        attrs += build_wsc_attr(ATTR_NETWORK_KEY, nw_key)
+    if mac_addr is not None:
+        attrs += build_wsc_attr(ATTR_MAC_ADDR, mac_addr)
+    return build_wsc_attr(ATTR_CRED, attrs)
+
+def test_wps_ext_cred_proto_success(dev, apdev):
+    """WPS and Credential: success"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr)
+    wps_run_cred_proto(dev, apdev, m8_cred, connect=True)
+
+def test_wps_ext_cred_proto_mac_addr_mismatch(dev, apdev):
+    """WPS and Credential: MAC Address mismatch"""
+    m8_cred = build_cred()
+    wps_run_cred_proto(dev, apdev, m8_cred, connect=True)
+
+def test_wps_ext_cred_proto_zero_padding(dev, apdev):
+    """WPS and Credential: zeropadded attributes"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, ssid='test-wps-conf\x00',
+                         nw_key="12345678\x00")
+    wps_run_cred_proto(dev, apdev, m8_cred, connect=True)
+
+def test_wps_ext_cred_proto_ssid_missing(dev, apdev):
+    """WPS and Credential: SSID missing"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, ssid=None)
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_ssid_zero_len(dev, apdev):
+    """WPS and Credential: Zero-length SSID"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, ssid="")
+    wps_run_cred_proto(dev, apdev, m8_cred, no_connect=True)
+
+def test_wps_ext_cred_proto_auth_type_missing(dev, apdev):
+    """WPS and Credential: Auth Type missing"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, auth_type=None)
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_encr_type_missing(dev, apdev):
+    """WPS and Credential: Encr Type missing"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, encr_type=None)
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_network_key_missing(dev, apdev):
+    """WPS and Credential: Network Key missing"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, nw_key=None)
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_network_key_missing_open(dev, apdev):
+    """WPS and Credential: Network Key missing (open)"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, auth_type='\x00\x01',
+                         encr_type='\x00\x01', nw_key=None, ssid="foo")
+    wps_run_cred_proto(dev, apdev, m8_cred, no_connect=True)
+
+def test_wps_ext_cred_proto_mac_addr_missing(dev, apdev):
+    """WPS and Credential: MAC Address missing"""
+    m8_cred = build_cred(mac_addr=None)
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_invalid_encr_type(dev, apdev):
+    """WPS and Credential: Invalid Encr Type"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = build_cred(mac_addr=mac_addr, encr_type='\x00\x00')
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_cred_proto_missing_cred(dev, apdev):
+    """WPS and Credential: Missing Credential"""
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    m8_cred = ''
+    wps_run_cred_proto(dev, apdev, m8_cred)
+
+def test_wps_ext_proto_m2_no_public_key(dev, apdev):
+    """WPS and no Public Key in M2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, None)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    # Verify STA NACK's the credential
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m2_invalid_public_key(dev, apdev):
+    """WPS and invalid Public Key in M2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, 192*'\xff')
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    # Verify STA NACK's the credential
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m2_public_key_oom(dev, apdev):
+    """WPS and Public Key OOM in M2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    with alloc_fail(dev[0], 1, "wpabuf_alloc_copy;wps_process_pubkey"):
+        send_wsc_msg(dev[0], bssid, m2)
+        eap_id = (eap_id + 1) % 256
+
+        # Verify STA NACK's the credential
+        msg = get_wsc_msg(dev[0])
+        if msg['wsc_opcode'] != WSC_NACK:
+            raise Exception("Unexpected message - expected WSC_Nack")
+        dev[0].request("WPS_CANCEL")
+        send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+        dev[0].wait_disconnected()
+
+def test_wps_ext_proto_nack_m3(dev, apdev):
+    """WPS and NACK M3"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, m1_attrs[ATTR_ENROLLEE_NONCE],
+                            r_nonce, config_error='\x01\x23')
+    send_wsc_msg(dev[0], bssid, msg)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("Failure not reported")
+    if "msg=7 config_error=291" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
+def test_wps_ext_proto_nack_m5(dev, apdev):
+    """WPS and NACK M5"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    raw_m4_attrs = attrs
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 from STA")
+    msg, m5_attrs, raw_m5_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M5)
+
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, m1_attrs[ATTR_ENROLLEE_NONCE],
+                            r_nonce, config_error='\x01\x24')
+    send_wsc_msg(dev[0], bssid, msg)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("Failure not reported")
+    if "msg=9 config_error=292" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
+def wps_nack_m3(dev, apdev):
+    pin = "00000000"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pbc=True)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk, dev_pw_id='\x00\x04')
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+    return eap_id, m1_attrs[ATTR_ENROLLEE_NONCE], r_nonce, bssid
+
+def test_wps_ext_proto_nack_m3_no_config_error(dev, apdev):
+    """WPS and NACK M3 missing Config Error"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, e_nonce, r_nonce, config_error=None)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_no_e_nonce(dev, apdev):
+    """WPS and NACK M3 missing E-Nonce"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, None, r_nonce)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_e_nonce_mismatch(dev, apdev):
+    """WPS and NACK M3 E-Nonce mismatch"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, 16*'\x00', r_nonce)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_no_r_nonce(dev, apdev):
+    """WPS and NACK M3 missing R-Nonce"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, e_nonce, None)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_r_nonce_mismatch(dev, apdev):
+    """WPS and NACK M3 R-Nonce mismatch"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, e_nonce, 16*'\x00')
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_no_msg_type(dev, apdev):
+    """WPS and NACK M3 no Message Type"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, e_nonce, r_nonce, msg_type=None)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_invalid_msg_type(dev, apdev):
+    """WPS and NACK M3 invalid Message Type"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_nack(eap_id, e_nonce, r_nonce, msg_type=123)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_nack_m3_invalid_attr(dev, apdev):
+    """WPS and NACK M3 invalid attribute"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    attrs = '\x10\x10\x00'
+    msg = build_eap_wsc(1, eap_id, attrs, opcode=WSC_NACK)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_no_e_nonce(dev, apdev):
+    """WPS and ACK M3 missing E-Nonce"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, None, r_nonce)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_e_nonce_mismatch(dev, apdev):
+    """WPS and ACK M3 E-Nonce mismatch"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, 16*'\x00', r_nonce)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_no_r_nonce(dev, apdev):
+    """WPS and ACK M3 missing R-Nonce"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, e_nonce, None)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_r_nonce_mismatch(dev, apdev):
+    """WPS and ACK M3 R-Nonce mismatch"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, e_nonce, 16*'\x00')
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_no_msg_type(dev, apdev):
+    """WPS and ACK M3 no Message Type"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, e_nonce, r_nonce, msg_type=None)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_invalid_msg_type(dev, apdev):
+    """WPS and ACK M3 invalid Message Type"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send NACK to STA")
+    msg, attrs = build_ack(eap_id, e_nonce, r_nonce, msg_type=123)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3_invalid_attr(dev, apdev):
+    """WPS and ACK M3 invalid attribute"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send ACK to STA")
+    attrs = '\x10\x10\x00'
+    msg = build_eap_wsc(1, eap_id, attrs, opcode=WSC_ACK)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def test_wps_ext_proto_ack_m3(dev, apdev):
+    """WPS and ACK M3"""
+    eap_id, e_nonce, r_nonce, bssid = wps_nack_m3(dev, apdev)
+    logger.debug("Send ACK to STA")
+    msg, attrs = build_ack(eap_id, e_nonce, r_nonce)
+    send_wsc_msg(dev[0], bssid, msg)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
+def wps_to_m3_helper(dev, apdev):
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+    wps_ext_eap_wsc(dev[0], hapd, bssid, "EAP-WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Receive M1 from STA")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M1)
+    eap_id = (msg['eap_identifier'] + 1) % 256
+
+    authkey,keywrapkey = wsc_dh_kdf(m1_attrs[ATTR_PUBLIC_KEY], own_private,
+                                    mac_addr, m1_attrs[ATTR_ENROLLEE_NONCE],
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, pin,
+                                                m1_attrs[ATTR_PUBLIC_KEY], e_pk)
+
+    logger.debug("Send M2 to STA")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, eap_id,
+                                m1_attrs[ATTR_ENROLLEE_NONCE],
+                                r_nonce, uuid_r, e_pk)
+    send_wsc_msg(dev[0], bssid, m2)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M3 from STA")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M3)
+    return eap_id, m1_attrs, r_nonce, bssid, r_hash1, r_hash2, r_s1, r_s2, raw_m3_attrs, authkey, keywrapkey
+
+def wps_to_m3(dev, apdev):
+    eap_id, m1_attrs, r_nonce, bssid, r_hash1, r_hash2, r_s1, r_s2, raw_m3_attrs, authkey, keywrapkey = wps_to_m3_helper(dev, apdev)
+    return eap_id, m1_attrs[ATTR_ENROLLEE_NONCE], r_nonce, bssid, r_hash1, r_hash2, r_s1, raw_m3_attrs, authkey, keywrapkey
+
+def wps_to_m5(dev, apdev):
+    eap_id, m1_attrs, r_nonce, bssid, r_hash1, r_hash2, r_s1, r_s2, raw_m3_attrs, authkey, keywrapkey = wps_to_m3_helper(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, m1_attrs[ATTR_ENROLLEE_NONCE])
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    raw_m4_attrs = attrs
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 from STA")
+    msg, m5_attrs, raw_m5_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M5)
+
+    return eap_id, m1_attrs[ATTR_ENROLLEE_NONCE], r_nonce, bssid, r_hash1, r_hash2, r_s2, raw_m5_attrs, authkey, keywrapkey
+
+def test_wps_ext_proto_m4_missing_r_hash1(dev, apdev):
+    """WPS and no R-Hash1 in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    #attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m4_missing_r_hash2(dev, apdev):
+    """WPS and no R-Hash2 in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    #attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m4_missing_r_snonce1(dev, apdev):
+    """WPS and no R-SNonce1 in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    #data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    data = ''
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m4_invalid_pad_string(dev, apdev):
+    """WPS and invalid pad string in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+
+    m = hmac.new(authkey, data, hashlib.sha256)
+    kwa = m.digest()[0:8]
+    data += build_wsc_attr(ATTR_KEY_WRAP_AUTH, kwa)
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = (pad_len - 1) * struct.pack('B', pad_len) + struct.pack('B', pad_len - 1)
+    data += ps
+    wrapped = aes.encrypt(data)
+    attrs += build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m4_invalid_pad_value(dev, apdev):
+    """WPS and invalid pad value in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+
+    m = hmac.new(authkey, data, hashlib.sha256)
+    kwa = m.digest()[0:8]
+    data += build_wsc_attr(ATTR_KEY_WRAP_AUTH, kwa)
+    iv = 16*'\x99'
+    aes = AES.new(keywrapkey, AES.MODE_CBC, iv)
+    pad_len = 16 - len(data) % 16
+    ps = (pad_len - 1) * struct.pack('B', pad_len) + struct.pack('B', 255)
+    data += ps
+    wrapped = aes.encrypt(data)
+    attrs += build_wsc_attr(ATTR_ENCR_SETTINGS, iv + wrapped)
+
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m4_no_encr_settings(dev, apdev):
+    """WPS and no Encr Settings in M4"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s1, m3, authkey, keywrapkey = wps_to_m3(dev, apdev)
+
+    logger.debug("Send M4 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    attrs += build_attr_authenticator(authkey, m3, attrs)
+    m4 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m4)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M5 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m6_missing_r_snonce2(dev, apdev):
+    """WPS and no R-SNonce2 in M6"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s2, m5, authkey, keywrapkey = wps_to_m5(dev, apdev)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    #data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    data = ''
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m5, attrs)
+    m6 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m6)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M7 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m6_no_encr_settings(dev, apdev):
+    """WPS and no Encr Settings in M6"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s2, m5, authkey, keywrapkey = wps_to_m5(dev, apdev)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    #attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m5, attrs)
+    m6 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m6)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M7 (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def test_wps_ext_proto_m8_no_encr_settings(dev, apdev):
+    """WPS and no Encr Settings in M6"""
+    eap_id, e_nonce, r_nonce, bssid, r_hash1, r_hash2, r_s2, m5, authkey, keywrapkey = wps_to_m5(dev, apdev)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, m5, attrs)
+    raw_m6_attrs = attrs
+    m6 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m6)
+    eap_id = (eap_id + 1) % 256
+
+    logger.debug("Receive M7 from STA")
+    msg, m7_attrs, raw_m7_attrs = recv_wsc_msg(dev[0], WSC_MSG, WPS_M7)
+
+    logger.debug("Send M8 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M8)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    #attrs += build_attr_encr_settings(authkey, keywrapkey, m8_cred)
+    attrs += build_attr_authenticator(authkey, raw_m7_attrs, attrs)
+    raw_m8_attrs = attrs
+    m8 = build_eap_wsc(1, eap_id, attrs)
+    send_wsc_msg(dev[0], bssid, m8)
+
+    logger.debug("Receive WSC_Done (NACK) from STA")
+    msg = get_wsc_msg(dev[0])
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_Nack")
+
+    dev[0].request("WPS_CANCEL")
+    send_wsc_msg(dev[0], bssid, build_eap_failure(eap_id))
+    dev[0].wait_disconnected()
+
+def wps_start_ext_reg(apdev, dev):
+    addr = dev.own_addr()
+    bssid = apdev['bssid']
+    ssid = "test-wps-conf"
+    appin = "12345670"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "ap_pin": appin }
+    hapd = hostapd.add_ap(apdev['ifname'], params)
+
+    dev.scan_for_bss(bssid, freq="2412")
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev.request("SET ext_eapol_frame_io 1")
+
+    dev.request("WPS_REG " + bssid + " " + appin)
+
+    return addr,bssid,hapd
+
+def wps_run_ap_settings_proto(dev, apdev, ap_settings, success):
+    addr,bssid,hapd = wps_start_ext_reg(apdev[0], dev[0])
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive M1 from AP")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M1)
+    mac_addr = m1_attrs[ATTR_MAC_ADDR]
+    e_nonce = m1_attrs[ATTR_ENROLLEE_NONCE]
+    e_pk = m1_attrs[ATTR_PUBLIC_KEY]
+
+    appin = '12345670'
+    uuid_r = 16*'\x33'
+    r_nonce = 16*'\x44'
+    own_private, r_pk = wsc_dh_init()
+    authkey,keywrapkey = wsc_dh_kdf(e_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    r_s1,r_s2,r_hash1,r_hash2 = wsc_dev_pw_hash(authkey, appin, e_pk, r_pk)
+
+    logger.debug("Send M2 to AP")
+    m2, raw_m2_attrs = build_m2(authkey, raw_m1_attrs, msg['eap_identifier'],
+                                e_nonce, r_nonce, uuid_r, r_pk, eap_code=2)
+    send_wsc_msg(hapd, addr, m2)
+
+    logger.debug("Receive M3 from AP")
+    msg, m3_attrs, raw_m3_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M3)
+
+    logger.debug("Send M4 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M4)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_R_HASH1, r_hash1)
+    attrs += build_wsc_attr(ATTR_R_HASH2, r_hash2)
+    data = build_wsc_attr(ATTR_R_SNONCE1, r_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m3_attrs, attrs)
+    raw_m4_attrs = attrs
+    m4 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m4)
+
+    logger.debug("Receive M5 from AP")
+    msg, m5_attrs, raw_m5_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M5)
+
+    logger.debug("Send M6 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M6)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    data = build_wsc_attr(ATTR_R_SNONCE2, r_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m5_attrs, attrs)
+    raw_m6_attrs = attrs
+    m6 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m6)
+
+    logger.debug("Receive M7 from AP")
+    msg, m7_attrs, raw_m7_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M7)
+
+    logger.debug("Send M8 to STA")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M8)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    if ap_settings:
+        attrs += build_attr_encr_settings(authkey, keywrapkey, ap_settings)
+    attrs += build_attr_authenticator(authkey, raw_m7_attrs, attrs)
+    raw_m8_attrs = attrs
+    m8 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m8)
+
+    if success:
+        ev = hapd.wait_event(["WPS-NEW-AP-SETTINGS"], timeout=5)
+        if ev is None:
+            raise Exception("New AP settings not reported")
+        logger.debug("Receive WSC_Done from AP")
+        msg = get_wsc_msg(hapd)
+        if msg['wsc_opcode'] != WSC_Done:
+            raise Exception("Unexpected message - expected WSC_Done")
+
+        logger.debug("Send WSC_ACK to AP")
+        ack,attrs = build_ack(msg['eap_identifier'], e_nonce, r_nonce,
+                              eap_code=2)
+        send_wsc_msg(hapd, addr, ack)
+        dev[0].wait_disconnected()
+    else:
+        ev = hapd.wait_event(["WPS-FAIL"], timeout=5)
+        if ev is None:
+            raise Exception("WPS failure not reported")
+        logger.debug("Receive WSC_NACK from AP")
+        msg = get_wsc_msg(hapd)
+        if msg['wsc_opcode'] != WSC_NACK:
+            raise Exception("Unexpected message - expected WSC_NACK")
+
+        logger.debug("Send WSC_NACK to AP")
+        nack,attrs = build_nack(msg['eap_identifier'], e_nonce, r_nonce,
+                                eap_code=2)
+        send_wsc_msg(hapd, addr, nack)
+        dev[0].wait_disconnected()
+
+def test_wps_ext_ap_settings_success(dev, apdev):
+    """WPS and AP Settings: success"""
+    ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
+    ap_settings += build_wsc_attr(ATTR_SSID, "test")
+    ap_settings += build_wsc_attr(ATTR_AUTH_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_ENCR_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_NETWORK_KEY, '')
+    ap_settings += build_wsc_attr(ATTR_MAC_ADDR, binascii.unhexlify(apdev[0]['bssid'].replace(':', '')))
+    wps_run_ap_settings_proto(dev, apdev, ap_settings, True)
+
+def test_wps_ext_ap_settings_missing(dev, apdev):
+    """WPS and AP Settings: missing"""
+    wps_run_ap_settings_proto(dev, apdev, None, False)
+
+def test_wps_ext_ap_settings_mac_addr_mismatch(dev, apdev):
+    """WPS and AP Settings: MAC Address mismatch"""
+    ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
+    ap_settings += build_wsc_attr(ATTR_SSID, "test")
+    ap_settings += build_wsc_attr(ATTR_AUTH_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_ENCR_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_NETWORK_KEY, '')
+    ap_settings += build_wsc_attr(ATTR_MAC_ADDR, '\x00\x00\x00\x00\x00\x00')
+    wps_run_ap_settings_proto(dev, apdev, ap_settings, True)
+
+def test_wps_ext_ap_settings_mac_addr_missing(dev, apdev):
+    """WPS and AP Settings: missing MAC Address"""
+    ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
+    ap_settings += build_wsc_attr(ATTR_SSID, "test")
+    ap_settings += build_wsc_attr(ATTR_AUTH_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_ENCR_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_NETWORK_KEY, '')
+    wps_run_ap_settings_proto(dev, apdev, ap_settings, False)
+
+def test_wps_ext_ap_settings_reject_encr_type(dev, apdev):
+    """WPS and AP Settings: reject Encr Type"""
+    ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
+    ap_settings += build_wsc_attr(ATTR_SSID, "test")
+    ap_settings += build_wsc_attr(ATTR_AUTH_TYPE, '\x00\x01')
+    ap_settings += build_wsc_attr(ATTR_ENCR_TYPE, '\x00\x00')
+    ap_settings += build_wsc_attr(ATTR_NETWORK_KEY, '')
+    ap_settings += build_wsc_attr(ATTR_MAC_ADDR, binascii.unhexlify(apdev[0]['bssid'].replace(':', '')))
+    wps_run_ap_settings_proto(dev, apdev, ap_settings, False)
+
+def test_wps_ext_ap_settings_m2d(dev, apdev):
+    """WPS and AP Settings: M2D"""
+    addr,bssid,hapd = wps_start_ext_reg(apdev[0], dev[0])
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive M1 from AP")
+    msg, m1_attrs, raw_m1_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M1)
+    e_nonce = m1_attrs[ATTR_ENROLLEE_NONCE]
+
+    r_nonce = 16*'\x44'
+    uuid_r = 16*'\x33'
+
+    logger.debug("Send M2D to AP")
+    m2d, raw_m2d_attrs = build_m2d(raw_m1_attrs, msg['eap_identifier'],
+                                   e_nonce, r_nonce, uuid_r,
+                                   dev_pw_id='\x00\x00', eap_code=2)
+    send_wsc_msg(hapd, addr, m2d)
+
+    ev = hapd.wait_event(["WPS-M2D"], timeout=5)
+    if ev is None:
+        raise Exception("M2D not reported")
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def wps_wait_ap_nack(hapd, dev, e_nonce, r_nonce):
+    logger.debug("Receive WSC_NACK from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_NACK:
+        raise Exception("Unexpected message - expected WSC_NACK")
+
+    logger.debug("Send WSC_NACK to AP")
+    nack,attrs = build_nack(msg['eap_identifier'], e_nonce, r_nonce,
+                            eap_code=2)
+    send_wsc_msg(hapd, dev.own_addr(), nack)
+    dev.wait_disconnected()
+
+def test_wps_ext_m3_missing_e_hash1(dev, apdev):
+    """WPS proto: M3 missing E-Hash1"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    #attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m3_missing_e_hash2(dev, apdev):
+    """WPS proto: M3 missing E-Hash2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    #attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m5_missing_e_snonce1(dev, apdev):
+    """WPS proto: M5 missing E-SNonce1"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    #data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    data = ''
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m5_e_snonce1_mismatch(dev, apdev):
+    """WPS proto: M5 E-SNonce1 mismatch"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, 16*'\x00')
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m7_missing_e_snonce2(dev, apdev):
+    """WPS proto: M7 missing E-SNonce2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    logger.debug("Receive M6 from AP")
+    msg, m6_attrs, raw_m6_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M6)
+
+    logger.debug("Send M7 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    #data = build_wsc_attr(ATTR_E_SNONCE2, e_s2)
+    data = ''
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m6_attrs, attrs)
+    m7 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    raw_m7_attrs = attrs
+    send_wsc_msg(hapd, addr, m7)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m7_e_snonce2_mismatch(dev, apdev):
+    """WPS proto: M7 E-SNonce2 mismatch"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    logger.debug("Receive M6 from AP")
+    msg, m6_attrs, raw_m6_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M6)
+
+    logger.debug("Send M7 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE2, 16*'\x00')
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m6_attrs, attrs)
+    m7 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    raw_m7_attrs = attrs
+    send_wsc_msg(hapd, addr, m7)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m1_pubkey_oom(dev, apdev):
+    """WPS proto: M1 PubKey OOM"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    with alloc_fail(hapd, 1, "wpabuf_alloc_copy;wps_process_pubkey"):
+        m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                    e_nonce, e_pk)
+        send_wsc_msg(hapd, addr, m1)
+        wps_wait_eap_failure(hapd, dev[0])
+
+def wps_wait_eap_failure(hapd, dev):
+    ev = hapd.wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    dev.wait_disconnected()
+
+def test_wps_ext_m3_m1(dev, apdev):
+    """WPS proto: M3 replaced with M1"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3(M1) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M1)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m5_m3(dev, apdev):
+    """WPS proto: M5 replaced with M3"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5(M3) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m3_m2(dev, apdev):
+    """WPS proto: M3 replaced with M2"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3(M2) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M2)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m3_m5(dev, apdev):
+    """WPS proto: M3 replaced with M5"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3(M5) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m3_m7(dev, apdev):
+    """WPS proto: M3 replaced with M7"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3(M7) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m3_done(dev, apdev):
+    """WPS proto: M3 replaced with WSC_Done"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3(WSC_Done) to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_WSC_DONE)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, addr, m3)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_nack_invalid(dev, apdev):
+    """WPS proto: M2 followed by invalid NACK"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_NACK to AP")
+    attrs = '\x10\x00\x00'
+    nack = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_NACK)
+    send_wsc_msg(hapd, addr, nack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_nack_no_msg_type(dev, apdev):
+    """WPS proto: M2 followed by NACK without Msg Type"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_NACK to AP")
+    nack,attrs = build_nack(msg['eap_identifier'], e_nonce, r_nonce,
+                            msg_type=None, eap_code=2)
+    send_wsc_msg(hapd, addr, nack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_nack_invalid_msg_type(dev, apdev):
+    """WPS proto: M2 followed by NACK with invalid Msg Type"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_NACK to AP")
+    nack,attrs = build_nack(msg['eap_identifier'], e_nonce, r_nonce,
+                            msg_type=WPS_WSC_ACK, eap_code=2)
+    send_wsc_msg(hapd, addr, nack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_nack_e_nonce_mismatch(dev, apdev):
+    """WPS proto: M2 followed by NACK with e-nonce mismatch"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_NACK to AP")
+    nack,attrs = build_nack(msg['eap_identifier'], 16*'\x00', r_nonce,
+                            eap_code=2)
+    send_wsc_msg(hapd, addr, nack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_nack_no_config_error(dev, apdev):
+    """WPS proto: M2 followed by NACK without Config Error"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_NACK to AP")
+    nack,attrs = build_nack(msg['eap_identifier'], e_nonce, r_nonce,
+                            config_error=None, eap_code=2)
+    send_wsc_msg(hapd, addr, nack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_ack_invalid(dev, apdev):
+    """WPS proto: M2 followed by invalid ACK"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_ACK to AP")
+    attrs = '\x10\x00\x00'
+    ack = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_ACK)
+    send_wsc_msg(hapd, addr, ack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_ack(dev, apdev):
+    """WPS proto: M2 followed by ACK"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_ACK to AP")
+    ack,attrs = build_ack(msg['eap_identifier'], e_nonce, r_nonce, eap_code=2)
+    send_wsc_msg(hapd, addr, ack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_ack_no_msg_type(dev, apdev):
+    """WPS proto: M2 followed by ACK missing Msg Type"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_ACK to AP")
+    ack,attrs = build_ack(msg['eap_identifier'], e_nonce, r_nonce,
+                          msg_type=None, eap_code=2)
+    send_wsc_msg(hapd, addr, ack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_ack_invalid_msg_type(dev, apdev):
+    """WPS proto: M2 followed by ACK with invalid Msg Type"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_ACK to AP")
+    ack,attrs = build_ack(msg['eap_identifier'], e_nonce, r_nonce,
+                          msg_type=WPS_WSC_NACK, eap_code=2)
+    send_wsc_msg(hapd, addr, ack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m2_ack_e_nonce_mismatch(dev, apdev):
+    """WPS proto: M2 followed by ACK with e-nonce mismatch"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send WSC_ACK to AP")
+    ack,attrs = build_ack(msg['eap_identifier'], 16*'\x00', r_nonce,
+                          eap_code=2)
+    send_wsc_msg(hapd, addr, ack)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m1_invalid(dev, apdev):
+    """WPS proto: M1 failing parsing"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    logger.debug("Send M1 to AP")
+    attrs = '\x10\x00\x00'
+    m1 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m1)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m1_missing_msg_type(dev, apdev):
+    """WPS proto: M1 missing Msg Type"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    logger.debug("Send M1 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    m1 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m1)
+
+    wps_wait_ap_nack(hapd, dev[0], 16*'\x00', 16*'\x00')
+
+def wps_ext_wsc_done(dev, apdev):
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    logger.debug("Receive M6 from AP")
+    msg, m6_attrs, raw_m6_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M6)
+
+    logger.debug("Send M7 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE2, e_s2)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m6_attrs, attrs)
+    m7 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    raw_m7_attrs = attrs
+    send_wsc_msg(hapd, addr, m7)
+
+    logger.debug("Receive M8 from AP")
+    msg, m8_attrs, raw_m8_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M8)
+    return hapd, msg, e_nonce, r_nonce
+
+def test_wps_ext_wsc_done_invalid(dev, apdev):
+    """WPS proto: invalid WSC_Done"""
+    hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
+
+    logger.debug("Send WSC_Done to AP")
+    attrs = '\x10\x00\x00'
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, dev[0].own_addr(), wsc_done)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_wsc_done_no_msg_type(dev, apdev):
+    """WPS proto: invalid WSC_Done"""
+    hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
+
+    logger.debug("Send WSC_Done to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    #attrs += build_attr_msg_type(WPS_WSC_DONE)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, dev[0].own_addr(), wsc_done)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_wsc_done_wrong_msg_type(dev, apdev):
+    """WPS proto: WSC_Done with wrong Msg Type"""
+    hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
+
+    logger.debug("Send WSC_Done to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_WSC_ACK)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, dev[0].own_addr(), wsc_done)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_wsc_done_no_e_nonce(dev, apdev):
+    """WPS proto: WSC_Done without e_nonce"""
+    hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
+
+    logger.debug("Send WSC_Done to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_WSC_DONE)
+    #attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, dev[0].own_addr(), wsc_done)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_wsc_done_no_r_nonce(dev, apdev):
+    """WPS proto: WSC_Done without r_nonce"""
+    hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
+
+    logger.debug("Send WSC_Done to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_WSC_DONE)
+    attrs += build_wsc_attr(ATTR_ENROLLEE_NONCE, e_nonce)
+    #attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    wsc_done = build_eap_wsc(2, msg['eap_identifier'], attrs, opcode=WSC_Done)
+    send_wsc_msg(hapd, dev[0].own_addr(), wsc_done)
+
+    wps_wait_eap_failure(hapd, dev[0])
+
+def test_wps_ext_m7_no_encr_settings(dev, apdev):
+    """WPS proto: M7 without Encr Settings"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk)
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+    r_nonce = m2_attrs[ATTR_REGISTRAR_NONCE]
+    r_pk = m2_attrs[ATTR_PUBLIC_KEY]
+
+    authkey,keywrapkey = wsc_dh_kdf(r_pk, own_private, mac_addr, e_nonce,
+                                    r_nonce)
+    e_s1,e_s2,e_hash1,e_hash2 = wsc_dev_pw_hash(authkey, pin, e_pk, r_pk)
+
+    logger.debug("Send M3 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M3)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    attrs += build_wsc_attr(ATTR_E_HASH1, e_hash1)
+    attrs += build_wsc_attr(ATTR_E_HASH2, e_hash2)
+    attrs += build_attr_authenticator(authkey, raw_m2_attrs, attrs)
+    raw_m3_attrs = attrs
+    m3 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m3)
+
+    logger.debug("Receive M4 from AP")
+    msg, m4_attrs, raw_m4_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M4)
+
+    logger.debug("Send M5 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M5)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    data = build_wsc_attr(ATTR_E_SNONCE1, e_s1)
+    attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m4_attrs, attrs)
+    raw_m5_attrs = attrs
+    m5 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    send_wsc_msg(hapd, addr, m5)
+
+    logger.debug("Receive M6 from AP")
+    msg, m6_attrs, raw_m6_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M6)
+
+    logger.debug("Send M7 to AP")
+    attrs = build_wsc_attr(ATTR_VERSION, '\x10')
+    attrs += build_attr_msg_type(WPS_M7)
+    attrs += build_wsc_attr(ATTR_REGISTRAR_NONCE, r_nonce)
+    #data = build_wsc_attr(ATTR_E_SNONCE2, e_s2)
+    #attrs += build_attr_encr_settings(authkey, keywrapkey, data)
+    attrs += build_attr_authenticator(authkey, raw_m6_attrs, attrs)
+    m7 = build_eap_wsc(2, msg['eap_identifier'], attrs)
+    raw_m7_attrs = attrs
+    send_wsc_msg(hapd, addr, m7)
+
+    wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
+
+def test_wps_ext_m1_workaround(dev, apdev):
+    """WPS proto: M1 Manufacturer/Model workaround"""
+    pin = "12345670"
+    addr,bssid,hapd = wps_start_ext(apdev[0], dev[0], pin=pin)
+    wps_ext_eap_identity_req(dev[0], hapd, bssid)
+    wps_ext_eap_identity_resp(hapd, dev[0], addr)
+
+    logger.debug("Receive WSC/Start from AP")
+    msg = get_wsc_msg(hapd)
+    if msg['wsc_opcode'] != WSC_Start:
+        raise Exception("Unexpected Op-Code for WSC/Start")
+
+    mac_addr = binascii.unhexlify(dev[0].own_addr().replace(':', ''))
+    uuid_e = 16*'\x11'
+    e_nonce = 16*'\x22'
+    own_private, e_pk = wsc_dh_init()
+
+    logger.debug("Send M1 to AP")
+    m1, raw_m1_attrs = build_m1(msg['eap_identifier'], uuid_e, mac_addr,
+                                e_nonce, e_pk, manufacturer='Apple TEST',
+                                model_name='AirPort', config_methods='\xff\xff')
+    send_wsc_msg(hapd, addr, m1)
+
+    logger.debug("Receive M2 from AP")
+    msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)

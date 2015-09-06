@@ -1116,6 +1116,63 @@ def _test_ap_wps_er_add_enrollee_uuid(dev, apdev):
     dev[0].dump_monitor()
     dev[0].request("WPS_ER_STOP")
 
+def test_ap_wps_er_multi_add_enrollee(dev, apdev):
+    """Multiple WPS ERs adding a new enrollee using PIN"""
+    try:
+        _test_ap_wps_er_multi_add_enrollee(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_multi_add_enrollee(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     'friendly_name': "WPS AP",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+
+    for i in range(2):
+        dev[i].scan_for_bss(apdev[0]['bssid'], freq=2412)
+        dev[i].wps_reg(apdev[0]['bssid'], ap_pin)
+        dev[i].request("WPS_ER_START ifname=lo")
+    for i in range(2):
+        ev = dev[i].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+        if ev is None:
+            raise Exception("AP discovery timed out")
+        dev[i].dump_monitor()
+        dev[i].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+        ev = dev[i].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+        if ev is None:
+            raise Exception("AP learn timed out")
+        ev = dev[i].wait_event(["WPS-FAIL"], timeout=15)
+        if ev is None:
+            raise Exception("WPS-FAIL after AP learn timed out")
+
+    time.sleep(0.1)
+
+    pin = dev[2].wps_read_pin()
+    addr = dev[2].own_addr()
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_PIN any " + pin + " " + addr)
+    dev[1].dump_monitor()
+    dev[1].request("WPS_ER_PIN any " + pin + " " + addr)
+
+    dev[2].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[2].dump_monitor()
+    dev[2].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    ev = dev[2].wait_event(["WPS-SUCCESS"], timeout=30)
+    if ev is None:
+        raise Exception("Enrollee did not report success")
+    dev[2].wait_connected(timeout=15)
+
 def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     """WPS ER connected to AP and adding a new enrollee using PBC"""
     try:

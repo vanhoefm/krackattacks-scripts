@@ -4354,6 +4354,40 @@ RGV2aWNlIEEQSQAGADcqAAEg
         url2 = urlparse.urlparse(wps_event_url.replace('/event/', '/notfound/'))
         send_wlanevent(url2, uuid, m1, no_response=True)
 
+    logger.info("EAP message: M1")
+    data = '\x0202:11:22:00:00:00'
+    data += '\x10\x22\x00\x01\x04'
+    data += '\x10\x47\x00\x10' + 16*'\x00'
+    data += '\x10\x20\x00\x06\x02\x00\x00\x00\x00\x00'
+    data += '\x10\x1a\x00\x10' + 16*'\x00'
+    data += '\x10\x32\x00\xc0' + 192*'\x00'
+    data += '\x10\x04\x00\x02\x00\x00'
+    data += '\x10\x10\x00\x02\x00\x00'
+    data += '\x10\x0d\x00\x01\x00'
+    data += '\x10\x08\x00\x02\x00\x00'
+    data += '\x10\x44\x00\x01\x00'
+    data += '\x10\x21\x00\x00'
+    data += '\x10\x23\x00\x00'
+    data += '\x10\x24\x00\x00'
+    data += '\x10\x42\x00\x00'
+    data += '\x10\x54\x00\x08' + 8*'\x00'
+    data += '\x10\x11\x00\x00'
+    data += '\x10\x3c\x00\x01\x00'
+    data += '\x10\x02\x00\x02\x00\x00'
+    data += '\x10\x12\x00\x02\x00\x00'
+    data += '\x10\x09\x00\x02\x00\x00'
+    data += '\x10\x2d\x00\x04\x00\x00\x00\x00'
+    dev[0].dump_monitor()
+    with alloc_fail(dev[0], 1, "wps_er_add_sta_data"):
+        send_wlanevent(url, uuid, data)
+        ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected enrollee add event")
+    send_wlanevent(url, uuid, data)
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=2)
+    if ev is None:
+        raise Exception("Enrollee add event not seen")
+
 def test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev):
     """WPS ER HTTP protocol testing - no eventSubURL"""
     class WPSAPHTTPServer_no_event_sub_url(WPSAPHTTPServer):

@@ -1743,6 +1743,57 @@ def _test_ap_wps_er_subscribe_oom(dev, apdev):
 
     dev[0].request("WPS_ER_STOP")
 
+def test_ap_wps_er_set_sel_reg_oom(dev, apdev):
+    """WPS ER SetSelectedRegistrar OOM"""
+    try:
+        _test_ap_wps_er_set_sel_reg_oom(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_set_sel_reg_oom(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("AP not discovered")
+
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL timed out")
+    time.sleep(0.1)
+
+    for func in [ "http_client_url_parse;wps_er_send_set_sel_reg",
+                  "wps_er_soap_hdr;wps_er_send_set_sel_reg",
+                  "http_client_addr;wps_er_send_set_sel_reg",
+                  "wpabuf_alloc;wps_er_set_sel_reg" ]:
+        with alloc_fail(dev[0], 1, func):
+            if "OK" not in dev[0].request("WPS_ER_PBC " + ap_uuid):
+                raise Exception("WPS_ER_PBC failed")
+            ev = dev[0].wait_event(["WPS-PBC-ACTIVE"], timeout=3)
+            if ev is None:
+                raise Exception("WPS-PBC-ACTIVE not seen")
+
+    dev[0].request("WPS_ER_STOP")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

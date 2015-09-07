@@ -192,6 +192,7 @@ struct wpa_eapol_key {
 #define WPA_KCK_MAX_LEN 24
 #define WPA_KEK_MAX_LEN 64
 #define WPA_TK_MAX_LEN 32
+#define FILS_ICK_MAX_LEN 48
 
 /**
  * struct wpa_ptk - WPA Pairwise Transient Key
@@ -329,6 +330,9 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 		   const u8 *addr1, const u8 *addr2,
 		   const u8 *nonce1, const u8 *nonce2,
 		   struct wpa_ptk *ptk, int akmp, int cipher);
+int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
+		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
+		    u8 *ick, size_t *ick_len, int akmp, int cipher);
 
 #ifdef CONFIG_IEEE80211R
 int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,

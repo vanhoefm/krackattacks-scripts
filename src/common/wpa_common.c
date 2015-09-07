@@ -229,6 +229,73 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 	return 0;
 }
 
+#ifdef CONFIG_FILS
+int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
+		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
+		    u8 *ick, size_t *ick_len, int akmp, int cipher)
+{
+	u8 data[2 * ETH_ALEN + 2 * FILS_NONCE_LEN];
+	u8 tmp[FILS_ICK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN];
+	size_t key_data_len;
+	const char *label = "FILS PTK Derivation";
+
+	/*
+	 * FILS-Key-Data = PRF-X(PMK, "FILS PTK Derivation",
+	 *                       SPA || AA || SNonce || ANonce)
+	 * ICK = L(FILS-Key-Data, 0, ICK_bits)
+	 * KEK = L(FILS-Key-Data, ICK_bits, KEK_bits)
+	 * TK = L(FILS-Key-Data, ICK_bits + KEK_bits, TK_bits)
+	 * If doing FT initial mobility domain association:
+	 * FILS-FT = L(FILS-Key-Data, ICK_bits + KEK_bits + TK_bits,
+	 *             FILS-FT_bits)
+	 */
+	os_memcpy(data, spa, ETH_ALEN);
+	os_memcpy(data + ETH_ALEN, aa, ETH_ALEN);
+	os_memcpy(data + 2 * ETH_ALEN, snonce, FILS_NONCE_LEN);
+	os_memcpy(data + 2 * ETH_ALEN + FILS_NONCE_LEN, anonce, FILS_NONCE_LEN);
+
+	ptk->kck_len = 0;
+	ptk->kek_len = wpa_kek_len(akmp);
+	ptk->tk_len = wpa_cipher_key_len(cipher);
+	if (wpa_key_mgmt_sha384(akmp))
+		*ick_len = 48;
+	else if (wpa_key_mgmt_sha256(akmp))
+		*ick_len = 32;
+	else
+		return -1;
+	key_data_len = *ick_len + ptk->kek_len + ptk->tk_len;
+
+	if (wpa_key_mgmt_sha384(akmp))
+		sha384_prf(pmk, pmk_len, label, data, sizeof(data),
+			   tmp, key_data_len);
+	else if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),
+			    tmp, key_data_len) < 0)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "FILS: PTK derivation - SPA=" MACSTR
+		   " AA=" MACSTR, MAC2STR(spa), MAC2STR(aa));
+	wpa_hexdump(MSG_DEBUG, "FILS: SNonce", snonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", anonce, FILS_NONCE_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: PMK", pmk, pmk_len);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: FILS-Key-Data", tmp, key_data_len);
+
+	os_memcpy(ick, tmp, *ick_len);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: ICK", ick, *ick_len);
+
+	os_memcpy(ptk->kek, tmp + *ick_len, ptk->kek_len);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: KEK", ptk->kek, ptk->kek_len);
+
+	os_memcpy(ptk->tk, tmp + *ick_len + ptk->kek_len, ptk->tk_len);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: TK", ptk->tk, ptk->tk_len);
+
+	/* TODO: FILS-FT */
+
+	os_memset(tmp, 0, sizeof(tmp));
+	return 0;
+}
+
+#endif /* CONFIG_FILS */
+
 
 #ifdef CONFIG_IEEE80211R
 int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,

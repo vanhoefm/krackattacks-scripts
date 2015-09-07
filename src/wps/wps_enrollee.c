@@ -759,7 +759,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 
 
 static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
-			     size_t cred_len[], size_t num_cred, int wps2)
+			     u16 cred_len[], unsigned int num_cred, int wps2)
 {
 	size_t i;
 	int ok = 0;

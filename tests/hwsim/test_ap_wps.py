@@ -1704,6 +1704,45 @@ def _test_ap_wps_er_cache_ap_settings_oom2(dev, apdev):
 
     dev[0].request("WPS_ER_STOP")
 
+def test_ap_wps_er_subscribe_oom(dev, apdev):
+    """WPS ER subscribe OOM"""
+    try:
+        _test_ap_wps_er_subscribe_oom(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_subscribe_oom(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+    id = int(dev[0].list_networks()[0]['id'])
+    dev[0].set_network(id, "scan_freq", "2412")
+
+    with alloc_fail(dev[0], 1, "http_client_addr;wps_er_subscribe"):
+        dev[0].request("WPS_ER_START ifname=lo")
+        for i in range(50):
+            res = dev[0].request("GET_ALLOC_FAIL")
+            if res.startswith("0:"):
+                break
+            time.sleep(0.1)
+        ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=0)
+        if ev:
+            raise Exception("Unexpected AP discovery during OOM")
+
+    dev[0].request("WPS_ER_STOP")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

@@ -3947,7 +3947,7 @@ def run_wps_er_proto_test(dev, handler, no_event_url=False, location_url=None):
     finally:
             dev.request("WPS_ER_STOP")
 
-def send_wlanevent(url, uuid, data):
+def send_wlanevent(url, uuid, data, no_response=False):
     conn = httplib.HTTPConnection(url.netloc)
     payload = '''<?xml version="1.0" encoding="utf-8"?>
 <e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
@@ -3964,6 +3964,12 @@ def send_wlanevent(url, uuid, data):
                 "SEQ": "0",
                 "Content-Length": str(len(payload)) }
     conn.request("NOTIFY", url.path, payload, headers)
+    if no_response:
+        try:
+            conn.getresponse()
+        except Exception, e:
+            pass
+        return
     resp = conn.getresponse()
     if resp.status != 200:
         raise Exception("Unexpected HTTP response: %d" % resp.status)
@@ -4340,6 +4346,13 @@ RGV2aWNlIEEQSQAGADcqAAEg
                   "wps_process_dev_name" ]:
         with alloc_fail(dev[0], 1, func):
             send_wlanevent(url, uuid, m1)
+
+    with alloc_fail(dev[0], 1, "wps_er_http_resp_ok"):
+        send_wlanevent(url, uuid, m1, no_response=True)
+
+    with alloc_fail(dev[0], 1, "wps_er_http_resp_not_found"):
+        url2 = urlparse.urlparse(wps_event_url.replace('/event/', '/notfound/'))
+        send_wlanevent(url2, uuid, m1, no_response=True)
 
 def test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev):
     """WPS ER HTTP protocol testing - no eventSubURL"""

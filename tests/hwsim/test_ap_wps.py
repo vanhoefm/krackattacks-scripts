@@ -3419,6 +3419,12 @@ def _test_ap_wps_er_init_oom(dev, apdev):
         if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
             raise Exception("WPS_ER_START succeeded during os_get_random failure")
 
+def test_ap_wps_er_init_fail(dev, apdev):
+    """WPS ER init failure"""
+    if "FAIL" not in dev[0].request("WPS_ER_START ifname=does-not-exist"):
+        dev[0].request("WPS_ER_STOP")
+        raise Exception("WPS_ER_START with non-existing ifname succeeded")
+
 def test_ap_wps_wpa_cli_action(dev, apdev, test_params):
     """WPS events and wpa_cli action script"""
     logdir = os.path.abspath(test_params['logdir'])

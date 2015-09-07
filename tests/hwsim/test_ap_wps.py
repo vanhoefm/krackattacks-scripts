@@ -4388,6 +4388,18 @@ RGV2aWNlIEEQSQAGADcqAAEg
     if ev is None:
         raise Exception("Enrollee add event not seen")
 
+    with alloc_fail(dev[0], 1, "base64_encode;wps_er_soap_hdr"):
+        send_wlanevent(url, uuid, data)
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;wps_er_soap_hdr"):
+        send_wlanevent(url, uuid, data)
+
+    with alloc_fail(dev[0], 1, "http_client_url_parse;wps_er_sta_send_msg"):
+        send_wlanevent(url, uuid, data)
+
+    with alloc_fail(dev[0], 1, "http_client_addr;wps_er_sta_send_msg"):
+        send_wlanevent(url, uuid, data)
+
 def test_ap_wps_er_http_proto_no_event_sub_url(dev, apdev):
     """WPS ER HTTP protocol testing - no eventSubURL"""
     class WPSAPHTTPServer_no_event_sub_url(WPSAPHTTPServer):

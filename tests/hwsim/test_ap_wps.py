@@ -787,6 +787,44 @@ def test_ap_wps_setup_locked_timeout(dev, apdev):
     if ev is None:
         raise Exception("AP PIN did not get unlocked on 60 second timeout")
 
+def test_ap_wps_setup_locked_2(dev, apdev):
+    """WPS AP configured for special ap_setup_locked=2 mode"""
+    ssid = "test-wps-ap-pin"
+    appin = "12345670"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "ap_pin": appin, "ap_setup_locked": "2" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    new_ssid = "wps-new-ssid-test"
+    new_passphrase = "1234567890"
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], appin)
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    hapd.dump_monitor()
+    dev[0].dump_monitor()
+    dev[0].wps_reg(apdev[0]['bssid'], appin, new_ssid, "WPA2PSK",
+                   "CCMP", new_passphrase, no_wait=True)
+
+    ev = hapd.wait_event(["WPS-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("hostapd did not report WPS failure")
+    if "msg=12 config_error=15" not in ev:
+        raise Exception("Unexpected failure reason (AP): " + ev)
+
+    ev = dev[0].wait_event(["WPS-FAIL", "CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on receiving WPS operation failure event")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection")
+    if "config_error=15" not in ev:
+        raise Exception("Unexpected failure reason (STA): " + ev)
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+
 def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     """WPS PBC session overlap with two active APs"""
     hostapd.add_ap(apdev[0]['ifname'],

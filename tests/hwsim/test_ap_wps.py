@@ -1580,6 +1580,130 @@ def _test_ap_wps_er_cache_ap_settings(dev, apdev):
     dev[0].dump_monitor()
     dev[0].request("WPS_ER_STOP")
 
+def test_ap_wps_er_cache_ap_settings_oom(dev, apdev):
+    """WPS ER caching AP settings (OOM)"""
+    try:
+        _test_ap_wps_er_cache_ap_settings_oom(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_cache_ap_settings_oom(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+    id = int(dev[0].list_networks()[0]['id'])
+    dev[0].set_network(id, "scan_freq", "2412")
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL after AP learn timed out")
+    time.sleep(0.1)
+
+    with alloc_fail(dev[0], 1, "=wps_er_ap_use_cached_settings"):
+        hapd.disable()
+
+        for i in range(2):
+            ev = dev[0].wait_event([ "WPS-ER-AP-REMOVE",
+                                     "CTRL-EVENT-DISCONNECTED" ],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("AP removal or disconnection timed out")
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        for i in range(2):
+            ev = dev[0].wait_event([ "WPS-ER-AP-ADD", "CTRL-EVENT-CONNECTED" ],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("AP discovery or connection timed out")
+
+    dev[0].request("WPS_ER_STOP")
+
+def test_ap_wps_er_cache_ap_settings_oom2(dev, apdev):
+    """WPS ER caching AP settings (OOM 2)"""
+    try:
+        _test_ap_wps_er_cache_ap_settings_oom2(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_cache_ap_settings_oom2(dev, apdev):
+    ssid = "wps-er-add-enrollee"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+    id = int(dev[0].list_networks()[0]['id'])
+    dev[0].set_network(id, "scan_freq", "2412")
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL after AP learn timed out")
+    time.sleep(0.1)
+
+    with alloc_fail(dev[0], 1, "=wps_er_ap_cache_settings"):
+        hapd.disable()
+
+        for i in range(2):
+            ev = dev[0].wait_event([ "WPS-ER-AP-REMOVE",
+                                     "CTRL-EVENT-DISCONNECTED" ],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("AP removal or disconnection timed out")
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        for i in range(2):
+            ev = dev[0].wait_event([ "WPS-ER-AP-ADD", "CTRL-EVENT-CONNECTED" ],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("AP discovery or connection timed out")
+
+    dev[0].request("WPS_ER_STOP")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

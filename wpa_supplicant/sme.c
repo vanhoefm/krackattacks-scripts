@@ -958,6 +958,24 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 	}
 #endif /* CONFIG_IEEE80211R */
 
+#ifdef CONFIG_FILS
+	if (data->auth.auth_type == WLAN_AUTH_FILS_SK) {
+		if (fils_process_auth(wpa_s->wpa, data->auth.ies,
+				      data->auth.ies_len) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SME: FILS Authentication response processing failed");
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid="
+				MACSTR
+				" reason=%d locally_generated=1",
+				MAC2STR(wpa_s->pending_bssid),
+				WLAN_REASON_DEAUTH_LEAVING);
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_mark_disassoc(wpa_s);
+			return;
+		}
+	}
+#endif /* CONFIG_FILS */
+
 	sme_associate(wpa_s, ssid->mode, data->auth.peer,
 		      data->auth.auth_type);
 }

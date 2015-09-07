@@ -142,6 +142,10 @@ struct wpa_sm {
 #ifdef CONFIG_FILS
 	u8 fils_nonce[FILS_NONCE_LEN];
 	u8 fils_session[FILS_SESSION_LEN];
+	u8 fils_anonce[FILS_NONCE_LEN];
+	u8 fils_key_auth_ap[FILS_MAX_KEY_AUTH_LEN];
+	u8 fils_key_auth_sta[FILS_MAX_KEY_AUTH_LEN];
+	size_t fils_key_auth_len;
 #endif /* CONFIG_FILS */
 };
 

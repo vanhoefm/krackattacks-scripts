@@ -16,6 +16,7 @@
 #include "crypto/random.h"
 #include "crypto/aes_siv.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa.h"
 #include "eloop.h"
@@ -3284,6 +3285,141 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 fail:
 	wpabuf_free(erp_msg);
 	return buf;
+}
+
+
+int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
+{
+	const u8 *pos, *end;
+	struct ieee802_11_elems elems;
+	struct wpa_ie_data rsn;
+	int pmkid_match = 0;
+	u8 ick[FILS_ICK_MAX_LEN];
+	size_t ick_len;
+	int res;
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Authentication frame fields",
+		    data, len);
+	pos = data;
+	end = data + len;
+
+	/* TODO: Finite Cyclic Group when using PK or PFS */
+	/* TODO: Element when using PK or PFS */
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Remaining IEs", pos, end - pos);
+	if (ieee802_11_parse_elems(pos, end - pos, &elems, 1) == ParseFailed) {
+		wpa_printf(MSG_DEBUG, "FILS: Could not parse elements");
+		return -1;
+	}
+
+	/* RSNE */
+	wpa_hexdump(MSG_DEBUG, "FILS: RSN element", elems.rsn_ie,
+		    elems.rsn_ie_len);
+	if (!elems.rsn_ie ||
+	    wpa_parse_wpa_ie_rsn(elems.rsn_ie - 2, elems.rsn_ie_len + 2,
+				 &rsn) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: No RSN element");
+		return -1;
+	}
+
+	if (!elems.fils_nonce) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Nonce field");
+		return -1;
+	}
+	os_memcpy(sm->fils_anonce, elems.fils_nonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", sm->fils_anonce, FILS_NONCE_LEN);
+
+	/* TODO: MDE when using FILS+FT */
+	/* TODO: FTE when using FILS+FT */
+
+	/* PMKID List */
+	if (rsn.pmkid && rsn.num_pmkid > 0) {
+		wpa_hexdump(MSG_DEBUG, "FILS: PMKID List",
+			    rsn.pmkid, rsn.num_pmkid * PMKID_LEN);
+
+		if (rsn.num_pmkid != 1) {
+			wpa_printf(MSG_DEBUG, "FILS: Invalid PMKID selection");
+			return -1;
+		}
+		wpa_hexdump(MSG_DEBUG, "FILS: PMKID", rsn.pmkid, PMKID_LEN);
+		if (os_memcmp(sm->cur_pmksa->pmkid, rsn.pmkid, PMKID_LEN) != 0)
+		{
+			wpa_printf(MSG_DEBUG, "FILS: PMKID mismatch");
+			wpa_hexdump(MSG_DEBUG, "FILS: Expected PMKID",
+				    sm->cur_pmksa->pmkid, PMKID_LEN);
+			return -1;
+		}
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Matching PMKID - continue using PMKSA caching");
+		pmkid_match = 1;
+	}
+	if (!pmkid_match && sm->cur_pmksa) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: No PMKID match - cannot use cached PMKSA entry");
+		sm->cur_pmksa = NULL;
+	}
+
+	/* FILS Session */
+	if (!elems.fils_session) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Session element");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "FILS: FILS Session", elems.fils_session,
+		    FILS_SESSION_LEN);
+	if (os_memcmp(sm->fils_session, elems.fils_session, FILS_SESSION_LEN)
+	    != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Session mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
+			    sm->fils_session, FILS_SESSION_LEN);
+		return -1;
+	}
+
+	/* FILS Wrapped Data */
+	if (!sm->cur_pmksa && elems.fils_wrapped_data) {
+		wpa_hexdump(MSG_DEBUG, "FILS: Wrapped Data",
+			    elems.fils_wrapped_data,
+			    elems.fils_wrapped_data_len);
+		eapol_sm_process_erp_finish(sm->eapol, elems.fils_wrapped_data,
+					    elems.fils_wrapped_data_len);
+		if (eapol_sm_failed(sm->eapol))
+			return -1;
+
+		res = eapol_sm_get_key(sm->eapol, sm->pmk, PMK_LEN);
+		if (res)
+			return -1;
+
+		wpa_printf(MSG_DEBUG, "FILS: ERP processing succeeded - add PMKSA cache entry for the result");
+		sm->cur_pmksa = pmksa_cache_add(sm->pmksa, sm->pmk, PMK_LEN,
+						NULL, NULL, 0, sm->bssid,
+						sm->own_addr,
+						sm->network_ctx, sm->key_mgmt);
+	}
+
+	if (!sm->cur_pmksa) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: No remaining options to continue FILS authentication");
+		return -1;
+	}
+
+	if (fils_pmk_to_ptk(sm->pmk, sm->pmk_len, sm->own_addr, sm->bssid,
+			    sm->fils_nonce, sm->fils_anonce, &sm->ptk,
+			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher) <
+	    0) {
+		wpa_printf(MSG_DEBUG, "FILS: Failed to derive PTK");
+		return -1;
+	}
+	sm->ptk_set = 1;
+	sm->tptk_set = 0;
+	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
+
+	res = fils_key_auth_sk(ick, ick_len, sm->fils_nonce,
+			       sm->fils_anonce, sm->own_addr, sm->bssid,
+			       NULL, 0, NULL, 0, /* TODO: SK+PFS */
+			       sm->key_mgmt, sm->fils_key_auth_sta,
+			       sm->fils_key_auth_ap,
+			       &sm->fils_key_auth_len);
+	os_memset(ick, 0, sizeof(ick));
+	return res;
 }
 
 #endif /* CONFIG_FILS */

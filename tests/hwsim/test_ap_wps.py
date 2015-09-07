@@ -9057,3 +9057,10 @@ def test_wps_ext_m1_workaround(dev, apdev):
 
     logger.debug("Receive M2 from AP")
     msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
+
+def test_ap_wps_disable_enable(dev, apdev):
+    """WPS and DISABLE/ENABLE AP"""
+    hapd = wps_start_ap(apdev[0])
+    hapd.disable()
+    hapd.enable()
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")

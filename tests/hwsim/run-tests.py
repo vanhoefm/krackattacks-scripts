@@ -18,6 +18,12 @@ import termios
 import logging
 logger = logging.getLogger()
 
+try:
+    import sqlite3
+    sqlite3_imported = True
+except ImportError:
+    sqlite3_imported = False
+
 scriptsdir = os.path.dirname(os.path.realpath(sys.modules[__name__].__file__))
 sys.path.append(os.path.join(scriptsdir, '..', '..', 'wpaspy'))
 
@@ -80,7 +86,7 @@ def add_log_file(conn, test, run, type, path):
     if contents is None:
         return
     sql = "INSERT INTO logs(test,run,type,contents) VALUES(?, ?, ?, ?)"
-    params = (test, run, type, contents)
+    params = (test, run, type, sqlite3.Binary(contents))
     try:
         conn.execute(sql, params)
         conn.commit()
@@ -231,7 +237,9 @@ def main():
         sys.exit(2)
 
     if args.database:
-        import sqlite3
+        if not sqlite3_imported:
+            print "No sqlite3 module found"
+            sys.exit(2)
         conn = sqlite3.connect(args.database)
         conn.execute('CREATE TABLE IF NOT EXISTS results (test,result,run,time,duration,build,commitid)')
         conn.execute('CREATE TABLE IF NOT EXISTS tests (test,description)')

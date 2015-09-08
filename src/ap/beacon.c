@@ -310,6 +310,22 @@ static u8 * hostapd_eid_csa(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static u8 * hostapd_eid_ecsa(struct hostapd_data *hapd, u8 *eid)
+{
+	if (!hapd->cs_freq_params.channel || !hapd->iface->cs_oper_class)
+		return eid;
+
+	*eid++ = WLAN_EID_EXT_CHANSWITCH_ANN;
+	*eid++ = 4;
+	*eid++ = hapd->cs_block_tx;
+	*eid++ = hapd->iface->cs_oper_class;
+	*eid++ = hapd->cs_freq_params.channel;
+	*eid++ = hapd->cs_count;
+
+	return eid;
+}
+
+
 static u8 * hostapd_eid_secondary_channel(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 sec_ch;
@@ -333,26 +349,39 @@ static u8 * hostapd_eid_secondary_channel(struct hostapd_data *hapd, u8 *eid)
 
 
 static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
-				  u8 *start, unsigned int *csa_counter_off)
+				  u8 *start, unsigned int *csa_counter_off,
+				  unsigned int *ecsa_counter_off)
 {
-	u8 *old_pos = pos;
+	u8 *curr_pos = pos;
+	u8 *csa_pos = pos;
 
-	if (!csa_counter_off)
+	if (!csa_counter_off || !ecsa_counter_off)
 		return pos;
 
 	*csa_counter_off = 0;
-	pos = hostapd_eid_csa(hapd, pos);
+	*ecsa_counter_off = 0;
 
-	if (pos != old_pos) {
-		/* save an offset to the counter - should be last byte */
-		*csa_counter_off = pos - start - 1;
-		pos = hostapd_eid_secondary_channel(hapd, pos);
+	curr_pos = hostapd_eid_csa(hapd, curr_pos);
+
+	/* save an offset to the csa counter - should be last byte */
+	if (curr_pos != pos)
+		*csa_counter_off = curr_pos - start - 1;
+
+	csa_pos = curr_pos;
+	curr_pos = hostapd_eid_ecsa(hapd, curr_pos);
+
+	/* save an offset to the eCSA counter - should be last byte */
+	if (curr_pos != csa_pos)
+		*ecsa_counter_off = curr_pos - start - 1;
+
+	/* at least one of ies is added */
+	if (pos != curr_pos) {
+		curr_pos = hostapd_eid_secondary_channel(hapd, curr_pos);
 #ifdef CONFIG_IEEE80211AC
-		pos = hostapd_eid_wb_chsw_wrapper(hapd, pos);
+		curr_pos = hostapd_eid_wb_chsw_wrapper(hapd, curr_pos);
 #endif /* CONFIG_IEEE80211AC */
 	}
-
-	return pos;
+	return curr_pos;
 }
 
 
@@ -449,7 +478,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_roaming_consortium(hapd, pos);
 
 	pos = hostapd_add_csa_elems(hapd, pos, (u8 *)resp,
-				    &hapd->cs_c_off_proberesp);
+				    &hapd->cs_c_off_proberesp,
+				    &hapd->cs_c_off_ecsa_proberesp);
 
 #ifdef CONFIG_FST
 	if (hapd->iface->fst_ies) {
@@ -1018,7 +1048,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	tailpos = hostapd_eid_adv_proto(hapd, tailpos);
 	tailpos = hostapd_eid_roaming_consortium(hapd, tailpos);
 	tailpos = hostapd_add_csa_elems(hapd, tailpos, tail,
-					&hapd->cs_c_off_beacon);
+					&hapd->cs_c_off_beacon,
+					&hapd->cs_c_off_ecsa_beacon);
 
 #ifdef CONFIG_FST
 	if (hapd->iface->fst_ies) {

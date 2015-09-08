@@ -228,6 +228,8 @@ struct hostapd_data {
 	unsigned int cs_c_off_beacon;
 	unsigned int cs_c_off_proberesp;
 	int csa_in_progress;
+	unsigned int cs_c_off_ecsa_beacon;
+	unsigned int cs_c_off_ecsa_proberesp;
 
 	/* BSS Load */
 	unsigned int bss_load_update_timeout;
@@ -401,6 +403,9 @@ struct hostapd_iface {
 	u64 last_channel_time;
 	u64 last_channel_time_busy;
 	u8 channel_utilization;
+
+	/* eCSA IE will be added only if operating class is specified */
+	u8 cs_oper_class;
 
 	unsigned int dfs_cac_ms;
 	struct os_reltime dfs_cac_start;

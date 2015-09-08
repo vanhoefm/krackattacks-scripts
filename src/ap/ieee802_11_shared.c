@@ -172,6 +172,8 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 	case 0: /* Bits 0-7 */
 		if (hapd->iconf->obss_interval)
 			*pos |= 0x01; /* Bit 0 - Coexistence management */
+		if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA)
+			*pos |= 0x04; /* Bit 2 - Extended Channel Switching */
 		break;
 	case 1: /* Bits 8-15 */
 		if (hapd->conf->proxy_arp)

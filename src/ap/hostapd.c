@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
+#include "common/hw_features_common.h"
 #include "radius/radius_client.h"
 #include "radius/radius_das.h"
 #include "eap_server/tncs.h"
@@ -2744,9 +2745,9 @@ free_ap_params:
 
 
 /*
- * TODO: This flow currently supports only changing frequency within the
- * same hw_mode. Any other changes to MAC parameters or provided settings (even
- * width) are not supported.
+ * TODO: This flow currently supports only changing channel and width within
+ * the same hw_mode. Any other changes to MAC parameters or provided settings
+ * are not supported.
  */
 static int hostapd_change_config_freq(struct hostapd_data *hapd,
 				      struct hostapd_config *conf,
@@ -2765,15 +2766,44 @@ static int hostapd_change_config_freq(struct hostapd_data *hapd,
 		return -1;
 
 	/* if a pointer to old_params is provided we save previous state */
-	if (old_params) {
-		old_params->channel = conf->channel;
-		old_params->ht_enabled = conf->ieee80211n;
-		old_params->sec_channel_offset = conf->secondary_channel;
+	if (old_params &&
+	    hostapd_set_freq_params(old_params, conf->hw_mode,
+				    hostapd_hw_get_freq(hapd, conf->channel),
+				    conf->channel, conf->ieee80211n,
+				    conf->ieee80211ac,
+				    conf->secondary_channel,
+				    conf->vht_oper_chwidth,
+				    conf->vht_oper_centr_freq_seg0_idx,
+				    conf->vht_oper_centr_freq_seg1_idx,
+				    conf->vht_capab))
+		return -1;
+
+	switch (params->bandwidth) {
+	case 0:
+	case 20:
+	case 40:
+		conf->vht_oper_chwidth = VHT_CHANWIDTH_USE_HT;
+		break;
+	case 80:
+		if (params->center_freq2)
+			conf->vht_oper_chwidth = VHT_CHANWIDTH_80P80MHZ;
+		else
+			conf->vht_oper_chwidth = VHT_CHANWIDTH_80MHZ;
+		break;
+	case 160:
+		conf->vht_oper_chwidth = VHT_CHANWIDTH_160MHZ;
+		break;
+	default:
+		return -1;
 	}
 
 	conf->channel = channel;
 	conf->ieee80211n = params->ht_enabled;
 	conf->secondary_channel = params->sec_channel_offset;
+	conf->vht_oper_centr_freq_seg0_idx =
+		hostapd_hw_get_channel(hapd, params->center_freq1);
+	conf->vht_oper_centr_freq_seg1_idx =
+		hostapd_hw_get_channel(hapd, params->center_freq2);
 
 	/* TODO: maybe call here hostapd_config_check here? */
 

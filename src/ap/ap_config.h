@@ -652,6 +652,7 @@ struct hostapd_config {
 	double ignore_assoc_probability;
 	double ignore_reassoc_probability;
 	double corrupt_gtk_rekey_mic_probability;
+	int ecsa_ie_only;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #ifdef CONFIG_ACS

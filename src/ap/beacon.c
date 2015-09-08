@@ -297,6 +297,11 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 
 static u8 * hostapd_eid_csa(struct hostapd_data *hapd, u8 *eid)
 {
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->iface->cs_oper_class && hapd->iconf->ecsa_ie_only)
+		return eid;
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (!hapd->cs_freq_params.channel)
 		return eid;
 

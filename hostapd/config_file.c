@@ -3249,6 +3249,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	PARSE_TEST_PROBABILITY(ignore_assoc_probability)
 	PARSE_TEST_PROBABILITY(ignore_reassoc_probability)
 	PARSE_TEST_PROBABILITY(corrupt_gtk_rekey_mic_probability)
+	} else if (os_strcmp(buf, "ecsa_ie_only") == 0) {
+		conf->ecsa_ie_only = atoi(pos);
 	} else if (os_strcmp(buf, "bss_load_test") == 0) {
 		WPA_PUT_LE16(bss->bss_load_test, atoi(pos));
 		pos = os_strchr(pos, ':');

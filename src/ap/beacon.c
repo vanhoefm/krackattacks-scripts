@@ -347,6 +347,9 @@ static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
 		/* save an offset to the counter - should be last byte */
 		*csa_counter_off = pos - start - 1;
 		pos = hostapd_eid_secondary_channel(hapd, pos);
+#ifdef CONFIG_IEEE80211AC
+		pos = hostapd_eid_wb_chsw_wrapper(hapd, pos);
+#endif /* CONFIG_IEEE80211AC */
 	}
 
 	return pos;

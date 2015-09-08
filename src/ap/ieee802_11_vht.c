@@ -131,6 +131,58 @@ static int check_valid_vht_mcs(struct hostapd_hw_modes *mode,
 }
 
 
+u8 * hostapd_eid_wb_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 bw, chan1, chan2 = 0;
+	int freq1;
+
+	if (!hapd->cs_freq_params.vht_enabled)
+		return eid;
+
+	/* bandwidth: 0: 40, 1: 80, 2: 160, 3: 80+80 */
+	switch (hapd->cs_freq_params.bandwidth) {
+	case 40:
+		bw = 0;
+		break;
+	case 80:
+		/* check if it's 80+80 */
+		if (!hapd->cs_freq_params.center_freq2)
+			bw = 1;
+		else
+			bw = 3;
+		break;
+	case 160:
+		bw = 2;
+		break;
+	default:
+		/* not valid VHT bandwidth or not in CSA */
+		return eid;
+	}
+
+	freq1 = hapd->cs_freq_params.center_freq1 ?
+		hapd->cs_freq_params.center_freq1 :
+		hapd->cs_freq_params.freq;
+	if (ieee80211_freq_to_chan(freq1, &chan1) !=
+	    HOSTAPD_MODE_IEEE80211A)
+		return eid;
+
+	if (hapd->cs_freq_params.center_freq2 &&
+	    ieee80211_freq_to_chan(hapd->cs_freq_params.center_freq2,
+				   &chan2) != HOSTAPD_MODE_IEEE80211A)
+		return eid;
+
+	*eid++ = WLAN_EID_VHT_CHANNEL_SWITCH_WRAPPER;
+	*eid++ = 5; /* Length of Channel Switch Wrapper */
+	*eid++ = WLAN_EID_VHT_WIDE_BW_CHSWITCH;
+	*eid++ = 3; /* Length of Wide Bandwidth Channel Switch element */
+	*eid++ = bw; /* New Channel Width */
+	*eid++ = chan1; /* New Channel Center Frequency Segment 0 */
+	*eid++ = chan2; /* New Channel Center Frequency Segment 1 */
+
+	return eid;
+}
+
+
 u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *vht_capab)
 {

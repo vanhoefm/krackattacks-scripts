@@ -670,6 +670,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 	size_t i, resp_len;
 	int noack;
 	enum ssid_match_result res;
+	int ret;
+	u16 csa_offs[2];
+	size_t csa_offs_len;
 
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
@@ -858,7 +861,22 @@ void handle_probe_req(struct hostapd_data *hapd,
 	noack = !!(res == WILDCARD_SSID_MATCH &&
 		   is_broadcast_ether_addr(mgmt->da));
 
-	if (hostapd_drv_send_mlme(hapd, resp, resp_len, noack) < 0)
+	csa_offs_len = 0;
+	if (hapd->csa_in_progress) {
+		if (hapd->cs_c_off_proberesp)
+			csa_offs[csa_offs_len++] =
+				hapd->cs_c_off_proberesp;
+
+		if (hapd->cs_c_off_ecsa_proberesp)
+			csa_offs[csa_offs_len++] =
+				hapd->cs_c_off_ecsa_proberesp;
+	}
+
+	ret = hostapd_drv_send_mlme_csa(hapd, resp, resp_len, noack,
+					csa_offs_len ? csa_offs : NULL,
+					csa_offs_len);
+
+	if (ret < 0)
 		wpa_printf(MSG_INFO, "handle_probe_req: send failed");
 
 	os_free(resp);

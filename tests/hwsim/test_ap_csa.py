@@ -12,9 +12,10 @@ import hwsim_utils
 import hostapd
 from utils import HwsimSkip
 
-def connect(dev, apdev):
+def connect(dev, apdev, **kwargs):
     params = { "ssid": "ap-csa",
                "channel": "1" }
+    params.update(kwargs)
     ap = hostapd.add_ap(apdev[0]['ifname'], params)
     dev.connect("ap-csa", key_mgmt="NONE")
     return ap
@@ -108,4 +109,13 @@ def test_ap_csa_1_switch_count_2(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 2, 2462)
+    hwsim_utils.test_connectivity(dev[0], ap)
+
+def test_ap_csa_ecsa_only(dev, apdev):
+    """AP Channel Switch, one switch with only ECSA IE"""
+    csa_supported(dev[0])
+    ap = connect(dev[0], apdev, ecsa_ie_only="1")
+
+    hwsim_utils.test_connectivity(dev[0], ap)
+    switch_channel(ap, 10, 2462)
     hwsim_utils.test_connectivity(dev[0], ap)

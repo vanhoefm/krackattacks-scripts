@@ -5533,23 +5533,41 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 	struct wpa_used_freq_data *freqs;
 	unsigned int cand;
 	unsigned int num, i;
+	int ignore_no_freqs = 0;
 
 	os_memset(params, 0, sizeof(*params));
 	params->role_go = 1;
 	params->ht40 = ht40;
 	params->vht = vht;
 
-	if (wpa_s->p2p_group_common_freqs_num)
-		wpa_printf(MSG_DEBUG, "P2P: %s called for an active GO",
-			   __func__);
-
 	freqs = os_calloc(wpa_s->num_multichan_concurrent,
 			  sizeof(struct wpa_used_freq_data));
 	if (!freqs)
 		return -1;
 
-	num = wpas_p2p_valid_oper_freqs(wpa_s, freqs,
-					wpa_s->num_multichan_concurrent);
+	num = get_shared_radio_freqs_data(wpa_s, freqs,
+					  wpa_s->num_multichan_concurrent);
+
+	if (wpa_s->current_ssid &&
+	    wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO &&
+	    wpa_s->wpa_state == WPA_COMPLETED) {
+		wpa_printf(MSG_DEBUG, "P2P: %s called for an active GO",
+			   __func__);
+
+		/*
+		 * If the frequency selection is done for an active P2P GO that
+		 * is not sharing a frequency, allow to select a new frequency
+		 * even if there are no unused frequencies as we are about to
+		 * move the P2P GO so its frequency can be re-used.
+		 */
+		for (i = 0; i < num; i++) {
+			if (freqs[i].freq == wpa_s->current_ssid->frequency &&
+			    freqs[i].flags == 0) {
+				ignore_no_freqs = 1;
+				break;
+			}
+		}
+	}
 
 	/* try using the forced freq */
 	if (freq) {
@@ -5570,7 +5588,8 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 			}
 		}
 
-		if (wpas_p2p_num_unused_channels(wpa_s) <= 0) {
+		if (!ignore_no_freqs &&
+		    wpas_p2p_num_unused_channels(wpa_s) <= 0) {
 			wpa_printf(MSG_DEBUG,
 				   "P2P: Cannot force GO on freq (%d MHz) as all the channels are in use",
 				   freq);
@@ -5608,7 +5627,8 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (wpas_p2p_num_unused_channels(wpa_s) <= 0) {
+	if (!ignore_no_freqs &&
+	    wpas_p2p_num_unused_channels(wpa_s) <= 0) {
 		wpa_printf(MSG_DEBUG,
 			   "P2P: Cannot force GO on any of the channels we are already using");
 		goto fail;

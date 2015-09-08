@@ -230,6 +230,7 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 }
 
 #ifdef CONFIG_FILS
+
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher)
@@ -291,6 +292,87 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 	/* TODO: FILS-FT */
 
 	os_memset(tmp, 0, sizeof(tmp));
+	return 0;
+}
+
+
+int fils_key_auth_sk(const u8 *ick, size_t ick_len, const u8 *snonce,
+		     const u8 *anonce, const u8 *sta_addr, const u8 *bssid,
+		     const u8 *g_sta, size_t g_sta_len,
+		     const u8 *g_ap, size_t g_ap_len,
+		     int akmp, u8 *key_auth_sta, u8 *key_auth_ap,
+		     size_t *key_auth_len)
+{
+	const u8 *addr[6];
+	size_t len[6];
+	size_t num_elem = 4;
+	int res;
+
+	/*
+	 * For (Re)Association Request frame (STA->AP):
+	 * Key-Auth = HMAC-Hash(ICK, SNonce || ANonce || STA-MAC || AP-BSSID
+	 *                      [ || gSTA || gAP ])
+	 */
+	addr[0] = snonce;
+	len[0] = FILS_NONCE_LEN;
+	addr[1] = anonce;
+	len[1] = FILS_NONCE_LEN;
+	addr[2] = sta_addr;
+	len[2] = ETH_ALEN;
+	addr[3] = bssid;
+	len[3] = ETH_ALEN;
+	if (g_sta && g_ap_len && g_ap && g_ap_len) {
+		addr[4] = g_sta;
+		len[4] = g_sta_len;
+		addr[5] = g_ap;
+		len[5] = g_ap_len;
+		num_elem = 6;
+	}
+
+	if (wpa_key_mgmt_sha384(akmp)) {
+		*key_auth_len = 48;
+		res = hmac_sha384_vector(ick, ick_len, num_elem, addr, len,
+					 key_auth_sta);
+	} else if (wpa_key_mgmt_sha256(akmp)) {
+		*key_auth_len = 32;
+		res = hmac_sha256_vector(ick, ick_len, num_elem, addr, len,
+					 key_auth_sta);
+	} else {
+		return -1;
+	}
+	if (res < 0)
+		return res;
+
+	/*
+	 * For (Re)Association Response frame (AP->STA):
+	 * Key-Auth = HMAC-Hash(ICK, ANonce || SNonce || AP-BSSID || STA-MAC
+	 *                      [ || gAP || gSTA ])
+	 */
+	addr[0] = anonce;
+	addr[1] = snonce;
+	addr[2] = bssid;
+	addr[3] = sta_addr;
+	if (g_sta && g_ap_len && g_ap && g_ap_len) {
+		addr[4] = g_ap;
+		len[4] = g_ap_len;
+		addr[5] = g_sta;
+		len[5] = g_sta_len;
+	}
+
+	if (wpa_key_mgmt_sha384(akmp))
+		res = hmac_sha384_vector(ick, ick_len, num_elem, addr, len,
+					 key_auth_ap);
+	else if (wpa_key_mgmt_sha256(akmp))
+		res = hmac_sha256_vector(ick, ick_len, num_elem, addr, len,
+					 key_auth_ap);
+	if (res < 0)
+		return res;
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Key-Auth (STA)",
+		    key_auth_sta, *key_auth_len);
+	wpa_hexdump(MSG_DEBUG, "FILS: Key-Auth (AP)",
+		    key_auth_ap, *key_auth_len);
+
 	return 0;
 }
 

@@ -333,6 +333,12 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher);
+int fils_key_auth_sk(const u8 *ick, size_t ick_len, const u8 *snonce,
+		     const u8 *anonce, const u8 *sta_addr, const u8 *bssid,
+		     const u8 *g_sta, size_t g_sta_len,
+		     const u8 *g_ap, size_t g_ap_len,
+		     int akmp, u8 *key_auth_sta, u8 *key_auth_ap,
+		     size_t *key_auth_len);
 
 #ifdef CONFIG_IEEE80211R
 int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,

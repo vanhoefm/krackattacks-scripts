@@ -2366,6 +2366,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	const u8 *pos;
 	int left, i;
 	struct sta_info *sta;
+	u8 *tmp = NULL;
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_req) :
 				      sizeof(mgmt->u.assoc_req))) {
@@ -2491,6 +2492,30 @@ static void handle_assoc(struct hostapd_data *hapd,
 	 */
 	sta->capability = capab_info;
 
+#ifdef CONFIG_FILS
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		/* The end of the payload is encrypted. Need to decrypt it
+		 * before parsing. */
+
+		tmp = os_malloc(left);
+		if (!tmp) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		os_memcpy(tmp, pos, left);
+
+		left = fils_decrypt_assoc(sta->wpa_sm, sta->fils_session, mgmt,
+					  len, tmp, left);
+		if (left < 0) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		pos = tmp;
+	}
+#endif /* CONFIG_FILS */
+
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
 	 * is used */
 	resp = check_assoc_ies(hapd, sta, pos, left, reassoc);
@@ -2600,6 +2625,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
 
 	reply_res = send_assoc_resp(hapd, sta, resp, reassoc, pos, left);
+	os_free(tmp);
 
 	/*
 	 * Remove the station in case tranmission of a success response fails

@@ -1747,6 +1747,10 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event)
 	if (sm->mgmt_frame_prot && event == WPA_AUTH)
 		remove_ptk = 0;
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_FILS
+	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt) && event == WPA_AUTH)
+		remove_ptk = 0;
+#endif /* CONFIG_FILS */
 
 	if (remove_ptk) {
 		sm->PTK_valid = FALSE;
@@ -2057,6 +2061,11 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 			       sm->fils_key_auth_ap,
 			       &sm->fils_key_auth_len);
 	os_memset(ick, 0, sizeof(ick));
+
+	/* Store nonces for (Re)Association Request/Response frame processing */
+	os_memcpy(sm->SNonce, snonce, FILS_NONCE_LEN);
+	os_memcpy(sm->ANonce, anonce, FILS_NONCE_LEN);
+
 	return res;
 }
 
@@ -2114,6 +2123,138 @@ static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 		*_key_data_len = key_data_len;
 	return 0;
 }
+
+
+int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
+		       const struct ieee80211_mgmt *mgmt, size_t frame_len,
+		       u8 *pos, size_t left)
+{
+	u16 fc, stype;
+	const u8 *end, *ie_start, *ie, *session, *crypt;
+	struct ieee802_11_elems elems;
+	const u8 *aad[5];
+	size_t aad_len[5];
+
+	if (!sm || !sm->PTK_valid) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: No KEK to decrypt Assocication Request frame");
+		return -1;
+	}
+
+	if (!wpa_key_mgmt_fils(sm->wpa_key_mgmt)) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Not a FILS AKM - reject association");
+		return -1;
+	}
+
+	end = ((const u8 *) mgmt) + frame_len;
+	fc = le_to_host16(mgmt->frame_control);
+	stype = WLAN_FC_GET_STYPE(fc);
+	if (stype == WLAN_FC_STYPE_REASSOC_REQ)
+		ie_start = mgmt->u.reassoc_req.variable;
+	else
+		ie_start = mgmt->u.assoc_req.variable;
+	ie = ie_start;
+
+	/*
+	 * Find FILS Session element which is the last unencrypted element in
+	 * the frame.
+	 */
+	session = NULL;
+	while (ie + 1 < end) {
+		if (ie + 2 + ie[1] > end)
+			break;
+		if (ie[0] == WLAN_EID_EXTENSION &&
+		    ie[1] >= 1 + FILS_SESSION_LEN &&
+		    ie[2] == WLAN_EID_EXT_FILS_SESSION) {
+			session = ie;
+			break;
+		}
+		ie += 2 + ie[1];
+	}
+
+	if (!session) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Could not find FILS Session element in Association Request frame - reject");
+		return -1;
+	}
+	if (os_memcmp(fils_session, session + 3, FILS_SESSION_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Session mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
+			    fils_session, FILS_SESSION_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS: Received FILS Session",
+			    session + 3, FILS_SESSION_LEN);
+		return -1;
+	}
+	crypt = session + 2 + session[1];
+
+	if (end - crypt < AES_BLOCK_SIZE) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Too short frame to include AES-SIV data");
+		return -1;
+	}
+
+	/* AES-SIV AAD vectors */
+
+	/* The STA's MAC address */
+	aad[0] = mgmt->sa;
+	aad_len[0] = ETH_ALEN;
+	/* The AP's BSSID */
+	aad[1] = mgmt->da;
+	aad_len[1] = ETH_ALEN;
+	/* The STA's nonce */
+	aad[2] = sm->SNonce;
+	aad_len[2] = FILS_NONCE_LEN;
+	/* The AP's nonce */
+	aad[3] = sm->ANonce;
+	aad_len[3] = FILS_NONCE_LEN;
+	/*
+	 * The (Re)Association Request frame from the Capability Information
+	 * field to the FILS Session element (both inclusive).
+	 */
+	aad[4] = (const u8 *) &mgmt->u.assoc_req.capab_info;
+	aad_len[4] = crypt - aad[0];
+
+	if (aes_siv_decrypt(sm->PTK.kek, sm->PTK.kek_len, crypt, end - crypt,
+			    1, aad, aad_len, pos + (crypt - ie_start)) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Invalid AES-SIV data in the frame");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "FILS: Decrypted Association Request elements",
+		    pos, left - AES_BLOCK_SIZE);
+
+	if (ieee802_11_parse_elems(pos, left - AES_BLOCK_SIZE, &elems, 1) ==
+	    ParseFailed) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Failed to parse decrypted elements");
+		return -1;
+	}
+	if (!elems.fils_key_confirm) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Key Confirm element");
+		return -1;
+	}
+	if (elems.fils_key_confirm_len != sm->fils_key_auth_len) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Unexpected Key-Auth length %d (expected %d)",
+			   elems.fils_key_confirm_len,
+			   (int) sm->fils_key_auth_len);
+		return -1;
+	}
+	if (os_memcmp(elems.fils_key_confirm, sm->fils_key_auth_sta,
+		      sm->fils_key_auth_len) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Key-Auth mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Received Key-Auth",
+			    elems.fils_key_confirm,
+			    elems.fils_key_confirm_len);
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected Key-Auth",
+			    sm->fils_key_auth_sta, sm->fils_key_auth_len);
+		return -1;
+	}
+
+	return left - AES_BLOCK_SIZE;
+}
+
 #endif /* CONFIG_FILS */
 
 

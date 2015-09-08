@@ -5568,7 +5568,7 @@ int get_shared_radio_freqs_data(struct wpa_supplicant *wpa_s,
 			freqs_data[idx++].freq = freq;
 
 		if (ifs->current_ssid->mode == WPAS_MODE_INFRA) {
-			freqs_data[i].flags = ifs->current_ssid->p2p_group ?
+			freqs_data[i].flags |= ifs->current_ssid->p2p_group ?
 				WPA_FREQ_USED_BY_P2P_CLIENT :
 				WPA_FREQ_USED_BY_INFRA_STATION;
 		}

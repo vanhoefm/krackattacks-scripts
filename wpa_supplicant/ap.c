@@ -76,10 +76,19 @@ no_vht:
 #endif /* CONFIG_IEEE80211N */
 
 
-void wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
-			       struct wpa_ssid *ssid,
-			       struct hostapd_config *conf)
+int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid,
+			      struct hostapd_config *conf)
 {
+	conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
+					       &conf->channel);
+
+	if (conf->hw_mode == NUM_HOSTAPD_MODES) {
+		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
+			   ssid->frequency);
+		return -1;
+	}
+
 	/* TODO: enable HT40 if driver supports it;
 	 * drop to 11b if driver does not support 11g */
 
@@ -166,6 +175,8 @@ void wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 		}
 	}
 #endif /* CONFIG_IEEE80211N */
+
+	return 0;
 }
 
 
@@ -179,15 +190,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	os_strlcpy(bss->iface, wpa_s->ifname, sizeof(bss->iface));
 
-	conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
-					       &conf->channel);
-	if (conf->hw_mode == NUM_HOSTAPD_MODES) {
-		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
-			   ssid->frequency);
+	if (wpa_supplicant_conf_ap_ht(wpa_s, ssid, conf))
 		return -1;
-	}
-
-	wpa_supplicant_conf_ap_ht(wpa_s, ssid, conf);
 
 	if (ieee80211_is_dfs(ssid->frequency) && wpa_s->conf->country[0]) {
 		conf->ieee80211h = 1;

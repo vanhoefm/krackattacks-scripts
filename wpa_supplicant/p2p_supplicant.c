@@ -53,6 +53,13 @@
  */
 #define P2P_GO_FREQ_CHANGE_TIME 5
 
+/**
+ * Defines CSA parameters which are used when GO evacuates the no longer valid
+ * channel (and if the driver supports channel switch).
+ */
+#define P2P_GO_CSA_COUNT 7
+#define P2P_GO_CSA_BLOCK_TX 0
+
 #ifndef P2P_MAX_CLIENT_IDLE
 /*
  * How many seconds to try to reconnect to the GO when connection in P2P client
@@ -8473,14 +8480,117 @@ static void wpas_p2p_optimize_listen_channel(struct wpa_supplicant *wpa_s,
 
 static int wpas_p2p_move_go_csa(struct wpa_supplicant *wpa_s)
 {
+	struct hostapd_config *conf;
+	struct p2p_go_neg_results params;
+	struct csa_settings csa_settings;
+	struct wpa_ssid *current_ssid = wpa_s->current_ssid;
+	int old_freq = current_ssid->frequency;
+	int ret;
+	u8 chan;
+
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP_CSA)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "CSA is not enabled");
 		return -1;
 	}
 
-	/* TODO: Add CSA support */
-	wpa_dbg(wpa_s, MSG_DEBUG, "Moving GO with CSA is not implemented");
-	return -1;
+	/*
+	 * TODO: This function may not always work correctly. For example,
+	 * when we have a running GO and a BSS on a DFS channel.
+	 */
+	if (wpas_p2p_init_go_params(wpa_s, &params, 0, 0, 0, NULL)) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: Failed to select new frequency for GO");
+		return -1;
+	}
+
+	if (current_ssid->frequency == params.freq) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: Selected same frequency - not moving GO");
+		return 0;
+	}
+
+	conf = hostapd_config_defaults();
+	if (!conf) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: Failed to allocate default config");
+		return -1;
+	}
+
+	current_ssid->frequency = params.freq;
+	if (wpa_supplicant_conf_ap_ht(wpa_s, current_ssid, conf)) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: Failed to create new GO config");
+		ret = -1;
+		goto out;
+	}
+
+	if (conf->hw_mode != wpa_s->ap_iface->current_mode->mode) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: CSA to a different band is not supported");
+		ret = -1;
+		goto out;
+	}
+
+	os_memset(&csa_settings, 0, sizeof(csa_settings));
+	csa_settings.cs_count = P2P_GO_CSA_COUNT;
+	csa_settings.block_tx = P2P_GO_CSA_BLOCK_TX;
+	csa_settings.freq_params.freq = params.freq;
+
+	if (ieee80211_freq_to_channel_ext(params.freq, conf->secondary_channel,
+					  conf->ieee80211ac,
+					  &wpa_s->ap_iface->cs_oper_class,
+					  &chan) == NUM_HOSTAPD_MODES) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P CSA: Selected invalid frequency");
+		ret = -1;
+		goto out;
+	}
+
+	csa_settings.freq_params.channel = chan;
+	csa_settings.freq_params.sec_channel_offset = conf->secondary_channel;
+	csa_settings.freq_params.ht_enabled = conf->ieee80211n;
+	csa_settings.freq_params.bandwidth = conf->secondary_channel ? 40 : 20;
+
+	if (conf->ieee80211ac) {
+		int freq1 = 0, freq2 = 0;
+
+		if (conf->vht_oper_centr_freq_seg0_idx)
+			freq1 = ieee80211_chan_to_freq(
+				NULL, wpa_s->ap_iface->cs_oper_class,
+				conf->vht_oper_centr_freq_seg0_idx);
+
+		if (conf->vht_oper_centr_freq_seg1_idx)
+			freq2 = ieee80211_chan_to_freq(
+				NULL, wpa_s->ap_iface->cs_oper_class,
+				conf->vht_oper_centr_freq_seg1_idx);
+
+		if (freq1 < 0 || freq2 < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P CSA: Selected invalid VHT center freqs");
+			ret = -1;
+			goto out;
+		}
+
+		csa_settings.freq_params.vht_enabled = conf->ieee80211ac;
+		csa_settings.freq_params.center_freq1 = freq1;
+		csa_settings.freq_params.center_freq2 = freq2;
+
+		switch (conf->vht_oper_chwidth) {
+		case VHT_CHANWIDTH_80MHZ:
+		case VHT_CHANWIDTH_80P80MHZ:
+			csa_settings.freq_params.bandwidth = 80;
+			break;
+		case VHT_CHANWIDTH_160MHZ:
+			csa_settings.freq_params.bandwidth = 160;
+			break;
+		}
+	}
+
+	ret = ap_switch_channel(wpa_s, &csa_settings);
+out:
+	current_ssid->frequency = old_freq;
+	hostapd_config_free(conf);
+	return ret;
 }
 
 

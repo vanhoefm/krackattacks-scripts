@@ -986,6 +986,9 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 {
 	struct wpa_driver_associate_params params;
 	struct ieee802_11_elems elems;
+#ifdef CONFIG_FILS
+	u8 nonces[2 * FILS_NONCE_LEN];
+#endif /* CONFIG_FILS */
 #ifdef CONFIG_HT_OVERRIDES
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
@@ -996,6 +999,37 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 #endif /* CONFIG_VHT_OVERRIDES */
 
 	os_memset(&params, 0, sizeof(params));
+
+#ifdef CONFIG_FILS
+	if (auth_type == WLAN_AUTH_FILS_SK) {
+		struct wpabuf *buf;
+		const u8 *snonce, *anonce;
+
+		buf = fils_build_assoc_req(wpa_s->wpa, &params.fils_kek,
+					   &params.fils_kek_len, &snonce,
+					   &anonce);
+		if (!buf)
+			return;
+		/* TODO: Make wpa_s->sme.assoc_req_ie use dynamic allocation */
+		if (wpa_s->sme.assoc_req_ie_len + wpabuf_len(buf) >
+		    sizeof(wpa_s->sme.assoc_req_ie)) {
+			wpa_printf(MSG_ERROR,
+				   "FILS: Not enough buffer room for own AssocReq elements");
+			wpabuf_free(buf);
+			return;
+		}
+		os_memcpy(wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len,
+			  wpabuf_head(buf), wpabuf_len(buf));
+		wpa_s->sme.assoc_req_ie_len += wpabuf_len(buf);
+		wpabuf_free(buf);
+
+		os_memcpy(nonces, snonce, FILS_NONCE_LEN);
+		os_memcpy(nonces + FILS_NONCE_LEN, anonce, FILS_NONCE_LEN);
+		params.fils_nonces = nonces;
+		params.fils_nonces_len = sizeof(nonces);
+	}
+#endif /* CONFIG_FILS */
+
 	params.bssid = bssid;
 	params.ssid = wpa_s->sme.ssid;
 	params.ssid_len = wpa_s->sme.ssid_len;

@@ -428,5 +428,8 @@ void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf);
 
 struct wpabuf * fils_build_auth(struct wpa_sm *sm);
 int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len);
+struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
+				     size_t *kek_len, const u8 **snonce,
+				     const u8 **anonce);
 
 #endif /* WPA_H */

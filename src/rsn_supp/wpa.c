@@ -3422,4 +3422,53 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 	return res;
 }
 
+
+struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
+				     size_t *kek_len, const u8 **snonce,
+				     const u8 **anonce)
+{
+	struct wpabuf *buf;
+
+	buf = wpabuf_alloc(1000);
+	if (!buf)
+		return NULL;
+
+	/* FILS Session */
+	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(buf, 1 + FILS_SESSION_LEN); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_SESSION);
+	wpabuf_put_data(buf, sm->fils_session, FILS_SESSION_LEN);
+
+	/* Everything after FILS Session element gets encrypted in the driver
+	 * with KEK. The buffer returned from here is the plaintext version. */
+
+	/* TODO: FILS Public Key */
+
+	/* FILS Key Confirm */
+	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+	wpabuf_put_u8(buf, 1 + sm->fils_key_auth_len); /* Length */
+	/* Element ID Extension */
+	wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_KEY_CONFIRM);
+	wpabuf_put_data(buf, sm->fils_key_auth_sta, sm->fils_key_auth_len);
+
+	/* TODO: FILS HLP Container */
+
+	/* TODO: FILS IP Address Assignment */
+
+	wpa_hexdump_buf(MSG_DEBUG, "FILS: Association Request plaintext", buf);
+
+	*kek = sm->ptk.kek;
+	*kek_len = sm->ptk.kek_len;
+	wpa_hexdump_key(MSG_DEBUG, "FILS: KEK for AEAD", *kek, *kek_len);
+	*snonce = sm->fils_nonce;
+	wpa_hexdump(MSG_DEBUG, "FILS: SNonce for AEAD AAD",
+		    *snonce, FILS_NONCE_LEN);
+	*anonce = sm->fils_anonce;
+	wpa_hexdump(MSG_DEBUG, "FILS: ANonce for AEAD AAD",
+		    *anonce, FILS_NONCE_LEN);
+
+	return buf;
+}
+
 #endif /* CONFIG_FILS */

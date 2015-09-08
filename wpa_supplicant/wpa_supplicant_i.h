@@ -721,7 +721,7 @@ struct wpa_supplicant {
 		u8 ssid[SSID_MAX_LEN];
 		size_t ssid_len;
 		int freq;
-		u8 assoc_req_ie[200];
+		u8 assoc_req_ie[300];
 		size_t assoc_req_ie_len;
 		int mfp;
 		int ft_used;

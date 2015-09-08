@@ -326,28 +326,6 @@ static u8 * hostapd_eid_ecsa(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-static u8 * hostapd_eid_secondary_channel(struct hostapd_data *hapd, u8 *eid)
-{
-	u8 sec_ch;
-
-	if (!hapd->cs_freq_params.sec_channel_offset)
-		return eid;
-
-	if (hapd->cs_freq_params.sec_channel_offset == -1)
-		sec_ch = HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW;
-	else if (hapd->cs_freq_params.sec_channel_offset == 1)
-		sec_ch = HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE;
-	else
-		return eid;
-
-	*eid++ = WLAN_EID_SECONDARY_CHANNEL_OFFSET;
-	*eid++ = 1;
-	*eid++ = sec_ch;
-
-	return eid;
-}
-
-
 static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
 				  u8 *start, unsigned int *csa_counter_off,
 				  unsigned int *ecsa_counter_off)
@@ -376,7 +354,9 @@ static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
 
 	/* at least one of ies is added */
 	if (pos != curr_pos) {
+#ifdef CONFIG_IEEE80211N
 		curr_pos = hostapd_eid_secondary_channel(hapd, curr_pos);
+#endif /* CONFIG_IEEE80211N */
 #ifdef CONFIG_IEEE80211AC
 		curr_pos = hostapd_eid_wb_chsw_wrapper(hapd, curr_pos);
 #endif /* CONFIG_IEEE80211AC */

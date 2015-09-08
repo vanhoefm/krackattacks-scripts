@@ -326,6 +326,34 @@ static u8 * hostapd_eid_ecsa(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static u8 * hostapd_eid_supported_op_classes(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 op_class, channel;
+
+	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA) ||
+	    !hapd->iface->freq)
+		return eid;
+
+	if (ieee80211_freq_to_channel_ext(hapd->iface->freq,
+					  hapd->iconf->secondary_channel,
+					  hapd->iconf->vht_oper_chwidth,
+					  &op_class, &channel) ==
+	    NUM_HOSTAPD_MODES)
+		return eid;
+
+	*eid++ = WLAN_EID_SUPPORTED_OPERATING_CLASSES;
+	*eid++ = 2;
+
+	/* Current Operating Class */
+	*eid++ = op_class;
+
+	/* TODO: Advertise all the supported operating classes */
+	*eid++ = 0;
+
+	return eid;
+}
+
+
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
@@ -415,6 +443,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	if (csa_pos != pos)
 		hapd->cs_c_off_ecsa_proberesp = csa_pos - (u8 *) resp - 1;
 	pos = csa_pos;
+
+	pos = hostapd_eid_supported_op_classes(hapd, pos);
 
 #ifdef CONFIG_IEEE80211N
 	/* Secondary Channel Offset element */
@@ -996,6 +1026,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	if (csa_pos != tailpos)
 		hapd->cs_c_off_ecsa_beacon = csa_pos - tail - 1;
 	tailpos = csa_pos;
+
+	tailpos = hostapd_eid_supported_op_classes(hapd, tailpos);
 
 #ifdef CONFIG_IEEE80211N
 	/* Secondary Channel Offset element */

@@ -174,19 +174,21 @@ def test_p2p_channel_avoid(dev):
         ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
         if ev is None:
             raise Exception("No CTRL-EVENT-AVOID-FREQ event")
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=1)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"], timeout=1)
         if ev is not None:
-            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP event")
+            raise Exception("Unexpected + " + ev + " event")
 
         if "OK" not in dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES " + str(freq)):
             raise Exception("Could not simulate driver event(3)")
         ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
         if ev is None:
             raise Exception("No CTRL-EVENT-AVOID-FREQ event")
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"],
                                      timeout=10)
         if ev is None:
-            raise Exception("No P2P-REMOVE-AND-REFORM-GROUP event")
+            raise Exception("No P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED event")
     finally:
         set_country("00")
         dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES")
@@ -693,10 +695,11 @@ def test_p2p_go_move_reg_change(dev, apdev, params):
         # GO move is not allowed while waiting for initial client connection
         time.sleep(20)
         set_country("00")
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"],
                                      timeout=10)
         if ev is None:
-            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
 
         freq2 = dev[0].get_group_status_field('freq')
         if freq1 == freq2:
@@ -732,10 +735,11 @@ def test_p2p_go_move_active(dev, apdev, params):
         time.sleep(20)
         dev[0].global_request("P2P_SET disallow_freq ")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"],
                                      timeout=10)
         if ev is not None:
-            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP seen")
+            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED seen")
 
         dev[0].remove_group()
     finally:
@@ -767,9 +771,10 @@ def test_p2p_go_move_scm(dev, apdev, params):
         time.sleep(20)
         dev[0].global_request("P2P_SET disallow_freq ")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
-            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -807,9 +812,10 @@ def test_p2p_go_move_scm_peer_supports(dev, apdev, params):
         dev[0].connect("ap-test", key_mgmt="NONE",
                        scan_freq="2462")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
-            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -849,10 +855,11 @@ def test_p2p_go_move_scm_peer_does_not_support(dev, apdev, params):
         dev[0].connect("ap-test", key_mgmt="NONE",
                        scan_freq="2462")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"],
                                      timeout=10)
         if ev is not None:
-            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP seen")
+            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED seen")
 
         dev[0].remove_group()
     finally:
@@ -885,9 +892,10 @@ def test_p2p_go_move_scm_multi(dev, apdev, params):
         time.sleep(20)
         dev[0].global_request("P2P_SET disallow_freq ")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=3)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
-            raise Exception("P2P-REMOVE-AND-REFORM-GROUP not seen")
+            raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -898,9 +906,10 @@ def test_p2p_go_move_scm_multi(dev, apdev, params):
         dev[0].connect("ap-test-2", key_mgmt="NONE",
                        scan_freq="2437")
 
-        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=5)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                      "AP-CSA-FINISHED"], timeout=5)
         if ev is None:
-            raise Exception("(2) P2P-REMOVE-AND-REFORM-GROUP not seen")
+            raise Exception("(2) P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2437':

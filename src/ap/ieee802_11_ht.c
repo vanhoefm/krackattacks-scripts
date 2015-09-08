@@ -112,7 +112,8 @@ u8 * hostapd_eid_secondary_channel(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 sec_ch;
 
-	if (!hapd->cs_freq_params.sec_channel_offset)
+	if (!hapd->cs_freq_params.channel ||
+	    !hapd->cs_freq_params.sec_channel_offset)
 		return eid;
 
 	if (hapd->cs_freq_params.sec_channel_offset == -1)

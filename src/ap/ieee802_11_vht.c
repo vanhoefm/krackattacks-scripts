@@ -136,7 +136,8 @@ u8 * hostapd_eid_wb_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
 	u8 bw, chan1, chan2 = 0;
 	int freq1;
 
-	if (!hapd->cs_freq_params.vht_enabled)
+	if (!hapd->cs_freq_params.channel ||
+	    !hapd->cs_freq_params.vht_enabled)
 		return eid;
 
 	/* bandwidth: 0: 40, 1: 80, 2: 160, 3: 80+80 */

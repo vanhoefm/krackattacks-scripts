@@ -2634,6 +2634,17 @@ void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s)
 }
 
 
+int hostapd_csa_in_progress(struct hostapd_iface *iface)
+{
+	unsigned int i;
+
+	for (i = 0; i < iface->num_bss; i++)
+		if (iface->bss[i]->csa_in_progress)
+			return 1;
+	return 0;
+}
+
+
 #ifdef NEED_AP_MLME
 
 static void free_beacon_data(struct beacon_data *beacon)

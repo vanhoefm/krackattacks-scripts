@@ -817,16 +817,6 @@ static int hostapd_dfs_start_channel_switch_cac(struct hostapd_iface *iface)
 }
 
 
-static int hostapd_csa_in_progress(struct hostapd_iface *iface)
-{
-	unsigned int i;
-	for (i = 0; i < iface->num_bss; i++)
-		if (iface->bss[i]->csa_in_progress)
-			return 1;
-	return 0;
-}
-
-
 static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
 {
 	struct hostapd_channel_data *channel;

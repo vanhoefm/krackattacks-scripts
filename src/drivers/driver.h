@@ -1965,10 +1965,13 @@ struct wpa_driver_ops {
 	 * @noack: Do not wait for this frame to be acked (disable retries)
 	 * @freq: Frequency (in MHz) to send the frame on, or 0 to let the
 	 * driver decide
+	 * @csa_offs: Array of CSA offsets or %NULL
+	 * @csa_offs_len: Number of elements in csa_offs
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*send_mlme)(void *priv, const u8 *data, size_t data_len,
-			 int noack, unsigned int freq);
+			 int noack, unsigned int freq, const u16 *csa_offs,
+			 size_t csa_offs_len);
 
 	/**
 	 * update_ft_ies - Update FT (IEEE 802.11r) IEs

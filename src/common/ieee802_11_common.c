@@ -570,7 +570,8 @@ enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel)
 {
 	u8 op_class;
 
-	return ieee80211_freq_to_channel_ext(freq, 0, 0, &op_class, channel);
+	return ieee80211_freq_to_channel_ext(freq, 0, VHT_CHANWIDTH_USE_HT,
+					     &op_class, channel);
 }
 
 
@@ -579,7 +580,7 @@ enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel)
  * for HT40 and VHT. DFS channels are not covered.
  * @freq: Frequency (MHz) to convert
  * @sec_channel: 0 = non-HT40, 1 = sec. channel above, -1 = sec. channel below
- * @vht: 0 - non-VHT, 1 - 80 MHz
+ * @vht: VHT channel width (VHT_CHANWIDTH_*)
  * @op_class: Buffer for returning operating class
  * @channel: Buffer for returning channel number
  * Returns: hw_mode on success, NUM_HOSTAPD_MODES on failure
@@ -588,6 +589,8 @@ enum hostapd_hw_mode ieee80211_freq_to_channel_ext(unsigned int freq,
 						   int sec_channel, int vht,
 						   u8 *op_class, u8 *channel)
 {
+	u8 vht_opclass;
+
 	/* TODO: more operating classes */
 
 	if (sec_channel > 1 || sec_channel < -1)
@@ -631,38 +634,34 @@ enum hostapd_hw_mode ieee80211_freq_to_channel_ext(unsigned int freq,
 		return HOSTAPD_MODE_IEEE80211A;
 	}
 
+	switch (vht) {
+	case VHT_CHANWIDTH_80MHZ:
+		vht_opclass = 128;
+		break;
+	case VHT_CHANWIDTH_160MHZ:
+		vht_opclass = 129;
+		break;
+	case VHT_CHANWIDTH_80P80MHZ:
+		vht_opclass = 130;
+		break;
+	default:
+		vht_opclass = 0;
+		break;
+	}
+
 	/* 5 GHz, channels 36..48 */
 	if (freq >= 5180 && freq <= 5240) {
 		if ((freq - 5000) % 5)
 			return NUM_HOSTAPD_MODES;
 
-		if (sec_channel == 1)
+		if (vht_opclass)
+			*op_class = vht_opclass;
+		else if (sec_channel == 1)
 			*op_class = 116;
 		else if (sec_channel == -1)
 			*op_class = 117;
-		else if (vht)
-			*op_class = 128;
 		else
 			*op_class = 115;
-
-		*channel = (freq - 5000) / 5;
-
-		return HOSTAPD_MODE_IEEE80211A;
-	}
-
-	/* 5 GHz, channels 149..161 */
-	if (freq >= 5745 && freq <= 5805) {
-		if ((freq - 5000) % 5)
-			return NUM_HOSTAPD_MODES;
-
-		if (sec_channel == 1)
-			*op_class = 126;
-		else if (sec_channel == -1)
-			*op_class = 127;
-		else if (vht)
-			*op_class = 128;
-		else
-			*op_class = 124;
 
 		*channel = (freq - 5000) / 5;
 
@@ -674,7 +673,16 @@ enum hostapd_hw_mode ieee80211_freq_to_channel_ext(unsigned int freq,
 		if ((freq - 5000) % 5)
 			return NUM_HOSTAPD_MODES;
 
-		*op_class = 125;
+		if (vht_opclass)
+			*op_class = vht_opclass;
+		else if (sec_channel == 1)
+			*op_class = 126;
+		else if (sec_channel == -1)
+			*op_class = 127;
+		else if (freq <= 5805)
+			*op_class = 124;
+		else
+			*op_class = 125;
 
 		*channel = (freq - 5000) / 5;
 

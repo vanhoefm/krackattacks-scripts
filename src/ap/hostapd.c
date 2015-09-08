@@ -2828,16 +2828,31 @@ static int hostapd_fill_csa_settings(struct hostapd_data *hapd,
 	struct hostapd_iface *iface = hapd->iface;
 	struct hostapd_freq_params old_freq;
 	int ret;
-	u8 chan;
+	u8 chan, vht_bandwidth;
 
 	os_memset(&old_freq, 0, sizeof(old_freq));
 	if (!iface || !iface->freq || hapd->csa_in_progress)
 		return -1;
 
+	switch (settings->freq_params.bandwidth) {
+	case 80:
+		if (settings->freq_params.center_freq2)
+			vht_bandwidth = VHT_CHANWIDTH_80P80MHZ;
+		else
+			vht_bandwidth = VHT_CHANWIDTH_80MHZ;
+		break;
+	case 160:
+		vht_bandwidth = VHT_CHANWIDTH_160MHZ;
+		break;
+	default:
+		vht_bandwidth = VHT_CHANWIDTH_USE_HT;
+		break;
+	}
+
 	if (ieee80211_freq_to_channel_ext(
 		    settings->freq_params.freq,
 		    settings->freq_params.sec_channel_offset,
-		    settings->freq_params.vht_enabled,
+		    vht_bandwidth,
 		    &hapd->iface->cs_oper_class,
 		    &chan) == NUM_HOSTAPD_MODES) {
 		wpa_printf(MSG_DEBUG,

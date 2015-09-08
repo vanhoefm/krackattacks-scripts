@@ -8529,7 +8529,6 @@ static int wpas_p2p_move_go_csa(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *current_ssid = wpa_s->current_ssid;
 	int old_freq = current_ssid->frequency;
 	int ret;
-	u8 chan;
 
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP_CSA)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "CSA is not enabled");
@@ -8578,33 +8577,32 @@ static int wpas_p2p_move_go_csa(struct wpa_supplicant *wpa_s)
 	csa_settings.cs_count = P2P_GO_CSA_COUNT;
 	csa_settings.block_tx = P2P_GO_CSA_BLOCK_TX;
 	csa_settings.freq_params.freq = params.freq;
-
-	if (ieee80211_freq_to_channel_ext(params.freq, conf->secondary_channel,
-					  conf->ieee80211ac,
-					  &wpa_s->ap_iface->cs_oper_class,
-					  &chan) == NUM_HOSTAPD_MODES) {
-		wpa_dbg(wpa_s, MSG_DEBUG,
-			"P2P CSA: Selected invalid frequency");
-		ret = -1;
-		goto out;
-	}
-
-	csa_settings.freq_params.channel = chan;
 	csa_settings.freq_params.sec_channel_offset = conf->secondary_channel;
 	csa_settings.freq_params.ht_enabled = conf->ieee80211n;
 	csa_settings.freq_params.bandwidth = conf->secondary_channel ? 40 : 20;
 
 	if (conf->ieee80211ac) {
 		int freq1 = 0, freq2 = 0;
+		u8 chan, opclass;
+
+		if (ieee80211_freq_to_channel_ext(params.freq,
+						  conf->secondary_channel,
+						  conf->vht_oper_chwidth,
+						  &opclass, &chan) ==
+		    NUM_HOSTAPD_MODES) {
+			wpa_printf(MSG_ERROR, "P2P CSA: Bad freq");
+			ret = -1;
+			goto out;
+		}
 
 		if (conf->vht_oper_centr_freq_seg0_idx)
 			freq1 = ieee80211_chan_to_freq(
-				NULL, wpa_s->ap_iface->cs_oper_class,
+				NULL, opclass,
 				conf->vht_oper_centr_freq_seg0_idx);
 
 		if (conf->vht_oper_centr_freq_seg1_idx)
 			freq2 = ieee80211_chan_to_freq(
-				NULL, wpa_s->ap_iface->cs_oper_class,
+				NULL, opclass,
 				conf->vht_oper_centr_freq_seg1_idx);
 
 		if (freq1 < 0 || freq2 < 0) {

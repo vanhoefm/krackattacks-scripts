@@ -2828,10 +2828,27 @@ static int hostapd_fill_csa_settings(struct hostapd_data *hapd,
 	struct hostapd_iface *iface = hapd->iface;
 	struct hostapd_freq_params old_freq;
 	int ret;
+	u8 chan;
 
 	os_memset(&old_freq, 0, sizeof(old_freq));
 	if (!iface || !iface->freq || hapd->csa_in_progress)
 		return -1;
+
+	if (ieee80211_freq_to_channel_ext(
+		    settings->freq_params.freq,
+		    settings->freq_params.sec_channel_offset,
+		    settings->freq_params.vht_enabled,
+		    &hapd->iface->cs_oper_class,
+		    &chan) == NUM_HOSTAPD_MODES) {
+		wpa_printf(MSG_DEBUG,
+			   "invalid frequency for channel switch (freq=%d, sec_channel_offset=%d, vht_enabled=%d)",
+			   settings->freq_params.freq,
+			   settings->freq_params.sec_channel_offset,
+			   settings->freq_params.vht_enabled);
+		return -1;
+	}
+
+	settings->freq_params.channel = chan;
 
 	ret = hostapd_change_config_freq(iface->bss[0], iface->conf,
 					 &settings->freq_params,

@@ -3473,6 +3473,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				  data->ch_switch.ch_width,
 				  data->ch_switch.cf1,
 				  data->ch_switch.cf2);
+
+		wpas_p2p_update_channel_list(wpa_s, WPAS_P2P_CHANNEL_UPDATE_CS);
 		break;
 #ifdef NEED_AP_MLME
 	case EVENT_DFS_RADAR_DETECTED:

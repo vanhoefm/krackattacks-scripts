@@ -1327,6 +1327,9 @@ static u16 check_ext_capab(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 #endif /* CONFIG_INTERWORKING */
 
+	if (ext_capab_ie_len > 0)
+		sta->ecsa_supported = !!(ext_capab_ie[0] & BIT(2));
+
 	return WLAN_STATUS_SUCCESS;
 }
 

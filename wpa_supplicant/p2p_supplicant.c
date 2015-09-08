@@ -2692,6 +2692,29 @@ static int wpas_p2p_go_is_peer_freq(struct wpa_supplicant *wpa_s, int freq)
 }
 
 
+static int wpas_sta_check_ecsa(struct hostapd_data *hapd,
+			       struct sta_info *sta, void *ctx)
+{
+	int *ecsa_support = ctx;
+
+	*ecsa_support &= sta->ecsa_supported;
+
+	return 0;
+}
+
+
+/* Check if all the peers support eCSA */
+static int wpas_p2p_go_clients_support_ecsa(struct wpa_supplicant *wpa_s)
+{
+	int ecsa_support = 1;
+
+	ap_for_each_sta(wpa_s->ap_iface->bss[0], wpas_sta_check_ecsa,
+			&ecsa_support);
+
+	return ecsa_support;
+}
+
+
 /**
  * Pick the best frequency to use from all the currently used frequencies.
  */
@@ -8750,6 +8773,25 @@ static void wpas_p2p_consider_moving_one_go(struct wpa_supplicant *wpa_s,
 			   P2P_GO_FREQ_MOVE_SCM_PEER_SUPPORTS &&
 			   wpas_p2p_go_is_peer_freq(wpa_s, freqs[i].freq)) {
 			policy_move = 1;
+		} else if ((wpa_s->conf->p2p_go_freq_change_policy ==
+			    P2P_GO_FREQ_MOVE_SCM_ECSA) &&
+			   wpas_p2p_go_is_peer_freq(wpa_s, freqs[i].freq)) {
+			if (!p2p_get_group_num_members(wpa_s->p2p_group)) {
+				policy_move = 1;
+			} else if ((wpa_s->drv_flags &
+				    WPA_DRIVER_FLAGS_AP_CSA) &&
+				   wpas_p2p_go_clients_support_ecsa(wpa_s)) {
+				u8 chan;
+
+				/*
+				 * We do not support CSA between bands, so move
+				 * GO only within the same band.
+				 */
+				if (wpa_s->ap_iface->current_mode->mode ==
+				    ieee80211_freq_to_chan(freqs[i].freq,
+							   &chan))
+					policy_move = 1;
+			}
 		}
 	}
 

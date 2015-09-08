@@ -638,6 +638,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		capa->max_stations =
 			nla_get_u32(tb[NL80211_ATTR_MAX_AP_ASSOC_STA]);
 
+	if (tb[NL80211_ATTR_MAX_CSA_COUNTERS])
+		capa->max_csa_counters =
+			nla_get_u8(tb[NL80211_ATTR_MAX_CSA_COUNTERS]);
+
 	return NL_SKIP;
 }
 
@@ -694,14 +698,18 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	if (!drv->capa.max_remain_on_chan)
 		drv->capa.max_remain_on_chan = 5000;
 
-	if (info->channel_switch_supported)
-		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_CSA;
 	drv->capa.wmm_ac_supported = info->wmm_ac_supported;
 
 	drv->capa.mac_addr_rand_sched_scan_supported =
 		info->mac_addr_rand_sched_scan_supported;
 	drv->capa.mac_addr_rand_scan_supported =
 		info->mac_addr_rand_scan_supported;
+
+	if (info->channel_switch_supported) {
+		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_CSA;
+		if (!drv->capa.max_csa_counters)
+			drv->capa.max_csa_counters = 1;
+	}
 
 	return 0;
 }

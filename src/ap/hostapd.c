@@ -2848,8 +2848,8 @@ static int hostapd_fill_csa_settings(struct hostapd_data *hapd,
 		return ret;
 	}
 
-	settings->counter_offset_beacon = hapd->cs_c_off_beacon;
-	settings->counter_offset_presp = hapd->cs_c_off_proberesp;
+	settings->counter_offset_beacon[0] = hapd->cs_c_off_beacon;
+	settings->counter_offset_presp[0] = hapd->cs_c_off_proberesp;
 
 	return 0;
 }

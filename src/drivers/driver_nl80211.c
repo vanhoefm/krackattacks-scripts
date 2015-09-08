@@ -7576,6 +7576,8 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nlattr *beacon_csa;
 	int ret = -ENOBUFS;
+	int csa_off_len = 0;
+	int i;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d width=%d cf1=%d cf2=%d)",
 		   settings->cs_count, settings->block_tx,
@@ -7592,20 +7594,56 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 	    (drv->nlmode != NL80211_IFTYPE_P2P_GO))
 		return -EOPNOTSUPP;
 
-	/* check settings validity */
-	if (!settings->beacon_csa.tail ||
-	    ((settings->beacon_csa.tail_len <=
-	      settings->counter_offset_beacon) ||
-	     (settings->beacon_csa.tail[settings->counter_offset_beacon] !=
-	      settings->cs_count)))
+	/*
+	 * Remove empty counters, assuming Probe Response and Beacon frame
+	 * counters match. This implementation assumes that there are only two
+	 * counters.
+	 */
+	if (settings->counter_offset_beacon[0] &&
+	    !settings->counter_offset_beacon[1]) {
+		csa_off_len = 1;
+	} else if (settings->counter_offset_beacon[1] &&
+		   !settings->counter_offset_beacon[0]) {
+		csa_off_len = 1;
+		settings->counter_offset_beacon[0] =
+			settings->counter_offset_beacon[1];
+		settings->counter_offset_presp[0] =
+			settings->counter_offset_presp[1];
+	} else if (settings->counter_offset_beacon[1] &&
+		   settings->counter_offset_beacon[0]) {
+		csa_off_len = 2;
+	} else {
+		wpa_printf(MSG_ERROR, "nl80211: No CSA counters provided");
+		return -EINVAL;
+	}
+
+	/* Check CSA counters validity */
+	if (drv->capa.max_csa_counters &&
+	    csa_off_len > drv->capa.max_csa_counters) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Too many CSA counters provided");
+		return -EINVAL;
+	}
+
+	if (!settings->beacon_csa.tail)
 		return -EINVAL;
 
-	if (settings->beacon_csa.probe_resp &&
-	    ((settings->beacon_csa.probe_resp_len <=
-	      settings->counter_offset_presp) ||
-	     (settings->beacon_csa.probe_resp[settings->counter_offset_presp] !=
-	      settings->cs_count)))
-		return -EINVAL;
+	for (i = 0; i < csa_off_len; i++) {
+		u16 csa_c_off_bcn = settings->counter_offset_beacon[i];
+		u16 csa_c_off_presp = settings->counter_offset_presp[i];
+
+		if ((settings->beacon_csa.tail_len <= csa_c_off_bcn) ||
+		    (settings->beacon_csa.tail[csa_c_off_bcn] !=
+		     settings->cs_count))
+			return -EINVAL;
+
+		if (settings->beacon_csa.probe_resp &&
+		    ((settings->beacon_csa.probe_resp_len <=
+		      csa_c_off_presp) ||
+		     (settings->beacon_csa.probe_resp[csa_c_off_presp] !=
+		      settings->cs_count)))
+			return -EINVAL;
+	}
 
 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_CHANNEL_SWITCH)) ||
 	    nla_put_u32(msg, NL80211_ATTR_CH_SWITCH_COUNT,
@@ -7629,11 +7667,13 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 	if (ret)
 		goto error;
 
-	if (nla_put_u16(msg, NL80211_ATTR_CSA_C_OFF_BEACON,
-			settings->counter_offset_beacon) ||
+	if (nla_put(msg, NL80211_ATTR_CSA_C_OFF_BEACON,
+		    csa_off_len * sizeof(u16),
+		    settings->counter_offset_beacon) ||
 	    (settings->beacon_csa.probe_resp &&
-	     nla_put_u16(msg, NL80211_ATTR_CSA_C_OFF_PRESP,
-			 settings->counter_offset_presp)))
+	     nla_put(msg, NL80211_ATTR_CSA_C_OFF_PRESP,
+		     csa_off_len * sizeof(u16),
+		     settings->counter_offset_presp)))
 		goto fail;
 
 	nla_nest_end(msg, beacon_csa);

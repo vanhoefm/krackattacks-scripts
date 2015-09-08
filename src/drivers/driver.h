@@ -1306,6 +1306,9 @@ struct wpa_driver_capa {
 	unsigned int max_conc_chan_2_4;
 	/* Maximum number of concurrent channels on 5 GHz */
 	unsigned int max_conc_chan_5_0;
+
+	/* Maximum number of supported CSA counters */
+	u16 max_csa_counters;
 };
 
 
@@ -1556,8 +1559,8 @@ struct csa_settings {
 	struct beacon_data beacon_csa;
 	struct beacon_data beacon_after;
 
-	u16 counter_offset_beacon;
-	u16 counter_offset_presp;
+	u16 counter_offset_beacon[2];
+	u16 counter_offset_presp[2];
 };
 
 /* TDLS peer capabilities for send_tdls_mgmt() */

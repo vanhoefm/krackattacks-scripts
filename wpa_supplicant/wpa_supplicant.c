@@ -5551,7 +5551,8 @@ int get_shared_radio_freqs_data(struct wpa_supplicant *wpa_s,
 			continue;
 
 		if (ifs->current_ssid->mode == WPAS_MODE_AP ||
-		    ifs->current_ssid->mode == WPAS_MODE_P2P_GO)
+		    ifs->current_ssid->mode == WPAS_MODE_P2P_GO ||
+		    ifs->current_ssid->mode == WPAS_MODE_MESH)
 			freq = ifs->current_ssid->frequency;
 		else if (wpa_drv_get_bssid(ifs, bssid) == 0)
 			freq = ifs->assoc_freq;

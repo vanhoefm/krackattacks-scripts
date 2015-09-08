@@ -459,11 +459,21 @@ int p2p_channels_to_freqs(const struct p2p_channels *channels, int *freq_list,
 			break;
 		for (j = 0; j < c->channels; j++) {
 			int freq;
+			unsigned int k;
+
 			if (idx + 1 == max_len)
 				break;
 			freq = p2p_channel_to_freq(c->reg_class,
 						   c->channel[j]);
 			if (freq < 0)
+				continue;
+
+			for (k = 0; k < idx; k++) {
+				if (freq_list[k] == freq)
+					break;
+			}
+
+			if (k < idx)
 				continue;
 			freq_list[idx++] = freq;
 		}

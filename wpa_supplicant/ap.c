@@ -1205,6 +1205,8 @@ void wpas_ap_ch_switch(struct wpa_supplicant *wpa_s, int freq, int ht,
 		return;
 
 	wpa_s->assoc_freq = freq;
+	if (wpa_s->current_ssid)
+		wpa_s->current_ssid->frequency = freq;
 	hostapd_event_ch_switch(wpa_s->ap_iface->bss[0], freq, ht, offset, width, cf1, cf1);
 }
 

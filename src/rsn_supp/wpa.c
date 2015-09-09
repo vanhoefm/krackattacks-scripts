@@ -1292,8 +1292,8 @@ static int wpa_supplicant_process_1_of_2_rsn(struct wpa_sm *sm,
 					      &gd->key_rsc_len, &gd->alg))
 		return -1;
 
-	wpa_hexdump(MSG_DEBUG, "RSN: received GTK in group key handshake",
-		    ie.gtk, ie.gtk_len);
+	wpa_hexdump_key(MSG_DEBUG, "RSN: received GTK in group key handshake",
+			ie.gtk, ie.gtk_len);
 	gd->keyidx = ie.gtk[0] & 0x3;
 	gd->tx = wpa_supplicant_gtk_tx_bit_workaround(sm,
 						      !!(ie.gtk[0] & BIT(2)));

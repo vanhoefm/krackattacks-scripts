@@ -355,5 +355,6 @@ int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 		       u8 *pos, size_t left);
 int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 		       size_t current_len, size_t max_len);
+int fils_set_tk(struct wpa_state_machine *sm);
 
 #endif /* WPA_AUTH_H */

@@ -1759,7 +1759,8 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event)
 		remove_ptk = 0;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_FILS
-	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt) && event == WPA_AUTH)
+	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
+	    (event == WPA_AUTH || event == WPA_ASSOC))
 		remove_ptk = 0;
 #endif /* CONFIG_FILS */
 
@@ -2393,6 +2394,28 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 	sm->fils_completed = 1;
 
 	return current_len;
+}
+
+
+int fils_set_tk(struct wpa_state_machine *sm)
+{
+	enum wpa_alg alg;
+	int klen;
+
+	if (!sm || !sm->PTK_valid)
+		return -1;
+
+	alg = wpa_cipher_to_alg(sm->pairwise);
+	klen = wpa_cipher_key_len(sm->pairwise);
+
+	wpa_printf(MSG_DEBUG, "FILS: Configure TK to the driver");
+	if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
+			     sm->PTK.tk, klen)) {
+		wpa_printf(MSG_DEBUG, "FILS: Failed to set TK to the driver");
+		return -1;
+	}
+
+	return 0;
 }
 
 #endif /* CONFIG_FILS */

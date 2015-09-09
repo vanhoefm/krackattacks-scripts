@@ -3258,6 +3258,18 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
 
+#ifdef CONFIG_FILS
+	if ((sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	     sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	     sta->auth_alg == WLAN_AUTH_FILS_PK) &&
+	    fils_set_tk(sta->wpa_sm) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: TK configuration failed");
+		ap_sta_disconnect(hapd, sta, sta->addr,
+				  WLAN_REASON_UNSPECIFIED);
+		return;
+	}
+#endif /* CONFIG_FILS */
+
 	if (sta->pending_eapol_rx) {
 		struct os_reltime now, age;
 

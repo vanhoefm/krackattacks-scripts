@@ -2158,3 +2158,15 @@ void eapol_sm_erp_flush(struct eapol_sm *sm)
 	if (sm)
 		eap_peer_erp_free_keys(sm->eap);
 }
+
+
+struct wpabuf * eapol_sm_build_erp_reauth_start(struct eapol_sm *sm)
+{
+#ifdef CONFIG_ERP
+	if (!sm)
+		return NULL;
+	return eap_peer_build_erp_reauth_start(sm->eap, 0);
+#else /* CONFIG_ERP */
+	return NULL;
+#endif /* CONFIG_ERP */
+}

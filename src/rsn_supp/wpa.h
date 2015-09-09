@@ -431,5 +431,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len);
 struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 				     size_t *kek_len, const u8 **snonce,
 				     const u8 **anonce);
+int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len);
+int wpa_fils_is_completed(struct wpa_sm *sm);
 
 #endif /* WPA_H */

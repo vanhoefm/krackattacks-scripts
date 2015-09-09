@@ -2478,6 +2478,16 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 		clear_ptk = 0;
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_FILS
+	if (sm->fils_completed) {
+		/*
+		 * Clear portValid to kick EAPOL state machine to re-enter
+		 * AUTHENTICATED state to get the EAPOL port Authorized.
+		 */
+		wpa_supplicant_key_neg_complete(sm, sm->bssid, 1);
+		clear_ptk = 0;
+	}
+#endif /* CONFIG_FILS */
 
 	if (clear_ptk) {
 		/*
@@ -2520,6 +2530,9 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
 #ifdef CONFIG_TDLS
 	wpa_tdls_disassoc(sm);
 #endif /* CONFIG_TDLS */
+#ifdef CONFIG_FILS
+	sm->fils_completed = 0;
+#endif /* CONFIG_FILS */
 
 	/* Keys are not needed in the WPA state machine anymore */
 	wpa_sm_drop_sa(sm);
@@ -3219,6 +3232,8 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 	wpa_printf(MSG_DEBUG, "FILS: Try to use FILS (erp=%d pmksa_cache=%d)",
 		   erp_msg != NULL, sm->cur_pmksa != NULL);
 
+	sm->fils_completed = 0;
+
 	if (!sm->assoc_wpa_ie) {
 		wpa_printf(MSG_INFO, "FILS: No own RSN IE set for FILS");
 		goto fail;
@@ -3471,4 +3486,168 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 	return buf;
 }
 
+
+int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	const u8 *end, *ie_start;
+	struct ieee802_11_elems elems;
+	int keylen, rsclen;
+	enum wpa_alg alg;
+	struct wpa_gtk_data gd;
+	int maxkeylen;
+	struct wpa_eapol_ie_parse kde;
+
+	if (!sm || !sm->ptk_set) {
+		wpa_printf(MSG_DEBUG, "FILS: No KEK available");
+		return -1;
+	}
+
+	if (!wpa_key_mgmt_fils(sm->key_mgmt)) {
+		wpa_printf(MSG_DEBUG, "FILS: Not a FILS AKM");
+		return -1;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "FILS: (Re)Association Response frame",
+		    resp, len);
+
+	mgmt = (const struct ieee80211_mgmt *) resp;
+	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.assoc_resp))
+		return -1;
+
+	end = resp + len;
+	/* Same offset for Association Response and Reassociation Response */
+	ie_start = mgmt->u.assoc_resp.variable;
+
+	if (ieee802_11_parse_elems(ie_start, end - ie_start, &elems, 1) ==
+	    ParseFailed) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Failed to parse decrypted elements");
+		goto fail;
+	}
+
+	if (!elems.fils_session) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Session element");
+		return -1;
+	}
+	if (os_memcmp(elems.fils_session, sm->fils_session,
+		      FILS_SESSION_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: FILS Session mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Received FILS Session",
+			    elems.fils_session, FILS_SESSION_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
+			    sm->fils_session, FILS_SESSION_LEN);
+	}
+
+	/* TODO: FILS Public Key */
+
+	if (!elems.fils_key_confirm) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Key Confirm element");
+		goto fail;
+	}
+	if (elems.fils_key_confirm_len != sm->fils_key_auth_len) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Unexpected Key-Auth length %d (expected %d)",
+			   elems.fils_key_confirm_len,
+			   (int) sm->fils_key_auth_len);
+		goto fail;
+	}
+	if (os_memcmp(elems.fils_key_confirm, sm->fils_key_auth_ap,
+		      sm->fils_key_auth_len) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Key-Auth mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Received Key-Auth",
+			    elems.fils_key_confirm,
+			    elems.fils_key_confirm_len);
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected Key-Auth",
+			    sm->fils_key_auth_ap, sm->fils_key_auth_len);
+		goto fail;
+	}
+
+	/* Key Delivery */
+	if (!elems.key_delivery) {
+		wpa_printf(MSG_DEBUG, "FILS: No Key Delivery element");
+		goto fail;
+	}
+
+	/* Parse GTK and set the key to the driver */
+	os_memset(&gd, 0, sizeof(gd));
+	if (wpa_supplicant_parse_ies(elems.key_delivery + WPA_KEY_RSC_LEN,
+				     elems.key_delivery_len - WPA_KEY_RSC_LEN,
+				     &kde) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Failed to parse KDEs");
+		goto fail;
+	}
+	if (!kde.gtk) {
+		wpa_printf(MSG_DEBUG, "FILS: No GTK KDE");
+		goto fail;
+	}
+	maxkeylen = gd.gtk_len = kde.gtk_len - 2;
+	if (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
+					      gd.gtk_len, maxkeylen,
+					      &gd.key_rsc_len, &gd.alg))
+		goto fail;
+
+	wpa_hexdump_key(MSG_DEBUG, "FILS: Received GTK", kde.gtk, kde.gtk_len);
+	gd.keyidx = kde.gtk[0] & 0x3;
+	gd.tx = wpa_supplicant_gtk_tx_bit_workaround(sm,
+						     !!(kde.gtk[0] & BIT(2)));
+	if (kde.gtk_len - 2 > sizeof(gd.gtk)) {
+		wpa_printf(MSG_DEBUG, "FILS: Too long GTK in GTK KDE (len=%lu)",
+			   (unsigned long) kde.gtk_len - 2);
+		goto fail;
+	}
+	os_memcpy(gd.gtk, kde.gtk + 2, kde.gtk_len - 2);
+
+	wpa_printf(MSG_DEBUG, "FILS: Set GTK to driver");
+	if (wpa_supplicant_install_gtk(sm, &gd, elems.key_delivery) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Failed to set GTK");
+		goto fail;
+	}
+
+	if (ieee80211w_set_keys(sm, &kde) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Failed to set IGTK");
+		goto fail;
+	}
+
+	alg = wpa_cipher_to_alg(sm->pairwise_cipher);
+	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
+	rsclen = wpa_cipher_rsc_len(sm->pairwise_cipher);
+	wpa_hexdump_key(MSG_DEBUG, "FILS: Set TK to driver",
+			sm->ptk.tk, keylen);
+	if (wpa_sm_set_key(sm, alg, sm->bssid, 0, 1, null_rsc, rsclen,
+			   sm->ptk.tk, keylen) < 0) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+			"FILS: Failed to set PTK to the driver (alg=%d keylen=%d bssid="
+			MACSTR ")",
+			alg, keylen, MAC2STR(sm->bssid));
+		goto fail;
+	}
+
+	/* TODO: TK could be cleared after auth frame exchange now that driver
+	 * takes care of association frame encryption/decryption. */
+	/* TK is not needed anymore in supplicant */
+	os_memset(sm->ptk.tk, 0, WPA_TK_MAX_LEN);
+
+	/* TODO: FILS HLP Container */
+
+	/* TODO: FILS IP Address Assignment */
+
+	wpa_printf(MSG_DEBUG, "FILS: Auth+Assoc completed successfully");
+	sm->fils_completed = 1;
+
+	return 0;
+fail:
+	return -1;
+}
+
 #endif /* CONFIG_FILS */
+
+
+int wpa_fils_is_completed(struct wpa_sm *sm)
+{
+#ifdef CONFIG_FILS
+	return sm && sm->fils_completed;
+#else /* CONFIG_FILS */
+	return 0;
+#endif /* CONFIG_FILS */
+}

@@ -2058,6 +2058,19 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	if (!found && data->assoc_info.req_ies)
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
+#ifdef CONFIG_FILS
+#ifdef CONFIG_SME
+	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FILS &&
+	    (!data->assoc_info.resp_frame ||
+	     fils_process_assoc_resp(wpa_s->wpa,
+				     data->assoc_info.resp_frame,
+				     data->assoc_info.resp_frame_len) < 0)) {
+		wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_UNSPECIFIED);
+		return -1;
+	}
+#endif /* CONFIG_SME */
+#endif /* CONFIG_FILS */
+
 #ifdef CONFIG_IEEE80211R
 #ifdef CONFIG_SME
 	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FT) {
@@ -2279,6 +2292,13 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	ft_completed = wpa_ft_is_completed(wpa_s->wpa);
 	if (data && wpa_supplicant_event_associnfo(wpa_s, data) < 0)
 		return;
+	/*
+	 * FILS authentication can share the same mechanism to mark the
+	 * connection fully authenticated, so set ft_completed also based on
+	 * FILS result.
+	 */
+	if (!ft_completed)
+		ft_completed = wpa_fils_is_completed(wpa_s->wpa);
 
 	if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
 		wpa_dbg(wpa_s, MSG_ERROR, "Failed to get BSSID");

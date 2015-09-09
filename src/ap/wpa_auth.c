@@ -617,6 +617,16 @@ int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 	}
 #endif /* CONFIG_IEEE80211R */
 
+#ifdef CONFIG_FILS
+	if (sm->fils_completed) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
+				"FILS authentication already completed - do not start 4-way handshake");
+		/* Go to PTKINITDONE state to allow GTK rekeying */
+		sm->wpa_ptk_state = WPA_PTK_PTKINITDONE;
+		return 0;
+	}
+#endif /* CONFIG_FILS */
+
 	if (sm->started) {
 		os_memset(&sm->key_replay, 0, sizeof(sm->key_replay));
 		sm->ReAuthenticationRequest = TRUE;
@@ -2379,6 +2389,8 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 		    pos, AES_BLOCK_SIZE + wpabuf_len(plain));
 	current_len += wpabuf_len(plain) + AES_BLOCK_SIZE;
 	wpabuf_free(plain);
+
+	sm->fils_completed = 1;
 
 	return current_len;
 }

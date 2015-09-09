@@ -4190,6 +4190,16 @@ union wpa_event_data {
 		size_t resp_ies_len;
 
 		/**
+		 * resp_frame - (Re)Association Response frame
+		 */
+		const u8 *resp_frame;
+
+		/**
+		 * resp_frame_len - (Re)Association Response frame length
+		 */
+		size_t resp_frame_len;
+
+		/**
 		 * beacon_ies - Beacon or Probe Response IEs
 		 *
 		 * Optional Beacon/ProbeResp data: IEs included in Beacon or

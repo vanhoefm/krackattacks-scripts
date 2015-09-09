@@ -247,6 +247,8 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	os_memcpy(drv->prev_bssid, mgmt->sa, ETH_ALEN);
 
 	os_memset(&event, 0, sizeof(event));
+	event.assoc_info.resp_frame = frame;
+	event.assoc_info.resp_frame_len = len;
 	if (len > 24 + sizeof(mgmt->u.assoc_resp)) {
 		event.assoc_info.resp_ies = (u8 *) mgmt->u.assoc_resp.variable;
 		event.assoc_info.resp_ies_len =

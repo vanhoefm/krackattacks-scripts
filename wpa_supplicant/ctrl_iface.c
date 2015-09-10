@@ -3039,19 +3039,19 @@ static int wpa_supplicant_ctrl_iface_get_network(
 	*name++ = '\0';
 
 	id = atoi(cmd);
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: GET_NETWORK id=%d name='%s'",
+	wpa_printf(MSG_EXCESSIVE, "CTRL_IFACE: GET_NETWORK id=%d name='%s'",
 		   id, name);
 
 	ssid = wpa_config_get_network(wpa_s->conf, id);
 	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
+		wpa_printf(MSG_EXCESSIVE, "CTRL_IFACE: Could not find network "
 			   "id=%d", id);
 		return -1;
 	}
 
 	value = wpa_config_get_no_key(ssid, name);
 	if (value == NULL) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to get network "
+		wpa_printf(MSG_EXCESSIVE, "CTRL_IFACE: Failed to get network "
 			   "variable '%s'", name);
 		return -1;
 	}
@@ -8112,6 +8112,19 @@ static int wpas_ctrl_iface_mac_rand_scan(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_cmd_debug_level(const char *cmd)
+{
+	if (os_strcmp(cmd, "PING") == 0 ||
+	    os_strncmp(cmd, "BSS ", 4) == 0 ||
+	    os_strncmp(cmd, "GET_NETWORK ", 12) == 0 ||
+	    os_strncmp(cmd, "STATUS", 6) == 0 ||
+	    os_strncmp(cmd, "STA ", 4) == 0 ||
+	    os_strncmp(cmd, "STA-", 4) == 0)
+		return MSG_EXCESSIVE;
+	return MSG_DEBUG;
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -8135,9 +8148,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",
 				      (const u8 *) buf, os_strlen(buf));
 	} else {
-		int level = MSG_DEBUG;
-		if (os_strcmp(buf, "PING") == 0)
-			level = MSG_EXCESSIVE;
+		int level = wpas_ctrl_cmd_debug_level(buf);
 		wpa_dbg(wpa_s, level, "Control interface command '%s'", buf);
 	}
 

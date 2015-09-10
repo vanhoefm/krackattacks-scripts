@@ -2170,3 +2170,14 @@ struct wpabuf * eapol_sm_build_erp_reauth_start(struct eapol_sm *sm)
 	return NULL;
 #endif /* CONFIG_ERP */
 }
+
+
+void eapol_sm_process_erp_finish(struct eapol_sm *sm, const u8 *buf,
+				 size_t len)
+{
+#ifdef CONFIG_ERP
+	if (!sm)
+		return;
+	eap_peer_finish(sm->eap, (const struct eap_hdr *) buf, len);
+#endif /* CONFIG_ERP */
+}

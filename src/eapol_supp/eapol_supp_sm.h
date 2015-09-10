@@ -329,6 +329,8 @@ void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
 int eapol_sm_failed(struct eapol_sm *sm);
 void eapol_sm_erp_flush(struct eapol_sm *sm);
 struct wpabuf * eapol_sm_build_erp_reauth_start(struct eapol_sm *sm);
+void eapol_sm_process_erp_finish(struct eapol_sm *sm, const u8 *buf,
+				 size_t len);
 int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len);
 #else /* IEEE8021X_EAPOL */
 static inline struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
@@ -443,6 +445,10 @@ static inline struct wpabuf *
 eapol_sm_build_erp_reauth_start(struct eapol_sm *sm)
 {
 	return NULL;
+}
+static inline void eapol_sm_process_erp_finish(struct eapol_sm *sm,
+					       const u8 *buf, size_t len)
+{
 }
 #endif /* IEEE8021X_EAPOL */
 

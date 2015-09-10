@@ -1591,8 +1591,7 @@ invalid:
 }
 
 
-static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
-			    size_t len)
+void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr, size_t len)
 {
 #ifdef CONFIG_ERP
 	const u8 *pos = (const u8 *) (hdr + 1);

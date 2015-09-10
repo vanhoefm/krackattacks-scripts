@@ -349,6 +349,7 @@ void eap_set_anon_id(struct eap_sm *sm, const u8 *id, size_t len);
 int eap_peer_was_failure_expected(struct eap_sm *sm);
 void eap_peer_erp_free_keys(struct eap_sm *sm);
 struct wpabuf * eap_peer_build_erp_reauth_start(struct eap_sm *sm, u8 eap_id);
+void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr, size_t len);
 
 #endif /* IEEE8021X_EAPOL */
 

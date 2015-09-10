@@ -1178,6 +1178,28 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	}
 #endif /* CONFIG_IEEE80211R */
 
+#ifdef CONFIG_FILS
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "PMK from FILS - skip IEEE 802.1X/EAP");
+		/* Setup EAPOL state machines to already authenticated state
+		 * because of existing FILS information. */
+		sta->eapol_sm->keyRun = TRUE;
+		sta->eapol_sm->eap_if->eapKeyAvailable = TRUE;
+		sta->eapol_sm->auth_pae_state = AUTH_PAE_AUTHENTICATING;
+		sta->eapol_sm->be_auth_state = BE_AUTH_SUCCESS;
+		sta->eapol_sm->authSuccess = TRUE;
+		sta->eapol_sm->authFail = FALSE;
+		sta->eapol_sm->portValid = TRUE;
+		if (sta->eapol_sm->eap)
+			eap_sm_notify_cached(sta->eapol_sm->eap);
+		return;
+	}
+#endif /* CONFIG_FILS */
+
 	pmksa = wpa_auth_sta_get_pmksa(sta->wpa_sm);
 	if (pmksa) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,

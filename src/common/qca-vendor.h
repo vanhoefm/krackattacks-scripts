@@ -156,6 +156,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_GET_PREFERRED_FREQ_LIST = 103,
 	QCA_NL80211_VENDOR_SUBCMD_SET_PROBABLE_OPER_CHANNEL = 104,
 	QCA_NL80211_VENDOR_SUBCMD_SETBAND = 105,
+	QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN = 106,
+	QCA_NL80211_VENDOR_SUBCMD_SCAN_DONE = 107,
 };
 
 
@@ -352,6 +354,58 @@ enum qca_set_band {
  */
 enum qca_vendor_element_id {
 	QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST = 0,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_scan - Specifies vendor scan attributes
+ *
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_IE: IEs that should be included as part of scan
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES: Nested unsigned 32-bit attributes
+ *	with frequencies to be scanned (in MHz)
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS: Nested attribute with SSIDs to be scanned
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_SUPP_RATES: Nested array attribute of supported
+ *	rates to be included
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_TX_NO_CCK_RATE: flag used to send probe requests
+ * 	at non CCK rate in 2GHz band
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_FLAGS: Unsigned 32-bit scan flags
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE: Unsigned 64-bit cookie provided by the
+ * 	driver for the specific scan request
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_STATUS: Unsigned 8-bit status of the scan
+ * 	request decoded as in enum scan_status
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_MAC: 6-byte MAC address to use when randomisation
+ * 	scan flag is set
+ * @QCA_WLAN_VENDOR_ATTR_SCAN_MAC_MASK: 6-byte MAC address mask to be used with
+ * 	randomisation
+ */
+enum qca_wlan_vendor_attr_scan {
+	QCA_WLAN_VENDOR_ATTR_SCAN_INVALID_PARAM = 0,
+	QCA_WLAN_VENDOR_ATTR_SCAN_IE,
+	QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES,
+	QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS,
+	QCA_WLAN_VENDOR_ATTR_SCAN_SUPP_RATES,
+	QCA_WLAN_VENDOR_ATTR_SCAN_TX_NO_CCK_RATE,
+	QCA_WLAN_VENDOR_ATTR_SCAN_FLAGS,
+	QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE,
+	QCA_WLAN_VENDOR_ATTR_SCAN_STATUS,
+	QCA_WLAN_VENDOR_ATTR_SCAN_MAC,
+	QCA_WLAN_VENDOR_ATTR_SCAN_MAC_MASK,
+	QCA_WLAN_VENDOR_ATTR_SCAN_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SCAN_MAX =
+	QCA_WLAN_VENDOR_ATTR_SCAN_AFTER_LAST - 1
+};
+
+/**
+ * enum scan_status - Specifies the valid values the vendor scan attribute
+ * 	QCA_WLAN_VENDOR_ATTR_SCAN_STATUS can take
+ *
+ * @VENDOR_SCAN_STATUS_NEW_RESULTS: implies the vendor scan is successful with
+ * 	new scan results
+ * @VENDOR_SCAN_STATUS_ABORTED: implies the vendor scan was aborted in-between
+ */
+enum scan_status {
+	VENDOR_SCAN_STATUS_NEW_RESULTS,
+	VENDOR_SCAN_STATUS_ABORTED,
+	VENDOR_SCAN_STATUS_MAX,
 };
 
 #endif /* QCA_VENDOR_H */

@@ -602,6 +602,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				case QCA_NL80211_VENDOR_SUBCMD_SETBAND:
 					drv->setband_vendor_cmd_avail = 1;
 					break;
+				case QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN:
+					drv->scan_vendor_cmd_avail = 1;
+					break;
 				}
 			}
 

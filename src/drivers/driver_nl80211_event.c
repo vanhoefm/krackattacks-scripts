@@ -1686,6 +1686,123 @@ static void qca_nl80211_dfs_offload_radar_event(
 }
 
 
+static void qca_nl80211_scan_trigger_event(struct wpa_driver_nl80211_data *drv,
+					   u8 *data, size_t len)
+{
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SCAN_MAX + 1];
+	u64 cookie = 0;
+
+	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_SCAN_MAX,
+		      (struct nlattr *) data, len, NULL) ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE])
+		return;
+
+	cookie = nla_get_u64(tb[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE]);
+	if (cookie != drv->vendor_scan_cookie) {
+		/* External scan trigger event, ignore */
+		return;
+	}
+
+	drv->scan_state = SCAN_STARTED;
+	wpa_supplicant_event(drv->ctx, EVENT_SCAN_STARTED, NULL);
+}
+
+
+static void send_vendor_scan_event(struct wpa_driver_nl80211_data *drv,
+				   int aborted, struct nlattr *tb[])
+{
+	union wpa_event_data event;
+	struct nlattr *nl;
+	int rem;
+	struct scan_info *info;
+	int freqs[MAX_REPORT_FREQS];
+	int num_freqs = 0;
+
+	os_memset(&event, 0, sizeof(event));
+	info = &event.scan_info;
+	info->aborted = aborted;
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS]) {
+		nla_for_each_nested(nl,
+				    tb[QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS], rem) {
+			struct wpa_driver_scan_ssid *s =
+				&info->ssids[info->num_ssids];
+			s->ssid = nla_data(nl);
+			s->ssid_len = nla_len(nl);
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Scan probed for SSID '%s'",
+				   wpa_ssid_txt(s->ssid, s->ssid_len));
+			info->num_ssids++;
+			if (info->num_ssids == WPAS_MAX_SCAN_SSIDS)
+				break;
+		}
+	}
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES]) {
+		char msg[200], *pos, *end;
+		int res;
+
+		pos = msg;
+		end = pos + sizeof(msg);
+		*pos = '\0';
+
+		nla_for_each_nested(nl,
+				    tb[QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES],
+				    rem) {
+			freqs[num_freqs] = nla_get_u32(nl);
+			res = os_snprintf(pos, end - pos, " %d",
+					  freqs[num_freqs]);
+			if (!os_snprintf_error(end - pos, res))
+				pos += res;
+			num_freqs++;
+			if (num_freqs == MAX_REPORT_FREQS - 1)
+				break;
+		}
+
+		info->freqs = freqs;
+		info->num_freqs = num_freqs;
+		wpa_printf(MSG_DEBUG, "nl80211: Scan included frequencies:%s",
+			   msg);
+	}
+	wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, &event);
+}
+
+
+static void qca_nl80211_scan_done_event(struct wpa_driver_nl80211_data *drv,
+					u8 *data, size_t len)
+{
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SCAN_MAX + 1];
+	u64 cookie = 0;
+	enum scan_status status;
+
+	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_SCAN_MAX,
+		      (struct nlattr *) data, len, NULL) ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_SCAN_STATUS] ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE])
+		return;
+
+	status = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_SCAN_STATUS]);
+	if (status >= VENDOR_SCAN_STATUS_MAX)
+		return; /* invalid status */
+
+	cookie = nla_get_u64(tb[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE]);
+	if (cookie != drv->vendor_scan_cookie) {
+		/* Event from an external scan, get scan results */
+	} else {
+		if (status == VENDOR_SCAN_STATUS_NEW_RESULTS)
+			drv->scan_state = SCAN_COMPLETED;
+		else
+			drv->scan_state = SCAN_ABORTED;
+
+		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
+				     drv->ctx);
+		drv->vendor_scan_cookie = 0;
+	}
+
+	send_vendor_scan_event(drv, (status == VENDOR_SCAN_STATUS_ABORTED), tb);
+}
+
+
 static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 				     u32 subcmd, u8 *data, size_t len)
 {
@@ -1708,6 +1825,12 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_NOP_FINISHED:
 	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED:
 		qca_nl80211_dfs_offload_radar_event(drv, subcmd, data, len);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN:
+		qca_nl80211_scan_trigger_event(drv, data, len);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_SCAN_DONE:
+		qca_nl80211_scan_done_event(drv, data, len);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,

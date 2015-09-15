@@ -14,6 +14,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/qca-vendor.h"
 #include "driver_nl80211.h"
 
 
@@ -780,4 +781,190 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 	}
 
 	wpa_scan_results_free(res);
+}
+
+
+static int scan_cookie_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	u64 *cookie = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_VENDOR_DATA]) {
+		struct nlattr *nl_vendor = tb[NL80211_ATTR_VENDOR_DATA];
+		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_SCAN_MAX + 1];
+
+		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_SCAN_MAX,
+			  nla_data(nl_vendor), nla_len(nl_vendor), NULL);
+
+		if (tb_vendor[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE])
+			*cookie = nla_get_u64(
+				tb_vendor[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE]);
+	}
+
+	return NL_SKIP;
+}
+
+
+/**
+ * wpa_driver_nl80211_vendor_scan - Request the driver to initiate a vendor scan
+ * @bss: Pointer to private driver data from wpa_driver_nl80211_init()
+ * @params: Scan parameters
+ * Returns: 0 on success, -1 on failure
+ */
+int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
+				   struct wpa_driver_scan_params *params)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg = NULL;
+	struct nlattr *attr;
+	size_t i;
+	u32 scan_flags = 0;
+	int ret = -1;
+	u64 cookie = 0;
+
+	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: vendor scan request");
+	drv->scan_for_auth = 0;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN) )
+		goto fail;
+
+	attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+	if (attr == NULL)
+		goto fail;
+
+	if (params->num_ssids) {
+		struct nlattr *ssids;
+
+		ssids = nla_nest_start(msg, QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS);
+		if (ssids == NULL)
+			goto fail;
+		for (i = 0; i < params->num_ssids; i++) {
+			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
+					params->ssids[i].ssid,
+					params->ssids[i].ssid_len);
+			if (nla_put(msg, i + 1, params->ssids[i].ssid_len,
+				    params->ssids[i].ssid))
+				goto fail;
+		}
+		nla_nest_end(msg, ssids);
+	}
+
+	if (params->extra_ies) {
+		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
+			    params->extra_ies, params->extra_ies_len);
+		if (nla_put(msg, QCA_WLAN_VENDOR_ATTR_SCAN_IE,
+			    params->extra_ies_len, params->extra_ies))
+			goto fail;
+	}
+
+	if (params->freqs) {
+		struct nlattr *freqs;
+
+		freqs = nla_nest_start(msg,
+				       QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES);
+		if (freqs == NULL)
+			goto fail;
+		for (i = 0; params->freqs[i]; i++) {
+			wpa_printf(MSG_MSGDUMP,
+				   "nl80211: Scan frequency %u MHz",
+				   params->freqs[i]);
+			if (nla_put_u32(msg, i + 1, params->freqs[i]))
+				goto fail;
+		}
+		nla_nest_end(msg, freqs);
+	}
+
+	os_free(drv->filter_ssids);
+	drv->filter_ssids = params->filter_ssids;
+	params->filter_ssids = NULL;
+	drv->num_filter_ssids = params->num_filter_ssids;
+
+	if (params->low_priority && drv->have_low_prio_scan) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Add NL80211_SCAN_FLAG_LOW_PRIORITY");
+		scan_flags |= NL80211_SCAN_FLAG_LOW_PRIORITY;
+	}
+
+	if (params->mac_addr_rand) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Add NL80211_SCAN_FLAG_RANDOM_ADDR");
+		scan_flags |= NL80211_SCAN_FLAG_RANDOM_ADDR;
+
+		if (params->mac_addr) {
+			wpa_printf(MSG_DEBUG, "nl80211: MAC address: " MACSTR,
+				   MAC2STR(params->mac_addr));
+			if (nla_put(msg, QCA_WLAN_VENDOR_ATTR_SCAN_MAC,
+				    ETH_ALEN, params->mac_addr))
+				goto fail;
+		}
+
+		if (params->mac_addr_mask) {
+			wpa_printf(MSG_DEBUG, "nl80211: MAC address mask: "
+				   MACSTR, MAC2STR(params->mac_addr_mask));
+			if (nla_put(msg, QCA_WLAN_VENDOR_ATTR_SCAN_MAC_MASK,
+				    ETH_ALEN, params->mac_addr_mask))
+				goto fail;
+		}
+	}
+
+	if (scan_flags &&
+	    nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, scan_flags))
+		goto fail;
+
+	if (params->p2p_probe) {
+		struct nlattr *rates;
+
+		wpa_printf(MSG_DEBUG, "nl80211: P2P probe - mask SuppRates");
+
+		rates = nla_nest_start(msg,
+				       QCA_WLAN_VENDOR_ATTR_SCAN_SUPP_RATES);
+		if (rates == NULL)
+			goto fail;
+
+		/*
+		 * Remove 2.4 GHz rates 1, 2, 5.5, 11 Mbps from supported rates
+		 * by masking out everything else apart from the OFDM rates 6,
+		 * 9, 12, 18, 24, 36, 48, 54 Mbps from non-MCS rates. All 5 GHz
+		 * rates are left enabled.
+		 */
+		if (nla_put(msg, NL80211_BAND_2GHZ, 8,
+			    "\x0c\x12\x18\x24\x30\x48\x60\x6c"))
+			goto fail;
+		nla_nest_end(msg, rates);
+
+		if (nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_SCAN_TX_NO_CCK_RATE))
+			goto fail;
+	}
+
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(drv, msg, scan_cookie_handler, &cookie);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Vendor scan trigger failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto fail;
+	}
+
+	drv->vendor_scan_cookie = cookie;
+	drv->scan_state = SCAN_REQUESTED;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Vendor scan requested (ret=%d) - scan timeout 30 seconds, scan cookie:0x%llx",
+		   ret, (long long unsigned int) cookie);
+	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
+	eloop_register_timeout(30, 0, wpa_driver_nl80211_scan_timeout,
+			       drv, drv->ctx);
+
+fail:
+	nlmsg_free(msg);
+	return ret;
 }

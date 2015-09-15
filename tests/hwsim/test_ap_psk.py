@@ -2032,3 +2032,34 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
         dev[0].scan_for_bss(bssid, 2412, force_scan=True, only_new=True)
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
+
+def test_ap_cli_order(dev, apdev):
+    ssid = "test-rsn-setup"
+    passphrase = 'zzzzzzzz'
+    ifname = apdev[0]['ifname']
+
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(ifname)
+    hapd_global.add(ifname)
+
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set('ssid', ssid)
+    hapd.set('wpa_passphrase', passphrase)
+    hapd.set('rsn_pairwise', 'CCMP')
+    hapd.set('wpa_key_mgmt', 'WPA-PSK')
+    hapd.set('wpa', '2')
+    hapd.enable()
+    cfg = hapd.get_config()
+    if cfg['group_cipher'] != 'CCMP':
+        raise Exception("Unexpected group_cipher: " + cfg['group_cipher'])
+    if cfg['rsn_pairwise_cipher'] != 'CCMP':
+        raise Exception("Unexpected rsn_pairwise_cipher: " + cfg['rsn_pairwise_cipher'])
+
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=30)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")

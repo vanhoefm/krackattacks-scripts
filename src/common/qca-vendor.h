@@ -249,11 +249,14 @@ enum qca_wlan_vendor_acs_hw_mode {
  *	after roaming, rather than having the user space wpa_supplicant do it.
  * @QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY: Device supports automatic
  *	band selection based on channel selection results.
+ * @QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS: Device supports
+ * 	simultaneous off-channel operations.
  * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
  */
 enum qca_wlan_vendor_features {
 	QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD	= 0,
 	QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY     = 1,
+	QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS = 2,
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 

@@ -7224,6 +7224,17 @@ static int driver_nl80211_scan2(void *priv,
 				struct wpa_driver_scan_params *params)
 {
 	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	/*
+	 * Do a vendor specific scan if possible. If only_new_results is
+	 * set, do a normal scan since a kernel (cfg80211) BSS cache flush
+	 * cannot be achieved through a vendor scan. The below condition may
+	 * need to be modified if new scan flags are added in the future whose
+	 * functionality can only be achieved through a normal scan.
+	 */
+	if (drv->scan_vendor_cmd_avail && !params->only_new_results)
+		return wpa_driver_nl80211_vendor_scan(bss, params);
 	return wpa_driver_nl80211_scan(bss, params);
 }
 

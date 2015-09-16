@@ -4381,6 +4381,9 @@ union wpa_event_data {
 	 * @ssids: Scanned SSIDs (%NULL or zero-length SSID indicates wildcard
 	 *	SSID)
 	 * @num_ssids: Number of entries in ssids array
+	 * @external_scan: Whether the scan info is for an external scan
+	 * @nl_scan_event: 1 if the source of this scan event is a normal scan,
+	 * 	0 if the source of the scan event is a vendor scan
 	 */
 	struct scan_info {
 		int aborted;
@@ -4388,6 +4391,8 @@ union wpa_event_data {
 		size_t num_freqs;
 		struct wpa_driver_scan_ssid ssids[WPAS_MAX_SCAN_SSIDS];
 		size_t num_ssids;
+		int external_scan;
+		int nl_scan_event;
 	} scan_info;
 
 	/**

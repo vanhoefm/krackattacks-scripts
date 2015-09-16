@@ -298,6 +298,7 @@ int wpa_driver_nl80211_scan(struct i802_bss *bss,
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 	eloop_register_timeout(timeout, 0, wpa_driver_nl80211_scan_timeout,
 			       drv, drv->ctx);
+	drv->last_scan_cmd = NL80211_CMD_TRIGGER_SCAN;
 
 fail:
 	nlmsg_free(msg);
@@ -963,6 +964,7 @@ int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 	eloop_register_timeout(30, 0, wpa_driver_nl80211_scan_timeout,
 			       drv, drv->ctx);
+	drv->last_scan_cmd = NL80211_CMD_VENDOR;
 
 fail:
 	nlmsg_free(msg);

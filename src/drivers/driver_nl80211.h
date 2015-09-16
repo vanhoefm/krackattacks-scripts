@@ -184,6 +184,13 @@ struct wpa_driver_nl80211_data {
 	int auth_wep_tx_keyidx;
 	int auth_local_state_change;
 	int auth_p2p;
+
+	/*
+	 * Tells whether the last scan issued from wpa_supplicant was a normal
+	 * scan (NL80211_CMD_TRIGGER_SCAN) or a vendor scan
+	 * (NL80211_CMD_VENDOR). 0 if no pending scan request.
+	 */
+	int last_scan_cmd;
 };
 
 struct nl_msg;

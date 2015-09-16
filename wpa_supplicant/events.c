@@ -1417,6 +1417,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 			return -1;
 		if (!own_request)
 			return -1;
+		if (data && data->scan_info.external_scan)
+			return -1;
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results - try "
 			"scanning again");
 		wpa_supplicant_req_new_scan(wpa_s, 1, 0);
@@ -1441,7 +1443,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_RANDOM_POOL */
 
 	if (own_request && wpa_s->scan_res_handler &&
-	    (wpa_s->own_scan_running || !wpa_s->radio->external_scan_running)) {
+	    !(data && data->scan_info.external_scan)) {
 		void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 					 struct wpa_scan_results *scan_res);
 
@@ -1462,9 +1464,11 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "New scan results available (own=%u ext=%u)",
-		wpa_s->own_scan_running, wpa_s->radio->external_scan_running);
+		wpa_s->own_scan_running,
+		data ? data->scan_info.external_scan : 0);
 	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
-	    wpa_s->manual_scan_use_id && wpa_s->own_scan_running) {
+	    wpa_s->manual_scan_use_id && wpa_s->own_scan_running &&
+	    own_request && !(data && data->scan_info.external_scan)) {
 		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS "id=%u",
 			     wpa_s->manual_scan_id);
 		wpa_s->manual_scan_use_id = 0;
@@ -1475,7 +1479,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpas_notify_scan_done(wpa_s, 1);
 
-	if (!wpa_s->own_scan_running && wpa_s->radio->external_scan_running) {
+	if (data && data->scan_info.external_scan) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Do not use results from externally requested scan operation for network selection");
 		wpa_scan_results_free(scan_res);
 		return 0;
@@ -1506,7 +1510,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpa_scan_results_free(scan_res);
 
-	if (wpa_s->scan_work) {
+	if (own_request && wpa_s->scan_work) {
 		struct wpa_radio_work *work = wpa_s->scan_work;
 		wpa_s->scan_work = NULL;
 		radio_work_done(work);
@@ -1516,7 +1520,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 scan_work_done:
 	wpa_scan_results_free(scan_res);
-	if (wpa_s->scan_work) {
+	if (own_request && wpa_s->scan_work) {
 		struct wpa_radio_work *work = wpa_s->scan_work;
 		wpa_s->scan_work = NULL;
 		radio_work_done(work);
@@ -3257,10 +3261,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #ifndef CONFIG_NO_SCAN_PROCESSING
 	case EVENT_SCAN_STARTED:
-		os_get_reltime(&wpa_s->scan_start_time);
-		if (wpa_s->own_scan_requested) {
+		if (wpa_s->own_scan_requested ||
+		    (data && !data->scan_info.external_scan)) {
 			struct os_reltime diff;
 
+			os_get_reltime(&wpa_s->scan_start_time);
 			os_reltime_sub(&wpa_s->scan_start_time,
 				       &wpa_s->scan_trigger_time, &diff);
 			wpa_dbg(wpa_s, MSG_DEBUG, "Own scan request started a scan in %ld.%06ld seconds",
@@ -3283,7 +3288,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		break;
 	case EVENT_SCAN_RESULTS:
-		if (os_reltime_initialized(&wpa_s->scan_start_time)) {
+		if (!(data && data->scan_info.external_scan) &&
+		    os_reltime_initialized(&wpa_s->scan_start_time)) {
 			struct os_reltime now, diff;
 			os_get_reltime(&now);
 			os_reltime_sub(&now, &wpa_s->scan_start_time, &diff);
@@ -3294,8 +3300,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		if (wpa_supplicant_event_scan_results(wpa_s, data))
 			break; /* interface may have been removed */
-		wpa_s->own_scan_running = 0;
-		wpa_s->radio->external_scan_running = 0;
+		if (!(data && data->scan_info.external_scan))
+			wpa_s->own_scan_running = 0;
+		if (data && data->scan_info.nl_scan_event)
+			wpa_s->radio->external_scan_running = 0;
 		radio_work_check_next(wpa_s);
 		break;
 #endif /* CONFIG_NO_SCAN_PROCESSING */

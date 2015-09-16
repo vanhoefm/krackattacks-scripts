@@ -407,7 +407,6 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct radius_client_data *radius = eloop_ctx;
-	struct hostapd_radius_servers *conf = radius->conf;
 	struct os_reltime now;
 	os_time_t first;
 	struct radius_msg_list *entry, *prev, *tmp;
@@ -476,10 +475,10 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 			       (long int) (first - now.sec));
 	}
 
-	if (auth_failover && conf->num_auth_servers > 1)
+	if (auth_failover)
 		radius_client_auth_failover(radius);
 
-	if (acct_failover && conf->num_acct_servers > 1)
+	if (acct_failover)
 		radius_client_acct_failover(radius);
 }
 
@@ -1015,6 +1014,9 @@ radius_change_server(struct radius_client_data *radius,
 	int sel_sock;
 	struct radius_msg_list *entry;
 	struct hostapd_radius_servers *conf = radius->conf;
+	struct sockaddr_in disconnect_addr = {
+		.sin_family = AF_UNSPEC,
+	};
 
 	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_INFO,
@@ -1022,6 +1024,12 @@ radius_change_server(struct radius_client_data *radius,
 		       auth ? "Authentication" : "Accounting",
 		       hostapd_ip_txt(&nserv->addr, abuf, sizeof(abuf)),
 		       nserv->port);
+
+	if (oserv && oserv == nserv) {
+		/* Reconnect to same server, flush */
+		if (auth)
+			radius_client_flush(radius, 1);
+	}
 
 	if (oserv && oserv != nserv &&
 	    (nserv->shared_secret_len != oserv->shared_secret_len ||
@@ -1124,6 +1132,11 @@ radius_change_server(struct radius_client_data *radius,
 			return -1;
 		}
 	}
+
+	/* Force a reconnect by disconnecting the socket first */
+	if (connect(sel_sock, (struct sockaddr *) &disconnect_addr,
+		    sizeof(disconnect_addr)) < 0)
+		wpa_printf(MSG_INFO, "disconnect[radius]: %s", strerror(errno));
 
 	if (connect(sel_sock, addr, addrlen) < 0) {
 		wpa_printf(MSG_INFO, "connect[radius]: %s", strerror(errno));

@@ -3228,7 +3228,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "GONegotiationRequest", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "path", "o", ARG_OUT },
-		  { "dev_passwd_id", "i", ARG_OUT },
+		  { "dev_passwd_id", "q", ARG_OUT },
 		  { "device_go_intent", "y", ARG_OUT },
 		  END_ARGS
 	  }

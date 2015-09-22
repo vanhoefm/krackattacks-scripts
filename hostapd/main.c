@@ -456,6 +456,7 @@ static void usage(void)
 		"   -T = record to Linux tracing in addition to logging\n"
 		"        (records all messages regardless of debug verbosity)\n"
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
+		"   -S   start all the interfaces synchronously\n"
 		"   -t   include timestamps in some debug messages\n"
 		"   -v   show hostapd version\n");
 
@@ -570,6 +571,7 @@ int main(int argc, char *argv[])
 #ifdef CONFIG_DEBUG_LINUX_TRACING
 	int enable_trace_dbg = 0;
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
+	int start_ifaces_in_sync = 0;
 
 	if (os_program_init())
 		return -1;
@@ -587,7 +589,7 @@ int main(int argc, char *argv[])
 	interfaces.global_ctrl_dst = NULL;
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bde:f:hKP:Ttu:vg:G:");
+		c = getopt(argc, argv, "b:Bde:f:hKP:STtu:vg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -643,6 +645,9 @@ int main(int argc, char *argv[])
 				goto out;
 			bss_config = tmp_bss;
 			bss_config[num_bss_configs++] = optarg;
+			break;
+		case 'S':
+			start_ifaces_in_sync = 1;
 			break;
 #ifdef CONFIG_WPS
 		case 'u':
@@ -712,6 +717,8 @@ int main(int argc, char *argv[])
 			wpa_printf(MSG_ERROR, "Failed to initialize interface");
 			goto out;
 		}
+		if (start_ifaces_in_sync)
+			interfaces.iface[i]->need_to_start_in_sync = 1;
 	}
 
 	/* Allocate and parse configuration for per-BSS files */

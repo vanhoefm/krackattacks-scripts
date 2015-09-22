@@ -329,6 +329,15 @@ struct hostapd_iface {
 	 */
 	unsigned int driver_ap_teardown:1;
 
+	/*
+	 * When set, indicates that this interface is part of list of
+	 * interfaces that need to be started together (synchronously).
+	 */
+	unsigned int need_to_start_in_sync:1;
+
+	/* Ready to start but waiting for other interfaces to become ready. */
+	unsigned int ready_to_start_in_sync:1;
+
 	int num_ap; /* number of entries in ap_list */
 	struct ap_info *ap_list; /* AP info list head */
 	struct ap_info *ap_hash[STA_HASH_SIZE];

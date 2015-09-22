@@ -2269,6 +2269,36 @@ def test_ap_wpa2_eap_interactive(dev, apdev):
         dev[0].wait_connected(timeout=10)
         dev[0].request("REMOVE_NETWORK all")
 
+def test_ap_wpa2_eap_ext_enable_network_while_connected(dev, apdev):
+    """WPA2-Enterprise interactive identity entry and ENABLE_NETWORK"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    id_other = dev[0].connect("other", key_mgmt="NONE", scan_freq="2412",
+                              only_add_network=True)
+
+    req_id = "DOMAIN\mschapv2 user"
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   anonymous_identity="ttls", identity=None,
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-IDENTITY"])
+    if ev is None:
+        raise Exception("Request for identity timed out")
+    id = ev.split(':')[0].split('-')[-1]
+    dev[0].request("CTRL-RSP-IDENTITY-" + id + ":" + req_id)
+    dev[0].wait_connected(timeout=10)
+
+    if "OK" not in dev[0].request("ENABLE_NETWORK " + str(id_other)):
+        raise Exception("Failed to enable network")
+    ev = dev[0].wait_event(["SME: Trying to authenticate"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected reconnection attempt on ENABLE_NETWORK")
+    dev[0].request("REMOVE_NETWORK all")
+
 def test_ap_wpa2_eap_vendor_test(dev, apdev):
     """WPA2-Enterprise connection using EAP vendor test"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

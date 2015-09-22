@@ -843,6 +843,10 @@ static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
 
 	if (check_feature(QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY, &info))
 		drv->capa.flags |= WPA_DRIVER_FLAGS_SUPPORT_HW_MODE_ANY;
+
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS,
+			  &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS;
 }
 
 
@@ -927,6 +931,16 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 
 	qca_nl80211_check_dfs_capa(drv);
 	qca_nl80211_get_features(drv);
+
+	/*
+	 * To enable offchannel simultaneous support in wpa_supplicant, the
+	 * underlying driver needs to support the same along with offchannel TX.
+	 * Offchannel TX support is needed since remain_on_channel and
+	 * action_tx use some common data structures and hence cannot be
+	 * scheduled simultaneously.
+	 */
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX))
+		drv->capa.flags &= ~WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS;
 
 	return 0;
 }

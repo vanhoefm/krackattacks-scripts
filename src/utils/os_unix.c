@@ -17,6 +17,12 @@
 #include <private/android_filesystem_config.h>
 #endif /* ANDROID */
 
+#ifdef __MACH__
+#include <CoreServices/CoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif /* __MACH__ */
+
 #include "os.h"
 #include "common.h"
 
@@ -63,6 +69,7 @@ int os_get_time(struct os_time *t)
 
 int os_get_reltime(struct os_reltime *t)
 {
+#ifndef __MACH__
 #if defined(CLOCK_BOOTTIME)
 	static clockid_t clock_id = CLOCK_BOOTTIME;
 #elif defined(CLOCK_MONOTONIC)
@@ -95,6 +102,23 @@ int os_get_reltime(struct os_reltime *t)
 			return -1;
 		}
 	}
+#else /* __MACH__ */
+	uint64_t abstime, nano;
+	static mach_timebase_info_data_t info = { 0, 0 };
+
+	if (!info.denom) {
+		if (mach_timebase_info(&info) != KERN_SUCCESS)
+			return -1;
+	}
+
+	abstime = mach_absolute_time();
+	nano = (abstime * info.numer) / info.denom;
+
+	t->sec = nano / NSEC_PER_SEC;
+	t->usec = (nano - (((uint64_t) t->sec) * NSEC_PER_SEC)) / NSEC_PER_USEC;
+
+	return 0;
+#endif /* __MACH__ */
 }
 
 
@@ -420,8 +444,19 @@ int os_file_exists(const char *fname)
 
 int os_fdatasync(FILE *stream)
 {
-	if (!fflush(stream))
+	if (!fflush(stream)) {
+#ifndef __MACH__
 		return fdatasync(fileno(stream));
+#else /* __MACH__ */
+#ifdef F_FULLFSYNC
+		/* OS X does not implement fdatasync(). */
+		return fcntl(fileno(stream), F_FULLFSYNC);
+#else /* F_FULLFSYNC */
+#error Neither fdatasync nor F_FULLSYNC are defined
+#endif /* F_FULLFSYNC */
+#endif /* __MACH__ */
+	}
+
 	return -1;
 }
 

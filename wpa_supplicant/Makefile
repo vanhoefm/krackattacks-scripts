@@ -131,11 +131,14 @@ endif
 OBJS += ../src/utils/$(CONFIG_ELOOP).o
 OBJS_c += ../src/utils/$(CONFIG_ELOOP).o
 
+ifndef CONFIG_OSX
 ifeq ($(CONFIG_ELOOP), eloop)
 # Using glibc < 2.17 requires -lrt for clock_gettime()
+# OS X has an alternate implementation
 LIBS += -lrt
 LIBS_c += -lrt
 LIBS_p += -lrt
+endif
 endif
 
 ifdef CONFIG_ELOOP_POLL

@@ -1373,13 +1373,15 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211AC
-	resp = copy_sta_vht_capab(hapd, sta, elems.vht_capabilities);
-	if (resp != WLAN_STATUS_SUCCESS)
-		return resp;
+	if (hapd->iconf->ieee80211ac) {
+		resp = copy_sta_vht_capab(hapd, sta, elems.vht_capabilities);
+		if (resp != WLAN_STATUS_SUCCESS)
+			return resp;
 
-	resp = set_sta_vht_opmode(hapd, sta, elems.vht_opmode_notif);
-	if (resp != WLAN_STATUS_SUCCESS)
-		return resp;
+		resp = set_sta_vht_opmode(hapd, sta, elems.vht_opmode_notif);
+		if (resp != WLAN_STATUS_SUCCESS)
+			return resp;
+	}
 
 	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht &&
 	    !(sta->flags & WLAN_STA_VHT)) {

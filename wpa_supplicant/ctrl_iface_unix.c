@@ -584,6 +584,53 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 	if (wpa_s->conf->ctrl_interface == NULL)
 		return priv;
 
+#ifdef ANDROID
+	if (wpa_s->global->params.ctrl_interface) {
+		int same = 0;
+
+		if (wpa_s->global->params.ctrl_interface[0] == '/') {
+			if (os_strcmp(wpa_s->global->params.ctrl_interface,
+				      wpa_s->conf->ctrl_interface) == 0)
+				same = 1;
+		} else if (os_strncmp(wpa_s->global->params.ctrl_interface,
+				      "@android:", 9) == 0 ||
+			   os_strncmp(wpa_s->global->params.ctrl_interface,
+				      "@abstract:", 10) == 0) {
+			char *pos;
+
+			/*
+			 * Currently, Android uses @android:wpa_* as the naming
+			 * convention for the global ctrl interface. This logic
+			 * needs to be revisited if the above naming convention
+			 * is modified.
+			 */
+			pos = os_strchr(wpa_s->global->params.ctrl_interface,
+					'_');
+			if (pos &&
+			    os_strcmp(pos + 1,
+				      wpa_s->conf->ctrl_interface) == 0)
+				same = 1;
+		}
+
+		if (same) {
+			/*
+			 * The invalid configuration combination might be
+			 * possible to hit in an Android OTA upgrade case, so
+			 * instead of refusing to start the wpa_supplicant
+			 * process, do not open the per-interface ctrl_iface
+			 * and continue with the global control interface that
+			 * was set from the command line since the Wi-Fi
+			 * framework will use it for operations.
+			 */
+			wpa_printf(MSG_ERROR,
+				   "global ctrl interface %s matches ctrl interface %s - do not open per-interface ctrl interface",
+				   wpa_s->global->params.ctrl_interface,
+				   wpa_s->conf->ctrl_interface);
+			return priv;
+		}
+	}
+#endif /* ANDROID */
+
 	if (wpas_ctrl_iface_open_sock(wpa_s, priv) < 0) {
 		os_free(priv);
 		return NULL;

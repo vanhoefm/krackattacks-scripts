@@ -152,6 +152,8 @@ try_again:
 
 #ifdef ANDROID
 	chmod(ctrl->local.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	/* Set group even if we do not have privileges to change owner */
+	chown(ctrl->local.sun_path, -1, AID_WIFI);
 	chown(ctrl->local.sun_path, AID_SYSTEM, AID_WIFI);
 
 	if (os_strncmp(ctrl_path, "@android:", 9) == 0) {

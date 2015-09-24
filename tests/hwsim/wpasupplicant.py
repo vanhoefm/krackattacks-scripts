@@ -413,6 +413,12 @@ class WpaSupplicant:
     def p2p_listen(self):
         return self.global_request("P2P_LISTEN")
 
+    def p2p_ext_listen(self, period, interval):
+        return self.global_request("P2P_EXT_LISTEN %d %d" % (period, interval))
+
+    def p2p_cancel_ext_listen(self):
+        return self.global_request("P2P_EXT_LISTEN")
+
     def p2p_find(self, social=False, progressive=False, dev_id=None,
                  dev_type=None, delay=None, freq=None):
         cmd = "P2P_FIND"

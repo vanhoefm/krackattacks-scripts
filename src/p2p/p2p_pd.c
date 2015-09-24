@@ -728,38 +728,46 @@ out:
 		config_methods = msg.wps_config_methods;
 	else
 		config_methods = 0;
-	resp = p2p_build_prov_disc_resp(p2p, dev, msg.dialog_token, reject,
-					config_methods, adv_id,
-					msg.group_id, msg.group_id_len,
-					msg.persistent_ssid,
-					msg.persistent_ssid_len,
-					(const u8 *) &resp_fcap,
-					sizeof(resp_fcap));
-	if (resp == NULL) {
-		p2p_parse_free(&msg);
-		return;
-	}
-	p2p_dbg(p2p, "Sending Provision Discovery Response");
-	if (rx_freq > 0)
-		freq = rx_freq;
-	else
-		freq = p2p_channel_to_freq(p2p->cfg->reg_class,
-					   p2p->cfg->channel);
-	if (freq < 0) {
-		p2p_dbg(p2p, "Unknown regulatory class/channel");
-		wpabuf_free(resp);
-		p2p_parse_free(&msg);
-		return;
-	}
-	p2p->pending_action_state = P2P_PENDING_PD_RESPONSE;
-	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
-			    p2p->cfg->dev_addr,
-			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
-		p2p_dbg(p2p, "Failed to send Action frame");
-	} else
-		p2p->send_action_in_progress = 1;
 
-	wpabuf_free(resp);
+	/*
+	 * Send PD Response for an initial PD Request or for follow-on
+	 * PD Request with P2P_SC_SUCCESS_DEFERRED status.
+	 */
+	if (!msg.status || *msg.status == P2P_SC_SUCCESS_DEFERRED) {
+		resp = p2p_build_prov_disc_resp(p2p, dev, msg.dialog_token,
+						reject, config_methods, adv_id,
+						msg.group_id, msg.group_id_len,
+						msg.persistent_ssid,
+						msg.persistent_ssid_len,
+						(const u8 *) &resp_fcap,
+						sizeof(resp_fcap));
+		if (!resp) {
+			p2p_parse_free(&msg);
+			return;
+		}
+		p2p_dbg(p2p, "Sending Provision Discovery Response");
+		if (rx_freq > 0)
+			freq = rx_freq;
+		else
+			freq = p2p_channel_to_freq(p2p->cfg->reg_class,
+						   p2p->cfg->channel);
+		if (freq < 0) {
+			p2p_dbg(p2p, "Unknown regulatory class/channel");
+			wpabuf_free(resp);
+			p2p_parse_free(&msg);
+			return;
+		}
+		p2p->pending_action_state = P2P_PENDING_PD_RESPONSE;
+		if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
+				    p2p->cfg->dev_addr,
+				    wpabuf_head(resp), wpabuf_len(resp),
+				    200) < 0)
+			p2p_dbg(p2p, "Failed to send Action frame");
+		else
+			p2p->send_action_in_progress = 1;
+
+		wpabuf_free(resp);
+	}
 
 	if (!p2p->cfg->p2ps_prov_complete) {
 		/* Don't emit anything */

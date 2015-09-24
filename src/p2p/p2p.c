@@ -3327,6 +3327,43 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 	}
 
 	/*
+	 * If after PD Request the peer doesn't expect to receive PD Response
+	 * the PD Request ACK indicates a completion of the current PD. This
+	 * happens only on the advertiser side sending the follow-on PD Request
+	 * with the status different than 12 (Success: accepted by user).
+	 */
+	if (p2p->p2ps_prov && !p2p->p2ps_prov->pd_seeker &&
+	    p2p->p2ps_prov->status != P2P_SC_SUCCESS_DEFERRED) {
+		p2p_dbg(p2p, "P2PS PD completion on Follow-on PD Request ACK");
+
+		if (p2p->send_action_in_progress) {
+			p2p->send_action_in_progress = 0;
+			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+		}
+
+		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+
+		if (p2p->cfg->p2ps_prov_complete) {
+			p2p->cfg->p2ps_prov_complete(
+				p2p->cfg->cb_ctx,
+				p2p->p2ps_prov->status,
+				p2p->p2ps_prov->adv_mac,
+				p2p->p2ps_prov->adv_mac,
+				p2p->p2ps_prov->session_mac,
+				NULL, p2p->p2ps_prov->adv_id,
+				p2p->p2ps_prov->session_id,
+				0, 0, NULL, 0, 0, 0,
+				NULL, NULL, 0);
+		}
+
+		if (p2p->user_initiated_pd)
+			p2p_reset_pending_pd(p2p);
+
+		p2ps_prov_free(p2p);
+		return;
+	}
+
+	/*
 	 * This postponing, of resetting pending_action_state, needs to be
 	 * done only for user initiated PD requests and not internal ones.
 	 */

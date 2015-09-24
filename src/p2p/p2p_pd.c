@@ -448,6 +448,8 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	u16 allowed_config_methods = WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
 	struct p2ps_feature_capab resp_fcap = { 0, 0 };
 	struct p2ps_feature_capab *req_fcap;
+	u8 remote_conncap;
+	u16 method;
 
 	if (p2p_parse(data, len, &msg))
 		return;
@@ -546,111 +548,73 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	 * p2ps_feature_capab is extended to include additional fields and it
 	 * affects the structure size.
 	 */
-	if (msg.adv_id && msg.session_id && msg.session_mac && msg.adv_mac &&
-	    msg.feature_cap && msg.feature_cap_len >= sizeof(*req_fcap) &&
-	    (msg.status || msg.conn_cap)) {
-		u8 remote_conncap;
+	if (!msg.adv_id || !msg.session_id || !msg.session_mac ||
+	    !msg.adv_mac || !msg.feature_cap ||
+	    msg.feature_cap_len < sizeof(*req_fcap) ||
+	    !(msg.status || msg.conn_cap))
+		goto out;
 
-		req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
+	req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
 
-		os_memcpy(session_mac, msg.session_mac, ETH_ALEN);
-		os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
+	os_memcpy(session_mac, msg.session_mac, ETH_ALEN);
+	os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
 
-		session_id = WPA_GET_LE32(msg.session_id);
-		adv_id = WPA_GET_LE32(msg.adv_id);
+	session_id = WPA_GET_LE32(msg.session_id);
+	adv_id = WPA_GET_LE32(msg.adv_id);
 
-		if (!msg.status)
-			p2ps_adv = p2p_service_p2ps_id(p2p, adv_id);
+	if (!msg.status)
+		p2ps_adv = p2p_service_p2ps_id(p2p, adv_id);
 
-		p2p_dbg(p2p, "adv_id: %x - p2ps_adv - %p", adv_id, p2ps_adv);
+	p2p_dbg(p2p, "adv_id: %x - p2ps_adv - %p", adv_id, p2ps_adv);
 
-		if (msg.conn_cap)
-			conncap = *msg.conn_cap;
-		remote_conncap = conncap;
+	if (msg.conn_cap)
+		conncap = *msg.conn_cap;
+	remote_conncap = conncap;
 
-		if (p2ps_adv) {
-			auto_accept = p2ps_adv->auto_accept;
-			conncap = p2p->cfg->p2ps_group_capability(
-				p2p->cfg->cb_ctx, conncap, auto_accept);
+	if (p2ps_adv) {
+		auto_accept = p2ps_adv->auto_accept;
+		conncap = p2p->cfg->p2ps_group_capability(p2p->cfg->cb_ctx,
+							  conncap, auto_accept);
 
-			p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
-				auto_accept, remote_conncap, conncap);
+		p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
+			auto_accept, remote_conncap, conncap);
 
-			resp_fcap.cpt =
-				p2ps_own_preferred_cpt(p2ps_adv->cpt_priority,
+		resp_fcap.cpt = p2ps_own_preferred_cpt(p2ps_adv->cpt_priority,
 						       req_fcap->cpt);
 
+		p2p_dbg(p2p, "cpt: service:0x%x remote:0x%x result:0x%x",
+			p2ps_adv->cpt_mask, req_fcap->cpt, resp_fcap.cpt);
+
+		if (!resp_fcap.cpt) {
 			p2p_dbg(p2p,
-				"cpt: service:0x%x remote:0x%x result:0x%x",
-				p2ps_adv->cpt_mask, req_fcap->cpt,
-				resp_fcap.cpt);
-
-			if (!resp_fcap.cpt) {
-				p2p_dbg(p2p,
-					"Incompatible P2PS feature capability CPT bitmask");
-				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-			} else if (p2ps_adv->config_methods &&
-				   !(msg.wps_config_methods &
-				   p2ps_adv->config_methods)) {
-				p2p_dbg(p2p,
-					"Unsupported config methods in Provision Discovery Request (own=0x%x peer=0x%x)",
-					p2ps_adv->config_methods,
-					msg.wps_config_methods);
-				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-			} else if (!p2ps_adv->state) {
-				p2p_dbg(p2p, "P2PS state unavailable");
-				reject = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
-			} else if (!conncap) {
-				p2p_dbg(p2p, "Conncap resolution failed");
-				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-			}
-
-			if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
-				p2p_dbg(p2p, "Keypad - always defer");
-				auto_accept = 0;
-			}
-
-			if (auto_accept || reject != P2P_SC_SUCCESS) {
-				struct p2ps_provision *tmp;
-
-				if (reject == P2P_SC_SUCCESS && !conncap) {
-					reject =
-						P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				}
-
-				if (p2ps_setup_p2ps_prov(
-					    p2p, adv_id, session_id,
-					    msg.wps_config_methods,
-					    session_mac, adv_mac) < 0) {
-					reject = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
-					goto out;
-				}
-
-				tmp = p2p->p2ps_prov;
-				if (conncap) {
-					tmp->conncap = conncap;
-					tmp->status = P2P_SC_SUCCESS;
-				} else {
-					tmp->conncap = auto_accept;
-					tmp->status = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				}
-
-				if (reject != P2P_SC_SUCCESS)
-					goto out;
-			}
-		} else if (!msg.status) {
+				"Incompatible P2PS feature capability CPT bitmask");
 			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-			goto out;
+		} else if (p2ps_adv->config_methods &&
+			   !(msg.wps_config_methods &
+			     p2ps_adv->config_methods)) {
+			p2p_dbg(p2p,
+				"Unsupported config methods in Provision Discovery Request (own=0x%x peer=0x%x)",
+				p2ps_adv->config_methods,
+				msg.wps_config_methods);
+			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+		} else if (!p2ps_adv->state) {
+			p2p_dbg(p2p, "P2PS state unavailable");
+			reject = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
+		} else if (!conncap) {
+			p2p_dbg(p2p, "Conncap resolution failed");
+			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
 		}
 
-		if (!msg.status && !auto_accept &&
-		    (!p2p->p2ps_prov || p2p->p2ps_prov->adv_id != adv_id)) {
+		if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
+			p2p_dbg(p2p, "Keypad - always defer");
+			auto_accept = 0;
+		}
+
+		if (auto_accept || reject != P2P_SC_SUCCESS) {
 			struct p2ps_provision *tmp;
 
-			if (!conncap) {
+			if (reject == P2P_SC_SUCCESS && !conncap)
 				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				goto out;
-			}
 
 			if (p2ps_setup_p2ps_prov(p2p, adv_id, session_id,
 						 msg.wps_config_methods,
@@ -658,69 +622,96 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 				reject = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
 				goto out;
 			}
+
 			tmp = p2p->p2ps_prov;
-			reject = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
-			tmp->status = reject;
-		}
-
-		if (msg.status) {
-			if (*msg.status &&
-			    *msg.status != P2P_SC_SUCCESS_DEFERRED) {
-				reject = *msg.status;
-			} else if (*msg.status == P2P_SC_SUCCESS_DEFERRED &&
-				   p2p->p2ps_prov) {
-				u16 method = p2p->p2ps_prov->method;
-
-				conncap = p2p->cfg->p2ps_group_capability(
-					p2p->cfg->cb_ctx, remote_conncap,
-					p2p->p2ps_prov->conncap);
-
-				p2p_dbg(p2p,
-					"Conncap: local:%d remote:%d result:%d",
-					p2p->p2ps_prov->conncap,
-					remote_conncap, conncap);
-
-				resp_fcap.cpt = p2ps_own_preferred_cpt(
-					p2p->p2ps_prov->cpt_priority,
-					req_fcap->cpt);
-
-				p2p_dbg(p2p,
-					"cpt: local:0x%x remote:0x%x result:0x%x",
-					p2p->p2ps_prov->cpt_mask,
-					req_fcap->cpt, resp_fcap.cpt);
-
-				/*
-				 * Ensure that if we asked for PIN originally,
-				 * our method is consistent with original
-				 * request.
-				 */
-				if (method & WPS_CONFIG_DISPLAY)
-					method = WPS_CONFIG_KEYPAD;
-				else if (method & WPS_CONFIG_KEYPAD)
-					method = WPS_CONFIG_DISPLAY;
-
-				if (!conncap ||
-				    !(msg.wps_config_methods & method)) {
-					/*
-					 * Reject this "Deferred Accept*
-					 * if incompatible conncap or method
-					 */
-					reject =
-						P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				} else if (!resp_fcap.cpt) {
-					p2p_dbg(p2p,
-						"Incompatible P2PS feature capability CPT bitmask");
-					reject =
-						P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-				} else {
-					reject = P2P_SC_SUCCESS;
-				}
-
-				p2p->p2ps_prov->status = reject;
-				p2p->p2ps_prov->conncap = conncap;
+			if (conncap) {
+				tmp->conncap = conncap;
+				tmp->status = P2P_SC_SUCCESS;
+			} else {
+				tmp->conncap = auto_accept;
+				tmp->status = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
 			}
+
+			if (reject != P2P_SC_SUCCESS)
+				goto out;
 		}
+	} else if (!msg.status) {
+		reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+		goto out;
 	}
+
+	if (!msg.status && !auto_accept &&
+	    (!p2p->p2ps_prov || p2p->p2ps_prov->adv_id != adv_id)) {
+		struct p2ps_provision *tmp;
+
+		if (!conncap) {
+			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+			goto out;
+		}
+
+		if (p2ps_setup_p2ps_prov(p2p, adv_id, session_id,
+					 msg.wps_config_methods,
+					 session_mac, adv_mac) < 0) {
+			reject = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
+			goto out;
+		}
+		tmp = p2p->p2ps_prov;
+		reject = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
+		tmp->status = reject;
+	}
+
+	/* Not a P2PS Follow-on PD */
+	if (!msg.status)
+		goto out;
+
+	if (*msg.status && *msg.status != P2P_SC_SUCCESS_DEFERRED) {
+		reject = *msg.status;
+		goto out;
+	}
+
+	if (*msg.status != P2P_SC_SUCCESS_DEFERRED || !p2p->p2ps_prov)
+		goto out;
+
+	method = p2p->p2ps_prov->method;
+
+	conncap = p2p->cfg->p2ps_group_capability(p2p->cfg->cb_ctx,
+						  remote_conncap,
+						  p2p->p2ps_prov->conncap);
+
+	p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
+		p2p->p2ps_prov->conncap, remote_conncap, conncap);
+
+	resp_fcap.cpt = p2ps_own_preferred_cpt(p2p->p2ps_prov->cpt_priority,
+					       req_fcap->cpt);
+
+	p2p_dbg(p2p, "cpt: local:0x%x remote:0x%x result:0x%x",
+		p2p->p2ps_prov->cpt_mask, req_fcap->cpt, resp_fcap.cpt);
+
+	/*
+	 * Ensure that if we asked for PIN originally, our method is consistent
+	 * with original request.
+	 */
+	if (method & WPS_CONFIG_DISPLAY)
+		method = WPS_CONFIG_KEYPAD;
+	else if (method & WPS_CONFIG_KEYPAD)
+		method = WPS_CONFIG_DISPLAY;
+
+	if (!conncap || !(msg.wps_config_methods & method)) {
+		/*
+		 * Reject this "Deferred Accept*
+		 * if incompatible conncap or method
+		 */
+		reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+	} else if (!resp_fcap.cpt) {
+		p2p_dbg(p2p,
+			"Incompatible P2PS feature capability CPT bitmask");
+		reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+	} else {
+		reject = P2P_SC_SUCCESS;
+	}
+
+	p2p->p2ps_prov->status = reject;
+	p2p->p2ps_prov->conncap = conncap;
 
 out:
 	if (reject == P2P_SC_SUCCESS ||

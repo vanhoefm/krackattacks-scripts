@@ -585,6 +585,26 @@ wpas_p2p_get_go_group(struct wpa_supplicant *wpa_s)
 }
 
 
+static unsigned int p2p_is_active_persistent_cli(struct wpa_supplicant *wpa_s)
+{
+	return p2p_is_active_persistent_group(wpa_s) &&
+		wpa_s->current_ssid->mode == WPAS_MODE_INFRA;
+}
+
+
+/* Find an interface for a P2P group where we are the P2P Client */
+static struct wpa_supplicant *
+wpas_p2p_get_cli_group(struct wpa_supplicant *wpa_s)
+{
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (p2p_is_active_persistent_cli(wpa_s))
+			return wpa_s;
+	}
+
+	return NULL;
+}
+
+
 /* Find an active P2P group where we are the GO */
 static struct wpa_ssid * wpas_p2p_group_go_ssid(struct wpa_supplicant *wpa_s,
 						u8 *bssid)
@@ -616,13 +636,11 @@ wpas_p2p_get_persistent_go(struct wpa_supplicant *wpa_s)
 
 static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 {
-	struct wpa_supplicant *wpa_s = ctx, *tmp_wpa_s;
+	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *s;
 	u8 conncap = P2PS_SETUP_NONE;
 	unsigned int owned_members = 0;
-	unsigned int owner = 0;
-	unsigned int client = 0;
-	struct wpa_supplicant *go_wpa_s;
+	struct wpa_supplicant *go_wpa_s, *cli_wpa_s;
 	struct wpa_ssid *persistent_go;
 	int p2p_no_group_iface;
 
@@ -635,36 +653,21 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 	 * If client, then no GO.
 	 */
 	go_wpa_s = wpas_p2p_get_go_group(wpa_s);
+	if (go_wpa_s)
+		owned_members = p2p_get_group_num_members(go_wpa_s->p2p_group);
 	persistent_go = wpas_p2p_get_persistent_go(wpa_s);
 	p2p_no_group_iface = !wpas_p2p_create_iface(wpa_s);
+	cli_wpa_s = wpas_p2p_get_cli_group(wpa_s);
 
-	wpa_printf(MSG_DEBUG, "P2P: GO(iface)=%p persistent(ssid)=%p",
-		   go_wpa_s, persistent_go);
-
-	for (tmp_wpa_s = wpa_s->global->ifaces; tmp_wpa_s;
-	     tmp_wpa_s = tmp_wpa_s->next) {
-		for (s = tmp_wpa_s->conf->ssid; s; s = s->next) {
-			wpa_printf(MSG_DEBUG,
-				   "P2P: sup:%p ssid:%p disabled:%d p2p:%d mode:%d",
-				   tmp_wpa_s, s, s->disabled,
-				   s->p2p_group, s->mode);
-			if (!s->disabled && s->p2p_group) {
-				if (s->mode == WPAS_MODE_P2P_GO) {
-					owned_members +=
-						p2p_get_group_num_members(
-							tmp_wpa_s->p2p_group);
-					owner++;
-				} else
-					client++;
-			}
-		}
-	}
+	wpa_printf(MSG_DEBUG,
+		   "P2P: GO(iface)=%p members=%u CLI(iface)=%p persistent(ssid)=%p",
+		   go_wpa_s, owned_members, cli_wpa_s, persistent_go);
 
 	/* If not concurrent, restrict our choices */
 	if (p2p_no_group_iface) {
 		wpa_printf(MSG_DEBUG, "P2P: p2p_no_group_iface");
 
-		if (client)
+		if (cli_wpa_s)
 			return P2PS_SETUP_NONE;
 
 		if (go_wpa_s) {
@@ -708,7 +711,7 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 			 * Must be a complimentary role - cannot be a client to
 			 * more than one peer.
 			 */
-			if (incoming == role || client)
+			if (incoming == role || cli_wpa_s)
 				return P2PS_SETUP_NONE;
 
 			return P2PS_SETUP_CLIENT;
@@ -734,7 +737,7 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 	switch (incoming) {
 	case P2PS_SETUP_NONE:
 	case P2PS_SETUP_NEW:
-		if (client)
+		if (cli_wpa_s)
 			conncap = P2PS_SETUP_GROUP_OWNER;
 		else if (!owned_members)
 			conncap = P2PS_SETUP_NEW;
@@ -749,13 +752,13 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 		break;
 
 	case P2PS_SETUP_GROUP_OWNER:
-		if (!client)
+		if (!cli_wpa_s)
 			conncap = P2PS_SETUP_CLIENT;
 		break;
 
 	case P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW:
 	case P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_CLIENT:
-		if (client)
+		if (cli_wpa_s)
 			conncap = P2PS_SETUP_GROUP_OWNER;
 		else {
 			u8 r;
@@ -777,15 +780,12 @@ grp_owner:
 	    (!incoming && (conncap & P2PS_SETUP_NEW))) {
 		if (go_wpa_s && p2p_client_limit_reached(go_wpa_s->p2p_group))
 			conncap &= ~P2PS_SETUP_GROUP_OWNER;
-		wpa_printf(MSG_DEBUG, "P2P: GOs:%d members:%d conncap:%d",
-			   owner, owned_members, conncap);
 
 		s = wpas_p2p_get_persistent_go(wpa_s);
-
-		if (!s && !owner && p2p_no_group_iface) {
+		if (!s && !go_wpa_s && p2p_no_group_iface) {
 			p2p_set_intended_addr(wpa_s->global->p2p,
 					      wpa_s->own_addr);
-		} else if (!s && !owner) {
+		} else if (!s && !go_wpa_s) {
 			if (wpas_p2p_add_group_interface(wpa_s,
 							 WPA_IF_P2P_GO) < 0) {
 				wpa_printf(MSG_ERROR,

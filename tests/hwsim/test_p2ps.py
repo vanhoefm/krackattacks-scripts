@@ -92,6 +92,7 @@ def p2ps_exact_seek(i_dev, r_dev, svc_name, srv_info=None,
         if rcvd_svc_name != svc_name:
             raise Exception("service name not matching")
 
+    i_dev.p2p_stop_find()
     return [adv_id, rcvd_svc_name]
 
 def p2ps_nonexact_seek(i_dev, r_dev, svc_name, srv_info=None, adv_num=None):
@@ -123,6 +124,8 @@ def p2ps_nonexact_seek(i_dev, r_dev, svc_name, srv_info=None, adv_num=None):
         adv_id = ev1.split(" ")[3]
         rcvd_svc_name = ev1.split(" ")[6]
         ev_list.append(''.join([adv_id, ' ', rcvd_svc_name]))
+
+    i_dev.p2p_stop_find()
     return ev_list
 
 def p2ps_parse_event(ev, *args):
@@ -152,6 +155,10 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", 
         ev = seeker.wait_global_event(["P2P-PROV-DISC-FAILURE"], timeout=10)
         if ev is None:
             raise Exception("P2P-PROV-DISC-FAILURE timeout on seeker side")
+
+        # Put seeker into a listen state, since we expect the deferred flow to
+        # continue.
+        seeker.p2p_ext_listen(500, 500)
 
         if method == "100":
             ev = advertiser.wait_global_event(["P2P-PROV-DISC-ENTER-PIN"],
@@ -197,6 +204,7 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", 
             if addr1 not in ev:
                 raise Exception("Unknown peer " + addr1)
 
+        seeker.p2p_cancel_ext_listen()
         if pin is not None:
             return ev1, ev2, pin
         return ev1, ev2

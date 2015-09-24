@@ -545,27 +545,39 @@ static unsigned int p2p_group_go_member_count(struct wpa_supplicant *wpa_s)
 }
 
 
+static unsigned int p2p_is_active_persistent_group(struct wpa_supplicant *wpa_s)
+{
+	return !wpa_s->p2p_mgmt && wpa_s->current_ssid &&
+		!wpa_s->current_ssid->disabled &&
+		wpa_s->current_ssid->p2p_group &&
+		wpa_s->current_ssid->p2p_persistent_group;
+}
+
+
+static unsigned int p2p_is_active_persistent_go(struct wpa_supplicant *wpa_s)
+{
+	return p2p_is_active_persistent_group(wpa_s) &&
+		wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO;
+}
+
+
 /* Find an interface for a P2P group where we are the GO */
 static struct wpa_supplicant *
 wpas_p2p_get_go_group(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_supplicant *save = NULL;
-	struct wpa_ssid *s;
 
 	if (!wpa_s)
 		return NULL;
 
 	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		for (s = wpa_s->conf->ssid; s; s = s->next) {
-			if (s->disabled || !s->p2p_group ||
-			    s->mode != WPAS_MODE_P2P_GO)
-				continue;
+		if (!p2p_is_active_persistent_go(wpa_s))
+			continue;
 
-			/* Prefer a group with connected clients */
-			if (p2p_get_group_num_members(wpa_s->p2p_group))
-				return wpa_s;
-			save = wpa_s;
-		}
+		/* Prefer a group with connected clients */
+		if (p2p_get_group_num_members(wpa_s->p2p_group))
+			return wpa_s;
+		save = wpa_s;
 	}
 
 	/* No group with connected clients, so pick the one without (if any) */
@@ -577,25 +589,13 @@ wpas_p2p_get_go_group(struct wpa_supplicant *wpa_s)
 static struct wpa_ssid * wpas_p2p_group_go_ssid(struct wpa_supplicant *wpa_s,
 						u8 *bssid)
 {
-	struct wpa_ssid *s, *empty = NULL;
+	struct wpa_supplicant *go = wpas_p2p_get_go_group(wpa_s);
 
-	if (!wpa_s)
-		return 0;
+	if (!go)
+		return NULL;
 
-	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		for (s = wpa_s->conf->ssid; s; s = s->next) {
-			if (s->disabled || !s->p2p_group ||
-			    s->mode != WPAS_MODE_P2P_GO)
-				continue;
-
-			os_memcpy(bssid, wpa_s->own_addr, ETH_ALEN);
-			if (p2p_get_group_num_members(wpa_s->p2p_group))
-				return s;
-			empty = s;
-		}
-	}
-
-	return empty;
+	os_memcpy(bssid, go->own_addr, ETH_ALEN);
+	return go->current_ssid;
 }
 
 

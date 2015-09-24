@@ -427,6 +427,117 @@ static u8 p2ps_own_preferred_cpt(const u8 *cpt_priority, u8 req_cpt_mask)
 }
 
 
+/* Check if the message contains a valid P2PS PD Request */
+static int p2ps_validate_pd_req(struct p2p_data *p2p, struct p2p_message *msg,
+				const u8 *addr)
+{
+	u8 group_id = 0;
+	u8 intended_addr = 0;
+	u8 operating_channel = 0;
+	u8 channel_list = 0;
+	u8 config_timeout = 0;
+	u8 listen_channel = 0;
+
+#define P2PS_PD_REQ_CHECK(_val, _attr) \
+do { \
+	if ((_val) && !msg->_attr) { \
+		p2p_dbg(p2p, "Not P2PS PD Request. Missing %s", #_attr); \
+		return -1; \
+	} \
+} while (0)
+
+	P2PS_PD_REQ_CHECK(1, adv_id);
+	P2PS_PD_REQ_CHECK(1, session_id);
+	P2PS_PD_REQ_CHECK(1, session_mac);
+	P2PS_PD_REQ_CHECK(1, adv_mac);
+	P2PS_PD_REQ_CHECK(1, capability);
+	P2PS_PD_REQ_CHECK(1, p2p_device_info);
+	P2PS_PD_REQ_CHECK(1, feature_cap);
+
+	/*
+	 * We don't need to check Connection Capability, Persistent Group,
+	 * and related attributes for follow-on PD Request with a status
+	 * other than SUCCESS_DEFERRED.
+	 */
+	if (msg->status && *msg->status != P2P_SC_SUCCESS_DEFERRED)
+		return 0;
+
+	P2PS_PD_REQ_CHECK(1, conn_cap);
+
+	/*
+	 * Note 1: A feature capability attribute structure can be changed
+	 * in the future. The assumption is that such modifications are
+	 * backward compatible, therefore we allow processing of msg.feature_cap
+	 * exceeding the size of the p2ps_feature_capab structure.
+	 * Note 2: Verification of msg.feature_cap_len below has to be changed
+	 * to allow 2 byte feature capability processing if
+	 * struct p2ps_feature_capab is extended to include additional fields
+	 * and it affects the structure size.
+	 */
+	if (msg->feature_cap_len < sizeof(struct p2ps_feature_capab)) {
+		p2p_dbg(p2p, "P2PS: Invalid feature capability len");
+		return -1;
+	}
+
+	switch (*msg->conn_cap) {
+	case P2PS_SETUP_NEW:
+		group_id = 1;
+		intended_addr = 1;
+		operating_channel = 1;
+		channel_list = 1;
+		config_timeout = 1;
+		listen_channel = 1;
+		break;
+	case P2PS_SETUP_CLIENT:
+		channel_list = 1;
+		listen_channel = 1;
+		break;
+	case P2PS_SETUP_GROUP_OWNER:
+		group_id = 1;
+		intended_addr = 1;
+		operating_channel = 1;
+		break;
+	case P2PS_SETUP_NEW | P2PS_SETUP_GROUP_OWNER:
+		group_id = 1;
+		operating_channel = 1;
+		intended_addr = 1;
+		channel_list = 1;
+		config_timeout = 1;
+		break;
+	case P2PS_SETUP_CLIENT | P2PS_SETUP_GROUP_OWNER:
+		group_id = 1;
+		intended_addr = 1;
+		operating_channel = 1;
+		channel_list = 1;
+		config_timeout = 1;
+		break;
+	default:
+		p2p_dbg(p2p, "Invalid P2PS PD connection capability");
+		return -1;
+	}
+
+	if (msg->persistent_dev) {
+		channel_list = 1;
+		config_timeout = 1;
+		if (os_memcmp(msg->persistent_dev, addr, ETH_ALEN) == 0) {
+			intended_addr = 1;
+			operating_channel = 1;
+		}
+	}
+
+	P2PS_PD_REQ_CHECK(group_id, group_id);
+	P2PS_PD_REQ_CHECK(intended_addr, intended_addr);
+	P2PS_PD_REQ_CHECK(operating_channel, operating_channel);
+	P2PS_PD_REQ_CHECK(channel_list, channel_list);
+	P2PS_PD_REQ_CHECK(config_timeout, config_timeout);
+	P2PS_PD_REQ_CHECK(listen_channel, listen_channel);
+
+#undef P2PS_PD_REQ_CHECK
+
+	return 0;
+}
+
+
 void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			       const u8 *data, size_t len, int rx_freq)
 {
@@ -538,21 +649,23 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	os_memset(session_mac, 0, ETH_ALEN);
 	os_memset(adv_mac, 0, ETH_ALEN);
 
-	/* Note 1: A feature capability attribute structure can be changed
-	 * in the future. The assumption is that such modifications are
-	 * backwards compatible, therefore we allow processing of
-	 * msg.feature_cap exceeding the size of the p2ps_feature_capab
-	 * structure.
-	 * Note 2: Vverification of msg.feature_cap_len below has to be changed
-	 * to allow 2 byte feature capability processing if struct
-	 * p2ps_feature_capab is extended to include additional fields and it
-	 * affects the structure size.
+	/*
+	 * Validate a P2PS PD Request and skip P2PS processing if not a valid
+	 * P2PS PD.
 	 */
-	if (!msg.adv_id || !msg.session_id || !msg.session_mac ||
-	    !msg.adv_mac || !msg.feature_cap ||
-	    msg.feature_cap_len < sizeof(*req_fcap) ||
-	    !(msg.status || msg.conn_cap))
+	if (msg.adv_id) {
+		/*
+		 * Set adv_id here, so that in case of an error, a P2PS PD
+		 * Response will be sent.
+		 */
+		adv_id = WPA_GET_LE32(msg.adv_id);
+		if (p2ps_validate_pd_req(p2p, &msg, sa) < 0) {
+			reject = P2P_SC_FAIL_INVALID_PARAMS;
+			goto out;
+		}
+	} else {
 		goto out;
+	}
 
 	req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
 
@@ -560,16 +673,27 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
 
 	session_id = WPA_GET_LE32(msg.session_id);
-	adv_id = WPA_GET_LE32(msg.adv_id);
-
-	if (!msg.status)
-		p2ps_adv = p2p_service_p2ps_id(p2p, adv_id);
-
-	p2p_dbg(p2p, "adv_id: %x - p2ps_adv - %p", adv_id, p2ps_adv);
 
 	if (msg.conn_cap)
 		conncap = *msg.conn_cap;
 	remote_conncap = conncap;
+
+	if (!msg.status) {
+		if (os_memcmp(p2p->cfg->dev_addr, msg.adv_mac, ETH_ALEN)) {
+			p2p_dbg(p2p,
+				"P2PS PD adv mac does not match the local one");
+			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+			goto out;
+		}
+
+		p2ps_adv = p2p_service_p2ps_id(p2p, adv_id);
+		if (!p2ps_adv) {
+			p2p_dbg(p2p, "P2PS PD invalid adv_id=0x%X", adv_id);
+			reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+			goto out;
+		}
+		p2p_dbg(p2p, "adv_id: 0x%X, p2ps_adv: %p", adv_id, p2ps_adv);
+	}
 
 	if (p2ps_adv) {
 		auto_accept = p2ps_adv->auto_accept;
@@ -613,9 +737,6 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		if (auto_accept || reject != P2P_SC_SUCCESS) {
 			struct p2ps_provision *tmp;
 
-			if (reject == P2P_SC_SUCCESS && !conncap)
-				reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-
 			if (p2ps_setup_p2ps_prov(p2p, adv_id, session_id,
 						 msg.wps_config_methods,
 						 session_mac, adv_mac) < 0) {
@@ -635,9 +756,6 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			if (reject != P2P_SC_SUCCESS)
 				goto out;
 		}
-	} else if (!msg.status) {
-		reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
-		goto out;
 	}
 
 	if (!msg.status && !auto_accept &&
@@ -671,6 +789,19 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 
 	if (*msg.status != P2P_SC_SUCCESS_DEFERRED || !p2p->p2ps_prov)
 		goto out;
+
+	if (p2p->p2ps_prov->adv_id != adv_id ||
+	    os_memcmp(p2p->p2ps_prov->adv_mac, msg.adv_mac, ETH_ALEN)) {
+		p2p_dbg(p2p,
+			"P2PS Follow-on PD with mismatch Advertisement ID/MAC");
+		goto out;
+	}
+
+	if (p2p->p2ps_prov->session_id != session_id ||
+	    os_memcmp(p2p->p2ps_prov->session_mac, msg.session_mac, ETH_ALEN)) {
+		p2p_dbg(p2p, "P2PS Follow-on PD with mismatch Session ID/MAC");
+		goto out;
+	}
 
 	method = p2p->p2ps_prov->method;
 

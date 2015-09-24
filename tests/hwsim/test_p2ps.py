@@ -809,6 +809,44 @@ def test_p2ps_connect_adv_go_persistent(dev):
     p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
     remove_group(dev[0], dev[1])
 
+def test_p2ps_pd_follow_on_status_failure(dev):
+    """P2PS PD follow on request with status 11"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
+                   srv_info='I can receive files upto size 2 GB')
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              srv_info='2 GB')
+    dev[1].asp_provision(addr0, adv_id=str(adv_id), adv_mac=addr0,
+                         session_id=1, session_mac=addr1)
+    ev_pd_start = dev[0].wait_global_event(["P2PS-PROV-START"], timeout=10)
+    if ev_pd_start is None:
+        raise Exception("P2PS-PROV-START timeout on Advertiser side")
+    ev = dev[1].wait_global_event(["P2P-PROV-DISC-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("P2P-PROV-DISC-FAILURE timeout on seeker side")
+    dev[1].p2p_ext_listen(500, 500)
+    dev[0].asp_provision(addr1, adv_id=str(adv_id), adv_mac=addr0, session_id=1,
+                         session_mac=addr1, status=11, method=0)
+
+    ev = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("P2P-PROV-DONE timeout on seeker side")
+    if adv_id not in ev:
+        raise Exception("P2P-PROV-DONE without adv_id on seeker side")
+    if "status=11" not in ev:
+        raise Exception("P2P-PROV-DONE without status on seeker side")
+
+    ev = dev[0].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("P2P-PROV-DONE timeout on advertiser side")
+    if adv_id not in ev:
+        raise Exception("P2P-PROV-DONE without adv_id on advertiser side")
+    if "status=11" not in ev:
+        raise Exception("P2P-PROV-DONE without status on advertiser side")
+
 def test_p2ps_client_probe(dev):
     """P2PS CLI discoverability on operating channel"""
     cli_probe = dev[0].global_request("SET p2p_cli_probe 1")

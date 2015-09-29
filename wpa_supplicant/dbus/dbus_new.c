@@ -2172,6 +2172,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "ExpectDisconnect", WPAS_DBUS_NEW_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_expect_disconnect,
+	  {
+		END_ARGS
+	  }
+	},
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 

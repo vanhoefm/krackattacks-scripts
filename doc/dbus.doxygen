@@ -97,6 +97,11 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 	  <dd>Getting an interface object path failed for an unknown reason.</dd>
 	</dl>
       </li>
+
+      <li>
+	<h3>ExpectDisconnect ( ) --> nothing</h3>
+	<p>Notify wpa_supplicant of an externally triggered disconnection, e.g., due to system suspend.</p>
+      </li>
     </ul>
 
 \subsection dbus_main_properties Properties

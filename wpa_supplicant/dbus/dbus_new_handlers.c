@@ -1580,6 +1580,27 @@ DBusMessage * wpas_dbus_handler_reassociate(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_handler_expect_disconnect - ExpectDisconnect
+ * @message: Pointer to incoming dbus message
+ * @global: %wpa_supplicant global data structure
+ * Returns: NULL
+ *
+ * Handler function for notifying system there will be a expected disconnect.
+ * This will prevent wpa_supplicant from adding blacklists upon next disconnect..
+ */
+DBusMessage * wpas_dbus_handler_expect_disconnect(DBusMessage *message,
+						  struct wpa_global *global)
+{
+	struct wpa_supplicant *wpa_s = global->ifaces;
+
+	for (; wpa_s; wpa_s = wpa_s->next)
+		if (wpa_s->wpa_state >= WPA_ASSOCIATED)
+			wpa_s->own_disconnect_req = 1;
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_handler_reattach - Reattach to current AP
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface

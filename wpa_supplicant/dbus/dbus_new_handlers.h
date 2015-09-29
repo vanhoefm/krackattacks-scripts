@@ -50,6 +50,9 @@ DBusMessage * wpas_dbus_handler_remove_interface(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 					      struct wpa_global *global);
 
+DBusMessage * wpas_dbus_handler_expect_disconnect(DBusMessage *message,
+						  struct wpa_global *global);
+
 dbus_bool_t wpas_dbus_getter_debug_level(DBusMessageIter *iter,
 					 DBusError *error,
 					 void *user_data);

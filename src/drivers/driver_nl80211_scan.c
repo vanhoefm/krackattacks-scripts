@@ -785,6 +785,8 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 }
 
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
+
 static int scan_cookie_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -970,3 +972,5 @@ fail:
 	nlmsg_free(msg);
 	return ret;
 }
+
+#endif /* CONFIG_DRIVER_NL80211_QCA */

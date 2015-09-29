@@ -580,6 +580,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				case QCA_NL80211_VENDOR_SUBCMD_TEST:
 					drv->vendor_cmd_test_avail = 1;
 					break;
+#ifdef CONFIG_DRIVER_NL80211_QCA
 				case QCA_NL80211_VENDOR_SUBCMD_ROAMING:
 					drv->roaming_vendor_cmd_avail = 1;
 					break;
@@ -605,6 +606,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				case QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN:
 					drv->scan_vendor_cmd_avail = 1;
 					break;
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 				}
 			}
 
@@ -704,6 +706,8 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	return 0;
 }
 
+
+#ifdef CONFIG_DRIVER_NL80211_QCA
 
 static int dfs_info_handler(struct nl_msg *msg, void *arg)
 {
@@ -849,6 +853,8 @@ static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS;
 }
 
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+
 
 int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 {
@@ -929,6 +935,7 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	if (!drv->use_monitor && !info.data_tx_status)
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	qca_nl80211_check_dfs_capa(drv);
 	qca_nl80211_get_features(drv);
 
@@ -941,6 +948,7 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	 */
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX))
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS;
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 	return 0;
 }

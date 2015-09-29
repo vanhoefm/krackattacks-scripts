@@ -2468,6 +2468,7 @@ static int wpa_cipher_to_cipher_suites(unsigned int ciphers, u32 suites[],
 }
 
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 static int issue_key_mgmt_set_key(struct wpa_driver_nl80211_data *drv,
 				  const u8 *key, size_t key_len)
 {
@@ -2495,6 +2496,7 @@ static int issue_key_mgmt_set_key(struct wpa_driver_nl80211_data *drv,
 
 	return ret;
 }
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 
 static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
@@ -2525,6 +2527,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	}
 #endif /* CONFIG_TDLS */
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	if (alg == WPA_ALG_PMK &&
 	    (drv->capa.flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD)) {
 		wpa_printf(MSG_DEBUG, "%s: calling issue_key_mgmt_set_key",
@@ -2532,6 +2535,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 		ret = issue_key_mgmt_set_key(drv, key, key_len);
 		return ret;
 	}
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 	if (alg == WPA_ALG_NONE) {
 		msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_DEL_KEY);
@@ -4680,6 +4684,7 @@ static int wpa_driver_nl80211_try_connect(
 	int ret;
 	int algs;
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	if (params->req_key_mgmt_offload && params->psk &&
 	    (params->key_mgmt_suite == WPA_KEY_MGMT_PSK ||
 	     params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256 ||
@@ -4689,6 +4694,7 @@ static int wpa_driver_nl80211_try_connect(
 		if (ret)
 			return ret;
 	}
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 	wpa_printf(MSG_DEBUG, "nl80211: Connect (ifindex=%d)", drv->ifindex);
 	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_CONNECT);
@@ -7224,6 +7230,7 @@ static int driver_nl80211_scan2(void *priv,
 				struct wpa_driver_scan_params *params)
 {
 	struct i802_bss *bss = priv;
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	/*
@@ -7235,6 +7242,7 @@ static int driver_nl80211_scan2(void *priv,
 	 */
 	if (drv->scan_vendor_cmd_avail && !params->only_new_results)
 		return wpa_driver_nl80211_vendor_scan(bss, params);
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 	return wpa_driver_nl80211_scan(bss, params);
 }
 
@@ -7871,6 +7879,7 @@ static int nl80211_set_wowlan(void *priv,
 }
 
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 static int nl80211_roaming(void *priv, int allowed, const u8 *bssid)
 {
 	struct i802_bss *bss = priv;
@@ -7903,6 +7912,7 @@ static int nl80211_roaming(void *priv, int allowed, const u8 *bssid)
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
 }
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 
 static int nl80211_set_mac_addr(void *priv, const u8 *addr)
@@ -8387,6 +8397,8 @@ set_val:
 }
 
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
+
 static int hw_mode_to_qca_acs(enum hostapd_hw_mode hw_mode)
 {
 	switch (hw_mode) {
@@ -8710,6 +8722,8 @@ static int nl80211_set_prob_oper_freq(void *priv, unsigned int freq)
 	return 0;
 }
 
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+
 
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
@@ -8804,7 +8818,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.vendor_cmd = nl80211_vendor_cmd,
 	.set_qos_map = nl80211_set_qos_map,
 	.set_wowlan = nl80211_set_wowlan,
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	.roaming = nl80211_roaming,
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 	.set_mac_addr = nl80211_set_mac_addr,
 #ifdef CONFIG_MESH
 	.init_mesh = wpa_driver_nl80211_init_mesh,
@@ -8817,8 +8833,10 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.br_set_net_param = wpa_driver_br_set_net_param,
 	.add_tx_ts = nl80211_add_ts,
 	.del_tx_ts = nl80211_del_ts,
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	.do_acs = wpa_driver_do_acs,
 	.set_band = nl80211_set_band,
 	.get_pref_freq_list = nl80211_get_pref_freq_list,
 	.set_prob_oper_freq = nl80211_set_prob_oper_freq,
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 };

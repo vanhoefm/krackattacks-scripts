@@ -30,6 +30,9 @@ DRV_OBJS += ../src/drivers/driver_nl80211_event.o
 DRV_OBJS += ../src/drivers/driver_nl80211_monitor.o
 DRV_OBJS += ../src/drivers/driver_nl80211_scan.o
 DRV_OBJS += ../src/utils/radiotap.o
+ifdef CONFIG_DRIVER_NL80211_QCA
+DRV_CFLAGS += -DCONFIG_DRIVER_NL80211_QCA
+endif
 NEED_SME=y
 NEED_AP_MLME=y
 NEED_NETLINK=y

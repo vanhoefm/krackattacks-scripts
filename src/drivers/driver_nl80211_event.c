@@ -1446,6 +1446,8 @@ static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 }
 
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
+
 static void qca_nl80211_avoid_freq(struct wpa_driver_nl80211_data *drv,
 				   const u8 *data, size_t len)
 {
@@ -1819,6 +1821,8 @@ static void qca_nl80211_scan_done_event(struct wpa_driver_nl80211_data *drv,
 			       external_scan);
 }
 
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+
 
 static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 				     u32 subcmd, u8 *data, size_t len)
@@ -1827,6 +1831,7 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 	case QCA_NL80211_VENDOR_SUBCMD_TEST:
 		wpa_hexdump(MSG_DEBUG, "nl80211: QCA test event", data, len);
 		break;
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	case QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY:
 		qca_nl80211_avoid_freq(drv, data, len);
 		break;
@@ -1849,6 +1854,7 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 	case QCA_NL80211_VENDOR_SUBCMD_SCAN_DONE:
 		qca_nl80211_scan_done_event(drv, data, len);
 		break;
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 	default:
 		wpa_printf(MSG_DEBUG,
 			   "nl80211: Ignore unsupported QCA vendor event %u",

@@ -31,6 +31,9 @@ CONFIG_DRIVER_WEXT=y
 # Driver interface for Linux drivers using the nl80211 kernel interface
 CONFIG_DRIVER_NL80211=y
 
+# QCA vendor extensions to nl80211
+#CONFIG_DRIVER_NL80211_QCA=y
+
 # driver_nl80211.c requires libnl. If you are compiling it yourself
 # you may need to point hostapd to your version of libnl.
 #

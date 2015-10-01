@@ -1412,7 +1412,7 @@ LIBS += $(DBUS_LIBS)
 
 ifdef CONFIG_READLINE
 OBJS_c += ../src/utils/edit_readline.o
-LIBS_c += -lncurses -lreadline
+LIBS_c += -lreadline -lncurses
 else
 ifdef CONFIG_WPA_CLI_EDIT
 OBJS_c += ../src/utils/edit.o

@@ -2668,7 +2668,9 @@ def upnp_get_urls(location):
     res['event_sub_url'] = urlparse.urljoin(location, service.find(urn + 'eventSubURL').text)
     return res
 
-def upnp_soap_action(conn, path, action, include_soap_action=True, soap_action_override=None):
+def upnp_soap_action(conn, path, action, include_soap_action=True,
+                     soap_action_override=None, newmsg=None, neweventtype=None,
+                     neweventmac=None):
     soapns = 'http://schemas.xmlsoap.org/soap/envelope/'
     wpsns = 'urn:schemas-wifialliance-org:service:WFAWLANConfig:1'
     ET.register_namespace('soapenv', soapns)
@@ -2678,6 +2680,15 @@ def upnp_soap_action(conn, path, action, include_soap_action=True, soap_action_o
     root = ET.Element("{%s}Envelope" % soapns, attrib=attrib)
     body = ET.SubElement(root, "{%s}Body" % soapns)
     act = ET.SubElement(body, "{%s}%s" % (wpsns, action))
+    if newmsg:
+        msg = ET.SubElement(act, "NewMessage")
+        msg.text = base64.b64encode(newmsg)
+    if neweventtype:
+        msg = ET.SubElement(act, "NewWLANEventType")
+        msg.text = neweventtype
+    if neweventmac:
+        msg = ET.SubElement(act, "NewWLANEventMAC")
+        msg.text = neweventmac
     tree = ET.ElementTree(root)
     soap = StringIO.StringIO()
     tree.write(soap, xml_declaration=True, encoding='utf-8')
@@ -9064,3 +9075,149 @@ def test_ap_wps_disable_enable(dev, apdev):
     hapd.disable()
     hapd.enable()
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+
+def test_ap_wps_upnp_web_oom(dev, apdev, params):
+    """hostapd WPS UPnP web OOM"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    location = ssdp_get_location(ap_uuid)
+    url = urlparse.urlparse(location)
+    urls = upnp_get_urls(location)
+    eventurl = urlparse.urlparse(urls['event_sub_url'])
+    ctrlurl = urlparse.urlparse(urls['control_url'])
+
+    conn = httplib.HTTPConnection(url.netloc)
+    with alloc_fail(hapd, 1, "web_connection_parse_get"):
+        conn.request("GET", "/wps_device.xml")
+        try:
+            resp = conn.getresponse()
+        except:
+            pass
+
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("GET", "/unknown")
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP result for unknown URL: %d" + resp.status)
+
+    with alloc_fail(hapd, 1, "web_connection_parse_get"):
+        conn.request("GET", "/unknown")
+        try:
+            resp = conn.getresponse()
+            print resp.status
+        except:
+            pass
+
+    conn = httplib.HTTPConnection(url.netloc)
+    conn.request("GET", "/wps_device.xml")
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise Exception("GET /wps_device.xml failed")
+
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
+    if resp.status != 200:
+        raise Exception("GetDeviceInfo failed")
+
+    with alloc_fail(hapd, 1, "web_process_get_device_info"):
+        conn = httplib.HTTPConnection(url.netloc)
+        resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
+        if resp.status != 500:
+            raise Exception("Internal error not reported from GetDeviceInfo OOM")
+
+    with alloc_fail(hapd, 1, "wps_build_m1;web_process_get_device_info"):
+        conn = httplib.HTTPConnection(url.netloc)
+        resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
+        if resp.status != 500:
+            raise Exception("Internal error not reported from GetDeviceInfo OOM")
+
+    with alloc_fail(hapd, 1, "wpabuf_alloc;web_connection_send_reply"):
+        conn = httplib.HTTPConnection(url.netloc)
+        try:
+            resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
+        except:
+            pass
+
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "GetDeviceInfo")
+    if resp.status != 200:
+        raise Exception("GetDeviceInfo failed")
+
+    # No NewWLANEventType in PutWLANResponse NewMessage
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse", newmsg="foo")
+    if resp.status != 600:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    # No NewWLANEventMAC in PutWLANResponse NewMessage
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse",
+                            newmsg="foo", neweventtype="1")
+    if resp.status != 600:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    # Invalid NewWLANEventMAC in PutWLANResponse NewMessage
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse",
+                            newmsg="foo", neweventtype="1",
+                            neweventmac="foo")
+    if resp.status != 600:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    # Workaround for NewWLANEventMAC in PutWLANResponse NewMessage
+    # Ignored unexpected PutWLANResponse WLANEventType 1
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse",
+                            newmsg="foo", neweventtype="1",
+                            neweventmac="00.11.22.33.44.55")
+    if resp.status != 500:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    # PutWLANResponse NewMessage with invalid EAP message
+    conn = httplib.HTTPConnection(url.netloc)
+    resp = upnp_soap_action(conn, ctrlurl.path, "PutWLANResponse",
+                            newmsg="foo", neweventtype="2",
+                            neweventmac="00:11:22:33:44:55")
+    if resp.status != 200:
+        raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    with alloc_fail(hapd, 1, "web_connection_parse_subscribe"):
+        conn = httplib.HTTPConnection(url.netloc)
+        headers = { "callback": '<http://127.0.0.1:12345/event>',
+                    "NT": "upnp:event",
+                    "timeout": "Second-1234" }
+        conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
+        try:
+            resp = conn.getresponse()
+        except:
+            pass
+
+    with alloc_fail(hapd, 1, "dup_binstr;web_connection_parse_subscribe"):
+        conn = httplib.HTTPConnection(url.netloc)
+        headers = { "callback": '<http://127.0.0.1:12345/event>',
+                    "NT": "upnp:event",
+                    "timeout": "Second-1234" }
+        conn.request("SUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
+        resp = conn.getresponse()
+        if resp.status != 500:
+            raise Exception("Unexpected HTTP response: %d" % resp.status)
+
+    with alloc_fail(hapd, 1, "wpabuf_alloc;web_connection_parse_unsubscribe"):
+        conn = httplib.HTTPConnection(url.netloc)
+        headers = { "callback": '<http://127.0.0.1:12345/event>',
+                    "NT": "upnp:event",
+                    "timeout": "Second-1234" }
+        conn.request("UNSUBSCRIBE", eventurl.path, "\r\n\r\n", headers)
+        try:
+            resp = conn.getresponse()
+        except:
+            pass
+
+    with alloc_fail(hapd, 1, "web_connection_unimplemented"):
+        conn = httplib.HTTPConnection(url.netloc)
+        conn.request("HEAD", "/wps_device.xml")
+        try:
+            resp = conn.getresponse()
+        except:
+            pass

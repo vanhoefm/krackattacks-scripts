@@ -149,5 +149,5 @@ def test_connect_cmd_roam(dev, apdev):
     wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
 
     hostapd.add_ap(apdev[1]['ifname'], params)
-    wpas.scan_for_bss(apdev[1]['bssid'], freq=2412)
+    wpas.scan_for_bss(apdev[1]['bssid'], freq=2412, force_scan=True)
     wpas.roam(apdev[1]['bssid'])

@@ -300,7 +300,8 @@ static void http_put_empty(struct wpabuf *buf, enum http_reply_code code)
  * would appear to be required (given that we will be closing it!).
  */
 static void web_connection_parse_get(struct upnp_wps_device_sm *sm,
-				     struct http_request *hreq, char *filename)
+				     struct http_request *hreq,
+				     const char *filename)
 {
 	struct wpabuf *buf; /* output buffer, allocated */
 	char *put_length_here;

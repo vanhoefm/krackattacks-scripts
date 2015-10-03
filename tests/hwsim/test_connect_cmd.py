@@ -26,7 +26,10 @@ def test_connect_cmd_open(dev, apdev):
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
                  bg_scan_period="1")
+    wpas.dump_monitor()
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_wep(dev, apdev):
     """WEP Open System using cfg80211 connect command"""
@@ -37,8 +40,11 @@ def test_connect_cmd_wep(dev, apdev):
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
                  wep_key0='"hello"')
+    wpas.dump_monitor()
     hwsim_utils.test_connectivity(wpas, hapd)
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_wep_shared(dev, apdev):
     """WEP Shared key using cfg80211 connect command"""
@@ -50,13 +56,17 @@ def test_connect_cmd_wep_shared(dev, apdev):
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     id = wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
                       auth_alg="SHARED", wep_key0='"hello"')
+    wpas.dump_monitor()
     hwsim_utils.test_connectivity(wpas, hapd)
     wpas.request("DISCONNECT")
     wpas.remove_network(id)
     wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
                  auth_alg="OPEN SHARED", wep_key0='"hello"')
+    wpas.dump_monitor()
     hwsim_utils.test_connectivity(wpas, hapd)
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_p2p_management(dev, apdev):
     """Open connection using cfg80211 connect command and AP using P2P management"""
@@ -68,7 +78,10 @@ def test_connect_cmd_p2p_management(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+    wpas.dump_monitor()
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_wpa2_psk(dev, apdev):
     """WPA2-PSK connection using cfg80211 connect command"""
@@ -78,7 +91,10 @@ def test_connect_cmd_wpa2_psk(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("sta-connect", psk="12345678", scan_freq="2412")
+    wpas.dump_monitor()
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP using cfg80211 connect command"""
@@ -88,6 +104,7 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("test-open", key_mgmt="NONE", wait_connect=False)
+    wpas.dump_monitor()
 
     logger.info("Form a P2P group while connecting to an AP")
     wpas.request("SET p2p_no_group_iface 0")
@@ -96,9 +113,14 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
                                            r_dev=wpas, r_freq=2412)
     check_grpform_results(i_res, r_res)
     remove_group(dev[0], wpas)
+    wpas.dump_monitor()
 
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(wpas, hapd)
+
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
 
 def test_connect_cmd_reject_assoc(dev, apdev):
     """Connection using cfg80211 connect command getting rejected"""
@@ -119,6 +141,9 @@ def test_connect_cmd_reject_assoc(dev, apdev):
         if "status_code=27" not in ev:
             raise Exception("Unexpected rejection status code")
 
+    wpas.request("DISCONNECT")
+    wpas.dump_monitor()
+
 def test_connect_cmd_disconnect_event(dev, apdev):
     """Connection using cfg80211 connect command getting disconnected by the AP"""
     params = { "ssid": "sta-connect" }
@@ -138,6 +163,7 @@ def test_connect_cmd_disconnect_event(dev, apdev):
     # testing purposes. Anyway, wait some time to allow the debug log to capture
     # the following NL80211_CMD_DISCONNECT event.
     time.sleep(0.1)
+    wpas.dump_monitor()
 
 def test_connect_cmd_roam(dev, apdev):
     """cfg80211 connect command to trigger roam"""
@@ -147,7 +173,12 @@ def test_connect_cmd_roam(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+    wpas.dump_monitor()
 
     hostapd.add_ap(apdev[1]['ifname'], params)
     wpas.scan_for_bss(apdev[1]['bssid'], freq=2412, force_scan=True)
     wpas.roam(apdev[1]['bssid'])
+    time.sleep(0.1)
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()

@@ -3318,16 +3318,22 @@ def _test_ap_wpa2_eap_in_bridge(dev, apdev):
     subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
     subprocess.check_call(['brctl', 'addif', br_ifname, ifname])
     wpas.interface_add(ifname, br_ifname=br_ifname)
+    wpas.dump_monitor()
 
     id = eap_connect(wpas, apdev[0], "PAX", "pax.user@example.com",
                      password_hex="0123456789abcdef0123456789abcdef")
+    wpas.dump_monitor()
     eap_reauth(wpas, "PAX")
+    wpas.dump_monitor()
     # Try again as a regression test for packet socket workaround
     eap_reauth(wpas, "PAX")
+    wpas.dump_monitor()
     wpas.request("DISCONNECT")
     wpas.wait_disconnected()
+    wpas.dump_monitor()
     wpas.request("RECONNECT")
     wpas.wait_connected()
+    wpas.dump_monitor()
 
 def test_ap_wpa2_eap_session_ticket(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS and TLS session ticket enabled"""

@@ -486,6 +486,7 @@ def test_autogo_join_auto_go_not_found(dev):
     autogo(wpas, freq=2412)
     addr = wpas.p2p_dev_addr()
     bssid = wpas.p2p_interface_addr()
+    wpas.dump_monitor()
 
     dev[1].global_request("SET p2p_no_group_iface 0")
     dev[1].scan_for_bss(bssid, freq=2412)
@@ -496,12 +497,15 @@ def test_autogo_join_auto_go_not_found(dev):
     # exchange.
     if "OK" not in wpas.group_request("STOP_AP"):
         raise Exception("STOP_AP failed")
+    wpas.dump_monitor()
     wpas.group_request("SET ext_mgmt_frame_handling 1")
     wpas.p2p_listen()
+    wpas.dump_monitor()
     time.sleep(0.02)
     dev[1].global_request("P2P_CONNECT " + addr + " pbc auto")
 
     ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG-ENABLED"], 15)
+    wpas.dump_monitor()
     if ev is None:
         raise Exception("Could not trigger old-scan-only case")
         return
@@ -512,6 +516,7 @@ def test_autogo_join_auto_go_not_found(dev):
         raise Exception("Fallback to GO Negotiation not seen")
     if "reason=GO-not-found" not in ev:
         raise Exception("Unexpected reason for fallback: " + ev)
+    wpas.dump_monitor()
 
 def test_autogo_join_auto(dev):
     """P2P_CONNECT-auto joining a group"""

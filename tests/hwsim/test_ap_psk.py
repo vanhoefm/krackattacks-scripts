@@ -1857,8 +1857,10 @@ def _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
     subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
     subprocess.check_call(['brctl', 'addif', br_ifname, ifname])
     wpas.interface_add(ifname, br_ifname=br_ifname)
+    wpas.dump_monitor()
 
     wpas.connect(ssid, psk=passphrase, scan_freq="2412")
+    wpas.dump_monitor()
 
 def test_ap_wpa2_psk_ifdown(dev, apdev):
     """AP with open mode and external ifconfig down"""

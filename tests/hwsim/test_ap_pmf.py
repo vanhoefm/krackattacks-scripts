@@ -187,18 +187,24 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
     wpas.set_network(id, "frequency", "2412")
     wpas.connect_network(id)
     bssid = wpas.own_addr()
+    wpas.dump_monitor()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
+    wpas.dump_monitor()
     wpas.request("DEAUTHENTICATE " + addr + " test=0")
+    wpas.dump_monitor()
     wpas.request("DISASSOCIATE " + addr + " test=0")
+    wpas.dump_monitor()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
     wpas.request("DEAUTHENTICATE " + addr + " reason=6 test=0")
+    wpas.dump_monitor()
     wpas.request("DISASSOCIATE " + addr + " reason=7 test=0")
+    wpas.dump_monitor()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection")
@@ -206,6 +212,7 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
         raise Exception("STA did not send SA Query")
     if wt.get_sta_counter("valid_saqueryresp_rx", bssid, addr) < 1:
         raise Exception("AP did not reply to SA Query")
+    wpas.dump_monitor()
 
 def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
     """WPA2-PSK AP with station using SA Query and getting no response"""
@@ -226,22 +233,30 @@ def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
     wpas.set_network(id, "frequency", "2412")
     wpas.connect_network(id)
     bssid = wpas.own_addr()
+    wpas.dump_monitor()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
+    wpas.dump_monitor()
     wpas.request("DEAUTHENTICATE " + addr + " test=0")
+    wpas.dump_monitor()
     wpas.request("DISASSOCIATE " + addr + " test=0")
+    wpas.dump_monitor()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
     wpas.request("SET ext_mgmt_frame_handling 1")
     wpas.request("DEAUTHENTICATE " + addr + " reason=6 test=0")
+    wpas.dump_monitor()
     wpas.request("DISASSOCIATE " + addr + " reason=7 test=0")
+    wpas.dump_monitor()
     dev[0].wait_disconnected()
+    wpas.dump_monitor()
     wpas.request("SET ext_mgmt_frame_handling 0")
     dev[0].wait_connected()
+    wpas.dump_monitor()
 
 def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     """WPA2-PSK AP with station receiving burst of unprotected Deauthentication frames"""

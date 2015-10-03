@@ -3475,22 +3475,26 @@ def test_ap_wps_ap_scan_2(dev, apdev):
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.dump_monitor()
 
     if "OK" not in wpas.request("AP_SCAN 2"):
         raise Exception("Failed to set AP_SCAN 2")
 
     wpas.flush_scan_cache()
     wpas.scan_for_bss(apdev[0]['bssid'], freq="2412")
+    wpas.dump_monitor()
     wpas.request("WPS_PBC " + apdev[0]['bssid'])
     ev = wpas.wait_event(["WPS-SUCCESS"], timeout=15)
     if ev is None:
         raise Exception("WPS-SUCCESS event timed out")
     wpas.wait_connected(timeout=30)
+    wpas.dump_monitor()
     wpas.request("DISCONNECT")
     wpas.request("BSS_FLUSH 0")
     wpas.dump_monitor()
     wpas.request("REASSOCIATE")
     wpas.wait_connected(timeout=30)
+    wpas.dump_monitor()
 
 def test_ap_wps_eapol_workaround(dev, apdev):
     """EAPOL workaround code path for 802.1X header length mismatch"""

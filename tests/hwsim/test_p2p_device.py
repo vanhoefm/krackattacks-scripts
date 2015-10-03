@@ -25,7 +25,9 @@ def test_p2p_device_grpform(dev, apdev):
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=wpas, r_intent=0)
         check_grpform_results(i_res, r_res)
+        wpas.dump_monitor()
         remove_group(dev[0], wpas)
+        wpas.dump_monitor()
 
         res = wpas.global_request("IFNAME=p2p-dev-" + iface + " STATUS-DRIVER")
         lines = res.splitlines()
@@ -49,7 +51,9 @@ def test_p2p_device_grpform2(dev, apdev):
         [i_res, r_res] = go_neg_pin_authorized(i_dev=wpas, i_intent=15,
                                                r_dev=dev[0], r_intent=0)
         check_grpform_results(i_res, r_res)
+        wpas.dump_monitor()
         remove_group(wpas, dev[0])
+        wpas.dump_monitor()
 
 def test_p2p_device_group_remove(dev, apdev):
     """P2P group removal via the P2P ctrl interface with driver using cfg80211 P2P Device"""
@@ -96,6 +100,7 @@ def test_p2p_device_nfc_invite(dev, apdev):
         res = wpas.global_request("P2P_LISTEN")
         if "FAIL" in res:
             raise Exception("Failed to start Listen mode")
+        wpas.dump_monitor()
         pw = wpas.global_request("WPS_NFC_TOKEN NDEF").rstrip()
         if "FAIL" in pw:
             raise Exception("Failed to generate password token")
@@ -105,6 +110,7 @@ def test_p2p_device_nfc_invite(dev, apdev):
         sel = wpas.global_request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
         if "FAIL" in sel:
             raise Exception("Failed to generate NFC connection handover select")
+        wpas.dump_monitor()
 
         logger.info("Read NFC Tag on the GO to trigger invitation")
         res = dev[0].global_request("WPS_NFC_TAG_READ " + sel)
@@ -115,8 +121,10 @@ def test_p2p_device_nfc_invite(dev, apdev):
         if ev is None:
             raise Exception("Joining the group timed out")
         res = wpas.group_form_result(ev)
+        wpas.dump_monitor()
         hwsim_utils.test_connectivity_p2p(dev[0], wpas)
         check_ip_addr(res)
+        wpas.dump_monitor()
 
 def test_p2p_device_misuses(dev, apdev):
     """cfg80211 P2P Device misuses"""
@@ -189,11 +197,13 @@ def test_p2p_device_incorrect_command_interface(dev, apdev):
         ev = wpas.wait_event(["P2P-DEVICE-FOUND"], timeout=0.1)
         if ev is not None:
             raise Exception("Unexpected P2P-DEVICE-FOUND event on station interface")
+        wpas.dump_monitor()
 
         pin = wpas.wps_read_pin()
         dev[0].p2p_go_neg_auth(wpas.p2p_dev_addr(), pin, "enter", go_intent=14,
                                freq=2412)
         wpas.request('P2P_STOP_FIND')
+        wpas.dump_monitor()
         if "OK" not in wpas.request('P2P_CONNECT ' + dev[0].p2p_dev_addr() + ' ' + pin + ' display go_intent=1'):
             raise Exception("P2P_CONNECT failed")
 
@@ -201,6 +211,7 @@ def test_p2p_device_incorrect_command_interface(dev, apdev):
         if ev is None:
             raise Exception("Group formation timed out")
         wpas.group_form_result(ev)
+        wpas.dump_monitor()
 
         ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
         if ev is None:
@@ -209,6 +220,7 @@ def test_p2p_device_incorrect_command_interface(dev, apdev):
 
         dev[0].remove_group()
         wpas.wait_go_ending_session()
+        wpas.dump_monitor()
 
 def test_p2p_device_incorrect_command_interface2(dev, apdev):
     """cfg80211 P2P Device and P2P_GROUP_ADD command on incorrect interface"""
@@ -216,12 +228,15 @@ def test_p2p_device_incorrect_command_interface2(dev, apdev):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
 
-        print wpas.request('P2P_GROUP_ADD')
+        if "OK" not in wpas.request('P2P_GROUP_ADD'):
+            raise Exception("P2P_GROUP_ADD failed")
         ev = wpas.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
         if ev is None:
             raise Exception("Group formation timed out")
         res = wpas.group_form_result(ev)
+        wpas.dump_monitor()
         logger.info("Group results: " + str(res))
         wpas.remove_group()
         if not res['ifname'].startswith('p2p-' + iface + '-'):
             raise Exception("Unexpected group ifname: " + res['ifname'])
+        wpas.dump_monitor()

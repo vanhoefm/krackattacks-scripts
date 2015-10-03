@@ -348,13 +348,16 @@ def test_autogo_force_diff_channel(dev, apdev):
         hapd = hostapd.add_ap(apdev[0]['ifname'],
                               {"ssid" : 'ap-test', "channel" : '1'})
         wpas.connect("ap-test", key_mgmt = "NONE", scan_freq = "2412")
+        wpas.dump_monitor()
         channels = { 2 : 2417, 5 : 2432, 9 : 2452 }
         for key in channels:
             res_go = autogo(wpas, channels[key])
+            wpas.dump_monitor()
             hwsim_utils.test_connectivity(wpas, hapd)
             if int(res_go['freq']) == 2412:
                 raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
             wpas.remove_group(res_go['ifname'])
+            wpas.dump_monitor()
 
 def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
     """P2P channel selection: GO negotiation with forced freq different than station interface"""

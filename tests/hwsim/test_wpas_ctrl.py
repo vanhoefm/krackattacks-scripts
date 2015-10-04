@@ -1437,6 +1437,7 @@ def _test_wpas_ctrl_interface_add_many(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
+    dev[0].dump_monitor()
 
     l = []
     for i in range(10):
@@ -1444,9 +1445,14 @@ def _test_wpas_ctrl_interface_add_many(dev, apdev):
         dev[0].interface_add(ifname, create=True)
         wpas = WpaSupplicant(ifname=ifname)
         wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
+        wpas.dump_monitor()
         l.append(wpas)
+        dev[0].dump_monitor()
     for wpas in l:
+        wpas.dump_monitor()
         hwsim_utils.test_connectivity(wpas, hapd)
+        wpas.dump_monitor()
+    dev[0].dump_monitor()
 
 def test_wpas_ctrl_interface_add2(dev, apdev):
     """wpa_supplicant INTERFACE_ADD/REMOVE with vif without creation/removal"""

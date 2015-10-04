@@ -20,7 +20,7 @@ def hostapd_oom_loop(apdev, params, start_func="main"):
         if "OK" not in hapd.request("TEST_ALLOC_FAIL %d:%s" % (i, start_func)):
             raise HwsimSkip("TEST_ALLOC_FAIL not supported")
         try:
-            hostapd.add_ap(apdev[1]['ifname'], params)
+            hostapd.add_ap(apdev[1]['ifname'], params, timeout=2.5)
             logger.info("Iteration %d - success" % i)
             hapd_global.remove(apdev[1]['ifname'])
 

@@ -7735,6 +7735,33 @@ static int wpas_ctrl_get_fail(struct wpa_supplicant *wpa_s,
 #endif /* WPA_TRACE_BFD */
 }
 
+
+static void wpas_ctrl_event_test_cb(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	int i, count = (intptr_t) timeout_ctx;
+
+	wpa_printf(MSG_DEBUG, "TEST: Send %d control interface event messages",
+		   count);
+	for (i = 0; i < count; i++) {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, "TEST-EVENT-MESSAGE %d/%d",
+			     i + 1, count);
+	}
+}
+
+
+static int wpas_ctrl_event_test(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	int count;
+
+	count = atoi(cmd);
+	if (count <= 0)
+		return -1;
+
+	return eloop_register_timeout(0, 0, wpas_ctrl_event_test_cb, wpa_s,
+				      (void *) (intptr_t) count);
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -8769,6 +8796,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "GET_FAIL") == 0) {
 		reply_len = wpas_ctrl_get_fail(wpa_s, reply, reply_size);
+	} else if (os_strncmp(buf, "EVENT_TEST ", 11) == 0) {
+		if (wpas_ctrl_event_test(wpa_s, buf + 11) < 0)
+			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {
 		if (wpas_ctrl_vendor_elem_add(wpa_s, buf + 16) < 0)

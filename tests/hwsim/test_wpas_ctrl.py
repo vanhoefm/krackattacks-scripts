@@ -1757,3 +1757,27 @@ def test_wpas_ctrl_socket_full(dev, apdev, test_params):
     if not dev[0].ping():
         raise Exception("Could not ping wpa_supplicant at the end of the test")
     dev[0].get_status()
+
+def test_wpas_ctrl_event_burst(dev, apdev):
+    """wpa_supplicant control socket and event burst"""
+    if "OK" not in dev[0].request("EVENT_TEST 1000"):
+        raise Exception("Could not request event messages")
+
+    total_i = 0
+    total_g = 0
+    for i in range(100):
+        (i,g) = dev[0].dump_monitor()
+        total_i += i
+        total_g += g
+        logger.info("Received i=%d g=%d" % (i, g))
+        if total_i >= 1000 and total_g >= 1000:
+            break
+        time.sleep(0.05)
+
+    if total_i < 1000:
+        raise Exception("Some per-interface events not seen: %d" % total_i)
+    if total_g < 1000:
+        raise Exception("Some global events not seen: %d" % total_g)
+
+    if not dev[0].ping():
+        raise Exception("Could not ping wpa_supplicant at the end of the test")

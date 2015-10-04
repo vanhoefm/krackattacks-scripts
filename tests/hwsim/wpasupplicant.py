@@ -688,12 +688,17 @@ class WpaSupplicant:
             raise Exception("Unexpected group removal reason")
 
     def dump_monitor(self):
+        count_iface = 0
+        count_global = 0
         while self.mon.pending():
             ev = self.mon.recv()
             logger.debug(self.ifname + ": " + ev)
+            count_iface += 1
         while self.global_mon and self.global_mon.pending():
             ev = self.global_mon.recv()
             logger.debug(self.ifname + "(global): " + ev)
+            count_global += 1
+        return (count_iface, count_global)
 
     def remove_group(self, ifname=None):
         if self.gctrl_mon:

@@ -2029,6 +2029,7 @@ def test_ap_wpa_ie_parsing(dev, apdev):
             if ev is None:
                 raise Exception("Association rejection not reported")
             dev[0].request("DISCONNECT")
+            dev[0].dump_monitor()
         finally:
             dev[0].request("VENDOR_ELEM_REMOVE 13 *")
 
@@ -2042,6 +2043,7 @@ def test_ap_wpa_ie_parsing(dev, apdev):
             dev[0].select_network(id)
             dev[0].wait_connected()
             dev[0].request("DISCONNECT")
+            dev[0].dump_monitor()
         finally:
             dev[0].request("VENDOR_ELEM_REMOVE 13 *")
 

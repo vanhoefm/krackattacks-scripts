@@ -60,6 +60,7 @@ def check_auto_select(dev, bssid):
         raise Exception("Connected to incorrect network")
     dev.request("REMOVE_NETWORK all")
     dev.wait_disconnected()
+    dev.dump_monitor()
 
 def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()

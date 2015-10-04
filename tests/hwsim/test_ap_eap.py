@@ -615,6 +615,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
     time.sleep(0.1)
+    dev[0].dump_monitor()
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -643,6 +644,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
     time.sleep(0.1)
+    dev[0].dump_monitor()
 
     tests = [ ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:0011223344",
               ":UMTS-AUTH:34",
@@ -669,6 +671,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
         time.sleep(0.1)
+        dev[0].dump_monitor()
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""

@@ -916,8 +916,10 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 
 free_dst:
 	dl_list_for_each_safe(dst, prev, &priv->ctrl_dst, struct wpa_ctrl_dst,
-			      list)
+			      list) {
+		dl_list_del(&dst->list);
 		os_free(dst);
+	}
 	dl_list_for_each_safe(msg, prev_msg, &priv->msg_queue,
 			      struct ctrl_iface_msg, list) {
 		dl_list_del(&msg->list);
@@ -1422,8 +1424,10 @@ wpa_supplicant_global_ctrl_iface_deinit(struct ctrl_iface_global_priv *priv)
 	if (priv->global->params.ctrl_interface)
 		unlink(priv->global->params.ctrl_interface);
 	dl_list_for_each_safe(dst, prev, &priv->ctrl_dst, struct wpa_ctrl_dst,
-			      list)
+			      list) {
+		dl_list_del(&dst->list);
 		os_free(dst);
+	}
 	dl_list_for_each_safe(msg, prev_msg, &priv->msg_queue,
 			      struct ctrl_iface_msg, list) {
 		dl_list_del(&msg->list);

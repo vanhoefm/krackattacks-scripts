@@ -173,7 +173,16 @@ static int ifconfig_up(const char *if_name)
 static int vlan_if_add(struct hostapd_data *hapd, struct hostapd_vlan *vlan,
 		       int existsok)
 {
-	int ret;
+	int ret, i;
+
+	for (i = 0; i < NUM_WEP_KEYS; i++) {
+		if (!hapd->conf->ssid.wep.key[i])
+			continue;
+		wpa_printf(MSG_ERROR,
+			   "VLAN: Refusing to set up VLAN iface %s with WEP",
+			   vlan->ifname);
+		return -1;
+	}
 
 	if (!if_nametoindex(vlan->ifname))
 		ret = hostapd_vlan_if_add(hapd, vlan->ifname);
@@ -935,32 +944,6 @@ static void full_dynamic_vlan_deinit(struct full_dynamic_vlan *priv)
 	os_free(priv);
 }
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
-
-
-int vlan_setup_encryption_dyn(struct hostapd_data *hapd, const char *dyn_vlan)
-{
-        int i;
-
-        if (dyn_vlan == NULL)
-		return 0;
-
-	/* Static WEP keys are set here; IEEE 802.1X and WPA uses their own
-	 * functions for setting up dynamic broadcast keys. */
-	for (i = 0; i < 4; i++) {
-		if (hapd->conf->ssid.wep.key[i] &&
-		    hostapd_drv_set_key(dyn_vlan, hapd, WPA_ALG_WEP, NULL, i,
-					i == hapd->conf->ssid.wep.idx, NULL, 0,
-					hapd->conf->ssid.wep.key[i],
-					hapd->conf->ssid.wep.len[i]))
-		{
-			wpa_printf(MSG_ERROR, "VLAN: Could not set WEP "
-				   "encryption for dynamic VLAN");
-			return -1;
-		}
-	}
-
-	return 0;
-}
 
 
 static int vlan_dynamic_add(struct hostapd_data *hapd,

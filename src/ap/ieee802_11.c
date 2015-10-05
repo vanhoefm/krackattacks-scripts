@@ -1210,7 +1210,7 @@ static void handle_auth(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
+int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	int i, j = 32, aid;
 

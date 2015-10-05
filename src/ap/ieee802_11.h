@@ -64,6 +64,7 @@ void hostapd_get_ht_capab(struct hostapd_data *hapd,
 void hostapd_get_vht_capab(struct hostapd_data *hapd,
 			   struct ieee80211_vht_capabilities *vht_cap,
 			   struct ieee80211_vht_capabilities *neg_vht_cap);
+int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta);
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		      const u8 *ht_capab);
 u16 copy_sta_vendor_vht(struct hostapd_data *hapd, struct sta_info *sta,

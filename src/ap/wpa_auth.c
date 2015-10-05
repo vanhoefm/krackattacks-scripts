@@ -3388,6 +3388,98 @@ wpa_auth_add_group(struct wpa_authenticator *wpa_auth, int vlan_id)
 }
 
 
+/*
+ * Enforce that the group state machine for the VLAN is running, increase
+ * reference counter as interface is up. References might have been increased
+ * even if a negative value is returned.
+ * Returns: -1 on error (group missing, group already failed); otherwise, 0
+ */
+int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id)
+{
+	struct wpa_group *group;
+
+	if (wpa_auth == NULL)
+		return 0;
+
+	group = wpa_auth->group;
+	while (group) {
+		if (group->vlan_id == vlan_id)
+			break;
+		group = group->next;
+	}
+
+	if (group == NULL) {
+		group = wpa_auth_add_group(wpa_auth, vlan_id);
+		if (group == NULL)
+			return -1;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "WPA: Ensure group state machine running for VLAN ID %d",
+		   vlan_id);
+
+	wpa_group_get(wpa_auth, group);
+	group->num_setup_iface++;
+
+	if (group->wpa_group_state == WPA_GROUP_FATAL_FAILURE)
+		return -1;
+
+	return 0;
+}
+
+
+/*
+ * Decrease reference counter, expected to be zero afterwards.
+ * returns: -1 on error (group not found, group in fail state)
+ *          -2 if wpa_group is still referenced
+ *           0 else
+ */
+int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id)
+{
+	struct wpa_group *group;
+	int ret = 0;
+
+	if (wpa_auth == NULL)
+		return 0;
+
+	group = wpa_auth->group;
+	while (group) {
+		if (group->vlan_id == vlan_id)
+			break;
+		group = group->next;
+	}
+
+	if (group == NULL)
+		return -1;
+
+	wpa_printf(MSG_DEBUG,
+		   "WPA: Try stopping group state machine for VLAN ID %d",
+		   vlan_id);
+
+	if (group->num_setup_iface <= 0) {
+		wpa_printf(MSG_ERROR,
+			   "WPA: wpa_auth_release_group called more often than wpa_auth_ensure_group for VLAN ID %d, skipping.",
+			   vlan_id);
+		return -1;
+	}
+	group->num_setup_iface--;
+
+	if (group->wpa_group_state == WPA_GROUP_FATAL_FAILURE)
+		ret = -1;
+
+	if (group->references > 1) {
+		wpa_printf(MSG_DEBUG,
+			   "WPA: Cannot stop group state machine for VLAN ID %d as references are still hold",
+			   vlan_id);
+		ret = -2;
+	}
+
+	wpa_group_put(wpa_auth, group);
+
+	return ret;
+}
+
+
 int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id)
 {
 	struct wpa_group *group;

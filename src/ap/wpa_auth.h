@@ -325,4 +325,7 @@ int wpa_auth_radius_das_disconnect_pmksa(struct wpa_authenticator *wpa_auth,
 					 struct radius_das_attrs *attr);
 void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth);
 
+int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id);
+int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id);
+
 #endif /* WPA_AUTH_H */

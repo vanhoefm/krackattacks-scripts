@@ -172,19 +172,6 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	    !(sta->flags & WLAN_STA_PREAUTH))
 		hostapd_drv_sta_remove(hapd, sta->addr);
 
-#ifndef CONFIG_NO_VLAN
-	if (sta->vlan_id_bound) {
-		/*
-		 * Need to remove the STA entry before potentially removing the
-		 * VLAN.
-		 */
-		if (hapd->iface->driver_ap_teardown &&
-		    !(sta->flags & WLAN_STA_PREAUTH))
-			hostapd_drv_sta_remove(hapd, sta->addr);
-		vlan_remove_dynamic(hapd, sta->vlan_id_bound);
-	}
-#endif /* CONFIG_NO_VLAN */
-
 	ap_sta_hash_del(hapd, sta);
 	ap_sta_list_del(hapd, sta);
 
@@ -273,6 +260,24 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	if (hapd->radius)
 		radius_client_flush_auth(hapd->radius, sta->addr);
 #endif /* CONFIG_NO_RADIUS */
+
+#ifndef CONFIG_NO_VLAN
+	/*
+	 * sta->wpa_sm->group needs to be released before so that
+	 * vlan_remove_dynamic() can check that no stations are left on the
+	 * AP_VLAN netdev.
+	 */
+	if (sta->vlan_id_bound) {
+		/*
+		 * Need to remove the STA entry before potentially removing the
+		 * VLAN.
+		 */
+		if (hapd->iface->driver_ap_teardown &&
+		    !(sta->flags & WLAN_STA_PREAUTH))
+			hostapd_drv_sta_remove(hapd, sta->addr);
+		vlan_remove_dynamic(hapd, sta->vlan_id_bound);
+	}
+#endif /* CONFIG_NO_VLAN */
 
 	os_free(sta->challenge);
 

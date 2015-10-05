@@ -171,6 +171,7 @@ struct wpa_group {
 #endif /* CONFIG_IEEE80211W */
 	/* Number of references except those in struct wpa_group->next */
 	unsigned int references;
+	unsigned int num_setup_iface;
 };
 
 

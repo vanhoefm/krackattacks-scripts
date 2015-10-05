@@ -20,6 +20,8 @@ except ImportError:
 import hwsim_utils
 import hostapd
 from utils import iface_is_in_bridge, HwsimSkip
+import os
+from tshark import run_tshark
 
 def test_ap_vlan_open(dev, apdev):
     """AP VLAN with open network"""
@@ -382,3 +384,84 @@ def test_ap_vlan_iface_cleanup_multibss(dev, apdev):
         hapd.request("DISABLE")
     finally:
         ap_vlan_iface_cleanup_multibss_cleanup()
+
+def test_ap_vlan_without_station(dev, apdev, p):
+    """AP VLAN with WPA2-PSK and no station"""
+    try:
+        subprocess.call(['brctl', 'addbr', 'brvlan1'])
+        subprocess.call(['brctl', 'setfd', 'brvlan1', '0'])
+        subprocess.call(['ifconfig', 'brvlan1', 'up'])
+        # use a passphrase wlantest does not know, so it cannot
+        # inject decrypted frames into pcap
+        params = hostapd.wpa2_params(ssid="test-vlan",
+                                     passphrase="12345678x")
+        params['dynamic_vlan'] = "1";
+        params['vlan_file'] = 'hostapd.wlan3.vlan'
+        params['accept_mac_file'] = "hostapd.accept";
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        # inject some traffic
+        sa = hapd.own_addr()
+        da = "ff:ff:ff:ff:ff:00"
+        hapd.request('DATA_TEST_CONFIG 1 ifname=brvlan1')
+        hapd.request('DATA_TEST_TX {} {} 0'.format(da, sa))
+        hapd.request('DATA_TEST_CONFIG 0')
+        time.sleep(.1)
+
+        dev[0].connect("test-vlan", psk="12345678x", scan_freq="2412")
+
+        # inject some traffic
+        sa = hapd.own_addr()
+        da = "ff:ff:ff:ff:ff:01"
+        hapd.request('DATA_TEST_CONFIG 1 ifname=brvlan1')
+        hapd.request('DATA_TEST_TX {} {} 0'.format(da, sa))
+        hapd.request('DATA_TEST_CONFIG 0')
+
+        # let the AP send couple of Beacon frames
+        time.sleep(1)
+        out = run_tshark(os.path.join(p['logdir'], "hwsim0.pcapng"),
+                         "wlan.da == ff:ff:ff:ff:ff:00",
+                         ["wlan.fc.protected"])
+
+        if out is not None:
+            lines = out.splitlines()
+            if len(lines) < 1:
+                raise Exception("first frame not observed")
+            state = 1
+            for l in lines:
+                is_protected = int(l, 16)
+                if is_protected != 1:
+                    state = 0
+            if state != 1:
+                raise Exception("Broadcast packets were not encrypted when no station was connected")
+        else:
+            raise Exception("first frame not observed")
+
+        out = run_tshark(os.path.join(p['logdir'], "hwsim0.pcapng"),
+                         "wlan.da == ff:ff:ff:ff:ff:01",
+                         ["wlan.fc.protected"])
+
+        if out is not None:
+            lines = out.splitlines()
+            if len(lines) < 1:
+                raise Exception("second frame not observed")
+            state = 1
+            for l in lines:
+                is_protected = int(l, 16)
+                if is_protected != 1:
+                    state = 0
+            if state != 1:
+                raise Exception("Broadcast packets were not encrypted when station was connected")
+        else:
+            raise Exception("second frame not observed")
+
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'brvlan1', 'down'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'wlan3.1', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delif', 'brvlan1', 'wlan3.1'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'brvlan1'])

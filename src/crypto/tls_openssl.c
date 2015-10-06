@@ -97,7 +97,7 @@ struct tls_connection {
 	SSL_CTX *ssl_ctx;
 	SSL *ssl;
 	BIO *ssl_in, *ssl_out;
-#ifndef OPENSSL_NO_ENGINE
+#if defined(ANDROID) || !defined(OPENSSL_NO_ENGINE)
 	ENGINE *engine;        /* functional reference to the engine */
 	EVP_PKEY *private_key; /* the private key if using engine */
 #endif /* OPENSSL_NO_ENGINE */
@@ -967,10 +967,32 @@ static int tls_is_pin_error(unsigned int err)
 #endif /* OPENSSL_NO_ENGINE */
 
 
+#ifdef ANDROID
+/* EVP_PKEY_from_keystore comes from system/security/keystore-engine. */
+EVP_PKEY * EVP_PKEY_from_keystore(const char *key_id);
+#endif /* ANDROID */
+
 static int tls_engine_init(struct tls_connection *conn, const char *engine_id,
 			   const char *pin, const char *key_id,
 			   const char *cert_id, const char *ca_cert_id)
 {
+#if defined(ANDROID) && defined(OPENSSL_IS_BORINGSSL)
+#if !defined(OPENSSL_NO_ENGINE)
+#error "This code depends on OPENSSL_NO_ENGINE being defined by BoringSSL."
+#endif
+	if (!key_id)
+		return TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED;
+	conn->engine = NULL;
+	conn->private_key = EVP_PKEY_from_keystore(key_id);
+	if (!conn->private_key) {
+		wpa_printf(MSG_ERROR,
+			   "ENGINE: cannot load private key with id '%s' [%s]",
+			   key_id,
+			   ERR_error_string(ERR_get_error(), NULL));
+		return TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED;
+	}
+#endif /* ANDROID && OPENSSL_IS_BORINGSSL */
+
 #ifndef OPENSSL_NO_ENGINE
 	int ret = -1;
 	if (engine_id == NULL) {
@@ -1068,17 +1090,19 @@ err:
 
 static void tls_engine_deinit(struct tls_connection *conn)
 {
-#ifndef OPENSSL_NO_ENGINE
+#if defined(ANDROID) || !defined(OPENSSL_NO_ENGINE)
 	wpa_printf(MSG_DEBUG, "ENGINE: engine deinit");
 	if (conn->private_key) {
 		EVP_PKEY_free(conn->private_key);
 		conn->private_key = NULL;
 	}
 	if (conn->engine) {
+#if !defined(OPENSSL_IS_BORINGSSL)
 		ENGINE_finish(conn->engine);
+#endif /* !OPENSSL_IS_BORINGSSL */
 		conn->engine = NULL;
 	}
-#endif /* OPENSSL_NO_ENGINE */
+#endif /* ANDROID || !OPENSSL_NO_ENGINE */
 }
 
 
@@ -2463,7 +2487,7 @@ static int tls_connection_engine_ca_cert(struct tls_data *data,
 
 static int tls_connection_engine_private_key(struct tls_connection *conn)
 {
-#ifndef OPENSSL_NO_ENGINE
+#if defined(ANDROID) || !defined(OPENSSL_NO_ENGINE)
 	if (SSL_use_PrivateKey(conn->ssl, conn->private_key) != 1) {
 		tls_show_errors(MSG_ERROR, __func__,
 				"ENGINE: cannot use private key for TLS");

@@ -1182,6 +1182,7 @@ static int cred_excluded_ssid(struct wpa_cred *cred, struct wpa_bss *bss)
 static int cred_below_min_backhaul(struct wpa_supplicant *wpa_s,
 				   struct wpa_cred *cred, struct wpa_bss *bss)
 {
+#ifdef CONFIG_HS20
 	int res;
 	unsigned int dl_bandwidth, ul_bandwidth;
 	const u8 *wan;
@@ -1233,6 +1234,7 @@ static int cred_below_min_backhaul(struct wpa_supplicant *wpa_s,
 		if (cred->min_ul_bandwidth_roaming > ul_bandwidth)
 			return 1;
 	}
+#endif /* CONFIG_HS20 */
 
 	return 0;
 }
@@ -1260,6 +1262,8 @@ static int cred_over_max_bss_load(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_HS20
+
 static int has_proto_match(const u8 *pos, const u8 *end, u8 proto)
 {
 	while (pos + 4 <= end) {
@@ -1285,10 +1289,13 @@ static int has_proto_port_match(const u8 *pos, const u8 *end, u8 proto,
 	return 0;
 }
 
+#endif /* CONFIG_HS20 */
+
 
 static int cred_conn_capab_missing(struct wpa_supplicant *wpa_s,
 				   struct wpa_cred *cred, struct wpa_bss *bss)
 {
+#ifdef CONFIG_HS20
 	int res;
 	const u8 *capab, *end;
 	unsigned int i, j;
@@ -1325,6 +1332,7 @@ static int cred_conn_capab_missing(struct wpa_supplicant *wpa_s,
 			}
 		}
 	}
+#endif /* CONFIG_HS20 */
 
 	return 0;
 }
@@ -2564,11 +2572,13 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 		return;
 	}
 
+#ifdef CONFIG_HS20
 	if (wpa_s->fetch_osu_icon_in_progress) {
 		wpa_printf(MSG_DEBUG, "Interworking: Next icon (in progress)");
 		hs20_next_osu_icon(wpa_s);
 		return;
 	}
+#endif /* CONFIG_HS20 */
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (!(bss->caps & IEEE80211_CAP_ESS))
@@ -2602,6 +2612,7 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 	}
 
 	if (found == 0) {
+#ifdef CONFIG_HS20
 		if (wpa_s->fetch_osu_info) {
 			if (wpa_s->num_prov_found == 0 &&
 			    wpa_s->fetch_osu_waiting_scan &&
@@ -2614,6 +2625,7 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 			hs20_osu_icon_fetch(wpa_s);
 			return;
 		}
+#endif /* CONFIG_HS20 */
 		wpa_msg(wpa_s, MSG_INFO, "ANQP fetch completed");
 		wpa_s->fetch_anqp_in_progress = 0;
 		if (wpa_s->network_select)
@@ -2907,8 +2919,10 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 		   " dialog_token=%u result=%d status_code=%u",
 		   MAC2STR(dst), dialog_token, result, status_code);
 	if (result != GAS_QUERY_SUCCESS) {
+#ifdef CONFIG_HS20
 		if (wpa_s->fetch_osu_icon_in_progress)
 			hs20_icon_fetch_failed(wpa_s);
+#endif /* CONFIG_HS20 */
 		anqp_result = "FAILURE";
 		goto out;
 	}
@@ -2918,8 +2932,10 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 	    pos[1] < 2 || pos[3] != ACCESS_NETWORK_QUERY_PROTOCOL) {
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"ANQP: Unexpected Advertisement Protocol in response");
+#ifdef CONFIG_HS20
 		if (wpa_s->fetch_osu_icon_in_progress)
 			hs20_icon_fetch_failed(wpa_s);
+#endif /* CONFIG_HS20 */
 		anqp_result = "INVALID_FRAME";
 		goto out;
 	}
@@ -2968,7 +2984,9 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 	}
 
 out_parse_done:
+#ifdef CONFIG_HS20
 	hs20_notify_parse_done(wpa_s);
+#endif /* CONFIG_HS20 */
 out:
 	wpa_msg(wpa_s, MSG_INFO, ANQP_QUERY_DONE "addr=" MACSTR " result=%s",
 		MAC2STR(dst), anqp_result);

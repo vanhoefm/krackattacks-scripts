@@ -6877,7 +6877,9 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->next_ssid = NULL;
 
 #ifdef CONFIG_INTERWORKING
+#ifdef CONFIG_HS20
 	hs20_cancel_fetch_osu(wpa_s);
+#endif /* CONFIG_HS20 */
 #endif /* CONFIG_INTERWORKING */
 
 	wpa_s->ext_mgmt_frame_handling = 0;

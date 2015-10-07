@@ -4231,6 +4231,8 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 #ifdef CONFIG_INTERWORKING
 	if ((mask & WPA_BSS_MASK_INTERNETW) && bss->anqp) {
 		struct wpa_bss_anqp *anqp = bss->anqp;
+		struct wpa_bss_anqp_elem *elem;
+
 		pos = anqp_add_hex(pos, end, "anqp_capability_list",
 				   anqp->capability_list);
 		pos = anqp_add_hex(pos, end, "anqp_venue_name",
@@ -4260,6 +4262,15 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		pos = anqp_add_hex(pos, end, "hs20_osu_providers_list",
 				   anqp->hs20_osu_providers_list);
 #endif /* CONFIG_HS20 */
+
+		dl_list_for_each(elem, &anqp->anqp_elems,
+				 struct wpa_bss_anqp_elem, list) {
+			char title[20];
+
+			os_snprintf(title, sizeof(title), "anqp[%u]",
+				    elem->infoid);
+			pos = anqp_add_hex(pos, end, title, elem->payload);
+		}
 	}
 #endif /* CONFIG_INTERWORKING */
 

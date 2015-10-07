@@ -60,6 +60,9 @@ struct wpa_bss_anqp * wpa_bss_anqp_alloc(void)
 	anqp = os_zalloc(sizeof(*anqp));
 	if (anqp == NULL)
 		return NULL;
+#ifdef CONFIG_INTERWORKING
+	dl_list_init(&anqp->anqp_elems);
+#endif /* CONFIG_INTERWORKING */
 	anqp->users = 1;
 	return anqp;
 }
@@ -80,6 +83,7 @@ static struct wpa_bss_anqp * wpa_bss_anqp_clone(struct wpa_bss_anqp *anqp)
 
 #define ANQP_DUP(f) if (anqp->f) n->f = wpabuf_dup(anqp->f)
 #ifdef CONFIG_INTERWORKING
+	dl_list_init(&n->anqp_elems);
 	ANQP_DUP(capability_list);
 	ANQP_DUP(venue_name);
 	ANQP_DUP(network_auth_type);
@@ -141,6 +145,10 @@ int wpa_bss_anqp_unshare_alloc(struct wpa_bss *bss)
  */
 static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
 {
+#ifdef CONFIG_INTERWORKING
+	struct wpa_bss_anqp_elem *elem;
+#endif /* CONFIG_INTERWORKING */
+
 	if (anqp == NULL)
 		return;
 
@@ -159,6 +167,13 @@ static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
 	wpabuf_free(anqp->nai_realm);
 	wpabuf_free(anqp->anqp_3gpp);
 	wpabuf_free(anqp->domain_name);
+
+	while ((elem = dl_list_first(&anqp->anqp_elems,
+				     struct wpa_bss_anqp_elem, list))) {
+		dl_list_del(&elem->list);
+		wpabuf_free(elem->payload);
+		os_free(elem);
+	}
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20
 	wpabuf_free(anqp->hs20_capability_list);

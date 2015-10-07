@@ -2716,6 +2716,41 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 }
 
 
+static void anqp_add_extra(struct wpa_supplicant *wpa_s,
+			   struct wpa_bss_anqp *anqp, u16 info_id,
+			   const u8 *data, size_t slen)
+{
+	struct wpa_bss_anqp_elem *tmp, *elem = NULL;
+
+	if (!anqp)
+		return;
+
+	dl_list_for_each(tmp, &anqp->anqp_elems, struct wpa_bss_anqp_elem,
+			 list) {
+		if (tmp->infoid == info_id) {
+			elem = tmp;
+			break;
+		}
+	}
+
+	if (!elem) {
+		elem = os_zalloc(sizeof(*elem));
+		if (!elem)
+			return;
+		elem->infoid = info_id;
+		dl_list_add(&anqp->anqp_elems, &elem->list);
+	} else {
+		wpabuf_free(elem->payload);
+	}
+
+	elem->payload = wpabuf_alloc_copy(data, slen);
+	if (!elem->payload) {
+		dl_list_del(&elem->list);
+		os_free(elem);
+	}
+}
+
+
 static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 					    struct wpa_bss *bss, const u8 *sa,
 					    u16 info_id,
@@ -2849,6 +2884,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 	default:
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"Interworking: Unsupported ANQP Info ID %u", info_id);
+		anqp_add_extra(wpa_s, anqp, info_id, data, slen);
 		break;
 	}
 }

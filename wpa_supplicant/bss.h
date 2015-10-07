@@ -19,6 +19,12 @@ struct wpa_scan_res;
 #define WPA_BSS_ASSOCIATED		BIT(5)
 #define WPA_BSS_ANQP_FETCH_TRIED	BIT(6)
 
+struct wpa_bss_anqp_elem {
+	struct dl_list list;
+	u16 infoid;
+	struct wpabuf *payload;
+};
+
 /**
  * struct wpa_bss_anqp - ANQP data for a BSS entry (struct wpa_bss)
  */
@@ -34,6 +40,7 @@ struct wpa_bss_anqp {
 	struct wpabuf *nai_realm;
 	struct wpabuf *anqp_3gpp;
 	struct wpabuf *domain_name;
+	struct dl_list anqp_elems; /* list of struct wpa_bss_anqp_elem */
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20
 	struct wpabuf *hs20_capability_list;

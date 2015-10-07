@@ -941,3 +941,71 @@ def test_gas_anqp_oom_hapd(dev, apdev):
             raise Exception("ANQP-QUERY-DONE event not seen")
         if "result=FAILURE" not in ev:
             raise Exception("Unexpected result: " + ev)
+
+def test_gas_anqp_extra_elements(dev, apdev):
+    """GAS/ANQP and extra ANQP elements"""
+    geo_loc = "001052834d12efd2b08b9b4bf1cc2c00004104050000000000060100"
+    civic_loc = "0000f9555302f50102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5"
+    params = { "ssid": "gas/anqp",
+               "interworking": "1",
+               "anqp_elem": [ "265:" + geo_loc,
+                              "266:" + civic_loc,
+                              "262:1122334455",
+                              "275:01020304",
+                              "60000:01",
+                              "299:0102" ] }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 265,266"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    bss = dev[0].get_bss(bssid)
+
+    if 'anqp[265]' not in bss:
+        raise Exception("AP Geospatial Location ANQP-element not seen")
+    if bss['anqp[265]'] != geo_loc:
+        raise Exception("Unexpected AP Geospatial Location ANQP-element value: " + bss['anqp[265]'])
+
+    if 'anqp[266]' not in bss:
+        raise Exception("AP Civic Location ANQP-element not seen")
+    if bss['anqp[266]'] != civic_loc:
+        raise Exception("Unexpected AP Civic Location ANQP-element value: " + bss['anqp[266]'])
+
+    dev[1].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[1].request("ANQP_GET " + bssid + " 257,258,259,260,261,262,263,264,265,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,285,286,287,288,289,290,291,292,293,294,295,296,297,298,299"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[1].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    bss = dev[1].get_bss(bssid)
+
+    if 'anqp[265]' not in bss:
+        raise Exception("AP Geospatial Location ANQP-element not seen")
+    if bss['anqp[265]'] != geo_loc:
+        raise Exception("Unexpected AP Geospatial Location ANQP-element value: " + bss['anqp[265]'])
+
+    if 'anqp[266]' in bss:
+        raise Exception("AP Civic Location ANQP-element unexpectedly seen")
+
+    if 'anqp[275]' not in bss:
+        raise Exception("ANQP-element Info ID 275 not seen")
+    if bss['anqp[275]'] != "01020304":
+        raise Exception("Unexpected AP ANQP-element Info ID 299 value: " + bss['anqp[299]'])
+
+    if 'anqp[299]' not in bss:
+        raise Exception("ANQP-element Info ID 299 not seen")
+    if bss['anqp[299]'] != "0102":
+        raise Exception("Unexpected AP ANQP-element Info ID 299 value: " + bss['anqp[299]'])
+
+    if 'anqp_ip_addr_type_availability' not in bss:
+        raise Exception("ANQP-element Info ID 292 not seen")
+    if bss['anqp_ip_addr_type_availability'] != "1122334455":
+        raise Exception("Unexpected AP ANQP-element Info ID 262 value: " + bss['anqp_ip_addr_type_availability'])

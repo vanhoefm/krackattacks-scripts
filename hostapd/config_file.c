@@ -1519,6 +1519,54 @@ fail:
 }
 
 
+static int parse_anqp_elem(struct hostapd_bss_config *bss, char *buf, int line)
+{
+	char *delim;
+	u16 infoid;
+	size_t len;
+	struct wpabuf *payload;
+	struct anqp_element *elem;
+
+	delim = os_strchr(buf, ':');
+	if (!delim)
+		return -1;
+	delim++;
+	infoid = atoi(buf);
+	len = os_strlen(delim);
+	if (len & 1)
+		return -1;
+	len /= 2;
+	payload = wpabuf_alloc(len);
+	if (!payload)
+		return -1;
+	if (hexstr2bin(delim, wpabuf_put(payload, len), len) < 0) {
+		wpabuf_free(payload);
+		return -1;
+	}
+
+	dl_list_for_each(elem, &bss->anqp_elem, struct anqp_element, list) {
+		if (elem->infoid == infoid) {
+			/* Update existing entry */
+			wpabuf_free(elem->payload);
+			elem->payload = payload;
+			return 0;
+		}
+	}
+
+	/* Add a new entry */
+	elem = os_zalloc(sizeof(*elem));
+	if (!elem) {
+		wpabuf_free(payload);
+		return -1;
+	}
+	elem->infoid = infoid;
+	elem->payload = payload;
+	dl_list_add(&bss->anqp_elem, &elem->list);
+
+	return 0;
+}
+
+
 static int parse_qos_map_set(struct hostapd_bss_config *bss,
 			     char *buf, int line)
 {
@@ -3135,6 +3183,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 	} else if (os_strcmp(buf, "nai_realm") == 0) {
 		if (parse_nai_realm(bss, pos, line) < 0)
+			return 1;
+	} else if (os_strcmp(buf, "anqp_elem") == 0) {
+		if (parse_anqp_elem(bss, pos, line) < 0)
 			return 1;
 	} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 		bss->gas_frag_limit = atoi(pos);

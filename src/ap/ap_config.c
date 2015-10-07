@@ -38,6 +38,8 @@ static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)
 
 void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 {
+	dl_list_init(&bss->anqp_elem);
+
 	bss->logger_syslog_level = HOSTAPD_LEVEL_INFO;
 	bss->logger_stdout_level = HOSTAPD_LEVEL_INFO;
 	bss->logger_syslog = (unsigned int) -1;
@@ -411,6 +413,19 @@ void hostapd_config_clear_wpa_psk(struct hostapd_wpa_psk **l)
 }
 
 
+static void hostapd_config_free_anqp_elem(struct hostapd_bss_config *conf)
+{
+	struct anqp_element *elem;
+
+	while ((elem = dl_list_first(&conf->anqp_elem, struct anqp_element,
+				     list))) {
+		dl_list_del(&elem->list);
+		wpabuf_free(elem->payload);
+		os_free(elem);
+	}
+}
+
+
 void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 {
 	struct hostapd_eap_user *user, *prev_user;
@@ -524,6 +539,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->network_auth_type);
 	os_free(conf->anqp_3gpp_cell_net);
 	os_free(conf->domain_name);
+	hostapd_config_free_anqp_elem(conf);
 
 #ifdef CONFIG_RADIUS_TEST
 	os_free(conf->dump_msk_file);

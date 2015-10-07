@@ -10,6 +10,7 @@
 #define HOSTAPD_CONFIG_H
 
 #include "common/defs.h"
+#include "utils/list.h"
 #include "ip_addr.h"
 #include "common/wpa_common.h"
 #include "common/ieee802_11_defs.h"
@@ -204,6 +205,13 @@ struct hostapd_nai_realm_data {
 		u8 auth_val[MAX_NAI_AUTH_TYPES];
 	} eap_method[MAX_NAI_EAP_METHODS];
 };
+
+struct anqp_element {
+	struct dl_list list;
+	u16 infoid;
+	struct wpabuf *payload;
+};
+
 
 /**
  * struct hostapd_bss_config - Per-BSS configuration
@@ -480,6 +488,8 @@ struct hostapd_bss_config {
 
 	unsigned int nai_realm_count;
 	struct hostapd_nai_realm_data *nai_realm_data;
+
+	struct dl_list anqp_elem; /* list of struct anqp_element */
 
 	u16 gas_comeback_delay;
 	int gas_frag_limit;

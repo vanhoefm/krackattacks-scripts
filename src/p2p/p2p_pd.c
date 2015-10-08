@@ -301,7 +301,7 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 				       group_capab);
 		p2p_buf_add_device_info(buf, p2p, NULL);
 
-		if (persist_ssid && p2p->cfg->get_persistent_group &&
+		if (persist_ssid && p2p->cfg->get_persistent_group && dev &&
 		    (status == P2P_SC_SUCCESS ||
 		     status == P2P_SC_SUCCESS_DEFERRED)) {
 			u8 ssid[SSID_MAX_LEN];

@@ -102,10 +102,12 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	size_t ssid_len;
 	u8 go_dev_addr[ETH_ALEN];
 	u8 intended_addr[ETH_ALEN];
+	int follow_on_req_fail = prov->status >= 0 &&
+		prov->status != P2P_SC_SUCCESS_DEFERRED;
 
 	/* If we might be explicite group owner, add GO details */
-	if (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
-			     P2PS_SETUP_NEW))
+	if (!follow_on_req_fail &&
+	    (prov->conncap & (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW)))
 		p2ps_add_new_group_info(p2p, dev, buf);
 
 	if (prov->status >= 0)
@@ -113,42 +115,49 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	else
 		prov->method = config_methods;
 
-	if (p2p->cfg->get_persistent_group) {
-		shared_group = p2p->cfg->get_persistent_group(
-			p2p->cfg->cb_ctx, dev->info.p2p_device_addr, NULL, 0,
-			go_dev_addr, ssid, &ssid_len, intended_addr);
+	if (!follow_on_req_fail) {
+		if (p2p->cfg->get_persistent_group) {
+			shared_group = p2p->cfg->get_persistent_group(
+				p2p->cfg->cb_ctx, dev->info.p2p_device_addr,
+				NULL, 0, go_dev_addr, ssid, &ssid_len,
+				intended_addr);
+		}
+
+		if (shared_group ||
+		    (prov->conncap & (P2PS_SETUP_CLIENT | P2PS_SETUP_NEW)))
+			p2p_buf_add_channel_list(buf, p2p->cfg->country,
+						 &p2p->channels);
+
+		if ((shared_group && !is_zero_ether_addr(intended_addr)) ||
+		    (prov->conncap & (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW)))
+			p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+						      p2p->op_reg_class,
+						      p2p->op_channel);
 	}
 
-	if (shared_group ||
-	    (prov->conncap & (P2PS_SETUP_CLIENT | P2PS_SETUP_NEW)))
-		p2p_buf_add_channel_list(buf, p2p->cfg->country,
-					 &p2p->channels);
-
-	if ((shared_group && !is_zero_ether_addr(intended_addr)) ||
-	    (prov->conncap & (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW)))
-		p2p_buf_add_operating_channel(buf, p2p->cfg->country,
-					      p2p->op_reg_class,
-					      p2p->op_channel);
-
-	if (prov->info[0])
+	if (prov->status < 0 && prov->info[0])
 		p2p_buf_add_session_info(buf, prov->info);
 
-	p2p_buf_add_connection_capability(buf, prov->conncap);
+	if (!follow_on_req_fail)
+		p2p_buf_add_connection_capability(buf, prov->conncap);
 
 	p2p_buf_add_advertisement_id(buf, prov->adv_id, prov->adv_mac);
 
-	if (shared_group || prov->conncap == P2PS_SETUP_NEW ||
-	    prov->conncap ==
-	    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW) ||
-	    prov->conncap ==
-	    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_CLIENT)) {
-		/* Add Config Timeout */
-		p2p_buf_add_config_timeout(buf, p2p->go_timeout,
-					   p2p->client_timeout);
-	}
+	if (!follow_on_req_fail) {
+		if (shared_group || prov->conncap == P2PS_SETUP_NEW ||
+		    prov->conncap ==
+		    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW) ||
+		    prov->conncap ==
+		    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_CLIENT)) {
+			/* Add Config Timeout */
+			p2p_buf_add_config_timeout(buf, p2p->go_timeout,
+						   p2p->client_timeout);
+		}
 
-	p2p_buf_add_listen_channel(buf, p2p->cfg->country, p2p->cfg->reg_class,
-				   p2p->cfg->channel);
+		p2p_buf_add_listen_channel(buf, p2p->cfg->country,
+					   p2p->cfg->reg_class,
+					   p2p->cfg->channel);
+	}
 
 	p2p_buf_add_session_id(buf, prov->session_id, prov->session_mac);
 

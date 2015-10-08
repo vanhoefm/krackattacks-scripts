@@ -3817,7 +3817,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	u8 mac[ETH_ALEN];
-	struct wpa_ssid *persistent_go, *stale, *s;
+	struct wpa_ssid *persistent_go, *stale, *s = NULL;
 	int save_config = 0;
 	struct wpa_supplicant *go_wpa_s;
 	char feat_cap_str[256];
@@ -3888,8 +3888,9 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 	}
 
 	/* Clean up stale persistent groups with this device */
-	s = wpas_p2p_get_persistent(wpa_s, dev, persist_ssid,
-				    persist_ssid_size);
+	if (persist_ssid && persist_ssid_size)
+		s = wpas_p2p_get_persistent(wpa_s, dev, persist_ssid,
+					    persist_ssid_size);
 
 	if (persist_ssid && s && s->mode != WPAS_MODE_P2P_GO &&
 	    is_zero_ether_addr(grp_mac)) {

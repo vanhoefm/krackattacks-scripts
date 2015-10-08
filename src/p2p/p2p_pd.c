@@ -40,21 +40,31 @@ static void p2p_build_wps_ie_config_methods(struct wpabuf *buf,
 }
 
 
-static void p2ps_add_new_group_info(struct p2p_data *p2p, struct wpabuf *buf)
+static void p2ps_add_new_group_info(struct p2p_data *p2p,
+				    struct p2p_device *dev,
+				    struct wpabuf *buf)
 {
 	int found;
 	u8 intended_addr[ETH_ALEN];
 	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	int group_iface;
+	unsigned int force_freq;
 
 	if (!p2p->cfg->get_go_info)
 		return;
 
 	found = p2p->cfg->get_go_info(
 		p2p->cfg->cb_ctx, intended_addr, ssid,
-		&ssid_len, &group_iface);
+		&ssid_len, &group_iface, &force_freq);
 	if (found) {
+		if (force_freq > 0) {
+			p2p->p2ps_prov->force_freq = force_freq;
+			p2p->p2ps_prov->pref_freq = 0;
+
+			if (dev)
+				p2p_prepare_channel(p2p, dev, force_freq, 0, 0);
+		}
 		p2p_buf_add_group_id(buf, p2p->cfg->dev_addr,
 				     ssid, ssid_len);
 
@@ -96,7 +106,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	/* If we might be explicite group owner, add GO details */
 	if (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
 			     P2PS_SETUP_NEW))
-		p2ps_add_new_group_info(p2p, buf);
+		p2ps_add_new_group_info(p2p, dev, buf);
 
 	if (prov->status >= 0)
 		p2p_buf_add_status(buf, (u8) prov->status);
@@ -109,25 +119,16 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 			go_dev_addr, ssid, &ssid_len, intended_addr);
 	}
 
-	/* Add Operating Channel if conncap includes GO */
 	if (shared_group ||
-	    (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
-			      P2PS_SETUP_NEW))) {
-		u8 tmp;
+	    (prov->conncap & (P2PS_SETUP_CLIENT | P2PS_SETUP_NEW)))
+		p2p_buf_add_channel_list(buf, p2p->cfg->country,
+					 &p2p->channels);
 
-		p2p_go_select_channel(p2p, dev, &tmp);
-
-		if (p2p->op_reg_class && p2p->op_channel)
-			p2p_buf_add_operating_channel(buf, p2p->cfg->country,
-						      p2p->op_reg_class,
-						      p2p->op_channel);
-		else
-			p2p_buf_add_operating_channel(buf, p2p->cfg->country,
-						      p2p->cfg->op_reg_class,
-						      p2p->cfg->op_channel);
-	}
-
-	p2p_buf_add_channel_list(buf, p2p->cfg->country, &p2p->cfg->channels);
+	if ((shared_group && !is_zero_ether_addr(intended_addr)) ||
+	    (prov->conncap & (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW)))
+		p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+					      p2p->op_reg_class,
+					      p2p->op_channel);
 
 	if (prov->info[0])
 		p2p_buf_add_session_info(buf, prov->info);
@@ -324,7 +325,7 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		}
 
 		if (!persist && (prov->conncap & P2PS_SETUP_GROUP_OWNER))
-			p2ps_add_new_group_info(p2p, buf);
+			p2ps_add_new_group_info(p2p, dev, buf);
 
 		/* Add Operating Channel if conncap indicates GO */
 		if (persist || (prov->conncap & P2PS_SETUP_GROUP_OWNER)) {
@@ -346,7 +347,7 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		}
 
 		p2p_buf_add_channel_list(buf, p2p->cfg->country,
-					 &p2p->cfg->channels);
+					 &p2p->channels);
 
 		if (!persist && (status == P2P_SC_SUCCESS ||
 				 status == P2P_SC_SUCCESS_DEFERRED))
@@ -703,9 +704,15 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (p2ps_adv) {
+		unsigned int forced_freq, pref_freq;
+
 		auto_accept = p2ps_adv->auto_accept;
 		conncap = p2p->cfg->p2ps_group_capability(p2p->cfg->cb_ctx,
-							  conncap, auto_accept);
+							  conncap, auto_accept,
+							  &forced_freq,
+							  &pref_freq);
+
+		p2p_prepare_channel(p2p, dev, forced_freq, pref_freq, 0);
 
 		p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
 			auto_accept, remote_conncap, conncap);
@@ -752,6 +759,8 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			}
 
 			tmp = p2p->p2ps_prov;
+			tmp->force_freq = forced_freq;
+			tmp->pref_freq = pref_freq;
 			if (conncap) {
 				tmp->conncap = conncap;
 				tmp->status = P2P_SC_SUCCESS;
@@ -814,16 +823,18 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 
 	conncap = p2p->cfg->p2ps_group_capability(p2p->cfg->cb_ctx,
 						  remote_conncap,
-						  p2p->p2ps_prov->conncap);
-
-	p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
-		p2p->p2ps_prov->conncap, remote_conncap, conncap);
+						  p2p->p2ps_prov->conncap,
+						  &p2p->p2ps_prov->force_freq,
+						  &p2p->p2ps_prov->pref_freq);
 
 	resp_fcap.cpt = p2ps_own_preferred_cpt(p2p->p2ps_prov->cpt_priority,
 					       req_fcap->cpt);
 
 	p2p_dbg(p2p, "cpt: local:0x%x remote:0x%x result:0x%x",
 		p2p->p2ps_prov->cpt_mask, req_fcap->cpt, resp_fcap.cpt);
+
+	p2p_prepare_channel(p2p, dev, p2p->p2ps_prov->force_freq,
+			    p2p->p2ps_prov->pref_freq, 0);
 
 	/*
 	 * Ensure that if we asked for PIN originally, our method is consistent
@@ -1460,6 +1471,10 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 			"Building PD Request based on P2PS config method 0x%x status %d --> req_config_methods 0x%x",
 			p2p->p2ps_prov->method, p2p->p2ps_prov->status,
 			dev->req_config_methods);
+
+		if (p2p_prepare_channel(p2p, dev, p2p->p2ps_prov->force_freq,
+					p2p->p2ps_prov->pref_freq, 1) < 0)
+			return -1;
 	}
 
 	req = p2p_build_prov_disc_req(p2p, dev, join);

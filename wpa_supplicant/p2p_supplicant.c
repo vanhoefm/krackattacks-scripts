@@ -124,6 +124,10 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			 int go);
 static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
 			       const u8 *ssid, size_t ssid_len);
+static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
+				int *force_freq, int *pref_freq, int go,
+				unsigned int *pref_freq_list,
+				unsigned int *num_pref_freq);
 static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 				   const u8 *ssid, size_t ssid_len);
 static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
@@ -605,20 +609,6 @@ wpas_p2p_get_cli_group(struct wpa_supplicant *wpa_s)
 }
 
 
-/* Find an active P2P group where we are the GO */
-static struct wpa_ssid * wpas_p2p_group_go_ssid(struct wpa_supplicant *wpa_s,
-						u8 *bssid)
-{
-	struct wpa_supplicant *go = wpas_p2p_get_go_group(wpa_s);
-
-	if (!go)
-		return NULL;
-
-	os_memcpy(bssid, go->own_addr, ETH_ALEN);
-	return go->current_ssid;
-}
-
-
 /* Find a persistent group where we are the GO */
 static struct wpa_ssid *
 wpas_p2p_get_persistent_go(struct wpa_supplicant *wpa_s)
@@ -634,7 +624,9 @@ wpas_p2p_get_persistent_go(struct wpa_supplicant *wpa_s)
 }
 
 
-static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
+static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role,
+				unsigned int *force_freq,
+				unsigned int *pref_freq)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *s;
@@ -643,8 +635,22 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role)
 	struct wpa_supplicant *go_wpa_s, *cli_wpa_s;
 	struct wpa_ssid *persistent_go;
 	int p2p_no_group_iface;
+	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS], size;
 
 	wpa_printf(MSG_DEBUG, "P2P: Conncap - in:%d role:%d", incoming, role);
+
+	if (force_freq)
+		*force_freq = 0;
+	if (pref_freq)
+		*pref_freq = 0;
+
+	size = P2P_MAX_PREF_CHANNELS;
+	if (force_freq && pref_freq &&
+	    !wpas_p2p_setup_freqs(wpa_s, 0, (int *) force_freq,
+				  (int *) pref_freq, 0, pref_freq_list, &size))
+		wpas_p2p_set_own_freq_preference(wpa_s,
+						 *force_freq ? *force_freq :
+						 *pref_freq);
 
 	/*
 	 * For non-concurrent capable devices:
@@ -3685,11 +3691,12 @@ static int wpas_get_persistent_group(void *ctx, const u8 *addr, const u8 *ssid,
 
 
 static int wpas_get_go_info(void *ctx, u8 *intended_addr,
-			    u8 *ssid, size_t *ssid_len, int *group_iface)
+			    u8 *ssid, size_t *ssid_len, int *group_iface,
+			    unsigned int *freq)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_supplicant *go;
 	struct wpa_ssid *s;
-	u8 bssid[ETH_ALEN];
 
 	/*
 	 * group_iface will be set to 1 only if a dedicated interface for P2P
@@ -3699,17 +3706,25 @@ static int wpas_get_go_info(void *ctx, u8 *intended_addr,
 	 * that the pending interface should be used.
 	 */
 	*group_iface = 0;
-	s = wpas_p2p_group_go_ssid(wpa_s, bssid);
-	if (!s) {
+
+	if (freq)
+		*freq = 0;
+
+	go = wpas_p2p_get_go_group(wpa_s);
+	if (!go) {
 		s = wpas_p2p_get_persistent_go(wpa_s);
 		*group_iface = wpas_p2p_create_iface(wpa_s);
 		if (s)
-			os_memcpy(bssid, s->bssid, ETH_ALEN);
+			os_memcpy(intended_addr, s->bssid, ETH_ALEN);
 		else
 			return 0;
+	} else {
+		s = go->current_ssid;
+		os_memcpy(intended_addr, go->own_addr, ETH_ALEN);
+		if (freq)
+			*freq = go->assoc_freq;
 	}
 
-	os_memcpy(intended_addr, bssid, ETH_ALEN);
 	os_memcpy(ssid, s->ssid, s->ssid_len);
 	*ssid_len = s->ssid_len;
 
@@ -6235,7 +6250,9 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	wpa_s->pending_pd_use = NORMAL_PD;
 	if (p2ps_prov && use == WPAS_P2P_PD_FOR_ASP) {
 		p2ps_prov->conncap = p2ps_group_capability(
-			wpa_s, P2PS_SETUP_NONE, p2ps_prov->role);
+			wpa_s, P2PS_SETUP_NONE, p2ps_prov->role,
+			&p2ps_prov->force_freq, &p2ps_prov->pref_freq);
+
 		wpa_printf(MSG_DEBUG,
 			   "P2P: %s conncap: %d - ASP parsed: %x %x %d %s",
 			   __func__, p2ps_prov->conncap,

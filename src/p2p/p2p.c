@@ -1459,7 +1459,7 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 
 
 /**
- * p2p_prepare_channel - Select operating channel for GO Negotiation
+ * p2p_prepare_channel - Select operating channel for GO Negotiation or P2PS PD
  * @p2p: P2P module context from p2p_init()
  * @dev: Selected peer device
  * @force_freq: Forced frequency in MHz or 0 if not forced
@@ -1468,9 +1468,9 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
  * Returns: 0 on success, -1 on failure (channel not supported for P2P)
  *
  * This function is used to do initial operating channel selection for GO
- * Negotiation prior to having received peer information. The selected channel
- * may be further optimized in p2p_reselect_channel() once the peer information
- * is available.
+ * Negotiation prior to having received peer information or for P2PS PD
+ * signalling. The selected channel may be further optimized in
+ * p2p_reselect_channel() once the peer information is available.
  */
 int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
 			unsigned int force_freq, unsigned int pref_freq, int go)

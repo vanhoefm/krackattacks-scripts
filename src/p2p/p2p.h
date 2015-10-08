@@ -224,6 +224,16 @@ struct p2ps_provision {
 	u8 cpt_priority[P2PS_FEATURE_CAPAB_CPT_MAX + 1];
 
 	/**
+	 * force_freq - The only allowed channel frequency in MHz or 0.
+	 */
+	unsigned int force_freq;
+
+	/**
+	 * pref_freq - Preferred operating frequency in MHz or 0.
+	 */
+	unsigned int pref_freq;
+
+	/**
 	 * info - Vendor defined extra Provisioning information
 	 */
 	char info[0];
@@ -1024,6 +1034,8 @@ struct p2p_config {
 	 * @ssid_len: Buffer for returning length of @ssid
 	 * @group_iface: Buffer for returning whether a separate group interface
 	 *	would be used
+	 * @freq: Variable for returning the current operating frequency of a
+	 *	currently running P2P GO.
 	 * Returns: 1 if GO info found, 0 otherwise
 	 *
 	 * This is used to compose New Group settings (SSID, and intended
@@ -1031,7 +1043,8 @@ struct p2p_config {
 	 * result in our being an autonomous GO.
 	 */
 	int (*get_go_info)(void *ctx, u8 *intended_addr,
-			   u8 *ssid, size_t *ssid_len, int *group_iface);
+			   u8 *ssid, size_t *ssid_len, int *group_iface,
+			   unsigned int *freq);
 
 	/**
 	 * remove_stale_groups - Remove stale P2PS groups
@@ -1070,14 +1083,20 @@ struct p2p_config {
 
 	/**
 	 * p2ps_group_capability - Determine group capability
+	 * @ctx: Callback context from cb_ctx
+	 * @incoming: Peer requested roles, expressed with P2PS_SETUP_* bitmap.
+	 * @role: Local roles, expressed with P2PS_SETUP_* bitmap.
+	 * @force_freq: Variable for returning forced frequency for the group.
+	 * @pref_freq: Variable for returning preferred frequency for the group.
+	 * Returns: P2PS_SETUP_* bitmap of group capability result.
 	 *
-	 * This function can be used to determine group capability based on
-	 * information from P2PS PD exchange and the current state of ongoing
-	 * groups and driver capabilities.
-	 *
-	 * P2PS_SETUP_* bitmap is used as the parameters and return value.
+	 * This function can be used to determine group capability and
+	 * frequencies based on information from P2PS PD exchange and the
+	 * current state of ongoing groups and driver capabilities.
 	 */
-	u8 (*p2ps_group_capability)(void *ctx, u8 incoming, u8 role);
+	u8 (*p2ps_group_capability)(void *ctx, u8 incoming, u8 role,
+				    unsigned int *force_freq,
+				    unsigned int *pref_freq);
 
 	/**
 	 * get_pref_freq_list - Get preferred frequency list for an interface

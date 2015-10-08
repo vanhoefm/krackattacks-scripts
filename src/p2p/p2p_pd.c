@@ -1365,10 +1365,55 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		passwd_id = DEV_PW_P2PS_DEFAULT;
 	}
 
-	if ((msg.conn_cap || msg.persistent_dev) &&
-	    (status == P2P_SC_SUCCESS || status == P2P_SC_SUCCESS_DEFERRED) &&
+	if ((status == P2P_SC_SUCCESS || status == P2P_SC_SUCCESS_DEFERRED) &&
 	    p2p->p2ps_prov) {
+		dev->oper_freq = 0;
+
+		/*
+		 * Save the reported channel list and operating frequency.
+		 * Note that the specification mandates that the responder
+		 * should include in the channel list only channels reported by
+		 * the initiator, so this is only a sanity check, and if this
+		 * fails the flow would continue, although it would probably
+		 * fail. Same is true for the operating channel.
+		 */
+		if (msg.channel_list && msg.channel_list_len &&
+		    p2p_peer_channels_check(p2p, &p2p->channels, dev,
+					    msg.channel_list,
+					    msg.channel_list_len) < 0)
+			p2p_dbg(p2p, "P2PS PD Response - no common channels");
+
+		if (msg.operating_channel) {
+			if (p2p_channels_includes(&p2p->channels,
+						  msg.operating_channel[3],
+						  msg.operating_channel[4]) &&
+			    p2p_channels_includes(&dev->channels,
+						  msg.operating_channel[3],
+						  msg.operating_channel[4])) {
+				dev->oper_freq =
+					p2p_channel_to_freq(
+						msg.operating_channel[3],
+						msg.operating_channel[4]);
+			} else {
+				p2p_dbg(p2p,
+					"P2PS PD Response - invalid operating channel");
+			}
+		}
+
 		if (p2p->cfg->p2ps_prov_complete) {
+			if (conncap == P2PS_SETUP_GROUP_OWNER) {
+				u8 tmp;
+
+				/*
+				 * Re-select the operating channel as it is
+				 * possible that original channel is no longer
+				 * valid. This should not really fail.
+				 */
+				if (p2p_go_select_channel(p2p, dev, &tmp) < 0)
+					p2p_dbg(p2p,
+						"P2PS PD channel selection failed");
+			}
+
 			p2p->cfg->p2ps_prov_complete(
 				p2p->cfg->cb_ctx, status, sa, adv_mac,
 				p2p->p2ps_prov->session_mac,

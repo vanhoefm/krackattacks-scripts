@@ -579,6 +579,17 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 				   0)) {
 			p2p_dbg(p2p, "Provision Discovery Request add device failed "
 				MACSTR, MAC2STR(sa));
+			goto out;
+		}
+
+		if (!dev) {
+			dev = p2p_get_device(p2p, sa);
+			if (!dev) {
+				p2p_dbg(p2p,
+					"Provision Discovery device not found "
+					MACSTR, MAC2STR(sa));
+				goto out;
+			}
 		}
 	} else if (msg.wfd_subelems) {
 		wpabuf_free(dev->info.wfd_subelems);
@@ -610,37 +621,33 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		}
 	}
 
-	if (dev) {
-		dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
-				P2P_DEV_PD_PEER_KEYPAD |
-				P2P_DEV_PD_PEER_P2PS);
+	dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
+			P2P_DEV_PD_PEER_KEYPAD |
+			P2P_DEV_PD_PEER_P2PS);
 
-		/* Remove stale persistent groups */
-		if (p2p->cfg->remove_stale_groups) {
-			p2p->cfg->remove_stale_groups(
-				p2p->cfg->cb_ctx, dev->info.p2p_device_addr,
-				msg.persistent_dev,
-				msg.persistent_ssid, msg.persistent_ssid_len);
-		}
+	/* Remove stale persistent groups */
+	if (p2p->cfg->remove_stale_groups) {
+		p2p->cfg->remove_stale_groups(
+			p2p->cfg->cb_ctx, dev->info.p2p_device_addr,
+			msg.persistent_dev,
+			msg.persistent_ssid, msg.persistent_ssid_len);
 	}
+
 	if (msg.wps_config_methods & WPS_CONFIG_DISPLAY) {
 		p2p_dbg(p2p, "Peer " MACSTR
 			" requested us to show a PIN on display", MAC2STR(sa));
-		if (dev)
-			dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
+		dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
 		passwd_id = DEV_PW_USER_SPECIFIED;
 	} else if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
 		p2p_dbg(p2p, "Peer " MACSTR
 			" requested us to write its PIN using keypad",
 			MAC2STR(sa));
-		if (dev)
-			dev->flags |= P2P_DEV_PD_PEER_DISPLAY;
+		dev->flags |= P2P_DEV_PD_PEER_DISPLAY;
 		passwd_id = DEV_PW_REGISTRAR_SPECIFIED;
 	} else if (msg.wps_config_methods & WPS_CONFIG_P2PS) {
 		p2p_dbg(p2p, "Peer " MACSTR " requesting P2PS PIN",
 			MAC2STR(sa));
-		if (dev)
-			dev->flags |= P2P_DEV_PD_PEER_P2PS;
+		dev->flags |= P2P_DEV_PD_PEER_P2PS;
 		passwd_id = DEV_PW_P2PS_DEFAULT;
 	}
 
@@ -891,6 +898,11 @@ out:
 		wpabuf_free(resp);
 	}
 
+	if (!dev) {
+		p2p_parse_free(&msg);
+		return;
+	}
+
 	if (!p2p->cfg->p2ps_prov_complete) {
 		/* Don't emit anything */
 	} else if (msg.status && *msg.status != P2P_SC_SUCCESS &&
@@ -1028,7 +1040,7 @@ out:
 					msg.group_id, msg.group_id_len);
 	}
 
-	if (dev && reject == P2P_SC_SUCCESS) {
+	if (reject == P2P_SC_SUCCESS) {
 		switch (config_methods) {
 		case WPS_CONFIG_DISPLAY:
 			dev->wps_prov_info = WPS_CONFIG_KEYPAD;

@@ -1117,7 +1117,7 @@ class WpaSupplicant:
         return vals
 
     def asp_provision(self, peer, adv_id, adv_mac, session_id, session_mac,
-                      method="1000", info="", status=None, cpt=None):
+                      method="1000", info="", status=None, cpt=None, role=None):
         if status is None:
             cmd = "P2P_ASP_PROVISION"
             params = "info='%s' method=%s" % (info, method)
@@ -1125,6 +1125,8 @@ class WpaSupplicant:
             cmd = "P2P_ASP_PROVISION_RESP"
             params = "status=%d" % status
 
+	if role is not None:
+	    params += " role=" + role
         if cpt is not None:
             params += " cpt=" + cpt
 

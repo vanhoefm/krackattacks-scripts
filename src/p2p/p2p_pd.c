@@ -329,11 +329,6 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 
 		/* Add Operating Channel if conncap indicates GO */
 		if (persist || (prov->conncap & P2PS_SETUP_GROUP_OWNER)) {
-			u8 tmp;
-
-			if (dev)
-				p2p_go_select_channel(p2p, dev, &tmp);
-
 			if (p2p->op_reg_class && p2p->op_channel)
 				p2p_buf_add_operating_channel(
 					buf, p2p->cfg->country,
@@ -748,6 +743,52 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			auto_accept = 0;
 		}
 
+		if ((remote_conncap & (P2PS_SETUP_NEW | P2PS_SETUP_CLIENT) ||
+		     msg.persistent_dev) && conncap != P2PS_SETUP_NEW &&
+		    msg.channel_list && msg.channel_list_len &&
+		    p2p_peer_channels_check(p2p, &p2p->channels, dev,
+					    msg.channel_list,
+					    msg.channel_list_len) < 0) {
+			p2p_dbg(p2p,
+				"No common channels - force deferred flow");
+			auto_accept = 0;
+		}
+
+		if (((remote_conncap & P2PS_SETUP_GROUP_OWNER) ||
+		     msg.persistent_dev) && msg.operating_channel) {
+			struct p2p_channels intersect;
+
+			/*
+			 * There are cases where only the operating channel is
+			 * provided. This requires saving the channel as the
+			 * supported channel list, and verifying that it is
+			 * supported.
+			 */
+			if (dev->channels.reg_classes == 0 ||
+			    !p2p_channels_includes(&dev->channels,
+						   msg.operating_channel[3],
+						   msg.operating_channel[4])) {
+				struct p2p_channels *ch = &dev->channels;
+
+				os_memset(ch, 0, sizeof(*ch));
+				ch->reg_class[0].reg_class =
+					msg.operating_channel[3];
+				ch->reg_class[0].channel[0] =
+					msg.operating_channel[4];
+				ch->reg_class[0].channels = 1;
+				ch->reg_classes = 1;
+			}
+
+			p2p_channels_intersect(&p2p->channels, &dev->channels,
+					       &intersect);
+
+			if (intersect.reg_classes == 0) {
+				p2p_dbg(p2p,
+					"No common channels - force deferred flow");
+				auto_accept = 0;
+			}
+		}
+
 		if (auto_accept || reject != P2P_SC_SUCCESS) {
 			struct p2ps_provision *tmp;
 
@@ -855,8 +896,31 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		p2p_dbg(p2p,
 			"Incompatible P2PS feature capability CPT bitmask");
 		reject = P2P_SC_FAIL_INCOMPATIBLE_PARAMS;
+	} else if ((remote_conncap & (P2PS_SETUP_NEW | P2PS_SETUP_CLIENT) ||
+		    msg.persistent_dev) && conncap != P2PS_SETUP_NEW &&
+		   msg.channel_list && msg.channel_list_len &&
+		   p2p_peer_channels_check(p2p, &p2p->channels, dev,
+					   msg.channel_list,
+					   msg.channel_list_len) < 0) {
+		p2p_dbg(p2p,
+			"No common channels in Follow-On Provision Discovery Request");
+		reject = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 	} else {
 		reject = P2P_SC_SUCCESS;
+	}
+
+	dev->oper_freq = 0;
+	if (reject == P2P_SC_SUCCESS || reject == P2P_SC_SUCCESS_DEFERRED) {
+		u8 tmp;
+
+		if (msg.operating_channel)
+			dev->oper_freq =
+				p2p_channel_to_freq(msg.operating_channel[3],
+						    msg.operating_channel[4]);
+
+		if ((conncap & P2PS_SETUP_GROUP_OWNER) &&
+		    p2p_go_select_channel(p2p, dev, &tmp) < 0)
+			reject = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 	}
 
 	p2p->p2ps_prov->status = reject;

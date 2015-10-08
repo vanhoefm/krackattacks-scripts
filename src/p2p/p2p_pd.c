@@ -295,6 +295,11 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		u8 *len = p2p_buf_add_ie_hdr(buf);
 		struct p2ps_provision *prov = p2p->p2ps_prov;
 		u8 group_capab;
+		u8 conncap = 0;
+
+		if (status == P2P_SC_SUCCESS ||
+		    status == P2P_SC_SUCCESS_DEFERRED)
+			conncap = prov->conncap;
 
 		if (!status && prov->status != -1)
 			status = prov->status;
@@ -333,11 +338,11 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 			}
 		}
 
-		if (!persist && (prov->conncap & P2PS_SETUP_GROUP_OWNER))
+		if (!persist && (conncap & P2PS_SETUP_GROUP_OWNER))
 			p2ps_add_new_group_info(p2p, dev, buf);
 
 		/* Add Operating Channel if conncap indicates GO */
-		if (persist || (prov->conncap & P2PS_SETUP_GROUP_OWNER)) {
+		if (persist || (conncap & P2PS_SETUP_GROUP_OWNER)) {
 			if (p2p->op_reg_class && p2p->op_channel)
 				p2p_buf_add_operating_channel(
 					buf, p2p->cfg->country,
@@ -350,17 +355,20 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 					p2p->cfg->op_channel);
 		}
 
-		p2p_buf_add_channel_list(buf, p2p->cfg->country,
-					 &p2p->channels);
+		if (persist ||
+		    (conncap & (P2PS_SETUP_CLIENT | P2PS_SETUP_GROUP_OWNER)))
+			p2p_buf_add_channel_list(buf, p2p->cfg->country,
+						 &p2p->channels);
 
-		if (!persist && (status == P2P_SC_SUCCESS ||
-				 status == P2P_SC_SUCCESS_DEFERRED))
-			p2p_buf_add_connection_capability(buf, prov->conncap);
+		if (!persist && conncap)
+			p2p_buf_add_connection_capability(buf, conncap);
 
 		p2p_buf_add_advertisement_id(buf, adv_id, prov->adv_mac);
 
-		p2p_buf_add_config_timeout(buf, p2p->go_timeout,
-					   p2p->client_timeout);
+		if (persist ||
+		    (conncap & (P2PS_SETUP_CLIENT | P2PS_SETUP_GROUP_OWNER)))
+			p2p_buf_add_config_timeout(buf, p2p->go_timeout,
+						   p2p->client_timeout);
 
 		p2p_buf_add_session_id(buf, prov->session_id,
 				       prov->session_mac);

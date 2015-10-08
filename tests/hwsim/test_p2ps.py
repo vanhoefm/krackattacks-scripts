@@ -12,6 +12,7 @@ import re
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
+import hostapd
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
 from test_p2p_persistent import go_neg_pin_authorized_persistent
@@ -135,12 +136,15 @@ def p2ps_parse_event(ev, *args):
         ret += (m.group(1) if m is not None else None,)
     return ret
 
-def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", adv_cpt=None, seeker_cpt=None):
+def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000",
+                   adv_cpt=None, seeker_cpt=None, handler=None, adv_role=None,
+                   seeker_role=None):
     addr0 = seeker.p2p_dev_addr()
     addr1 = advertiser.p2p_dev_addr()
 
     seeker.asp_provision(addr1, adv_id=str(adv_id), adv_mac=addr1, session_id=1,
-                         session_mac=addr0, method=method, cpt=seeker_cpt)
+                         session_mac=addr0, method=method, cpt=seeker_cpt,
+                         role=seeker_role)
 
     if not auto_accept or method == "100":
         pin = None
@@ -155,6 +159,9 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", 
         ev = seeker.wait_global_event(["P2P-PROV-DISC-FAILURE"], timeout=10)
         if ev is None:
             raise Exception("P2P-PROV-DISC-FAILURE timeout on seeker side")
+
+        if handler:
+            handler(seeker, advertiser)
 
         # Put seeker into a listen state, since we expect the deferred flow to
         # continue.
@@ -186,7 +193,7 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", 
         advertiser.asp_provision(peer, adv_id=advert_id, adv_mac=advert_mac,
                                  session_id=int(session, 0),
                                  session_mac=session_mac, status=12,
-                                 cpt=adv_cpt)
+                                 cpt=adv_cpt, role=adv_role)
 
         ev1 = seeker.wait_global_event(["P2PS-PROV-DONE"], timeout=10)
         if ev1 is None:
@@ -235,7 +242,7 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000", 
 
     return ev1, ev2
 
-def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None):
+def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra=""):
     conf_methods_map = {"8": "p2ps", "1": "display", "5": "keypad"}
     peer0 = ev0.split()[1]
     peer1 = ev1.split()[1]
@@ -347,15 +354,18 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None):
                 raise Exception("Device " + dev_go.p2p_dev_addr() + " failed to become GO")
             if join_address is None:
                 raise Exception("Device " + dev_cli.p2p_dev_addr() + " failed to become CLI")
-            ev = dev_go.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
-            if ev is None:
-                raise Exception("P2P-GROUP-STARTED timeout on " + dev_go.p2p_dev_addr())
-            dev_go.group_form_result(ev)
+
+            if not dev_go.get_group_ifname().startswith('p2p-'):
+                ev = dev_go.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+                if ev is None:
+                    raise Exception("P2P-GROUP-STARTED timeout on " + dev_go.p2p_dev_addr())
+                dev_go.group_form_result(ev)
+
             if go_method != "p2ps":
                 ev = dev_go.group_request("WPS_PIN any " + pin)
                 if ev is None:
                     raise Exception("Failed to initiate pin authorization on registrar side")
-            if "OK" not in dev_cli.global_request("P2P_CONNECT " + join_address + " " + pin + " " + cli_method + " persistent join"):
+            if "OK" not in dev_cli.global_request("P2P_CONNECT " + join_address + " " + pin + " " + cli_method + join_extra + " persistent join"):
                 raise Exception("P2P_CONNECT failed on " + dev_cli.p2p_dev_addr())
             ev = dev_cli.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
             if ev is None:
@@ -708,7 +718,7 @@ def get_ifnames():
         ifnames.append(ifname)
     return ifnames
 
-def p2ps_connect_p2ps_method(dev, keep_group=False):
+def p2ps_connect_p2ps_method(dev, keep_group=False, join_extra=""):
     dev[0].flush_scan_cache()
     dev[1].flush_scan_cache()
     p2ps_advertise(r_dev=dev[0], r_role='2', svc_name='org.wi-fi.wfds.send.rx',
@@ -718,7 +728,7 @@ def p2ps_connect_p2ps_method(dev, keep_group=False):
                                               srv_info='2 GB')
     ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
     ifnames = get_ifnames()
-    p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+    p2ps_connect_pd(dev[0], dev[1], ev0, ev1, join_extra=join_extra)
 
     grp_ifname0 = dev[0].get_group_ifname()
     grp_ifname1 = dev[1].get_group_ifname()
@@ -1045,3 +1055,383 @@ def test_p2ps_feature_capability_udp_mac_nonautoaccept(dev):
     p2ps_test_feature_capability_cpt(dev, adv_cpt="UDP:MAC",
                                      seeker_cpt="MAC:UDP", adv_role="0",
                                      result="MAC")
+
+def test_p2ps_channel_one_connected(dev, apdev):
+    """P2PS connection with P2PS method - one of the stations connected"""
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-2.4ghz', "channel": '7' })
+        dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2442")
+
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True, join_extra=" freq=2442")
+        freq = dev[0].get_group_status_field('freq');
+
+        if freq != '2442':
+            raise Exception('Unexpected frequency for group 2442 != ' + freq)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def set_random_listen_chan(dev):
+    chan = random.randrange(0, 3) * 5 + 1
+    dev.global_request("P2P_SET listen_channel %d" % chan)
+
+def test_p2ps_channel_both_connected_same(dev, apdev):
+    """P2PS connection with P2PS method - stations connected on same channel"""
+    set_no_group_iface(dev[2], 0)
+    set_no_group_iface(dev[1], 0)
+
+    dev[2].global_request("P2P_SET listen_channel 6")
+    dev[1].global_request("P2P_SET listen_channel 6")
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-2.4ghz', "channel": '6' })
+
+        dev[2].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
+        dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
+
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True, join_extra=" freq=2437")
+        freq = dev[2].get_group_status_field('freq');
+
+        if freq != '2437':
+            raise Exception('Unexpected frequency for group 2437 != ' + freq)
+    finally:
+        remove_group(dev[2], dev[1])
+        dev[2].global_request("P2P_SERVICE_DEL asp all")
+        for i in range(1, 3):
+            set_random_listen_chan(dev[i])
+
+def disconnect_handler(seeker, advertiser):
+    advertiser.request("DISCONNECT")
+    advertiser.wait_disconnected(timeout=1)
+
+def test_p2ps_channel_both_connected_different(dev, apdev):
+    """P2PS connection with P2PS method - stations connected on different channel"""
+    if dev[0].get_mcc() > 1:
+        raise HwsimSkip('Skip due to MCC being enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+                               { "ssid": 'bss-channel-3', "channel": '3' })
+
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+                               { "ssid": 'bss-channel-10', "channel": '10' })
+
+        dev[0].connect("bss-channel-3", key_mgmt="NONE", scan_freq="2422")
+        dev[1].connect("bss-channel-10", key_mgmt="NONE", scan_freq="2457")
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id, auto_accept=False,
+                                  handler=disconnect_handler)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+        freq = dev[0].get_group_status_field('freq');
+        if freq != '2457':
+            raise Exception('Unexpected frequency for group 2457 != ' + freq)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_channel_both_connected_different_mcc(dev, apdev):
+    """P2PS connection with P2PS method - stations connected on different channels with mcc"""
+    if dev[0].get_mcc() == 1:
+        raise HwsimSkip('Skip case due to MCC not enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+                               { "ssid": 'bss-channel-3', "channel": '3' })
+
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+                               { "ssid": 'bss-channel-10', "channel": '10' })
+
+        dev[0].connect("bss-channel-3", key_mgmt="NONE", scan_freq="2422")
+        dev[1].connect("bss-channel-10", key_mgmt="NONE", scan_freq="2457")
+
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True)
+        freq = dev[0].get_group_status_field('freq');
+
+        if freq != '2422' and freq != '2457':
+            raise Exception('Unexpected frequency for group =' + freq)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def clear_disallow_handler(seeker, advertiser):
+    advertiser.global_request("P2P_SET disallow_freq ")
+
+def test_p2ps_channel_disallow_freq(dev, apdev):
+    """P2PS connection with P2PS method - disallow freqs"""
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2412-2457")
+        dev[1].global_request("P2P_SET disallow_freq 2417-2462")
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id, auto_accept=False,
+                                  handler=clear_disallow_handler)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+
+        freq = dev[0].get_group_status_field('freq');
+        if freq != '2412':
+            raise Exception('Unexpected frequency for group 2412 != ' + freq)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[1].global_request("P2P_SET disallow_freq ")
+
+def test_p2ps_channel_sta_connected_disallow_freq(dev, apdev):
+    """P2PS connection with P2PS method - one station and disallow freqs"""
+    if dev[0].get_mcc() > 1:
+        raise HwsimSkip('Skip due to MCC being enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2437")
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-channel-6', "channel": '6' })
+
+        dev[1].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id, auto_accept=False,
+                                  handler=clear_disallow_handler)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+
+        freq = dev[0].get_group_status_field('freq');
+        if freq != '2437':
+            raise Exception('Unexpected frequency for group 2437 != ' + freq)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_channel_sta_connected_disallow_freq_mcc(dev, apdev):
+    """P2PS connection with P2PS method - one station and disallow freqs with mcc"""
+    if dev[0].get_mcc() == 1:
+        raise HwsimSkip('Skip due to MCC not being enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        dev[0].global_request("P2P_SET disallow_freq 2437")
+        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+                               { "ssid": 'bss-channel-6', "channel": '6' })
+
+        dev[1].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
+
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True)
+
+        freq = dev[0].get_group_status_field('freq');
+        if freq == '2437':
+            raise Exception('Unexpected frequency=2437')
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_active_go_adv(dev, apdev):
+    """P2PS connection with P2PS method - active GO on advertiser"""
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        # Add a P2P GO
+        dev[0].global_request("P2P_GROUP_ADD persistent")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev[0].p2p_dev_addr())
+
+        dev[0].group_form_result(ev)
+
+        p2ps_advertise(r_dev=dev[0], r_role='4',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  single_peer_expected=False)
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
+
+        # explicitly stop find/listen as otherwise the long listen started by
+        # the advertiser would prevent the seeker to connect with the P2P GO
+        dev[0].p2p_stop_find()
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_active_go_seeker(dev, apdev):
+    """P2PS connection with P2PS method - active GO on seeker"""
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        # Add a P2P GO on the seeker
+        dev[1].global_request("P2P_GROUP_ADD persistent")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev[1].p2p_dev_addr())
+
+        dev[1].group_form_result(ev)
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_channel_active_go_and_station_same(dev, apdev):
+    """P2PS connection, active P2P GO and station on channel"""
+    set_no_group_iface(dev[2], 0)
+    set_no_group_iface(dev[1], 0)
+
+    dev[2].global_request("P2P_SET listen_channel 11")
+    dev[1].global_request("P2P_SET listen_channel 11")
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-channel-11', "channel": '11' })
+
+        dev[2].connect("bss-channel-11", key_mgmt="NONE", scan_freq="2462")
+
+        # Add a P2P GO on the seeker
+        dev[1].global_request("P2P_GROUP_ADD freq=2462 persistent")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev[1].p2p_dev_addr())
+
+        dev[1].group_form_result(ev)
+
+        p2ps_advertise(r_dev=dev[2], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[2],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[2], adv_id)
+        p2ps_connect_pd(dev[2], dev[1], ev0, ev1, join_extra=" freq=2462")
+    finally:
+        remove_group(dev[2], dev[1])
+        dev[2].global_request("P2P_SERVICE_DEL asp all")
+        for i in range(1, 3):
+            set_random_listen_chan(dev[i])
+
+def test_p2ps_channel_active_go_and_station_different(dev, apdev):
+    """P2PS connection, active P2P GO and station on channel"""
+    if dev[0].get_mcc() > 1:
+        raise HwsimSkip('Skip due to MCC being enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-channel-2', "channel": '2' })
+
+        dev[0].connect("bss-channel-2", key_mgmt="NONE", scan_freq="2417")
+
+        # Add a P2P GO on the seeker. Force the listen channel to be the same,
+        # as extended listen will not kick as long as P2P GO is waiting for
+        # initial connection.
+        dev[1].global_request("P2P_SET listen_channel 11")
+        dev[1].global_request("P2P_GROUP_ADD freq=2462 persistent")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev[1].p2p_dev_addr())
+
+        dev[1].group_form_result(ev)
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id, auto_accept=False,
+                                  handler=disconnect_handler, adv_role='2',
+                                  seeker_role='4')
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+        freq = dev[0].get_group_status_field('freq');
+        if freq != '2462':
+            raise Exception('Unexpected frequency for group 2462!=' + freq)
+    finally:
+        dev[0].global_request("P2P_SERVICE_DEL asp all")
+        set_random_listen_chan(dev[1])
+
+def test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
+    """P2PS connection, active P2P GO and station on channel"""
+    if dev[0].get_mcc() == 1:
+        raise HwsimSkip('Skip due to MCC not being enabled')
+
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-channel-6', "channel": '6' })
+
+        dev[0].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
+
+        # Add a P2P GO on the seeker
+        dev[1].global_request("P2P_GROUP_ADD freq=2462 persistent")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on " + dev[1].p2p_dev_addr())
+
+        dev[1].group_form_result(ev)
+
+        p2ps_advertise(r_dev=dev[0], r_role='2',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+    finally:
+        remove_group(dev[0], dev[1])
+        dev[0].request("DISCONNECT")
+        hapd.disable()
+        dev[0].global_request("P2P_SERVICE_DEL asp all")

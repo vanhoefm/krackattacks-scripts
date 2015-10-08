@@ -3812,7 +3812,8 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				    const u8 *persist_ssid,
 				    size_t persist_ssid_size, int response_done,
 				    int prov_start, const char *session_info,
-				    const u8 *feat_cap, size_t feat_cap_len)
+				    const u8 *feat_cap, size_t feat_cap_len,
+				    unsigned int freq)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	u8 mac[ETH_ALEN];
@@ -3970,6 +3971,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 		go_ifname[0] = '\0';
 		if (!go_wpa_s) {
 			wpa_s->global->pending_p2ps_group = 1;
+			wpa_s->global->pending_p2ps_group_freq = freq;
 
 			if (!wpas_p2p_create_iface(wpa_s))
 				os_memcpy(go_ifname, wpa_s->ifname,
@@ -3984,7 +3986,7 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
 					dev, adv_mac, ses_mac,
 					grp_mac, adv_id, ses_id, 0, 0,
-					NULL, 0, 0, 0, NULL, NULL, 0);
+					NULL, 0, 0, 0, NULL, NULL, 0, 0);
 				return;
 			}
 
@@ -3992,13 +3994,13 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 			if (response_done && persistent_go) {
 				wpas_p2p_group_add_persistent(
 					wpa_s, persistent_go,
-					0, 0, 0, 0, 0, NULL,
+					0, 0, freq, 0, 0, NULL,
 					persistent_go->mode ==
 					WPAS_MODE_P2P_GO ?
 					P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE :
 					0, 0);
 			} else if (response_done) {
-				wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
+				wpas_p2p_group_add(wpa_s, 1, freq, 0, 0);
 			}
 
 			if (passwd_id == DEV_PW_P2PS_DEFAULT) {
@@ -4087,10 +4089,13 @@ static int wpas_prov_disc_resp_cb(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *persistent_go;
+	unsigned int freq;
 
 	if (!wpa_s->global->pending_p2ps_group)
 		return 0;
 
+	freq = wpa_s->global->pending_p2ps_group_freq;
+	wpa_s->global->pending_p2ps_group_freq = 0;
 	wpa_s->global->pending_p2ps_group = 0;
 
 	if (wpas_p2p_get_go_group(wpa_s))
@@ -4103,7 +4108,7 @@ static int wpas_prov_disc_resp_cb(void *ctx)
 			persistent_go->mode == WPAS_MODE_P2P_GO ?
 			P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0, 0);
 	} else {
-		wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
+		wpas_p2p_group_add(wpa_s, 1, freq, 0, 0);
 	}
 
 	return 1;
@@ -5167,6 +5172,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	wpa_s->global->p2p_fail_on_wps_complete = 0;
 	wpa_s->global->pending_p2ps_group = 0;
+	wpa_s->global->pending_p2ps_group_freq = 0;
 	wpa_s->p2ps_method_config_any = 0;
 
 	if (go_intent < 0)
@@ -6246,6 +6252,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	u16 config_methods;
 
 	wpa_s->global->pending_p2ps_group = 0;
+	wpa_s->global->pending_p2ps_group_freq = 0;
 	wpa_s->p2p_fallback_to_go_neg = 0;
 	wpa_s->pending_pd_use = NORMAL_PD;
 	if (p2ps_prov && use == WPAS_P2P_PD_FOR_ASP) {

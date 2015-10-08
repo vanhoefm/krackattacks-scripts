@@ -6814,6 +6814,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	p2p_wpa_s->global->p2p_go_avoid_freq.range = NULL;
 	p2p_wpa_s->global->p2p_go_avoid_freq.num = 0;
 	p2p_wpa_s->global->pending_p2ps_group = 0;
+	p2p_wpa_s->global->pending_p2ps_group_freq = 0;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

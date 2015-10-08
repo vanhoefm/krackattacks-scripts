@@ -3353,7 +3353,7 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 				NULL, p2p->p2ps_prov->adv_id,
 				p2p->p2ps_prov->session_id,
 				0, 0, NULL, 0, 0, 0,
-				NULL, NULL, 0);
+				NULL, NULL, 0, 0);
 		}
 
 		if (p2p->user_initiated_pd)

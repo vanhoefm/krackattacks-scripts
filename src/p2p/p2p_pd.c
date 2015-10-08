@@ -978,6 +978,14 @@ out:
 		return;
 	}
 
+	freq = 0;
+	if (reject == P2P_SC_SUCCESS && conncap == P2PS_SETUP_GROUP_OWNER) {
+		freq = p2p_channel_to_freq(p2p->op_reg_class,
+					   p2p->op_channel);
+		if (freq < 0)
+			freq = 0;
+	}
+
 	if (!p2p->cfg->p2ps_prov_complete) {
 		/* Don't emit anything */
 	} else if (msg.status && *msg.status != P2P_SC_SUCCESS &&
@@ -988,7 +996,7 @@ out:
 					     NULL, adv_id, session_id,
 					     0, 0, msg.persistent_ssid,
 					     msg.persistent_ssid_len,
-					     0, 0, NULL, NULL, 0);
+					     0, 0, NULL, NULL, 0, freq);
 	} else if (msg.status && *msg.status == P2P_SC_SUCCESS_DEFERRED &&
 		   p2p->p2ps_prov) {
 		p2p->p2ps_prov->status = reject;
@@ -1001,7 +1009,7 @@ out:
 						     session_id, conncap, 0,
 						     msg.persistent_ssid,
 						     msg.persistent_ssid_len, 0,
-						     0, NULL, NULL, 0);
+						     0, NULL, NULL, 0, freq);
 		else
 			p2p->cfg->p2ps_prov_complete(p2p->cfg->cb_ctx,
 						     *msg.status,
@@ -1013,7 +1021,7 @@ out:
 						     msg.persistent_ssid_len, 0,
 						     0, NULL,
 						     (const u8 *) &resp_fcap,
-						     sizeof(resp_fcap));
+						     sizeof(resp_fcap), freq);
 	} else if (msg.status && p2p->p2ps_prov) {
 		p2p->p2ps_prov->status = P2P_SC_SUCCESS;
 		p2p->cfg->p2ps_prov_complete(p2p->cfg->cb_ctx, *msg.status, sa,
@@ -1024,7 +1032,7 @@ out:
 					     msg.persistent_ssid_len,
 					     0, 0, NULL,
 					     (const u8 *) &resp_fcap,
-					     sizeof(resp_fcap));
+					     sizeof(resp_fcap), freq);
 	} else if (msg.status) {
 	} else if (auto_accept && reject == P2P_SC_SUCCESS) {
 		p2p->cfg->p2ps_prov_complete(p2p->cfg->cb_ctx, P2P_SC_SUCCESS,
@@ -1035,7 +1043,7 @@ out:
 					     msg.persistent_ssid_len,
 					     0, 0, NULL,
 					     (const u8 *) &resp_fcap,
-					     sizeof(resp_fcap));
+					     sizeof(resp_fcap), freq);
 	} else if (reject == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
 		   (!msg.session_info || !msg.session_info_len)) {
 		p2p->p2ps_prov->method = msg.wps_config_methods;
@@ -1048,7 +1056,7 @@ out:
 					     msg.persistent_ssid_len,
 					     0, 1, NULL,
 					     (const u8 *) &resp_fcap,
-					     sizeof(resp_fcap));
+					     sizeof(resp_fcap), freq);
 	} else if (reject == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) {
 		size_t buf_len = msg.session_info_len;
 		char *buf = os_malloc(2 * buf_len + 1);
@@ -1065,7 +1073,8 @@ out:
 				session_id, conncap, passwd_id,
 				msg.persistent_ssid, msg.persistent_ssid_len,
 				0, 1, buf,
-				(const u8 *) &resp_fcap, sizeof(resp_fcap));
+				(const u8 *) &resp_fcap, sizeof(resp_fcap),
+				freq);
 
 			os_free(buf);
 		}
@@ -1401,6 +1410,8 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		}
 
 		if (p2p->cfg->p2ps_prov_complete) {
+			int freq = 0;
+
 			if (conncap == P2PS_SETUP_GROUP_OWNER) {
 				u8 tmp;
 
@@ -1412,6 +1423,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				if (p2p_go_select_channel(p2p, dev, &tmp) < 0)
 					p2p_dbg(p2p,
 						"P2PS PD channel selection failed");
+
+				freq = p2p_channel_to_freq(p2p->op_reg_class,
+							   p2p->op_channel);
+				if (freq < 0)
+					freq = 0;
 			}
 
 			p2p->cfg->p2ps_prov_complete(
@@ -1420,7 +1436,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				group_mac, adv_id, p2p->p2ps_prov->session_id,
 				conncap, passwd_id, msg.persistent_ssid,
 				msg.persistent_ssid_len, 1, 0, NULL,
-				msg.feature_cap, msg.feature_cap_len);
+				msg.feature_cap, msg.feature_cap_len, freq);
 		}
 		p2ps_prov_free(p2p);
 	} else if (status != P2P_SC_SUCCESS &&
@@ -1431,7 +1447,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				p2p->cfg->cb_ctx, status, sa, adv_mac,
 				p2p->p2ps_prov->session_mac,
 				group_mac, adv_id, p2p->p2ps_prov->session_id,
-				0, 0, NULL, 0, 1, 0, NULL, NULL, 0);
+				0, 0, NULL, 0, 1, 0, NULL, NULL, 0, 0);
 		p2ps_prov_free(p2p);
 	}
 

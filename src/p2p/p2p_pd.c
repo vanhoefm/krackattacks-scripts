@@ -547,14 +547,14 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	u8 conncap = P2PS_SETUP_NEW;
 	u8 auto_accept = 0;
 	u32 session_id = 0;
-	u8 session_mac[ETH_ALEN];
-	u8 adv_mac[ETH_ALEN];
+	u8 session_mac[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
+	u8 adv_mac[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 	const u8 *group_mac;
 	int passwd_id = DEV_PW_DEFAULT;
 	u16 config_methods;
 	u16 allowed_config_methods = WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
 	struct p2ps_feature_capab resp_fcap = { 0, 0 };
-	struct p2ps_feature_capab *req_fcap;
+	struct p2ps_feature_capab *req_fcap = NULL;
 	u8 remote_conncap;
 	u16 method;
 
@@ -592,42 +592,74 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
 	}
 
-	if (msg.adv_id)
-		allowed_config_methods |= WPS_CONFIG_P2PS;
-	else
+	if (!msg.adv_id) {
 		allowed_config_methods |= WPS_CONFIG_PUSHBUTTON;
-
-	if (!(msg.wps_config_methods & allowed_config_methods)) {
-		p2p_dbg(p2p, "Unsupported Config Methods in Provision Discovery Request");
-		goto out;
-	}
-
-	/* Legacy (non-P2PS) - Unknown groups allowed for P2PS */
-	if (!msg.adv_id && msg.group_id) {
-		size_t i;
-		for (i = 0; i < p2p->num_groups; i++) {
-			if (p2p_group_is_group_id_match(p2p->groups[i],
-							msg.group_id,
-							msg.group_id_len))
-				break;
-		}
-		if (i == p2p->num_groups) {
-			p2p_dbg(p2p, "PD request for unknown P2P Group ID - reject");
+		if (!(msg.wps_config_methods & allowed_config_methods)) {
+			p2p_dbg(p2p,
+				"Unsupported Config Methods in Provision Discovery Request");
 			goto out;
 		}
+
+		/* Legacy (non-P2PS) - Unknown groups allowed for P2PS */
+		if (msg.group_id) {
+			size_t i;
+
+			for (i = 0; i < p2p->num_groups; i++) {
+				if (p2p_group_is_group_id_match(
+					    p2p->groups[i],
+					    msg.group_id, msg.group_id_len))
+					break;
+			}
+			if (i == p2p->num_groups) {
+				p2p_dbg(p2p,
+					"PD request for unknown P2P Group ID - reject");
+				goto out;
+			}
+		}
+	} else {
+		allowed_config_methods |= WPS_CONFIG_P2PS;
+
+		/*
+		 * Set adv_id here, so in case of an error, a P2PS PD Response
+		 * will be sent.
+		 */
+		adv_id = WPA_GET_LE32(msg.adv_id);
+		if (p2ps_validate_pd_req(p2p, &msg, sa) < 0) {
+			reject = P2P_SC_FAIL_INVALID_PARAMS;
+			goto out;
+		}
+
+		req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
+
+		os_memcpy(session_mac, msg.session_mac, ETH_ALEN);
+		os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
+
+		session_id = WPA_GET_LE32(msg.session_id);
+
+		if (msg.conn_cap)
+			conncap = *msg.conn_cap;
+
+		/*
+		 * We need to verify a P2PS config methog in an initial PD
+		 * request or in a follow-on PD request with the status
+		 * SUCCESS_DEFERRED.
+		 */
+		if ((!msg.status || *msg.status == P2P_SC_SUCCESS_DEFERRED) &&
+		    !(msg.wps_config_methods & allowed_config_methods)) {
+			p2p_dbg(p2p,
+				"Unsupported Config Methods in Provision Discovery Request");
+			goto out;
+		}
+
+		/*
+		 * TODO: since we don't support multiple PD, reject PD request
+		 * if we are in the middle of P2PS PD with some other peer
+		 */
 	}
 
 	dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
 			P2P_DEV_PD_PEER_KEYPAD |
 			P2P_DEV_PD_PEER_P2PS);
-
-	/* Remove stale persistent groups */
-	if (p2p->cfg->remove_stale_groups) {
-		p2p->cfg->remove_stale_groups(
-			p2p->cfg->cb_ctx, dev->info.p2p_device_addr,
-			msg.persistent_dev,
-			msg.persistent_ssid, msg.persistent_ssid_len);
-	}
 
 	if (msg.wps_config_methods & WPS_CONFIG_DISPLAY) {
 		p2p_dbg(p2p, "Peer " MACSTR
@@ -647,41 +679,28 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		passwd_id = DEV_PW_P2PS_DEFAULT;
 	}
 
-	reject = P2P_SC_SUCCESS;
-
-	os_memset(session_mac, 0, ETH_ALEN);
-	os_memset(adv_mac, 0, ETH_ALEN);
-
-	/*
-	 * Validate a P2PS PD Request and skip P2PS processing if not a valid
-	 * P2PS PD.
-	 */
-	if (msg.adv_id) {
-		/*
-		 * Set adv_id here, so that in case of an error, a P2PS PD
-		 * Response will be sent.
-		 */
-		adv_id = WPA_GET_LE32(msg.adv_id);
-		if (p2ps_validate_pd_req(p2p, &msg, sa) < 0) {
-			reject = P2P_SC_FAIL_INVALID_PARAMS;
-			goto out;
-		}
-	} else {
-		goto out;
+	/* Remove stale persistent groups */
+	if (p2p->cfg->remove_stale_groups) {
+		p2p->cfg->remove_stale_groups(
+			p2p->cfg->cb_ctx, dev->info.p2p_device_addr,
+			msg.persistent_dev,
+			msg.persistent_ssid, msg.persistent_ssid_len);
 	}
 
-	req_fcap = (struct p2ps_feature_capab *) msg.feature_cap;
+	reject = P2P_SC_SUCCESS;
 
-	os_memcpy(session_mac, msg.session_mac, ETH_ALEN);
-	os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
+	/*
+	 * End of a legacy P2P PD Request processing, from this point continue
+	 * with P2PS one.
+	 */
+	if (!msg.adv_id)
+		goto out;
 
-	session_id = WPA_GET_LE32(msg.session_id);
-
-	if (msg.conn_cap)
-		conncap = *msg.conn_cap;
 	remote_conncap = conncap;
 
 	if (!msg.status) {
+		unsigned int forced_freq, pref_freq;
+
 		if (os_memcmp(p2p->cfg->dev_addr, msg.adv_mac, ETH_ALEN)) {
 			p2p_dbg(p2p,
 				"P2PS PD adv mac does not match the local one");
@@ -696,10 +715,6 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 			goto out;
 		}
 		p2p_dbg(p2p, "adv_id: 0x%X, p2ps_adv: %p", adv_id, p2ps_adv);
-	}
-
-	if (p2ps_adv) {
-		unsigned int forced_freq, pref_freq;
 
 		auto_accept = p2ps_adv->auto_accept;
 		conncap = p2p->cfg->p2ps_group_capability(p2p->cfg->cb_ctx,
@@ -707,10 +722,10 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 							  &forced_freq,
 							  &pref_freq);
 
-		p2p_prepare_channel(p2p, dev, forced_freq, pref_freq, 0);
-
 		p2p_dbg(p2p, "Conncap: local:%d remote:%d result:%d",
 			auto_accept, remote_conncap, conncap);
+
+		p2p_prepare_channel(p2p, dev, forced_freq, pref_freq, 0);
 
 		resp_fcap.cpt = p2ps_own_preferred_cpt(p2ps_adv->cpt_priority,
 						       req_fcap->cpt);

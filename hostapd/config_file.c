@@ -3482,7 +3482,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 {
 	struct hostapd_config *conf;
 	FILE *f;
-	char buf[512], *pos;
+	char buf[4096], *pos;
 	int line = 0;
 	int errors = 0;
 	size_t i;

@@ -27,6 +27,11 @@
 static int pkcs7_to_cert(struct hs20_osu_client *ctx, const u8 *pkcs7,
 			 size_t len, char *pem_file, char *der_file)
 {
+#ifdef OPENSSL_IS_BORINGSSL
+	wpa_printf(MSG_ERROR,
+		"EST: pkcs7_to_cert not yet supported with BoringSSL");
+	return -1;
+#else /* OPENSSL_IS_BORINGSSL */
 	PKCS7 *p7 = NULL;
 	const unsigned char *p = pkcs7;
 	STACK_OF(X509) *certs;
@@ -89,6 +94,7 @@ fail:
 		BIO_free_all(out);
 
 	return ret;
+#endif /* OPENSSL_IS_BORINGSSL */
 }
 
 
@@ -216,6 +222,8 @@ ASN1_CHOICE(CsrAttrs) = {
 IMPLEMENT_ASN1_FUNCTIONS(CsrAttrs);
 
 
+#ifndef OPENSSL_IS_BORINGSSL
+
 static void add_csrattrs_oid(struct hs20_osu_client *ctx, ASN1_OBJECT *oid,
 			     STACK_OF(X509_EXTENSION) *exts)
 {
@@ -324,11 +332,18 @@ static void add_csrattrs(struct hs20_osu_client *ctx, CsrAttrs *csrattrs,
 	}
 }
 
+#endif /* OPENSSL_IS_BORINGSSL */
+
 
 static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 			char *csr_pem, char *est_req, char *old_cert,
 			CsrAttrs *csrattrs)
 {
+#ifdef OPENSSL_IS_BORINGSSL
+	wpa_printf(MSG_ERROR,
+		"EST: CSR generation not yet supported with BoringSSL");
+	return -1;
+#else /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *pctx = NULL;
 	EVP_PKEY *pkey = NULL;
 	RSA *rsa;
@@ -535,6 +550,7 @@ fail:
 	if (pctx)
 		EVP_PKEY_CTX_free(pctx);
 	return ret;
+#endif /* OPENSSL_IS_BORINGSSL */
 }
 
 

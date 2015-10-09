@@ -421,6 +421,28 @@ ASN1_SEQUENCE(LogotypeExtn) = {
 
 IMPLEMENT_ASN1_FUNCTIONS(LogotypeExtn);
 
+#ifdef OPENSSL_IS_BORINGSSL
+#define sk_LogotypeInfo_num(st) \
+sk_num(CHECKED_CAST(_STACK *, STACK_OF(LogotypeInfo) *, (st)))
+#define sk_LogotypeInfo_value(st, i) (LogotypeInfo *) \
+sk_value(CHECKED_CAST(_STACK *, const STACK_OF(LogotypeInfo) *, (st)), (i))
+#define sk_LogotypeImage_num(st) \
+sk_num(CHECKED_CAST(_STACK *, STACK_OF(LogotypeImage) *, (st)))
+#define sk_LogotypeImage_value(st, i) (LogotypeImage *) \
+sk_value(CHECKED_CAST(_STACK *, const STACK_OF(LogotypeImage) *, (st)), (i))
+#define sk_LogotypeAudio_num(st) \
+sk_num(CHECKED_CAST(_STACK *, STACK_OF(LogotypeAudio) *, (st)))
+#define sk_LogotypeAudio_value(st, i) (LogotypeAudio *) \
+sk_value(CHECK_CAST(_STACK *, const STACK_OF(LogotypeAudio) *, (st)), (i))
+#define sk_HashAlgAndValue_num(st) \
+sk_num(CHECKED_CAST(_STACK *, STACK_OF(HashAlgAndValue) *, (st)))
+#define sk_HashAlgAndValue_value(st, i) (HashAlgAndValue *) \
+sk_value(CHECKED_CAST(_STACK *, const STACK_OF(HashAlgAndValue) *, (st)), (i))
+#define sk_ASN1_IA5STRING_num(st) \
+sk_num(CHECKED_CAST(_STACK *, STACK_OF(ASN1_IA5STRING) *, (st)))
+#define sk_ASN1_IA5STRING_value(st, i) (ASN1_IA5STRING *) \
+sk_value(CHECKED_CAST(_STACK *, const STACK_OF(ASN1_IA5STRING) *, (st)), (i))
+#else /* OPENSSL_IS_BORINGSSL */
 #define sk_LogotypeInfo_num(st) SKM_sk_num(LogotypeInfo, (st))
 #define sk_LogotypeInfo_value(st, i) SKM_sk_value(LogotypeInfo, (st), (i))
 #define sk_LogotypeImage_num(st) SKM_sk_num(LogotypeImage, (st))
@@ -431,6 +453,7 @@ IMPLEMENT_ASN1_FUNCTIONS(LogotypeExtn);
 #define sk_HashAlgAndValue_value(st, i) SKM_sk_value(HashAlgAndValue, (st), (i))
 #define sk_ASN1_IA5STRING_num(st) SKM_sk_num(ASN1_IA5STRING, (st))
 #define sk_ASN1_IA5STRING_value(st, i) SKM_sk_value(ASN1_IA5STRING, (st), (i))
+#endif /* OPENSSL_IS_BORINGSSL */
 
 
 static void add_logo(struct http_ctx *ctx, struct http_cert *hcert,

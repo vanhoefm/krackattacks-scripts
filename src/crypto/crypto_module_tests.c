@@ -1503,6 +1503,7 @@ static int test_sha256(void)
 	const u8 *addr[2];
 	size_t len[2];
 	int errors = 0;
+	u8 *key;
 
 	for (i = 0; i < ARRAY_SIZE(tests); i++) {
 		wpa_printf(MSG_INFO, "SHA256 test case %d:", i + 1);
@@ -1572,6 +1573,29 @@ static int test_sha256(void)
 	sha256_prf((u8 *) "abc", 3, "KDF test", (u8 *) "data", 4,
 		   hash, sizeof(hash));
 	/* TODO: add proper test case for this */
+
+	key = os_malloc(8161);
+	if (key) {
+		int res;
+
+		res = hmac_sha256_kdf((u8 *) "secret", 6, "label",
+				      (u8 *) "seed", 4, key, 8160);
+		if (res) {
+			wpa_printf(MSG_INFO,
+				   "Unexpected hmac_sha256_kdf(outlen=8160) failure");
+			errors++;
+		}
+
+		res = hmac_sha256_kdf((u8 *) "secret", 6, "label",
+				      (u8 *) "seed", 4, key, 8161);
+		if (res == 0) {
+			wpa_printf(MSG_INFO,
+				   "Unexpected hmac_sha256_kdf(outlen=8161) success");
+			errors++;
+		}
+
+		os_free(key);
+	}
 
 	if (!errors)
 		wpa_printf(MSG_INFO, "SHA256 test cases passed");

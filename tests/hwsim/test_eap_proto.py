@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import hashlib
 import hmac
 import logging
 logger = logging.getLogger()
@@ -60,10 +62,9 @@ def start_radius_server(eap_handler):
     class TestServer(pyrad.server.Server):
         def _HandleAuthPacket(self, pkt):
             pyrad.server.Server._HandleAuthPacket(self, pkt)
-            if len(pkt[79]) > 1:
-                logger.info("Multiple EAP-Message attributes")
-                # TODO: reassemble
-            eap = pkt[79][0]
+            eap = ""
+            for p in pkt[79]:
+                eap += p
             eap_req = self.eap_handler(self.ctx, eap)
             reply = self.CreateReplyPacket(pkt)
             if eap_req:
@@ -4009,5 +4010,383 @@ def test_eap_proto_ikev2(dev, apdev):
             else:
                 time.sleep(0.05)
             dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)
+
+def NtPasswordHash(password):
+    pw = password.encode('utf_16_le')
+    return hashlib.new('md4', pw).digest()
+
+def HashNtPasswordHash(password_hash):
+    return hashlib.new('md4', password_hash).digest()
+
+def ChallengeHash(peer_challenge, auth_challenge, username):
+    data = peer_challenge + auth_challenge + username
+    return hashlib.sha1(data).digest()[0:8]
+
+def GenerateAuthenticatorResponse(password, nt_response, peer_challenge,
+                                  auth_challenge, username):
+    magic1 = binascii.unhexlify("4D616769632073657276657220746F20636C69656E74207369676E696E6720636F6E7374616E74")
+    magic2 = binascii.unhexlify("50616420746F206D616B6520697420646F206D6F7265207468616E206F6E6520697465726174696F6E")
+
+    password_hash = NtPasswordHash(password)
+    password_hash_hash = HashNtPasswordHash(password_hash)
+    data = password_hash_hash + nt_response + magic1
+    digest = hashlib.sha1(data).digest()
+
+    challenge = ChallengeHash(peer_challenge, auth_challenge, username)
+
+    data = digest + challenge + magic2
+    resp = hashlib.sha1(data).digest()
+    return resp
+
+def test_eap_proto_mschapv2(dev, apdev):
+    """EAP-MSCHAPv2 protocol tests"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+
+    def mschapv2_handler(ctx, req):
+        logger.info("mschapv2_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_MSCHAPV2)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unknown MSCHAPv2 op_code")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               0, 0, 5, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid ms_len and unknown MSCHAPv2 op_code")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               255, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success before challenge")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 5, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - required challenge field not present")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 5, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - invalid failure challenge len")
+            payload = 'C=12'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - invalid failure challenge len")
+            payload = 'C=12 V=3'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - invalid failure challenge")
+            payload = 'C=00112233445566778899aabbccddeefQ '
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - password expired")
+            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success after password change")
+            payload = "S=1122334455667788990011223344556677889900"
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 4 + len(payload)) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid challenge length")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short challenge packet")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1, 16)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1 + 16 + 6,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1 + 16 + 6, 16) + 16*'A' + 'foobar'
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure - password expired")
+            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success after password change")
+            if len(req) != 591:
+                logger.info("Unexpected Change-Password packet length: %s" % len(req))
+                return None
+            data = req[9:]
+            enc_pw = data[0:516]
+            data = data[516:]
+            enc_hash = data[0:16]
+            data = data[16:]
+            peer_challenge = data[0:16]
+            data = data[16:]
+            # Reserved
+            data = data[8:]
+            nt_response = data[0:24]
+            data = data[24:]
+            flags = data
+            logger.info("enc_hash: " + enc_hash.encode("hex"))
+            logger.info("peer_challenge: " + peer_challenge.encode("hex"))
+            logger.info("nt_response: " + nt_response.encode("hex"))
+            logger.info("flags: " + flags.encode("hex"))
+
+            auth_challenge = binascii.unhexlify("00112233445566778899aabbccddeeff")
+            logger.info("auth_challenge: " + auth_challenge.encode("hex"))
+ 
+            auth_resp = GenerateAuthenticatorResponse("new-pw", nt_response,
+                                                      peer_challenge,
+                                                      auth_challenge, "user")
+            payload = "S=" + auth_resp.encode('hex').upper()
+            logger.info("Success message payload: " + payload)
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure - password expired")
+            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success after password change")
+            if len(req) != 591:
+                logger.info("Unexpected Change-Password packet length: %s" % len(req))
+                return None
+            data = req[9:]
+            enc_pw = data[0:516]
+            data = data[516:]
+            enc_hash = data[0:16]
+            data = data[16:]
+            peer_challenge = data[0:16]
+            data = data[16:]
+            # Reserved
+            data = data[8:]
+            nt_response = data[0:24]
+            data = data[24:]
+            flags = data
+            logger.info("enc_hash: " + enc_hash.encode("hex"))
+            logger.info("peer_challenge: " + peer_challenge.encode("hex"))
+            logger.info("nt_response: " + nt_response.encode("hex"))
+            logger.info("flags: " + flags.encode("hex"))
+
+            auth_challenge = binascii.unhexlify("00112233445566778899aabbccddeeff")
+            logger.info("auth_challenge: " + auth_challenge.encode("hex"))
+ 
+            auth_resp = GenerateAuthenticatorResponse("new-pw", nt_response,
+                                                      peer_challenge,
+                                                      auth_challenge, "user")
+            payload = "S=" + auth_resp.encode('hex').upper()
+            logger.info("Success message payload: " + payload)
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1 + 16 + 6,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1 + 16 + 6, 16) + 16*'A' + 'foobar'
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure - authentication failure")
+            payload = 'E=691 R=1 C=00112233445566778899aabbccddeeff V=3 M=Authentication failed'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1 + 16 + 6,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1 + 16 + 6, 16) + 16*'A' + 'foobar'
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure - authentication failure")
+            payload = 'E=691 R=1 C=00112233445566778899aabbccddeeff V=3 M=Authentication failed (2)'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(mschapv2_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 15):
+            logger.info("RUN: %d" % i)
+            if i == 12:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                               wait_connect=False)
+            elif i == 14:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               phase2="mschapv2_retry=0",
+                               password="password", wait_connect=False)
+            else:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password="password", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+
+            if i in [ 8, 11, 12 ]:
+                ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on new password request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+                if i in [ 11, 12 ]:
+                    ev = dev[0].wait_event(["CTRL-EVENT-PASSWORD-CHANGED"],
+                                       timeout=10)
+                    if ev is None:
+                        raise Exception("Timeout on password change")
+                    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"],
+                                       timeout=10)
+                    if ev is None:
+                        raise Exception("Timeout on EAP success")
+                else:
+                    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                           timeout=10)
+                    if ev is None:
+                        raise Exception("Timeout on EAP failure")
+
+            if i in [ 13 ]:
+                ev = dev[0].wait_event(["CTRL-REQ-IDENTITY"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on identity request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-IDENTITY-" + id + ":user")
+
+                ev = dev[0].wait_event(["CTRL-REQ-PASSWORD"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on password request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-PASSWORD-" + id + ":password")
+
+                # TODO: Does this work correctly?
+
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+
+            if i in [ 4, 5, 6, 7, 14 ]:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            else:
+                time.sleep(0.05)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
     finally:
         stop_radius_server(srv)

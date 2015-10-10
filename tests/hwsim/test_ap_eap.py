@@ -951,6 +951,17 @@ def test_ap_wpa2_eap_ttls_mschapv2_utf8(dev, apdev):
                 anonymous_identity="ttls",
                 password_hex="hash:bd5844fad2489992da7fe8c5a01559cf",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    for p in [ "80", "41c041e04141e041", 257*"41" ]:
+        dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                       eap="TTLS", identity="utf8-user-hash",
+                       anonymous_identity="ttls", password_hex=p,
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       wait_connect=False, scan_freq="2412")
+        ev = dev[2].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=1)
+        if ev is None:
+            raise Exception("No failure reported")
+        dev[2].request("REMOVE_NETWORK all")
+        dev[2].wait_disconnected()
 
 def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC"""

@@ -2507,6 +2507,110 @@ def int_eap_server_params():
                "private_key": "auth_serv/server.key" }
     return params
 
+def test_ap_wpa2_eap_tls_ocsp_ca_signed_good(dev, apdev, params):
+    """EAP-TLS and CA signed OCSP response (good)"""
+    check_ocsp_support(dev[0])
+    ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed.der")
+    if not os.path.exists(ocsp):
+        raise HwsimSkip("No OCSP response available")
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = ocsp
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   scan_freq="2412")
+
+def test_ap_wpa2_eap_tls_ocsp_ca_signed_revoked(dev, apdev, params):
+    """EAP-TLS and CA signed OCSP response (revoked)"""
+    check_ocsp_support(dev[0])
+    ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed-revoked.der")
+    if not os.path.exists(ocsp):
+        raise HwsimSkip("No OCSP response available")
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = ocsp
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   wait_connect=False, scan_freq="2412")
+    count = 0
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"])
+        if ev is None:
+            raise Exception("Timeout on EAP status")
+        if 'bad certificate status response' in ev:
+            break
+        if 'certificate revoked' in ev:
+            break
+        count = count + 1
+        if count > 10:
+            raise Exception("Unexpected number of EAP status messages")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
+def test_ap_wpa2_eap_tls_ocsp_ca_signed_unknown(dev, apdev, params):
+    """EAP-TLS and CA signed OCSP response (unknown)"""
+    check_ocsp_support(dev[0])
+    ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed-unknown.der")
+    if not os.path.exists(ocsp):
+        raise HwsimSkip("No OCSP response available")
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = ocsp
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   wait_connect=False, scan_freq="2412")
+    count = 0
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"])
+        if ev is None:
+            raise Exception("Timeout on EAP status")
+        if 'bad certificate status response' in ev:
+            break
+        count = count + 1
+        if count > 10:
+            raise Exception("Unexpected number of EAP status messages")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
+def test_ap_wpa2_eap_tls_ocsp_server_signed(dev, apdev, params):
+    """EAP-TLS and server signed OCSP response"""
+    check_ocsp_support(dev[0])
+    ocsp = os.path.join(params['logdir'], "ocsp-resp-server-signed.der")
+    if not os.path.exists(ocsp):
+        raise HwsimSkip("No OCSP response available")
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = ocsp
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   wait_connect=False, scan_freq="2412")
+    count = 0
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"])
+        if ev is None:
+            raise Exception("Timeout on EAP status")
+        if 'bad certificate status response' in ev:
+            break
+        count = count + 1
+        if count > 10:
+            raise Exception("Unexpected number of EAP status messages")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
 def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP data"""
     check_ocsp_support(dev[0])

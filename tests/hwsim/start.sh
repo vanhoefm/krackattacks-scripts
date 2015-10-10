@@ -147,6 +147,27 @@ for i in unknown revoked; do
 	-reqin $DIR/auth_serv/ocsp-req.der \
 	-respout $LOGDIR/ocsp-server-cache-$i.der >> $LOGDIR/ocsp.log 2>&1
 done
+
+openssl ocsp -reqout $LOGDIR/ocsp-req.der -issuer $DIR/auth_serv/ca.pem \
+    -serial 0xD8D3E3A6CBE3CCE2 -no_nonce -sha256 >> $LOGDIR/ocsp.log 2>&1
+for i in "" "-unknown" "-revoked"; do
+    openssl ocsp -index $DIR/auth_serv/index$i.txt \
+	-rsigner $DIR/auth_serv/ca.pem \
+	-rkey $DIR/auth_serv/ca-key.pem \
+	-CA $DIR/auth_serv/ca.pem \
+	-ndays 7 \
+	-reqin $LOGDIR/ocsp-req.der \
+	-resp_no_certs \
+	-respout $LOGDIR/ocsp-resp-ca-signed$i.der >> $LOGDIR/ocsp.log 2>&1
+done
+openssl ocsp -index $DIR/auth_serv/index.txt \
+    -rsigner $DIR/auth_serv/server.pem \
+    -rkey $DIR/auth_serv/server.key \
+    -CA $DIR/auth_serv/ca.pem \
+    -ndays 7 \
+    -reqin $LOGDIR/ocsp-req.der \
+    -respout $LOGDIR/ocsp-resp-server-signed.der >> $LOGDIR/ocsp.log 2>&1
+
 touch $LOGDIR/hostapd.db
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
 

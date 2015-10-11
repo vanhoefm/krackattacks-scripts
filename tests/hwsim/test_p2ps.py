@@ -1312,7 +1312,7 @@ def test_p2ps_active_go_seeker(dev, apdev):
         if ev is None:
             raise Exception("P2P-GROUP-STARTED timeout on " + dev[1].p2p_dev_addr())
 
-        dev[1].group_form_result(ev)
+        res = dev[1].group_form_result(ev)
 
         p2ps_advertise(r_dev=dev[0], r_role='2',
                        svc_name='org.wi-fi.wfds.send.rx',
@@ -1322,7 +1322,8 @@ def test_p2ps_active_go_seeker(dev, apdev):
                                                   srv_info='2 GB')
 
         ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
-        p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
+        p2ps_connect_pd(dev[0], dev[1], ev0, ev1,
+                        join_extra=" freq=" + res['freq'])
     finally:
         remove_group(dev[0], dev[1])
         dev[0].global_request("P2P_SERVICE_DEL asp all")

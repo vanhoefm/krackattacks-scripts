@@ -17,6 +17,7 @@ from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
 from test_p2p_persistent import go_neg_pin_authorized_persistent
 from utils import HwsimSkip
+from hwsim import HWSimRadio
 
 # Dev[0] -> Advertiser
 # Dev[1] -> Seeker
@@ -1262,28 +1263,33 @@ def test_p2ps_channel_sta_connected_disallow_freq(dev, apdev):
 
 def test_p2ps_channel_sta_connected_disallow_freq_mcc(dev, apdev):
     """P2PS connection with P2PS method - one station and disallow freqs with mcc"""
-    if dev[0].get_mcc() == 1:
-        raise HwsimSkip('Skip due to MCC not being enabled')
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    set_no_group_iface(dev[0], 0)
-    set_no_group_iface(dev[1], 0)
+        if wpas.get_mcc() < 2:
+            raise Exception("New radio does not support MCC")
 
-    try:
-        dev[0].global_request("P2P_SET disallow_freq 2437")
-        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
-                               { "ssid": 'bss-channel-6', "channel": '6' })
+        set_no_group_iface(dev[0], 0)
+        set_no_group_iface(wpas, 0)
 
-        dev[1].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
+        try:
+            dev[0].global_request("P2P_SET disallow_freq 2437")
+            hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+                                   { "ssid": 'bss-channel-6', "channel": '6' })
 
-        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True)
+            wpas.connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
 
-        freq = dev[0].get_group_status_field('freq');
-        if freq == '2437':
-            raise Exception('Unexpected frequency=2437')
-    finally:
-        remove_group(dev[0], dev[1])
-        dev[0].global_request("P2P_SET disallow_freq ")
-        dev[0].global_request("P2P_SERVICE_DEL asp all")
+            tmpdev = [ dev[0], wpas ]
+            (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True)
+
+            freq = dev[0].get_group_status_field('freq');
+            if freq == '2437':
+                raise Exception('Unexpected frequency=2437')
+        finally:
+            remove_group(dev[0], wpas)
+            dev[0].global_request("P2P_SET disallow_freq ")
+            dev[0].global_request("P2P_SERVICE_DEL asp all")
 
 def test_p2ps_active_go_adv(dev, apdev):
     """P2PS connection with P2PS method - active GO on advertiser"""

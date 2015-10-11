@@ -1132,6 +1132,14 @@ static void tls_msg_cb(int write_p, int version, int content_type,
 	struct tls_connection *conn = arg;
 	const u8 *pos = buf;
 
+	if (write_p == 2) {
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: session ver=0x%x content_type=%d",
+			   version, content_type);
+		wpa_hexdump_key(MSG_MSGDUMP, "OpenSSL: Data", buf, len);
+		return;
+	}
+
 	wpa_printf(MSG_DEBUG, "OpenSSL: %s ver=0x%x content_type=%d",
 		   write_p ? "TX" : "RX", version, content_type);
 	wpa_hexdump_key(MSG_MSGDUMP, "OpenSSL: Message", buf, len);

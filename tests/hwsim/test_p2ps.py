@@ -292,6 +292,7 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra=""):
 
     # Persistent Connection (todo: handle frequency)
     if persist0 is not None:
+        dev0.p2p_stop_find()
         if "OK" not in dev0.global_request("P2P_GROUP_ADD persistent=" + persist0 + " freq=2412"):
             raise Exception("Could not re-start persistent group")
         ev0 = dev0.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)

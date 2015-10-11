@@ -247,7 +247,7 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000",
 
     return ev1, ev2
 
-def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra=""):
+def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra="", go_ev=None):
     conf_methods_map = {"8": "p2ps", "1": "display", "5": "keypad"}
     peer0 = ev0.split()[1]
     peer1 = ev1.split()[1]
@@ -362,7 +362,11 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra=""):
                 raise Exception("Device " + dev_cli.p2p_dev_addr() + " failed to become CLI")
 
             if not dev_go.get_group_ifname().startswith('p2p-'):
-                ev = dev_go.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+                if go_ev:
+                    ev = go_ev
+                else:
+                    ev = dev_go.wait_global_event(["P2P-GROUP-STARTED"],
+                                                  timeout=10)
                 if ev is None:
                     raise Exception("P2P-GROUP-STARTED timeout on " + dev_go.p2p_dev_addr())
                 dev_go.group_form_result(ev)
@@ -733,8 +737,20 @@ def p2ps_connect_p2ps_method(dev, keep_group=False, join_extra=""):
                                               svc_name='org.wi-fi.wfds.send.rx',
                                               srv_info='2 GB')
     ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id)
+    go_ev = None
+    if "join=" in ev0 and "go=" in ev1:
+        # dev[1] started GO and dev[0] is about to join it.
+        # Parse P2P-GROUP-STARTED from the GO to learn the operating frequency.
+        go_ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if go_ev is None:
+            raise Exception("P2P-GROUP-STARTED timeout on dev1")
+        res = dev[1].group_form_result(go_ev)
+        if join_extra == "":
+            join_extra = " freq=" + res['freq']
+        
     ifnames = get_ifnames()
-    p2ps_connect_pd(dev[0], dev[1], ev0, ev1, join_extra=join_extra)
+    p2ps_connect_pd(dev[0], dev[1], ev0, ev1, join_extra=join_extra,
+                    go_ev=go_ev)
 
     grp_ifname0 = dev[0].get_group_ifname()
     grp_ifname1 = dev[1].get_group_ifname()

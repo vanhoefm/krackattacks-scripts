@@ -1126,6 +1126,65 @@ int tls_get_errors(void *ssl_ctx)
 }
 
 
+static const char * openssl_content_type(int content_type)
+{
+	switch (content_type) {
+	case 20:
+		return "change cipher spec";
+	case 21:
+		return "alert";
+	case 22:
+		return "handshake";
+	case 23:
+		return "application data";
+	case 24:
+		return "heartbeat";
+	case 256:
+		return "TLS header info"; /* pseudo content type */
+	default:
+		return "?";
+	}
+}
+
+
+static const char * openssl_handshake_type(int content_type, const u8 *buf,
+					   size_t len)
+{
+	if (content_type != 22 || !buf || len == 0)
+		return "";
+	switch (buf[0]) {
+	case 0:
+		return "hello request";
+	case 1:
+		return "client hello";
+	case 2:
+		return "server hello";
+	case 4:
+		return "new session ticket";
+	case 11:
+		return "certificate";
+	case 12:
+		return "server key exchange";
+	case 13:
+		return "certificate request";
+	case 14:
+		return "server hello done";
+	case 15:
+		return "certificate verify";
+	case 16:
+		return "client key exchange";
+	case 20:
+		return "finished";
+	case 21:
+		return "certificate url";
+	case 22:
+		return "certificate status";
+	default:
+		return "?";
+	}
+}
+
+
 static void tls_msg_cb(int write_p, int version, int content_type,
 		       const void *buf, size_t len, SSL *ssl, void *arg)
 {
@@ -1140,8 +1199,10 @@ static void tls_msg_cb(int write_p, int version, int content_type,
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "OpenSSL: %s ver=0x%x content_type=%d",
-		   write_p ? "TX" : "RX", version, content_type);
+	wpa_printf(MSG_DEBUG, "OpenSSL: %s ver=0x%x content_type=%d (%s/%s)",
+		   write_p ? "TX" : "RX", version, content_type,
+		   openssl_content_type(content_type),
+		   openssl_handshake_type(content_type, buf, len));
 	wpa_hexdump_key(MSG_MSGDUMP, "OpenSSL: Message", buf, len);
 	if (content_type == 24 && len >= 3 && pos[0] == 1) {
 		size_t payload_len = WPA_GET_BE16(pos + 1);

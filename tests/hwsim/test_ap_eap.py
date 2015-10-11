@@ -15,7 +15,7 @@ import os
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
+from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips, wait_fail_trigger
 from wpasupplicant import WpaSupplicant
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -3955,3 +3955,85 @@ def test_eap_tls_no_session_resumption_radius(dev, apdev):
         raise Exception("Key handshake with the AP timed out")
     if dev[0].get_status_field("tls_session_reused") != '0':
         raise Exception("Unexpected session resumption on the second connection")
+
+def test_eap_mschapv2_errors(dev, apdev):
+    """EAP-MSCHAPv2 error cases"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    check_eap_capa(dev[0], "FAST")
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="MSCHAPV2",
+                   identity="phase1-user", password="password",
+                   scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    tests = [ (1, "hash_nt_password_hash;mschapv2_derive_response"),
+              (1, "nt_password_hash;mschapv2_derive_response"),
+              (1, "nt_password_hash;=mschapv2_derive_response"),
+              (1, "generate_nt_response;mschapv2_derive_response"),
+              (1, "generate_authenticator_response;mschapv2_derive_response"),
+              (1, "nt_password_hash;=mschapv2_derive_response"),
+              (1, "get_master_key;mschapv2_derive_response"),
+              (1, "os_get_random;eap_mschapv2_challenge_reply") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="MSCHAPV2",
+                           identity="phase1-user", password="password",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "hash_nt_password_hash;mschapv2_derive_response"),
+              (1, "hash_nt_password_hash;=mschapv2_derive_response"),
+              (1, "generate_nt_response_pwhash;mschapv2_derive_response"),
+              (1, "generate_authenticator_response_pwhash;mschapv2_derive_response") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="MSCHAPV2",
+                           identity="phase1-user",
+                           password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_mschapv2_init"),
+              (1, "eap_msg_alloc;eap_mschapv2_challenge_reply"),
+              (1, "eap_msg_alloc;eap_mschapv2_success"),
+              (1, "eap_mschapv2_getKey") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="MSCHAPV2",
+                           identity="phase1-user", password="password",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_msg_alloc;eap_mschapv2_failure") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="MSCHAPV2",
+                           identity="phase1-user", password="wrong password",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (2, "eap_mschapv2_init"),
+              (3, "eap_mschapv2_init") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="FAST",
+                           anonymous_identity="FAST", identity="user",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           phase1="fast_provisioning=1",
+                           pac_file="blob://fast_pac",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

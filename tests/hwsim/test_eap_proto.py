@@ -15,7 +15,7 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, fail_test, wait_fail_trigger
 from test_ap_eap import check_eap_capa
 
 EAP_CODE_REQUEST = 1
@@ -4386,6 +4386,89 @@ def test_eap_proto_mschapv2(dev, apdev):
                     raise Exception("Timeout on EAP failure")
             else:
                 time.sleep(0.05)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_proto_mschapv2_errors(dev, apdev):
+    """EAP-MSCHAPv2 protocol tests (error paths)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+
+    def mschapv2_handler(ctx, req):
+        logger.info("mschapv2_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - password expired")
+            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success after password change")
+            payload = "S=1122334455667788990011223344556677889900"
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 4 + len(payload)) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Failure before challenge - password expired")
+            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               4, 0, 4 + len(payload)) + payload
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success after password change")
+            payload = "S=1122334455667788990011223344556677889900"
+            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + len(payload),
+                               EAP_TYPE_MSCHAPV2,
+                               3, 0, 4 + len(payload)) + payload
+
+        return None
+
+    srv = start_radius_server(mschapv2_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        with fail_test(dev[0], 1, "eap_mschapv2_change_password"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="MSCHAPV2", identity="user",
+                           password="password", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
+            if ev is None:
+                raise Exception("Timeout on new password request")
+            id = ev.split(':')[0].split('-')[-1]
+            dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+
+        with fail_test(dev[0], 1, "get_master_key;eap_mschapv2_change_password"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="MSCHAPV2", identity="user",
+                           password="password", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
+            if ev is None:
+                raise Exception("Timeout on new password request")
+            id = ev.split(':')[0].split('-')[-1]
+            dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+            wait_fail_trigger(dev[0], "GET_FAIL")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected(timeout=1)
     finally:

@@ -5,6 +5,7 @@
 # See README for more details.
 
 import os
+import time
 
 def get_ifnames():
     ifnames = []
@@ -49,6 +50,14 @@ class fail_test(object):
         if type is None:
             if self._dev.request("GET_FAIL") != "0:%s" % self._funcs:
                 raise Exception("Test failure did not trigger")
+
+def wait_fail_trigger(dev, cmd):
+    for i in range(0, 40):
+        if dev.request(cmd).startswith("0:"):
+            break
+        if i == 39:
+            raise Exception("Failure not triggered")
+        time.sleep(0.05)
 
 def require_under_vm():
     with open('/proc/1/cmdline', 'r') as f:

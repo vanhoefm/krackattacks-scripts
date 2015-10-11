@@ -190,6 +190,11 @@ def p2ps_provision(seeker, advertiser, adv_id, auto_accept=True, method="1000",
                 raise Exception("Unknown peer " + addr0)
             pin = ev.split()[2]
 
+        # Stop P2P_LISTEN before issuing P2P_ASP_PROVISION_RESP to avoid
+        # excessive delay and test case timeouts if it takes large number of
+        # retries to find the peer awake on its Listen channel.
+        advertiser.p2p_stop_find()
+
         advertiser.asp_provision(peer, adv_id=advert_id, adv_mac=advert_mac,
                                  session_id=int(session, 0),
                                  session_mac=session_mac, status=12,
@@ -856,6 +861,7 @@ def test_p2ps_pd_follow_on_status_failure(dev):
     if ev is None:
         raise Exception("P2P-PROV-DISC-FAILURE timeout on seeker side")
     dev[1].p2p_ext_listen(500, 500)
+    dev[0].p2p_stop_find()
     dev[0].asp_provision(addr1, adv_id=str(adv_id), adv_mac=addr0, session_id=1,
                          session_mac=addr1, status=11, method=0)
 

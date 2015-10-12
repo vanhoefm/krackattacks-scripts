@@ -498,7 +498,7 @@ void printf_encode(char *txt, size_t maxlen, const u8 *data, size_t len)
 			*txt++ = 't';
 			break;
 		default:
-			if (data[i] >= 32 && data[i] <= 127) {
+			if (data[i] >= 32 && data[i] <= 126) {
 				*txt++ = data[i];
 			} else {
 				txt += os_snprintf(txt, end - txt, "\\x%02x",

@@ -1586,6 +1586,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	struct wpa_connect_work *cwork;
 	int rand_style;
 
+	wpa_s->own_disconnect_req = 0;
+
 	if (ssid->mac_addr == -1)
 		rand_style = wpa_s->conf->mac_addr;
 	else

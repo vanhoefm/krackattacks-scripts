@@ -101,7 +101,15 @@ fi
 
 echo "Starting test run in a virtual machine"
 
-kvm \
+KVM=kvm
+for kvmprog in kvm qemu-kvm; do
+    if $kvmprog --version &> /dev/null; then
+	KVM=$kvmprog
+	break
+    fi
+done
+
+$KVM \
 	-kernel $KERNEL -smp 4 \
 	$KVMARGS -m $MEMORY -nographic \
 	-fsdev local,security_model=none,id=fsdev-root,path=/$ROTAG \

@@ -4934,3 +4934,18 @@ def _test_dbus_ap_scan_2_ap_mode_scan(dev, apdev):
     dev[1].wait_disconnected()
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_dbus_expectdisconnect(dev, apdev):
+    """D-Bus ExpectDisconnect"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    wpas = dbus.Interface(wpas_obj, WPAS_DBUS_SERVICE)
+
+    params = { "ssid": "test-open" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+
+    # This does not really verify the behavior other than by going through the
+    # code path for additional coverage.
+    wpas.ExpectDisconnect()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

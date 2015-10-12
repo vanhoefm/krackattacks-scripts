@@ -1682,6 +1682,24 @@ def test_dbus_network_oom(dev, apdev):
 
 def test_dbus_interface(dev, apdev):
     """D-Bus CreateInterface/GetInterface/RemoveInterface parameters and error cases"""
+    try:
+        _test_dbus_interface(dev, apdev)
+    finally:
+        # Need to force P2P channel list update since the 'lo' interface
+        # with driver=none ends up configuring default dualband channels.
+        dev[0].request("SET country US")
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+        if ev is None:
+            ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"],
+                                          timeout=1)
+        dev[0].request("SET country 00")
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+        if ev is None:
+            ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"],
+                                          timeout=1)
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_dbus_interface(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wpas = dbus.Interface(wpas_obj, WPAS_DBUS_SERVICE)
 

@@ -2190,7 +2190,7 @@ void ieee802_1x_deinit(struct hostapd_data *hapd)
 {
 	eloop_cancel_timeout(ieee802_1x_rekey, hapd, NULL);
 
-	if (hapd->driver != NULL &&
+	if (hapd->driver && hapd->drv_priv &&
 	    (hapd->conf->ieee802_1x || hapd->conf->wpa))
 		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
 

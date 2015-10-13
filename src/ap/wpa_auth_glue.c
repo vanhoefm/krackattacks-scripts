@@ -674,13 +674,14 @@ void hostapd_deinit_wpa(struct hostapd_data *hapd)
 		wpa_deinit(hapd->wpa_auth);
 		hapd->wpa_auth = NULL;
 
-		if (hostapd_set_privacy(hapd, 0)) {
+		if (hapd->drv_priv && hostapd_set_privacy(hapd, 0)) {
 			wpa_printf(MSG_DEBUG, "Could not disable "
 				   "PrivacyInvoked for interface %s",
 				   hapd->conf->iface);
 		}
 
-		if (hostapd_set_generic_elem(hapd, (u8 *) "", 0)) {
+		if (hapd->drv_priv &&
+		    hostapd_set_generic_elem(hapd, (u8 *) "", 0)) {
 			wpa_printf(MSG_DEBUG, "Could not remove generic "
 				   "information element from interface %s",
 				   hapd->conf->iface);

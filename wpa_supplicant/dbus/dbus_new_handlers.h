@@ -64,6 +64,8 @@ DECLARE_ACCESSOR(wpas_dbus_setter_debug_show_keys);
 DECLARE_ACCESSOR(wpas_dbus_getter_interfaces);
 DECLARE_ACCESSOR(wpas_dbus_getter_eap_methods);
 DECLARE_ACCESSOR(wpas_dbus_getter_global_capabilities);
+DECLARE_ACCESSOR(wpas_dbus_getter_iface_global);
+DECLARE_ACCESSOR(wpas_dbus_setter_iface_global);
 
 DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				     struct wpa_supplicant *wpa_s);

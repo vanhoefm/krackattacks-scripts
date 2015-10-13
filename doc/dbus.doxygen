@@ -678,6 +678,251 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<h3>DisconnectReason - i - (read)</h3>
 	<p>The most recent IEEE 802.11 reason code for disconnect. Negative value indicates locally generated disconnection.</p>
       </li>
+
+      <li>
+	<h3>EapolVersion - s - (read/write)</h3>
+	<p>IEEE 802.1X/EAPOL version number</p>
+      </li>
+
+      <li>
+	<h3>Bgscan - s - (read/write)</h3>
+	<p>Background scan and roaming parameters or an empty string if none</p>
+      </li>
+
+      <li>
+	<h3>DisableScanOffload - s - (read/write)</h3>
+	<p>Disable automatic offloading of scan requests</p>
+      </li>
+
+      <li>
+	<h3>OpenscEnginePath - s - (read/write)</h3>
+	<p>Path to the OpenSSL engine for opensc</p>
+      </li>
+
+      <li>
+	<h3>OpensslCiphers - s - (read/write)</h3>
+	<p>OpenSSL cipher string</p>
+      </li>
+
+      <li>
+	<h3>PcscReader - s - (read/write)</h3>
+	<p>PC/SC reader name prefix</p>
+      </li>
+
+      <li>
+	<h3>PcscPin - s - (read/write)</h3>
+	<p>PIN for USIM, GSM SIM, and smartcards</p>
+      </li>
+
+      <li>
+	<h3>ExternalSim - s - (read/write)</h3>
+	<p>Use external processing for SIM/USIM operations</p>
+      </li>
+
+      <li>
+	<h3>DriverParam - s - (read/write)</h3>
+	<p>Driver interface parameters</p>
+      </li>
+
+      <li>
+	<h3>Dot11RSNAConfigPMKLifetime - s - (read/write)</h3>
+	<p>Maximum lifetime of a PMK</p>
+      </li>
+
+      <li>
+	<h3>Dot11RSNAConfigPMKReauthThreshold - s - (read/write)</h3>
+	<p>PMK re-authentication threshold</p>
+      </li>
+
+      <li>
+	<h3>Dot11RSNAConfigSATimeout - s - (read/write)</h3>
+	<p>Security association timeout</p>
+      </li>
+
+      <li>
+	<h3>BssMaxCount - s - (read/write)</h3>
+	<p>Maximum number of BSS entries to keep in memory</p>
+      </li>
+
+      <li>
+	<h3>FilterSsids - s - (read/write)</h3>
+	<p>SSID-based scan result filtering</p>
+      </li>
+
+      <li>
+	<h3>FilterRssi - s - (read/write)</h3>
+	<p>RSSI-based scan result filtering</p>
+      </li>
+
+      <li>
+	<h3>MaxNumSta - s - (read/write)</h3>
+	<p>Maximum number of STAs in an AP/P2P GO</p>
+      </li>
+
+      <li>
+	<h3>DisassocLowAck - s - (read/write)</h3>
+	<p>Disassocicate stations with massive packet loss</p>
+      </li>
+
+      <li>
+	<h3>Interworking - s - (read/write)</h3>
+	<p>Whether Interworking (IEEE 802.11u) is enabled</p>
+      </li>
+
+      <li>
+	<h3>Hessid - s - (read/write)</h3>
+	<p>Homogenous ESS identifier</p>
+      </li>
+
+      <li>
+	<h3>AccessNetworkType - s - (read/write)</h3>
+	<p>Access Network Type</p>
+      </li>
+
+      <li>
+	<h3>PbcInM1 - s - (read/write)</h3>
+	<p>AP mode WPS probing workaround for PBC with Windows 7</p>
+      </li>
+
+      <li>
+	<h3>Autoscan - s - (read/write)</h3>
+	<p>Automatic scan parameters or an empty string if none</p>
+      </li>
+
+      <li>
+	<h3>WpsNfcDevPwId - s - (read/write)</h3>
+	<p>NFC Device Password ID for password token</p>
+      </li>
+
+      <li>
+	<h3>WpsNfcDhPubkey - s - (read/write)</h3>
+	<p>NFC DH Public Key for password token</p>
+      </li>
+
+      <li>
+	<h3>WpsNfcDhPrivkey - s - (read/write)</h3>
+	<p>NFC DH Private Key for password token</p>
+      </li>
+
+      <li>
+	<h3>WpsNfcDevPw - s - (read/write)</h3>
+	<p>NFC Device Password for password token</p>
+      </li>
+
+      <li>
+	<h3>ExtPasswordBackend - s - (read/write)</h3>
+	<p>External password backend or an empty string if none</p>
+      </li>
+
+      <li>
+	<h3>P2pGoMaxInactivity - s - (read/write)</h3>
+	<p>Timeout in seconds to detect STA inactivity</p>
+      </li>
+
+      <li>
+	<h3>AutoInterworking - s - (read/write)</h3>
+	<p>Whether to use network selection automatically</p>
+      </li>
+
+      <li>
+	<h3>Okc - s - (read/write)</h3>
+	<p>Whether to enable opportunistic key caching by default</p>
+      </li>
+
+      <li>
+	<h3>Pmf - s - (read/write)</h3>
+	<p>Whether to enable/require PMF by default</p>
+      </li>
+
+      <li>
+	<h3>SaeGroups - s - (read/write)</h3>
+	<p>Preference list of enabled groups for SAE</p>
+      </li>
+
+      <li>
+	<h3>DtimPeriod - s - (read/write)</h3>
+	<p>Default DTIM period in Beacon intervals</p>
+      </li>
+
+      <li>
+	<h3>BeaconInt - s - (read/write)</h3>
+	<p>Default Beacon interval in TU</p>
+      </li>
+
+      <li>
+	<h3>IgnoreOldScanRes - s - (read/write)</h3>
+	<p>Ignore scan results older than request</p>
+      </li>
+
+      <li>
+	<h3>FreqList - s - (read/write)</h3>
+	<p>Array of allowed scan frequencies or an empty string for all</p>
+      </li>
+
+      <li>
+	<h3>ScanCurFreq - s - (read/write)</h3>
+	<p>Whether to scan only the current channel</p>
+      </li>
+
+      <li>
+	<h3>SchedScanInterval - s - (read/write)</h3>
+	<p>schedule scan interval</p>
+      </li>
+
+      <li>
+	<h3>TdlsExternalControl - s - (read/write)</h3>
+	<p>External control for TDLS setup requests</p>
+      </li>
+
+      <li>
+	<h3>OsuDir - s - (read/write)</h3>
+	<p>OSU provider information directory</p>
+      </li>
+
+      <li>
+	<h3>WowlanTriggers - s - (read/write)</h3>
+	<p>Wake-on-WLAN triggers</p>
+      </li>
+
+      <li>
+	<h3>P2pSearchDelay - s - (read/write)</h3>
+	<p>Extra delay between concurrent search iterations</p>
+      </li>
+
+      <li>
+	<h3>MacAddr - s - (read/write)</h3>
+	<p>MAC address policy default</p>
+      </li>
+
+      <li>
+	<h3>RandAddrLifetime - s - (read/write)</h3>
+	<p>Lifetime of random MAC address in seconds</p>
+      </li>
+
+      <li>
+	<h3>PreassocMacAddr - s - (read/write)</h3>
+	<p>Pre-association MAC address policy</p>
+      </li>
+
+      <li>
+	<h3>KeyMgmtOffload - s - (read/write)</h3>
+	<p>Use key management offload</p>
+      </li>
+
+      <li>
+	<h3>PassiveScan - s - (read/write)</h3>
+	<p>Whether to force passive scan for network connection</p>
+      </li>
+
+      <li>
+	<h3>ReassocSameBssOptim - s - (read/write)</h3>
+	<p>Whether to optimize reassoc-to-same-BSS</p>
+      </li>
+
+      <li>
+	<h3>WpsPriority - s - (read/write)</h3>
+	<p>Priority for the networks added through WPS</p>
+      </li>
     </ul>
 
 \subsection dbus_interface_signals Signals

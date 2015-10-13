@@ -4304,6 +4304,23 @@ int wpa_config_get_value(const char *name, struct wpa_config *config,
 }
 
 
+int wpa_config_get_num_global_field_names(void)
+{
+	return NUM_GLOBAL_FIELDS;
+}
+
+
+const char * wpa_config_get_global_field_name(unsigned int i, int *no_var)
+{
+	if (i >= NUM_GLOBAL_FIELDS)
+		return NULL;
+
+	if (no_var)
+		*no_var = !global_fields[i].param1;
+	return global_fields[i].name;
+}
+
+
 int wpa_config_process_global(struct wpa_config *config, char *pos, int line)
 {
 	size_t i;

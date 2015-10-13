@@ -1310,6 +1310,9 @@ void wpa_config_debug_dump_networks(struct wpa_config *config);
 /* Prototypes for common functions from config.c */
 int wpa_config_process_global(struct wpa_config *config, char *pos, int line);
 
+int wpa_config_get_num_global_field_names(void);
+
+const char * wpa_config_get_global_field_name(unsigned int i, int *no_var);
 
 /* Prototypes for backend specific functions from the selected config_*.c */
 

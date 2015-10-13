@@ -93,6 +93,8 @@ struct wpa_dbus_property_desc {
 	WPADBusPropertyAccessor getter;
 	/* property setter function */
 	WPADBusPropertyAccessor setter;
+	/* other data */
+	const char *data;
 };
 
 

@@ -1117,7 +1117,8 @@ def test_p2ps_channel_both_connected_same(dev, apdev):
         dev[2].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
         dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
 
-        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True, join_extra=" freq=2437")
+        tmpdev = [ dev[2], dev[1] ]
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True, join_extra=" freq=2437")
         freq = dev[2].get_group_status_field('freq');
 
         if freq != '2437':

@@ -16,9 +16,13 @@ typedef DBusMessage * (*WPADBusMethodHandler)(DBusMessage *message,
 					      void *user_data);
 typedef void (*WPADBusArgumentFreeFunction)(void *handler_arg);
 
-typedef dbus_bool_t (*WPADBusPropertyAccessor)(DBusMessageIter *iter,
-					       DBusError *error,
-					       void *user_data);
+struct wpa_dbus_property_desc;
+typedef dbus_bool_t (*WPADBusPropertyAccessor)(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data);
+#define DECLARE_ACCESSOR(f) \
+dbus_bool_t f(const struct wpa_dbus_property_desc *property_desc, \
+	      DBusMessageIter *iter, DBusError *error, void *user_data)
 
 struct wpa_dbus_object_desc {
 	DBusConnection *connection;

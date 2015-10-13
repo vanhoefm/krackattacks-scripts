@@ -44,7 +44,8 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 				       struct wpa_group *group);
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
-			  const u8 *pmk, struct wpa_ptk *ptk);
+			  const u8 *pmk, unsigned int pmk_len,
+			  struct wpa_ptk *ptk);
 static void wpa_group_free(struct wpa_authenticator *wpa_auth,
 			   struct wpa_group *group);
 static void wpa_group_get(struct wpa_authenticator *wpa_auth,
@@ -827,6 +828,7 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 	struct wpa_ptk PTK;
 	int ok = 0;
 	const u8 *pmk = NULL;
+	unsigned int pmk_len;
 
 	for (;;) {
 		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
@@ -834,10 +836,13 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 					       sm->p2p_dev_addr, pmk);
 			if (pmk == NULL)
 				break;
-		} else
+			pmk_len = PMK_LEN;
+		} else {
 			pmk = sm->PMK;
+			pmk_len = sm->pmk_len;
+		}
 
-		wpa_derive_ptk(sm, sm->alt_SNonce, pmk, &PTK);
+		wpa_derive_ptk(sm, sm->alt_SNonce, pmk, pmk_len, &PTK);
 
 		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK, data, data_len)
 		    == 0) {
@@ -1904,11 +1909,27 @@ SM_STATE(WPA_PTK, INITPMK)
 #endif /* CONFIG_IEEE80211R */
 	if (sm->pmksa) {
 		wpa_printf(MSG_DEBUG, "WPA: PMK from PMKSA cache");
-		os_memcpy(sm->PMK, sm->pmksa->pmk, PMK_LEN);
+		os_memcpy(sm->PMK, sm->pmksa->pmk, sm->pmksa->pmk_len);
+		sm->pmk_len = sm->pmksa->pmk_len;
 	} else if (wpa_auth_get_msk(sm->wpa_auth, sm->addr, msk, &len) == 0) {
+		unsigned int pmk_len;
+
+		if (sm->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+			pmk_len = PMK_LEN_SUITE_B_192;
+		else
+			pmk_len = PMK_LEN;
 		wpa_printf(MSG_DEBUG, "WPA: PMK from EAPOL state machine "
-			   "(len=%lu)", (unsigned long) len);
-		os_memcpy(sm->PMK, msk, PMK_LEN);
+			   "(MSK len=%lu PMK len=%u)", (unsigned long) len,
+			   pmk_len);
+		if (len < pmk_len) {
+			wpa_printf(MSG_DEBUG,
+				   "WPA: MSK not long enough (%u) to create PMK (%u)",
+				   (unsigned int) len, (unsigned int) pmk_len);
+			sm->Disconnect = TRUE;
+			return;
+		}
+		os_memcpy(sm->PMK, msk, pmk_len);
+		sm->pmk_len = pmk_len;
 #ifdef CONFIG_IEEE80211R
 		if (len >= 2 * PMK_LEN) {
 			os_memcpy(sm->xxkey, msk + PMK_LEN, PMK_LEN);
@@ -1943,6 +1964,7 @@ SM_STATE(WPA_PTK, INITPSK)
 	psk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr, NULL);
 	if (psk) {
 		os_memcpy(sm->PMK, psk, PMK_LEN);
+		sm->pmk_len = PMK_LEN;
 #ifdef CONFIG_IEEE80211R
 		os_memcpy(sm->xxkey, psk, PMK_LEN);
 		sm->xxkey_len = PMK_LEN;
@@ -1994,7 +2016,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 			 * Calculate PMKID since no PMKSA cache entry was
 			 * available with pre-calculated PMKID.
 			 */
-			rsn_pmkid(sm->PMK, PMK_LEN, sm->wpa_auth->addr,
+			rsn_pmkid(sm->PMK, sm->pmk_len, sm->wpa_auth->addr,
 				  sm->addr, &pmkid[2 + RSN_SELECTOR_LEN],
 				  wpa_key_mgmt_sha256(sm->wpa_key_mgmt));
 		}
@@ -2006,14 +2028,15 @@ SM_STATE(WPA_PTK, PTKSTART)
 
 
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
-			  const u8 *pmk, struct wpa_ptk *ptk)
+			  const u8 *pmk, unsigned int pmk_len,
+			  struct wpa_ptk *ptk)
 {
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
 		return wpa_auth_derive_ptk_ft(sm, pmk, ptk);
 #endif /* CONFIG_IEEE80211R */
 
-	return wpa_pmk_to_ptk(pmk, PMK_LEN, "Pairwise key expansion",
+	return wpa_pmk_to_ptk(pmk, pmk_len, "Pairwise key expansion",
 			      sm->wpa_auth->addr, sm->addr, sm->ANonce, snonce,
 			      ptk, sm->wpa_key_mgmt, sm->pairwise);
 }
@@ -2024,6 +2047,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	struct wpa_ptk PTK;
 	int ok = 0, psk_found = 0;
 	const u8 *pmk = NULL;
+	unsigned int pmk_len;
 
 	SM_ENTRY_MA(WPA_PTK, PTKCALCNEGOTIATING, wpa_ptk);
 	sm->EAPOLKeyReceived = FALSE;
@@ -2039,10 +2063,13 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 			if (pmk == NULL)
 				break;
 			psk_found = 1;
-		} else
+			pmk_len = PMK_LEN;
+		} else {
 			pmk = sm->PMK;
+			pmk_len = sm->pmk_len;
+		}
 
-		wpa_derive_ptk(sm, sm->SNonce, pmk, &PTK);
+		wpa_derive_ptk(sm, sm->SNonce, pmk, pmk_len, &PTK);
 
 		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,
 				       sm->last_rx_eapol_key,
@@ -2092,6 +2119,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		 * state machine data based on whatever PSK was selected here.
 		 */
 		os_memcpy(sm->PMK, pmk, PMK_LEN);
+		sm->pmk_len = PMK_LEN;
 	}
 
 	sm->MICVerified = TRUE;
@@ -3243,13 +3271,21 @@ const u8 * wpa_auth_get_wpa_ie(struct wpa_authenticator *wpa_auth, size_t *len)
 
 
 int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
+		       unsigned int pmk_len,
 		       int session_timeout, struct eapol_state_machine *eapol)
 {
 	if (sm == NULL || sm->wpa != WPA_VERSION_WPA2 ||
 	    sm->wpa_auth->conf.disable_pmksa_caching)
 		return -1;
 
-	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,
+	if (sm->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		if (pmk_len > PMK_LEN_SUITE_B_192)
+			pmk_len = PMK_LEN_SUITE_B_192;
+	} else if (pmk_len > PMK_LEN) {
+		pmk_len = PMK_LEN;
+	}
+
+	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, pmk_len,
 				 sm->PTK.kck, sm->PTK.kck_len,
 				 sm->wpa_auth->addr, sm->addr, session_timeout,
 				 eapol, sm->wpa_key_mgmt))

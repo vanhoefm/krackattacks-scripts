@@ -130,7 +130,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	struct rsn_pmksa_cache_entry *entry, *pos, *prev;
 	struct os_reltime now;
 
-	if (pmk_len > PMK_LEN)
+	if (pmk_len > PMK_LEN_MAX)
 		return NULL;
 
 	if (wpa_key_mgmt_suite_b(akmp) && !kck)

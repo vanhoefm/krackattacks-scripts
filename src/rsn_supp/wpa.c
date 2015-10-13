@@ -206,15 +206,21 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 #endif /* CONFIG_IEEE80211R */
 	} else if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) && sm->eapol) {
 		int res, pmk_len;
-		pmk_len = PMK_LEN;
-		res = eapol_sm_get_key(sm->eapol, sm->pmk, PMK_LEN);
+
+		if (sm->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+			pmk_len = PMK_LEN_SUITE_B_192;
+		else
+			pmk_len = PMK_LEN;
+		res = eapol_sm_get_key(sm->eapol, sm->pmk, pmk_len);
 		if (res) {
-			/*
-			 * EAP-LEAP is an exception from other EAP methods: it
-			 * uses only 16-byte PMK.
-			 */
-			res = eapol_sm_get_key(sm->eapol, sm->pmk, 16);
-			pmk_len = 16;
+			if (pmk_len == PMK_LEN) {
+				/*
+				 * EAP-LEAP is an exception from other EAP
+				 * methods: it uses only 16-byte PMK.
+				 */
+				res = eapol_sm_get_key(sm->eapol, sm->pmk, 16);
+				pmk_len = 16;
+			}
 		} else {
 #ifdef CONFIG_IEEE80211R
 			u8 buf[2 * PMK_LEN];

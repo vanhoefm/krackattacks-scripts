@@ -279,6 +279,7 @@ void wpa_auth_sta_local_mic_failure_report(struct wpa_state_machine *sm);
 const u8 * wpa_auth_get_wpa_ie(struct wpa_authenticator *wpa_auth,
 			       size_t *len);
 int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
+		       unsigned int pmk_len,
 		       int session_timeout, struct eapol_state_machine *eapol);
 int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 			       const u8 *pmk, size_t len, const u8 *sta_addr,

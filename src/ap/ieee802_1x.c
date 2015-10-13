@@ -2575,7 +2575,7 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		session_timeout = dot11RSNAConfigPMKLifetime;
 	if (success && key && len >= PMK_LEN && !sta->remediation &&
 	    !sta->hs20_deauth_requested &&
-	    wpa_auth_pmksa_add(sta->wpa_sm, key, session_timeout,
+	    wpa_auth_pmksa_add(sta->wpa_sm, key, len, session_timeout,
 			       sta->eapol_sm) == 0) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_WPA,
 			       HOSTAPD_LEVEL_DEBUG,

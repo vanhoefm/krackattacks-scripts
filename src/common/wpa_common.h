@@ -12,6 +12,8 @@
 /* IEEE 802.11i */
 #define PMKID_LEN 16
 #define PMK_LEN 32
+#define PMK_LEN_SUITE_B_192 48
+#define PMK_LEN_MAX 48
 #define WPA_REPLAY_COUNTER_LEN 8
 #define WPA_NONCE_LEN 32
 #define WPA_KEY_RSC_LEN 8

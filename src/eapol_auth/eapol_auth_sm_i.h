@@ -162,12 +162,6 @@ struct eapol_state_machine {
 	struct radius_class_data radius_class;
 	struct wpabuf *radius_cui; /* Chargeable-User-Identity */
 
-	/* Keys for encrypting and signing EAPOL-Key frames */
-	u8 *eapol_key_sign;
-	size_t eapol_key_sign_len;
-	u8 *eapol_key_crypt;
-	size_t eapol_key_crypt_len;
-
 	struct eap_sm *eap;
 
 	Boolean initializing; /* in process of initializing state machines */

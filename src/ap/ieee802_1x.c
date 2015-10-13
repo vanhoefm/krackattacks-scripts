@@ -1715,15 +1715,6 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		ieee802_1x_check_hs20(hapd, sta, msg,
 				      session_timeout_set ?
 				      (int) session_timeout : -1);
-		if (sm->eap_if->eapKeyAvailable && !sta->remediation &&
-		    !sta->hs20_deauth_requested &&
-		    wpa_auth_pmksa_add(sta->wpa_sm, sm->eapol_key_crypt,
-				       session_timeout_set ?
-				       (int) session_timeout : -1, sm) == 0) {
-			hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_WPA,
-				       HOSTAPD_LEVEL_DEBUG,
-				       "Added PMKSA cache entry");
-		}
 		break;
 	case RADIUS_CODE_ACCESS_REJECT:
 		sm->eap_if->aaaFail = TRUE;

@@ -119,7 +119,7 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
 
     dev[0].dump_monitor()
     with open(testfile, "w") as f:
-        f.write(dev[0].p2p_dev_addr())
+        f.write(dev[0].own_addr())
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")

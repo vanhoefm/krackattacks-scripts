@@ -117,6 +117,7 @@ def test_wpas_config_file(dev):
             raise Exception("Unexpected configuration change")
 
         wpas.request("SET update_config 0")
+        wpas.global_request("SET update_config 0")
         if "OK" in wpas.request("SAVE_CONFIG"):
             raise Exception("SAVE_CONFIG succeeded unexpectedly")
         if "OK" in wpas.global_request("SAVE_CONFIG"):
@@ -126,6 +127,7 @@ def test_wpas_config_file(dev):
         os.remove(config)
         os.mkdir(config)
         wpas.request("SET update_config 1")
+        wpas.global_request("SET update_config 1")
         if "OK" in wpas.request("SAVE_CONFIG"):
             raise Exception("SAVE_CONFIG succeeded unexpectedly")
         if "OK" in wpas.global_request("SAVE_CONFIG"):

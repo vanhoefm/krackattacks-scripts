@@ -1469,6 +1469,8 @@ def _test_wpas_ctrl_interface_add2(dev, apdev, ifname):
 
     subprocess.call(['iw', 'dev', dev[0].ifname, 'interface', 'add', ifname,
                      'type', 'station'])
+    subprocess.call(['ip', 'link', 'set', 'dev', ifname, 'address',
+                     '02:01:00:00:02:01'])
     dev[0].interface_add(ifname, set_ifname=False, all_params=True)
     wpas = WpaSupplicant(ifname=ifname)
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")

@@ -1006,7 +1006,7 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 		}
 	}
 	if (tb[NL80211_ATTR_SCAN_FREQUENCIES]) {
-		char msg[200], *pos, *end;
+		char msg[300], *pos, *end;
 		int res;
 
 		pos = msg;
@@ -1753,7 +1753,7 @@ static void send_vendor_scan_event(struct wpa_driver_nl80211_data *drv,
 	}
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES]) {
-		char msg[200], *pos, *end;
+		char msg[300], *pos, *end;
 		int res;
 
 		pos = msg;

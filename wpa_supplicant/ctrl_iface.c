@@ -7825,6 +7825,7 @@ wpas_ctrl_vendor_elem_iface(struct wpa_supplicant *wpa_s,
 	case VENDOR_ELEM_P2P_INV_REQ:
 	case VENDOR_ELEM_P2P_INV_RESP:
 	case VENDOR_ELEM_P2P_ASSOC_REQ:
+	case VENDOR_ELEM_P2P_ASSOC_RESP:
 		return wpa_s->parent;
 #endif /* CONFIG_P2P */
 	default:

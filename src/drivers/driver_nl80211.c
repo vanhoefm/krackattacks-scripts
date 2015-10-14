@@ -1537,6 +1537,10 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 			   "after rfkill unblock");
 		return;
 	}
+
+	if (is_p2p_net_interface(drv->nlmode))
+		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+
 	/* rtnetlink ifup handler will report interface as enabled */
 }
 
@@ -2227,6 +2231,11 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 				   "interface '%s' UP", bss->ifname);
 			return ret;
 		}
+
+		if (is_p2p_net_interface(nlmode))
+			nl80211_disable_11b_rates(bss->drv,
+						  bss->drv->ifindex, 1);
+
 		if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
 			return ret;
 	} else {
@@ -6471,9 +6480,13 @@ static int wpa_driver_nl80211_deinit_p2p_cli(void *priv)
 static void wpa_driver_nl80211_resume(void *priv)
 {
 	struct i802_bss *bss = priv;
+	enum nl80211_iftype nlmode = nl80211_get_ifmode(bss);
 
 	if (i802_set_iface_flags(bss, 1))
 		wpa_printf(MSG_DEBUG, "nl80211: Failed to set interface up on resume event");
+
+	if (is_p2p_net_interface(nlmode))
+		nl80211_disable_11b_rates(bss->drv, bss->drv->ifindex, 1);
 }
 
 

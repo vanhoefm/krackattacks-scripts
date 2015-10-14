@@ -621,7 +621,10 @@ class FstAP (FstDevice):
         hostapd."""
         if len(self.fst_group) != 0:
             self.remove_all_sessions()
-            self.send_iface_detach_request(self.iface)
+            try:
+                self.send_iface_detach_request(self.iface)
+            except Exception, e:
+                logger.info(str(e))
         self.reg_ctrl.stop()
         del self.global_instance
         self.global_instance = None

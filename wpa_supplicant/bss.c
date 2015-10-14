@@ -799,7 +799,7 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 	struct wpa_bss *bss, *n;
 
 	os_get_reltime(&wpa_s->last_scan);
-	if (!new_scan)
+	if ((info && info->aborted) || !new_scan)
 		return; /* do not expire entries without new scan */
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {

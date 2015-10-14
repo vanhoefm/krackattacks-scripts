@@ -1704,10 +1704,10 @@ atheros_deinit(void *priv)
 	atheros_reset_appfilter(drv);
 
 	if (drv->wpa_ie || drv->wps_beacon_ie || drv->wps_probe_resp_ie) {
+		atheros_set_opt_ie(priv, NULL, 0);
 		wpabuf_free(drv->wpa_ie);
 		wpabuf_free(drv->wps_beacon_ie);
 		wpabuf_free(drv->wps_probe_resp_ie);
-		atheros_set_opt_ie(priv, NULL, 0);
 	}
 	netlink_deinit(drv->netlink);
 	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);

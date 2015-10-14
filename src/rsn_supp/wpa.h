@@ -104,6 +104,7 @@ struct rsn_supp_config {
 	size_t ssid_len;
 	int wpa_ptk_rekey;
 	int p2p;
+	int wpa_rsc_relaxation;
 };
 
 #ifndef CONFIG_NO_WPA

@@ -39,6 +39,7 @@
 #define DEFAULT_KEY_MGMT_OFFLOAD 1
 #define DEFAULT_CERT_IN_CB 1
 #define DEFAULT_P2P_GO_CTWINDOW 0
+#define DEFAULT_WPA_RSC_RELAXATION 1
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1252,6 +1253,16 @@ struct wpa_config {
 	 * interface.
 	 */
 	int fst_llt;
+
+	 /**
+	  * wpa_rsc_relaxation - RSC relaxation on GTK installation
+	  *
+	  * Values:
+	  * 0 - use the EAPOL-Key RSC value on GTK installation
+	  * 1 - use the null RSC if a bogus RSC value is detected in message 3
+	  * of 4-Way Handshake or message 1 of Group Key Handshake.
+	  */
+	 int wpa_rsc_relaxation;
 };
 
 

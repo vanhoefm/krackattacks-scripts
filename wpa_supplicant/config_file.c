@@ -1299,6 +1299,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->wps_priority)
 		fprintf(f, "wps_priority=%d\n", config->wps_priority);
+
+	if (config->wpa_rsc_relaxation != DEFAULT_WPA_RSC_RELAXATION)
+		fprintf(f, "wpa_rsc_relaxation=%d\n",
+			config->wpa_rsc_relaxation);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

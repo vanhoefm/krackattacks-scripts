@@ -3540,6 +3540,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->rand_addr_lifetime = DEFAULT_RAND_ADDR_LIFETIME;
 	config->key_mgmt_offload = DEFAULT_KEY_MGMT_OFFLOAD;
 	config->cert_in_cb = DEFAULT_CERT_IN_CB;
+	config->wpa_rsc_relaxation = DEFAULT_WPA_RSC_RELAXATION;
 
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);
@@ -4246,6 +4247,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(fst_priority, 1, FST_MAX_PRIO_VALUE), 0 },
 	{ INT_RANGE(fst_llt, 1, FST_MAX_LLT_MS), 0 },
 #endif /* CONFIG_FST */
+	{ INT_RANGE(wpa_rsc_relaxation, 0, 1), 0 },
 };
 
 #undef FUNC

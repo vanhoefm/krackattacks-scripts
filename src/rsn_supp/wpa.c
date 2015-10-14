@@ -1,6 +1,7 @@
 /*
  * WPA Supplicant - WPA state machine and EAPOL-Key processing
  * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
+ * Copyright(c) 2015 Intel Deutschland GmbH
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -21,6 +22,9 @@
 #include "wpa_i.h"
 #include "wpa_ie.h"
 #include "peerkey.h"
+
+
+static const u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
 /**
@@ -611,7 +615,6 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 	int keylen, rsclen;
 	enum wpa_alg alg;
 	const u8 *key_rsc;
-	u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	if (!sm->tk_to_set) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
@@ -768,12 +771,43 @@ static int wpa_supplicant_gtk_tx_bit_workaround(const struct wpa_sm *sm,
 }
 
 
+static int wpa_supplicant_rsc_relaxation(const struct wpa_sm *sm,
+					 const u8 *rsc)
+{
+	int rsclen;
+
+	if (!sm->wpa_rsc_relaxation)
+		return 0;
+
+	rsclen = wpa_cipher_rsc_len(sm->group_cipher);
+
+	/*
+	 * Try to detect RSC (endian) corruption issue where the AP sends
+	 * the RSC bytes in EAPOL-Key message in the wrong order, both if
+	 * it's actually a 6-byte field (as it should be) and if it treats
+	 * it as an 8-byte field.
+	 * An AP model known to have this bug is the Sapido RB-1632.
+	 */
+	if (rsclen == 6 && ((rsc[5] && !rsc[0]) || rsc[6] || rsc[7])) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+			"RSC %02x%02x%02x%02x%02x%02x%02x%02x is likely bogus, using 0",
+			rsc[0], rsc[1], rsc[2], rsc[3],
+			rsc[4], rsc[5], rsc[6], rsc[7]);
+
+		return 1;
+	}
+
+	return 0;
+}
+
+
 static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 				       const struct wpa_eapol_key *key,
 				       const u8 *gtk, size_t gtk_len,
 				       int key_info)
 {
 	struct wpa_gtk_data gd;
+	const u8 *key_rsc;
 
 	/*
 	 * IEEE Std 802.11i-2004 - 8.5.2 EAPOL-Key frames - Figure 43x
@@ -799,11 +833,15 @@ static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 	os_memcpy(gd.gtk, gtk, gtk_len);
 	gd.gtk_len = gtk_len;
 
+	key_rsc = key->key_rsc;
+	if (wpa_supplicant_rsc_relaxation(sm, key->key_rsc))
+		key_rsc = null_rsc;
+
 	if (sm->group_cipher != WPA_CIPHER_GTK_NOT_USED &&
 	    (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
 					       gtk_len, gtk_len,
 					       &gd.key_rsc_len, &gd.alg) ||
-	     wpa_supplicant_install_gtk(sm, &gd, key->key_rsc))) {
+	     wpa_supplicant_install_gtk(sm, &gd, key_rsc))) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"RSN: Failed to install GTK");
 		os_memset(&gd, 0, sizeof(gd));
@@ -1464,6 +1502,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	u16 key_info;
 	int rekey, ret;
 	struct wpa_gtk_data gd;
+	const u8 *key_rsc;
 
 	if (!sm->msg_3_of_4_ok) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
@@ -1494,7 +1533,11 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	if (ret)
 		goto failed;
 
-	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc) ||
+	key_rsc = key->key_rsc;
+	if (wpa_supplicant_rsc_relaxation(sm, key->key_rsc))
+		key_rsc = null_rsc;
+
+	if (wpa_supplicant_install_gtk(sm, &gd, key_rsc) ||
 	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info) < 0)
 		goto failed;
 	os_memset(&gd, 0, sizeof(gd));
@@ -2450,6 +2493,7 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 			sm->ssid_len = 0;
 		sm->wpa_ptk_rekey = config->wpa_ptk_rekey;
 		sm->p2p = config->p2p;
+		sm->wpa_rsc_relaxation = config->wpa_rsc_relaxation;
 	} else {
 		sm->network_ctx = NULL;
 		sm->peerkey_enabled = 0;
@@ -2460,6 +2504,7 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		sm->ssid_len = 0;
 		sm->wpa_ptk_rekey = 0;
 		sm->p2p = 0;
+		sm->wpa_rsc_relaxation = 0;
 	}
 }
 

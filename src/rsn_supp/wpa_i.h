@@ -61,6 +61,7 @@ struct wpa_sm {
 	size_t ssid_len;
 	int wpa_ptk_rekey;
 	int p2p;
+	int wpa_rsc_relaxation;
 
 	u8 own_addr[ETH_ALEN];
 	const char *ifname;

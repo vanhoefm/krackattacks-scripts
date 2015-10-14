@@ -357,6 +357,7 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
         cmd = subprocess.Popen(['brctl', 'showmacs', 'ap-br0'],
                                stdout=subprocess.PIPE)
         macs1 = cmd.stdout.read()
+        cmd = subprocess.call(['brctl', 'setageing', 'ap-br0', '1'])
         dev[0].request("DISCONNECT")
         dev[1].request("DISCONNECT")
         time.sleep(1)

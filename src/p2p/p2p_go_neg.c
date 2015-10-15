@@ -901,6 +901,14 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			return;
 		}
 
+		if (dev->go_neg_req_sent &&
+		    (dev->flags & P2P_DEV_PEER_WAITING_RESPONSE)) {
+			p2p_dbg(p2p,
+				"Do not reply since peer is waiting for us to start a new GO Negotiation and GO Neg Request already sent");
+			p2p_parse_free(&msg);
+			return;
+		}
+
 		go = p2p_go_det(p2p->go_intent, *msg.go_intent);
 		if (go < 0) {
 			p2p_dbg(p2p, "Incompatible GO Intent");

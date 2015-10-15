@@ -1398,6 +1398,25 @@ struct send_action_work {
 };
 
 
+static void wpas_p2p_free_send_action_work(struct wpa_supplicant *wpa_s)
+{
+	struct send_action_work *awork = wpa_s->p2p_send_action_work->ctx;
+
+	wpa_printf(MSG_DEBUG,
+		   "P2P: Free Action frame radio work @%p (freq=%u dst="
+		   MACSTR " src=" MACSTR " bssid=" MACSTR " wait_time=%u)",
+		   wpa_s->p2p_send_action_work, awork->freq,
+		   MAC2STR(awork->dst), MAC2STR(awork->src),
+		   MAC2STR(awork->bssid), awork->wait_time);
+	wpa_hexdump(MSG_DEBUG, "P2P: Freeing pending Action frame",
+		    awork->buf, awork->len);
+	os_free(awork);
+	wpa_s->p2p_send_action_work->ctx = NULL;
+	radio_work_done(wpa_s->p2p_send_action_work);
+	wpa_s->p2p_send_action_work = NULL;
+}
+
+
 static void wpas_p2p_send_action_work_timeout(void *eloop_ctx,
 					      void *timeout_ctx)
 {
@@ -1407,9 +1426,7 @@ static void wpas_p2p_send_action_work_timeout(void *eloop_ctx,
 		return;
 
 	wpa_printf(MSG_DEBUG, "P2P: Send Action frame radio work timed out");
-	os_free(wpa_s->p2p_send_action_work->ctx);
-	radio_work_done(wpa_s->p2p_send_action_work);
-	wpa_s->p2p_send_action_work = NULL;
+	wpas_p2p_free_send_action_work(wpa_s);
 }
 
 
@@ -1417,11 +1434,13 @@ static void wpas_p2p_action_tx_clear(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->p2p_send_action_work) {
 		struct send_action_work *awork;
+
 		awork = wpa_s->p2p_send_action_work->ctx;
+		wpa_printf(MSG_DEBUG,
+			   "P2P: Clear Action TX work @%p (wait_time=%u)",
+			   wpa_s->p2p_send_action_work, awork->wait_time);
 		if (awork->wait_time == 0) {
-			os_free(awork);
-			radio_work_done(wpa_s->p2p_send_action_work);
-			wpa_s->p2p_send_action_work = NULL;
+			wpas_p2p_free_send_action_work(wpa_s);
 		} else {
 			/*
 			 * In theory, this should not be needed, but number of

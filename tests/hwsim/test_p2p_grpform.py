@@ -4,8 +4,10 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import logging
 logger = logging.getLogger()
+import struct
 import time
 import threading
 import Queue
@@ -16,6 +18,7 @@ import hwsim_utils
 import utils
 from utils import HwsimSkip
 from wpasupplicant import WpaSupplicant
+from test_p2p_messages import parse_p2p_public_action, p2p_hdr, p2p_attr_capability, p2p_attr_go_intent, p2p_attr_config_timeout, p2p_attr_listen_channel, p2p_attr_intended_interface_addr, p2p_attr_channel_list, p2p_attr_device_info, p2p_attr_operating_channel, ie_p2p, ie_wsc, mgmt_tx, P2P_GO_NEG_REQ
 
 def check_grpform_results(i_res, r_res):
     if i_res['result'] != 'success' or r_res['result'] != 'success':
@@ -1050,3 +1053,175 @@ def test_grpform_not_ready2(dev):
         raise Exception("Unexpected peer discovered: " + ev)
     for i in range(3):
         dev[i].p2p_stop_find()
+
+def test_grpform_and_scan(dev):
+    """GO Negotiation and scan operations"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+
+    if "OK" not in dev[0].request("SCAN TYPE=ONLY freq=2412-2472"):
+        raise Exception("Could not start scan")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan did not start")
+    time.sleep(0.1)
+    # Request PD while the previously started scan is still in progress
+    if "OK" not in dev[0].request("P2P_PROV_DISC %s pbc" % addr1):
+        raise Exception("Could not request PD")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+    time.sleep(0.3)
+
+    dev[1].p2p_listen()
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-PBC-RESP"], timeout=5)
+    if ev is None:
+        raise Exception("PD Response not received")
+
+    if "OK" not in dev[0].request("SCAN TYPE=ONLY freq=2412-2472"):
+        raise Exception("Could not start scan")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan did not start")
+    time.sleep(0.1)
+    # Request GO Neg while the previously started scan is still in progress
+    if "OK" not in dev[0].request("P2P_CONNECT %s pbc" % addr1):
+        raise Exception("Could not request GO Negotiation")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
+    if ev is None:
+        raise Exception("GO Neg Req RX not reported")
+
+    dev[1].p2p_stop_find()
+
+    if "OK" not in dev[1].request("SCAN TYPE=ONLY freq=2412-2472"):
+        raise Exception("Could not start scan")
+    ev = dev[1].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan did not start")
+    time.sleep(0.1)
+    dev[1].global_request("P2P_CONNECT " + addr0 + " pbc")
+    ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+
+    ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev0 is None:
+        raise Exception("Group formation timed out on dev0")
+    dev[0].group_form_result(ev0)
+
+    ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev1 is None:
+        raise Exception("Group formation timed out on dev1")
+    dev[1].group_form_result(ev1)
+
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    remove_group(dev[0], dev[1])
+
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_grpform_go_neg_dup_on_restart(dev):
+    """Duplicated GO Negotiation Request after GO Neg restart"""
+    if dev[0].p2p_dev_addr() > dev[1].p2p_dev_addr():
+        higher = dev[0]
+        lower = dev[1]
+    else:
+        higher = dev[1]
+        lower = dev[0]
+    addr_low = lower.p2p_dev_addr()
+    addr_high = higher.p2p_dev_addr()
+    higher.p2p_listen()
+    if not lower.discover_peer(addr_high):
+        raise Exception("Could not discover peer")
+    lower.p2p_stop_find()
+
+    if "OK" not in lower.request("P2P_CONNECT %s pbc" % addr_high):
+        raise Exception("Could not request GO Negotiation")
+    ev = higher.wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
+    if ev is None:
+        raise Exception("GO Neg Req RX not reported")
+
+    # Wait for GO Negotiation Response (Status=1) to go through
+    time.sleep(0.2)
+
+    if "FAIL" in lower.request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+
+    higher.p2p_stop_find()
+    higher.global_request("P2P_CONNECT " + addr_low + " pbc")
+
+    # Wait for the GO Negotiation Request frame of the restarted GO Negotiation
+    rx_msg = lower.mgmt_rx()
+    if rx_msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(rx_msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame")
+    if p2p['subtype'] != 0:
+        raise Exception("Unexpected P2P Public Action subtype %d" % p2p['subtype'])
+
+    # Send duplicate GO Negotiation Request from the prior instance of GO
+    # Negotiation
+    lower.p2p_stop_find()
+    peer = higher.get_peer(addr_low)
+
+    msg = p2p_hdr(addr_high, addr_low, type=P2P_GO_NEG_REQ, dialog_token=123)
+    attrs = p2p_attr_capability(dev_capab=0x25, group_capab=0x08)
+    attrs += p2p_attr_go_intent(go_intent=7, tie_breaker=1)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_listen_channel(chan=(int(peer['listen_freq']) - 2407) / 5)
+    attrs += p2p_attr_intended_interface_addr(lower.p2p_dev_addr())
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr_low, config_methods=0x80, name="Device A")
+    attrs += p2p_attr_operating_channel()
+    wsc_attrs = struct.pack(">HHH", 0x1012, 2, 4)
+    msg['payload'] += ie_p2p(attrs) + ie_wsc(wsc_attrs)
+    mgmt_tx(lower, "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr_high, addr_high, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+
+    # Wait for the GO Negotiation Response frame which would have been sent in
+    # this case previously, but not anymore after the check for
+    # dev->go_neg_req_sent and dev->flags & P2P_DEV_PEER_WAITING_RESPONSE.
+    rx_msg = lower.mgmt_rx(timeout=0.2)
+    if rx_msg is not None:
+        raise Exception("Unexpected management frame")
+
+    if "FAIL" in lower.request("SET ext_mgmt_frame_handling 0"):
+        raise Exception("Failed to disable external management frame handling")
+    lower.p2p_listen()
+
+    ev = lower.wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("GO Negotiation did not succeed on dev0")
+
+    ev = higher.wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("GO Negotiation did not succeed on dev1")
+
+    ev0 = lower.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev0 is None:
+        raise Exception("Group formation timed out on dev0")
+    lower.group_form_result(ev0)
+
+    ev1 = higher.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev1 is None:
+        raise Exception("Group formation timed out on dev1")
+    higher.group_form_result(ev1)
+
+    lower.dump_monitor()
+    higher.dump_monitor()
+
+    remove_group(lower, higher)
+
+    lower.dump_monitor()
+    higher.dump_monitor()

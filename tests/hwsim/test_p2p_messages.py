@@ -145,8 +145,9 @@ def p2p_attr_channel_list():
 def p2p_attr_device_info(addr, name="Test", config_methods=0, dev_type="00010050F2040001"):
     val = struct.unpack('6B', binascii.unhexlify(addr.replace(':','')))
     val2 = struct.unpack('8B', binascii.unhexlify(dev_type))
-    t = (P2P_ATTR_DEVICE_INFO, 6 + 2 + 8 + 1 + 4 + len(name)) + val + (config_methods,) + val2 + (0,)
-    return struct.pack("<BH6BH8BB", *t) + struct.pack('>HH', 0x1011, len(name)) +name
+    t = (P2P_ATTR_DEVICE_INFO, 6 + 2 + 8 + 1 + 4 + len(name)) + val
+    t2 = val2 + (0,)
+    return struct.pack("<BH6B", *t) + struct.pack(">H", config_methods) + struct.pack("8BB", *t2) + struct.pack('>HH', 0x1011, len(name)) +name
 
 def p2p_attr_group_id(addr, ssid):
     val = struct.unpack('6B', binascii.unhexlify(addr.replace(':','')))

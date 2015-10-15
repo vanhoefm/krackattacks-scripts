@@ -627,9 +627,15 @@ static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 	 */
 
 	if (peer->initiator) {
+		u8 addr[ETH_ALEN];
+
 		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
 			   " - try to renew", MAC2STR(peer->addr));
-		wpa_tdls_start(sm, peer->addr);
+		/* cache the peer address before do_teardown */
+		os_memcpy(addr, peer->addr, ETH_ALEN);
+		wpa_tdls_do_teardown(sm, peer,
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+		wpa_tdls_start(sm, addr);
 	} else {
 		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
 			   " - tear down", MAC2STR(peer->addr));

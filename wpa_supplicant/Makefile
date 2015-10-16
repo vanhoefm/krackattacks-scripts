@@ -17,6 +17,16 @@ CFLAGS += -I$(abspath ../src/utils)
 
 -include .config
 
+ifndef CONFIG_NO_GITVER
+# Add VERSION_STR postfix for builds from a git repository
+ifeq ($(wildcard ../.git),../.git)
+GITVER := $(shell git describe --dirty=+)
+ifneq ($(GITVER),)
+CFLAGS += -DGIT_VERSION_STR_POSTFIX=\"-$(GITVER)\"
+endif
+endif
+endif
+
 ifdef CONFIG_TESTING_OPTIONS
 CFLAGS += -DCONFIG_TESTING_OPTIONS
 CONFIG_WPS_TESTING=y

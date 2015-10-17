@@ -898,6 +898,9 @@ int omac1_aes_vector(const u8 *key, size_t key_len, size_t num_elem,
 	int ret = -1;
 	size_t outlen, i;
 
+	if (TEST_FAIL())
+		return -1;
+
 	ctx = CMAC_CTX_new();
 	if (ctx == NULL)
 		return -1;

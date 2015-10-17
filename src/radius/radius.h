@@ -1,6 +1,6 @@
 /*
  * RADIUS message processing
- * Copyright (c) 2002-2009, 2012, 2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2012, 2014-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -52,6 +52,7 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_USER_PASSWORD = 2,
        RADIUS_ATTR_NAS_IP_ADDRESS = 4,
        RADIUS_ATTR_NAS_PORT = 5,
+       RADIUS_ATTR_FRAMED_IP_ADDRESS = 8,
        RADIUS_ATTR_FRAMED_MTU = 12,
        RADIUS_ATTR_REPLY_MESSAGE = 18,
        RADIUS_ATTR_STATE = 24,

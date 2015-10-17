@@ -1,6 +1,6 @@
 /*
  * hostapd / RADIUS Accounting
- * Copyright (c) 2002-2009, 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2012-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -145,6 +145,15 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 					 (u8 *) sta->radius_cui,
 					 os_strlen(sta->radius_cui))) {
 			wpa_printf(MSG_ERROR, "Could not add CUI from ACL");
+			goto fail;
+		}
+
+		if (sta->ipaddr &&
+		    !radius_msg_add_attr_int32(msg,
+					       RADIUS_ATTR_FRAMED_IP_ADDRESS,
+					       be_to_host32(sta->ipaddr))) {
+			wpa_printf(MSG_ERROR,
+				   "Could not add Framed-IP-Address");
 			goto fail;
 		}
 	}

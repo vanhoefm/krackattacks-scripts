@@ -2734,6 +2734,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			conf->preamble = LONG_PREAMBLE;
 	} else if (os_strcmp(buf, "ignore_broadcast_ssid") == 0) {
 		bss->ignore_broadcast_ssid = atoi(pos);
+	} else if (os_strcmp(buf, "no_probe_resp_if_max_sta") == 0) {
+		bss->no_probe_resp_if_max_sta = atoi(pos);
 	} else if (os_strcmp(buf, "wep_default_key") == 0) {
 		bss->ssid.wep.idx = atoi(pos);
 		if (bss->ssid.wep.idx > 3) {

@@ -844,6 +844,17 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 
+	if (hapd->conf->no_probe_resp_if_max_sta &&
+	    is_multicast_ether_addr(mgmt->da) &&
+	    is_multicast_ether_addr(mgmt->bssid) &&
+	    hapd->num_sta >= hapd->conf->max_num_sta &&
+	    !ap_get_sta(hapd, mgmt->sa)) {
+		wpa_printf(MSG_MSGDUMP, "%s: Ignore Probe Request from " MACSTR
+			   " since no room for additional STA",
+			   hapd->conf->iface, MAC2STR(mgmt->sa));
+		return;
+	}
+
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->iconf->ignore_probe_probability > 0.0 &&
 	    drand48() < hapd->iconf->ignore_probe_probability) {

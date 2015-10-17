@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import hashlib
 import hmac
 import logging
@@ -17,6 +18,7 @@ import time
 
 import hostapd
 from utils import HwsimSkip, require_under_vm
+from test_ap_hs20 import build_dhcp_ack
 
 def connect(dev, ssid, wait_connect=True):
     dev.connect(ssid, key_mgmt="WPA-EAP", scan_freq="2412",
@@ -286,6 +288,43 @@ def test_radius_acct_interim_unreachable(dev, apdev):
     req_e = int(end['radiusAccClientTimeouts'])
     if req_e < req_s + 2:
         raise Exception("Unexpected RADIUS server acct MIB value")
+
+def test_radius_acct_ipaddr(dev, apdev):
+    """RADIUS Accounting and Framed-IP-Address"""
+    try:
+        _test_radius_acct_ipaddr(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def _test_radius_acct_ipaddr(dev, apdev):
+    params = { "ssid": "radius-acct-open",
+               'acct_server_addr': "127.0.0.1",
+               'acct_server_port': "1813",
+               'acct_server_shared_secret': "radius",
+               'proxy_arp': '1',
+               'ap_isolate': '1',
+               'bridge': 'ap-br0' }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+    addr0 = dev[0].own_addr()
+
+    pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.123", chaddr=addr0)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.disable()
 
 def send_and_check_reply(srv, req, code, error_cause=0):
     reply = srv.SendPacket(req)

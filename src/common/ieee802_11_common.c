@@ -398,8 +398,8 @@ int ieee802_11_ie_count(const u8 *ies, size_t ies_len)
 	pos = ies;
 	end = ies + ies_len;
 
-	while (pos + 2 <= end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos >= 2) {
+		if (2 + pos[1] > end - pos)
 			break;
 		count++;
 		pos += 2 + pos[1];
@@ -419,8 +419,8 @@ struct wpabuf * ieee802_11_vendor_ie_concat(const u8 *ies, size_t ies_len,
 	end = ies + ies_len;
 	ie = NULL;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			return NULL;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    WPA_GET_BE32(&pos[2]) == oui_type) {
@@ -441,8 +441,8 @@ struct wpabuf * ieee802_11_vendor_ie_concat(const u8 *ies, size_t ies_len,
 	 * There may be multiple vendor IEs in the message, so need to
 	 * concatenate their data fields.
 	 */
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    WPA_GET_BE32(&pos[2]) == oui_type)

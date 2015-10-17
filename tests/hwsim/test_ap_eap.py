@@ -4037,3 +4037,63 @@ def test_eap_mschapv2_errors(dev, apdev):
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_eap_gpsk_errors(dev, apdev):
+    """EAP-GPSK error cases"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                   identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    tests = [ (1, "os_get_random;eap_gpsk_send_gpsk_2", None),
+              (1, "eap_gpsk_derive_session_id;eap_gpsk_send_gpsk_2",
+               "cipher=1"),
+              (1, "eap_gpsk_derive_session_id;eap_gpsk_send_gpsk_2",
+               "cipher=2"),
+              (1, "eap_gpsk_derive_keys_helper", None),
+              (2, "eap_gpsk_derive_keys_helper", None),
+              (1, "eap_gpsk_compute_mic_aes;eap_gpsk_compute_mic;eap_gpsk_send_gpsk_2",
+               "cipher=1"),
+              (1, "hmac_sha256;eap_gpsk_compute_mic;eap_gpsk_send_gpsk_2",
+               "cipher=2"),
+              (1, "eap_gpsk_compute_mic;eap_gpsk_validate_gpsk_3_mic", None),
+              (1, "eap_gpsk_compute_mic;eap_gpsk_send_gpsk_4", None),
+              (1, "eap_gpsk_derive_mid_helper", None) ]
+    for count, func, phase1 in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                           identity="gpsk user",
+                           password="abcdefghijklmnop0123456789abcdef",
+                           phase1=phase1,
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_gpsk_init"),
+              (2, "eap_gpsk_init"),
+              (3, "eap_gpsk_init"),
+              (1, "eap_gpsk_process_id_server"),
+              (1, "eap_msg_alloc;eap_gpsk_send_gpsk_2"),
+              (1, "eap_gpsk_derive_session_id;eap_gpsk_send_gpsk_2"),
+              (1, "eap_gpsk_derive_mid_helper;eap_gpsk_derive_session_id;eap_gpsk_send_gpsk_2"),
+              (1, "eap_gpsk_derive_keys"),
+              (1, "eap_gpsk_derive_keys_helper"),
+              (1, "eap_msg_alloc;eap_gpsk_send_gpsk_4"),
+              (1, "eap_gpsk_getKey"),
+              (1, "eap_gpsk_get_emsk"),
+              (1, "eap_gpsk_get_session_id") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].request("ERP_FLUSH")
+            dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                           identity="gpsk user", erp="1",
+                           password="abcdefghijklmnop0123456789abcdef",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

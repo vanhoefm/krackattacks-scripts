@@ -292,38 +292,47 @@ static int wpa_ft_parse_ftie(const u8 *ie, size_t ie_len,
 	pos = ie + sizeof(struct rsn_ftie);
 	end = ie + ie_len;
 
-	while (pos + 2 <= end && pos + 2 + pos[1] <= end) {
-		switch (pos[0]) {
+	while (end - pos >= 2) {
+		u8 id, len;
+
+		id = *pos++;
+		len = *pos++;
+		if (len > end - pos)
+			break;
+
+		switch (id) {
 		case FTIE_SUBELEM_R1KH_ID:
-			if (pos[1] != FT_R1KH_ID_LEN) {
-				wpa_printf(MSG_DEBUG, "FT: Invalid R1KH-ID "
-					   "length in FTIE: %d", pos[1]);
+			if (len != FT_R1KH_ID_LEN) {
+				wpa_printf(MSG_DEBUG,
+					   "FT: Invalid R1KH-ID length in FTIE: %d",
+					   len);
 				return -1;
 			}
-			parse->r1kh_id = pos + 2;
+			parse->r1kh_id = pos;
 			break;
 		case FTIE_SUBELEM_GTK:
-			parse->gtk = pos + 2;
-			parse->gtk_len = pos[1];
+			parse->gtk = pos;
+			parse->gtk_len = len;
 			break;
 		case FTIE_SUBELEM_R0KH_ID:
-			if (pos[1] < 1 || pos[1] > FT_R0KH_ID_MAX_LEN) {
-				wpa_printf(MSG_DEBUG, "FT: Invalid R0KH-ID "
-					   "length in FTIE: %d", pos[1]);
+			if (len < 1 || len > FT_R0KH_ID_MAX_LEN) {
+				wpa_printf(MSG_DEBUG,
+					   "FT: Invalid R0KH-ID length in FTIE: %d",
+					   len);
 				return -1;
 			}
-			parse->r0kh_id = pos + 2;
-			parse->r0kh_id_len = pos[1];
+			parse->r0kh_id = pos;
+			parse->r0kh_id_len = len;
 			break;
 #ifdef CONFIG_IEEE80211W
 		case FTIE_SUBELEM_IGTK:
-			parse->igtk = pos + 2;
-			parse->igtk_len = pos[1];
+			parse->igtk = pos;
+			parse->igtk_len = len;
 			break;
 #endif /* CONFIG_IEEE80211W */
 		}
 
-		pos += 2 + pos[1];
+		pos += len;
 	}
 
 	return 0;
@@ -345,11 +354,18 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 
 	pos = ies;
 	end = ies + ies_len;
-	while (pos + 2 <= end && pos + 2 + pos[1] <= end) {
-		switch (pos[0]) {
+	while (end - pos >= 2) {
+		u8 id, len;
+
+		id = *pos++;
+		len = *pos++;
+		if (len > end - pos)
+			break;
+
+		switch (id) {
 		case WLAN_EID_RSN:
-			parse->rsn = pos + 2;
-			parse->rsn_len = pos[1];
+			parse->rsn = pos;
+			parse->rsn_len = len;
 			ret = wpa_parse_wpa_ie_rsn(parse->rsn - 2,
 						   parse->rsn_len + 2,
 						   &data);
@@ -362,32 +378,32 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 				parse->rsn_pmkid = data.pmkid;
 			break;
 		case WLAN_EID_MOBILITY_DOMAIN:
-			if (pos[1] < sizeof(struct rsn_mdie))
+			if (len < sizeof(struct rsn_mdie))
 				return -1;
-			parse->mdie = pos + 2;
-			parse->mdie_len = pos[1];
+			parse->mdie = pos;
+			parse->mdie_len = len;
 			break;
 		case WLAN_EID_FAST_BSS_TRANSITION:
-			if (pos[1] < sizeof(*ftie))
+			if (len < sizeof(*ftie))
 				return -1;
-			ftie = (const struct rsn_ftie *) (pos + 2);
+			ftie = (const struct rsn_ftie *) pos;
 			prot_ie_count = ftie->mic_control[1];
-			if (wpa_ft_parse_ftie(pos + 2, pos[1], parse) < 0)
+			if (wpa_ft_parse_ftie(pos, len, parse) < 0)
 				return -1;
 			break;
 		case WLAN_EID_TIMEOUT_INTERVAL:
-			if (pos[1] != 5)
+			if (len != 5)
 				break;
-			parse->tie = pos + 2;
-			parse->tie_len = pos[1];
+			parse->tie = pos;
+			parse->tie_len = len;
 			break;
 		case WLAN_EID_RIC_DATA:
 			if (parse->ric == NULL)
-				parse->ric = pos;
+				parse->ric = pos - 2;
 			break;
 		}
 
-		pos += 2 + pos[1];
+		pos += len;
 	}
 
 	if (prot_ie_count == 0)
@@ -416,13 +432,15 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 	}
 
 	/* Determine the end of the RIC IE(s) */
-	pos = parse->ric;
-	while (pos && pos + 2 <= end && pos + 2 + pos[1] <= end &&
-	       prot_ie_count) {
-		prot_ie_count--;
-		pos += 2 + pos[1];
+	if (parse->ric) {
+		pos = parse->ric;
+		while (end - pos >= 2 && 2 + pos[1] <= end - pos &&
+		       prot_ie_count) {
+			prot_ie_count--;
+			pos += 2 + pos[1];
+		}
+		parse->ric_len = pos - parse->ric;
 	}
-	parse->ric_len = pos - parse->ric;
 	if (prot_ie_count) {
 		wpa_printf(MSG_DEBUG, "FT: %d protected IEs missing from "
 			   "frame", (int) prot_ie_count);

@@ -249,6 +249,23 @@ def test_ap_max_num_sta(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected association")
 
+def test_ap_max_num_sta_no_probe_resp(dev, apdev):
+    """Maximum STA count and limit on Probe Response frames"""
+    dev[0].flush_scan_cache()
+    ssid = "max"
+    params = {}
+    params['ssid'] = ssid
+    params['beacon_int'] = "2000"
+    params['max_num_sta'] = "1"
+    params['no_probe_resp_if_max_sta'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[0].scan(freq=2412, type="ONLY")
+    dev[0].scan(freq=2412, type="ONLY")
+    if dev[0].get_bss(apdev[0]['bssid']) != None:
+        raise Exception("AP found unexpectedly")
+    dev[1].scan(freq=2412, type="ONLY")
+
 def test_ap_tx_queue_params(dev, apdev):
     """Open AP with TX queue params set"""
     ssid = "tx"

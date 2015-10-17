@@ -636,11 +636,11 @@ static void p2p_update_peer_vendor_elems(struct p2p_device *dev, const u8 *ies,
 
 	end = ies + ies_len;
 
-	for (pos = ies; pos + 1 < end; pos += len) {
+	for (pos = ies; end - pos > 1; pos += len) {
 		id = *pos++;
 		len = *pos++;
 
-		if (pos + len > end)
+		if (len > end - pos)
 			break;
 
 		if (id != WLAN_EID_VENDOR_SPECIFIC || len < 3)

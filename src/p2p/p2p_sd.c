@@ -28,11 +28,11 @@ static int wfd_wsd_supported(struct wpabuf *wfd)
 	pos = wpabuf_head(wfd);
 	end = pos + wpabuf_len(wfd);
 
-	while (pos + 3 <= end) {
+	while (end - pos >= 3) {
 		subelem = *pos++;
 		len = WPA_GET_BE16(pos);
 		pos += 2;
-		if (pos + len > end)
+		if (len > end - pos)
 			break;
 
 		if (subelem == WFD_SUBELEM_DEVICE_INFO && len >= 6) {
@@ -355,11 +355,11 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	pos++;
 
 	slen = *pos++;
-	next = pos + slen;
-	if (next > end || slen < 2) {
+	if (slen > end - pos || slen < 2) {
 		p2p_dbg(p2p, "Invalid IE in GAS Initial Request");
 		return;
 	}
+	next = pos + slen;
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
@@ -370,16 +370,16 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 
 	pos = next;
 	/* Query Request */
-	if (pos + 2 > end)
+	if (end - pos < 2)
 		return;
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	if (pos + slen > end)
+	if (slen > end - pos)
 		return;
 	end = pos + slen;
 
 	/* ANQP Query Request */
-	if (pos + 4 > end)
+	if (end - pos < 4)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
 		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
@@ -389,7 +389,7 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	if (pos + slen > end || slen < 3 + 1) {
+	if (slen > end - pos || slen < 3 + 1) {
 		p2p_dbg(p2p, "Invalid ANQP Query Request length");
 		return;
 	}
@@ -401,7 +401,7 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	}
 	pos += 4;
 
-	if (pos + 2 > end)
+	if (end - pos < 2)
 		return;
 	update_indic = WPA_GET_LE16(pos);
 	p2p_dbg(p2p, "Service Update Indicator: %u", update_indic);
@@ -512,11 +512,11 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	pos++;
 
 	slen = *pos++;
-	next = pos + slen;
-	if (next > end || slen < 2) {
+	if (slen > end - pos || slen < 2) {
 		p2p_dbg(p2p, "Invalid IE in GAS Initial Response");
 		return;
 	}
+	next = pos + slen;
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
@@ -527,14 +527,14 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 
 	pos = next;
 	/* Query Response */
-	if (pos + 2 > end) {
+	if (end - pos < 2) {
 		p2p_dbg(p2p, "Too short Query Response");
 		return;
 	}
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
 	p2p_dbg(p2p, "Query Response Length: %d", slen);
-	if (pos + slen > end) {
+	if (slen > end - pos) {
 		p2p_dbg(p2p, "Not enough Query Response data");
 		return;
 	}
@@ -552,7 +552,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	/* ANQP Query Response */
-	if (pos + 4 > end)
+	if (end - pos < 4)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
 		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
@@ -562,7 +562,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	if (pos + slen > end || slen < 3 + 1) {
+	if (slen > end - pos || slen < 3 + 1) {
 		p2p_dbg(p2p, "Invalid ANQP Query Response length");
 		return;
 	}
@@ -574,7 +574,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 	pos += 4;
 
-	if (pos + 2 > end)
+	if (end - pos < 2)
 		return;
 	update_indic = WPA_GET_LE16(pos);
 	p2p_dbg(p2p, "Service Update Indicator: %u", update_indic);
@@ -727,11 +727,11 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	pos++;
 
 	slen = *pos++;
-	next = pos + slen;
-	if (next > end || slen < 2) {
+	if (slen > end - pos || slen < 2) {
 		p2p_dbg(p2p, "Invalid IE in GAS Comeback Response");
 		return;
 	}
+	next = pos + slen;
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
@@ -742,14 +742,14 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 
 	pos = next;
 	/* Query Response */
-	if (pos + 2 > end) {
+	if (end - pos < 2) {
 		p2p_dbg(p2p, "Too short Query Response");
 		return;
 	}
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
 	p2p_dbg(p2p, "Query Response Length: %d", slen);
-	if (pos + slen > end) {
+	if (slen > end - pos) {
 		p2p_dbg(p2p, "Not enough Query Response data");
 		return;
 	}
@@ -768,7 +768,7 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	/* ANQP Query Response */
-	if (pos + 4 > end)
+	if (end - pos < 4)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
 		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
@@ -783,7 +783,7 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 		p2p_dbg(p2p, "Invalid ANQP Query Response length");
 		return;
 	}
-	if (pos + 4 > end)
+	if (end - pos < 4)
 		return;
 
 	if (WPA_GET_BE32(pos) != P2P_IE_VENDOR_TYPE) {
@@ -793,7 +793,7 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 	pos += 4;
 
-	if (pos + 2 > end)
+	if (end - pos < 2)
 		return;
 	p2p->sd_rx_update_indic = WPA_GET_LE16(pos);
 	p2p_dbg(p2p, "Service Update Indicator: %u", p2p->sd_rx_update_indic);

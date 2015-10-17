@@ -296,14 +296,14 @@ static int wifi_display_add_dev_info_descr(struct wpabuf *buf,
 	os_memset(zero_addr, 0, ETH_ALEN);
 	pos = wpabuf_head_u8(m->wfd_ie);
 	end = pos + wpabuf_len(m->wfd_ie);
-	while (pos + 1 < end) {
+	while (end - pos >= 3) {
 		u8 id;
 		u16 len;
 
 		id = *pos++;
 		len = WPA_GET_BE16(pos);
 		pos += 2;
-		if (pos + len > end)
+		if (len > end - pos)
 			break;
 
 		switch (id) {

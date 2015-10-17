@@ -38,7 +38,7 @@ int p2p_peer_channels_check(struct p2p_data *p2p, struct p2p_channels *own,
 {
 	const u8 *pos, *end;
 	struct p2p_channels *ch;
-	size_t channels;
+	u8 channels;
 	struct p2p_channels intersection;
 
 	ch = &dev->channels;
@@ -58,14 +58,14 @@ int p2p_peer_channels_check(struct p2p_data *p2p, struct p2p_channels *own,
 	}
 	pos += 3;
 
-	while (pos + 2 < end) {
+	while (end - pos > 2) {
 		struct p2p_reg_class *cl = &ch->reg_class[ch->reg_classes];
 		cl->reg_class = *pos++;
-		if (pos + 1 + pos[0] > end) {
+		channels = *pos++;
+		if (channels > end - pos) {
 			p2p_info(p2p, "Invalid peer Channel List");
 			return -1;
 		}
-		channels = *pos++;
 		cl->channels = channels > P2P_MAX_REG_CLASS_CHANNELS ?
 			P2P_MAX_REG_CLASS_CHANNELS : channels;
 		os_memcpy(cl->channel, pos, cl->channels);

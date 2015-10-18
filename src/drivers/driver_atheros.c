@@ -1246,7 +1246,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		 * Format: "Manage.prob_req <frame len>" | zero padding | frame
 		 */
 		int len = atoi(custom + 16);
-		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || MGMT_FRAM_TAG_SIZE + len > end - custom) {
 			wpa_printf(MSG_DEBUG, "Invalid Manage.prob_req event "
 				   "length %d", len);
 			return;
@@ -1259,7 +1259,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		/* Format: "Manage.assoc_req <frame len>" | zero padding |
 		 * frame */
 		int len = atoi(custom + 17);
-		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || MGMT_FRAM_TAG_SIZE + len > end - custom) {
 			wpa_printf(MSG_DEBUG,
 				   "Invalid Manage.assoc_req event length %d",
 				   len);
@@ -1271,7 +1271,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		/* Format: "Manage.auth <frame len>" | zero padding | frame */
 		int len = atoi(custom + 12);
 			if (len < 0 ||
-			    custom + MGMT_FRAM_TAG_SIZE + len > end) {
+			    MGMT_FRAM_TAG_SIZE + len > end - custom) {
 			wpa_printf(MSG_DEBUG,
 				   "Invalid Manage.auth event length %d", len);
 			return;
@@ -1284,7 +1284,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		/* Format: "Manage.assoc_req <frame len>" | zero padding | frame
 		 */
 		int len = atoi(custom + 14);
-		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || MGMT_FRAM_TAG_SIZE + len > end - custom) {
 			wpa_printf(MSG_DEBUG,
 				   "Invalid Manage.action event length %d",
 				   len);
@@ -1384,7 +1384,7 @@ atheros_wireless_event_atheros_custom(struct atheros_driver_data *drv,
 
 static void
 atheros_wireless_event_wireless(struct atheros_driver_data *drv,
-				char *data, int len)
+				char *data, unsigned int len)
 {
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
 	char *pos, *end, *custom, *buf;
@@ -1392,13 +1392,13 @@ atheros_wireless_event_wireless(struct atheros_driver_data *drv,
 	pos = data;
 	end = data + len;
 
-	while (pos + IW_EV_LCP_LEN <= end) {
+	while ((size_t) (end - pos) >= IW_EV_LCP_LEN) {
 		/* Event data may be unaligned, so make a local, aligned copy
 		 * before processing. */
 		memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
 		wpa_printf(MSG_MSGDUMP, "Wireless event: cmd=0x%x len=%d",
 			   iwe->cmd, iwe->len);
-		if (iwe->len <= IW_EV_LCP_LEN)
+		if (iwe->len <= IW_EV_LCP_LEN || iwe->len > end - pos)
 			return;
 
 		custom = pos + IW_EV_POINT_LEN;
@@ -1430,7 +1430,7 @@ atheros_wireless_event_wireless(struct atheros_driver_data *drv,
 			 * just like IWEVCUSTOM.
 			 */
 		case IWEVCUSTOM:
-			if (custom + iwe->u.data.length > end)
+			if (iwe->u.data.length > end - custom)
 				return;
 			buf = malloc(iwe->u.data.length + 1);
 			if (buf == NULL)

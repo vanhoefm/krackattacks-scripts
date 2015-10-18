@@ -1950,3 +1950,31 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_NO_COMMON_CHANNELS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_NO_COMMON_CHANNELS, dialog_token)
+
+def test_p2p_msg_group_info(dev):
+    """P2P protocol tests for Group Info parsing"""
+    try:
+        _test_p2p_msg_group_info(dev)
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 2 *")
+
+def _test_p2p_msg_group_info(dev):
+    tests = [ "dd08506f9a090e010001",
+              "dd08506f9a090e010000",
+              "dd20506f9a090e190018" + "112233445566" + "aabbccddeeff" + "00" + "0000" + "0000000000000000" + "ff",
+              "dd20506f9a090e190018" + "112233445566" + "aabbccddeeff" + "00" + "0000" + "0000000000000000" + "00",
+              "dd24506f9a090e1d001c" + "112233445566" + "aabbccddeeff" + "00" + "0000" + "0000000000000000" + "00" + "00000000",
+              "dd24506f9a090e1d001c" + "112233445566" + "aabbccddeeff" + "00" + "0000" + "0000000000000000" + "00" + "10110001",
+              "dd24506f9a090e1d001c" + "112233445566" + "aabbccddeeff" + "00" + "0000" + "0000000000000000" + "00" + "1011ffff" ]
+    for t in tests:
+        dev[0].request("VENDOR_ELEM_REMOVE 2 *")
+        if "OK" not in dev[0].request("VENDOR_ELEM_ADD 2 " + t):
+            raise Exception("VENDOR_ELEM_ADD failed")
+        dev[0].p2p_start_go(freq=2412)
+        bssid = dev[0].get_group_status_field('bssid')
+        dev[2].request("BSS_FLUSH 0")
+        dev[2].scan_for_bss(bssid, freq=2412, force_scan=True)
+        bss = dev[2].request("BSS " + bssid)
+        if 'p2p_group_client' in bss:
+            raise Exception("Unexpected p2p_group_client")
+        dev[0].remove_group()

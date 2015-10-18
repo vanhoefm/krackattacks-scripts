@@ -448,8 +448,8 @@ const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie)
 	pos = ies;
 	end = ies + ies_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == ie)
 			return pos;

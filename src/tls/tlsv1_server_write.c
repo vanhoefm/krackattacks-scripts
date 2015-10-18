@@ -168,6 +168,11 @@ static int tls_write_server_certificate(struct tlsv1_server *conn,
 	}
 
 	pos = *msgpos;
+	if (TLS_RECORD_HEADER_LEN + 1 + 3 + 3 > end - pos) {
+		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				   TLS_ALERT_INTERNAL_ERROR);
+		return -1;
+	}
 
 	tlsv1_server_log(conn, "Send Certificate");
 	rhdr = pos;
@@ -188,7 +193,7 @@ static int tls_write_server_certificate(struct tlsv1_server *conn,
 	pos += 3;
 	cert = conn->cred->cert;
 	while (cert) {
-		if (pos + 3 + cert->cert_len > end) {
+		if (3 + cert->cert_len > (size_t) (end - pos)) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space "
 				   "for Certificate (cert_len=%lu left=%lu)",
 				   (unsigned long) cert->cert_len,
@@ -371,7 +376,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	/* body - ServerDHParams */
 	server_params = pos;
 	/* dh_p */
-	if (pos + 2 + dh_p_len > end) {
+	if (2 + dh_p_len > (size_t) (end - pos)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space for "
 			   "dh_p");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -385,7 +390,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	pos += dh_p_len;
 
 	/* dh_g */
-	if (pos + 2 + conn->cred->dh_g_len > end) {
+	if (2 + conn->cred->dh_g_len > (size_t) (end - pos)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space for "
 			   "dh_g");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -399,7 +404,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	pos += conn->cred->dh_g_len;
 
 	/* dh_Ys */
-	if (pos + 2 + dh_ys_len > end) {
+	if (2 + dh_ys_len > (size_t) (end - pos)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space for "
 			   "dh_Ys");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -457,7 +462,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 			 *   SignatureAlgorithm signature;
 			 * } SignatureAndHashAlgorithm;
 			 */
-			if (hlen < 0 || pos + 2 > end) {
+			if (hlen < 0 || end - pos < 2) {
 				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 						   TLS_ALERT_INTERNAL_ERROR);
 				return -1;

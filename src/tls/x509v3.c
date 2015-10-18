@@ -199,11 +199,10 @@ static int x509_parse_algorithm_identifier(
 			   hdr.class, hdr.tag);
 		return -1;
 	}
+	if (hdr.length > buf + len - hdr.payload)
+		return -1;
 	pos = hdr.payload;
 	end = pos + hdr.length;
-
-	if (end > buf + len)
-		return -1;
 
 	*next = end;
 
@@ -243,7 +242,7 @@ static int x509_parse_public_key(const u8 *buf, size_t len,
 	}
 	pos = hdr.payload;
 
-	if (pos + hdr.length > end)
+	if (hdr.length > end - pos)
 		return -1;
 	end = pos + hdr.length;
 	*next = end;
@@ -319,7 +318,7 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 	}
 	pos = hdr.payload;
 
-	if (pos + hdr.length > buf + len)
+	if (hdr.length > buf + len - pos)
 		return -1;
 
 	end = *next = pos + hdr.length;
@@ -677,7 +676,7 @@ static int x509_parse_validity(const u8 *buf, size_t len,
 	pos = hdr.payload;
 	plen = hdr.length;
 
-	if (pos + plen > buf + len)
+	if (plen > (size_t) (buf + len - pos))
 		return -1;
 
 	*next = pos + plen;
@@ -801,7 +800,7 @@ static int x509_parse_ext_basic_constraints(struct x509_certificate *cert,
 		}
 		cert->ca = hdr.payload[0];
 
-		if (hdr.payload + hdr.length == pos + len) {
+		if (hdr.length == pos + len - hdr.payload) {
 			wpa_printf(MSG_DEBUG, "X509: BasicConstraints - cA=%d",
 				   cert->ca);
 			return 0;
@@ -1503,12 +1502,12 @@ struct x509_certificate * x509_certificate_parse(const u8 *buf, size_t len)
 	}
 	pos = hdr.payload;
 
-	if (pos + hdr.length > end) {
+	if (hdr.length > end - pos) {
 		x509_certificate_free(cert);
 		return NULL;
 	}
 
-	if (pos + hdr.length < end) {
+	if (hdr.length < end - pos) {
 		wpa_hexdump(MSG_MSGDUMP, "X509: Ignoring extra data after DER "
 			    "encoded certificate",
 			    pos + hdr.length, end - (pos + hdr.length));

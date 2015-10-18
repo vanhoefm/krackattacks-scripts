@@ -134,6 +134,11 @@ static int tls_write_client_certificate(struct tlsv1_client *conn,
 	struct x509_certificate *cert;
 
 	pos = *msgpos;
+	if (TLS_RECORD_HEADER_LEN + 1 + 3 + 3 > end - pos) {
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+			  TLS_ALERT_INTERNAL_ERROR);
+		return -1;
+	}
 
 	wpa_printf(MSG_DEBUG, "TLSv1: Send Certificate");
 	rhdr = pos;
@@ -154,7 +159,7 @@ static int tls_write_client_certificate(struct tlsv1_client *conn,
 	pos += 3;
 	cert = conn->cred ? conn->cred->cert : NULL;
 	while (cert) {
-		if (pos + 3 + cert->cert_len > end) {
+		if (3 + cert->cert_len > (size_t) (end - pos)) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space "
 				   "for Certificate (cert_len=%lu left=%lu)",
 				   (unsigned long) cert->cert_len,
@@ -265,9 +270,16 @@ static int tlsv1_key_x_dh(struct tlsv1_client *conn, u8 **pos, u8 *end)
 	wpa_hexdump(MSG_DEBUG, "TLSv1: DH Yc (client's public value)",
 		    dh_yc, dh_yc_len);
 
+	if (end - *pos < 2) {
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+			  TLS_ALERT_INTERNAL_ERROR);
+		os_free(csecret);
+		os_free(dh_yc);
+		return -1;
+	}
 	WPA_PUT_BE16(*pos, dh_yc_len);
 	*pos += 2;
-	if (*pos + dh_yc_len > end) {
+	if (dh_yc_len > (size_t) (end - *pos)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough room in the "
 			   "message buffer for Yc");
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,

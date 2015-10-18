@@ -1096,7 +1096,7 @@ static int eap_fast_parse_decrypted(struct wpabuf *decrypted,
 	/* Parse TLVs from the decrypted Phase 2 data */
 	pos = wpabuf_mhead(decrypted);
 	end = pos + wpabuf_len(decrypted);
-	while (pos + 4 < end) {
+	while (end - pos > 4) {
 		mandatory = pos[0] & 0x80;
 		tlv_type = WPA_GET_BE16(pos) & 0x3fff;
 		pos += 2;

@@ -709,7 +709,7 @@ static void eap_fast_pac_get_a_id(struct eap_fast_pac *pac)
 	pos = pac->pac_info;
 	end = pos + pac->pac_info_len;
 
-	while (pos + 4 < end) {
+	while (end - pos > 4) {
 		type = WPA_GET_BE16(pos);
 		pos += 2;
 		len = WPA_GET_BE16(pos);

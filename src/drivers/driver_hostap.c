@@ -814,7 +814,7 @@ hostapd_wireless_event_wireless_custom(struct hostap_driver_data *drv,
 
 
 static void hostapd_wireless_event_wireless(struct hostap_driver_data *drv,
-					    char *data, int len)
+					    char *data, unsigned int len)
 {
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
 	char *pos, *end, *custom, *buf;
@@ -822,13 +822,13 @@ static void hostapd_wireless_event_wireless(struct hostap_driver_data *drv,
 	pos = data;
 	end = data + len;
 
-	while (pos + IW_EV_LCP_LEN <= end) {
+	while ((size_t) (end - pos) >= IW_EV_LCP_LEN) {
 		/* Event data may be unaligned, so make a local, aligned copy
 		 * before processing. */
 		memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
 		wpa_printf(MSG_DEBUG, "Wireless event: cmd=0x%x len=%d",
 			   iwe->cmd, iwe->len);
-		if (iwe->len <= IW_EV_LCP_LEN)
+		if (iwe->len <= IW_EV_LCP_LEN || iwe->len > end - pos)
 			return;
 
 		custom = pos + IW_EV_POINT_LEN;
@@ -847,7 +847,7 @@ static void hostapd_wireless_event_wireless(struct hostap_driver_data *drv,
 
 		switch (iwe->cmd) {
 		case IWEVCUSTOM:
-			if (custom + iwe->u.data.length > end)
+			if (iwe->u.data.length > end - custom)
 				return;
 			buf = malloc(iwe->u.data.length + 1);
 			if (buf == NULL)

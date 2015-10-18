@@ -187,8 +187,8 @@ static void wnm_sleep_mode_exit_success(struct wpa_supplicant *wpa_s,
 	end = ptr + key_len_total;
 	wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data", ptr, key_len_total);
 
-	while (ptr + 1 < end) {
-		if (ptr + 2 + ptr[1] > end) {
+	while (end - ptr > 1) {
+		if (2 + ptr[1] > end - ptr) {
 			wpa_printf(MSG_DEBUG, "WNM: Invalid Key Data element "
 				   "length");
 			if (end > ptr) {
@@ -259,9 +259,9 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 		return;
 	}
 	pos += 3 + key_len_total;
-	while (pos - frm < len) {
+	while (pos - frm + 1 < len) {
 		u8 ie_len = *(pos + 1);
-		if (pos + 2 + ie_len > frm + len) {
+		if (2 + ie_len > frm + len - pos) {
 			wpa_printf(MSG_INFO, "WNM: Invalid IE len %u", ie_len);
 			break;
 		}
@@ -790,7 +790,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 	unsigned int beacon_int;
 	u8 valid_int;
 
-	if (pos + 5 > end)
+	if (end - pos < 5)
 		return;
 
 	if (wpa_s->current_bss)
@@ -813,7 +813,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 	pos += 5;
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED) {
-		if (pos + 12 > end) {
+		if (end - pos < 12) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short BSS TM Request");
 			return;
 		}
@@ -824,7 +824,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) {
 		char url[256];
 
-		if (pos + 1 > end || pos + 1 + pos[0] > end) {
+		if (end - pos < 1 || 1 + pos[0] > end - pos) {
 			wpa_printf(MSG_DEBUG, "WNM: Invalid BSS Transition "
 				   "Management Request (URL)");
 			return;
@@ -860,7 +860,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wnm_neighbor_report_elements == NULL)
 			return;
 
-		while (pos + 2 <= end &&
+		while (end - pos >= 2 &&
 		       wpa_s->wnm_num_neighbor_report < WNM_MAX_NEIGHBOR_REPORT)
 		{
 			u8 tag = *pos++;
@@ -868,7 +868,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 			wpa_printf(MSG_DEBUG, "WNM: Neighbor report tag %u",
 				   tag);
-			if (pos + len > end) {
+			if (len > end - pos) {
 				wpa_printf(MSG_DEBUG, "WNM: Truncated request");
 				return;
 			}
@@ -971,7 +971,7 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 	pos = data;
 	end = data + len;
 
-	while (pos + 1 < end) {
+	while (end - pos > 1) {
 		ie = *pos++;
 		ie_len = *pos++;
 		wpa_printf(MSG_DEBUG, "WNM: WFA subelement %u len %u",
@@ -1009,7 +1009,7 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 				url = NULL;
 				osu_method = 1;
 			} else {
-				if (pos + url_len + 1 > ie_end) {
+				if (url_len + 1 > ie_end - pos) {
 					wpa_printf(MSG_DEBUG, "WNM: Not enough room for Server URL (len=%u) and Server Method (left %d)",
 						   url_len,
 						   (int) (ie_end - pos));
@@ -1048,7 +1048,7 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 				   "Imminent - Reason Code %u   "
 				   "Re-Auth Delay %u  URL Length %u",
 				   code, reauth_delay, url_len);
-			if (pos + url_len > ie_end)
+			if (url_len > ie_end - pos)
 				break;
 			url = os_malloc(url_len + 1);
 			if (url == NULL)

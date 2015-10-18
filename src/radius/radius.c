@@ -704,7 +704,7 @@ struct radius_msg * radius_msg_parse(const u8 *data, size_t len)
 
 		attr = (struct radius_attr_hdr *) pos;
 
-		if (pos + attr->length > end || attr->length < sizeof(*attr))
+		if (attr->length > end - pos || attr->length < sizeof(*attr))
 			goto fail;
 
 		/* TODO: check that attr->length is suitable for attr->type */

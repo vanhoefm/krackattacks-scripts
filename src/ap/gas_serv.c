@@ -401,7 +401,7 @@ static int hs20_add_nai_home_realm_matches(struct hostapd_data *hapd,
 
 	pos = home_realm;
 	end = pos + home_realm_len;
-	if (pos + 1 > end) {
+	if (end - pos < 1) {
 		wpa_hexdump(MSG_DEBUG, "Too short NAI Home Realm Query",
 			    home_realm, home_realm_len);
 		return -1;
@@ -409,7 +409,7 @@ static int hs20_add_nai_home_realm_matches(struct hostapd_data *hapd,
 	num_realms = *pos++;
 
 	for (i = 0; i < num_realms && num_matching < 10; i++) {
-		if (pos + 2 > end) {
+		if (end - pos < 2) {
 			wpa_hexdump(MSG_DEBUG,
 				    "Truncated NAI Home Realm Query",
 				    home_realm, home_realm_len);
@@ -417,7 +417,7 @@ static int hs20_add_nai_home_realm_matches(struct hostapd_data *hapd,
 		}
 		encoding = *pos++;
 		realm_len = *pos++;
-		if (pos + realm_len > end) {
+		if (realm_len > end - pos) {
 			wpa_hexdump(MSG_DEBUG,
 				    "Truncated NAI Home Realm Query",
 				    home_realm, home_realm_len);
@@ -991,7 +991,7 @@ static void rx_anqp_query_list(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "ANQP: %u Info IDs requested in Query list",
 		   (unsigned int) (end - pos) / 2);
 
-	while (pos + 2 <= end) {
+	while (end - pos >= 2) {
 		rx_anqp_query_list_id(hapd, WPA_GET_LE16(pos), qi);
 		pos += 2;
 	}
@@ -1080,7 +1080,7 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 	u32 oui;
 	u8 subtype;
 
-	if (pos + 4 > end) {
+	if (end - pos < 4) {
 		wpa_printf(MSG_DEBUG, "ANQP: Too short vendor specific ANQP "
 			   "Query element");
 		return;
@@ -1116,7 +1116,7 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 	}
 	pos++;
 
-	if (pos + 1 >= end)
+	if (end - pos <= 1)
 		return;
 
 	subtype = *pos++;
@@ -1244,12 +1244,12 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 	adv_proto = pos++;
 
 	slen = *pos++;
-	next = pos + slen;
-	if (next > end || slen < 2) {
+	if (slen > end - pos || slen < 2) {
 		wpa_msg(hapd->msg_ctx, MSG_DEBUG,
 			"GAS: Invalid IE in GAS Initial Request");
 		return;
 	}
+	next = pos + slen;
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
@@ -1276,11 +1276,11 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 
 	pos = next;
 	/* Query Request */
-	if (pos + 2 > end)
+	if (end - pos < 2)
 		return;
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	if (pos + slen > end)
+	if (slen > end - pos)
 		return;
 	end = pos + slen;
 
@@ -1288,7 +1288,7 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 	while (pos < end) {
 		u16 info_id, elen;
 
-		if (pos + 4 > end)
+		if (end - pos < 4)
 			return;
 
 		info_id = WPA_GET_LE16(pos);
@@ -1296,7 +1296,7 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		elen = WPA_GET_LE16(pos);
 		pos += 2;
 
-		if (pos + elen > end) {
+		if (elen > end - pos) {
 			wpa_printf(MSG_DEBUG, "ANQP: Invalid Query Request");
 			return;
 		}

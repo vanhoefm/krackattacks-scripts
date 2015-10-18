@@ -1024,8 +1024,8 @@ const u8 * wpa_bss_get_ie(const struct wpa_bss *bss, u8 ie)
 	pos = (const u8 *) (bss + 1);
 	end = pos + bss->ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == ie)
 			return pos;
@@ -1052,8 +1052,8 @@ const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type)
 	pos = (const u8 *) (bss + 1);
 	end = pos + bss->ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    vendor_type == WPA_GET_BE32(&pos[2]))
@@ -1089,8 +1089,8 @@ const u8 * wpa_bss_get_vendor_ie_beacon(const struct wpa_bss *bss,
 	pos += bss->ie_len;
 	end = pos + bss->beacon_ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    vendor_type == WPA_GET_BE32(&pos[2]))
@@ -1125,8 +1125,8 @@ struct wpabuf * wpa_bss_get_vendor_ie_multi(const struct wpa_bss *bss,
 	pos = (const u8 *) (bss + 1);
 	end = pos + bss->ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    vendor_type == WPA_GET_BE32(&pos[2]))
@@ -1170,8 +1170,8 @@ struct wpabuf * wpa_bss_get_vendor_ie_multi_beacon(const struct wpa_bss *bss,
 	pos += bss->ie_len;
 	end = pos + bss->beacon_ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
 		    vendor_type == WPA_GET_BE32(&pos[2]))

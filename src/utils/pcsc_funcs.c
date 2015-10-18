@@ -275,7 +275,7 @@ static int scard_parse_fsp_templ(unsigned char *buf, size_t buf_len,
 	pos++;
 	if (pos >= end)
 		return -1;
-	if ((pos + pos[0]) < end)
+	if (pos[0] < end - pos)
 		end = pos + 1 + pos[0];
 	pos++;
 	wpa_hexdump(MSG_DEBUG, "SCARD: file header FSP template",
@@ -1385,7 +1385,7 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 		end = buf + len;
 
 		/* RES */
-		if (pos[0] > RES_MAX_LEN || pos + pos[0] > end) {
+		if (pos[0] > RES_MAX_LEN || pos[0] > end - pos) {
 			wpa_printf(MSG_DEBUG, "SCARD: Invalid RES");
 			return -1;
 		}
@@ -1395,7 +1395,7 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 		wpa_hexdump(MSG_DEBUG, "SCARD: RES", res, *res_len);
 
 		/* CK */
-		if (pos[0] != CK_LEN || pos + CK_LEN > end) {
+		if (pos[0] != CK_LEN || CK_LEN > end - pos) {
 			wpa_printf(MSG_DEBUG, "SCARD: Invalid CK");
 			return -1;
 		}
@@ -1405,7 +1405,7 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 		wpa_hexdump(MSG_DEBUG, "SCARD: CK", ck, CK_LEN);
 
 		/* IK */
-		if (pos[0] != IK_LEN || pos + IK_LEN > end) {
+		if (pos[0] != IK_LEN || IK_LEN > end - pos) {
 			wpa_printf(MSG_DEBUG, "SCARD: Invalid IK");
 			return -1;
 		}

@@ -617,7 +617,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	prov->osu_ssid_len = osu_ssid_len;
 
 	/* OSU Friendly Name Length */
-	if (pos + 2 > end) {
+	if (end - pos < 2) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU "
 			   "Friendly Name Length");
 		return;
@@ -633,9 +633,9 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	pos += len2;
 
 	/* OSU Friendly Name Duples */
-	while (pos2 + 4 <= pos && prov->friendly_name_count < OSU_MAX_ITEMS) {
+	while (pos - pos2 >= 4 && prov->friendly_name_count < OSU_MAX_ITEMS) {
 		struct osu_lang_string *f;
-		if (pos2 + 1 + pos2[0] > pos || pos2[0] < 3) {
+		if (1 + pos2[0] > pos - pos2 || pos2[0] < 3) {
 			wpa_printf(MSG_DEBUG, "Invalid OSU Friendly Name");
 			break;
 		}
@@ -646,7 +646,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 
 	/* OSU Server URI */
-	if (pos + 1 > end) {
+	if (end - pos < 1) {
 		wpa_printf(MSG_DEBUG,
 			   "HS 2.0: Not enough room for OSU Server URI length");
 		return;
@@ -661,7 +661,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	pos += uri_len;
 
 	/* OSU Method list */
-	if (pos + 1 > end) {
+	if (end - pos < 1) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU Method "
 			   "list length");
 		return;
@@ -681,7 +681,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 
 	/* Icons Available Length */
-	if (pos + 2 > end) {
+	if (end - pos < 2) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for Icons "
 			   "Available Length");
 		return;
@@ -701,7 +701,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		struct osu_icon *icon = &prov->icon[prov->icon_count];
 		u8 flen;
 
-		if (pos2 + 2 + 2 + 3 + 1 + 1 > pos) {
+		if (2 + 2 + 3 + 1 + 1 > pos - pos2) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Invalid Icon Metadata");
 			break;
 		}
@@ -713,46 +713,46 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		os_memcpy(icon->lang, pos2, 3);
 		pos2 += 3;
 
-		flen = pos2[0];
-		if (flen > pos - pos2 - 1) {
+		flen = *pos2++;
+		if (flen > pos - pos2) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Not room for Icon Type");
 			break;
 		}
-		os_memcpy(icon->icon_type, pos2 + 1, flen);
-		pos2 += 1 + flen;
+		os_memcpy(icon->icon_type, pos2, flen);
+		pos2 += flen;
 
-		if (pos2 + 1 > pos) {
+		if (pos - pos2 < 1) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Not room for Icon "
 				   "Filename length");
 			break;
 		}
-		flen = pos2[0];
-		if (flen > pos - pos2 - 1) {
+		flen = *pos2++;
+		if (flen > pos - pos2) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Not room for Icon "
 				   "Filename");
 			break;
 		}
-		os_memcpy(icon->filename, pos2 + 1, flen);
-		pos2 += 1 + flen;
+		os_memcpy(icon->filename, pos2, flen);
+		pos2 += flen;
 
 		prov->icon_count++;
 	}
 
 	/* OSU_NAI */
-	if (pos + 1 > end) {
+	if (end - pos < 1) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU_NAI");
 		return;
 	}
-	osu_nai_len = pos[0];
-	if (osu_nai_len > end - pos - 1) {
+	osu_nai_len = *pos++;
+	if (osu_nai_len > end - pos) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU_NAI");
 		return;
 	}
-	os_memcpy(prov->osu_nai, pos + 1, osu_nai_len);
-	pos += 1 + osu_nai_len;
+	os_memcpy(prov->osu_nai, pos, osu_nai_len);
+	pos += osu_nai_len;
 
 	/* OSU Service Description Length */
-	if (pos + 2 > end) {
+	if (end - pos < 2) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU "
 			   "Service Description Length");
 		return;
@@ -768,20 +768,20 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	pos += len2;
 
 	/* OSU Service Description Duples */
-	while (pos2 + 4 <= pos && prov->serv_desc_count < OSU_MAX_ITEMS) {
+	while (pos - pos2 >= 4 && prov->serv_desc_count < OSU_MAX_ITEMS) {
 		struct osu_lang_string *f;
 		u8 descr_len;
 
-		descr_len = pos2[0];
-		if (descr_len > pos - pos2 - 1 || descr_len < 3) {
+		descr_len = *pos2++;
+		if (descr_len > pos - pos2 || descr_len < 3) {
 			wpa_printf(MSG_DEBUG, "Invalid OSU Service "
 				   "Description");
 			break;
 		}
 		f = &prov->serv_desc[prov->serv_desc_count++];
-		os_memcpy(f->lang, pos2 + 1, 3);
-		os_memcpy(f->text, pos2 + 1 + 3, descr_len - 3);
-		pos2 += 1 + descr_len;
+		os_memcpy(f->lang, pos2, 3);
+		os_memcpy(f->text, pos2 + 3, descr_len - 3);
+		pos2 += descr_len;
 	}
 
 	wpa_printf(MSG_DEBUG, "HS 2.0: Added OSU Provider through " MACSTR,
@@ -816,9 +816,9 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s)
 		end = pos + wpabuf_len(prov_anqp);
 
 		/* OSU SSID */
-		if (pos + 1 > end)
+		if (end - pos < 1)
 			continue;
-		if (pos + 1 + pos[0] > end) {
+		if (1 + pos[0] > end - pos) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for "
 				   "OSU SSID");
 			continue;
@@ -832,7 +832,7 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s)
 		osu_ssid = pos;
 		pos += osu_ssid_len;
 
-		if (pos + 1 > end) {
+		if (end - pos < 1) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for "
 				   "Number of OSU Providers");
 			continue;
@@ -842,7 +842,7 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s)
 			   num_providers);
 
 		/* OSU Providers */
-		while (pos + 2 < end && num_providers > 0) {
+		while (end - pos > 2 && num_providers > 0) {
 			num_providers--;
 			len = WPA_GET_LE16(pos);
 			pos += 2;

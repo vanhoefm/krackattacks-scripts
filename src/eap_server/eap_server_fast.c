@@ -180,42 +180,47 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 			buf, end - buf);
 
 	pos = buf;
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		u8 id, elen;
+
+		id = *pos++;
+		elen = *pos++;
+		if (elen > end - pos)
 			break;
 
-		switch (*pos) {
+		switch (id) {
 		case PAC_OPAQUE_TYPE_PAD:
 			goto done;
 		case PAC_OPAQUE_TYPE_KEY:
-			if (pos[1] != EAP_FAST_PAC_KEY_LEN) {
-				wpa_printf(MSG_DEBUG, "EAP-FAST: Invalid "
-					   "PAC-Key length %d", pos[1]);
+			if (elen != EAP_FAST_PAC_KEY_LEN) {
+				wpa_printf(MSG_DEBUG,
+					   "EAP-FAST: Invalid PAC-Key length %d",
+					   elen);
 				os_free(buf);
 				return -1;
 			}
-			pac_key = pos + 2;
+			pac_key = pos;
 			wpa_hexdump_key(MSG_DEBUG, "EAP-FAST: PAC-Key from "
 					"decrypted PAC-Opaque",
 					pac_key, EAP_FAST_PAC_KEY_LEN);
 			break;
 		case PAC_OPAQUE_TYPE_LIFETIME:
-			if (pos[1] != 4) {
+			if (elen != 4) {
 				wpa_printf(MSG_DEBUG, "EAP-FAST: Invalid "
 					   "PAC-Key lifetime length %d",
-					   pos[1]);
+					   elen);
 				os_free(buf);
 				return -1;
 			}
-			lifetime = WPA_GET_BE32(pos + 2);
+			lifetime = WPA_GET_BE32(pos);
 			break;
 		case PAC_OPAQUE_TYPE_IDENTITY:
-			identity = pos + 2;
-			identity_len = pos[1];
+			identity = pos;
+			identity_len = elen;
 			break;
 		}
 
-		pos += 2 + pos[1];
+		pos += elen;
 	}
 done:
 
@@ -1134,7 +1139,7 @@ static int eap_fast_parse_tlvs(struct wpabuf *data,
 
 	pos = wpabuf_mhead(data);
 	end = pos + wpabuf_len(data);
-	while (pos + 4 < end) {
+	while (end - pos > 4) {
 		mandatory = pos[0] & 0x80;
 		tlv_type = WPA_GET_BE16(pos) & 0x3fff;
 		pos += 2;

@@ -1003,8 +1003,8 @@ static int wpa_supplicant_validate_ie_ft(struct wpa_sm *sm,
 	if (sm->assoc_resp_ies) {
 		pos = sm->assoc_resp_ies;
 		end = pos + sm->assoc_resp_ies_len;
-		while (pos + 2 < end) {
-			if (pos + 2 + pos[1] > end)
+		while (end - pos > 2) {
+			if (2 + pos[1] > end - pos)
 				break;
 			switch (*pos) {
 			case WLAN_EID_MOBILITY_DOMAIN:

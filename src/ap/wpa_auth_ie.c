@@ -251,7 +251,7 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	pos += 2;
 
 	if (pmkid) {
-		if (pos + 2 + PMKID_LEN > buf + len)
+		if (2 + PMKID_LEN > buf + len - pos)
 			return -1;
 		/* PMKID Count */
 		WPA_PUT_LE16(pos, 1);
@@ -263,7 +263,7 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 #ifdef CONFIG_IEEE80211W
 	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION &&
 	    conf->group_mgmt_cipher != WPA_CIPHER_AES_128_CMAC) {
-		if (pos + 2 + 4 > buf + len)
+		if (2 + 4 > buf + len - pos)
 			return -1;
 		if (pmkid == NULL) {
 			/* PMKID Count */
@@ -791,7 +791,7 @@ static int wpa_parse_generic(const u8 *pos, const u8 *end,
 		return 0;
 	}
 
-	if (pos + 1 + RSN_SELECTOR_LEN < end &&
+	if (1 + RSN_SELECTOR_LEN < end - pos &&
 	    pos[1] >= RSN_SELECTOR_LEN + PMKID_LEN &&
 	    RSN_SELECTOR_GET(pos + 2) == RSN_KEY_DATA_PMKID) {
 		ie->pmkid = pos + 2 + RSN_SELECTOR_LEN;
@@ -887,13 +887,13 @@ int wpa_parse_kde_ies(const u8 *buf, size_t len, struct wpa_eapol_ie_parse *ie)
 	int ret = 0;
 
 	os_memset(ie, 0, sizeof(*ie));
-	for (pos = buf, end = pos + len; pos + 1 < end; pos += 2 + pos[1]) {
+	for (pos = buf, end = pos + len; end - pos > 1; pos += 2 + pos[1]) {
 		if (pos[0] == 0xdd &&
 		    ((pos == buf + len - 1) || pos[1] == 0)) {
 			/* Ignore padding */
 			break;
 		}
-		if (pos + 2 + pos[1] > end) {
+		if (2 + pos[1] > end - pos) {
 			wpa_printf(MSG_DEBUG, "WPA: EAPOL-Key Key Data "
 				   "underflow (ie=%d len=%d pos=%d)",
 				   pos[0], pos[1], (int) (pos - buf));

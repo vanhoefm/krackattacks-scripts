@@ -785,8 +785,8 @@ static const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
 	pos = (const u8 *) (res + 1);
 	end = pos + res->ie_len;
 
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
+	while (end - pos > 1) {
+		if (2 + pos[1] > end - pos)
 			break;
 		if (pos[0] == ie)
 			return pos;

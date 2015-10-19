@@ -632,6 +632,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		radio_remove_works(wpa_s, "sme-connect", 0);
 	}
 
+	wpas_abort_ongoing_scan(wpa_s);
+
 	cwork = os_zalloc(sizeof(*cwork));
 	if (cwork == NULL)
 		return;

@@ -2465,3 +2465,14 @@ int wpas_mac_addr_rand_scan_set(struct wpa_supplicant *wpa_s,
 	wpa_s->mac_addr_rand_enable |= type;
 	return 0;
 }
+
+
+int wpas_abort_ongoing_scan(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->scan_work && wpa_s->own_scan_running) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Abort an ongoing scan");
+		return wpa_drv_abort_scan(wpa_s);
+	}
+
+	return 0;
+}

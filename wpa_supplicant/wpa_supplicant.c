@@ -1706,6 +1706,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	wpas_abort_ongoing_scan(wpa_s);
+
 	cwork = os_zalloc(sizeof(*cwork));
 	if (cwork == NULL)
 		return;

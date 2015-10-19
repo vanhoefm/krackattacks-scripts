@@ -158,6 +158,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SETBAND = 105,
 	QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN = 106,
 	QCA_NL80211_VENDOR_SUBCMD_SCAN_DONE = 107,
+	QCA_NL80211_VENDOR_SUBCMD_OTA_TEST = 108,
+	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_SCALE = 109,
 };
 
 
@@ -409,6 +411,36 @@ enum scan_status {
 	VENDOR_SCAN_STATUS_NEW_RESULTS,
 	VENDOR_SCAN_STATUS_ABORTED,
 	VENDOR_SCAN_STATUS_MAX,
+};
+
+/**
+ * enum qca_vendor_attr_ota_test - Specifies the values for vendor
+ *                       command QCA_NL80211_VENDOR_SUBCMD_OTA_TEST
+ * @QCA_WLAN_VENDOR_ATTR_OTA_TEST_ENABLE: enable ota test
+ */
+enum qca_vendor_attr_ota_test {
+	QCA_WLAN_VENDOR_ATTR_OTA_TEST_INVALID,
+	/* 8-bit unsigned value to indicate if OTA test is enabled */
+	QCA_WLAN_VENDOR_ATTR_OTA_TEST_ENABLE,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_OTA_TEST_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OTA_TEST_MAX =
+	QCA_WLAN_VENDOR_ATTR_OTA_TEST_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_vendor_attr_txpower_scale - vendor sub commands index
+ *
+ * @QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE: scaling value
+ */
+enum qca_vendor_attr_txpower_scale {
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_INVALID,
+	/* 8-bit unsigned value to indicate the scaling of tx power */
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_MAX =
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

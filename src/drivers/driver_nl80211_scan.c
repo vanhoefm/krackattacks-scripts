@@ -787,6 +787,25 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 }
 
 
+int wpa_driver_nl80211_abort_scan(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret;
+	struct nl_msg *msg;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Abort scan");
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_ABORT_SCAN);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Abort scan failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+	}
+
+	return ret;
+}
+
+
 #ifdef CONFIG_DRIVER_NL80211_QCA
 
 static int scan_cookie_handler(struct nl_msg *msg, void *arg)

@@ -3457,6 +3457,13 @@ struct wpa_driver_ops {
 	 * on. Local device is assuming P2P Client role.
 	 */
 	int (*set_prob_oper_freq)(void *priv, unsigned int freq);
+
+	/**
+	 * abort_scan - Request the driver to abort an ongoing scan
+	 * @priv: Private driver interface data
+	 * Returns 0 on success, -1 on failure
+	 */
+	int (*abort_scan)(void *priv);
 };
 
 

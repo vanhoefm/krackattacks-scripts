@@ -279,6 +279,12 @@ CONFIG_BACKEND=file
 # none = Empty template
 #CONFIG_L2_PACKET=linux
 
+# Disable Linux packet socket workaround applicable for station interface
+# in a bridge for EAPOL frames. This should be uncommented only if the kernel
+# is known to not have the regression issue in packet socket behavior with
+# bridge interfaces (commit 'bridge: respect RFC2863 operational state')').
+#CONFIG_NO_LINUX_PACKET_SOCKET_WAR=y
+
 # PeerKey handshake for Station to Station Link (IEEE 802.11e DLS)
 CONFIG_PEERKEY=y
 

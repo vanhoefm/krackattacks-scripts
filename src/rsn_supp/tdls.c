@@ -2392,7 +2392,7 @@ skip_rsn:
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
 		   "TPK Handshake Message 3");
 	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0)
-		goto error;
+		goto error_no_msg;
 
 	if (!peer->tpk_success) {
 		/*
@@ -2413,6 +2413,7 @@ skip_rsn:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken, 1,
 			    status);
+error_no_msg:
 	wpa_tdls_disable_peer_link(sm, peer);
 	return -1;
 }

@@ -295,6 +295,26 @@ def test_dbus_properties(dev, apdev):
         if "InvalidArgs: invalid message format" not in str(e):
             raise Exception("Unexpected error message: " + str(e))
 
+def test_dbus_set_global_properties(dev, apdev):
+    """D-Bus Get/Set fi.w1.wpa_supplicant1 interface global properties"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    props = [ ('Okc', '0', '1'), ('ModelName', '', 'blahblahblah') ]
+
+    for p in props:
+        res = if_obj.Get(WPAS_DBUS_IFACE, p[0],
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if res != p[1]:
+            raise Exception("Unexpected " + p[0] + " value: " + str(res))
+
+        if_obj.Set(WPAS_DBUS_IFACE, p[0], p[2],
+                   dbus_interface=dbus.PROPERTIES_IFACE)
+
+        res = if_obj.Get(WPAS_DBUS_IFACE, p[0],
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if res != p[2]:
+            raise Exception("Unexpected " + p[0] + " value after set: " + str(res))
+
 def test_dbus_invalid_method(dev, apdev):
     """D-Bus invalid method"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -4734,6 +4754,8 @@ def test_dbus_introspect(dev, apdev):
                             dbus_interface=dbus.INTROSPECTABLE_IFACE)
     logger.info("Initial Introspect: " + str(res))
     if res is None or "Introspectable" not in res or "GroupStarted" not in res:
+        raise Exception("Unexpected initial Introspect response: " + str(res))
+    if "FastReauth" not in res or "PassiveScan" not in res:
         raise Exception("Unexpected initial Introspect response: " + str(res))
 
     with alloc_fail(dev[0], 1, "wpa_dbus_introspect"):

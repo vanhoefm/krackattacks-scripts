@@ -963,6 +963,11 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 			wpa_supplicant_terminate_proc(global);
 		}
 	}
+
+	if (wpa_debug_reopen_file() < 0) {
+		/* Ignore errors since we cannot really do much to fix this */
+		wpa_printf(MSG_DEBUG, "Could not reopen debug log file");
+	}
 }
 
 

@@ -3569,3 +3569,53 @@ def test_ap_hs20_connect_deinit(dev, apdev):
     # Remove the interface while the gas-query radio work is still pending and
     # GAS query has not yet been started.
     wpas.interface_remove("wlan5")
+
+def test_ap_hs20_anqp_format_errors(dev, apdev):
+    """Interworking network selection and ANQP format errors"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'ca_cert': "auth_serv/ca.pem",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com" }
+    id = dev[0].add_cred_values(values)
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    tests = [ "00", "ffff", "010011223344", "020008000005112233445500",
+              "01000400000000", "01000000000000",
+              "01000300000200", "0100040000ff0000", "01000300000100",
+              "01000300000001",
+              "01000600000056112233",
+              "01000900000002050001000111",
+              "01000600000001000000", "01000600000001ff0000",
+              "01000600000001020001",
+              "010008000000010400010001", "0100080000000104000100ff",
+              "010011000000010d00050200020100030005000600",
+              "0000" ]
+    for t in tests:
+        hapd.set("anqp_elem", "263:" + t)
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+        ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=5)
+        if ev is None:
+            raise Exception("Network selection timed out")
+        dev[0].dump_monitor()
+
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred_values({ 'imsi': "555444-333222111", 'eap': "AKA",
+                                  'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
+
+    tests = [ "00", "0100", "0001", "00ff", "000200ff", "0003000101",
+              "00020100" ]
+    for t in tests:
+        hapd.set("anqp_elem", "264:" + t)
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+        ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=5)
+        if ev is None:
+            raise Exception("Network selection timed out")
+        dev[0].dump_monitor()

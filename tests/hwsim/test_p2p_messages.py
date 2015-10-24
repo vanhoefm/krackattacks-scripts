@@ -1,5 +1,5 @@
 # P2P protocol tests for various messages
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -13,6 +13,7 @@ logger = logging.getLogger()
 import hostapd
 from test_p2p_persistent import form
 from test_p2p_persistent import invite
+from test_gas import anqp_adv_proto
 
 MGMT_SUBTYPE_PROBE_REQ = 4
 MGMT_SUBTYPE_ACTION = 13
@@ -1978,3 +1979,169 @@ def _test_p2p_msg_group_info(dev):
         if 'p2p_group_client' in bss:
             raise Exception("Unexpected p2p_group_client")
         dev[0].remove_group()
+
+MGMT_SUBTYPE_ACTION = 13
+ACTION_CATEG_PUBLIC = 4
+
+GAS_INITIAL_REQUEST = 10
+GAS_INITIAL_RESPONSE = 11
+GAS_COMEBACK_REQUEST = 12
+GAS_COMEBACK_RESPONSE = 13
+
+def gas_hdr(dst, src, type, req=True, dialog_token=0):
+    msg = {}
+    msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+    msg['da'] = dst
+    msg['sa'] = src
+    if req:
+        msg['bssid'] = dst
+    else:
+        msg['bssid'] = src
+    if dialog_token is None:
+        msg['payload'] = struct.pack("<BB", ACTION_CATEG_PUBLIC, type)
+    else:
+        msg['payload'] = struct.pack("<BBB", ACTION_CATEG_PUBLIC, type,
+                                     dialog_token)
+    return msg
+
+def test_p2p_msg_sd(dev, apdev):
+    """P2P protocol tests for service discovery messages"""
+    dst, src, hapd, channel = start_p2p(dev, apdev)
+
+    logger.debug("Truncated GAS Initial Request - no Dialog Token field")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST, dialog_token=None)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - no Advertisement Protocol element")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - no Advertisement Protocol element length")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += struct.pack('B', 108)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - unexpected IE")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += struct.pack('BB', 0, 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Advertisement Protocol element")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += struct.pack('BB', 108, 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Advertisement Protocol element 2")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += struct.pack('BBB', 108, 1, 127)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - unsupported GAS advertisement protocol id 255")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += struct.pack('BBBB', 108, 2, 127, 255)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - no Query Request length field")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Query Request length field")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<B', 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Query Request field (minimum underflow)")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<H', 1)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Query Request field (maximum underflow)")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<H', 65535)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - too short Query Request field")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<H', 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - unsupported ANQP Info ID 65535")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<HHH', 4, 65535, 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - invalid ANQP Query Request length (truncated frame)")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<HHH', 4, 56797, 65535)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - invalid ANQP Query Request length (too short Query Request to contain OUI + OUI-type)")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<HHH', 4, 56797, 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Invalid GAS Initial Request - unsupported ANQP vendor OUI-type")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    req = struct.pack('<HH', 56797, 4) + struct.pack('>L', 0x506f9a00)
+    msg['payload'] += struct.pack('<H', len(req)) + req
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - no Service Update Indicator")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    req = struct.pack('<HH', 56797, 4) + struct.pack('>L', 0x506f9a09)
+    msg['payload'] += struct.pack('<H', len(req)) + req
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Initial Request - truncated Service Update Indicator")
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    req = struct.pack('<HH', 56797, 4) + struct.pack('>L', 0x506f9a09)
+    req += struct.pack('<B', 0)
+    msg['payload'] += struct.pack('<H', len(req)) + req
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Unexpected GAS Initial Response")
+    hapd.dump_monitor()
+    msg = gas_hdr(dst, src, GAS_INITIAL_RESPONSE)
+    msg['payload'] += struct.pack('<HH', 0, 0)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<H', 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Truncated GAS Comeback Request - no Dialog Token field")
+    msg = gas_hdr(dst, src, GAS_COMEBACK_REQUEST, dialog_token=None)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("GAS Comeback Request - no pending SD response fragment available")
+    msg = gas_hdr(dst, src, GAS_COMEBACK_REQUEST)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Unexpected GAS Comeback Response")
+    hapd.dump_monitor()
+    msg = gas_hdr(dst, src, GAS_COMEBACK_RESPONSE)
+    msg['payload'] += struct.pack('<HBH', 0, 0, 0)
+    msg['payload'] += anqp_adv_proto()
+    msg['payload'] += struct.pack('<H', 0)
+    hapd.mgmt_tx(msg)
+
+    logger.debug("Minimal GAS Initial Request")
+    hapd.dump_monitor()
+    msg = gas_hdr(dst, src, GAS_INITIAL_REQUEST)
+    msg['payload'] += anqp_adv_proto()
+    req = struct.pack('<HH', 56797, 4) + struct.pack('>L', 0x506f9a09)
+    req += struct.pack('<H', 0)
+    msg['payload'] += struct.pack('<H', len(req)) + req
+    hapd.mgmt_tx(msg)
+    resp = hapd.mgmt_rx()
+    if resp is None:
+        raise Exception("No response to minimal GAS Initial Request")

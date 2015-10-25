@@ -675,9 +675,12 @@ def test_wnm_bss_tm_global(dev, apdev):
 def test_wnm_action_proto(dev, apdev):
     """WNM Action protocol testing"""
     params = { "ssid": "test-wnm" }
+    params['wnm_sleep_mode'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("WNM_SLEEP enter")
+    time.sleep(0.1)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     msg = {}
@@ -874,10 +877,13 @@ def test_wnm_action_proto_pmf(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
     params["ieee80211w"] = "2"
+    params['wnm_sleep_mode'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
     dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK-SHA256",
                    proto="WPA2", ieee80211w="2", scan_freq="2412")
+    dev[0].request("WNM_SLEEP enter")
+    time.sleep(0.1)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     msg = {}
@@ -973,10 +979,13 @@ def test_wnm_action_proto_no_pmf(dev, apdev):
     """WNM Action protocol testing (PMF disabled)"""
     ssid = "test-wnm-no-pmf"
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params['wnm_sleep_mode'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
     dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK",
                    proto="WPA2", ieee80211w="0", scan_freq="2412")
+    dev[0].request("WNM_SLEEP enter")
+    time.sleep(0.1)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     msg = {}

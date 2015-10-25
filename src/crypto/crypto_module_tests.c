@@ -1576,6 +1576,7 @@ static int test_sha256(void)
 
 	key = os_malloc(8161);
 	if (key) {
+#ifdef CONFIG_HMAC_SHA256_KDF
 		int res;
 
 		res = hmac_sha256_kdf((u8 *) "secret", 6, "label",
@@ -1593,6 +1594,7 @@ static int test_sha256(void)
 				   "Unexpected hmac_sha256_kdf(outlen=8161) success");
 			errors++;
 		}
+#endif /* CONFIG_HMAC_SHA256_KDF */
 
 		os_free(key);
 	}

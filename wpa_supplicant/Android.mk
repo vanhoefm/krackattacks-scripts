@@ -1277,6 +1277,7 @@ ifdef NEED_TLS_PRF_SHA256
 SHA256OBJS += src/crypto/sha256-tlsprf.c
 endif
 ifdef NEED_HMAC_SHA256_KDF
+L_CFLAGS += -DCONFIG_HMAC_SHA256_KDF
 SHA256OBJS += src/crypto/sha256-kdf.c
 endif
 OBJS += $(SHA256OBJS)

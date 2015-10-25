@@ -195,6 +195,24 @@ MGMT_SUBTYPE_ACTION = 13
 ACTION_CATEG_WNM = 10
 WNM_ACT_BSS_TM_REQ = 7
 WNM_ACT_BSS_TM_RESP = 8
+WNM_ACT_SLEEP_MODE_REQ = 16
+WNM_ACT_SLEEP_MODE_RESP = 17
+WNM_ACT_NOTIFICATION_REQ = 26
+WNM_ACT_NOTIFICATION_RESP = 27
+WNM_NOTIF_TYPE_FW_UPGRADE = 0
+WNM_NOTIF_TYPE_WFA = 1
+WLAN_EID_TFS_RESP = 92
+WLAN_EID_WNMSLEEP = 93
+WNM_SLEEP_MODE_ENTER = 0
+WNM_SLEEP_MODE_EXIT = 1
+WNM_STATUS_SLEEP_ACCEPT = 0
+WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE = 1
+WNM_STATUS_DENIED_ACTION = 2
+WNM_STATUS_DENIED_TMP = 3
+WNM_STATUS_DENIED_KEY = 4
+WNM_STATUS_DENIED_OTHER_WNM_SERVICE = 5
+WNM_SLEEP_SUBELEM_GTK = 0
+WNM_SLEEP_SUBELEM_IGTK = 1
 
 def bss_tm_req(dst, src, dialog_token=1, req_mode=0, disassoc_timer=0,
                validity_interval=1):
@@ -653,3 +671,300 @@ def test_wnm_bss_tm_global(dev, apdev):
         wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:00,0x0000,124,162,7 neighbor=00:11:22:33:44:01,0x0000,125,148,7 neighbor=00:11:22:33:44:02,0x0000,125,170,7 neighbor=00:11:22:33:44:03,0x0000,128,35,7 neighbor=00:11:22:33:44:04,0x0000,128,162,7 neighbor=00:11:22:33:44:05,0x0000,129,49,7 neighbor=00:11:22:33:44:06,0x0000,129,115,7 neighbor=00:11:22:33:44:07,0x0000,180,0,7 neighbor=00:11:22:33:44:08,0x0000,180,5,7 neighbor=00:11:22:33:44:09,0x0000,0,0,7")
     finally:
         stop_wnm_tm(hapd, dev[0])
+
+def test_wnm_action_proto(dev, apdev):
+    """WNM Action protocol testing"""
+    params = { "ssid": "test-wnm" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    msg = {}
+    msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+    msg['da'] = dev[0].own_addr()
+    msg['sa'] = bssid
+    msg['bssid'] = bssid
+
+    dialog_token = 1
+
+    logger.debug("Unexpected WNM-Notification Response")
+    # Note: This is actually not registered for user space processing in
+    # driver_nl80211.c nl80211_mgmt_subscribe_non_ap() and as such, won't make
+    # it to wpa_supplicant.
+    msg['payload'] = struct.pack("<BBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_RESP,
+                                 dialog_token, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("Truncated WNM-Notification Request (no Type field)")
+    msg['payload'] = struct.pack("<BBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated IE (min)")
+    msg['payload'] = struct.pack("<BBBBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0, 1)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated IE (max)")
+    msg['payload'] = struct.pack("<BBBBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0, 255)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with too short IE")
+    msg['payload'] = struct.pack("<BBBBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated Sub Rem URL")
+    msg['payload'] = struct.pack(">BBBBBBLB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 5,
+                                 0x506f9a00, 1)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated Sub Rem URL(2)")
+    msg['payload'] = struct.pack(">BBBBBBLBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 6,
+                                 0x506f9a00, 1, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated Sub Rem URL(3)")
+    msg['payload'] = struct.pack(">BBBBBBLB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 5,
+                                 0x506f9a00, 0xff)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated Deauth Imminent URL(min)")
+    msg['payload'] = struct.pack(">BBBBBBLBHB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 8,
+                                 0x506f9a01, 0, 0, 1)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with truncated Deauth Imminent URL(max)")
+    msg['payload'] = struct.pack(">BBBBBBLBHB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 8,
+                                 0x506f9a01, 0, 0, 0xff)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WFA WNM-Notification Request with unsupported IE")
+    msg['payload'] = struct.pack("<BBBBBBL",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_WFA, 0xdd, 4, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM-Notification Request with unknown WNM-Notification type 0")
+    msg['payload'] = struct.pack("<BBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_NOTIFICATION_REQ,
+                                 dialog_token, WNM_NOTIF_TYPE_FW_UPGRADE)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("Truncated WNM Sleep Mode Response - no Dialog Token")
+    msg['payload'] = struct.pack("<BB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("Truncated WNM Sleep Mode Response - no Key Data Length")
+    msg['payload'] = struct.pack("<BBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("Truncated WNM Sleep Mode Response - truncated Key Data (min)")
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 1)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("Truncated WNM Sleep Mode Response - truncated Key Data (max)")
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0xffff)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - truncated IE header")
+    msg['payload'] = struct.pack("<BBBHB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - truncated IE")
+    msg['payload'] = struct.pack("<BBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, 0, 1)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Empty TFS Response")
+    msg['payload'] = struct.pack("<BBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - EID 0 not recognized")
+    msg['payload'] = struct.pack("<BBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, 0, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Empty WNM Sleep Mode element and TFS Response element")
+    msg['payload'] = struct.pack("<BBBHBBBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, WLAN_EID_WNMSLEEP, 0, WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - WNM Sleep Mode element and empty TFS Response element")
+    msg['payload'] = struct.pack("<BBBHBBBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_ENTER,
+                                 WNM_STATUS_SLEEP_ACCEPT, 0,
+                                 WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - WNM Sleep Mode element(exit, deny key) and empty TFS Response element")
+    msg['payload'] = struct.pack("<BBBHBBBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                 WNM_STATUS_DENIED_KEY, 0,
+                                 WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - WNM Sleep Mode element(enter, deny key) and empty TFS Response element")
+    msg['payload'] = struct.pack("<BBBHBBBBHBB",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 0, WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_ENTER,
+                                 WNM_STATUS_DENIED_KEY, 0,
+                                 WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+def test_wnm_action_proto_pmf(dev, apdev):
+    """WNM Action protocol testing (PMF enabled)"""
+    ssid = "test-wnm-pmf"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK-SHA256",
+                   proto="WPA2", ieee80211w="2", scan_freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    msg = {}
+    msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+    msg['da'] = dev[0].own_addr()
+    msg['sa'] = bssid
+    msg['bssid'] = bssid
+
+    logger.debug("WNM Sleep Mode Response - Invalid Key Data element length")
+    keydata = struct.pack("<BB", 0, 1)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Too short GTK subelem")
+    keydata = struct.pack("<BB", WNM_SLEEP_SUBELEM_GTK, 0)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Invalid GTK subelem")
+    keydata = struct.pack("<BBHB2L4L", WNM_SLEEP_SUBELEM_GTK, 11 + 16,
+                          0, 17, 0, 0, 0, 0, 0, 0)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Invalid GTK subelem (2)")
+    keydata = struct.pack("<BBHB2L4L", WNM_SLEEP_SUBELEM_GTK, 11 + 16,
+                          0, 0, 0, 0, 0, 0, 0, 0)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - GTK subelem and too short IGTK subelem")
+    keydata = struct.pack("<BBHB", WNM_SLEEP_SUBELEM_GTK, 11 + 16, 0, 16)
+    keydata += struct.pack(">2L4L", 0x01020304, 0x05060708,
+                           0x11223344, 0x55667788, 0x9900aabb, 0xccddeeff)
+    keydata += struct.pack("<BB", WNM_SLEEP_SUBELEM_IGTK, 0)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    logger.debug("WNM Sleep Mode Response - Unknown subelem")
+    keydata = struct.pack("<BB", 255, 0)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)

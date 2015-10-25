@@ -307,7 +307,12 @@ def _test_radius_acct_ipaddr(dev, apdev):
                'proxy_arp': '1',
                'ap_isolate': '1',
                'bridge': 'ap-br0' }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
     bssid = apdev[0]['bssid']
 
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])

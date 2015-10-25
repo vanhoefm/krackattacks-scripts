@@ -692,3 +692,84 @@ def _test_autogo_many_clients(dev):
     for i in [ name0, name2, name3 ]:
         if i not in ev1 and i not in ev2 and i not in ev3:
             raise Exception('name "%s" not found' % i)
+
+def rx_pd_req(dev):
+    msg = dev.mgmt_rx()
+    if msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame " + str(dialog_token))
+    if p2p['subtype'] != P2P_PROV_DISC_REQ:
+        raise Exception("Unexpected subtype %d" % p2p['subtype'])
+    p2p['freq'] = msg['freq']
+    return p2p
+
+def test_autogo_scan(dev):
+    """P2P autonomous GO and no P2P IE in Probe Response scan results"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_start_go(freq=2412, persistent=True)
+    bssid = dev[0].p2p_interface_addr()
+
+    dev[1].discover_peer(addr0)
+    dev[1].p2p_stop_find()
+    ev = dev[1].wait_global_event(["P2P-FIND-STOPPED"], timeout=2)
+    time.sleep(0.1)
+    dev[1].flush_scan_cache()
+
+    pin = dev[1].wps_read_pin()
+    dev[0].group_request("WPS_PIN any " + pin)
+
+    try:
+        dev[1].request("SET p2p_disabled 1")
+        dev[1].request("SCAN freq=2412")
+        ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+        if ev is None:
+            raise Exception("Active scan did not complete")
+    finally:
+        dev[1].request("SET p2p_disabled 0")
+
+    for i in range(2):
+        dev[1].request("SCAN freq=2412 passive=1")
+        ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+        if ev is None:
+            raise Exception("Scan did not complete")
+
+    # Disable management frame processing for a moment to skip Probe Response
+    # frame with P2P IE.
+    dev[0].group_request("SET ext_mgmt_frame_handling 1")
+
+    dev[1].request("P2P_CONNECT " + bssid + " " + pin + " freq=2412 join")
+
+    # Skip the first Probe Request frame
+    ev = dev[0].wait_group_event(["MGMT-RX"], timeout=10)
+    if ev is None:
+        raise Exception("No Probe Request frame seen")
+    if not ev.split(' ')[4].startswith("40"):
+        raise Exception("Not a Probe Request frame")
+
+    # Reply to PD Request while still filtering Probe Request frames
+    msg = rx_pd_req(dev[0])
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr0, 2412, "0409506f9a0908%02xdd0a0050f204100800020008" % msg['dialog_token']))
+
+    # Skip Probe Request frames until something else is received
+    for i in range(10):
+        ev = dev[0].wait_group_event(["MGMT-RX"], timeout=10)
+        if ev is None:
+            raise Exception("No frame seen")
+        if not ev.split(' ')[4].startswith("40"):
+            break
+
+    # Allow wpa_supplicant to process authentication and association
+    dev[0].group_request("SET ext_mgmt_frame_handling 0")
+
+    # Joining the group should succeed and indicate persistent group based on
+    # Beacon frame P2P IE.
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Failed to join group")
+    if "[PERSISTENT]" not in ev:
+        raise Exception("Did not recognize group as persistent")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

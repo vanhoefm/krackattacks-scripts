@@ -421,3 +421,23 @@ def _test_ap_pmf_toggle(dev, apdev):
     (data,err) = cmd.communicate()
     if "yes" not in [l for l in data.splitlines() if "MFP" in l][0]:
         raise Exception("Kernel STA entry did not have MFP enabled")
+
+def test_ap_pmf_required_sta_no_pmf(dev, apdev):
+    """WPA2-PSK AP with PMF required and PMF disabled on STA"""
+    ssid = "test-pmf-required"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
+    params["ieee80211w"] = "2";
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    # Disable PMF on the station and try to connect
+    dev[0].connect(ssid, psk="12345678", ieee80211w="0",
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND",
+                            "CTRL-EVENT-ASSOC-REJECT"], timeout=2)
+    if ev is None:
+        raise Exception("No connection result")
+    if "CTRL-EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Tried to connect to PMF required AP without PMF enabled")
+    dev[0].request("REMOVE_NETWORK all")

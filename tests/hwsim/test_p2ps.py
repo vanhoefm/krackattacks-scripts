@@ -13,9 +13,7 @@ import re
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 import hostapd
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
-from test_p2p_persistent import go_neg_pin_authorized_persistent
+from p2p_utils import *
 from utils import HwsimSkip
 from hwsim import HWSimRadio
 

@@ -16,11 +16,7 @@ from utils import HwsimSkip
 from tshark import run_tshark
 from wpasupplicant import WpaSupplicant
 from hwsim import HWSimRadio
-from test_p2p_grpform import go_neg_pin_authorized
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
-from test_p2p_grpform import go_neg_pbc
-from test_p2p_autogo import autogo
+from p2p_utils import *
 
 def set_country(country, dev=None):
     subprocess.call(['iw', 'reg', 'set', country])

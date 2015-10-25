@@ -9,7 +9,7 @@ logger = logging.getLogger()
 import os
 
 from tshark import run_tshark
-from test_p2p_persistent import form
+from p2p_utils import *
 
 def test_p2p_ext_discovery(dev):
     """P2P device discovery with vendor specific extensions"""

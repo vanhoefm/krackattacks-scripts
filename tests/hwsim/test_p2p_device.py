@@ -9,9 +9,7 @@ logger = logging.getLogger()
 import time
 
 from wpasupplicant import WpaSupplicant
-from test_p2p_grpform import go_neg_pin_authorized
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
+from p2p_utils import *
 from test_nfc_p2p import set_ip_addr_info, check_ip_addr, grpform_events
 from hwsim import HWSimRadio
 import hostapd

@@ -14,22 +14,8 @@ import utils
 from utils import HwsimSkip
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
-
-def autogo(go, freq=None, persistent=None):
-    logger.info("Start autonomous GO " + go.ifname)
-    res = go.p2p_start_go(freq=freq, persistent=persistent)
-    logger.debug("res: " + str(res))
-    return res
-
-def connect_cli(go, client, social=False, freq=None):
-    logger.info("Try to connect the client to the GO")
-    pin = client.wps_read_pin()
-    go.p2p_go_authorize_client(pin)
-    res = client.p2p_connect_group(go.p2p_dev_addr(), pin, timeout=60,
-                                   social=social, freq=freq)
-    logger.info("Client connected")
-    hwsim_utils.test_connectivity_p2p(go, client)
-    return res
+from p2p_utils import *
+from test_p2p_messages import mgmt_tx, parse_p2p_public_action
 
 def test_autogo(dev):
     """P2P autonomous GO and client joining group"""

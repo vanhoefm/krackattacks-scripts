@@ -11,14 +11,7 @@ import time
 
 import hwsim_utils
 import hostapd
-from test_p2p_grpform import go_neg_pin_authorized
-from test_p2p_grpform import go_neg_pbc
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
-from test_p2p_persistent import form
-from test_p2p_persistent import invite_from_cli
-from test_p2p_persistent import invite_from_go
-from test_p2p_persistent import invite
+from p2p_utils import *
 from test_ap_ht import clear_scan_cache
 from utils import HwsimSkip
 

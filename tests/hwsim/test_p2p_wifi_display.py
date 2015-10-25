@@ -12,8 +12,7 @@ import Queue
 
 import hwsim_utils
 import utils
-from test_p2p_autogo import connect_cli
-from test_p2p_persistent import form, invite, invite_from_cli, invite_from_go
+from p2p_utils import *
 
 def test_wifi_display(dev):
     """Wi-Fi Display extensions to P2P"""

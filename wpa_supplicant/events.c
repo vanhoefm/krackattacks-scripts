@@ -564,6 +564,13 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			break;
 		}
 #endif /* CONFIG_IEEE80211W */
+		if ((ie.capabilities & WPA_CAPABILITY_MFPR) &&
+		    wpas_get_ssid_pmf(wpa_s, ssid) ==
+		    NO_MGMT_FRAME_PROTECTION) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"   skip RSN IE - no mgmt frame protection enabled but AP requires it");
+			break;
+		}
 
 		wpa_dbg(wpa_s, MSG_DEBUG, "   selected based on RSN IE");
 		return 1;

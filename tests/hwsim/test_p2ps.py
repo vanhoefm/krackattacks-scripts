@@ -727,9 +727,10 @@ def get_ifnames():
         ifnames.append(ifname)
     return ifnames
 
-def p2ps_connect_p2ps_method(dev, keep_group=False, join_extra=""):
-    dev[0].flush_scan_cache()
-    dev[1].flush_scan_cache()
+def p2ps_connect_p2ps_method(dev, keep_group=False, join_extra="", flush=True):
+    if flush:
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
     p2ps_advertise(r_dev=dev[0], r_role='2', svc_name='org.wi-fi.wfds.send.rx',
                    srv_info='I can receive files upto size 2 GB')
     [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
@@ -1108,6 +1109,10 @@ def test_p2ps_channel_both_connected_same(dev, apdev):
 
     dev[2].global_request("P2P_SET listen_channel 6")
     dev[1].global_request("P2P_SET listen_channel 6")
+
+    dev[1].flush_scan_cache()
+    dev[2].flush_scan_cache()
+
     try:
         hapd = hostapd.add_ap(apdev[0]['ifname'],
                               { "ssid": 'bss-2.4ghz', "channel": '6' })
@@ -1116,7 +1121,7 @@ def test_p2ps_channel_both_connected_same(dev, apdev):
         dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
 
         tmpdev = [ dev[2], dev[1] ]
-        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True, join_extra=" freq=2437")
+        (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True, join_extra=" freq=2437", flush=False)
         freq = dev[2].get_group_status_field('freq');
 
         if freq != '2437':

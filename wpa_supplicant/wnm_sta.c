@@ -268,7 +268,7 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 			break;
 		}
 		wpa_hexdump(MSG_DEBUG, "WNM: Element", pos, 2 + ie_len);
-		if (*pos == WLAN_EID_WNMSLEEP)
+		if (*pos == WLAN_EID_WNMSLEEP && ie_len >= 4)
 			wnmsleep_ie = (struct wnm_sleep_element *) pos;
 		else if (*pos == WLAN_EID_TFS_RESP) {
 			if (!tfsresp_ie_start)

@@ -37,12 +37,14 @@ static int ieee80211_11_get_tfs_ie(struct wpa_supplicant *wpa_s, u8 *buf,
 
 /* set the TFS IE to driver */
 static int ieee80211_11_set_tfs_ie(struct wpa_supplicant *wpa_s,
-				   const u8 *addr, u8 *buf, u16 *buf_len,
+				   const u8 *addr, const u8 *buf, u16 buf_len,
 				   enum wnm_oper oper)
 {
+	u16 len = buf_len;
+
 	wpa_printf(MSG_DEBUG, "%s: TFS set operation %d", __func__, oper);
 
-	return wpa_drv_wnm_oper(wpa_s, oper, addr, buf, buf_len);
+	return wpa_drv_wnm_oper(wpa_s, oper, addr, (u8 *) buf, &len);
 }
 
 
@@ -147,8 +149,8 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 
 
 static void wnm_sleep_mode_enter_success(struct wpa_supplicant *wpa_s,
-					 u8 *tfsresp_ie_start,
-					 u8 *tfsresp_ie_end)
+					 const u8 *tfsresp_ie_start,
+					 const u8 *tfsresp_ie_end)
 {
 	wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_ENTER_CONFIRM,
 			 wpa_s->bssid, NULL, NULL);
@@ -164,7 +166,7 @@ static void wnm_sleep_mode_enter_success(struct wpa_supplicant *wpa_s,
 		/* pass the TFS Resp IE(s) to driver for processing */
 		if (ieee80211_11_set_tfs_ie(wpa_s, wpa_s->bssid,
 					    tfsresp_ie_start,
-					    &tfsresp_ie_len,
+					    tfsresp_ie_len,
 					    WNM_SLEEP_TFS_RESP_IE_SET))
 			wpa_printf(MSG_DEBUG, "WNM: Fail to set TFS Resp IE");
 	}
@@ -239,12 +241,12 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 	 * Action [1] | Dialog Token [1] | Key Data Len [2] | Key Data |
 	 * WNM-Sleep Mode IE | TFS Response IE
 	 */
-	u8 *pos = (u8 *) frm; /* point to payload after the action field */
+	const u8 *pos = frm; /* point to payload after the action field */
 	u16 key_len_total;
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Resp IE (assuming consecutive) */
-	u8 *tfsresp_ie_start = NULL;
-	u8 *tfsresp_ie_end = NULL;
+	const u8 *tfsresp_ie_start = NULL;
+	const u8 *tfsresp_ie_end = NULL;
 	size_t left;
 
 	if (len < 3)

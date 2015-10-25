@@ -517,16 +517,18 @@ int wpa_debug_reopen_file(void)
 {
 #ifdef CONFIG_DEBUG_FILE
 	int rv;
-	if (last_path) {
-		char *tmp = os_strdup(last_path);
-		wpa_debug_close_file();
-		rv = wpa_debug_open_file(tmp);
-		os_free(tmp);
-	} else {
-		wpa_printf(MSG_ERROR, "Last-path was not set, cannot "
-			   "re-open log file.");
-		rv = -1;
-	}
+	char *tmp;
+
+	if (!last_path)
+		return 0; /* logfile not used */
+
+	tmp = os_strdup(last_path);
+	if (!tmp)
+		return -1;
+
+	wpa_debug_close_file();
+	rv = wpa_debug_open_file(tmp);
+	os_free(tmp);
 	return rv;
 #else /* CONFIG_DEBUG_FILE */
 	return 0;

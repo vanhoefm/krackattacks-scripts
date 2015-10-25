@@ -968,3 +968,41 @@ def test_wnm_action_proto_pmf(dev, apdev):
                                   WLAN_EID_TFS_RESP, 0)
     hapd.mgmt_tx(msg)
     expect_ack(hapd)
+
+def test_wnm_action_proto_no_pmf(dev, apdev):
+    """WNM Action protocol testing (PMF disabled)"""
+    ssid = "test-wnm-no-pmf"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK",
+                   proto="WPA2", ieee80211w="0", scan_freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    msg = {}
+    msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+    msg['da'] = dev[0].own_addr()
+    msg['sa'] = bssid
+    msg['bssid'] = bssid
+
+    logger.debug("WNM Sleep Mode Response - GTK subelem and IGTK subelem")
+    keydata = struct.pack("<BBHB", WNM_SLEEP_SUBELEM_GTK, 11 + 16, 0, 16)
+    keydata += struct.pack(">2L4L", 0x01020304, 0x05060708,
+                           0x11223344, 0x55667788, 0x9900aabb, 0xccddeeff)
+    keydata += struct.pack("<BBHLH4L", WNM_SLEEP_SUBELEM_IGTK, 2 + 6 + 16, 0,
+                           0x10203040, 0x5060,
+                           0xf1f2f3f4, 0xf5f6f7f8, 0xf9f0fafb, 0xfcfdfeff)
+    msg['payload'] = struct.pack("<BBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_SLEEP_MODE_RESP, 0,
+                                 len(keydata))
+    msg['payload'] += keydata
+    msg['payload'] += struct.pack("<BBBBHBB",
+                                  WLAN_EID_WNMSLEEP, 4, WNM_SLEEP_MODE_EXIT,
+                                  WNM_STATUS_SLEEP_ACCEPT, 0,
+                                  WLAN_EID_TFS_RESP, 0)
+    hapd.mgmt_tx(msg)
+    expect_ack(hapd)
+
+    ev = dev[0].wait_event(["WNM: Ignore Key Data"], timeout=5)
+    if ev is None:
+        raise Exception("Key Data not ignored")

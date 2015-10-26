@@ -2700,8 +2700,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 	} else if (os_strcmp(buf, "fragm_threshold") == 0) {
 		conf->fragm_threshold = atoi(pos);
-		if (conf->fragm_threshold < 256 ||
-		    conf->fragm_threshold > 2346) {
+		if (conf->fragm_threshold == -1) {
+			/* allow a value of -1 */
+		} else if (conf->fragm_threshold < 256 ||
+			   conf->fragm_threshold > 2346) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid fragm_threshold %d",
 				   line, conf->fragm_threshold);

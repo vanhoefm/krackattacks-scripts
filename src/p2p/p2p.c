@@ -445,8 +445,9 @@ static struct p2p_device * p2p_create_device(struct p2p_data *p2p,
 static void p2p_copy_client_info(struct p2p_device *dev,
 				 struct p2p_client_info *cli)
 {
-	os_memcpy(dev->info.device_name, cli->dev_name, cli->dev_name_len);
-	dev->info.device_name[cli->dev_name_len] = '\0';
+	p2p_copy_filter_devname(dev->info.device_name,
+				sizeof(dev->info.device_name),
+				cli->dev_name, cli->dev_name_len);
 	dev->info.dev_capab = cli->dev_capab;
 	dev->info.config_methods = cli->config_methods;
 	os_memcpy(dev->info.pri_dev_type, cli->pri_dev_type, 8);

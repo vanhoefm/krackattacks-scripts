@@ -15,11 +15,28 @@
 #include "p2p_i.h"
 
 
+void p2p_copy_filter_devname(char *dst, size_t dst_len,
+			     const void *src, size_t src_len)
+{
+	size_t i;
+
+	if (src_len >= dst_len)
+		src_len = dst_len - 1;
+	os_memcpy(dst, src, src_len);
+	dst[src_len] = '\0';
+	for (i = 0; i < src_len; i++) {
+		if (dst[i] == '\0')
+			break;
+		if (is_ctrl_char(dst[i]))
+			dst[i] = '_';
+	}
+}
+
+
 static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 			       struct p2p_message *msg)
 {
 	const u8 *pos;
-	size_t i;
 	u16 nlen;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
 
@@ -156,14 +173,8 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 				   (int) (data + len - pos));
 			return -1;
 		}
-		os_memcpy(msg->device_name, pos, nlen);
-		msg->device_name[nlen] = '\0';
-		for (i = 0; i < nlen; i++) {
-			if (msg->device_name[i] == '\0')
-				break;
-			if (is_ctrl_char(msg->device_name[i]))
-				msg->device_name[i] = '_';
-		}
+		p2p_copy_filter_devname(msg->device_name,
+					sizeof(msg->device_name), pos, nlen);
 		wpa_printf(MSG_DEBUG, "P2P: * Device Info: addr " MACSTR
 			   " primary device type %s device name '%s' "
 			   "config methods 0x%x",

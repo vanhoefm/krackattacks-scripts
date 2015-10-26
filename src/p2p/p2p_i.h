@@ -691,6 +691,8 @@ int p2p_channel_random_social(struct p2p_channels *chans, u8 *op_class,
 			      u8 *op_channel);
 
 /* p2p_parse.c */
+void p2p_copy_filter_devname(char *dst, size_t dst_len,
+			     const void *src, size_t src_len);
 int p2p_parse_p2p_ie(const struct wpabuf *buf, struct p2p_message *msg);
 int p2p_parse_ies(const u8 *data, size_t len, struct p2p_message *msg);
 int p2p_parse(const u8 *data, size_t len, struct p2p_message *msg);

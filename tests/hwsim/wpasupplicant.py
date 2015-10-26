@@ -453,11 +453,12 @@ class WpaSupplicant:
             return True
         return "[PROBE_REQ_ONLY]" not in res
 
-    def discover_peer(self, peer, full=True, timeout=15, social=True, force_find=False):
+    def discover_peer(self, peer, full=True, timeout=15, social=True,
+                      force_find=False, freq=None):
         logger.info(self.ifname + ": Trying to discover peer " + peer)
         if not force_find and self.peer_known(peer, full):
             return True
-        self.p2p_find(social)
+        self.p2p_find(social, freq=freq)
         count = 0
         while count < timeout * 4:
             time.sleep(0.25)
@@ -754,7 +755,7 @@ class WpaSupplicant:
     def p2p_connect_group(self, go_addr, pin, timeout=0, social=False,
                           freq=None):
         self.dump_monitor()
-        if not self.discover_peer(go_addr, social=social):
+        if not self.discover_peer(go_addr, social=social, freq=freq):
             if social or not self.discover_peer(go_addr, social=social):
                 raise Exception("GO " + go_addr + " not found")
         self.dump_monitor()

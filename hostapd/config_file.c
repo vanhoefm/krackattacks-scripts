@@ -2692,7 +2692,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 	} else if (os_strcmp(buf, "rts_threshold") == 0) {
 		conf->rts_threshold = atoi(pos);
-		if (conf->rts_threshold < 0 || conf->rts_threshold > 2347) {
+		if (conf->rts_threshold < -1 || conf->rts_threshold > 65535) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid rts_threshold %d",
 				   line, conf->rts_threshold);

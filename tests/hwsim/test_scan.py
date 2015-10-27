@@ -946,3 +946,28 @@ def _test_scan_dfs(dev, apdev, params):
             f = int(ff)
             if (f >= 5260 and f <= 5320) or (f >= 5500 and f <= 5700):
                 raise Exception("Active scan on DFS channel: %d" % f)
+
+def test_scan_abort(dev, apdev):
+    """Aborting a full scan"""
+    dev[0].request("SCAN")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+    if ev is None:
+        raise Exception("Scan did not start")
+    if "OK" not in dev[0].request("ABORT_SCAN"):
+        raise Exception("ABORT_SCAN command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=2)
+    if ev is None:
+        raise Exception("Scan did not terminate")
+
+def test_scan_abort_on_connect(dev, apdev):
+    """Aborting a full scan on connection request"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("SCAN")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+    if ev is None:
+        raise Exception("Scan did not start")
+    dev[0].connect("test-scan", key_mgmt="NONE")

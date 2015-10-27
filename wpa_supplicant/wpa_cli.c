@@ -1770,6 +1770,13 @@ static int wpa_cli_cmd_scan_results(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_abort_scan(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "ABORT_SCAN");
+}
+
+
 static int wpa_cli_cmd_bss(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_cli_cmd(ctrl, "BSS", 1, argc, argv);
@@ -3029,6 +3036,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "scan_results", wpa_cli_cmd_scan_results, NULL,
 	  cli_cmd_flag_none,
 	  "= get latest scan results" },
+	{ "abort_scan", wpa_cli_cmd_abort_scan, NULL,
+	  cli_cmd_flag_none,
+	  "= request ongoing scan to be aborted" },
 	{ "bss", wpa_cli_cmd_bss, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,
 	  "<<idx> | <bssid>> = get detailed scan result info" },

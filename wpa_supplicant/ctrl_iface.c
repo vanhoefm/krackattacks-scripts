@@ -8670,6 +8670,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "SCAN_RESULTS") == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_scan_results(
 			wpa_s, reply, reply_size);
+	} else if (os_strcmp(buf, "ABORT_SCAN") == 0) {
+		if (wpas_abort_ongoing_scan(wpa_s) < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "SELECT_NETWORK ", 15) == 0) {
 		if (wpa_supplicant_ctrl_iface_select_network(wpa_s, buf + 15))
 			reply_len = -1;

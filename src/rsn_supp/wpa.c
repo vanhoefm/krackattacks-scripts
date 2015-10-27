@@ -34,11 +34,13 @@
  * @msg: EAPOL-Key message
  * @msg_len: Length of message
  * @key_mic: Pointer to the buffer to which the EAPOL-Key MIC is written
+ * Returns: >= 0 on success, < 0 on failure
  */
-void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
-			int ver, const u8 *dest, u16 proto,
-			u8 *msg, size_t msg_len, u8 *key_mic)
+int wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
+		       int ver, const u8 *dest, u16 proto,
+		       u8 *msg, size_t msg_len, u8 *key_mic)
 {
+	int ret = -1;
 	size_t mic_len = wpa_mic_len(sm->key_mgmt);
 
 	if (is_zero_ether_addr(dest) && is_zero_ether_addr(sm->bssid)) {
@@ -69,10 +71,11 @@ void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
 	wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", kck, kck_len);
 	wpa_hexdump(MSG_DEBUG, "WPA: Derived Key MIC", key_mic, mic_len);
 	wpa_hexdump(MSG_MSGDUMP, "WPA: TX EAPOL-Key", msg, msg_len);
-	wpa_sm_ether_send(sm, dest, proto, msg, msg_len);
+	ret = wpa_sm_ether_send(sm, dest, proto, msg, msg_len);
 	eapol_sm_notify_tx_eapol_key(sm->eapol);
 out:
 	os_free(msg);
+	return ret;
 }
 
 
@@ -324,7 +327,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
  * @wpa_ie: WPA/RSN IE
  * @wpa_ie_len: Length of the WPA/RSN IE
  * @ptk: PTK to use for keyed hash and encryption
- * Returns: 0 on success, -1 on failure
+ * Returns: >= 0 on success, < 0 on failure
  */
 int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 			       const struct wpa_eapol_key *key,
@@ -415,10 +418,8 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	os_memcpy(reply->key_nonce, nonce, WPA_NONCE_LEN);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 2/4");
-	wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst, ETH_P_EAPOL,
-			   rbuf, rlen, key_mic);
-
-	return 0;
+	return wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst,
+				  ETH_P_EAPOL, rbuf, rlen, key_mic);
 }
 
 
@@ -532,7 +533,7 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 #endif /* CONFIG_P2P */
 
 	if (wpa_supplicant_send_2_of_4(sm, sm->bssid, key, ver, sm->snonce,
-				       kde, kde_len, ptk))
+				       kde, kde_len, ptk) < 0)
 		goto failed;
 
 	os_free(kde_buf);
@@ -1100,7 +1101,7 @@ static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
  * @ver: Version bits from EAPOL-Key Key Info
  * @key_info: Key Info
  * @ptk: PTK to use for keyed hash and encryption
- * Returns: 0 on success, -1 on failure
+ * Returns: >= 0 on success, < 0 on failure
  */
 int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 			       const struct wpa_eapol_key *key,
@@ -1140,10 +1141,8 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		WPA_PUT_BE16(reply->key_data_length, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 4/4");
-	wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst, ETH_P_EAPOL,
-			   rbuf, rlen, key_mic);
-
-	return 0;
+	return wpa_eapol_key_send(sm, ptk->kck, ptk->kck_len, ver, dst,
+				  ETH_P_EAPOL, rbuf, rlen, key_mic);
 }
 
 
@@ -1216,7 +1215,7 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 #endif /* CONFIG_P2P */
 
 	if (wpa_supplicant_send_4_of_4(sm, sm->bssid, key, ver, key_info,
-				       &sm->ptk)) {
+				       &sm->ptk) < 0) {
 		goto failed;
 	}
 
@@ -1451,10 +1450,8 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 		WPA_PUT_BE16(reply->key_data_length, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 2/2");
-	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, sm->bssid,
-			   ETH_P_EAPOL, rbuf, rlen, key_mic);
-
-	return 0;
+	return wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver,
+				  sm->bssid, ETH_P_EAPOL, rbuf, rlen, key_mic);
 }
 
 
@@ -1498,7 +1495,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 		goto failed;
 
 	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc) ||
-	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info))
+	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info) < 0)
 		goto failed;
 	os_memset(&gd, 0, sizeof(gd));
 

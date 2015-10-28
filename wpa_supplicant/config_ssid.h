@@ -449,6 +449,10 @@ struct wpa_ssid {
 
 	int vht;
 
+	u8 max_oper_chwidth;
+
+	unsigned int vht_center_freq2;
+
 	/**
 	 * wpa_ptk_rekey - Maximum lifetime for PTK in seconds
 	 *

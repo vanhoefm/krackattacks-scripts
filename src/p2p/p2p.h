@@ -99,6 +99,10 @@ struct p2p_go_neg_results {
 
 	int vht;
 
+	u8 max_oper_chwidth;
+
+	unsigned int vht_center_freq2;
+
 	/**
 	 * ssid - SSID of the group
 	 */

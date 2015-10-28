@@ -56,12 +56,32 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 	if (!conf->secondary_channel)
 		goto no_vht;
 
-	center_chan = wpas_p2p_get_vht80_center(wpa_s, mode, channel);
+	switch (conf->vht_oper_chwidth) {
+	case VHT_CHANWIDTH_80MHZ:
+	case VHT_CHANWIDTH_80P80MHZ:
+		center_chan = wpas_p2p_get_vht80_center(wpa_s, mode, channel);
+		break;
+	case VHT_CHANWIDTH_160MHZ:
+		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel);
+		break;
+	default:
+		/*
+		 * conf->vht_oper_chwidth might not be set for non-P2P GO cases,
+		 * try oper_cwidth 160 MHz first then VHT 80 MHz, if 160 MHz is
+		 * not supported.
+		 */
+		conf->vht_oper_chwidth = VHT_CHANWIDTH_160MHZ;
+		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel);
+		if (!center_chan) {
+			conf->vht_oper_chwidth = VHT_CHANWIDTH_80MHZ;
+			center_chan = wpas_p2p_get_vht80_center(wpa_s, mode,
+								channel);
+		}
+		break;
+	}
 	if (!center_chan)
 		goto no_vht;
 
-	/* Use 80 MHz channel */
-	conf->vht_oper_chwidth = 1;
 	conf->vht_oper_centr_freq_seg0_idx = center_chan;
 	return;
 
@@ -634,6 +654,13 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;
 	}
+
+	/* Use the maximum oper channel width if it's given. */
+	if (ssid->max_oper_chwidth)
+		conf->vht_oper_chwidth = ssid->max_oper_chwidth;
+
+	ieee80211_freq_to_chan(ssid->vht_center_freq2,
+			       &conf->vht_oper_centr_freq_seg1_idx);
 
 	os_memcpy(wpa_s->ap_iface->conf->wmm_ac_params,
 		  wpa_s->conf->wmm_ac_params,

@@ -35,16 +35,20 @@ struct wpa_supplicant * wpas_get_p2p_client_iface(struct wpa_supplicant *wpa_s,
 int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		     const char *pin, enum p2p_wps_method wps_method,
 		     int persistent_group, int auto_join, int join,
-		     int auth, int go_intent, int freq, int persistent_id,
-		     int pd, int ht40, int vht);
+		     int auth, int go_intent, int freq,
+		     unsigned int vht_center_freq2, int persistent_id,
+		     int pd, int ht40, int vht, unsigned int max_oper_chwidth);
 int wpas_p2p_handle_frequency_conflicts(struct wpa_supplicant *wpa_s,
                                           int freq, struct wpa_ssid *ssid);
 int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
-		       int freq, int ht40, int vht);
+		       int freq, int vht_center_freq2, int ht40, int vht,
+		       int max_oper_chwidth);
 int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid, int addr_allocated,
-				  int force_freq, int neg_freq, int ht40,
-				  int vht, const struct p2p_channels *channels,
+				  int force_freq, int neg_freq,
+				  int vht_center_freq2, int ht40,
+				  int vht, int max_oper_chwidth,
+				  const struct p2p_channels *channels,
 				  int connection_timeout, int force_scan);
 struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
@@ -111,7 +115,8 @@ void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 int wpas_p2p_reject(struct wpa_supplicant *wpa_s, const u8 *addr);
 int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		    struct wpa_ssid *ssid, const u8 *go_dev_addr, int freq,
-		    int ht40, int vht, int pref_freq);
+		    int vht_center_freq2, int ht40, int vht,
+		    int max_oper_chwidth, int pref_freq);
 int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 			  const u8 *peer_addr, const u8 *go_dev_addr);
 int wpas_p2p_presence_req(struct wpa_supplicant *wpa_s, u32 duration1,

@@ -857,6 +857,9 @@ struct wpa_supplicant {
 	int *p2p_group_common_freqs;
 	unsigned int p2p_group_common_freqs_num;
 	u8 p2ps_join_addr[ETH_ALEN];
+
+	unsigned int p2p_go_max_oper_chwidth;
+	unsigned int p2p_go_vht_center_freq2;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

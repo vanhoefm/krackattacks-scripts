@@ -140,6 +140,8 @@ int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 			   struct hostapd_hw_modes *mode, u8 channel);
 int wpas_p2p_get_vht80_center(struct wpa_supplicant *wpa_s,
 			      struct hostapd_hw_modes *mode, u8 channel);
+int wpas_p2p_get_vht160_center(struct wpa_supplicant *wpa_s,
+			       struct hostapd_hw_modes *mode, u8 channel);
 unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s);
 void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 			 const u8 *p2p_dev_addr,

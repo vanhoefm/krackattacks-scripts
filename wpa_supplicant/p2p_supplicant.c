@@ -3417,6 +3417,75 @@ static enum chan_allowed wpas_p2p_verify_80mhz(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_p2p_get_center_160mhz(struct wpa_supplicant *wpa_s,
+				     struct hostapd_hw_modes *mode,
+				     u8 channel)
+{
+	u8 center_channels[] = { 50, 114 };
+	unsigned int i;
+
+	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(center_channels); i++)
+		/*
+		 * In 160 MHz, the bandwidth "spans" 28 channels (e.g., 36-64),
+		 * so the center channel is 14 channels away from the start/end.
+		 */
+		if (channel >= center_channels[i] - 14 &&
+		    channel <= center_channels[i] + 14)
+			return center_channels[i];
+
+	return 0;
+}
+
+
+static enum chan_allowed wpas_p2p_verify_160mhz(struct wpa_supplicant *wpa_s,
+					       struct hostapd_hw_modes *mode,
+					       u8 channel, u8 bw)
+{
+	u8 center_chan;
+	int i, flags;
+	enum chan_allowed res, ret = ALLOWED;
+
+	center_chan = wpas_p2p_get_center_160mhz(wpa_s, mode, channel);
+	if (!center_chan)
+		return NOT_ALLOWED;
+	/* VHT 160 MHz uses DFS channels in most countries. */
+
+	/* Check all the channels are available */
+	for (i = 0; i < 8; i++) {
+		int adj_chan = center_chan - 14 + i * 4;
+
+		res = has_channel(wpa_s->global, mode, adj_chan, &flags);
+		if (res == NOT_ALLOWED)
+			return NOT_ALLOWED;
+
+		if (res == NO_IR)
+			ret = NO_IR;
+
+		if (i == 0 && !(flags & HOSTAPD_CHAN_VHT_10_150))
+			return NOT_ALLOWED;
+		if (i == 1 && !(flags & HOSTAPD_CHAN_VHT_30_130))
+			return NOT_ALLOWED;
+		if (i == 2 && !(flags & HOSTAPD_CHAN_VHT_50_110))
+			return NOT_ALLOWED;
+		if (i == 3 && !(flags & HOSTAPD_CHAN_VHT_70_90))
+			return NOT_ALLOWED;
+		if (i == 4 && !(flags & HOSTAPD_CHAN_VHT_90_70))
+			return NOT_ALLOWED;
+		if (i == 5 && !(flags & HOSTAPD_CHAN_VHT_110_50))
+			return NOT_ALLOWED;
+		if (i == 6 && !(flags & HOSTAPD_CHAN_VHT_130_30))
+			return NOT_ALLOWED;
+		if (i == 7 && !(flags & HOSTAPD_CHAN_VHT_150_10))
+			return NOT_ALLOWED;
+	}
+
+	return ret;
+}
+
+
 static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
 						 struct hostapd_hw_modes *mode,
 						 u8 channel, u8 bw)
@@ -3435,6 +3504,8 @@ static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
 		res2 = has_channel(wpa_s->global, mode, channel + 4, NULL);
 	} else if (bw == BW80) {
 		res2 = wpas_p2p_verify_80mhz(wpa_s, mode, channel, bw);
+	} else if (bw == BW160) {
+		res2 = wpas_p2p_verify_160mhz(wpa_s, mode, channel, bw);
 	}
 
 	if (res == NOT_ALLOWED || res2 == NOT_ALLOWED)
@@ -3545,6 +3616,15 @@ int wpas_p2p_get_vht80_center(struct wpa_supplicant *wpa_s,
 		return 0;
 
 	return wpas_p2p_get_center_80mhz(wpa_s, mode, channel);
+}
+
+
+int wpas_p2p_get_vht160_center(struct wpa_supplicant *wpa_s,
+			       struct hostapd_hw_modes *mode, u8 channel)
+{
+	if (!wpas_p2p_verify_channel(wpa_s, mode, channel, BW160))
+		return 0;
+	return wpas_p2p_get_center_160mhz(wpa_s, mode, channel);
 }
 
 

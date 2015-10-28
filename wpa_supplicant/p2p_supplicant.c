@@ -3323,7 +3323,7 @@ struct p2p_oper_class_map {
 	u8 min_chan;
 	u8 max_chan;
 	u8 inc;
-	enum { BW20, BW40PLUS, BW40MINUS, BW80, BW2160 } bw;
+	enum { BW20, BW40PLUS, BW40MINUS, BW80, BW2160, BW160, BW80P80 } bw;
 };
 
 static const struct p2p_oper_class_map op_class[] = {
@@ -3349,6 +3349,8 @@ static const struct p2p_oper_class_map op_class[] = {
 	 * removing invalid channels.
 	 */
 	{ HOSTAPD_MODE_IEEE80211A, 128, 36, 161, 4, BW80 },
+	{ HOSTAPD_MODE_IEEE80211A, 130, 36, 161, 4, BW80P80 },
+	{ HOSTAPD_MODE_IEEE80211A, 129, 50, 114, 16, BW160 },
 	{ HOSTAPD_MODE_IEEE80211AD, 180, 1, 4, 1, BW2160 },
 	{ -1, 0, 0, 0, 0, BW20 }
 };

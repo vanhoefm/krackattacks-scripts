@@ -31,7 +31,7 @@
 /**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
  */
-#define P2P_MAX_REG_CLASSES 10
+#define P2P_MAX_REG_CLASSES 15
 
 /**
  * P2P_MAX_REG_CLASS_CHANNELS - Maximum number of channels per regulatory class

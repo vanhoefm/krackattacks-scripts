@@ -1706,9 +1706,11 @@ wpa_cli: $(OBJS_c)
 
 LIBCTRL += ../src/common/wpa_ctrl.o
 LIBCTRL += ../src/utils/os_$(CONFIG_OS).o
+LIBCTRL += ../src/utils/common.o
 LIBCTRL += ../src/utils/wpa_debug.o
 LIBCTRLSO += ../src/common/wpa_ctrl.c
 LIBCTRLSO += ../src/utils/os_$(CONFIG_OS).c
+LIBCTRLSO += ../src/utils/common.c
 LIBCTRLSO += ../src/utils/wpa_debug.c
 
 libwpa_client.a: $(LIBCTRL)

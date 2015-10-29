@@ -1001,3 +1001,122 @@ def test_p2p_delay_go_csa(dev, apdev, params):
 
         finally:
             wpas.global_request("SET p2p_go_freq_change_policy 2")
+
+def test_p2p_channel_vht80p80(dev):
+    """P2P group formation and VHT 80+80 MHz channel"""
+    try:
+        set_country("US", dev[0])
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               i_freq=5180,
+                                               i_freq2=5775,
+                                               i_max_oper_chwidth=160,
+                                               i_ht40=True, i_vht=True,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        freq = int(i_res['freq'])
+        if freq < 5000:
+            raise Exception("Unexpected channel %d MHz - did not follow 5 GHz preference" % freq)
+        sig = dev[1].group_request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80+80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        if "CENTER_FRQ1=5210" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+        if "CENTER_FRQ2=5775" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
+        remove_group(dev[0], dev[1])
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()
+
+def test_p2p_channel_vht80p80_autogo(dev):
+    """P2P autonomous GO and VHT 80+80 MHz channel"""
+    addr0 = dev[0].p2p_dev_addr()
+
+    try:
+        set_country("US", dev[0])
+        if "OK" not in dev[0].global_request("P2P_GROUP_ADD vht freq=5180 freq2=5775"):
+            raise Exception("Could not start GO")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("GO start up timed out")
+        dev[0].group_form_result(ev)
+
+        pin = dev[1].wps_read_pin()
+        dev[0].p2p_go_authorize_client(pin)
+
+        dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " join freq=5180")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Peer did not get connected")
+
+        sig = dev[1].group_request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80+80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        if "CENTER_FRQ1=5210" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+        if "CENTER_FRQ2=5775" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
+        remove_group(dev[0], dev[1])
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()
+
+def test_p2p_channel_vht80_autogo(dev):
+    """P2P autonomous GO and VHT 80 MHz channel"""
+    addr0 = dev[0].p2p_dev_addr()
+
+    try:
+        set_country("US", dev[0])
+        if "OK" not in dev[0].global_request("P2P_GROUP_ADD vht freq=5180 max_oper_chwidth=80"):
+            raise Exception("Could not start GO")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("GO start up timed out")
+        dev[0].group_form_result(ev)
+
+        pin = dev[1].wps_read_pin()
+        dev[0].p2p_go_authorize_client(pin)
+
+        dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " join freq=5180")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Peer did not get connected")
+
+        sig = dev[1].group_request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        remove_group(dev[0], dev[1])
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()
+
+def test_p2p_channel_vht80p80_persistent(dev):
+    """P2P persistent group re-invocation and VHT 80+80 MHz channel"""
+    addr0 = dev[0].p2p_dev_addr()
+    form(dev[0], dev[1])
+
+    try:
+        set_country("US", dev[0])
+        invite(dev[0], dev[1], extra="vht freq=5745 freq2=5210")
+        [go_res, cli_res] = check_result(dev[0], dev[1])
+
+        sig = dev[1].group_request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5745" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80+80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        if "CENTER_FRQ1=5775" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+        if "CENTER_FRQ2=5210" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
+        remove_group(dev[0], dev[1])
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()

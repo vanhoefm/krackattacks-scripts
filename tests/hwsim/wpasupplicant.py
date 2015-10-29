@@ -546,7 +546,9 @@ class WpaSupplicant:
 
         return res
 
-    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None, persistent=False, freq=None):
+    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None,
+                        persistent=False, freq=None, freq2=None,
+                        max_oper_chwidth=None, ht40=False, vht=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
@@ -558,6 +560,14 @@ class WpaSupplicant:
             cmd = cmd + ' go_intent=' + str(go_intent)
         if freq:
             cmd = cmd + ' freq=' + str(freq)
+        if freq2:
+            cmd = cmd + ' freq2=' + str(freq2)
+        if max_oper_chwidth:
+            cmd = cmd + ' max_oper_chwidth=' + str(max_oper_chwidth)
+        if ht40:
+            cmd = cmd + ' ht40'
+        if vht:
+            cmd = cmd + ' vht'
         if persistent:
             cmd = cmd + " persistent"
         if "OK" in self.global_request(cmd):
@@ -582,7 +592,11 @@ class WpaSupplicant:
         self.dump_monitor()
         return self.group_form_result(ev, expect_failure, go_neg_res)
 
-    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False, persistent=False, persistent_id=None, freq=None, provdisc=False, wait_group=True):
+    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None,
+                        expect_failure=False, persistent=False,
+                        persistent_id=None, freq=None, provdisc=False,
+                        wait_group=True, freq2=None, max_oper_chwidth=None,
+                        ht40=False, vht=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
@@ -594,6 +608,14 @@ class WpaSupplicant:
             cmd = cmd + ' go_intent=' + str(go_intent)
         if freq:
             cmd = cmd + ' freq=' + str(freq)
+        if freq2:
+            cmd = cmd + ' freq2=' + str(freq2)
+        if max_oper_chwidth:
+            cmd = cmd + ' max_oper_chwidth=' + str(max_oper_chwidth)
+        if ht40:
+            cmd = cmd + ' ht40'
+        if vht:
+            cmd = cmd + ' vht'
         if persistent:
             cmd = cmd + " persistent"
         elif persistent_id:

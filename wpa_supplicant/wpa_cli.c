@@ -66,6 +66,12 @@ static const char *const wpa_cli_full_license =
 "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n"
 "\n";
 
+#define VENDOR_ELEM_FRAME_ID \
+	"  0: Probe Req (P2P), 1: Probe Resp (P2P) , 2: Probe Resp (GO), " \
+	"3: Beacon (GO), 4: PD Req, 5: PD Resp, 6: GO Neg Req, " \
+	"7: GO Neg Resp, 8: GO Neg Conf, 9: Inv Req, 10: Inv Resp, " \
+	"11: Assoc Req (P2P), 12: Assoc Resp (P2P)"
+
 static struct wpa_ctrl *ctrl_conn;
 static struct wpa_ctrl *mon_conn;
 static int wpa_cli_quit = 0;
@@ -2477,6 +2483,27 @@ static int wpa_cli_cmd_p2p_remove_client(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "P2P_REMOVE_CLIENT", 1, argc, argv);
 }
 
+
+static int wpa_cli_cmd_vendor_elem_add(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "VENDOR_ELEM_ADD", 2, argc, argv);
+}
+
+
+static int wpa_cli_cmd_vendor_elem_get(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "VENDOR_ELEM_GET", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_vendor_elem_remove(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "VENDOR_ELEM_REMOVE", 2, argc, argv);
+}
+
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -3248,6 +3275,18 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_remove_client", wpa_cli_cmd_p2p_remove_client,
 	  wpa_cli_complete_p2p_peer, cli_cmd_flag_none,
 	  "<address|iface=address> = remove a peer from all groups" },
+	{ "vendor_elem_add", wpa_cli_cmd_vendor_elem_add, NULL,
+	  cli_cmd_flag_none,
+	  "<frame id> <hexdump of elem(s)> = add vendor specific IEs to frame(s)\n"
+	  VENDOR_ELEM_FRAME_ID },
+	{ "vendor_elem_get", wpa_cli_cmd_vendor_elem_get, NULL,
+	  cli_cmd_flag_none,
+	  "<frame id> = get vendor specific IE(s) to frame(s)\n"
+	  VENDOR_ELEM_FRAME_ID },
+	{ "vendor_elem_remove", wpa_cli_cmd_vendor_elem_remove, NULL,
+	  cli_cmd_flag_none,
+	  "<frame id> <hexdump of elem(s)> = remove vendor specific IE(s) in frame(s)\n"
+	  VENDOR_ELEM_FRAME_ID },
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_WIFI_DISPLAY
 	{ "wfd_subelem_set", wpa_cli_cmd_wfd_subelem_set, NULL,

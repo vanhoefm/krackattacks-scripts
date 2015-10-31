@@ -843,7 +843,9 @@ def test_wpas_ctrl_set(dev):
              "dot11RSNAConfigPMKReauthThreshold 101",
              "dot11RSNAConfigSATimeout 0",
              "wps_version_number -1",
-             "wps_version_number 256" ]
+             "wps_version_number 256",
+             "fst_group_id ",
+             "fst_llt 0"]
     for val in vals:
         if "FAIL" not in dev[0].request("SET " + val):
             raise Exception("Unexpected SET success for " + val)
@@ -861,6 +863,11 @@ def test_wpas_ctrl_set(dev):
     for val in vals:
         if "OK" not in dev[0].request("SET " + val):
             raise Exception("Unexpected SET failure for " + val)
+
+    # This fails if wpa_supplicant is built with loadable EAP peer method
+    # support due to missing file and succeeds if no support for loadable
+    # methods is included, so don't check the return value for now.
+    dev[0].request("SET load_dynamic_eap /tmp/hwsim-eap-not-found.so")
 
 def test_wpas_ctrl_get_capability(dev):
     """wpa_supplicant ctrl_iface GET_CAPABILITY"""

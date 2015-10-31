@@ -411,6 +411,7 @@ def test_wpas_ctrl_cred(dev):
     set_cred(dev[0], id, "temporary", "1")
     set_cred(dev[0], id, "priority", "1")
     set_cred(dev[0], id, "pcsc", "1")
+    set_cred(dev[0], id, "sim_num", "0")
     set_cred_quoted(dev[0], id, "private_key_passwd", "test")
     set_cred_quoted(dev[0], id, "domain_suffix_match", "test")
     set_cred_quoted(dev[0], id, "phase1", "test")
@@ -432,6 +433,16 @@ def test_wpas_ctrl_cred(dev):
 
     if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " foo 4142"):
         raise Exception("Unexpected success on unknown field")
+
+    tests = ["sp_priority 256",
+             'roaming_partner "example.org"',
+             'roaming_partner "' + 200*'a' + '.example.org,"',
+             'roaming_partner "example.org,1"',
+             'roaming_partner "example.org,1,2"',
+             'roaming_partner "example.org,1,2,ABC"' ]
+    for t in tests:
+        if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " " + t):
+            raise Exception("Unexpected success on invalid SET_CRED value: " + t)
 
     id3 = add_cred(dev[0])
     id4 = add_cred(dev[0])

@@ -12,6 +12,8 @@ import subprocess
 import logging
 logger = logging.getLogger()
 import os
+import socket
+import SocketServer
 
 import hwsim_utils
 import hostapd
@@ -4097,3 +4099,76 @@ def test_eap_gpsk_errors(dev, apdev):
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_ap_wpa2_eap_sim_db(dev, apdev, params):
+    """EAP-SIM DB error cases"""
+    sockpath = '/tmp/hlr_auc_gw.sock-test'
+    try:
+        os.remove(sockpath)
+    except:
+        pass
+    hparams = int_eap_server_params()
+    hparams['eap_sim_db'] = 'unix:' + sockpath
+    hapd = hostapd.add_ap(apdev[0]['ifname'], hparams)
+
+    # Initial test with hlr_auc_gw socket not available
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                        eap="SIM", identity="1232010000000000",
+                        password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                        scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
+    # Test with invalid responses and response timeout
+
+    class test_handler(SocketServer.DatagramRequestHandler):
+        def handle(self):
+            data = self.request[0].strip()
+            socket = self.request[1]
+            logger.debug("Received hlr_auc_gw request: " + data)
+            # EAP-SIM DB: Failed to parse response string
+            socket.sendto("FOO", self.client_address)
+            # EAP-SIM DB: Failed to parse response string
+            socket.sendto("FOO 1", self.client_address)
+            # EAP-SIM DB: Unknown external response
+            socket.sendto("FOO 1 2", self.client_address)
+            logger.info("No proper response - wait for pending eap_sim_db request timeout")
+
+    server = SocketServer.UnixDatagramServer(sockpath, test_handler)
+    server.timeout = 1
+
+    dev[0].select_network(id)
+    server.handle_request()
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
+    # Test with a valid response
+
+    class test_handler2(SocketServer.DatagramRequestHandler):
+        def handle(self):
+            data = self.request[0].strip()
+            socket = self.request[1]
+            logger.debug("Received hlr_auc_gw request: " + data)
+            fname = os.path.join(params['logdir'],
+                                 'hlr_auc_gw.milenage_db')
+            cmd = subprocess.Popen(['../../hostapd/hlr_auc_gw',
+                                    '-m', fname, data],
+                                   stdout=subprocess.PIPE)
+            res = cmd.stdout.read().strip()
+            cmd.stdout.close()
+            logger.debug("hlr_auc_gw response: " + res)
+            socket.sendto(res, self.client_address)
+
+    server.RequestHandlerClass = test_handler2
+
+    dev[0].select_network(id)
+    server.handle_request()
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

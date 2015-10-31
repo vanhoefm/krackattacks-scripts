@@ -188,6 +188,14 @@ SM_STATE(EAP, INITIALIZE)
 	 */
 	eapol_set_bool(sm, EAPOL_eapResp, FALSE);
 	eapol_set_bool(sm, EAPOL_eapNoResp, FALSE);
+	/*
+	 * RFC 4137 does not reset ignore here, but since it is possible for
+	 * some method code paths to end up not setting ignore=FALSE, clear the
+	 * value here to avoid issues if a previous authentication attempt
+	 * failed with ignore=TRUE being left behind in the last
+	 * m.check(eapReqData) operation.
+	 */
+	sm->ignore = 0;
 	sm->num_rounds = 0;
 	sm->prev_failure = 0;
 	sm->expected_failure = 0;

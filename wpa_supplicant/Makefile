@@ -1722,6 +1722,14 @@ libwpa_client.so: $(LIBCTRLSO)
 	@$(E) "  CC  $@ ($^)"
 	$(Q)$(CC) $(LDFLAGS) -o $@ $(CFLAGS) -shared -fPIC $^
 
+libwpa_test1: tests/libwpa_test.o libwpa_client.a
+	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test1 tests/libwpa_test.o libwpa_client.a $(LIBS_c)
+	@$(E) "  LD " $@
+
+libwpa_test2: tests/libwpa_test.o libwpa_client.so
+	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test2 tests/libwpa_test.o -L. -lwpa_client $(LIBS_c)
+	@$(E) "  LD " $@
+
 link_test: $(OBJS) $(OBJS_h) tests/link_test.o
 	$(Q)$(LDO) $(LDFLAGS) -o link_test $(OBJS) $(OBJS_h) tests/link_test.o $(LIBS)
 	@$(E) "  LD " $@
@@ -1843,5 +1851,6 @@ clean:
 	rm -rf lcov-html
 	rm -f libwpa_client.a
 	rm -f libwpa_client.so
+	rm -f libwpa_test1 libwpa_test2
 
 -include $(OBJS:%.o=%.d)

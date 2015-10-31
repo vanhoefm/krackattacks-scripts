@@ -64,10 +64,12 @@ void tls_deinit(void *ssl_ctx)
 		tlsv1_client_global_deinit();
 #endif /* CONFIG_TLS_INTERNAL_CLIENT */
 #ifdef CONFIG_TLS_INTERNAL_SERVER
-		tlsv1_cred_free(global->server_cred);
 		tlsv1_server_global_deinit();
 #endif /* CONFIG_TLS_INTERNAL_SERVER */
 	}
+#ifdef CONFIG_TLS_INTERNAL_SERVER
+	tlsv1_cred_free(global->server_cred);
+#endif /* CONFIG_TLS_INTERNAL_SERVER */
 	os_free(global);
 }
 

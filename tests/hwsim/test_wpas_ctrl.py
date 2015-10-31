@@ -32,7 +32,37 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request("GET_NETWORK " + str(id + 1) + " proto"):
         raise Exception("Unexpected success for invalid network id")
 
+    if "OK" not in dev[0].request("SET_NETWORK " + str(id) + " proto  \t WPA2 "):
+        raise Exception("Unexpected failure for SET_NETWORK proto")
+    res = dev[0].request("GET_NETWORK " + str(id) + " proto")
+    if res != "RSN":
+        raise Exception("Unexpected SET_NETWORK/GET_NETWORK conversion for proto: " + res)
+
+    if "OK" not in dev[0].request("SET_NETWORK " + str(id) + " key_mgmt  \t WPA-PSK "):
+        raise Exception("Unexpected success for SET_NETWORK key_mgmt")
+    res = dev[0].request("GET_NETWORK " + str(id) + " key_mgmt")
+    if res != "WPA-PSK":
+        raise Exception("Unexpected SET_NETWORK/GET_NETWORK conversion for key_mgmt: " + res)
+
+    if "OK" not in dev[0].request("SET_NETWORK " + str(id) + " auth_alg  \t OPEN "):
+        raise Exception("Unexpected failure for SET_NETWORK auth_alg")
+    res = dev[0].request("GET_NETWORK " + str(id) + " auth_alg")
+    if res != "OPEN":
+        raise Exception("Unexpected SET_NETWORK/GET_NETWORK conversion for auth_alg: " + res)
+
+    if "OK" not in dev[0].request("SET_NETWORK " + str(id) + " eap  \t TLS "):
+        raise Exception("Unexpected failure for SET_NETWORK eap")
+    res = dev[0].request("GET_NETWORK " + str(id) + " eap")
+    if res != "TLS":
+        raise Exception("Unexpected SET_NETWORK/GET_NETWORK conversion for eap: " + res)
+
+    tests = ("bssid foo", "key_mgmt foo", "key_mgmt ", "group NONE")
+    for t in tests:
+        if "FAIL" not in dev[0].request("SET_NETWORK " + str(id) + " " + t):
+            raise Exception("Unexpected success for invalid SET_NETWORK: " + t)
+
     tests = (("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
+             ("key_mgmt", "WPS SAE FT-SAE OSEN WPA-EAP-SUITE-B WPA-EAP-SUITE-B-192"),
              ("pairwise", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("auth_alg", "OPEN SHARED LEAP"),

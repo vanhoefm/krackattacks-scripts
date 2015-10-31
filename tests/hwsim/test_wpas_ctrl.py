@@ -678,6 +678,12 @@ def test_wpas_ctrl_mib(dev):
 
 def test_wpas_ctrl_set_wps_params(dev):
     """wpa_supplicant ctrl_iface SET config_methods"""
+    try:
+        _test_wpas_ctrl_set_wps_params(dev)
+    finally:
+        dev[2].request("SET config_methods ")
+
+def _test_wpas_ctrl_set_wps_params(dev):
     ts = [ "config_methods label virtual_display virtual_push_button keypad",
            "device_type 1-0050F204-1",
            "os_version 01020300",

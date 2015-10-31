@@ -102,7 +102,8 @@ def test_wpas_add_set_remove_support(dev):
     dev[0].set_network(id, "mode", "5")
     dev[0].remove_network(id)
 
-def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0):
+def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0,
+                          basic_rates=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
@@ -110,6 +111,8 @@ def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0):
     dev.set_network(id, "frequency", freq)
     if beacon_int:
         dev.set_network(id, "beacon_int", str(beacon_int))
+    if basic_rates:
+        dev.set_network(id, "mesh_basic_rates", basic_rates)
     if start:
         dev.mesh_group_add(id)
     return id
@@ -185,8 +188,8 @@ def test_wpas_mesh_mode_scan(dev):
 def test_wpas_mesh_open(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
     check_mesh_support(dev[0])
-    add_open_mesh_network(dev[0], freq="2462")
-    add_open_mesh_network(dev[1], freq="2462")
+    add_open_mesh_network(dev[0], freq="2462", basic_rates="60 120 240")
+    add_open_mesh_network(dev[1], freq="2462", basic_rates="60 120 240")
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])

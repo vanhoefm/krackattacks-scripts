@@ -327,7 +327,7 @@ def test_wifi_display_parsing(dev):
         dev[1].request("VENDOR_ELEM_REMOVE 11 *")
         dev[0].request("SET wifi_display 0")
 
-def test_wifi_display_parsing(dev):
+def _test_wifi_display_parsing(dev):
     wfd_devinfo = "00411c440028"
     dev[0].request("SET wifi_display 1")
     dev[0].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo)

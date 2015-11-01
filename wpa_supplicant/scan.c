@@ -2148,6 +2148,9 @@ void scan_only_handler(struct wpa_supplicant *wpa_s,
 		wpa_s->scan_work = NULL;
 		radio_work_done(work);
 	}
+
+	if (wpa_s->wpa_state == WPA_SCANNING)
+		wpa_supplicant_set_state(wpa_s, wpa_s->scan_prev_wpa_state);
 }
 
 

@@ -970,7 +970,7 @@ static void eap_pwd_process(struct eap_sm *sm, void *priv,
 	/*
 	 * the first and all intermediate fragments have the M bit set
 	 */
-	if (EAP_PWD_GET_MORE_BIT(lm_exch)) {
+	if (EAP_PWD_GET_MORE_BIT(lm_exch) || data->in_frag_pos) {
 		if ((data->in_frag_pos + len) > wpabuf_size(data->inbuf)) {
 			wpa_printf(MSG_DEBUG, "EAP-pwd: Buffer overflow "
 				   "attack detected! (%d+%d > %d)",
@@ -981,6 +981,8 @@ static void eap_pwd_process(struct eap_sm *sm, void *priv,
 		}
 		wpabuf_put_data(data->inbuf, pos, len);
 		data->in_frag_pos += len;
+	}
+	if (EAP_PWD_GET_MORE_BIT(lm_exch)) {
 		wpa_printf(MSG_DEBUG, "EAP-pwd: Got a %d byte fragment",
 			   (int) len);
 		return;
@@ -990,8 +992,6 @@ static void eap_pwd_process(struct eap_sm *sm, void *priv,
 	 * buffering fragments so that's how we know it's the last)
 	 */
 	if (data->in_frag_pos) {
-		wpabuf_put_data(data->inbuf, pos, len);
-		data->in_frag_pos += len;
 		pos = wpabuf_head_u8(data->inbuf);
 		len = data->in_frag_pos;
 		wpa_printf(MSG_DEBUG, "EAP-pwd: Last fragment, %d bytes",

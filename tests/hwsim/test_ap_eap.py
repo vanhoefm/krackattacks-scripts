@@ -1889,18 +1889,27 @@ def test_ap_wpa2_eap_pwd_groups(dev, apdev):
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
                "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf" }
-    for i in [ 19, 20, 21, 25, 26 ]:
+    groups = [ 19, 20, 21, 25, 26 ]
+    if tls.startswith("OpenSSL") and "build=OpenSSL 1.0.2" in tls and "run=OpenSSL 1.0.2" in tls:
+        logger.info("Add Brainpool EC groups since OpenSSL is new enough")
+        groups += [ 27, 28, 29, 30 ]
+    for i in groups:
+        logger.info("Group %d" % i)
         params['pwd_group'] = str(i)
         hostapd.add_ap(apdev[0]['ifname'], params)
-        dev[0].request("REMOVE_NETWORK all")
         try:
             eap_connect(dev[0], apdev[0], "PWD", "pwd user",
                         password="secret password")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+            dev[0].dump_monitor()
         except:
             if "BoringSSL" in tls and i in [ 25 ]:
                 logger.info("Ignore connection failure with group %d with BoringSSL" % i)
                 dev[0].request("DISCONNECT")
                 time.sleep(0.1)
+                dev[0].request("REMOVE_NETWORK all")
+                dev[0].dump_monitor()
                 continue
             raise
 

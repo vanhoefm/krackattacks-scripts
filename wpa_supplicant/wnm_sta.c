@@ -639,6 +639,7 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	if (bss == wpa_s->current_bss) {
 		wpa_printf(MSG_DEBUG,
 			   "WNM: Already associated with the preferred candidate");
+		wnm_deallocate_memory(wpa_s);
 		return 1;
 	}
 

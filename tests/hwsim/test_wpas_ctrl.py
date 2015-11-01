@@ -62,7 +62,7 @@ def test_wpas_ctrl_network(dev):
             raise Exception("Unexpected success for invalid SET_NETWORK: " + t)
 
     tests = (("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
-             ("key_mgmt", "WPS SAE FT-SAE OSEN WPA-EAP-SUITE-B WPA-EAP-SUITE-B-192"),
+             ("key_mgmt", "WPS SAE FT-SAE OSEN"),
              ("pairwise", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("auth_alg", "OPEN SHARED LEAP"),
@@ -81,6 +81,18 @@ def test_wpas_ctrl_network(dev):
         res = dev[0].get_network(id, field)
         if res != value:
             raise Exception("Unexpected response for '" + field + "': '" + res + "'")
+
+    try:
+        value = "WPA-EAP-SUITE-B WPA-EAP-SUITE-B-192"
+        dev[0].set_network(id, "key_mgmt", value)
+        res = dev[0].get_network(id, "key_mgmt")
+        if res != value:
+            raise Exception("Unexpected response for key_mgmt")
+    except Exception, e:
+        if str(e).startswith("Unexpected"):
+            raise
+        else:
+            pass
 
     q_tests = (("identity", "hello"),
                ("anonymous_identity", "foo@nowhere.com"))

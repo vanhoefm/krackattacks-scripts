@@ -6340,7 +6340,8 @@ static void wpas_p2p_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
 	if (!offchannel_pending_action_tx(wpa_s))
 		return;
 
-	wpas_p2p_action_tx_clear(wpa_s);
+	if (wpa_s->p2p_send_action_work)
+		wpas_p2p_free_send_action_work(wpa_s);
 
 	wpa_printf(MSG_DEBUG, "P2P: Drop pending Action TX due to new "
 		   "operation request");

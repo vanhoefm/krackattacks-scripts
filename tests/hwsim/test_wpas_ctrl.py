@@ -16,6 +16,7 @@ import hwsim_utils
 from hwsim import HWSimRadio
 from wpasupplicant import WpaSupplicant
 from utils import alloc_fail
+from test_wpas_ap import wait_ap_ready
 
 def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
@@ -1489,6 +1490,37 @@ def test_wpas_ctrl_interface_add(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].global_request("INTERFACE_REMOVE " + ifname)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_wpas_ctrl_interface_add_ap(dev, apdev):
+    """wpa_supplicant INTERFACE_ADD/REMOVE AP interface"""
+    with HWSimRadio() as (radio, iface):
+        wpas0 = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas0.interface_add(iface)
+
+        ifname = "test-wpas-ap"
+        wpas0.interface_add(ifname, create=True, if_type='ap')
+        wpas = WpaSupplicant(ifname=ifname)
+
+        id = wpas.add_network()
+        wpas.set_network(id, "mode", "2")
+        wpas.set_network_quoted(id, "ssid", "wpas-ap-open")
+        wpas.set_network(id, "key_mgmt", "NONE")
+        wpas.set_network(id, "frequency", "2412")
+        wpas.set_network(id, "scan_freq", "2412")
+        wpas.select_network(id)
+        wait_ap_ready(wpas)
+
+        dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+        dev[2].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+
+        hwsim_utils.test_connectivity(wpas, dev[1])
+        hwsim_utils.test_connectivity(dev[1], dev[2])
+
+        dev[1].request("DISCONNECT")
+        dev[2].request("DISCONNECT")
+        dev[1].wait_disconnected()
+        dev[2].wait_disconnected()
+        wpas0.global_request("INTERFACE_REMOVE " + ifname)
 
 def test_wpas_ctrl_interface_add_many(dev, apdev):
     """wpa_supplicant INTERFACE_ADD/REMOVE with vif creation/removal (many)"""

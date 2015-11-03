@@ -55,7 +55,7 @@ class WpaSupplicant:
 
     def interface_add(self, ifname, config="", driver="nl80211",
                       drv_params=None, br_ifname=None, create=False,
-                      set_ifname=True, all_params=False):
+                      set_ifname=True, all_params=False, if_type=None):
         try:
             groups = subprocess.check_output(["id"])
             group = "admin" if "(admin)" in groups else "adm"
@@ -74,6 +74,8 @@ class WpaSupplicant:
                 if not drv_params:
                     cmd += '\t'
             cmd += '\tcreate'
+            if if_type:
+                cmd += '\t' + if_type
         if all_params and not create:
             if not br_ifname:
                 cmd += '\t'

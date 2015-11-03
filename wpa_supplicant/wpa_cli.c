@@ -1872,14 +1872,15 @@ static int wpa_cli_cmd_interface_add(struct wpa_ctrl *ctrl, int argc,
 
 	/*
 	 * INTERFACE_ADD <ifname>TAB<confname>TAB<driver>TAB<ctrl_interface>TAB
-	 * <driver_param>TAB<bridge_name>[TAB<create>]
+	 * <driver_param>TAB<bridge_name>[TAB<create>[TAB<type>]]
 	 */
 	res = os_snprintf(cmd, sizeof(cmd),
-			  "INTERFACE_ADD %s\t%s\t%s\t%s\t%s\t%s\t%s",
+			  "INTERFACE_ADD %s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
 			  argv[0],
 			  argc > 1 ? argv[1] : "", argc > 2 ? argv[2] : "",
 			  argc > 3 ? argv[3] : "", argc > 4 ? argv[4] : "",
-			  argc > 5 ? argv[5] : "", argc > 6 ? argv[6] : "");
+			  argc > 5 ? argv[5] : "", argc > 6 ? argv[6] : "",
+			  argc > 7 ? argv[7] : "");
 	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
@@ -3044,8 +3045,10 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "interface_add", wpa_cli_cmd_interface_add, NULL,
 	  cli_cmd_flag_none,
 	  "<ifname> <confname> <driver> <ctrl_interface> <driver_param>\n"
-	  "  <bridge_name> = adds new interface, all parameters but <ifname>\n"
-	  "  are optional" },
+	  "  <bridge_name> <create> <type> = adds new interface, all "
+	  "parameters but\n"
+	  "  <ifname> are optional. Supported types are station ('sta') and "
+	  "AP ('ap')" },
 	{ "interface_remove", wpa_cli_cmd_interface_remove, NULL,
 	  cli_cmd_flag_none,
 	  "<ifname> = removes the interface" },

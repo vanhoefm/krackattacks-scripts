@@ -1877,7 +1877,7 @@ out:
 	os_free(iface);
 	return reply;
 #else /* IEEE8021X_EAPOL */
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: 802.1X not included");
+	wpa_printf(MSG_DEBUG, "dbus: 802.1X not included");
 	return wpas_dbus_error_unknown_error(message, "802.1X not included");
 #endif /* IEEE8021X_EAPOL */
 }

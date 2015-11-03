@@ -691,13 +691,15 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 				mgmt->u.disassoc.variable;
 		}
 	} else {
+		event.deauth_info.locally_generated =
+			!os_memcmp(mgmt->sa, drv->first_bss->addr, ETH_ALEN);
 		if (drv->ignore_deauth_event) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore deauth event due to previous forced deauth-during-auth");
 			drv->ignore_deauth_event = 0;
+			if (event.deauth_info.locally_generated)
+				drv->ignore_next_local_deauth = 0;
 			return;
 		}
-		event.deauth_info.locally_generated =
-			!os_memcmp(mgmt->sa, drv->first_bss->addr, ETH_ALEN);
 		if (drv->ignore_next_local_deauth) {
 			drv->ignore_next_local_deauth = 0;
 			if (event.deauth_info.locally_generated) {

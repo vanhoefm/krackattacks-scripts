@@ -5903,7 +5903,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
 				     void *bss_ctx, void **drv_priv,
 				     char *force_ifname, u8 *if_addr,
-				     const char *bridge, int use_existing)
+				     const char *bridge, int use_existing,
+				     int setup_ap)
 {
 	enum nl80211_iftype nlmode;
 	struct i802_bss *bss = priv;
@@ -5987,7 +5988,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		os_memcpy(if_addr, new_addr, ETH_ALEN);
 	}
 
-	if (type == WPA_IF_AP_BSS) {
+	if (type == WPA_IF_AP_BSS && setup_ap) {
 		struct i802_bss *new_bss = os_zalloc(sizeof(*new_bss));
 		if (new_bss == NULL) {
 			if (added)

@@ -2407,12 +2407,13 @@ struct wpa_driver_ops {
 	 *	change interface address)
 	 * @bridge: Bridge interface to use or %NULL if no bridge configured
 	 * @use_existing: Whether to allow existing interface to be used
+	 * @setup_ap: Whether to setup AP for %WPA_IF_AP_BSS interfaces
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*if_add)(void *priv, enum wpa_driver_if_type type,
 		      const char *ifname, const u8 *addr, void *bss_ctx,
 		      void **drv_priv, char *force_ifname, u8 *if_addr,
-		      const char *bridge, int use_existing);
+		      const char *bridge, int use_existing, int setup_ap);
 
 	/**
 	 * if_remove - Remove a virtual interface

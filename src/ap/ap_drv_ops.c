@@ -468,7 +468,7 @@ int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 		return -1;
 	return hapd->driver->if_add(hapd->drv_priv, type, ifname, addr,
 				    bss_ctx, drv_priv, force_ifname, if_addr,
-				    bridge, use_existing);
+				    bridge, use_existing, 1);
 }
 
 

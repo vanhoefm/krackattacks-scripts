@@ -3069,6 +3069,14 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_TDLS */
+#ifndef CONFIG_NO_CONFIG_WRITE
+	{ "SaveConfig", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_save_config,
+	  {
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_NO_CONFIG_WRITE */
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 

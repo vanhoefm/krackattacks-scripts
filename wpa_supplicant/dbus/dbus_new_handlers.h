@@ -194,6 +194,9 @@ DBusMessage * wpas_dbus_handler_tdls_status(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 					      struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_save_config(DBusMessage *message,
+					    struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
 					   const char *arg);
 DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,

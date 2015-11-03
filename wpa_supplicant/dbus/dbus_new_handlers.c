@@ -2294,6 +2294,35 @@ DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 #endif /* CONFIG_TDLS */
 
 
+#ifndef CONFIG_NO_CONFIG_WRITE
+/**
+ * wpas_dbus_handler_save_config - Save configuration to configuration file
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL on Success, Otherwise errror message
+ *
+ * Handler function for "SaveConfig" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_save_config(DBusMessage *message,
+					    struct wpa_supplicant *wpa_s)
+{
+	int ret;
+
+	if (!wpa_s->conf->update_config) {
+		return wpas_dbus_error_unknown_error(
+			message,
+			"Not allowed to update configuration (update_config=0)");
+	}
+
+	ret = wpa_config_write(wpa_s->confname, wpa_s->conf);
+	if (ret)
+		return wpas_dbus_error_unknown_error(
+			message, "Failed to update configuration");
+	return NULL;
+}
+#endif /* CONFIG_NO_CONFIG_WRITE */
+
+
 /**
  * wpas_dbus_handler_set_pkcs11_engine_and_module_path - Set PKCS #11 engine and module path
  * @message: Pointer to incoming dbus message

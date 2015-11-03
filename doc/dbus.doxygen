@@ -456,6 +456,10 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
       </li>
       <li>
+	<h3>SaveConfig ( ) --> nothing</h3>
+	<p>Save configuration to the configuration file.</p>
+      </li>
+      <li>
 	<h3>EAPLogoff ( ) --> nothing</h3>
 	<p>IEEE 802.1X EAPOL state machine logoff.</p>
       </li>

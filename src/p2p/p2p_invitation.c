@@ -284,7 +284,7 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 
 		if (!p2p_channels_includes(&intersection, reg_class, channel))
 		{
-			p2p_dbg(p2p, "forced freq %d MHz not in the supported channels interaction",
+			p2p_dbg(p2p, "forced freq %d MHz not in the supported channels intersection",
 				op_freq);
 			status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 			goto fail;

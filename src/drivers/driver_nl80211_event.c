@@ -651,10 +651,21 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 			 * Avoid issues with some roaming cases where
 			 * disconnection event for the old AP may show up after
 			 * we have started connection with the new AP.
+			 * In case of locally generated event clear
+			 * ignore_next_local_deauth as well, to avoid next local
+			 * deauth event be wrongly ignored.
 			 */
-			wpa_printf(MSG_DEBUG, "nl80211: Ignore deauth/disassoc event from old AP " MACSTR " when already authenticating with " MACSTR,
-				   MAC2STR(bssid),
-				   MAC2STR(drv->auth_attempt_bssid));
+			if (!os_memcmp(mgmt->sa, drv->first_bss->addr,
+				       ETH_ALEN)) {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Received a locally generated deauth event. Clear ignore_next_local_deauth flag");
+				drv->ignore_next_local_deauth = 0;
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Ignore deauth/disassoc event from old AP " MACSTR " when already authenticating with " MACSTR,
+					   MAC2STR(bssid),
+					   MAC2STR(drv->auth_attempt_bssid));
+			}
 			return;
 		}
 

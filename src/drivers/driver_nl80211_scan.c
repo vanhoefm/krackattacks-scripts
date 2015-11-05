@@ -132,6 +132,8 @@ nl80211_scan_common(struct i802_bss *bss, u8 cmd,
 				goto fail;
 		}
 		nla_nest_end(msg, ssids);
+	} else {
+		wpa_printf(MSG_DEBUG, "nl80211: Passive scan requested");
 	}
 
 	if (params->extra_ies) {

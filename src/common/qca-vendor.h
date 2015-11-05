@@ -161,6 +161,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_OTA_TEST = 108,
 	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_SCALE = 109,
 	/* 110..114 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_DECR_DB = 115,
 };
 
 
@@ -443,6 +444,22 @@ enum qca_vendor_attr_txpower_scale {
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_MAX =
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_SCALE_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_vendor_attr_txpower_decr_db - Attributes for TX power decrease
+ *
+ * These attributes are used with QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_DECR_DB.
+ */
+enum qca_vendor_attr_txpower_decr_db {
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_INVALID,
+	/* 8-bit unsigned value to indicate the reduction of TX power in dB for
+	 * a virtual interface. */
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_MAX =
+	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

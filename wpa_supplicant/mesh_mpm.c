@@ -548,6 +548,9 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 			return NULL;
 	}
 
+	/* Set WMM by default since Mesh STAs are QoS STAs */
+	sta->flags |= WLAN_STA_WMM;
+
 	/* initialize sta */
 	if (copy_supp_rates(wpa_s, sta, elems)) {
 		ap_free_sta(data, sta);

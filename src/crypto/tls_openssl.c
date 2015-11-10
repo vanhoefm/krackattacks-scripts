@@ -105,6 +105,66 @@ static BIO * BIO_from_keystore(const char *key)
 	free(value);
 	return bio;
 }
+
+
+static int tls_add_ca_from_keystore(X509_STORE *ctx, const char *key_alias)
+{
+	BIO *bio = BIO_from_keystore(key_alias);
+	STACK_OF(X509_INFO) *stack = NULL;
+	stack_index_t i;
+
+	if (bio) {
+		stack = PEM_X509_INFO_read_bio(bio, NULL, NULL, NULL);
+		BIO_free(bio);
+	}
+
+	if (!stack) {
+		wpa_printf(MSG_WARNING, "TLS: Failed to parse certificate: %s",
+			   key_alias);
+		return -1;
+	}
+
+	for (i = 0; i < sk_X509_INFO_num(stack); ++i) {
+		X509_INFO *info = sk_X509_INFO_value(stack, i);
+
+		if (info->x509)
+			X509_STORE_add_cert(ctx, info->x509);
+		if (info->crl)
+			X509_STORE_add_crl(ctx, info->crl);
+	}
+
+	sk_X509_INFO_pop_free(stack, X509_INFO_free);
+
+	return 0;
+}
+
+
+static int tls_add_ca_from_keystore_encoded(X509_STORE *ctx,
+					    const char *encoded_key_alias)
+{
+	int rc = -1;
+	int len = os_strlen(encoded_key_alias);
+	unsigned char *decoded_alias;
+
+	if (len & 1) {
+		wpa_printf(MSG_WARNING, "Invalid hex-encoded alias: %s",
+			   encoded_key_alias);
+		return rc;
+	}
+
+	decoded_alias = os_malloc(len / 2 + 1);
+	if (decoded_alias) {
+		if (!hexstr2bin(encoded_key_alias, decoded_alias, len / 2)) {
+			decoded_alias[len / 2] = '\0';
+			rc = tls_add_ca_from_keystore(
+				ctx, (const char *) decoded_alias);
+		}
+		os_free(decoded_alias);
+	}
+
+	return rc;
+}
+
 #endif /* ANDROID */
 
 static int tls_openssl_ref_count = 0;
@@ -1989,30 +2049,40 @@ static int tls_connection_ca_cert(struct tls_data *data,
 	}
 
 #ifdef ANDROID
+	/* Single alias */
 	if (ca_cert && os_strncmp("keystore://", ca_cert, 11) == 0) {
-		BIO *bio = BIO_from_keystore(&ca_cert[11]);
-		STACK_OF(X509_INFO) *stack = NULL;
-		stack_index_t i;
-
-		if (bio) {
-			stack = PEM_X509_INFO_read_bio(bio, NULL, NULL, NULL);
-			BIO_free(bio);
-		}
-		if (!stack)
+		if (tls_add_ca_from_keystore(ssl_ctx->cert_store,
+					     &ca_cert[11]) < 0)
 			return -1;
+		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
+		return 0;
+	}
 
-		for (i = 0; i < sk_X509_INFO_num(stack); ++i) {
-			X509_INFO *info = sk_X509_INFO_value(stack, i);
-			if (info->x509) {
-				X509_STORE_add_cert(ssl_ctx->cert_store,
-						    info->x509);
-			}
-			if (info->crl) {
-				X509_STORE_add_crl(ssl_ctx->cert_store,
-						   info->crl);
+	/* Multiple aliases separated by space */
+	if (ca_cert && os_strncmp("keystores://", ca_cert, 12) == 0) {
+		char *aliases = os_strdup(&ca_cert[12]);
+		const char *delim = " ";
+		int rc = 0;
+		char *savedptr;
+		char *alias;
+
+		if (!aliases)
+			return -1;
+		alias = strtok_r(aliases, delim, &savedptr);
+		for (; alias; alias = strtok_r(NULL, delim, &savedptr)) {
+			if (tls_add_ca_from_keystore_encoded(
+				    ssl_ctx->cert_store, alias)) {
+				wpa_printf(MSG_WARNING,
+					   "OpenSSL: %s - Failed to add ca_cert %s from keystore",
+					   __func__, alias);
+				rc = -1;
+				break;
 			}
 		}
-		sk_X509_INFO_pop_free(stack, X509_INFO_free);
+		os_free(aliases);
+		if (rc)
+			return rc;
+
 		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
 		return 0;
 	}

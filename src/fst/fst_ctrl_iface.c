@@ -749,7 +749,7 @@ int fst_ctrl_iface_mb_info(const u8 *addr, char *buf, size_t buflen)
 
 	foreach_fst_group(g) {
 		foreach_fst_group_iface(g, f) {
-			if (fst_iface_is_connected(f, addr)) {
+			if (fst_iface_is_connected(f, addr, TRUE)) {
 				ret += print_band(num++, f, addr,
 						  buf + ret, buflen - ret);
 			}

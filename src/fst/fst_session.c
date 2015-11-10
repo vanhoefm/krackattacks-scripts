@@ -863,13 +863,15 @@ int fst_session_initiate_setup(struct fst_session *s)
 		return -EINVAL;
 	}
 
-	if (!fst_iface_is_connected(s->data.old_iface, s->data.old_peer_addr)) {
+	if (!fst_iface_is_connected(s->data.old_iface, s->data.old_peer_addr,
+				    FALSE)) {
 		fst_printf_session(s, MSG_ERROR,
 				   "The preset old peer address is not connected");
 		return -EINVAL;
 	}
 
-	if (!fst_iface_is_connected(s->data.new_iface, s->data.new_peer_addr)) {
+	if (!fst_iface_is_connected(s->data.new_iface, s->data.new_peer_addr,
+				    FALSE)) {
 		fst_printf_session(s, MSG_ERROR,
 				   "The preset new peer address is not connected");
 		return -EINVAL;
@@ -966,7 +968,8 @@ int fst_session_respond(struct fst_session *s, u8 status_code)
 		return -EINVAL;
 	}
 
-	if (!fst_iface_is_connected(s->data.old_iface, s->data.old_peer_addr)) {
+	if (!fst_iface_is_connected(s->data.old_iface,
+				    s->data.old_peer_addr, FALSE)) {
 		fst_printf_session(s, MSG_ERROR,
 				   "The preset peer address is not in the peer list");
 		return -EINVAL;

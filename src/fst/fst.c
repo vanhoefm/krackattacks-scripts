@@ -160,7 +160,7 @@ void fst_global_del_ctrl(struct fst_ctrl_handle *h)
 void fst_rx_action(struct fst_iface *iface, const struct ieee80211_mgmt *mgmt,
 		   size_t len)
 {
-	if (fst_iface_is_connected(iface, mgmt->sa))
+	if (fst_iface_is_connected(iface, mgmt->sa, FALSE))
 		fst_session_on_action_rx(iface, mgmt, len);
 	else
 		wpa_printf(MSG_DEBUG,

@@ -1722,6 +1722,36 @@ static int bss_is_ibss(struct wpa_bss *bss)
 }
 
 
+static int drv_supports_vht(struct wpa_supplicant *wpa_s,
+			    const struct wpa_ssid *ssid)
+{
+	enum hostapd_hw_mode hw_mode;
+	struct hostapd_hw_modes *mode = NULL;
+	u8 channel;
+	int i;
+
+#ifdef CONFIG_HT_OVERRIDES
+	if (ssid->disable_ht)
+		return 0;
+#endif /* CONFIG_HT_OVERRIDES */
+
+	hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
+	if (hw_mode == NUM_HOSTAPD_MODES)
+		return 0;
+	for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
+		if (wpa_s->hw.modes[i].mode == hw_mode) {
+			mode = &wpa_s->hw.modes[i];
+			break;
+		}
+	}
+
+	if (!mode)
+		return 0;
+
+	return mode->vht_capab != 0;
+}
+
+
 void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 			  const struct wpa_ssid *ssid,
 			  struct hostapd_freq_params *freq)
@@ -1885,12 +1915,12 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 		   "IBSS/mesh: setup freq channel %d, sec_channel_offset %d",
 		   freq->channel, freq->sec_channel_offset);
 
-	/* Not sure if mesh is ready for VHT */
-	if (ssid->mode != WPAS_MODE_IBSS)
+	if (!drv_supports_vht(wpa_s, ssid))
 		return;
 
 	/* For IBSS check VHT_IBSS flag */
-	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_VHT_IBSS))
+	if (ssid->mode == WPAS_MODE_IBSS &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_VHT_IBSS))
 		return;
 
 	vht_freq = *freq;

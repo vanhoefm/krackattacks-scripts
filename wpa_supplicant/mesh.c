@@ -323,6 +323,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	params.meshid_len = ssid->ssid_len;
 	ibss_mesh_setup_freq(wpa_s, ssid, &params.freq);
 	wpa_s->mesh_ht_enabled = !!params.freq.ht_enabled;
+	wpa_s->mesh_vht_enabled = !!params.freq.vht_enabled;
 	if (ssid->beacon_int > 0)
 		params.beacon_int = ssid->beacon_int;
 	else if (wpa_s->conf->beacon_int > 0)

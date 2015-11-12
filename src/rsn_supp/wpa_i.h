@@ -344,8 +344,6 @@ wpa_sm_tdls_disable_channel_switch(struct wpa_sm *sm, const u8 *addr)
 static inline int wpa_sm_key_mgmt_set_pmk(struct wpa_sm *sm,
 					  const u8 *pmk, size_t pmk_len)
 {
-	if (!sm->proactive_key_caching)
-		return 0;
 	if (!sm->ctx->key_mgmt_set_pmk)
 		return -1;
 	return sm->ctx->key_mgmt_set_pmk(sm->ctx->ctx, pmk, pmk_len);

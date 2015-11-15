@@ -4971,3 +4971,14 @@ def test_dbus_expectdisconnect(dev, apdev):
     wpas.ExpectDisconnect()
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_dbus_save_config(dev, apdev):
+    """D-Bus SaveConfig"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+    try:
+        iface.SaveConfig()
+        raise Exception("SaveConfig() accepted unexpectedly")
+    except dbus.exceptions.DBusException, e:
+        if not str(e).startswith("fi.w1.wpa_supplicant1.UnknownError: Not allowed to update configuration"):
+            raise Exception("Unexpected error message for SaveConfig(): " + str(e))

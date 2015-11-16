@@ -77,6 +77,19 @@ extern "C" {
 /** Regulatory domain channel */
 #define WPA_EVENT_REGDOM_CHANGE "CTRL-EVENT-REGDOM-CHANGE "
 
+/** IP subnet status change notification
+ *
+ * When using an offloaded roaming mechanism where driver/firmware takes care
+ * of roaming and IP subnet validation checks post-roaming, this event can
+ * indicate whether IP subnet has changed.
+ *
+ * The event has a status=<0/1/2> parameter where
+ * 0 = unknown
+ * 1 = IP subnet unchanged (can continue to use the old IP address)
+ * 2 = IP subnet changed (need to get a new IP address)
+ */
+#define WPA_EVENT_SUBNET_STATUS_UPDATE "CTRL-EVENT-SUBNET-STATUS-UPDATE "
+
 /** RSN IBSS 4-way handshakes completed with specified peer */
 #define IBSS_RSN_COMPLETED "IBSS-RSN-COMPLETED "
 

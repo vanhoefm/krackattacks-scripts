@@ -268,7 +268,8 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       struct nlattr *authorized,
 			       struct nlattr *key_replay_ctr,
 			       struct nlattr *ptk_kck,
-			       struct nlattr *ptk_kek)
+			       struct nlattr *ptk_kek,
+			       struct nlattr *subnet_status)
 {
 	union wpa_event_data event;
 	const u8 *ssid;
@@ -365,6 +366,17 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 	if (ptk_kek) {
 		event.assoc_info.ptk_kek = nla_data(ptk_kek);
 		event.assoc_info.ptk_kek_len = nla_len(ptk_kek);
+	}
+
+	if (subnet_status) {
+		/*
+		 * At least for now, this is only available from
+		 * QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_SUBNET_STATUS and that
+		 * attribute has the same values 0, 1, 2 as are used in the
+		 * variable here, so no mapping between different values are
+		 * needed.
+		 */
+		event.assoc_info.subnet_status = nla_get_u8(subnet_status);
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
@@ -1600,7 +1612,8 @@ static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AUTHORIZED],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_KEY_REPLAY_CTR],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KCK],
-			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KEK]);
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KEK],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_SUBNET_STATUS]);
 }
 
 
@@ -2084,7 +2097,7 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				   tb[NL80211_ATTR_MAC],
 				   tb[NL80211_ATTR_REQ_IE],
 				   tb[NL80211_ATTR_RESP_IE],
-				   NULL, NULL, NULL, NULL);
+				   NULL, NULL, NULL, NULL, NULL);
 		break;
 	case NL80211_CMD_CH_SWITCH_NOTIFY:
 		mlme_event_ch_switch(drv,

@@ -3256,6 +3256,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_assoc(wpa_s, data);
 		if (data && data->assoc_info.authorized)
 			wpa_supplicant_event_assoc_auth(wpa_s, data);
+		if (data) {
+			wpa_msg(wpa_s, MSG_INFO,
+				WPA_EVENT_SUBNET_STATUS_UPDATE "status=%u",
+				data->assoc_info.subnet_status);
+		}
 		break;
 	case EVENT_DISASSOC:
 		wpas_event_disassoc(wpa_s,

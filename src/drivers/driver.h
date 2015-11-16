@@ -4106,6 +4106,12 @@ union wpa_event_data {
 		 * ptk_kek_len - The length of ptk_kek
 		 */
 		size_t ptk_kek_len;
+
+		/**
+		 * subnet_status - The subnet status:
+		 * 0 = unknown, 1 = unchanged, 2 = changed
+		 */
+		u8 subnet_status;
 	} assoc_info;
 
 	/**

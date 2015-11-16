@@ -683,6 +683,13 @@ static void wpas_wps_reenable_networks_cb(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+int wpas_wps_reenable_networks_pending(struct wpa_supplicant *wpa_s)
+{
+	return eloop_is_timeout_registered(wpas_wps_reenable_networks_cb,
+					   wpa_s, NULL);
+}
+
+
 static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);

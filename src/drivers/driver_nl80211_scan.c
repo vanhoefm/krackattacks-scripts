@@ -1,5 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211 - Scanning
+ * Copyright(c) 2015 Intel Deutschland GmbH
  * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
  * Copyright (c) 2009-2010, Atheros Communications
@@ -308,16 +309,82 @@ fail:
 }
 
 
+static int
+nl80211_sched_scan_add_scan_plans(struct wpa_driver_nl80211_data *drv,
+				  struct nl_msg *msg,
+				  struct wpa_driver_scan_params *params)
+{
+	struct nlattr *plans;
+	struct sched_scan_plan *scan_plans = params->sched_scan_plans;
+	unsigned int i;
+
+	plans = nla_nest_start(msg, NL80211_ATTR_SCHED_SCAN_PLANS);
+	if (!plans)
+		return -1;
+
+	for (i = 0; i < params->sched_scan_plans_num; i++) {
+		struct nlattr *plan = nla_nest_start(msg, i + 1);
+
+		if (!plan)
+			return -1;
+
+		if (!scan_plans[i].interval ||
+		    scan_plans[i].interval >
+		    drv->capa.max_sched_scan_plan_interval) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: sched scan plan no. %u: Invalid interval: %u",
+				   i, scan_plans[i].interval);
+			return -1;
+		}
+
+		if (nla_put_u32(msg, NL80211_SCHED_SCAN_PLAN_INTERVAL,
+				scan_plans[i].interval))
+			return -1;
+
+		if (scan_plans[i].iterations >
+		    drv->capa.max_sched_scan_plan_iterations) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: sched scan plan no. %u: Invalid number of iterations: %u",
+				   i, scan_plans[i].iterations);
+			return -1;
+		}
+
+		if (scan_plans[i].iterations &&
+		    nla_put_u32(msg, NL80211_SCHED_SCAN_PLAN_ITERATIONS,
+				scan_plans[i].iterations))
+			return -1;
+
+		nla_nest_end(msg, plan);
+
+		/*
+		 * All the scan plans must specify the number of iterations
+		 * except the last plan, which will run infinitely. So if the
+		 * number of iterations is not specified, this ought to be the
+		 * last scan plan.
+		 */
+		if (!scan_plans[i].iterations)
+			break;
+	}
+
+	if (i != params->sched_scan_plans_num - 1) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: All sched scan plans but the last must specify number of iterations");
+		return -1;
+	}
+
+	nla_nest_end(msg, plans);
+	return 0;
+}
+
+
 /**
  * wpa_driver_nl80211_sched_scan - Initiate a scheduled scan
  * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
  * @params: Scan parameters
- * @interval: Interval between scan cycles in milliseconds
  * Returns: 0 on success, -1 on failure or if not supported
  */
 int wpa_driver_nl80211_sched_scan(void *priv,
-				  struct wpa_driver_scan_params *params,
-				  u32 interval)
+				  struct wpa_driver_scan_params *params)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -332,10 +399,26 @@ int wpa_driver_nl80211_sched_scan(void *priv,
 		return android_pno_start(bss, params);
 #endif /* ANDROID */
 
+	if (!params->sched_scan_plans_num ||
+	    params->sched_scan_plans_num > drv->capa.max_sched_scan_plans) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Invalid number of sched scan plans: %u",
+			   params->sched_scan_plans_num);
+		return -1;
+	}
+
 	msg = nl80211_scan_common(bss, NL80211_CMD_START_SCHED_SCAN, params);
-	if (!msg ||
-	    nla_put_u32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval))
+	if (!msg)
 		goto fail;
+
+	if (drv->capa.max_sched_scan_plan_iterations) {
+		if (nl80211_sched_scan_add_scan_plans(drv, msg, params))
+			goto fail;
+	} else {
+		if (nla_put_u32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL,
+				params->sched_scan_plans[0].interval * 1000))
+			goto fail;
+	}
 
 	if ((drv->num_filter_ssids &&
 	    (int) drv->num_filter_ssids <= drv->capa.max_match_sets) ||
@@ -399,8 +482,7 @@ int wpa_driver_nl80211_sched_scan(void *priv,
 		goto fail;
 	}
 
-	wpa_printf(MSG_DEBUG, "nl80211: Sched scan requested (ret=%d) - "
-		   "scan interval %d msec", ret, interval);
+	wpa_printf(MSG_DEBUG, "nl80211: Sched scan requested (ret=%d)", ret);
 
 fail:
 	nlmsg_free(msg);

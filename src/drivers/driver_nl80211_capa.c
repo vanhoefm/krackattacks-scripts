@@ -499,6 +499,19 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		capa->max_sched_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS]);
 
+	if (tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_PLANS] &&
+	    tb[NL80211_ATTR_MAX_SCAN_PLAN_INTERVAL] &&
+	    tb[NL80211_ATTR_MAX_SCAN_PLAN_ITERATIONS]) {
+		capa->max_sched_scan_plans =
+			nla_get_u32(tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_PLANS]);
+
+		capa->max_sched_scan_plan_interval =
+			nla_get_u32(tb[NL80211_ATTR_MAX_SCAN_PLAN_INTERVAL]);
+
+		capa->max_sched_scan_plan_iterations =
+			nla_get_u32(tb[NL80211_ATTR_MAX_SCAN_PLAN_ITERATIONS]);
+	}
+
 	if (tb[NL80211_ATTR_MAX_MATCH_SETS])
 		capa->max_match_sets =
 			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
@@ -709,6 +722,12 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_CSA;
 		if (!drv->capa.max_csa_counters)
 			drv->capa.max_csa_counters = 1;
+	}
+
+	if (!drv->capa.max_sched_scan_plans) {
+		drv->capa.max_sched_scan_plans = 1;
+		drv->capa.max_sched_scan_plan_interval = UINT32_MAX;
+		drv->capa.max_sched_scan_plan_iterations = 0;
 	}
 
 	return 0;

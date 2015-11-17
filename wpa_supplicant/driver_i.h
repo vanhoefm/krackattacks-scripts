@@ -100,12 +100,10 @@ static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_sched_scan(struct wpa_supplicant *wpa_s,
-				     struct wpa_driver_scan_params *params,
-				     u32 interval)
+				     struct wpa_driver_scan_params *params)
 {
 	if (wpa_s->driver->sched_scan)
-		return wpa_s->driver->sched_scan(wpa_s->drv_priv,
-						 params, interval);
+		return wpa_s->driver->sched_scan(wpa_s->drv_priv, params);
 	return -1;
 }
 

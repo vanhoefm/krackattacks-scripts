@@ -271,14 +271,23 @@ int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
 				    int interval)
 {
 	int ret;
+	struct sched_scan_plan scan_plan = {
+		.interval = interval,
+		.iterations = 0,
+	};
+
+	params->sched_scan_plans = &scan_plan;
+	params->sched_scan_plans_num = 1;
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
-	ret = wpa_drv_sched_scan(wpa_s, params, interval * 1000);
+	ret = wpa_drv_sched_scan(wpa_s, params);
 	if (ret)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 	else
 		wpa_s->sched_scanning = 1;
 
+	params->sched_scan_plans = NULL;
+	params->sched_scan_plans_num = 0;
 	return ret;
 }
 
@@ -2217,6 +2226,19 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	params->only_new_results = src->only_new_results;
 	params->low_priority = src->low_priority;
 
+	if (src->sched_scan_plans_num > 0) {
+		params->sched_scan_plans =
+			os_malloc(sizeof(*src->sched_scan_plans) *
+				  src->sched_scan_plans_num);
+		if (!params->sched_scan_plans)
+			goto failed;
+
+		os_memcpy(params->sched_scan_plans, src->sched_scan_plans,
+			  sizeof(*src->sched_scan_plans) *
+			  src->sched_scan_plans_num);
+		params->sched_scan_plans_num = src->sched_scan_plans_num;
+	}
+
 	if (src->mac_addr_rand) {
 		params->mac_addr_rand = src->mac_addr_rand;
 
@@ -2254,6 +2276,7 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params)
 	os_free((u8 *) params->extra_ies);
 	os_free(params->freqs);
 	os_free(params->filter_ssids);
+	os_free(params->sched_scan_plans);
 
 	/*
 	 * Note: params->mac_addr_mask points to same memory allocation and

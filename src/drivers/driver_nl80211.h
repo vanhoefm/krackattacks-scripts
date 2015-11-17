@@ -276,8 +276,7 @@ void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 int wpa_driver_nl80211_scan(struct i802_bss *bss,
 			    struct wpa_driver_scan_params *params);
 int wpa_driver_nl80211_sched_scan(void *priv,
-				  struct wpa_driver_scan_params *params,
-				  u32 interval);
+				  struct wpa_driver_scan_params *params);
 int wpa_driver_nl80211_stop_sched_scan(void *priv);
 struct wpa_scan_results * wpa_driver_nl80211_get_scan_results(void *priv);
 void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv);

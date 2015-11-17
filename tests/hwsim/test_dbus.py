@@ -1375,6 +1375,17 @@ def test_dbus_connect_oom(dev, apdev):
         except:
             pass
 
+    # Force regulatory update to re-fetch hw capabilities for the following
+    # test cases.
+    try:
+        dev[0].dump_monitor()
+        subprocess.call(['iw', 'reg', 'set', 'US'])
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+    finally:
+        dev[0].dump_monitor()
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+
 def test_dbus_while_not_connected(dev, apdev):
     """D-Bus invalid operations while not connected"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

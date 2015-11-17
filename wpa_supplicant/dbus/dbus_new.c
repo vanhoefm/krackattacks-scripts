@@ -1950,6 +1950,7 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 	}
 
 	dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
 }
 
 

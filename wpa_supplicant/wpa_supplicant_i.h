@@ -511,9 +511,10 @@ struct wpa_supplicant {
 
 	struct wpa_ssid *prev_sched_ssid; /* last SSID used in sched scan */
 	int sched_scan_timeout;
-	int sched_scan_interval;
 	int first_sched_scan;
 	int sched_scan_timed_out;
+	struct sched_scan_plan *sched_scan_plans;
+	size_t sched_scan_plans_num;
 
 	void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 				 struct wpa_scan_results *scan_res);
@@ -645,6 +646,9 @@ struct wpa_supplicant {
 
 	int max_scan_ssids;
 	int max_sched_scan_ssids;
+	unsigned int max_sched_scan_plans;
+	unsigned int max_sched_scan_plan_interval;
+	unsigned int max_sched_scan_plan_iterations;
 	int sched_scan_supported;
 	unsigned int max_match_sets;
 	unsigned int max_remain_on_chan;
@@ -1183,5 +1187,7 @@ void fst_wpa_supplicant_fill_iface_obj(struct wpa_supplicant *wpa_s,
 				       struct fst_wpa_obj *iface_obj);
 
 #endif /* CONFIG_FST */
+
+int wpas_sched_scan_plans_set(struct wpa_supplicant *wpa_s, const char *cmd);
 
 #endif /* WPA_SUPPLICANT_I_H */

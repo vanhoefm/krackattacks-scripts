@@ -1304,6 +1304,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->wpa_rsc_relaxation != DEFAULT_WPA_RSC_RELAXATION)
 		fprintf(f, "wpa_rsc_relaxation=%d\n",
 			config->wpa_rsc_relaxation);
+
+	if (config->sched_scan_plans)
+		fprintf(f, "sched_scan_plans=%s\n", config->sched_scan_plans);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

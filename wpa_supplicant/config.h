@@ -1263,6 +1263,17 @@ struct wpa_config {
 	  * of 4-Way Handshake or message 1 of Group Key Handshake.
 	  */
 	 int wpa_rsc_relaxation;
+
+	/**
+	 * sched_scan_plans - Scan plans for scheduled scan
+	 *
+	 * Each scan plan specifies the interval between scans and the number of
+	 * iterations. The last scan plan only specifies the scan interval and
+	 * will be run infinitely.
+	 *
+	 * format: <interval:iterations> <interval2:iterations2> ... <interval>
+	 */
+	 char *sched_scan_plans;
 };
 
 

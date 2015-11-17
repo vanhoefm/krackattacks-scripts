@@ -2281,6 +2281,8 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->bgscan);
 	os_free(config->wowlan_triggers);
 	os_free(config->fst_group_id);
+	os_free(config->sched_scan_plans);
+
 	os_free(config);
 }
 
@@ -4258,6 +4260,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(fst_llt, 1, FST_MAX_LLT_MS), 0 },
 #endif /* CONFIG_FST */
 	{ INT_RANGE(wpa_rsc_relaxation, 0, 1), 0 },
+	{ STR(sched_scan_plans), 0 },
 };
 
 #undef FUNC

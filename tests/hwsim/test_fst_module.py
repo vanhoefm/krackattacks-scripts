@@ -752,9 +752,9 @@ def test_fst_sta_connect_to_non_fst_ap(dev, apdev, test_params):
             res_sta2_mbies = sta2.get_local_mbies()
             if (orig_sta1_mbies.startswith("FAIL") or
                 orig_sta2_mbies.startswith("FAIL") or
-                not res_sta1_mbies.startswith("FAIL") or
-                not res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs have not been removed on the stations")
+                res_sta1_mbies.startswith("FAIL") or
+                res_sta2_mbies.startswith("FAIL")):
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise
@@ -839,9 +839,9 @@ def test_fst_second_sta_connect_to_non_fst_ap(dev, apdev, test_params):
             res_sta2_mbies = sta2.get_local_mbies()
             if (orig_sta1_mbies.startswith("FAIL") or
                 orig_sta2_mbies.startswith("FAIL") or
-                not res_sta1_mbies.startswith("FAIL") or
-                not res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs have not been removed on the stations")
+                res_sta1_mbies.startswith("FAIL") or
+                res_sta2_mbies.startswith("FAIL")):
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise
@@ -868,11 +868,11 @@ def test_fst_second_sta_connect_to_fst_ap(dev, apdev, test_params):
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
-            if (not orig_sta1_mbies.startswith("FAIL") or
-                not orig_sta2_mbies.startswith("FAIL") or
-                not res_sta1_mbies.startswith("FAIL") or
-                not res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs should have stayed non-present on the stations")
+            if (orig_sta1_mbies.startswith("FAIL") or
+                orig_sta2_mbies.startswith("FAIL") or
+                res_sta1_mbies.startswith("FAIL") or
+                res_sta2_mbies.startswith("FAIL")):
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise
@@ -900,11 +900,11 @@ def test_fst_disconnect_1_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
-            if (not orig_sta1_mbies.startswith("FAIL") or
-                not orig_sta2_mbies.startswith("FAIL") or
+            if (orig_sta1_mbies.startswith("FAIL") or
+                orig_sta2_mbies.startswith("FAIL") or
                 res_sta1_mbies.startswith("FAIL") or
                 res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs haven't reappeared on the stations")
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise
@@ -932,11 +932,11 @@ def test_fst_disconnect_1_of_2_stas_from_fst_ap(dev, apdev, test_params):
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
-            if (not orig_sta1_mbies.startswith("FAIL") or
-                not orig_sta2_mbies.startswith("FAIL") or
-                not res_sta1_mbies.startswith("FAIL") or
-                not res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs should have stayed non-present on the stations")
+            if (orig_sta1_mbies.startswith("FAIL") or
+                orig_sta2_mbies.startswith("FAIL") or
+                res_sta1_mbies.startswith("FAIL") or
+                res_sta2_mbies.startswith("FAIL")):
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise
@@ -966,11 +966,11 @@ def test_fst_disconnect_2_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
-            if (not orig_sta1_mbies.startswith("FAIL") or
-                not orig_sta2_mbies.startswith("FAIL") or
+            if (orig_sta1_mbies.startswith("FAIL") or
+                orig_sta2_mbies.startswith("FAIL") or
                 res_sta1_mbies.startswith("FAIL") or
                 res_sta2_mbies.startswith("FAIL")):
-                raise Exception("Failure. MB IEs haven't reappeared on the stations")
+                raise Exception("Failure. MB IEs must be present on the stations")
         except Exception, e:
             logger.info(e)
             raise

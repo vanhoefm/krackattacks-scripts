@@ -2061,6 +2061,7 @@ def test_ap_wps_per_station_psk(dev, apdev):
     except:
         pass
 
+    hapd = None
     try:
         with open(pskfile, "w") as f:
             f.write("# WPA PSKs\n")
@@ -2113,6 +2114,14 @@ def test_ap_wps_per_station_psk(dev, apdev):
             raise Exception("Same PSK recorded for sta0(enrollee) and sta0(reg)")
     finally:
         os.remove(pskfile)
+        if hapd:
+            dev[0].request("DISCONNECT")
+            dev[1].request("DISCONNECT")
+            dev[2].request("DISCONNECT")
+            hapd.disable()
+            dev[0].flush_scan_cache()
+            dev[1].flush_scan_cache()
+            dev[2].flush_scan_cache()
 
 def test_ap_wps_per_station_psk_failure(dev, apdev):
     """WPS PBC provisioning with per-station PSK (file not writable)"""

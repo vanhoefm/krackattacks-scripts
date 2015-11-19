@@ -433,6 +433,21 @@ def test_ap_ft_eap(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-3"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-3") ])
 
+    # Verify EAPOL reauthentication after FT protocol
+    if dev[0].get_status_field('bssid') == apdev[0]['bssid']:
+        ap = hapd
+    else:
+        ap = hapd1
+    ap.request("EAPOL_REAUTH " + dev[0].own_addr())
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not succeed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], ap)
+
 def test_ap_ft_eap_pull(dev, apdev):
     """WPA2-EAP-FT AP (pull PMK)"""
     ssid = "test-ft"

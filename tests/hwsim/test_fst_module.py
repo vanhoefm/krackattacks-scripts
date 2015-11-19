@@ -2538,6 +2538,13 @@ def _test_fst_setup_mbie_diff(dev, apdev, test_params):
         fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie, mbie,
                       no_wait=True)
 
+    # Remove sessions to avoid causing issues to following test ases
+    s = hglobal.request("FST-MANAGER LIST_SESSIONS " + group)
+    if not s.startswith("FAIL"):
+        for sid in s.split(' '):
+            if len(sid):
+                hglobal.request("FST-MANAGER SESSION_REMOVE " + sid)
+
 def test_fst_many_setup(dev, apdev, test_params):
     """FST setup multiple times"""
     try:

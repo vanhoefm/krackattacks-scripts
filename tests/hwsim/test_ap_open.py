@@ -482,3 +482,17 @@ def test_ap_open_sta_enable_disable(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     sta_enable_disable(wpas, bssid)
+
+def test_ap_open_select_twice(dev, apdev):
+    """AP with open mode and select network twice"""
+    id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                        only_add_network=True)
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("No result reported")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    # Verify that the second SELECT_NETWORK starts a new scan immediately by
+    # waiting less than the default scan period.
+    dev[0].select_network(id)
+    dev[0].wait_connected(timeout=3)

@@ -2725,7 +2725,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 			wpas_notify_network_enabled_changed(wpa_s, other_ssid);
 	}
 
-	if (ssid && ssid == wpa_s->current_ssid && wpa_s->current_ssid) {
+	if (ssid && ssid == wpa_s->current_ssid && wpa_s->current_ssid &&
+	    wpa_s->wpa_state >= WPA_AUTHENTICATING) {
 		/* We are already associated with the selected network */
 		wpa_printf(MSG_DEBUG, "Already associated with the "
 			   "selected network - do nothing");

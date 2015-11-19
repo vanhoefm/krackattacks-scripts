@@ -78,6 +78,56 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
     dev[0].wait_disconnected(timeout=5)
     dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
+def test_pmksa_cache_and_reauth(dev, apdev):
+    """PMKSA caching and EAPOL reauthentication"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].dump_monitor()
+    logger.info("Roam to AP2")
+    # It can take some time for the second AP to become ready to reply to Probe
+    # Request frames especially under heavy CPU load, so allow couple of rounds
+    # of scanning to avoid reporting errors incorrectly just because of scans
+    # not having seen the target AP.
+    for i in range(0, 10):
+        dev[0].scan(freq="2412")
+        if dev[0].get_bss(bssid2) is not None:
+            break
+        logger.info("Scan again to find target AP")
+    dev[0].request("ROAM " + bssid2)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    dev[0].wait_connected(timeout=10, error="Roaming timed out")
+
+    dev[0].dump_monitor()
+    logger.info("Roam back to AP1")
+    dev[0].scan(freq="2412")
+    dev[0].request("ROAM " + bssid)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+
+    # Verify EAPOL reauthentication after PMKSA caching
+    hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not succeed")
+
 def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     """Opportunistic PMKSA caching enabled only on station"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")

@@ -15,7 +15,7 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip, fail_test, wait_fail_trigger
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_eap import check_eap_capa
 
 EAP_CODE_REQUEST = 1
@@ -782,6 +782,32 @@ def test_eap_proto_md5(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_md5_errors(dev, apdev):
+    """EAP-MD5 local error cases"""
+    check_eap_capa(dev[0], "MD5")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with fail_test(dev[0], 1, "chap_md5"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="phase1-user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_md5_process"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="phase1-user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
 
 def test_eap_proto_otp(dev, apdev):
     """EAP-OTP protocol tests"""

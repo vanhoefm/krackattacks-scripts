@@ -15,6 +15,7 @@ import hostapd
 from utils import HwsimSkip
 from test_dfs import wait_dfs_event
 from test_ap_csa import csa_supported
+from test_ap_ht import clear_scan_cache
 
 def vht_supported():
     cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
@@ -57,6 +58,7 @@ def test_ap_vht80(dev, apdev):
         dev[0].flush_scan_cache()
 
 def vht80_test(apdev, dev, channel, ht_capab):
+    clear_scan_cache(apdev['ifname'])
     try:
         hapd = None
         params = { "ssid": "vht",

@@ -3099,9 +3099,23 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 	wpa_printf(MSG_DEBUG, "P2P: Invitation result - status=%d peer=" MACSTR,
 		   status, MAC2STR(peer));
 	if (wpa_s->pending_invite_ssid_id == -1) {
+		struct wpa_supplicant *group_if =
+			wpa_s->global->p2p_invite_group;
+
 		if (status == P2P_SC_FAIL_UNKNOWN_GROUP)
 			wpas_remove_persistent_client(wpa_s, peer);
-		return; /* Invitation to active group */
+
+		/*
+		 * Invitation to an active group. If this is successful and we
+		 * are the GO, set the client wait to postpone some concurrent
+		 * operations and to allow provisioning and connection to happen
+		 * more quickly.
+		 */
+		if (status == P2P_SC_SUCCESS &&
+		    group_if && group_if->current_ssid &&
+		    group_if->current_ssid->mode == WPAS_MODE_P2P_GO)
+			os_get_reltime(&wpa_s->global->p2p_go_wait_client);
+		return;
 	}
 
 	if (status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) {

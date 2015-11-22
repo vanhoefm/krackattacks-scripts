@@ -1844,6 +1844,50 @@ static void interworking_process_assoc_resp(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_INTERWORKING */
 
 
+#ifdef CONFIG_FST
+static int wpas_fst_update_mbie(struct wpa_supplicant *wpa_s,
+				const u8 *ie, size_t ie_len)
+{
+	struct mb_ies_info mb_ies;
+
+	if (!ie || !ie_len || !wpa_s->fst)
+	    return -ENOENT;
+
+	os_memset(&mb_ies, 0, sizeof(mb_ies));
+
+	while (ie_len >= 2 && mb_ies.nof_ies < MAX_NOF_MB_IES_SUPPORTED) {
+		size_t len;
+
+		len = 2 + ie[1];
+		if (len > ie_len) {
+			wpa_hexdump(MSG_DEBUG, "FST: Truncated IE found",
+				    ie, ie_len);
+			break;
+		}
+
+		if (ie[0] == WLAN_EID_MULTI_BAND) {
+			wpa_printf(MSG_DEBUG, "MB IE of %u bytes found",
+				   (unsigned int) len);
+			mb_ies.ies[mb_ies.nof_ies].ie = ie + 2;
+			mb_ies.ies[mb_ies.nof_ies].ie_len = len - 2;
+			mb_ies.nof_ies++;
+		}
+
+		ie_len -= len;
+		ie += len;
+	}
+
+	if (mb_ies.nof_ies > 0) {
+		wpabuf_free(wpa_s->received_mb_ies);
+		wpa_s->received_mb_ies = mb_ies_by_info(&mb_ies);
+		return 0;
+	}
+
+	return -ENOENT;
+}
+#endif /* CONFIG_FST */
+
+
 static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 					  union wpa_event_data *data)
 {
@@ -2026,19 +2070,6 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	if (wpa_found || rsn_found)
 		wpa_s->ap_ies_from_associnfo = 1;
 
-#ifdef CONFIG_FST
-	wpabuf_free(wpa_s->received_mb_ies);
-	wpa_s->received_mb_ies = NULL;
-	if (wpa_s->fst) {
-		struct mb_ies_info mb_ies;
-
-		wpa_printf(MSG_DEBUG, "Looking for MB IE");
-		if (!mb_ies_info_by_ies(&mb_ies, data->assoc_info.resp_ies,
-					data->assoc_info.resp_ies_len))
-			wpa_s->received_mb_ies = mb_ies_by_info(&mb_ies);
-	}
-#endif /* CONFIG_FST */
-
 	if (wpa_s->assoc_freq && data->assoc_info.freq &&
 	    wpa_s->assoc_freq != data->assoc_info.freq) {
 		wpa_printf(MSG_DEBUG, "Operating frequency changed from "
@@ -2074,6 +2105,45 @@ static int wpa_supplicant_assoc_update_ie(struct wpa_supplicant *wpa_s)
 		return -1;
 
 	return 0;
+}
+
+
+static void wpas_fst_update_mb_assoc(struct wpa_supplicant *wpa_s,
+				     union wpa_event_data *data)
+{
+#ifdef CONFIG_FST
+	struct assoc_info *ai = data ? &data->assoc_info : NULL;
+	struct wpa_bss *bss = wpa_s->current_bss;
+	const u8 *ieprb, *iebcn;
+
+	wpabuf_free(wpa_s->received_mb_ies);
+	wpa_s->received_mb_ies = NULL;
+
+	if (ai &&
+	    !wpas_fst_update_mbie(wpa_s, ai->resp_ies, ai->resp_ies_len)) {
+		wpa_printf(MSG_DEBUG,
+			   "FST: MB IEs updated from Association Response frame");
+		return;
+	}
+
+	if (ai &&
+	    !wpas_fst_update_mbie(wpa_s, ai->beacon_ies, ai->beacon_ies_len)) {
+		wpa_printf(MSG_DEBUG,
+			   "FST: MB IEs updated from association event Beacon IEs");
+		return;
+	}
+
+	if (!bss)
+		return;
+
+	ieprb = (const u8 *) (bss + 1);
+	iebcn = ieprb + bss->ie_len;
+
+	if (!wpas_fst_update_mbie(wpa_s, ieprb, bss->ie_len))
+		wpa_printf(MSG_DEBUG, "FST: MB IEs updated from bss IE");
+	else if (!wpas_fst_update_mbie(wpa_s, iebcn, bss->beacon_ie_len))
+		wpa_printf(MSG_DEBUG, "FST: MB IEs updated from bss beacon IE");
+#endif /* CONFIG_FST */
 }
 
 
@@ -2136,6 +2206,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_WARNING,
 				"WPA/RSN IEs not updated");
 	}
+
+	wpas_fst_update_mb_assoc(wpa_s, data);
 
 #ifdef CONFIG_SME
 	os_memcpy(wpa_s->sme.prev_bssid, bssid, ETH_ALEN);
@@ -3252,6 +3324,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 
 	switch (event) {
 	case EVENT_AUTH:
+#ifdef CONFIG_FST
+		wpas_fst_update_mbie(wpa_s, data->auth.ies, data->auth.ies_len);
+#endif /* CONFIG_FST */
 		sme_event_auth(wpa_s, data);
 		break;
 	case EVENT_ASSOC:

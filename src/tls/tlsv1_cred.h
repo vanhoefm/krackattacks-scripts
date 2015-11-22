@@ -15,6 +15,8 @@ struct tlsv1_credentials {
 	struct crypto_private_key *key;
 
 	unsigned int ca_cert_verify:1;
+	unsigned int server_cert_only:1;
+	u8 srv_cert_hash[32];
 
 	/* Diffie-Hellman parameters */
 	u8 *dh_p; /* prime */

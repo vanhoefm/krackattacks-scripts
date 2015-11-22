@@ -364,10 +364,32 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 		pos += cert_len;
 	}
 
-	if (conn->cred && conn->cred->ca_cert_verify &&
-	    x509_certificate_chain_validate(conn->cred->trusted_certs, chain,
-					    &reason, conn->disable_time_checks)
-	    < 0) {
+	if (conn->cred && conn->cred->server_cert_only && chain) {
+		u8 hash[SHA256_MAC_LEN];
+		char buf[128];
+
+		wpa_printf(MSG_DEBUG,
+			   "TLSv1: Validate server certificate hash");
+		x509_name_string(&chain->subject, buf, sizeof(buf));
+		wpa_printf(MSG_DEBUG, "TLSv1: 0: %s", buf);
+		if (sha256_vector(1, &chain->cert_start, &chain->cert_len,
+				  hash) < 0 ||
+		    os_memcmp(conn->cred->srv_cert_hash, hash,
+			      SHA256_MAC_LEN) != 0) {
+			wpa_printf(MSG_DEBUG,
+				   "TLSv1: Server certificate hash mismatch");
+			wpa_hexdump(MSG_MSGDUMP, "TLSv1: SHA256 hash",
+				    hash, SHA256_MAC_LEN);
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				  TLS_ALERT_BAD_CERTIFICATE);
+			x509_certificate_chain_free(chain);
+			return -1;
+		}
+	} else if (conn->cred && conn->cred->ca_cert_verify &&
+		   x509_certificate_chain_validate(conn->cred->trusted_certs,
+						   chain, &reason,
+						   conn->disable_time_checks)
+		   < 0) {
 		int tls_reason;
 		wpa_printf(MSG_DEBUG, "TLSv1: Server certificate chain "
 			   "validation failed (reason=%d)", reason);

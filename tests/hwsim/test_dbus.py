@@ -4411,6 +4411,7 @@ def _test_dbus_p2p_group_idle_timeout(dev, apdev):
         def __init__(self, bus):
             TestDbus.__init__(self, bus)
             self.done = False
+            self.group_started = False
             self.peer_group_added = False
             self.peer_group_removed = False
 
@@ -4453,6 +4454,7 @@ def _test_dbus_p2p_group_idle_timeout(dev, apdev):
 
         def groupStarted(self, properties):
             logger.debug("groupStarted: " + str(properties))
+            self.group_started = True
             g_if_obj = bus.get_object(WPAS_DBUS_SERVICE,
                                       properties['interface_object'])
             dev1 = WpaSupplicant('wlan1', '/tmp/wpas-wlan1')
@@ -4472,6 +4474,8 @@ def _test_dbus_p2p_group_idle_timeout(dev, apdev):
                               invalidated_properties):
             logger.debug("propertiesChanged: interface_name=%s changed_properties=%s invalidated_properties=%s" % (interface_name, str(changed_properties), str(invalidated_properties)))
             if interface_name != WPAS_DBUS_P2P_PEER:
+                return
+            if not self.group_started:
                 return
             if "Groups" not in changed_properties:
                 return

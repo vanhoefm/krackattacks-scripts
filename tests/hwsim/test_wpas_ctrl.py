@@ -1236,6 +1236,8 @@ def test_wpas_ctrl_global(dev):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
     if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO					"):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface	driverparam	bridge	create	abcd"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
 
 def test_wpas_ctrl_roam(dev, apdev):
     """wpa_supplicant ctrl_iface ROAM error cases"""
@@ -1490,6 +1492,17 @@ def test_wpas_ctrl_interface_add(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].global_request("INTERFACE_REMOVE " + ifname)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_wpas_ctrl_interface_add_sta(dev, apdev):
+    """wpa_supplicant INTERFACE_ADD/REMOVE with STA vif creation/removal"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    ifname = "test-" + dev[0].ifname
+    dev[0].interface_add(ifname, create=True, if_type='sta')
+    wpas = WpaSupplicant(ifname=ifname)
+    wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    dev[0].global_request("INTERFACE_REMOVE " + ifname)
 
 def test_wpas_ctrl_interface_add_ap(dev, apdev):
     """wpa_supplicant INTERFACE_ADD/REMOVE AP interface"""

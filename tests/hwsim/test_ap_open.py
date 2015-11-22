@@ -488,7 +488,7 @@ def test_ap_open_select_twice(dev, apdev):
     id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                         only_add_network=True)
     dev[0].select_network(id)
-    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=5)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=10)
     if ev is None:
         raise Exception("No result reported")
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })

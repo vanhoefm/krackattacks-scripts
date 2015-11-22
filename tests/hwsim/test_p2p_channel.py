@@ -918,3 +918,86 @@ def test_p2p_go_move_scm_multi(dev, apdev, params):
     finally:
         dev[0].global_request("P2P_SET disallow_freq ")
         dev[0].global_request("SET p2p_go_freq_change_policy 2")
+
+def test_p2p_delay_go_csa(dev, apdev, params):
+    """P2P GO CSA delayed when inviting a P2P Device to an active P2P Group"""
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        wpas.global_request("SET p2p_no_group_iface 0")
+
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
+
+        addr0 = wpas.p2p_dev_addr()
+        addr1 = dev[1].p2p_dev_addr()
+
+        try:
+            dev[1].p2p_listen();
+            if not wpas.discover_peer(addr1, social=True):
+                raise Exception("Peer " + addr1 + " not found")
+            wpas.p2p_stop_find()
+
+            hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                        "channel": '1' })
+
+            wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+
+            wpas.global_request("SET p2p_go_freq_change_policy 0")
+            wpas.dump_monitor()
+
+            logger.info("Start GO on channel 6")
+            res = autogo(wpas, freq=2437)
+            if res['freq'] != "2437":
+               raise Exception("GO set on a freq=%s instead of 2437" % res['freq'])
+
+            # Start find on dev[1] to run scans with dev[2] in parallel
+            dev[1].p2p_find(social=True)
+
+            # Use another client device to stop the initial client connection
+            # timeout on the GO
+            if not dev[2].discover_peer(addr0, social=True):
+                raise Exception("Peer2 did not find the GO")
+            dev[2].p2p_stop_find()
+            pin = dev[2].wps_read_pin()
+            wpas.p2p_go_authorize_client(pin)
+            dev[2].global_request("P2P_CONNECT " + addr0 + " " + pin + " join freq=2437")
+            ev = dev[2].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+            if ev is None:
+                raise Exception("Peer2 did not get connected")
+
+            if not dev[1].discover_peer(addr0, social=True):
+                raise Exception("Peer did not find the GO")
+
+            pin = dev[1].wps_read_pin()
+            dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " join auth")
+            dev[1].p2p_listen();
+
+            # Force P2P GO channel switch on successful invitation signaling
+            wpas.group_request("SET p2p_go_csa_on_inv 1")
+
+            logger.info("Starting invitation")
+            wpas.p2p_go_authorize_client(pin)
+            wpas.global_request("P2P_INVITE group=" + wpas.group_ifname + " peer=" + addr1)
+            ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED",
+                                           "P2P-GROUP-STARTED"], timeout=10)
+
+            if ev is None:
+                raise Exception("Timeout on invitation on peer")
+            if "P2P-INVITATION-RECEIVED" in ev:
+                raise Exception("Unexpected request to accept pre-authorized invitation")
+
+            # A P2P GO move is not expected at this stage, as during the
+            # invitation signaling, the P2P GO includes only its current
+            # operating channel in the channel list, and as the invitation
+            # response can only include channels that were also in the
+            # invitation request channel list, the group common channels
+            # includes only the current P2P GO operating channel.
+            ev = wpas.wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
+                                        "AP-CSA-FINISHED"], timeout=1)
+            if ev is not None:
+                raise Exception("Unexpected + " + ev + " event")
+
+        finally:
+            wpas.global_request("SET p2p_go_freq_change_policy 2")

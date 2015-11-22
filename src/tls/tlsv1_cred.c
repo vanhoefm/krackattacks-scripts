@@ -190,6 +190,8 @@ int tlsv1_set_ca_cert(struct tlsv1_credentials *cred, const char *cert,
 		      const u8 *cert_blob, size_t cert_blob_len,
 		      const char *path)
 {
+	cred->ca_cert_verify = cert || cert_blob || path;
+
 	if (tlsv1_set_cert_chain(&cred->trusted_certs, cert,
 				 cert_blob, cert_blob_len) < 0)
 		return -1;

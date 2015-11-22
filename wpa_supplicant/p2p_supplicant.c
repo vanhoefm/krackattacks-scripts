@@ -3113,8 +3113,22 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 		 */
 		if (status == P2P_SC_SUCCESS &&
 		    group_if && group_if->current_ssid &&
-		    group_if->current_ssid->mode == WPAS_MODE_P2P_GO)
+		    group_if->current_ssid->mode == WPAS_MODE_P2P_GO) {
 			os_get_reltime(&wpa_s->global->p2p_go_wait_client);
+#ifdef CONFIG_TESTING_OPTIONS
+			if (group_if->p2p_go_csa_on_inv) {
+				wpa_printf(MSG_DEBUG,
+					   "Testing: force P2P GO CSA after invitation");
+				eloop_cancel_timeout(
+					wpas_p2p_reconsider_moving_go,
+					wpa_s, NULL);
+				eloop_register_timeout(
+					0, 50000,
+					wpas_p2p_reconsider_moving_go,
+					wpa_s, NULL);
+			}
+#endif /* CONFIG_TESTING_OPTIONS */
+		}
 		return;
 	}
 

@@ -1666,12 +1666,12 @@ libwpa_client.so: $(LIBCTRLSO)
 	@$(E) "  CC  $@ ($^)"
 	$(Q)$(CC) $(LDFLAGS) -o $@ $(CFLAGS) -shared -fPIC $^
 
-libwpa_test1: tests/libwpa_test.o libwpa_client.a
-	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test1 tests/libwpa_test.o libwpa_client.a $(LIBS_c)
+libwpa_test1: libwpa_test.o libwpa_client.a
+	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test1 libwpa_test.o libwpa_client.a $(LIBS_c)
 	@$(E) "  LD " $@
 
-libwpa_test2: tests/libwpa_test.o libwpa_client.so
-	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test2 tests/libwpa_test.o -L. -lwpa_client $(LIBS_c)
+libwpa_test2: libwpa_test.o libwpa_client.so
+	$(Q)$(LDO) $(LDFLAGS) -o libwpa_test2 libwpa_test.o -L. -lwpa_client $(LIBS_c)
 	@$(E) "  LD " $@
 
 nfc_pw_token: $(OBJS_nfc)

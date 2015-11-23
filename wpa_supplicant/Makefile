@@ -1756,17 +1756,6 @@ wpa_gui-qt4/lang/wpa_gui_de.qm: wpa_gui-qt4/lang/wpa_gui_de.ts
 wpa_gui-qt4: wpa_gui-qt4/Makefile wpa_gui-qt4/lang/wpa_gui_de.qm
 	$(MAKE) -C wpa_gui-qt4
 
-TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) $(MD5OBJS) \
-	../src/utils/common.o ../src/utils/os_unix.o \
-	../src/utils/wpa_debug.o $(AESOBJS) \
-	tests/test_eap_sim_common.o
-test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_EAP_SIM_COMMON_OBJS) $(LIBS)
-	./test-eap_sim_common
-	rm test-eap_sim_common
-
-tests: test-eap_sim_common
-
 FIPSDIR=/usr/local/ssl/fips-2.0
 FIPSLD=$(FIPSDIR)/bin/fipsld
 fips:

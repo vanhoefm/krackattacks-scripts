@@ -72,6 +72,7 @@ static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifndef CONFIG_NO_SCAN_PROCESSING
 /**
  * wpas_reenabled_network_time - Time until first network is re-enabled
  * @wpa_s: Pointer to wpa_supplicant data
@@ -107,6 +108,7 @@ static int wpas_reenabled_network_time(struct wpa_supplicant *wpa_s)
 
 	return res;
 }
+#endif /* CONFIG_NO_SCAN_PROCESSING */
 
 
 void wpas_network_reenabled(void *eloop_ctx, void *timeout_ctx)

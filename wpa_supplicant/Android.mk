@@ -386,7 +386,6 @@ EAPDYN += src/eap_peer/eap_tls.so
 else
 L_CFLAGS += -DEAP_TLS
 OBJS += src/eap_peer/eap_tls.c
-OBJS_h += src/eap_server/eap_server_tls.c
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -397,7 +396,6 @@ ifdef CONFIG_EAP_UNAUTH_TLS
 L_CFLAGS += -DEAP_UNAUTH_TLS
 ifndef CONFIG_EAP_TLS
 OBJS += src/eap_peer/eap_tls.c
-OBJS_h += src/eap_server/eap_server_tls.c
 TLS_FUNCS=y
 endif
 CONFIG_IEEE8021X_EAPOL=y
@@ -412,7 +410,6 @@ else
 L_CFLAGS += -DEAP_PEAP
 OBJS += src/eap_peer/eap_peap.c
 OBJS += src/eap_common/eap_peap_common.c
-OBJS_h += src/eap_server/eap_server_peap.c
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -426,7 +423,6 @@ EAPDYN += src/eap_peer/eap_ttls.so
 else
 L_CFLAGS += -DEAP_TTLS
 OBJS += src/eap_peer/eap_ttls.c
-OBJS_h += src/eap_server/eap_server_ttls.c
 endif
 TLS_FUNCS=y
 ifndef CONFIG_FIPS
@@ -444,7 +440,6 @@ EAPDYN += src/eap_peer/eap_md5.so
 else
 L_CFLAGS += -DEAP_MD5
 OBJS += src/eap_peer/eap_md5.c
-OBJS_h += src/eap_server/eap_server_md5.c
 endif
 CHAP=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -467,7 +462,6 @@ else
 L_CFLAGS += -DEAP_MSCHAPv2
 OBJS += src/eap_peer/eap_mschapv2.c
 OBJS += src/eap_peer/mschapv2.c
-OBJS_h += src/eap_server/eap_server_mschapv2.c
 endif
 MS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -481,7 +475,6 @@ EAPDYN += src/eap_peer/eap_gtc.so
 else
 L_CFLAGS += -DEAP_GTC
 OBJS += src/eap_peer/eap_gtc.c
-OBJS_h += src/eap_server/eap_server_gtc.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -506,7 +499,6 @@ EAPDYN += src/eap_peer/eap_sim.so
 else
 L_CFLAGS += -DEAP_SIM
 OBJS += src/eap_peer/eap_sim.c
-OBJS_h += src/eap_server/eap_server_sim.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
@@ -534,7 +526,6 @@ EAPDYN += src/eap_peer/eap_psk.so
 else
 L_CFLAGS += -DEAP_PSK
 OBJS += src/eap_peer/eap_psk.c src/eap_common/eap_psk_common.c
-OBJS_h += src/eap_server/eap_server_psk.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_AES=y
@@ -551,7 +542,6 @@ EAPDYN += src/eap_peer/eap_aka.so
 else
 L_CFLAGS += -DEAP_AKA
 OBJS += src/eap_peer/eap_aka.c
-OBJS_h += src/eap_server/eap_server_aka.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
@@ -577,7 +567,6 @@ endif
 
 ifdef CONFIG_EAP_SIM_COMMON
 OBJS += src/eap_common/eap_sim_common.c
-OBJS_h += src/eap_server/eap_sim_db.c
 NEED_AES=y
 NEED_FIPS186_2_PRF=y
 endif
@@ -592,7 +581,6 @@ else
 L_CFLAGS += -DEAP_FAST
 OBJS += src/eap_peer/eap_fast.c src/eap_peer/eap_fast_pac.c
 OBJS += src/eap_common/eap_fast_common.c
-OBJS_h += src/eap_server/eap_server_fast.c
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -607,7 +595,6 @@ EAPDYN += src/eap_peer/eap_pax.so
 else
 L_CFLAGS += -DEAP_PAX
 OBJS += src/eap_peer/eap_pax.c src/eap_common/eap_pax_common.c
-OBJS_h += src/eap_server/eap_server_pax.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -620,7 +607,6 @@ EAPDYN += src/eap_peer/eap_sake.so
 else
 L_CFLAGS += -DEAP_SAKE
 OBJS += src/eap_peer/eap_sake.c src/eap_common/eap_sake_common.c
-OBJS_h += src/eap_server/eap_server_sake.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -633,7 +619,6 @@ EAPDYN += src/eap_peer/eap_gpsk.so
 else
 L_CFLAGS += -DEAP_GPSK
 OBJS += src/eap_peer/eap_gpsk.c src/eap_common/eap_gpsk_common.c
-OBJS_h += src/eap_server/eap_server_gpsk.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 ifdef CONFIG_EAP_GPSK_SHA256
@@ -646,7 +631,6 @@ endif
 ifdef CONFIG_EAP_PWD
 L_CFLAGS += -DEAP_PWD
 OBJS += src/eap_peer/eap_pwd.c src/eap_common/eap_pwd_common.c
-OBJS_h += src/eap_server/eap_server_pwd.c
 CONFIG_IEEE8021X_EAPOL=y
 NEED_SHA256=y
 endif
@@ -659,7 +643,6 @@ EAPDYN += src/eap_peer/eap_eke.so
 else
 L_CFLAGS += -DEAP_EKE
 OBJS += src/eap_peer/eap_eke.c src/eap_common/eap_eke_common.c
-OBJS_h += src/eap_server/eap_server_eke.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
@@ -682,7 +665,6 @@ OBJS += src/wps/wps_attr_process.c
 OBJS += src/wps/wps_dev_attr.c
 OBJS += src/wps/wps_enrollee.c
 OBJS += src/wps/wps_registrar.c
-OBJS_h += src/eap_server/eap_server_wsc.c
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
@@ -745,8 +727,6 @@ else
 L_CFLAGS += -DEAP_IKEV2
 OBJS += src/eap_peer/eap_ikev2.c src/eap_peer/ikev2.c
 OBJS += src/eap_common/eap_ikev2_common.c src/eap_common/ikev2_common.c
-OBJS_h += src/eap_server/eap_server_ikev2.c
-OBJS_h += src/eap_server/ikev2.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
@@ -762,7 +742,6 @@ EAPDYN += src/eap_peer/eap_vendor_test.so
 else
 L_CFLAGS += -DEAP_VENDOR_TEST
 OBJS += src/eap_peer/eap_vendor_test.c
-OBJS_h += src/eap_server/eap_server_vendor_test.c
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -772,8 +751,6 @@ ifdef CONFIG_EAP_TNC
 L_CFLAGS += -DEAP_TNC
 OBJS += src/eap_peer/eap_tnc.c
 OBJS += src/eap_peer/tncc.c
-OBJS_h += src/eap_server/eap_server_tnc.c
-OBJS_h += src/eap_server/tncs.c
 NEED_BASE64=y
 ifndef CONFIG_NATIVE_WINDOWS
 ifndef CONFIG_DRIVER_BSD
@@ -880,36 +857,6 @@ OBJS += src/ap/peerkey_auth.c
 endif
 endif
 
-ifdef CONFIG_EAP_SERVER
-L_CFLAGS += -DEAP_SERVER
-OBJS_h += src/eap_server/eap_server.c
-OBJS_h += src/eap_server/eap_server_identity.c
-OBJS_h += src/eap_server/eap_server_methods.c
-endif
-
-ifdef CONFIG_RADIUS_CLIENT
-OBJS_h += src/utils/ip_addr.c
-OBJS_h += src/radius/radius.c
-OBJS_h += src/radius/radius_client.c
-endif
-
-ifdef CONFIG_AUTHENTICATOR
-OBJS_h += src/eapol_auth/eapol_auth_sm.c
-OBJS_h += src/ap/ieee802_1x.c
-endif
-
-ifdef CONFIG_WPA_AUTHENTICATOR
-OBJS_h += src/ap/wpa_auth.c
-OBJS_h += src/ap/wpa_auth_ie.c
-OBJS_h += src/ap/pmksa_cache_auth.c
-ifdef CONFIG_IEEE80211R
-OBJS_h += src/ap/wpa_auth_ft.c
-endif
-ifdef CONFIG_PEERKEY
-OBJS_h += src/ap/peerkey_auth.c
-endif
-endif
-
 ifdef CONFIG_PCSC
 # PC/SC interface for smartcards (USIM, GSM SIM)
 L_CFLAGS += -DPCSC_FUNCS -I/usr/include/PCSC
@@ -961,7 +908,6 @@ ifdef TLS_FUNCS
 NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, EAP_TTLS, and EAP_FAST)
 OBJS += src/eap_peer/eap_tls_common.c
-OBJS_h += src/eap_server/eap_server_tls_common.c
 ifndef CONFIG_FIPS
 NEED_TLS_PRF=y
 NEED_SHA1=y
@@ -1517,12 +1463,6 @@ endif
 
 OBJS += src/drivers/driver_common.c
 
-OBJS_wpa_rm := ctrl_iface.c ctrl_iface_unix.c
-OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.c
-ifdef CONFIG_AUTHENTICATOR
-OBJS_wpa += tests/link_test.c
-endif
-OBJS_wpa += $(OBJS_l2)
 OBJS += wpa_supplicant.c events.c blacklist.c wpas_glue.c scan.c
 OBJS_t := $(OBJS) $(OBJS_l2) eapol_test.c
 OBJS_t += src/radius/radius_client.c

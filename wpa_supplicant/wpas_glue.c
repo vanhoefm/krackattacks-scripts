@@ -1013,7 +1013,6 @@ static void wpa_supplicant_set_rekey_offload(void *ctx,
 
 	wpa_drv_set_rekey_info(wpa_s, kek, kek_len, kck, kck_len, replay_ctr);
 }
-#endif /* CONFIG_NO_WPA */
 
 
 static int wpa_supplicant_key_mgmt_set_pmk(void *ctx, const u8 *pmk,
@@ -1028,6 +1027,7 @@ static int wpa_supplicant_key_mgmt_set_pmk(void *ctx, const u8 *pmk,
 	else
 		return 0;
 }
+#endif /* CONFIG_NO_WPA */
 
 
 int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)

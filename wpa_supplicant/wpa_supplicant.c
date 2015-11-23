@@ -1155,6 +1155,10 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			return -1;
 	}
 
+#ifdef CONFIG_NO_WPA
+	wpa_s->group_cipher = WPA_CIPHER_NONE;
+	wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
+#else /* CONFIG_NO_WPA */
 	sel = ie.group_cipher & ssid->group_cipher;
 	wpa_s->group_cipher = wpa_pick_group_cipher(sel);
 	if (wpa_s->group_cipher < 0) {
@@ -1174,6 +1178,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 	wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK %s",
 		wpa_cipher_txt(wpa_s->pairwise_cipher));
+#endif /* CONFIG_NO_WPA */
 
 	sel = ie.key_mgmt & ssid->key_mgmt;
 #ifdef CONFIG_SAE

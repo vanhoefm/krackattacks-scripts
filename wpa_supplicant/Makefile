@@ -288,6 +288,10 @@ NEED_MD5=y
 NEED_RC4=y
 else
 CFLAGS += -DCONFIG_NO_WPA
+ifeq ($(CONFIG_TLS), internal)
+NEED_SHA1=y
+NEED_MD5=y
+endif
 endif
 
 ifdef CONFIG_IBSS_RSN

@@ -899,6 +899,9 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 
 static int wpa_config_parse_cipher(int line, const char *value)
 {
+#ifdef CONFIG_NO_WPA
+	return -1;
+#else /* CONFIG_NO_WPA */
 	int val = wpa_parse_cipher(value);
 	if (val < 0) {
 		wpa_printf(MSG_ERROR, "Line %d: invalid cipher '%s'.",
@@ -911,12 +914,16 @@ static int wpa_config_parse_cipher(int line, const char *value)
 		return -1;
 	}
 	return val;
+#endif /* CONFIG_NO_WPA */
 }
 
 
 #ifndef NO_CONFIG_WRITE
 static char * wpa_config_write_cipher(int cipher)
 {
+#ifdef CONFIG_NO_WPA
+	return NULL;
+#else /* CONFIG_NO_WPA */
 	char *buf = os_zalloc(50);
 	if (buf == NULL)
 		return NULL;
@@ -927,6 +934,7 @@ static char * wpa_config_write_cipher(int cipher)
 	}
 
 	return buf;
+#endif /* CONFIG_NO_WPA */
 }
 #endif /* NO_CONFIG_WRITE */
 

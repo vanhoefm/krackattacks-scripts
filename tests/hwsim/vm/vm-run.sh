@@ -6,7 +6,11 @@ if [ -z "$TESTDIR" ] ; then
 	TESTDIR=$(pwd)/../
 fi
 
-LOGS=/tmp/hwsim-test-logs
+if [ -n "$HWSIM_TEST_LOG_DIR" ] ; then
+	LOGS="$HWSIM_TEST_LOG_DIR"
+else
+	LOGS=/tmp/hwsim-test-logs
+fi
 
 # increase the memory size if you want to run with valgrind, 512 MB works
 MEMORY=192

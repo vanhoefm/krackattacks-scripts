@@ -352,6 +352,13 @@ def main():
                    help="run tests under valgrind")
     p.add_argument('params', nargs='*')
     args = p.parse_args()
+
+    dir = os.environ.get('HWSIM_TEST_LOG_DIR', '/tmp/hwsim-test-logs')
+    try:
+        os.makedirs(dir)
+    except:
+        pass
+
     num_servers = args.num_servers
     rerun_failures = not args.no_retry
     if args.debug:
@@ -363,7 +370,7 @@ def main():
         extra_args += [ '--long' ]
     if args.codecov:
         print "Code coverage - build separate binaries"
-        logdir = "/tmp/hwsim-test-logs/" + str(timestamp)
+        logdir = os.path.join(dir, str(timestamp))
         os.makedirs(logdir)
         subprocess.check_call([os.path.join(scriptsdir, 'build-codecov.sh'),
                                logdir])
@@ -389,12 +396,6 @@ def main():
             tests.append(name)
     if len(tests) == 0:
         sys.exit("No test cases selected")
-
-    dir = '/tmp/hwsim-test-logs'
-    try:
-        os.mkdir(dir)
-    except:
-        pass
 
     if args.shuffle:
         from random import shuffle

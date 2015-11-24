@@ -29,6 +29,7 @@ mknod -m 660 /dev/ttyS0 c 4 64
 mknod -m 660 /dev/random c 1 8
 mknod -m 660 /dev/urandom c 1 9
 mknod -m 666 /dev/null c 1 3
+mknod -m 666 /dev/kmsg c 1 11
 test -f /sys/class/misc/rfkill/dev && \
 	mknod -m 660 /dev/rfkill c $(cat /sys/class/misc/rfkill/dev | tr ':' ' ')
 ln -s /proc/self/fd/0 /dev/stdin

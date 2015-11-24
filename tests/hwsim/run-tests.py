@@ -400,6 +400,7 @@ def main():
             t = tests_to_run.pop(0)
 
         name = t.__name__.replace('test_', '', 1)
+        open('/dev/kmsg', 'w').write('running hwsim test case %s\n' % name)
         if log_handler:
             log_handler.stream.close()
             logger.removeHandler(log_handler)

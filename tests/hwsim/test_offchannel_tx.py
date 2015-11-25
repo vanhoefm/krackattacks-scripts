@@ -11,9 +11,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from test_gas import start_ap
 from test_gas import anqp_get
-from test_p2p_grpform import go_neg_pin_authorized
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
+from p2p_utils import *
 
 def test_offchannel_tx_roc_gas(dev, apdev):
     """GAS using cfg80211 remain-on-channel for offchannel TX"""

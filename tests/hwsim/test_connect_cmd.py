@@ -11,9 +11,7 @@ import time
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
-from test_p2p_grpform import go_neg_pin_authorized
-from test_p2p_grpform import check_grpform_results
-from test_p2p_grpform import remove_group
+from p2p_utils import *
 
 def test_connect_cmd_open(dev, apdev):
     """Open connection using cfg80211 connect command"""

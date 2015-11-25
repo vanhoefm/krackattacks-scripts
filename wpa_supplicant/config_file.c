@@ -751,6 +751,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(disabled);
 	INT(peerkey);
 	INT(mixed_cell);
+	INT(max_oper_chwidth);
 #ifdef CONFIG_IEEE80211W
 	write_int(f, "ieee80211w", ssid->ieee80211w,
 		  MGMT_FRAME_PROTECTION_DEFAULT);

@@ -1845,6 +1845,8 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(auth_alg) },
 	{ FUNC(scan_freq) },
 	{ FUNC(freq_list) },
+	{ INT_RANGE(max_oper_chwidth, VHT_CHANWIDTH_USE_HT,
+		    VHT_CHANWIDTH_80P80MHZ) },
 #ifdef IEEE8021X_EAPOL
 	{ FUNC(eap) },
 	{ STR_LENe(identity) },

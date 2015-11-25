@@ -1554,7 +1554,7 @@ static const char *network_fields[] = {
 	"ssid", "scan_ssid", "bssid", "bssid_blacklist",
 	"bssid_whitelist", "psk", "proto", "key_mgmt",
 	"bg_scan_period", "pairwise", "group", "auth_alg", "scan_freq",
-	"freq_list",
+	"freq_list", "max_oper_chwidth",
 #ifdef IEEE8021X_EAPOL
 	"eap", "identity", "anonymous_identity", "password", "ca_cert",
 	"ca_path", "client_cert", "private_key", "private_key_passwd",

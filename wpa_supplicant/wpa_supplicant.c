@@ -1769,8 +1769,10 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	struct hostapd_channel_data *pri_chan = NULL, *sec_chan = NULL;
 	u8 channel;
 	int i, chan_idx, ht40 = -1, res, obss_scan = 1;
-	unsigned int j;
+	unsigned int j, k;
 	struct hostapd_freq_params vht_freq;
+	int chwidth, seg0, seg1;
+	u32 vht_caps = 0;
 
 	freq->freq = ssid->frequency;
 
@@ -1956,12 +1958,45 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 			return;
 	}
 
+	chwidth = VHT_CHANWIDTH_80MHZ;
+	seg0 = vht80[j] + 6;
+	seg1 = 0;
+
+	if (ssid->max_oper_chwidth == VHT_CHANWIDTH_80P80MHZ) {
+		/* setup center_freq2, bandwidth */
+		for (k = 0; k < ARRAY_SIZE(vht80); k++) {
+			/* Only accept 80 MHz segments separated by a gap */
+			if (j == k || abs(vht80[j] - vht80[k]) == 16)
+				continue;
+			for (i = vht80[k]; i < vht80[k] + 16; i += 4) {
+				struct hostapd_channel_data *chan;
+
+				chan = hw_get_channel_chan(mode, i, NULL);
+				if (!chan)
+					continue;
+
+				if (chan->flag & (HOSTAPD_CHAN_DISABLED |
+						  HOSTAPD_CHAN_NO_IR |
+						  HOSTAPD_CHAN_RADAR))
+					continue;
+
+				/* Found a suitable second segment for 80+80 */
+				chwidth = VHT_CHANWIDTH_80P80MHZ;
+				vht_caps |=
+					VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
+				seg1 = vht80[k] + 6;
+			}
+
+			if (chwidth == VHT_CHANWIDTH_80P80MHZ)
+				break;
+		}
+	}
+
 	if (hostapd_set_freq_params(&vht_freq, mode->mode, freq->freq,
 				    freq->channel, freq->ht_enabled,
 				    vht_freq.vht_enabled,
 				    freq->sec_channel_offset,
-				    VHT_CHANWIDTH_80MHZ,
-				    vht80[j] + 6, 0, 0) != 0)
+				    chwidth, seg0, seg1, vht_caps) != 0)
 		return;
 
 	*freq = vht_freq;

@@ -318,6 +318,16 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_mesh_deinit(wpa_s);
 
+	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {
+		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
+		wpa_s->group_cipher = WPA_CIPHER_CCMP;
+		wpa_s->mgmt_group_cipher = 0;
+	} else {
+		wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
+		wpa_s->group_cipher = WPA_CIPHER_NONE;
+		wpa_s->mgmt_group_cipher = 0;
+	}
+
 	os_memset(&params, 0, sizeof(params));
 	params.meshid = ssid->ssid;
 	params.meshid_len = ssid->ssid_len;

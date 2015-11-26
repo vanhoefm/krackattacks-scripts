@@ -773,3 +773,23 @@ def test_autogo_scan(dev):
         raise Exception("Did not recognize group as persistent")
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_join_before_found(dev):
+    """P2P client joining a group before having found GO Device Address"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    res = autogo(dev[0], freq=2412)
+    if "p2p-wlan" not in res['ifname']:
+        raise Exception("Unexpected group interface name on GO")
+    status = dev[0].get_group_status()
+    bssid = status['bssid']
+
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    cmd = "P2P_CONNECT " + bssid + " " + pin + " join freq=2412"
+    if "OK" not in dev[1].global_request(cmd):
+        raise Exception("P2P_CONNECT join failed")
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

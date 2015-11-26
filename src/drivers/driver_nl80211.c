@@ -6560,8 +6560,12 @@ static int nl80211_signal_poll(void *priv, struct wpa_signal_info *si)
 
 	os_memset(si, 0, sizeof(*si));
 	res = nl80211_get_link_signal(drv, si);
-	if (res != 0)
-		return res;
+	if (res) {
+		if (drv->nlmode != NL80211_IFTYPE_ADHOC &&
+		    drv->nlmode != NL80211_IFTYPE_MESH_POINT)
+			return res;
+		si->current_signal = 0;
+	}
 
 	res = nl80211_get_channel_width(drv, si);
 	if (res != 0)

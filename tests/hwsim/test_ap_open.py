@@ -496,3 +496,22 @@ def test_ap_open_select_twice(dev, apdev):
     # waiting less than the default scan period.
     dev[0].select_network(id)
     dev[0].wait_connected(timeout=3)
+
+def test_ap_open_reassoc_not_found(dev, apdev):
+    """AP with open mode and REASSOCIATE not finding a match"""
+    id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                        only_add_network=True)
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=10)
+    if ev is None:
+        raise Exception("No result reported")
+    dev[0].request("DISCONNECT")
+
+    time.sleep(0.1)
+    dev[0].dump_monitor()
+
+    dev[0].request("REASSOCIATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=10)
+    if ev is None:
+        raise Exception("No result reported")
+    dev[0].request("DISCONNECT")

@@ -940,10 +940,11 @@ def _test_scan_dfs(dev, apdev, params):
                      "wlan.fc.type_subtype == 4", [ "radiotap.channel.freq" ])
     if out is not None:
         freq = out.splitlines()
+        freq = [int(f) for f in freq]
         freq = list(set(freq))
+        freq.sort()
         logger.info("Active scan seen on channels: " + str(freq))
-        for ff in freq:
-            f = int(ff)
+        for f in freq:
             if (f >= 5260 and f <= 5320) or (f >= 5500 and f <= 5700):
                 raise Exception("Active scan on DFS channel: %d" % f)
 

@@ -202,6 +202,7 @@ struct wlantest {
 	int last_mgmt_valid;
 
 	unsigned int assume_fcs:1;
+	unsigned int pcap_no_buffer:1;
 
 	char *notes[MAX_NOTES];
 	size_t num_notes;

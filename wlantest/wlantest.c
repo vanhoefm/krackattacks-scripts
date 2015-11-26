@@ -21,7 +21,7 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 
 static void usage(void)
 {
-	printf("wlantest [-cddhqqFt] [-i<ifname>] [-r<pcap file>] "
+	printf("wlantest [-cddhqqFNt] [-i<ifname>] [-r<pcap file>] "
 	       "[-p<passphrase>]\n"
 	       "         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdf:Fhi:I:L:n:p:P:qr:R:tT:w:W:");
+		c = getopt(argc, argv, "cdf:Fhi:I:L:n:Np:P:qr:R:tT:w:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -382,6 +382,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'n':
 			wt.pcapng_file = optarg;
+			break;
+		case 'N':
+			wt.pcap_no_buffer = 1;
 			break;
 		case 'p':
 			add_passphrase(&wt, optarg);

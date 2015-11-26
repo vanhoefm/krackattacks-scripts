@@ -59,6 +59,8 @@ void write_pcap_captured(struct wlantest *wt, const u8 *buf, size_t len)
 	h.caplen = len;
 	h.len = len;
 	pcap_dump(wt->write_pcap_dumper, &h, buf);
+	if (wt->pcap_no_buffer)
+		pcap_dump_flush(wt->write_pcap_dumper);
 }
 
 
@@ -102,6 +104,8 @@ void write_pcap_decrypted(struct wlantest *wt, const u8 *buf1, size_t len1,
 	h.caplen = len;
 	h.len = len;
 	pcap_dump(wt->write_pcap_dumper, &h, buf);
+	if (wt->pcap_no_buffer)
+		pcap_dump_flush(wt->write_pcap_dumper);
 }
 
 
@@ -181,6 +185,8 @@ int write_pcapng_init(struct wlantest *wt, const char *fname)
 	desc.link_type = LINKTYPE_IEEE802_11_RADIO;
 	desc.snap_len = 65535;
 	fwrite(&desc, sizeof(desc), 1, wt->pcapng);
+	if (wt->pcap_no_buffer)
+		fflush(wt->pcapng);
 
 	return 0;
 }
@@ -263,6 +269,8 @@ static void write_pcapng_decrypted(struct wlantest *wt)
 	*block_len = pkt->block_total_len = pos - (u8 *) pkt;
 
 	fwrite(pkt, pos - (u8 *) pkt, 1, wt->pcapng);
+	if (wt->pcap_no_buffer)
+		fflush(wt->pcapng);
 
 	os_free(pkt);
 }
@@ -337,6 +345,8 @@ void write_pcapng_write_read(struct wlantest *wt, int dlt,
 	*block_len = pkt->block_total_len = pos - (u8 *) pkt;
 
 	fwrite(pkt, pos - (u8 *) pkt, 1, wt->pcapng);
+	if (wt->pcap_no_buffer)
+		fflush(wt->pcapng);
 
 	os_free(pkt);
 

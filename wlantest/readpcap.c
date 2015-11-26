@@ -102,6 +102,8 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 				write_pcap_with_radiotap(wt, data, hdr->caplen);
 			else
 				pcap_dump(wt->write_pcap_dumper, hdr, data);
+			if (wt->pcap_no_buffer)
+				pcap_dump_flush(wt->write_pcap_dumper);
 		}
 		if (hdr->caplen < hdr->len) {
 			add_note(wt, MSG_DEBUG, "pcap: Dropped incomplete "

@@ -21,7 +21,7 @@ def run_tshark(filename, filter, display=None, wait=True):
     if wait:
         # wait a bit to make it more likely for wlantest sniffer to have
         # captured and written the results into a file that we can process here
-        time.sleep(1)
+        time.sleep(0.1)
 
     try:
         arg = [ "tshark", "-r", filename,

@@ -49,10 +49,12 @@ def wait_4way_handshake2(dev1, dev2, dev3):
 
 def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
              group=None, beacon_int=None, bssid=None, scan_freq=None,
-             wep_key0=None, freq=2412):
+             wep_key0=None, freq=2412, chwidth=0):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", str(freq))
+    if chwidth > 0:
+        dev.set_network(id, "max_oper_chwidth", str(chwidth))
     if scan_freq:
         dev.set_network(id, "scan_freq", str(scan_freq))
     dev.set_network_quoted(id, "ssid", ssid)
@@ -382,6 +384,59 @@ def _test_ibss_5ghz(dev):
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:
         logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_ibss_vht_80p80(dev):
+    """IBSS on VHT 80+80 MHz channel"""
+    try:
+        _test_ibss_vht_80p80(dev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_ibss_vht_80p80(dev):
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+    for i in range(2):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        dev[i].dump_monitor()
+
+    ssid="ibss"
+    id = add_ibss(dev[0], ssid, key_mgmt="NONE", freq=5180, chwidth=3)
+    connect_ibss_cmd(dev[0], id, freq=5180)
+    bssid0 = wait_ibss_connection(dev[0])
+    sig = dev[0].request("SIGNAL_POLL").splitlines()
+    if "FREQUENCY=5180" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+    if "WIDTH=80+80 MHz" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+    if "CENTER_FRQ1=5210" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+    if "CENTER_FRQ2=5775" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
+
+    dev[1].scan_for_bss(bssid0, freq=5180)
+    id = add_ibss(dev[1], ssid, key_mgmt="NONE", freq=5180, chwidth=3)
+    connect_ibss_cmd(dev[1], id, freq=5180)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+
+    sig = dev[1].request("SIGNAL_POLL").splitlines()
+    if "FREQUENCY=5180" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value(1b): " + str(sig))
+    logger.info("STA1 SIGNAL_POLL: " + str(sig))
+    # For now, don't report errors on joining STA failing to get 80+80 MHZ
+    # since mac80211 missed functionality for that to work.
 
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")

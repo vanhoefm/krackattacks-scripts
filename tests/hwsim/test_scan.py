@@ -905,3 +905,44 @@ def test_scan_bss_expiration_on_ssid_change(dev, apdev):
         raise Exception("The BSS entry with the old SSID was not removed")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_scan_dfs(dev, apdev, params):
+    """Scan on DFS channels"""
+    try:
+        _test_scan_dfs(dev, apdev, params)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def _test_scan_dfs(dev, apdev, params):
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+    for i in range(2):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        dev[i].dump_monitor()
+
+    if "OK" not in dev[0].request("SCAN"):
+        raise Exception("SCAN command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+    if ev is None:
+        raise Exception("Scan did not complete")
+
+    if "OK" not in dev[0].request("SCAN freq=2412,5180,5260,5500,5600,5745"):
+        raise Exception("SCAN command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+    if ev is None:
+        raise Exception("Scan did not complete")
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan.fc.type_subtype == 4", [ "radiotap.channel.freq" ])
+    if out is not None:
+        freq = out.splitlines()
+        freq = list(set(freq))
+        logger.info("Active scan seen on channels: " + str(freq))
+        for ff in freq:
+            f = int(ff)
+            if (f >= 5260 and f <= 5320) or (f >= 5500 and f <= 5700):
+                raise Exception("Active scan on DFS channel: %d" % f)

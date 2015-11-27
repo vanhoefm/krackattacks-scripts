@@ -895,11 +895,8 @@ def _test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
         dev[0].global_request("SET p2p_go_freq_change_policy 2")
         set_country("00")
 
-def test_p2p_go_move_scm_multi(dev, apdev, params):
-    """P2P GO move due to SCM operation preference multiple times [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
-
+def test_p2p_go_move_scm_multi(dev, apdev):
+    """P2P GO move due to SCM operation preference multiple times"""
     with HWSimRadio(n_channels=2) as (radio, iface):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
@@ -926,7 +923,14 @@ def _test_p2p_go_move_scm_multi(dev, apdev):
             raise Exception("Unexpected channel %d MHz" % freq)
 
         # GO move is not allowed while waiting for initial client connection
-        time.sleep(20)
+        connect_cli(dev[0], dev[1], freq=freq)
+        dev[1].remove_group()
+
+        freq = dev[0].get_group_status_field('freq')
+        if int(freq) > 2430:
+            raise Exception("Unexpected freq after initial client: " + freq)
+
+        dev[0].dump_monitor()
         dev[0].global_request("P2P_SET disallow_freq ")
 
         ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",

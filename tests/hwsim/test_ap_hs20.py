@@ -3137,7 +3137,7 @@ def send_ns(dev, src_ll=None, target=None, ip_src=None, ip_dst=None, opt=None,
     if "OK" not in dev.request(cmd + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
 
-def build_na(src_ll, ip_src, ip_dst, target, opt=None):
+def build_na(src_ll, ip_src, ip_dst, target, opt=None, flags=0):
     link_mc = binascii.unhexlify("3333ff000002")
     _src_ll = binascii.unhexlify(src_ll.replace(':',''))
     proto = '\x86\xdd'
@@ -3145,12 +3145,11 @@ def build_na(src_ll, ip_src, ip_dst, target, opt=None):
     _ip_src = socket.inet_pton(socket.AF_INET6, ip_src)
     _ip_dst = socket.inet_pton(socket.AF_INET6, ip_dst)
 
-    reserved = '\x00\x00\x00\x00'
     _target = socket.inet_pton(socket.AF_INET6, target)
     if opt:
-        payload = reserved + _target + opt
+        payload = struct.pack('>Bxxx', flags) + _target + opt
     else:
-        payload = reserved + _target
+        payload = struct.pack('>Bxxx', flags) + _target
     icmp = build_icmpv6(_ip_src + _ip_dst, 136, 0, payload)
 
     ipv6 = struct.pack('>BBBBHBB', 0x60, 0, 0, 0, len(icmp), 58, 255)

@@ -14,6 +14,8 @@ mount debugfs -t debugfs /sys/kernel/debug
 
 export PATH=/usr/sbin:$PATH
 
+echo 8 8 8 8 > /proc/sys/kernel/printk
+
 # reboot on any sort of crash
 sysctl kernel.panic_on_oops=1
 sysctl kernel.panic=1

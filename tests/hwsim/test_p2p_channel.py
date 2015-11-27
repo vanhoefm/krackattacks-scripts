@@ -754,12 +754,20 @@ def _test_p2p_go_move_active(dev, apdev):
 
 def test_p2p_go_move_scm(dev, apdev, params):
     """P2P GO move due to SCM operation preference [long]"""
-    if dev[0].get_mcc() <= 1:
-        raise HwsimSkip("Skip due to MCC not being enabled")
-
     if not params['long']:
         raise HwsimSkip("Skip test case with long duration due to --long not specified")
 
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        if wpas.get_mcc() < 2:
+            raise Exception("New radio does not support MCC")
+
+        ndev = [ wpas, dev[1] ]
+        _test_p2p_go_move_scm(ndev, apdev)
+
+def _test_p2p_go_move_scm(dev, apdev):
     dev[0].request("SET p2p_no_group_iface 0")
     try:
         dev[0].global_request("P2P_SET disallow_freq 2430-6000")

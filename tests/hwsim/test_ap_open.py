@@ -19,6 +19,9 @@ from wpasupplicant import WpaSupplicant
 
 def test_ap_open(dev, apdev):
     """AP with open mode (no security) configuration"""
+    _test_ap_open(dev, apdev)
+
+def _test_ap_open(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bg_scan_period="0")

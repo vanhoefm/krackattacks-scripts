@@ -676,11 +676,8 @@ def test_p2p_channel_5ghz_165_169_us(dev):
     finally:
         set_country("00")
 
-def test_p2p_go_move_reg_change(dev, apdev, params):
-    """P2P GO move due to regulatory change [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
-
+def test_p2p_go_move_reg_change(dev, apdev):
+    """P2P GO move due to regulatory change"""
     try:
         set_country("US")
         dev[0].global_request("P2P_SET disallow_freq 2400-5000")
@@ -692,7 +689,14 @@ def test_p2p_go_move_reg_change(dev, apdev, params):
         dev[0].global_request("P2P_SET disallow_freq ")
 
         # GO move is not allowed while waiting for initial client connection
-        time.sleep(20)
+        connect_cli(dev[0], dev[1], freq=freq1)
+        dev[1].remove_group()
+
+        freq = dev[0].get_group_status_field('freq')
+        if int(freq) < 5000:
+            raise Exception("Unexpected freq after initial client: " + freq)
+        dev[0].dump_monitor()
+
         set_country("00")
         ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP",
                                       "AP-CSA-FINISHED"],

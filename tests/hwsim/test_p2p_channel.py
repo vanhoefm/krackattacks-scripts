@@ -850,14 +850,19 @@ def _test_p2p_go_move_scm_peer_supports(dev, apdev):
         dev[0].global_request("SET p2p_go_freq_change_policy 2")
         set_country("00")
 
-def test_p2p_go_move_scm_peer_does_not_support(dev, apdev, params):
-    """No P2P GO move due to SCM operation (peer does not supports) [long]"""
-    if dev[0].get_mcc() <= 1:
-        raise HwsimSkip("Skip due to MCC not being enabled")
+def test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
+    """No P2P GO move due to SCM operation (peer does not supports)"""
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+        if wpas.get_mcc() < 2:
+            raise Exception("New radio does not support MCC")
 
+        ndev = [ wpas, dev[1] ]
+        _test_p2p_go_move_scm_peer_does_not_support(ndev, apdev)
+
+def _test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
     try:
         dev[0].global_request("SET p2p_go_freq_change_policy 1")
         set_country("US", dev[0])

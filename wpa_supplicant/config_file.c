@@ -747,6 +747,9 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(no_auto_peer);
 	INT(frequency);
 	INT(fixed_freq);
+#ifdef CONFIG_ACS
+	INT(acs);
+#endif /* CONFIG_ACS */
 	write_int(f, "proactive_key_caching", ssid->proactive_key_caching, -1);
 	INT(disabled);
 	INT(peerkey);

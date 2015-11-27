@@ -213,6 +213,14 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	if (wpa_supplicant_conf_ap_ht(wpa_s, ssid, conf))
 		return -1;
 
+#ifdef CONFIG_ACS
+	if (ssid->acs) {
+		/* Setting channel to 0 in order to enable ACS */
+		conf->channel = 0;
+		wpa_printf(MSG_DEBUG, "Use automatic channel selection");
+	}
+#endif /* CONFIG_ACS */
+
 	if (ieee80211_is_dfs(ssid->frequency) && wpa_s->conf->country[0]) {
 		conf->ieee80211h = 1;
 		conf->ieee80211d = 1;
@@ -557,6 +565,11 @@ static void ap_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 static void wpas_ap_configured_cb(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+
+#ifdef CONFIG_ACS
+	if (wpa_s->current_ssid && wpa_s->current_ssid->acs)
+		wpa_s->assoc_freq = wpa_s->ap_iface->freq;
+#endif /* CONFIG_ACS */
 
 	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 

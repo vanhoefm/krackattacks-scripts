@@ -431,6 +431,18 @@ struct wpa_ssid {
 	 */
 	int fixed_freq;
 
+#ifdef CONFIG_ACS
+	/**
+	 * ACS - Automatic Channel Selection for AP mode
+	 *
+	 * If present, it will be handled together with frequency.
+	 * frequency will be used to determine hardware mode only, when it is
+	 * used for both hardware mode and channel when used alone. This will
+	 * force the channel to be set to 0, thus enabling ACS.
+	 */
+	int acs;
+#endif /* CONFIG_ACS */
+
 	/**
 	 * mesh_basic_rates - BSS Basic rate set for mesh network
 	 *

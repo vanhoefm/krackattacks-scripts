@@ -857,6 +857,12 @@ OBJS += src/ap/peerkey_auth.c
 endif
 endif
 
+ifdef CONFIG_ACS
+L_CFLAGS += -DCONFIG_ACS
+OBJS += src/ap/acs.c
+LIBS += -lm
+endif
+
 ifdef CONFIG_PCSC
 # PC/SC interface for smartcards (USIM, GSM SIM)
 L_CFLAGS += -DPCSC_FUNCS -I/usr/include/PCSC

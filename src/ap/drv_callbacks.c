@@ -549,8 +549,8 @@ void hostapd_event_connect_failed_reason(struct hostapd_data *hapd,
 
 
 #ifdef CONFIG_ACS
-static void hostapd_acs_channel_selected(struct hostapd_data *hapd,
-					 struct acs_selected_channels *acs_res)
+void hostapd_acs_channel_selected(struct hostapd_data *hapd,
+				  struct acs_selected_channels *acs_res)
 {
 	int ret, i;
 

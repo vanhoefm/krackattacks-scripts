@@ -513,3 +513,29 @@ CONFIG_PEERKEY=y
 
 # OS X builds. This is only for building eapol_test.
 #CONFIG_OSX=y
+
+# Automatic Channel Selection
+# This will allow wpa_supplicant to pick the channel automatically when channel
+# is set to "0".
+#
+# TODO: Extend parser to be able to parse "channel=acs_survey" as an alternative
+# to "channel=0". This would enable us to eventually add other ACS algorithms in
+# similar way.
+#
+# Automatic selection is currently only done through initialization, later on
+# we hope to do background checks to keep us moving to more ideal channels as
+# time goes by. ACS is currently only supported through the nl80211 driver and
+# your driver must have survey dump capability that is filled by the driver
+# during scanning.
+#
+# TODO: In analogy to hostapd be able to customize the ACS survey algorithm with
+# a newly to create wpa_supplicant.conf variable acs_num_scans.
+#
+# Supported ACS drivers:
+# * ath9k
+# * ath5k
+# * ath10k
+#
+# For more details refer to:
+# http://wireless.kernel.org/en/users/Documentation/acs
+#CONFIG_ACS=y

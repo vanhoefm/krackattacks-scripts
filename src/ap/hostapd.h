@@ -496,6 +496,8 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 struct survey_results;
 void hostapd_event_get_survey(struct hostapd_iface *iface,
 			      struct survey_results *survey_results);
+void hostapd_acs_channel_selected(struct hostapd_data *hapd,
+				  struct acs_selected_channels *acs_res);
 
 const struct hostapd_eap_user *
 hostapd_get_eap_user(struct hostapd_data *hapd, const u8 *identity,

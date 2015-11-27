@@ -453,6 +453,11 @@ def main():
             except HwsimSkip, e:
                 logger.info("Skip test case: %s" % e)
                 result = "SKIP"
+            except NameError, e:
+                import traceback
+                logger.info(e)
+                traceback.print_exc()
+                result = "FAIL"
             except Exception, e:
                 logger.info(e)
                 if args.loglevel == logging.WARNING:

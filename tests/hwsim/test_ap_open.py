@@ -196,7 +196,7 @@ def hapd_out_of_mem(hapd, apdev, count, func):
         except:
             pass
         if started:
-            raise Exception("hostapd interface started even with memory allocation failure: " + arg)
+            raise Exception("hostapd interface started even with memory allocation failure: %d:%s" % (count, func))
 
 def test_ap_open_out_of_memory(dev, apdev):
     """hostapd failing to setup interface due to allocation failure"""

@@ -12,7 +12,6 @@ import time
 
 import hostapd
 import hwsim_utils
-from utils import HwsimSkip
 from tshark import run_tshark
 from wpasupplicant import WpaSupplicant
 from hwsim import HWSimRadio

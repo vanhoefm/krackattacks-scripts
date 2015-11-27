@@ -17,11 +17,14 @@ import time
 import hostapd
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_eap import check_eap_capa
+from test_erp import check_erp_capa
 
 EAP_CODE_REQUEST = 1
 EAP_CODE_RESPONSE = 2
 EAP_CODE_SUCCESS = 3
 EAP_CODE_FAILURE = 4
+EAP_CODE_INITIATE = 5
+EAP_CODE_FINISH = 6
 
 EAP_TYPE_IDENTITY = 1
 EAP_TYPE_NOTIFICATION = 2
@@ -47,6 +50,22 @@ EAP_TYPE_AKA_PRIME = 50
 EAP_TYPE_GPSK = 51
 EAP_TYPE_PWD = 52
 EAP_TYPE_EKE = 53
+
+# Type field in EAP-Initiate and EAP-Finish messages
+EAP_ERP_TYPE_REAUTH_START = 1
+EAP_ERP_TYPE_REAUTH = 2
+
+EAP_ERP_TLV_KEYNAME_NAI = 1
+EAP_ERP_TV_RRK_LIFETIME = 2
+EAP_ERP_TV_RMSK_LIFETIME = 3
+EAP_ERP_TLV_DOMAIN_NAME = 4
+EAP_ERP_TLV_CRYPTOSUITES = 5
+EAP_ERP_TLV_AUTHORIZATION_INDICATION = 6
+EAP_ERP_TLV_CALLED_STATION_ID = 128
+EAP_ERP_TLV_CALLING_STATION_ID = 129
+EAP_ERP_TLV_NAS_IDENTIFIER = 130
+EAP_ERP_TLV_NAS_IP_ADDRESS = 131
+EAP_ERP_TLV_NAS_IPV6_ADDRESS = 132
 
 def run_pyrad_server(srv, t_stop, eap_handler):
     srv.RunWithStop(t_stop, eap_handler)
@@ -4893,3 +4912,155 @@ def test_eap_proto_pwd_errors(dev, apdev):
         raise Exception("EAP-pwd not started")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_eap_proto_erp(dev, apdev):
+    """ERP protocol tests"""
+    check_erp_capa(dev[0])
+
+    global eap_proto_erp_test_done
+    eap_proto_erp_test_done = False
+
+    def erp_handler(ctx, req):
+        logger.info("erp_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing type")
+            return struct.pack(">BBH", EAP_CODE_INITIATE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected type")
+            return struct.pack(">BBHB", EAP_CODE_INITIATE, ctx['id'], 4 + 1,
+                               255)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing Reserved field")
+            return struct.pack(">BBHB", EAP_CODE_INITIATE, ctx['id'], 4 + 1,
+                               EAP_ERP_TYPE_REAUTH_START)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Zero-length TVs/TLVs")
+            payload = ""
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short TLV")
+            payload = struct.pack("B", 191)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Truncated TLV")
+            payload = struct.pack("BB", 191, 1)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Ignored unknown TLV and unknown TV/TLV terminating parsing")
+            payload = struct.pack("BBB", 191, 0, 192)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: More than one keyName-NAI")
+            payload = struct.pack("BBBB", EAP_ERP_TLV_KEYNAME_NAI, 0,
+                                  EAP_ERP_TLV_KEYNAME_NAI, 0)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short TLV keyName-NAI")
+            payload = struct.pack("B", EAP_ERP_TLV_KEYNAME_NAI)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Truncated TLV keyName-NAI")
+            payload = struct.pack("BB", EAP_ERP_TLV_KEYNAME_NAI, 1)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid rRK lifetime TV followed by too short rMSK lifetime TV")
+            payload = struct.pack(">BLBH", EAP_ERP_TV_RRK_LIFETIME, 0,
+                                  EAP_ERP_TV_RMSK_LIFETIME, 0)
+            return struct.pack(">BBHBB", EAP_CODE_INITIATE, ctx['id'],
+                               4 + 1 + 1 + len(payload),
+                               EAP_ERP_TYPE_REAUTH_START, 0) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing type (Finish)")
+            return struct.pack(">BBH", EAP_CODE_FINISH, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected type (Finish)")
+            return struct.pack(">BBHB", EAP_CODE_FINISH, ctx['id'], 4 + 1,
+                               255)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing fields (Finish)")
+            return struct.pack(">BBHB", EAP_CODE_FINISH, ctx['id'], 4 + 1,
+                               EAP_ERP_TYPE_REAUTH)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected SEQ (Finish)")
+            return struct.pack(">BBHBBHB", EAP_CODE_FINISH, ctx['id'],
+                               4 + 1 + 4,
+                               EAP_ERP_TYPE_REAUTH, 0, 0xffff, 0)
+
+        logger.info("No more test responses available - test case completed")
+        global eap_proto_erp_test_done
+        eap_proto_erp_test_done = True
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(erp_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        i = 0
+        while not eap_proto_erp_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PAX", identity="pax.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

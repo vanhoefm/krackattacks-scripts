@@ -945,6 +945,8 @@ static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
 	ieee802_1x_receive(hapd, src, data, data_len);
 }
 
+#endif /* HOSTAPD */
+
 
 static struct hostapd_channel_data * hostapd_get_mode_channel(
 	struct hostapd_iface *iface, unsigned int freq)
@@ -1019,10 +1021,9 @@ static void hostapd_single_channel_get_survey(struct hostapd_iface *iface,
 }
 
 
-static void hostapd_event_get_survey(struct hostapd_data *hapd,
-				     struct survey_results *survey_results)
+void hostapd_event_get_survey(struct hostapd_iface *iface,
+			      struct survey_results *survey_results)
 {
-	struct hostapd_iface *iface = hapd->iface;
 	struct freq_survey *survey, *tmp;
 	struct hostapd_channel_data *chan;
 
@@ -1054,6 +1055,7 @@ static void hostapd_event_get_survey(struct hostapd_data *hapd,
 }
 
 
+#ifdef HOSTAPD
 #ifdef NEED_AP_MLME
 
 static void hostapd_event_iface_unavailable(struct hostapd_data *hapd)
@@ -1261,7 +1263,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			data->connect_failed_reason.code);
 		break;
 	case EVENT_SURVEY:
-		hostapd_event_get_survey(hapd, &data->survey_results);
+		hostapd_event_get_survey(hapd->iface, &data->survey_results);
 		break;
 #ifdef NEED_AP_MLME
 	case EVENT_INTERFACE_UNAVAILABLE:

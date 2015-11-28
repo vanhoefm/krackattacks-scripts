@@ -345,6 +345,9 @@ int aes_128_cbc_encrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
 	int clen, len;
 	u8 buf[16];
 
+	if (TEST_FAIL())
+		return -1;
+
 	EVP_CIPHER_CTX_init(&ctx);
 	if (EVP_EncryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL, key, iv) != 1)
 		return -1;
@@ -369,6 +372,9 @@ int aes_128_cbc_decrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
 	EVP_CIPHER_CTX ctx;
 	int plen, len;
 	u8 buf[16];
+
+	if (TEST_FAIL())
+		return -1;
 
 	EVP_CIPHER_CTX_init(&ctx);
 	if (EVP_DecryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL, key, iv) != 1)

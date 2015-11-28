@@ -407,6 +407,9 @@ EAP_SAKE_AT_MSK_LIFE = 132
 
 def test_eap_proto_sake(dev, apdev):
     """EAP-SAKE protocol tests"""
+    global eap_proto_sake_test_done
+    eap_proto_sake_test_done = False
+
     def sake_challenge(ctx):
         logger.info("Test: Challenge subtype")
         return struct.pack(">BBHBBBBBBLLLL", EAP_CODE_REQUEST, ctx['id'],
@@ -419,31 +422,36 @@ def test_eap_proto_sake(dev, apdev):
         logger.info("sake_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:
             ctx['num'] = 0
-        ctx['num'] = ctx['num'] + 1
+        ctx['num'] += 1
         if 'id' not in ctx:
             ctx['id'] = 1
         ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
 
-        if ctx['num'] == 1:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Missing payload")
             return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'], 4 + 1,
                                EAP_TYPE_SAKE)
 
-        if ctx['num'] == 2:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Identity subtype without any attributes")
             return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3,
                                EAP_TYPE_SAKE,
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY)
 
-        if ctx['num'] == 3:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Identity subtype")
             return struct.pack(">BBHBBBBBBH", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 4,
                                EAP_TYPE_SAKE,
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY,
                                EAP_SAKE_AT_ANY_ID_REQ, 4, 0)
-        if ctx['num'] == 4:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Identity subtype (different session id)")
             return struct.pack(">BBHBBBBBBH", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 4,
@@ -451,7 +459,8 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 1, EAP_SAKE_SUBTYPE_IDENTITY,
                                EAP_SAKE_AT_PERM_ID_REQ, 4, 0)
 
-        if ctx['num'] == 5:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Identity subtype with too short attribute")
             return struct.pack(">BBHBBBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 2,
@@ -459,7 +468,8 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY,
                                EAP_SAKE_AT_ANY_ID_REQ, 2)
 
-        if ctx['num'] == 6:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Identity subtype with truncated attribute")
             return struct.pack(">BBHBBBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 2,
@@ -467,21 +477,24 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY,
                                EAP_SAKE_AT_ANY_ID_REQ, 4)
 
-        if ctx['num'] == 7:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Unknown subtype")
             return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3,
                                EAP_TYPE_SAKE,
                                EAP_SAKE_VERSION, 0, 123)
 
-        if ctx['num'] == 8:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Challenge subtype without any attributes")
             return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3,
                                EAP_TYPE_SAKE,
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CHALLENGE)
 
-        if ctx['num'] == 9:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Challenge subtype with too short AT_RAND_S")
             return struct.pack(">BBHBBBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 2,
@@ -489,9 +502,11 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CHALLENGE,
                                EAP_SAKE_AT_RAND_S, 2)
 
-        if ctx['num'] == 10:
+        idx += 1
+        if ctx['num'] == idx:
             return sake_challenge(ctx)
-        if ctx['num'] == 11:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Unexpected Identity subtype")
             return struct.pack(">BBHBBBBBBH", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 4,
@@ -499,9 +514,11 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY,
                                EAP_SAKE_AT_ANY_ID_REQ, 4, 0)
 
-        if ctx['num'] == 12:
+        idx += 1
+        if ctx['num'] == idx:
             return sake_challenge(ctx)
-        if ctx['num'] == 13:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Unexpected Challenge subtype")
             return struct.pack(">BBHBBBBBBLLLL", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 18,
@@ -509,18 +526,22 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CHALLENGE,
                                EAP_SAKE_AT_RAND_S, 18, 0, 0, 0, 0)
 
-        if ctx['num'] == 14:
+        idx += 1
+        if ctx['num'] == idx:
             return sake_challenge(ctx)
-        if ctx['num'] == 15:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Confirm subtype without any attributes")
             return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3,
                                EAP_TYPE_SAKE,
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CONFIRM)
 
-        if ctx['num'] == 16:
+        idx += 1
+        if ctx['num'] == idx:
             return sake_challenge(ctx)
-        if ctx['num'] == 17:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Confirm subtype with too short AT_MIC_S")
             return struct.pack(">BBHBBBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 2,
@@ -528,7 +549,8 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CONFIRM,
                                EAP_SAKE_AT_MIC_S, 2)
 
-        if ctx['num'] == 18:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Unexpected Confirm subtype")
             return struct.pack(">BBHBBBBBBLLLL", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 18,
@@ -536,9 +558,11 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CONFIRM,
                                EAP_SAKE_AT_MIC_S, 18, 0, 0, 0, 0)
 
-        if ctx['num'] == 19:
+        idx += 1
+        if ctx['num'] == idx:
             return sake_challenge(ctx)
-        if ctx['num'] == 20:
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Confirm subtype with incorrect AT_MIC_S")
             return struct.pack(">BBHBBBBBBLLLL", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3 + 18,
@@ -546,14 +570,20 @@ def test_eap_proto_sake(dev, apdev):
                                EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_CONFIRM,
                                EAP_SAKE_AT_MIC_S, 18, 0, 0, 0, 0)
 
-        return sake_challenge(ctx)
+        global eap_proto_sake_test_done
+        if eap_proto_sake_test_done:
+            return sake_challenge(ctx)
+
+        logger.info("No more test responses available - test case completed")
+        eap_proto_sake_test_done = True
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
     srv = start_radius_server(sake_handler)
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
 
-        for i in range(0, 14):
+        while not eap_proto_sake_test_done:
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="SAKE", identity="sake user",
                            password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",

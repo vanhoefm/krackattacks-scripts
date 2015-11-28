@@ -479,6 +479,97 @@ def test_eap_proto_sake(dev, apdev):
 
         idx += 1
         if ctx['num'] == idx:
+            logger.info("Test: Identity subtype with too short attribute header")
+            payload = struct.pack("B", EAP_SAKE_AT_ANY_ID_REQ)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype with AT_IV but not AT_ENCR_DATA")
+            payload = struct.pack("BB", EAP_SAKE_AT_IV, 2)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype with skippable and non-skippable unknown attribute")
+            payload = struct.pack("BBBB", 255, 2, 127, 2)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype: AT_RAND_P with invalid payload length")
+            payload = struct.pack("BB", EAP_SAKE_AT_RAND_P, 2)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype: AT_MIC_P with invalid payload length")
+            payload = struct.pack("BB", EAP_SAKE_AT_MIC_P, 2)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype: AT_PERM_ID_REQ with invalid payload length")
+            payload = struct.pack("BBBBBBBBBBBBBB",
+                                  EAP_SAKE_AT_SPI_S, 2,
+                                  EAP_SAKE_AT_SPI_P, 2,
+                                  EAP_SAKE_AT_ENCR_DATA, 2,
+                                  EAP_SAKE_AT_NEXT_TMPID, 2,
+                                  EAP_SAKE_AT_PERM_ID_REQ, 4, 0, 0,
+                                  EAP_SAKE_AT_PERM_ID_REQ, 2)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype: AT_PADDING")
+            payload = struct.pack("BBBBBB",
+                                  EAP_SAKE_AT_PADDING, 3, 0,
+                                  EAP_SAKE_AT_PADDING, 3, 1)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype: AT_MSK_LIFE")
+            payload = struct.pack(">BBLBBH",
+                                  EAP_SAKE_AT_MSK_LIFE, 6, 0,
+                                  EAP_SAKE_AT_MSK_LIFE, 4, 0)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype with invalid attribute length")
+            payload = struct.pack("BB", EAP_SAKE_AT_ANY_ID_REQ, 0)
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + len(payload),
+                               EAP_TYPE_SAKE, EAP_SAKE_VERSION, 0,
+                               EAP_SAKE_SUBTYPE_IDENTITY) + payload
+
+        idx += 1
+        if ctx['num'] == idx:
             logger.info("Test: Unknown subtype")
             return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
                                4 + 1 + 3,

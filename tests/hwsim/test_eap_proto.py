@@ -606,6 +606,101 @@ def test_eap_proto_sake(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def test_eap_proto_sake_errors(dev, apdev):
+    """EAP-SAKE local error cases"""
+    check_eap_capa(dev[0], "SAKE")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 3):
+        with alloc_fail(dev[0], i, "eap_sake_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SAKE", identity="sake user",
+                           password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ ( 1, "eap_msg_alloc;eap_sake_build_msg;eap_sake_process_challenge" ),
+              ( 1, "=eap_sake_process_challenge" ),
+              ( 1, "eap_sake_compute_mic;eap_sake_process_challenge" ),
+              ( 1, "eap_sake_build_msg;eap_sake_process_confirm" ),
+              ( 2, "eap_sake_compute_mic;eap_sake_process_confirm" ),
+              ( 1, "eap_sake_getKey" ),
+              ( 1, "eap_sake_get_emsk" ),
+              ( 1, "eap_sake_get_session_id" ) ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SAKE", identity="sake user",
+                           password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                           erp="1",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    with fail_test(dev[0], 1, "os_get_random;eap_sake_process_challenge"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="SAKE", identity="sake user",
+                       password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+def test_eap_proto_sake_errors2(dev, apdev):
+    """EAP-SAKE protocol tests (2)"""
+    def sake_handler(ctx, req):
+        logger.info("sake_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity subtype")
+            return struct.pack(">BBHBBBBBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SAKE,
+                               EAP_SAKE_VERSION, 0, EAP_SAKE_SUBTYPE_IDENTITY,
+                               EAP_SAKE_AT_ANY_ID_REQ, 4, 0)
+
+    srv = start_radius_server(sake_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_sake_build_msg;eap_sake_process_identity"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SAKE", identity="sake user",
+                           password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+                dev[0].request("REMOVE_NETWORK all")
+                dev[0].wait_disconnected()
+
+    finally:
+        stop_radius_server(srv)
+
 def test_eap_proto_leap(dev, apdev):
     """EAP-LEAP protocol tests"""
     check_eap_capa(dev[0], "LEAP")

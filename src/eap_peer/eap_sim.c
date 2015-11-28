@@ -1135,7 +1135,7 @@ static void * eap_sim_init_for_reauth(struct eap_sm *sm, void *priv)
 	if (random_get_bytes(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Failed to get random data "
 			   "for NONCE_MT");
-		os_free(data);
+		eap_sim_deinit(sm, data);
 		return NULL;
 	}
 	data->num_id_req = 0;

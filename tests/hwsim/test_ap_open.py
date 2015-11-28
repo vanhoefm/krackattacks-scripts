@@ -217,7 +217,7 @@ def test_ap_open_out_of_memory(dev, apdev):
         hapd_out_of_mem(hapd, apdev[1], i, "=wpa_driver_nl80211_drv_init")
 
     # eloop_register_read_sock() call from i802_init()
-    hapd_out_of_mem(hapd, apdev[1], 1, "eloop_sock_table_add_sock;eloop_register_sock;?eloop_register_read_sock;=i802_init")
+    hapd_out_of_mem(hapd, apdev[1], 1, "eloop_sock_table_add_sock;?eloop_register_sock;?eloop_register_read_sock;=i802_init")
 
     # verify that a new interface can still be added when memory allocation does
     # not fail

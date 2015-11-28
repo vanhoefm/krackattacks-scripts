@@ -3736,7 +3736,7 @@ def _test_ap_wps_er_init_oom(dev, apdev):
     with alloc_fail(dev[0], 2, "http_server_init"):
         if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
             raise Exception("WPS_ER_START succeeded during OOM")
-    with alloc_fail(dev[0], 1, "eloop_register_sock;wps_er_ssdp_init"):
+    with alloc_fail(dev[0], 1, "eloop_sock_table_add_sock;?eloop_register_sock;wps_er_ssdp_init"):
         if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
             raise Exception("WPS_ER_START succeeded during OOM")
     with fail_test(dev[0], 1, "os_get_random;wps_er_init"):
@@ -4382,7 +4382,7 @@ RGV2aWNlIEEQSQAGADcqAAEg
     logger.info("OOM in HTTP server")
     for func in [ "http_request_init", "httpread_create",
                   "eloop_register_timeout;httpread_create",
-                  "eloop_register_sock;httpread_create",
+                  "eloop_sock_table_add_sock;?eloop_register_sock;httpread_create",
                   "httpread_hdr_analyze" ]:
         with alloc_fail(dev[0], 1, func):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM,
@@ -4552,7 +4552,7 @@ def _test_ap_wps_er_http_proto_subscribe_oom(dev, apdev):
     tests = [ (1, "http_client_url_parse"),
               (1, "wpabuf_alloc;wps_er_subscribe"),
               (1, "http_client_addr"),
-              (1, "eloop_register_sock;http_client_addr"),
+              (1, "eloop_sock_table_add_sock;?eloop_register_sock;http_client_addr"),
               (1, "eloop_register_timeout;http_client_addr") ]
     for count,func in tests:
         with alloc_fail(dev[0], count, func):

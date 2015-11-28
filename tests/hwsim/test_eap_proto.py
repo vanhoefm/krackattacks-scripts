@@ -16,7 +16,7 @@ import time
 
 import hostapd
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
-from test_ap_eap import check_eap_capa
+from test_ap_eap import check_eap_capa, check_hlr_auc_gw_support
 from test_erp import check_erp_capa
 
 EAP_CODE_REQUEST = 1
@@ -3811,6 +3811,211 @@ def test_eap_proto_sim(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_sim_errors(dev, apdev):
+    """EAP-SIM protocol tests (error paths)"""
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with alloc_fail(dev[0], 1, "eap_sim_init"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="SIM", identity="1232010000000000",
+                       password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with fail_test(dev[0], 1, "os_get_random;eap_sim_init"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="SIM", identity="1232010000000000",
+                       password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="SIM", identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    with fail_test(dev[0], 1, "aes_128_cbc_encrypt;eap_sim_response_reauth"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="SIM", identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    with fail_test(dev[0], 1, "os_get_random;eap_sim_msg_add_encr_start"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="SIM", identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    with fail_test(dev[0], 1, "os_get_random;eap_sim_init_for_reauth"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="SIM", identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    with alloc_fail(dev[0], 1, "eap_sim_parse_encr;eap_sim_process_reauthentication"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    tests = [ (1, "eap_sim_verify_mac;eap_sim_process_challenge"),
+              (1, "eap_sim_parse_encr;eap_sim_process_challenge"),
+              (1, "eap_sim_msg_init;eap_sim_response_start"),
+              (1, "wpabuf_alloc;eap_sim_msg_init;eap_sim_response_start"),
+              (1, "=eap_sim_learn_ids"),
+              (2, "=eap_sim_learn_ids"),
+              (2, "eap_sim_learn_ids"),
+              (3, "eap_sim_learn_ids"),
+              (1, "eap_sim_process_start"),
+              (1, "eap_sim_getKey"),
+              (1, "eap_sim_get_emsk"),
+              (1, "eap_sim_get_session_id") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SIM", identity="1232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                           erp="1", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
+
+    tests = [ (1, "aes_128_cbc_decrypt;eap_sim_parse_encr") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SIM", identity="1232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
+
+def test_eap_proto_aka_errors(dev, apdev):
+    """EAP-AKA protocol tests (error paths)"""
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with alloc_fail(dev[0], 1, "eap_aka_init"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="AKA", identity="0232010000000000",
+                       password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ (1, "=eap_aka_learn_ids"),
+              (2, "=eap_aka_learn_ids"),
+              (1, "eap_sim_parse_encr;eap_aka_process_challenge"),
+              (1, "eap_aka_getKey"),
+              (1, "eap_aka_get_emsk"),
+              (1, "eap_aka_get_session_id") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="AKA", identity="0232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                           erp="1", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
+
+def test_eap_proto_aka_prime_errors(dev, apdev):
+    """EAP-AKA' protocol tests (error paths)"""
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    with alloc_fail(dev[0], 1, "eap_aka_init"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="AKA'", identity="6555444333222111",
+                       password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="AKA'", identity="6555444333222111",
+                   password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+
+    with fail_test(dev[0], 1, "aes_128_cbc_encrypt;eap_aka_response_reauth"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="AKA'", identity="6555444333222111",
+                   password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+
+    with alloc_fail(dev[0], 1, "eap_sim_parse_encr;eap_aka_process_reauthentication"):
+        hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("EAP re-authentication did not start")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    tests = [ (1, "eap_sim_verify_mac_sha256"),
+              (1, "=eap_aka_process_challenge") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="AKA'", identity="6555444333222111",
+                           password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                           erp="1", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
 
 def test_eap_proto_ikev2(dev, apdev):
     """EAP-IKEv2 protocol tests"""

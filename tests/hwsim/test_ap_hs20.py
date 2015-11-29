@@ -1242,6 +1242,7 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
 
 def test_ap_hs20_domain_suffix_match_full(dev, apdev):
     """Hotspot 2.0 and domain_suffix_match"""
+    check_domain_match_full(dev[0])
     check_eap_capa(dev[0], "MSCHAPV2")
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()

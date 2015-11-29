@@ -40,6 +40,16 @@ def check_altsubject_match_support(dev):
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("altsubject_match not supported with this TLS library: " + tls)
 
+def check_domain_match(dev):
+    tls = dev.request("GET tls_library")
+    if tls.startswith("internal"):
+        raise HwsimSkip("domain_match not supported with this TLS library: " + tls)
+
+def check_domain_suffix_match(dev):
+    tls = dev.request("GET tls_library")
+    if tls.startswith("internal"):
+        raise HwsimSkip("domain_suffix_match not supported with this TLS library: " + tls)
+
 def check_domain_match_full(dev):
     tls = dev.request("GET tls_library")
     if not tls.startswith("OpenSSL"):
@@ -839,6 +849,7 @@ def test_ap_wpa2_eap_ttls_chap_incorrect_password(dev, apdev):
 def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAP"""
     skip_with_fips(dev[0])
+    check_domain_suffix_match(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "mschap user",
@@ -873,6 +884,7 @@ def test_ap_wpa2_eap_ttls_mschap_incorrect_password(dev, apdev):
 
 def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
+    check_domain_suffix_match(dev[0])
     check_eap_capa(dev[0], "MSCHAPV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -917,6 +929,7 @@ def test_ap_wpa2_eap_ttls_mschapv2_suffix_match(dev, apdev):
 
 def test_ap_wpa2_eap_ttls_mschapv2_domain_match(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 (domain_match)"""
+    check_domain_match(dev[0])
     skip_with_fips(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -1531,6 +1544,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust3(dev, apdev):
 
 def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
     """WPA2-Enterprise negative test - domain suffix mismatch"""
+    check_domain_suffix_match(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
@@ -1584,6 +1598,7 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
 
 def test_ap_wpa2_eap_tls_neg_domain_match(dev, apdev):
     """WPA2-Enterprise negative test - domain mismatch"""
+    check_domain_match(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
@@ -2788,6 +2803,7 @@ def test_ap_wpa2_eap_ttls_optional_ocsp_unknown(dev, apdev, params):
 
 def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
+    check_domain_match_full(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -2801,6 +2817,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
 
 def test_ap_wpa2_eap_tls_domain_match_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domainmatch (CN)"""
+    check_domain_match(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -2828,6 +2845,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
 
 def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix mismatch (CN)"""
+    check_domain_suffix_match(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -2855,6 +2873,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
 
 def test_ap_wpa2_eap_tls_domain_mismatch_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain mismatch (CN)"""
+    check_domain_match(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -3528,6 +3547,7 @@ def test_ap_wpa2_eap_tls_oom(dev, apdev):
     """EAP-TLS and OOM"""
     check_subject_match_support(dev[0])
     check_altsubject_match_support(dev[0])
+    check_domain_match(dev[0])
     check_domain_match_full(dev[0])
 
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -3695,6 +3715,7 @@ def test_eap_ttls_chap_session_resumption(dev, apdev):
 
 def test_eap_ttls_mschap_session_resumption(dev, apdev):
     """EAP-TTLS/MSCHAP session resumption"""
+    check_domain_suffix_match(dev[0])
     params = int_eap_server_params()
     params['tls_session_lifetime'] = '60'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
@@ -3718,6 +3739,7 @@ def test_eap_ttls_mschap_session_resumption(dev, apdev):
 
 def test_eap_ttls_mschapv2_session_resumption(dev, apdev):
     """EAP-TTLS/MSCHAPv2 session resumption"""
+    check_domain_suffix_match(dev[0])
     check_eap_capa(dev[0], "MSCHAPV2")
     params = int_eap_server_params()
     params['tls_session_lifetime'] = '60'

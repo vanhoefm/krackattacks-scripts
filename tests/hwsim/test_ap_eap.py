@@ -3599,6 +3599,9 @@ def test_ap_wpa2_eap_tls_versions(dev, apdev):
             check_tls_ver(dev[0], apdev[0],
                           "tls_disable_tlsv1_0=1 tls_disable_tlsv1_1=1",
                           "TLSv1.2")
+    elif tls.startswith("internal"):
+        check_tls_ver(dev[0], apdev[0],
+                      "tls_disable_tlsv1_0=1 tls_disable_tlsv1_1=1", "TLSv1.2")
     check_tls_ver(dev[1], apdev[0],
                   "tls_disable_tlsv1_0=1 tls_disable_tlsv1_2=1", "TLSv1.1")
     check_tls_ver(dev[2], apdev[0],

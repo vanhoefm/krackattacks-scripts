@@ -22,6 +22,7 @@ from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test
 from p2p_utils import *
 from test_ap_tdls import connect_2sta_open
+from test_ap_eap import check_altsubject_match_support
 
 WPAS_DBUS_SERVICE = "fi.w1.wpa_supplicant1"
 WPAS_DBUS_PATH = "/fi/w1/wpa_supplicant1"
@@ -1407,6 +1408,7 @@ def test_dbus_while_not_connected(dev, apdev):
 
 def test_dbus_connect_eap(dev, apdev):
     """D-Bus AddNetwork and connect to EAP network"""
+    check_altsubject_match_support(dev[0])
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 

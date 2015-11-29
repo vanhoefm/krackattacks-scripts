@@ -258,7 +258,8 @@ int tls_version_ok(u16 ver);
 const char * tls_version_str(u16 ver);
 int tls_prf(u16 ver, const u8 *secret, size_t secret_len, const char *label,
 	    const u8 *seed, size_t seed_len, u8 *out, size_t outlen);
-int tlsv12_key_x_server_params_hash(u16 tls_version, const u8 *client_random,
+int tlsv12_key_x_server_params_hash(u16 tls_version, u8 hash_Alg,
+				    const u8 *client_random,
 				    const u8 *server_random,
 				    const u8 *server_params,
 				    size_t server_params_len, u8 *hash);

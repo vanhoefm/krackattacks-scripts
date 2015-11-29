@@ -529,7 +529,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	server_params_end = pos;
 
 	if (key_exchange == TLS_KEY_X_DHE_RSA) {
-		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN];
+		u8 hash[64];
 		int hlen;
 
 		if (conn->rl.tls_version == TLS_VERSION_1_2) {
@@ -546,18 +546,21 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 			 */
 			if (end - pos < 2)
 				goto fail;
-			if (pos[0] != TLS_HASH_ALG_SHA256 ||
+			if ((pos[0] != TLS_HASH_ALG_SHA256 &&
+			     pos[0] != TLS_HASH_ALG_SHA384 &&
+			     pos[0] != TLS_HASH_ALG_SHA512) ||
 			    pos[1] != TLS_SIGN_ALG_RSA) {
 				wpa_printf(MSG_DEBUG, "TLSv1.2: Unsupported hash(%u)/signature(%u) algorithm",
 					   pos[0], pos[1]);
 				goto fail;
 			}
-			pos += 2;
 
 			hlen = tlsv12_key_x_server_params_hash(
-				conn->rl.tls_version, conn->client_random,
+				conn->rl.tls_version, pos[0],
+				conn->client_random,
 				conn->server_random, server_params,
 				server_params_end - server_params, hash);
+			pos += 2;
 #else /* CONFIG_TLSV12 */
 			goto fail;
 #endif /* CONFIG_TLSV12 */

@@ -448,7 +448,8 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
 #ifdef CONFIG_TLSV12
 			hlen = tlsv12_key_x_server_params_hash(
-				conn->rl.tls_version, conn->client_random,
+				conn->rl.tls_version, TLS_HASH_ALG_SHA256,
+				conn->client_random,
 				conn->server_random, server_params,
 				pos - server_params, hash + 19);
 

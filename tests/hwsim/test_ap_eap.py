@@ -67,6 +67,11 @@ def check_ocsp_support(dev):
     #if "BoringSSL" in tls:
     #    raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
 
+def check_pkcs12_support(dev):
+    tls = dev.request("GET tls_library")
+    if tls.startswith("internal"):
+        raise HwsimSkip("PKCS#12 not supported with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -1355,6 +1360,7 @@ def test_ap_wpa2_eap_tls_blob(dev, apdev):
 
 def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12"""
+    check_pkcs12_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
@@ -1392,6 +1398,7 @@ def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
 
 def test_ap_wpa2_eap_tls_pkcs12_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12 from configuration blob"""
+    check_pkcs12_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     cert = read_pem("auth_serv/ca.pem")

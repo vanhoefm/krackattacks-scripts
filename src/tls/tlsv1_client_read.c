@@ -264,6 +264,32 @@ static void tls_peer_cert_event(struct tlsv1_client *conn, int depth,
 }
 
 
+static void tls_cert_chain_failure_event(struct tlsv1_client *conn, int depth,
+					 struct x509_certificate *cert,
+					 enum tls_fail_reason reason,
+					 const char *reason_txt)
+{
+	struct wpabuf *cert_buf = NULL;
+	union tls_event_data ev;
+	char subject[128];
+
+	if (!conn->event_cb)
+		return;
+
+	os_memset(&ev, 0, sizeof(ev));
+	ev.cert_fail.depth = depth;
+	x509_name_string(&cert->subject, subject, sizeof(subject));
+	ev.peer_cert.subject = subject;
+	ev.cert_fail.reason = reason;
+	ev.cert_fail.reason_txt = reason_txt;
+	cert_buf = wpabuf_alloc_copy(cert->cert_start,
+				     cert->cert_len);
+	ev.cert_fail.cert = cert_buf;
+	conn->event_cb(conn->cb_ctx, TLS_CERT_CHAIN_FAILURE, &ev);
+	wpabuf_free(cert_buf);
+}
+
+
 static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 				   const u8 *in_data, size_t *in_len)
 {
@@ -485,21 +511,33 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 		switch (reason) {
 		case X509_VALIDATE_BAD_CERTIFICATE:
 			tls_reason = TLS_ALERT_BAD_CERTIFICATE;
+			tls_cert_chain_failure_event(
+				conn, 0, chain, TLS_FAIL_BAD_CERTIFICATE,
+				"bad certificate");
 			break;
 		case X509_VALIDATE_UNSUPPORTED_CERTIFICATE:
 			tls_reason = TLS_ALERT_UNSUPPORTED_CERTIFICATE;
 			break;
 		case X509_VALIDATE_CERTIFICATE_REVOKED:
 			tls_reason = TLS_ALERT_CERTIFICATE_REVOKED;
+			tls_cert_chain_failure_event(
+				conn, 0, chain, TLS_FAIL_REVOKED,
+				"certificate revoked");
 			break;
 		case X509_VALIDATE_CERTIFICATE_EXPIRED:
 			tls_reason = TLS_ALERT_CERTIFICATE_EXPIRED;
+			tls_cert_chain_failure_event(
+				conn, 0, chain, TLS_FAIL_EXPIRED,
+				"certificate has expired or is not yet valid");
 			break;
 		case X509_VALIDATE_CERTIFICATE_UNKNOWN:
 			tls_reason = TLS_ALERT_CERTIFICATE_UNKNOWN;
 			break;
 		case X509_VALIDATE_UNKNOWN_CA:
 			tls_reason = TLS_ALERT_UNKNOWN_CA;
+			tls_cert_chain_failure_event(
+				conn, 0, chain, TLS_FAIL_UNTRUSTED,
+				"unknown CA");
 			break;
 		default:
 			tls_reason = TLS_ALERT_BAD_CERTIFICATE;

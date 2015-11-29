@@ -463,9 +463,9 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 		x509_certificate_chain_free(chain);
 		return -1;
 	} else if (conn->cred && conn->cred->ca_cert_verify &&
-		   x509_certificate_chain_validate(conn->cred->trusted_certs,
-						   chain, &reason,
-						   conn->disable_time_checks)
+		   x509_certificate_chain_validate(
+			   conn->cred->trusted_certs, chain, &reason,
+			   !!(conn->flags & TLS_CONN_DISABLE_TIME_CHECKS))
 		   < 0) {
 		int tls_reason;
 		wpa_printf(MSG_DEBUG, "TLSv1: Server certificate chain "

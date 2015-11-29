@@ -811,9 +811,14 @@ int tlsv1_client_set_cred(struct tlsv1_client *conn,
 }
 
 
-void tlsv1_client_set_time_checks(struct tlsv1_client *conn, int enabled)
+/**
+ * tlsv1_client_set_flags - Set connection flags
+ * @conn: TLSv1 client connection data from tlsv1_client_init()
+ * @flags: TLS_CONN_* bitfield
+ */
+void tlsv1_client_set_flags(struct tlsv1_client *conn, unsigned int flags)
 {
-	conn->disable_time_checks = !enabled;
+	conn->flags = flags;
 }
 
 

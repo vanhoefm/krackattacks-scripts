@@ -4230,3 +4230,45 @@ def test_ap_wpa2_eap_sim_db(dev, apdev, params):
     dev[0].wait_connected()
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_eap_tls_sha512(dev, apdev, params):
+    """EAP-TLS with SHA512 signature"""
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/sha512-ca.pem"
+    params["server_cert"] = "auth_serv/sha512-server.pem"
+    params["private_key"] = "auth_serv/sha512-server.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user sha512",
+                   ca_cert="auth_serv/sha512-ca.pem",
+                   client_cert="auth_serv/sha512-user.pem",
+                   private_key="auth_serv/sha512-user.key",
+                   scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user sha512",
+                   ca_cert="auth_serv/sha512-ca.pem",
+                   client_cert="auth_serv/sha384-user.pem",
+                   private_key="auth_serv/sha384-user.key",
+                   scan_freq="2412")
+
+def test_eap_tls_sha384(dev, apdev, params):
+    """EAP-TLS with SHA384 signature"""
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/sha512-ca.pem"
+    params["server_cert"] = "auth_serv/sha384-server.pem"
+    params["private_key"] = "auth_serv/sha384-server.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user sha512",
+                   ca_cert="auth_serv/sha512-ca.pem",
+                   client_cert="auth_serv/sha512-user.pem",
+                   private_key="auth_serv/sha512-user.key",
+                   scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user sha512",
+                   ca_cert="auth_serv/sha512-ca.pem",
+                   client_cert="auth_serv/sha384-user.pem",
+                   private_key="auth_serv/sha384-user.key",
+                   scan_freq="2412")

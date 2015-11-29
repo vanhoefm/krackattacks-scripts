@@ -31,7 +31,7 @@ cert_opt 	= ca_default
 
 copy_extensions = copy
 
-default_days	= 365
+default_days	= 3650
 default_crl_days= 30
 default_md	= default
 preserve	= no

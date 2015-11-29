@@ -403,14 +403,14 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 	if (conn->client) {
 		ret = tlsv1_client_prf(conn->client, label,
 				       server_random_first,
-				       _out, out_len);
+				       _out, skip + out_len);
 	}
 #endif /* CONFIG_TLS_INTERNAL_CLIENT */
 #ifdef CONFIG_TLS_INTERNAL_SERVER
 	if (conn->server) {
 		ret = tlsv1_server_prf(conn->server, label,
 				       server_random_first,
-				       _out, out_len);
+				       _out, skip + out_len);
 	}
 #endif /* CONFIG_TLS_INTERNAL_SERVER */
 	if (ret == 0 && skip_keyblock)

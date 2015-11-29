@@ -48,8 +48,27 @@ u8 * tls_send_client_hello(struct tlsv1_client *conn, size_t *out_len)
 	struct os_time now;
 	size_t len, i;
 	u8 *ext_start;
+	u16 tls_version = TLS_VERSION;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send ClientHello");
+	/* Pick the highest locally enabled TLS version */
+#ifdef CONFIG_TLSV12
+	if ((conn->flags & TLS_CONN_DISABLE_TLSv1_2) &&
+	    tls_version == TLS_VERSION_1_2)
+		tls_version = TLS_VERSION_1_1;
+#endif /* CONFIG_TLSV12 */
+#ifdef CONFIG_TLSV11
+	if ((conn->flags & TLS_CONN_DISABLE_TLSv1_1) &&
+	    tls_version == TLS_VERSION_1_1)
+		tls_version = TLS_VERSION_1;
+#endif /* CONFIG_TLSV11 */
+	if ((conn->flags & TLS_CONN_DISABLE_TLSv1_0) &&
+	    tls_version == TLS_VERSION_1) {
+		wpa_printf(MSG_INFO, "TLSv1: No TLS version allowed");
+		return NULL;
+	}
+
+	wpa_printf(MSG_DEBUG, "TLSv1: Send ClientHello (ver %s)",
+		   tls_version_str(tls_version));
 	*out_len = 0;
 
 	os_get_time(&now);
@@ -82,7 +101,7 @@ u8 * tls_send_client_hello(struct tlsv1_client *conn, size_t *out_len)
 	pos += 3;
 	/* body - ClientHello */
 	/* ProtocolVersion client_version */
-	WPA_PUT_BE16(pos, TLS_VERSION);
+	WPA_PUT_BE16(pos, tls_version);
 	pos += 2;
 	/* Random random: uint32 gmt_unix_time, opaque random_bytes */
 	os_memcpy(pos, conn->client_random, TLS_RANDOM_LEN);

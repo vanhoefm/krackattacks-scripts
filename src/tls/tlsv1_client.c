@@ -826,3 +826,15 @@ void tlsv1_client_set_session_ticket_cb(struct tlsv1_client *conn,
 	conn->session_ticket_cb = cb;
 	conn->session_ticket_cb_ctx = ctx;
 }
+
+
+void tlsv1_client_set_cb(struct tlsv1_client *conn,
+			 void (*event_cb)(void *ctx, enum tls_event ev,
+					  union tls_event_data *data),
+			 void *cb_ctx,
+			 int cert_in_cb)
+{
+	conn->event_cb = event_cb;
+	conn->cb_ctx = cb_ctx;
+	conn->cert_in_cb = !!cert_in_cb;
+}

@@ -211,6 +211,47 @@ decode_error:
 }
 
 
+static void tls_peer_cert_event(struct tlsv1_client *conn, int depth,
+				struct x509_certificate *cert)
+{
+	union tls_event_data ev;
+	struct wpabuf *cert_buf = NULL;
+#ifdef CONFIG_SHA256
+	u8 hash[32];
+#endif /* CONFIG_SHA256 */
+	char subject[128];
+
+	if (!conn->event_cb)
+		return;
+
+	os_memset(&ev, 0, sizeof(ev));
+	if (conn->cred->cert_probe || conn->cert_in_cb) {
+		cert_buf = wpabuf_alloc_copy(cert->cert_start,
+					     cert->cert_len);
+		ev.peer_cert.cert = cert_buf;
+	}
+#ifdef CONFIG_SHA256
+	if (cert_buf) {
+		const u8 *addr[1];
+		size_t len[1];
+		addr[0] = wpabuf_head(cert_buf);
+		len[0] = wpabuf_len(cert_buf);
+		if (sha256_vector(1, addr, len, hash) == 0) {
+			ev.peer_cert.hash = hash;
+			ev.peer_cert.hash_len = sizeof(hash);
+		}
+	}
+#endif /* CONFIG_SHA256 */
+
+	ev.peer_cert.depth = depth;
+	x509_name_string(&cert->subject, subject, sizeof(subject));
+	ev.peer_cert.subject = subject;
+
+	conn->event_cb(conn->cb_ctx, TLS_PEER_CERTIFICATE, &ev);
+	wpabuf_free(cert_buf);
+}
+
+
 static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 				   const u8 *in_data, size_t *in_len)
 {
@@ -354,6 +395,8 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 			return -1;
 		}
 
+		tls_peer_cert_event(conn, idx, cert);
+
 		if (last == NULL)
 			chain = cert;
 		else
@@ -380,11 +423,45 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 				   "TLSv1: Server certificate hash mismatch");
 			wpa_hexdump(MSG_MSGDUMP, "TLSv1: SHA256 hash",
 				    hash, SHA256_MAC_LEN);
+			if (conn->event_cb) {
+				union tls_event_data ev;
+
+				os_memset(&ev, 0, sizeof(ev));
+				ev.cert_fail.reason = TLS_FAIL_UNSPECIFIED;
+				ev.cert_fail.reason_txt =
+					"Server certificate mismatch";
+				ev.cert_fail.subject = buf;
+				conn->event_cb(conn->cb_ctx,
+					       TLS_CERT_CHAIN_FAILURE, &ev);
+			}
 			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				  TLS_ALERT_BAD_CERTIFICATE);
 			x509_certificate_chain_free(chain);
 			return -1;
 		}
+	} else if (conn->cred && conn->cred->cert_probe) {
+		wpa_printf(MSG_DEBUG,
+			   "TLSv1: Reject server certificate on probe-only rune");
+		if (conn->event_cb) {
+			union tls_event_data ev;
+			char buf[128];
+
+			os_memset(&ev, 0, sizeof(ev));
+			ev.cert_fail.reason = TLS_FAIL_SERVER_CHAIN_PROBE;
+			ev.cert_fail.reason_txt =
+				"Server certificate chain probe";
+			if (chain) {
+				x509_name_string(&chain->subject, buf,
+						 sizeof(buf));
+				ev.cert_fail.subject = buf;
+			}
+			conn->event_cb(conn->cb_ctx, TLS_CERT_CHAIN_FAILURE,
+				       &ev);
+		}
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+			  TLS_ALERT_BAD_CERTIFICATE);
+		x509_certificate_chain_free(chain);
+		return -1;
 	} else if (conn->cred && conn->cred->ca_cert_verify &&
 		   x509_certificate_chain_validate(conn->cred->trusted_certs,
 						   chain, &reason,

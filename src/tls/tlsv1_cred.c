@@ -218,6 +218,13 @@ int tlsv1_set_ca_cert(struct tlsv1_credentials *cred, const char *cert,
 		return 0;
 	}
 
+	if (cert && os_strncmp(cert, "probe://", 8) == 0) {
+		cred->cert_probe = 1;
+		cred->ca_cert_verify = 0;
+		wpa_printf(MSG_DEBUG, "TLSv1: Only probe server certificate");
+		return 0;
+	}
+
 	cred->ca_cert_verify = cert || cert_blob || path;
 
 	if (tlsv1_set_cert_chain(&cred->trusted_certs, cert,

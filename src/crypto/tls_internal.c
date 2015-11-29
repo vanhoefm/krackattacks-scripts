@@ -23,6 +23,11 @@ struct tls_global {
 	int server;
 	struct tlsv1_credentials *server_cred;
 	int check_crl;
+
+	void (*event_cb)(void *ctx, enum tls_event ev,
+			 union tls_event_data *data);
+	void *cb_ctx;
+	int cert_in_cb;
 };
 
 struct tls_connection {
@@ -51,6 +56,11 @@ void * tls_init(const struct tls_config *conf)
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
+	if (conf) {
+		global->event_cb = conf->event_cb;
+		global->cb_ctx = conf->cb_ctx;
+		global->cert_in_cb = conf->cert_in_cb;
+	}
 
 	return global;
 }
@@ -97,6 +107,8 @@ struct tls_connection * tls_connection_init(void *tls_ctx)
 			os_free(conn);
 			return NULL;
 		}
+		tlsv1_client_set_cb(conn->client, global->event_cb,
+				    global->cb_ctx, global->cert_in_cb);
 	}
 #endif /* CONFIG_TLS_INTERNAL_CLIENT */
 #ifdef CONFIG_TLS_INTERNAL_SERVER

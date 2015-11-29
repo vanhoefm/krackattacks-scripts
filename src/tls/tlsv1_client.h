@@ -51,4 +51,10 @@ void tlsv1_client_set_session_ticket_cb(struct tlsv1_client *conn,
 					tlsv1_client_session_ticket_cb cb,
 					void *ctx);
 
+void tlsv1_client_set_cb(struct tlsv1_client *conn,
+			 void (*event_cb)(void *ctx, enum tls_event ev,
+					  union tls_event_data *data),
+			 void *cb_ctx,
+			 int cert_in_cb);
+
 #endif /* TLSV1_CLIENT_H */

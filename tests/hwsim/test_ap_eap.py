@@ -47,7 +47,7 @@ def check_domain_match_full(dev):
 
 def check_cert_probe_support(dev):
     tls = dev.request("GET tls_library")
-    if not tls.startswith("OpenSSL"):
+    if not tls.startswith("OpenSSL") and not tls.startswith("internal"):
         raise HwsimSkip("Certificate probing not supported with this TLS library: " + tls)
 
 def check_ocsp_support(dev):

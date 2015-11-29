@@ -2499,9 +2499,18 @@ def test_ap_wpa2_eap_fast_gtc_identity_change(dev, apdev):
 def test_ap_wpa2_eap_fast_prf_oom(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and OOM in PRF"""
     check_eap_capa(dev[0], "FAST")
+    tls = dev[0].request("GET tls_library")
+    if tls.startswith("OpenSSL"):
+        func = "openssl_tls_prf"
+        count = 2
+    elif tls.startswith("internal"):
+        func = "tls_connection_prf"
+        count = 1
+    else:
+        raise HwsimSkip("Unsupported TLS library")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    with alloc_fail(dev[0], 2, "openssl_tls_prf"):
+    with alloc_fail(dev[0], count, func):
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
                        identity="user", anonymous_identity="FAST",
                        password="password", ca_cert="auth_serv/ca.pem",

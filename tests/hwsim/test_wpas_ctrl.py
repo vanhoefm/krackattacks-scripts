@@ -1723,8 +1723,6 @@ def _test_wpas_ctrl_oom(dev):
                3, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
               ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', 'FAIL',
                3, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG', 'FAIL',
-               4, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
               ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', 'FAIL',
                4, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
               ('P2P_ASP_PROVISION_RESP 00:11:22:33:44:55 id=1', 'FAIL',
@@ -1779,6 +1777,10 @@ def _test_wpas_ctrl_oom(dev):
                1, 'wpa_supplicant_ctrl_iface_autoscan'),
               ('PING', None,
                1, 'wpa_supplicant_ctrl_iface_process') ]
+    tls = dev[0].request("GET tls_library")
+    if not tls.startswith("internal"):
+        tests.append(('NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG', 'FAIL',
+                      4, 'wpas_ctrl_nfc_get_handover_sel_p2p'))
     for cmd,exp,count,func in tests:
         with alloc_fail(dev[0], count, func):
             res = dev[0].request(cmd)

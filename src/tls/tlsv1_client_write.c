@@ -855,6 +855,8 @@ static u8 * tls_send_change_cipher_spec(struct tlsv1_client *conn,
 
 	wpa_printf(MSG_DEBUG, "TLSv1: Session resumption completed "
 		   "successfully");
+	if (!conn->session_resumed && conn->use_session_ticket)
+		conn->session_resumed = 1;
 	conn->state = ESTABLISHED;
 
 	return msg;

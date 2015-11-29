@@ -1748,6 +1748,15 @@ static void p2p_go_configured(void *ctx, void *data)
 	struct wpa_ssid *ssid;
 	int network_id = -1;
 
+	wpa_s->ap_configured_cb = NULL;
+	wpa_s->ap_configured_cb_ctx = NULL;
+	wpa_s->ap_configured_cb_data = NULL;
+	if (!wpa_s->go_params) {
+		wpa_printf(MSG_ERROR,
+			   "P2P: p2p_go_configured() called with wpa_s->go_params == NULL");
+		return;
+	}
+
 	p2p_go_save_group_common_freqs(wpa_s, params);
 	p2p_go_dump_common_freqs(wpa_s);
 

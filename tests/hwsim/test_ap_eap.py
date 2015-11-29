@@ -52,6 +52,8 @@ def check_cert_probe_support(dev):
 
 def check_ocsp_support(dev):
     tls = dev.request("GET tls_library")
+    if tls.startswith("internal"):
+        raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
     #if "BoringSSL" in tls:
     #    raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
 

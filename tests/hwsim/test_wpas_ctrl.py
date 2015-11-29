@@ -62,8 +62,7 @@ def test_wpas_ctrl_network(dev):
         if "FAIL" not in dev[0].request("SET_NETWORK " + str(id) + " " + t):
             raise Exception("Unexpected success for invalid SET_NETWORK: " + t)
 
-    tests = (("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
-             ("key_mgmt", "WPS SAE FT-SAE OSEN"),
+    tests = [("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
              ("pairwise", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("auth_alg", "OPEN SHARED LEAP"),
@@ -74,7 +73,11 @@ def test_wpas_ctrl_network(dev):
              ("proto", "WPA RSN OSEN"),
              ("eap", "TLS"),
              ("go_p2p_dev_addr", "22:33:44:55:66:aa"),
-             ("p2p_client_list", "22:33:44:55:66:bb 02:11:22:33:44:55"))
+             ("p2p_client_list", "22:33:44:55:66:bb 02:11:22:33:44:55")]
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        tests.append(("key_mgmt", "WPS OSEN"))
+    else:
+        tests.append(("key_mgmt", "WPS SAE FT-SAE OSEN"))
 
     dev[0].set_network_quoted(id, "ssid", "test")
     for field, value in tests:

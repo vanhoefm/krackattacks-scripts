@@ -72,6 +72,11 @@ def check_pkcs12_support(dev):
     if tls.startswith("internal"):
         raise HwsimSkip("PKCS#12 not supported with this TLS library: " + tls)
 
+def check_dh_dsa_support(dev):
+    tls = dev.request("GET tls_library")
+    if tls.startswith("internal"):
+        raise HwsimSkip("DH DSA not supported with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -3003,6 +3008,7 @@ def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
 
 def test_ap_wpa2_eap_ttls_dh_params_dsa(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS and setting DH params (DSA)"""
+    check_dh_dsa_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",

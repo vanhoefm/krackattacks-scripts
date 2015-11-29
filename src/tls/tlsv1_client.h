@@ -56,5 +56,7 @@ void tlsv1_client_set_cb(struct tlsv1_client *conn,
 					  union tls_event_data *data),
 			 void *cb_ctx,
 			 int cert_in_cb);
+int tlsv1_client_get_version(struct tlsv1_client *conn, char *buf,
+			     size_t buflen);
 
 #endif /* TLSV1_CLIENT_H */

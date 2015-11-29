@@ -635,7 +635,12 @@ int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 int tls_get_version(void *ssl_ctx, struct tls_connection *conn,
 		    char *buf, size_t buflen)
 {
-	/* TODO */
+	if (conn == NULL)
+		return -1;
+#ifdef CONFIG_TLS_INTERNAL_CLIENT
+	if (conn->client)
+		return tlsv1_client_get_version(conn->client, buf, buflen);
+#endif /* CONFIG_TLS_INTERNAL_CLIENT */
 	return -1;
 }
 

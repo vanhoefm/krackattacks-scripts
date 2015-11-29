@@ -838,3 +838,26 @@ void tlsv1_client_set_cb(struct tlsv1_client *conn,
 	conn->cb_ctx = cb_ctx;
 	conn->cert_in_cb = !!cert_in_cb;
 }
+
+
+int tlsv1_client_get_version(struct tlsv1_client *conn, char *buf,
+			     size_t buflen)
+{
+	if (!conn)
+		return -1;
+	switch (conn->rl.tls_version) {
+	case TLS_VERSION_1:
+		os_strlcpy(buf, "TLSv1", buflen);
+		break;
+	case TLS_VERSION_1_1:
+		os_strlcpy(buf, "TLSv1.1", buflen);
+		break;
+	case TLS_VERSION_1_2:
+		os_strlcpy(buf, "TLSv1.2", buflen);
+		break;
+	default:
+		return -1;
+	}
+
+	return 0;
+}

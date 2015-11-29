@@ -68,6 +68,7 @@ struct x509_certificate {
 #define X509_EXT_KEY_USAGE			(1 << 2)
 #define X509_EXT_SUBJECT_ALT_NAME		(1 << 3)
 #define X509_EXT_ISSUER_ALT_NAME		(1 << 4)
+#define X509_EXT_EXT_KEY_USAGE			(1 << 5)
 
 	/* BasicConstraints */
 	int ca; /* cA */
@@ -84,6 +85,12 @@ struct x509_certificate {
 #define X509_KEY_USAGE_CRL_SIGN			(1 << 6)
 #define X509_KEY_USAGE_ENCIPHER_ONLY		(1 << 7)
 #define X509_KEY_USAGE_DECIPHER_ONLY		(1 << 8)
+
+	/* ExtKeyUsage */
+	unsigned long ext_key_usage;
+#define X509_EXT_KEY_USAGE_ANY			(1 << 0)
+#define X509_EXT_KEY_USAGE_SERVER_AUTH		(1 << 1)
+#define X509_EXT_KEY_USAGE_CLIENT_AUTH		(1 << 2)
 
 	/*
 	 * The DER format certificate follows struct x509_certificate. These

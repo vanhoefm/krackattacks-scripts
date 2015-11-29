@@ -548,6 +548,19 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 		return -1;
 	}
 
+	if (conn->cred && !conn->cred->server_cert_only && chain &&
+	    (chain->extensions_present & X509_EXT_EXT_KEY_USAGE) &&
+	    !(chain->ext_key_usage &
+	      (X509_EXT_KEY_USAGE_ANY | X509_EXT_KEY_USAGE_SERVER_AUTH))) {
+		tls_cert_chain_failure_event(
+			conn, 0, chain, TLS_FAIL_BAD_CERTIFICATE,
+			"certificate not allowed for server authentication");
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+			  TLS_ALERT_BAD_CERTIFICATE);
+		x509_certificate_chain_free(chain);
+		return -1;
+	}
+
 	x509_certificate_chain_free(chain);
 
 	*in_len = end - in_data;

@@ -471,6 +471,15 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 		return -1;
 	}
 
+	if (chain && (chain->extensions_present & X509_EXT_EXT_KEY_USAGE) &&
+	    !(chain->ext_key_usage &
+	      (X509_EXT_KEY_USAGE_ANY | X509_EXT_KEY_USAGE_CLIENT_AUTH))) {
+		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				   TLS_ALERT_BAD_CERTIFICATE);
+		x509_certificate_chain_free(chain);
+		return -1;
+	}
+
 	x509_certificate_chain_free(chain);
 
 	*in_len = end - in_data;

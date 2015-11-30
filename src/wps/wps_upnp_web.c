@@ -410,6 +410,15 @@ send_buf:
 }
 
 
+static void wps_upnp_peer_del(struct upnp_wps_peer *peer)
+{
+	dl_list_del(&peer->list);
+	if (peer->wps)
+		wps_deinit(peer->wps);
+	os_free(peer);
+}
+
+
 static enum http_reply_code
 web_process_get_device_info(struct upnp_wps_device_sm *sm,
 			    struct wpabuf **reply, const char **replyname)
@@ -427,7 +436,9 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 	if (!iface || iface->ctx->ap_pin == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;
 
-	peer = &iface->peer;
+	peer = os_zalloc(sizeof(*peer));
+	if (!peer)
+		return HTTP_INTERNAL_SERVER_ERROR;
 
 	/*
 	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
@@ -436,9 +447,6 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 	 * i.e., there may not be any intent to actually complete the
 	 * registration.
 	 */
-
-	if (peer->wps)
-		wps_deinit(peer->wps);
 
 	os_memset(&cfg, 0, sizeof(cfg));
 	cfg.wps = iface->wps;
@@ -456,8 +464,22 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 		*reply = NULL;
 	if (*reply == NULL) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Failed to get DeviceInfo");
+		os_free(peer);
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
+
+	if (dl_list_len(&iface->peers) > 3) {
+		struct upnp_wps_peer *old;
+
+		old = dl_list_first(&iface->peers, struct upnp_wps_peer, list);
+		if (old) {
+			wpa_printf(MSG_DEBUG, "WPS UPnP: Drop oldest active session");
+			wps_upnp_peer_del(old);
+		}
+	}
+	dl_list_add_tail(&iface->peers, &peer->list);
+	/* TODO: Could schedule a timeout to free the entry */
+
 	*replyname = name;
 	return HTTP_OK;
 }
@@ -473,6 +495,8 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 	enum wps_process_res res;
 	enum wsc_op_code op_code;
 	struct upnp_wps_device_interface *iface;
+	struct wps_parse_attr attr;
+	struct upnp_wps_peer *tmp, *peer;
 
 	iface = dl_list_first(&sm->interfaces,
 			      struct upnp_wps_device_interface, list);
@@ -488,11 +512,56 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 	msg = xml_get_base64_item(data, "NewInMessage", &ret);
 	if (msg == NULL)
 		return ret;
-	res = wps_process_msg(iface->peer.wps, WSC_UPnP, msg);
-	if (res == WPS_FAILURE)
+
+	if (wps_parse_msg(msg, &attr)) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS UPnP: Could not parse PutMessage - NewInMessage");
+		wpabuf_free(msg);
+		return HTTP_BAD_REQUEST;
+	}
+
+	/* Find a matching active peer session */
+	peer = NULL;
+	dl_list_for_each(tmp, &iface->peers, struct upnp_wps_peer, list) {
+		if (!tmp->wps)
+			continue;
+		if (attr.enrollee_nonce &&
+		    os_memcmp(tmp->wps->nonce_e, attr.enrollee_nonce,
+			      WPS_NONCE_LEN) != 0)
+			continue; /* Enrollee nonce mismatch */
+		if (attr.msg_type &&
+		    *attr.msg_type != WPS_M2 &&
+		    *attr.msg_type != WPS_M2D &&
+		    attr.registrar_nonce &&
+		    os_memcmp(tmp->wps->nonce_r, attr.registrar_nonce,
+			      WPS_NONCE_LEN) != 0)
+			continue; /* Registrar nonce mismatch */
+		peer = tmp;
+		break;
+	}
+	if (!peer) {
+		/*
+		  Try to use the first entry in case message could work with
+		 * it. The actual handler function will reject this, if needed.
+		 * This maintains older behavior where only a single peer entry
+		 * was supported.
+		 */
+		peer = dl_list_first(&iface->peers, struct upnp_wps_peer, list);
+	}
+	if (!peer || !peer->wps) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No active peer entry found");
+		wpabuf_free(msg);
+		return HTTP_BAD_REQUEST;
+	}
+
+	res = wps_process_msg(peer->wps, WSC_UPnP, msg);
+	if (res == WPS_FAILURE) {
 		*reply = NULL;
-	else
-		*reply = wps_get_msg(iface->peer.wps, &op_code);
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Drop active peer session");
+		wps_upnp_peer_del(peer);
+	} else {
+		*reply = wps_get_msg(peer->wps, &op_code);
+	}
 	wpabuf_free(msg);
 	if (*reply == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;

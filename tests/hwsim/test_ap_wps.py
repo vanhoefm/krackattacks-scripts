@@ -1216,13 +1216,16 @@ def _test_ap_wps_er_multi_add_enrollee(dev, apdev):
     for i in range(2):
         dev[i].scan_for_bss(apdev[0]['bssid'], freq=2412)
         dev[i].wps_reg(apdev[0]['bssid'], ap_pin)
+    for i in range(2):
         dev[i].request("WPS_ER_START ifname=lo")
     for i in range(2):
         ev = dev[i].wait_event(["WPS-ER-AP-ADD"], timeout=15)
         if ev is None:
             raise Exception("AP discovery timed out")
         dev[i].dump_monitor()
+    for i in range(2):
         dev[i].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    for i in range(2):
         ev = dev[i].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
         if ev is None:
             raise Exception("AP learn timed out")

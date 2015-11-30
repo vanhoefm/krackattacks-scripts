@@ -1862,6 +1862,89 @@ def test_eap_proto_eke(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def eap_eke_test_fail(dev, phase1=None, success=False):
+    dev.connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                eap="EKE", identity="eke user", password="hello",
+                phase1=phase1, erp="1", wait_connect=False)
+    ev = dev.wait_event([ "CTRL-EVENT-EAP-FAILURE",
+                          "CTRL-EVENT-EAP-SUCCESS" ], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP failure")
+    if not success and "CTRL-EVENT-EAP-FAILURE" not in ev:
+        raise Exception("EAP did not fail during failure test")
+    dev.request("REMOVE_NETWORK all")
+    dev.wait_disconnected()
+
+def test_eap_proto_eke_errors(dev, apdev):
+    """EAP-EKE local error cases"""
+    check_eap_capa(dev[0], "EKE")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 3):
+        with alloc_fail(dev[0], i, "eap_eke_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="EKE", identity="eke user", password="hello",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_eke_dh_init", None),
+              (1, "eap_eke_prf_hmac_sha1", "dhgroup=3 encr=1 prf=1 mac=1"),
+              (1, "eap_eke_prf_hmac_sha256", "dhgroup=5 encr=1 prf=2 mac=2"),
+              (1, "eap_eke_prf", None),
+              (1, "os_get_random;eap_eke_dhcomp", None),
+              (1, "aes_128_cbc_encrypt;eap_eke_dhcomp", None),
+              (1, "aes_128_cbc_decrypt;eap_eke_shared_secret", None),
+              (1, "eap_eke_prf;eap_eke_shared_secret", None),
+              (1, "eap_eke_prfplus;eap_eke_derive_ke_ki", None),
+              (1, "eap_eke_prfplus;eap_eke_derive_ka", None),
+              (1, "eap_eke_prfplus;eap_eke_derive_msk", None),
+              (1, "os_get_random;eap_eke_prot", None),
+              (1, "aes_128_cbc_decrypt;eap_eke_decrypt_prot", None),
+              (1, "eap_eke_derive_key;eap_eke_process_commit", None),
+              (1, "eap_eke_dh_init;eap_eke_process_commit", None),
+              (1, "eap_eke_shared_secret;eap_eke_process_commit", None),
+              (1, "eap_eke_derive_ke_ki;eap_eke_process_commit", None),
+              (1, "eap_eke_dhcomp;eap_eke_process_commit", None),
+              (1, "os_get_random;eap_eke_process_commit", None),
+              (1, "os_get_random;=eap_eke_process_commit", None),
+              (1, "eap_eke_prot;eap_eke_process_commit", None),
+              (1, "eap_eke_decrypt_prot;eap_eke_process_confirm", None),
+              (1, "eap_eke_derive_ka;eap_eke_process_confirm", None),
+              (1, "eap_eke_auth;eap_eke_process_confirm", None),
+              (2, "eap_eke_auth;eap_eke_process_confirm", None),
+              (1, "eap_eke_prot;eap_eke_process_confirm", None),
+              (1, "eap_eke_derive_msk;eap_eke_process_confirm", None) ]
+    for count, func, phase1 in tests:
+        with fail_test(dev[0], count, func):
+            eap_eke_test_fail(dev[0], phase1)
+
+    tests = [ (1, "=eap_eke_derive_ke_ki", None),
+              (1, "=eap_eke_derive_ka", None),
+              (1, "=eap_eke_derive_msk", None),
+              (1, "eap_eke_build_msg;eap_eke_process_id", None),
+              (1, "wpabuf_alloc;eap_eke_process_id", None),
+              (1, "=eap_eke_process_id", None),
+              (1, "wpabuf_alloc;eap_eke_process_id", None),
+              (1, "eap_eke_build_msg;eap_eke_process_commit", None),
+              (1, "wpabuf_resize;eap_eke_process_commit", None),
+              (1, "eap_eke_build_msg;eap_eke_process_confirm", None) ]
+    for count, func, phase1 in tests:
+        with alloc_fail(dev[0], count, func):
+            eap_eke_test_fail(dev[0], phase1)
+
+    tests = [ (1, "eap_eke_getKey", None),
+              (1, "eap_eke_get_emsk", None),
+              (1, "eap_eke_get_session_id", None) ]
+    for count, func, phase1 in tests:
+        with alloc_fail(dev[0], count, func):
+            eap_eke_test_fail(dev[0], phase1, success=True)
+
 EAP_PAX_OP_STD_1 = 0x01
 EAP_PAX_OP_STD_2 = 0x02
 EAP_PAX_OP_STD_3 = 0x03

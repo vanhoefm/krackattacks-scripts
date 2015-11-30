@@ -947,6 +947,8 @@ def _test_scan_dfs(dev, apdev, params):
         for f in freq:
             if (f >= 5260 and f <= 5320) or (f >= 5500 and f <= 5700):
                 raise Exception("Active scan on DFS channel: %d" % f)
+            if f in [ 2467, 2472 ]:
+                raise Exception("Active scan on US-disallowed channel: %d" % f)
 
 def test_scan_abort(dev, apdev):
     """Aborting a full scan"""

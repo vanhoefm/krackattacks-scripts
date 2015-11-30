@@ -452,6 +452,7 @@ static struct wpabuf * eap_eke_process_commit(struct eap_sm *sm,
 	/* DHComponent_P = Encr(key, y_p) */
 	rpos = wpabuf_put(resp, data->sess.dhcomp_len);
 	if (eap_eke_dhcomp(&data->sess, key, pub, rpos) < 0) {
+		wpabuf_free(resp);
 		wpa_printf(MSG_INFO, "EAP-EKE: Failed to build DHComponent_P");
 		os_memset(key, 0, sizeof(key));
 		return eap_eke_build_fail(data, ret, id,

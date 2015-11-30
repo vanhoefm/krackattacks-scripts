@@ -1435,17 +1435,9 @@ def test_p2ps_channel_active_go_and_station_different(dev, apdev):
 
 def test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
     """P2PS connection, active P2P GO and station on channel"""
-    with HWSimRadio(n_channels=2) as (radio, iface):
-        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
-        wpas.interface_add(iface)
+    if dev[0].get_mcc() == 1:
+        raise HwsimSkip('Skip due to MCC not being enabled')
 
-        if wpas.get_mcc() < 2:
-            raise Exception("New radio does not support MCC")
-
-        ndev = [ wpas, dev[1] ]
-        _test_p2ps_channel_active_go_and_station_different_mcc(ndev, apdev)
-
-def _test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
     set_no_group_iface(dev[0], 0)
     set_no_group_iface(dev[1], 0)
 

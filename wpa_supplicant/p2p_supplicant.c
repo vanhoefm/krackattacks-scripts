@@ -6340,6 +6340,8 @@ void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		eloop_register_timeout(P2P_MAX_INITIAL_CONN_WAIT, 0,
 				       wpas_p2p_group_formation_timeout,
 				       wpa_s->parent, NULL);
+		/* Complete group formation on successful data connection. */
+		wpa_s->p2p_go_group_formation_completed = 0;
 	} else if (ssid) {
 		/*
 		 * Use a separate timeout for initial data connection to
@@ -6890,6 +6892,15 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 		return;
 
 	wpa_s->show_group_started = 0;
+	if (!wpa_s->p2p_go_group_formation_completed &&
+	    wpa_s->global->p2p_group_formation == wpa_s) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P: Marking group formation completed on client on data connection");
+		wpa_s->p2p_go_group_formation_completed = 1;
+		wpa_s->global->p2p_group_formation = NULL;
+		wpa_s->p2p_in_provisioning = 0;
+		wpa_s->p2p_in_invitation = 0;
+	}
 
 	os_memset(go_dev_addr, 0, ETH_ALEN);
 	if (ssid->bssid_set)

@@ -1905,3 +1905,9 @@ def test_wpas_ctrl_event_burst(dev, apdev):
 
     if not dev[0].ping():
         raise Exception("Could not ping wpa_supplicant at the end of the test")
+
+def test_wpas_ctrl_sched_scan_plans(dev, apdev):
+    """wpa_supplicant sched_scan_plans parsing"""
+    dev[0].request("SET sched_scan_plans foo")
+    dev[0].request("SET sched_scan_plans 10:100 20:200 30")
+    dev[0].request("SET sched_scan_plans ")

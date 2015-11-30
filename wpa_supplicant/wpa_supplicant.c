@@ -5314,6 +5314,9 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_EXT_PW_BACKEND)
 		wpas_init_ext_pw(wpa_s);
 
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SCHED_SCAN_PLANS)
+		wpas_sched_scan_plans_set(wpa_s, wpa_s->conf->sched_scan_plans);
+
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);
 #endif /* CONFIG_WPS */

@@ -2548,6 +2548,14 @@ int wpas_sched_scan_plans_set(struct wpa_supplicant *wpa_s, const char *cmd)
 	if (!cmd)
 		return -1;
 
+	if (!cmd[0]) {
+		wpa_printf(MSG_DEBUG, "Clear sched scan plans");
+		os_free(wpa_s->sched_scan_plans);
+		wpa_s->sched_scan_plans = NULL;
+		wpa_s->sched_scan_plans_num = 0;
+		return 0;
+	}
+
 	while ((token = cstr_token(cmd, " ", &context))) {
 		int ret;
 		struct sched_scan_plan *scan_plan, *n;

@@ -4260,7 +4260,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(fst_llt, 1, FST_MAX_LLT_MS), 0 },
 #endif /* CONFIG_FST */
 	{ INT_RANGE(wpa_rsc_relaxation, 0, 1), 0 },
-	{ STR(sched_scan_plans), 0 },
+	{ STR(sched_scan_plans), CFG_CHANGED_SCHED_SCAN_PLANS },
 };
 
 #undef FUNC

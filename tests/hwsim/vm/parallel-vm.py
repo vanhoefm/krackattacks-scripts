@@ -458,7 +458,9 @@ def main():
         for i in range(0, num_servers):
             if len(vm[i]['failed']) == 0:
                 continue
-            print "./parallel-vm.py -1 1",
+            print "./vm-run.sh",
+            if args.long:
+                print "--long",
             skip = len(vm[i]['fail_seq'])
             skip -= min(skip, 30)
             for t in vm[i]['fail_seq']:

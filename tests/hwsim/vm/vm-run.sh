@@ -113,6 +113,17 @@ for kvmprog in kvm qemu-kvm; do
     fi
 done
 
+argsfile=$(mktemp)
+if [ $? -ne 0 ] ; then
+	exit 2
+fi
+function finish {
+	rm -f $argsfile
+}
+trap finish EXIT
+
+echo "$RUN_TEST_ARGS" > $argsfile
+
 $KVM \
 	-kernel $KERNEL -smp 4 \
 	$KVMARGS -m $MEMORY -nographic \
@@ -121,7 +132,7 @@ $KVM \
 	-fsdev local,security_model=none,id=fsdev-logs,path="$LOGDIR",writeout=immediate \
 	-device virtio-9p-pci,id=fs-logs,fsdev=fsdev-logs,mount_tag=logshare \
 	-monitor null -serial stdio -serial file:$LOGDIR/console \
-	-append "mac80211_hwsim.support_p2p_device=0 mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=7 init=$CMD testdir=$TESTDIR timewarp=$TIMEWARP console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$RUN_TEST_ARGS"
+	-append "mac80211_hwsim.support_p2p_device=0 mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=7 init=$CMD testdir=$TESTDIR timewarp=$TIMEWARP console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$argsfile"
 
 if [ $CODECOV = "yes" ]; then
     echo "Preparing code coverage reports"

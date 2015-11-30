@@ -22,7 +22,7 @@ sysctl kernel.panic=1
 TESTDIR=$(sed 's/.*testdir=\([^ ]*\) .*/\1/' /proc/cmdline)
 TIMEWARP=$(sed 's/.*timewarp=\([^ ]*\) .*/\1/' /proc/cmdline)
 EPATH=$(sed 's/.*EPATH=\([^ ]*\) .*/\1/' /proc/cmdline)
-ARGS=$(sed 's/.*ARGS=//' /proc/cmdline)
+ARGS=$(sed 's/.*ARGS=\([^ ]*\)\( \|$\).*/\1/' /proc/cmdline)
 
 # create /dev entries we need
 mknod -m 660 /dev/ttyS0 c 4 64
@@ -78,6 +78,10 @@ ip link set lo up
 mkdir /tmp/logs
 mount -t 9p -o trans=virtio,rw logshare /tmp/logs
 
+# allow access to any outside directory (e.g. /tmp) we also have
+mkdir /tmp/host
+mount --bind / /tmp/host
+
 if [ "$TIMEWARP" = "1" ] ; then
     (
         while sleep 1 ; do
@@ -107,7 +111,7 @@ else
 	dbus-daemon --config-file=$TESTDIR/vm/dbus.conf --fork
 
 	cd $TESTDIR
-	./run-all.sh $ARGS </dev/ttyS0 >/dev/ttyS0 2>&1
+	./run-all.sh $(cat /tmp/host$ARGS) </dev/ttyS0 >/dev/ttyS0 2>&1
 	if test -d /sys/kernel/debug/gcov ; then
 		cp -ar /sys/kernel/debug/gcov /tmp/logs/
 		# these are broken as they're updated while being read ...

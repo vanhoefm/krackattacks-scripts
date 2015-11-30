@@ -12,6 +12,7 @@ from wpasupplicant import WpaSupplicant
 from p2p_utils import *
 from test_nfc_p2p import set_ip_addr_info, check_ip_addr, grpform_events
 from hwsim import HWSimRadio
+from utils import HwsimSkip
 import hostapd
 import hwsim_utils
 
@@ -238,3 +239,90 @@ def test_p2p_device_incorrect_command_interface2(dev, apdev):
         if not res['ifname'].startswith('p2p-' + iface + '-'):
             raise Exception("Unexpected group ifname: " + res['ifname'])
         wpas.dump_monitor()
+
+def test_p2p_device_grpform_timeout_client(dev, apdev):
+    """P2P group formation timeout on client with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        addr0 = dev[0].p2p_dev_addr()
+        addr5 = wpas.p2p_dev_addr()
+        wpas.p2p_listen()
+        dev[0].discover_peer(addr5)
+        dev[0].p2p_listen()
+        wpas.discover_peer(addr0)
+        wpas.p2p_ext_listen(100, 150)
+        dev[0].global_request("P2P_CONNECT " + addr5 + " 12345670 enter go_intent=15 auth")
+        wpas.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=0")
+        ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=5)
+        if ev is None:
+            raise Exception("GO Negotiation did not succeed")
+        ev = dev[0].wait_global_event(["WPS-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("WPS did not succeed (GO)")
+        if "OK" not in dev[0].global_request("P2P_CANCEL"):
+            wpas.global_request("P2P_CANCEL")
+            del wpas
+            raise HwsimSkip("Did not manage to cancel group formation")
+        dev[0].dump_monitor()
+        ev = wpas.wait_global_event(["WPS-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("WPS did not succeed (Client)")
+        dev[0].dump_monitor()
+        ev = wpas.wait_global_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=20)
+        if ev is None:
+            raise Exception("Group formation timeout not seen on client")
+        ev = wpas.wait_global_event(["P2P-GROUP-REMOVED"], timeout=5)
+        if ev is None:
+            raise Exception("Group removal not seen on client")
+        wpas.p2p_cancel_ext_listen()
+        time.sleep(0.1)
+        ifaces = wpas.global_request("INTERFACES")
+        logger.info("Remaining interfaces: " + ifaces)
+        del wpas
+        if "p2p-" + iface + "-" in ifaces:
+            raise Exception("Group interface still present after failure")
+
+def test_p2p_device_grpform_timeout_go(dev, apdev):
+    """P2P group formation timeout on GO with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        addr0 = dev[0].p2p_dev_addr()
+        addr5 = wpas.p2p_dev_addr()
+        wpas.p2p_listen()
+        dev[0].discover_peer(addr5)
+        dev[0].p2p_listen()
+        wpas.discover_peer(addr0)
+        wpas.p2p_ext_listen(100, 150)
+        dev[0].global_request("P2P_CONNECT " + addr5 + " 12345670 enter go_intent=0 auth")
+        wpas.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=15")
+        ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=5)
+        if ev is None:
+            raise Exception("GO Negotiation did not succeed")
+        ev = dev[0].wait_global_event(["WPS-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("WPS did not succeed (Client)")
+        if "OK" not in dev[0].global_request("P2P_CANCEL"):
+            if "OK" not in dev[0].global_request("P2P_GROUP_REMOVE *"):
+                wpas.global_request("P2P_CANCEL")
+                del wpas
+                raise HwsimSkip("Did not manage to cancel group formation")
+        dev[0].dump_monitor()
+        ev = wpas.wait_global_event(["WPS-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("WPS did not succeed (GO)")
+        dev[0].dump_monitor()
+        ev = wpas.wait_global_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=20)
+        if ev is None:
+            raise Exception("Group formation timeout not seen on GO")
+        ev = wpas.wait_global_event(["P2P-GROUP-REMOVED"], timeout=5)
+        if ev is None:
+            raise Exception("Group removal not seen on GO")
+        wpas.p2p_cancel_ext_listen()
+        time.sleep(0.1)
+        ifaces = wpas.global_request("INTERFACES")
+        logger.info("Remaining interfaces: " + ifaces)
+        del wpas
+        if "p2p-" + iface + "-" in ifaces:
+            raise Exception("Group interface still present after failure")

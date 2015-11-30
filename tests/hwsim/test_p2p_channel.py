@@ -900,6 +900,7 @@ def _test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
         dev[0].remove_group()
     finally:
         dev[0].global_request("SET p2p_go_freq_change_policy 2")
+        dev[1].request("DRIVER_EVENT AVOID_FREQUENCIES")
         set_country("00")
 
 def test_p2p_go_move_scm_multi(dev, apdev):

@@ -6,11 +6,13 @@
 
 import logging
 logger = logging.getLogger()
+import os
 import time
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from p2p_utils import *
+from test_gas import start_ap
 
 def test_discovery(dev):
     """P2P device discovery and provision discovery"""
@@ -514,3 +516,28 @@ def test_p2p_config_methods(dev):
         raise Exception("Unexpected peer config methods(2): " + peer['config_methods'])
 
     wpas.p2p_stop_find()
+
+def test_discovery_after_gas(dev, apdev):
+    """P2P device discovery after GAS/ANQP exchange"""
+    hapd = start_ap(apdev[0])
+    hapd.set("gas_frag_limit", "50")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[0].request("FETCH_ANQP")
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("No ANQP-QUERY-DONE event")
+    dev[0].dump_monitor()
+
+    start = os.times()[4]
+    dev[0].p2p_listen()
+    dev[1].p2p_find(social=True)
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Peer not discovered")
+    end = os.times()[4]
+    dev[0].dump_monitor()
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    logger.info("Device discovery after fragmented GAS took %f seconds" % (end - start))
+    if end - start > 1.3:
+        raise Exception("Device discovery took unexpectedly long time")

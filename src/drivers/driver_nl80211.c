@@ -6183,6 +6183,20 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 
 		if (cookie_out)
 			*cookie_out = no_ack ? (u64) -1 : cookie;
+
+		if (drv->num_send_action_cookies == MAX_SEND_ACTION_COOKIES) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Drop oldest pending send action cookie 0x%llx",
+				   (long long unsigned int)
+				   drv->send_action_cookies[0]);
+			os_memmove(&drv->send_action_cookies[0],
+				   &drv->send_action_cookies[1],
+				   (MAX_SEND_ACTION_COOKIES - 1) *
+				   sizeof(u64));
+			drv->num_send_action_cookies--;
+		}
+		drv->send_action_cookies[drv->num_send_action_cookies] = cookie;
+		drv->num_send_action_cookies++;
 	}
 
 fail:
@@ -6237,17 +6251,16 @@ static int wpa_driver_nl80211_send_action(struct i802_bss *bss,
 }
 
 
-static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
+static void nl80211_frame_wait_cancel(struct i802_bss *bss, u64 cookie)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Cancel TX frame wait: cookie=0x%llx",
-		   (long long unsigned int) drv->send_action_cookie);
+		   (long long unsigned int) cookie);
 	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_FRAME_WAIT_CANCEL)) ||
-	    nla_put_u64(msg, NL80211_ATTR_COOKIE, drv->send_action_cookie)) {
+	    nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie)) {
 		nlmsg_free(msg);
 		return;
 	}
@@ -6256,6 +6269,30 @@ static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
 	if (ret)
 		wpa_printf(MSG_DEBUG, "nl80211: wait cancel failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
+}
+
+
+static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	unsigned int i;
+	u64 cookie;
+
+	/* Cancel the last pending TX cookie */
+	nl80211_frame_wait_cancel(bss, drv->send_action_cookie);
+
+	/*
+	 * Cancel the other pending TX cookies, if any. This is needed since
+	 * the driver may keep a list of all pending offchannel TX operations
+	 * and free up the radio only once they have expired or cancelled.
+	 */
+	for (i = drv->num_send_action_cookies; i > 0; i--) {
+		cookie = drv->send_action_cookies[i - 1];
+		if (cookie != drv->send_action_cookie)
+			nl80211_frame_wait_cancel(bss, cookie);
+	}
+	drv->num_send_action_cookies = 0;
 }
 
 

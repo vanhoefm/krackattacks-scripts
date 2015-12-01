@@ -532,6 +532,9 @@ def test_autogo_join_auto_go_neg(dev):
     dev[1].flush_scan_cache()
     dev[0].p2p_listen()
     addr = dev[0].p2p_dev_addr()
+    if not dev[1].discover_peer(addr, social=True):
+        raise Exception("Peer not found")
+    dev[1].p2p_stop_find()
     if "OK" not in dev[1].global_request("P2P_CONNECT " + addr + " pbc auto"):
         raise Exception("P2P_CONNECT failed")
 

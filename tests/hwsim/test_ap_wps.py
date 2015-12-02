@@ -1195,7 +1195,8 @@ def test_ap_wps_er_multi_add_enrollee(dev, apdev):
     try:
         _test_ap_wps_er_multi_add_enrollee(dev, apdev)
     finally:
-        dev[0].request("WPS_ER_STOP")
+        for i in range(2):
+            dev[i].request("WPS_ER_STOP")
 
 def _test_ap_wps_er_multi_add_enrollee(dev, apdev):
     ssid = "wps-er-add-enrollee"

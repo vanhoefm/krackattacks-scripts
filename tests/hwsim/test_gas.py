@@ -925,7 +925,7 @@ def test_gas_anqp_oom_hapd(dev, apdev):
         hapd.set("gas_frag_limit", "50")
 
         # This query will time out due to the AP not sending a response (OOM).
-        print dev[0].request("FETCH_ANQP")
+        dev[0].request("FETCH_ANQP")
         ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
         if ev is None:
             raise Exception("GAS query start timed out")

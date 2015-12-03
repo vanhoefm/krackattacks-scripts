@@ -5012,9 +5012,15 @@ int tls_connection_set_session_ticket_cb(void *tls_ctx,
 
 int tls_get_library_version(char *buf, size_t buf_len)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	return os_snprintf(buf, buf_len, "OpenSSL build=%s run=%s",
+			   OPENSSL_VERSION_TEXT,
+			   OpenSSL_version(OPENSSL_VERSION));
+#else
 	return os_snprintf(buf, buf_len, "OpenSSL build=%s run=%s",
 			   OPENSSL_VERSION_TEXT,
 			   SSLeay_version(SSLEAY_VERSION));
+#endif
 }
 
 

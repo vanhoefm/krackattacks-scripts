@@ -17,6 +17,19 @@ static void sha1_transform(u32 *state, const u8 data[64])
 {
 	SHA_CTX context;
 	os_memset(&context, 0, sizeof(context));
+#if defined(OPENSSL_IS_BORINGSSL) && !defined(ANDROID)
+	context.h[0] = state[0];
+	context.h[1] = state[1];
+	context.h[2] = state[2];
+	context.h[3] = state[3];
+	context.h[4] = state[4];
+	SHA1_Transform(&context, data);
+	state[0] = context.h[0];
+	state[1] = context.h[1];
+	state[2] = context.h[2];
+	state[3] = context.h[3];
+	state[4] = context.h[4];
+#else
 	context.h0 = state[0];
 	context.h1 = state[1];
 	context.h2 = state[2];
@@ -28,6 +41,7 @@ static void sha1_transform(u32 *state, const u8 data[64])
 	state[2] = context.h2;
 	state[3] = context.h3;
 	state[4] = context.h4;
+#endif
 }
 
 

@@ -768,6 +768,7 @@ def test_ap_require_ht(dev, apdev):
                    disable_ht="1", wait_connect=False)
     dev[0].connect("require-ht", key_mgmt="NONE", scan_freq="2412")
     ev = dev[1].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+    dev[1].request("DISCONNECT")
     if ev is None:
         raise Exception("Association rejection timed out")
     if "status_code=27" not in ev:
@@ -789,6 +790,7 @@ def test_ap_require_ht_limited_rates(dev, apdev):
                    disable_ht="1", wait_connect=False)
     dev[0].connect("require-ht", key_mgmt="NONE", scan_freq="2412")
     ev = dev[1].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+    dev[1].request("DISCONNECT")
     if ev is None:
         raise Exception("Association rejection timed out")
     if "status_code=27" not in ev:

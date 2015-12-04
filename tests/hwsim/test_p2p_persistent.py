@@ -553,3 +553,40 @@ def test_persistent_group_profile_add(dev):
 
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_persistent_group_cancel_on_cli(dev):
+    """P2P persistent group formation, re-invocation, and cancel"""
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
+    form(dev[0], dev[1])
+
+    invite_from_go(dev[0], dev[1], terminate=False)
+    if "FAIL" not in dev[1].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on CLI")
+    if "FAIL" not in dev[0].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
+    terminate_group(dev[0], dev[1])
+
+    invite_from_cli(dev[0], dev[1], terminate=False)
+    if "FAIL" not in dev[1].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on CLI")
+    if "FAIL" not in dev[0].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
+    terminate_group(dev[0], dev[1])
+
+def test_persistent_group_cancel_on_cli2(dev):
+    """P2P persistent group formation, re-invocation, and cancel (2)"""
+    form(dev[0], dev[1])
+    invite_from_go(dev[0], dev[1], terminate=False)
+    if "FAIL" not in dev[1].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on CLI")
+    if "FAIL" not in dev[0].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
+    terminate_group(dev[0], dev[1])
+
+    invite_from_cli(dev[0], dev[1], terminate=False)
+    if "FAIL" not in dev[1].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on CLI")
+    if "FAIL" not in dev[0].global_request("P2P_CANCEL"):
+        raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
+    terminate_group(dev[0], dev[1])

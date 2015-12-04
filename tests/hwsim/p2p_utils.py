@@ -158,20 +158,22 @@ def form(go, cli, test_data=True, reverse_init=False):
     else:
         return i_res
 
-def invite_from_cli(go, cli):
+def invite_from_cli(go, cli, terminate=True):
     logger.info("Re-invoke persistent group from client")
     invite(cli, go)
     [go_res, cli_res] = check_result(go, cli)
     hwsim_utils.test_connectivity_p2p(go, cli)
-    terminate_group(go, cli)
+    if terminate:
+        terminate_group(go, cli)
     return [go_res, cli_res]
 
-def invite_from_go(go, cli):
+def invite_from_go(go, cli, terminate=True):
     logger.info("Re-invoke persistent group from GO")
     invite(go, cli)
     [go_res, cli_res] = check_result(go, cli)
     hwsim_utils.test_connectivity_p2p(go, cli)
-    terminate_group(go, cli)
+    if terminate:
+        terminate_group(go, cli)
     return [go_res, cli_res]
 
 def autogo(go, freq=None, persistent=None):

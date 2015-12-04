@@ -1179,6 +1179,12 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 
 void wpas_network_reenabled(void *eloop_ctx, void *timeout_ctx);
 
+void wpas_vendor_elem_update(struct wpa_supplicant *wpa_s);
+struct wpa_supplicant * wpas_vendor_elem(struct wpa_supplicant *wpa_s,
+					 enum wpa_vendor_elem_frame frame);
+int wpas_vendor_elem_remove(struct wpa_supplicant *wpa_s, int frame,
+			    const u8 *elem, size_t len);
+
 #ifdef CONFIG_FST
 
 struct fst_wpa_obj;

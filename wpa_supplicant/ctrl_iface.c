@@ -7844,61 +7844,6 @@ static int wpas_ctrl_event_test(struct wpa_supplicant *wpa_s, const char *cmd)
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
-static void wpas_ctrl_vendor_elem_update(struct wpa_supplicant *wpa_s)
-{
-	unsigned int i;
-	char buf[30];
-
-	wpa_printf(MSG_DEBUG, "Update vendor elements");
-
-	for (i = 0; i < NUM_VENDOR_ELEM_FRAMES; i++) {
-		if (wpa_s->vendor_elem[i]) {
-			int res;
-
-			res = os_snprintf(buf, sizeof(buf), "frame[%u]", i);
-			if (!os_snprintf_error(sizeof(buf), res)) {
-				wpa_hexdump_buf(MSG_DEBUG, buf,
-						wpa_s->vendor_elem[i]);
-			}
-		}
-	}
-
-#ifdef CONFIG_P2P
-	if (wpa_s->parent == wpa_s &&
-	    wpa_s->global->p2p &&
-	    !wpa_s->global->p2p_disabled)
-		p2p_set_vendor_elems(wpa_s->global->p2p, wpa_s->vendor_elem);
-#endif /* CONFIG_P2P */
-}
-
-
-static struct wpa_supplicant *
-wpas_ctrl_vendor_elem_iface(struct wpa_supplicant *wpa_s,
-			    enum wpa_vendor_elem_frame frame)
-{
-	switch (frame) {
-#ifdef CONFIG_P2P
-	case VENDOR_ELEM_PROBE_REQ_P2P:
-	case VENDOR_ELEM_PROBE_RESP_P2P:
-	case VENDOR_ELEM_PROBE_RESP_P2P_GO:
-	case VENDOR_ELEM_BEACON_P2P_GO:
-	case VENDOR_ELEM_P2P_PD_REQ:
-	case VENDOR_ELEM_P2P_PD_RESP:
-	case VENDOR_ELEM_P2P_GO_NEG_REQ:
-	case VENDOR_ELEM_P2P_GO_NEG_RESP:
-	case VENDOR_ELEM_P2P_GO_NEG_CONF:
-	case VENDOR_ELEM_P2P_INV_REQ:
-	case VENDOR_ELEM_P2P_INV_RESP:
-	case VENDOR_ELEM_P2P_ASSOC_REQ:
-	case VENDOR_ELEM_P2P_ASSOC_RESP:
-		return wpa_s->parent;
-#endif /* CONFIG_P2P */
-	default:
-		return wpa_s;
-	}
-}
-
-
 static int wpas_ctrl_vendor_elem_add(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	char *pos = cmd;
@@ -7910,7 +7855,7 @@ static int wpas_ctrl_vendor_elem_add(struct wpa_supplicant *wpa_s, char *cmd)
 	frame = atoi(pos);
 	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
 		return -1;
-	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+	wpa_s = wpas_vendor_elem(wpa_s, frame);
 
 	pos = os_strchr(pos, ' ');
 	if (pos == NULL)
@@ -7941,7 +7886,7 @@ static int wpas_ctrl_vendor_elem_add(struct wpa_supplicant *wpa_s, char *cmd)
 
 	if (wpa_s->vendor_elem[frame] == NULL) {
 		wpa_s->vendor_elem[frame] = buf;
-		wpas_ctrl_vendor_elem_update(wpa_s);
+		wpas_vendor_elem_update(wpa_s);
 		return 0;
 	}
 
@@ -7952,7 +7897,7 @@ static int wpas_ctrl_vendor_elem_add(struct wpa_supplicant *wpa_s, char *cmd)
 
 	wpabuf_put_buf(wpa_s->vendor_elem[frame], buf);
 	wpabuf_free(buf);
-	wpas_ctrl_vendor_elem_update(wpa_s);
+	wpas_vendor_elem_update(wpa_s);
 
 	return 0;
 }
@@ -7965,7 +7910,7 @@ static int wpas_ctrl_vendor_elem_get(struct wpa_supplicant *wpa_s, char *cmd,
 
 	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
 		return -1;
-	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+	wpa_s = wpas_vendor_elem(wpa_s, frame);
 
 	if (wpa_s->vendor_elem[frame] == NULL)
 		return 0;
@@ -7983,12 +7928,12 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 	size_t len;
 	u8 *buf;
 	struct ieee802_11_elems elems;
-	u8 *ie, *end;
+	int res;
 
 	frame = atoi(pos);
 	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
 		return -1;
-	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+	wpa_s = wpas_vendor_elem(wpa_s, frame);
 
 	pos = os_strchr(pos, ' ');
 	if (pos == NULL)
@@ -7998,7 +7943,7 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 	if (*pos == '*') {
 		wpabuf_free(wpa_s->vendor_elem[frame]);
 		wpa_s->vendor_elem[frame] = NULL;
-		wpas_ctrl_vendor_elem_update(wpa_s);
+		wpas_vendor_elem_update(wpa_s);
 		return 0;
 	}
 
@@ -8026,31 +7971,9 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 		return -1;
 	}
 
-	ie = wpabuf_mhead_u8(wpa_s->vendor_elem[frame]);
-	end = ie + wpabuf_len(wpa_s->vendor_elem[frame]);
-
-	for (; ie + 1 < end; ie += 2 + ie[1]) {
-		if (ie + len > end)
-			break;
-		if (os_memcmp(ie, buf, len) != 0)
-			continue;
-
-		if (wpabuf_len(wpa_s->vendor_elem[frame]) == len) {
-			wpabuf_free(wpa_s->vendor_elem[frame]);
-			wpa_s->vendor_elem[frame] = NULL;
-		} else {
-			os_memmove(ie, ie + len,
-				   end - (ie + len));
-			wpa_s->vendor_elem[frame]->used -= len;
-		}
-		os_free(buf);
-		wpas_ctrl_vendor_elem_update(wpa_s);
-		return 0;
-	}
-
+	res = wpas_vendor_elem_remove(wpa_s, frame, buf, len);
 	os_free(buf);
-
-	return -1;
+	return res;
 }
 
 

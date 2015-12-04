@@ -4363,3 +4363,147 @@ out:
 }
 
 #endif /* CONFIG_AP */
+
+
+DBusMessage * wpas_dbus_handler_vendor_elem_add(DBusMessage *message,
+						struct wpa_supplicant *wpa_s)
+{
+	u8 *ielems;
+	int len;
+	struct ieee802_11_elems elems;
+	dbus_int32_t frame_id;
+	DBusMessageIter	iter, array;
+
+	dbus_message_iter_init(message, &iter);
+	dbus_message_iter_get_basic(&iter, &frame_id);
+	if (frame_id < 0 || frame_id >= NUM_VENDOR_ELEM_FRAMES) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Invalid ID");
+	}
+
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &array);
+	dbus_message_iter_get_fixed_array(&array, &ielems, &len);
+	if (!ielems || len == 0) {
+		return dbus_message_new_error(
+			message, DBUS_ERROR_INVALID_ARGS, "Invalid value");
+	}
+
+	if (ieee802_11_parse_elems(ielems, len, &elems, 0) == ParseFailed) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Parse error");
+	}
+
+	wpa_s = wpas_vendor_elem(wpa_s, frame_id);
+	if (!wpa_s->vendor_elem[frame_id]) {
+		wpa_s->vendor_elem[frame_id] = wpabuf_alloc_copy(ielems, len);
+		wpas_vendor_elem_update(wpa_s);
+		return NULL;
+	}
+
+	if (wpabuf_resize(&wpa_s->vendor_elem[frame_id], len) < 0) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Resize error");
+	}
+
+	wpabuf_put_data(wpa_s->vendor_elem[frame_id], ielems, len);
+	wpas_vendor_elem_update(wpa_s);
+	return NULL;
+}
+
+
+DBusMessage * wpas_dbus_handler_vendor_elem_get(DBusMessage *message,
+						struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply;
+	DBusMessageIter	iter, array_iter;
+	dbus_int32_t frame_id;
+	const u8 *elem;
+	size_t elem_len;
+
+	dbus_message_iter_init(message, &iter);
+	dbus_message_iter_get_basic(&iter, &frame_id);
+
+	if (frame_id < 0 || frame_id >= NUM_VENDOR_ELEM_FRAMES) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Invalid ID");
+	}
+
+	wpa_s = wpas_vendor_elem(wpa_s, frame_id);
+	if (!wpa_s->vendor_elem[frame_id]) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "ID value does not exist");
+	}
+
+	reply = dbus_message_new_method_return(message);
+	if (!reply)
+		return wpas_dbus_error_no_memory(message);
+
+	dbus_message_iter_init_append(reply, &iter);
+
+	elem = wpabuf_head_u8(wpa_s->vendor_elem[frame_id]);
+	elem_len = wpabuf_len(wpa_s->vendor_elem[frame_id]);
+
+	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &array_iter) ||
+	    !dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
+						  &elem, elem_len) ||
+	    !dbus_message_iter_close_container(&iter, &array_iter)) {
+		dbus_message_unref(reply);
+		reply = wpas_dbus_error_no_memory(message);
+	}
+
+	return reply;
+}
+
+
+DBusMessage * wpas_dbus_handler_vendor_elem_remove(DBusMessage *message,
+						   struct wpa_supplicant *wpa_s)
+{
+	u8 *ielems;
+	int len;
+	struct ieee802_11_elems elems;
+	DBusMessageIter	iter, array;
+	dbus_int32_t frame_id;
+
+	dbus_message_iter_init(message, &iter);
+	dbus_message_iter_get_basic(&iter, &frame_id);
+	if (frame_id < 0 || frame_id >= NUM_VENDOR_ELEM_FRAMES) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Invalid ID");
+	}
+
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &array);
+	dbus_message_iter_get_fixed_array(&array, &ielems, &len);
+	if (!ielems || len == 0) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Invalid value");
+	}
+
+	wpa_s = wpas_vendor_elem(wpa_s, frame_id);
+
+	if (len == 1 && *ielems == '*') {
+		wpabuf_free(wpa_s->vendor_elem[frame_id]);
+		wpa_s->vendor_elem[frame_id] = NULL;
+		wpas_vendor_elem_update(wpa_s);
+		return NULL;
+	}
+
+	if (!wpa_s->vendor_elem[frame_id]) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "ID value does not exist");
+	}
+
+	if (ieee802_11_parse_elems(ielems, len, &elems, 0) == ParseFailed) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Parse error");
+	}
+
+	if (wpas_vendor_elem_remove(wpa_s, frame_id, ielems, len) == 0)
+		return NULL;
+
+	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+				      "Not found");
+}

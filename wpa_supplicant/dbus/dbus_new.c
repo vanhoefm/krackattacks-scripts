@@ -3070,6 +3070,30 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_TDLS */
+	{ "VendorElemAdd", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_vendor_elem_add,
+	  {
+		  { "frame_id", "i", ARG_IN },
+		  { "ielems", "ay", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "VendorElemGet", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_vendor_elem_get,
+	  {
+		  { "frame_id", "i", ARG_IN },
+		  { "ielems", "ay", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "VendorElemRem", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_vendor_elem_remove,
+	  {
+		  { "frame_id", "i", ARG_IN },
+		  { "ielems", "ay", ARG_IN },
+		  END_ARGS
+	  }
+	},
 #ifndef CONFIG_NO_CONFIG_WRITE
 	{ "SaveConfig", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) wpas_dbus_handler_save_config,

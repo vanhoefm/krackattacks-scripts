@@ -456,6 +456,58 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
       </li>
       <li>
+	<h3>VendorElemAdd ( i: frame_id, ay: ielems ) --> nothing</h3>
+	<p>Add Vendor Elements to corresponding frame ID.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>i : frame_id</dt>
+	  <dd>Frame ID for which Vendor specific IE is to be added.</dd>
+	  <dt>ay : ielems</dt>
+	  <dd>Information Element(s).</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "ielems" argument is not a properly formatted or size mismatch.</dd>
+	  <dt>fi.w1.wpa_supplicant1.NoMemory</dt>
+	  <dd>Needed memory was not possible to get allocated.</dd>
+	</dl>
+      </li>
+      <li>
+	<h3>VendorElemGet ( i: frame_id ) --> ay: ielems</h3>
+	<p>Get Vendor Elements of corresponding frame ID.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>i : frame_id</dt>
+	  <dd>Frame ID for which Vendor specific IE is being queried.</dd>
+	  <dt>ay : ielems</dt>
+	  <dd>Information Element(s).</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "frame_id" argument is not valid.</dd>
+	</dl>
+      </li>
+      <li>
+	<h3>VendorElemRem ( i: frame_id, ay: ielems ) --> nothing</h3>
+	<p>Remove Vendor Elements of corresponding frame ID.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>i : frame_id</dt>
+	  <dd>Frame ID for which Vendor specific IE is to be removed.</dd>
+	  <dt>ay : ielems</dt>
+	  <dd>Information Element(s) OR * to remove all.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "ielems" argument is not a properly formatted or size mismatch.</dd>
+	  <dt>fi.w1.wpa_supplicant1.NoMemory</dt>
+	  <dd>Needed memory was not possible to get allocated.</dd>
+	</dl>
+      </li>
+      <li>
 	<h3>SaveConfig ( ) --> nothing</h3>
 	<p>Save configuration to the configuration file.</p>
       </li>

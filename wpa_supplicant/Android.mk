@@ -932,6 +932,7 @@ ifeq ($(CONFIG_TLS), openssl)
 ifdef TLS_FUNCS
 L_CFLAGS += -DEAP_TLS_OPENSSL
 OBJS += src/crypto/tls_openssl.c
+OBJS += src/crypto/tls_openssl_ocsp.c
 LIBS += -lssl
 endif
 OBJS += src/crypto/crypto_openssl.c

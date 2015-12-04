@@ -55,6 +55,7 @@ OBJS += ../../src/crypto/crypto_internal.c
 OBJS += ../../src/crypto/md5-internal.c
 OBJS += ../../src/crypto/sha1-internal.c
 OBJS += ../../src/crypto/sha256-internal.c
+OBJS += ../../src/crypto/tls_openssl_ocsp.c
 
 L_CFLAGS += -DEAP_TLS_OPENSSL
 

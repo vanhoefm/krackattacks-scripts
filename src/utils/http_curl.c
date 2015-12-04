@@ -26,6 +26,9 @@
 #include "common.h"
 #include "xml-utils.h"
 #include "http-utils.h"
+#ifdef EAP_TLS_OPENSSL
+#include "crypto/tls_openssl.h"
+#endif /* EAP_TLS_OPENSSL */
 
 
 struct http_ctx {
@@ -1004,6 +1007,26 @@ static int curl_cb_ssl_verify(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	if (depth == 0 && preverify_ok && validate_server_cert(ctx, cert) < 0)
 		return 0;
 
+#ifdef OPENSSL_IS_BORINGSSL
+	if (depth == 0 && ctx->ocsp != NO_OCSP && preverify_ok) {
+		enum ocsp_result res;
+
+		res = check_ocsp_resp(ssl_ctx, ssl, cert, ctx->peer_issuer,
+				      ctx->peer_issuer_issuer);
+		if (res == OCSP_REVOKED) {
+			preverify_ok = 0;
+			wpa_printf(MSG_INFO, "OCSP: certificate revoked");
+			if (err == X509_V_OK)
+				X509_STORE_CTX_set_error(
+					x509_ctx, X509_V_ERR_CERT_REVOKED);
+		} else if (res != OCSP_GOOD && (ctx->ocsp == MANDATORY_OCSP)) {
+			preverify_ok = 0;
+			wpa_printf(MSG_INFO,
+				   "OCSP: bad certificate status response");
+		}
+	}
+#endif /* OPENSSL_IS_BORINGSSL */
+
 	if (!preverify_ok)
 		ctx->last_err = "TLS validation failed";
 
@@ -1296,6 +1319,16 @@ static CURL * setup_curl_post(struct http_ctx *ctx, const char *address,
 #ifdef EAP_TLS_OPENSSL
 		curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, curl_cb_ssl);
 		curl_easy_setopt(curl, CURLOPT_SSL_CTX_DATA, ctx);
+#ifdef OPENSSL_IS_BORINGSSL
+		/* For now, using the CURLOPT_SSL_VERIFYSTATUS option only
+		 * with BoringSSL since the OpenSSL specific callback hack to
+		 * enable OCSP is not available with BoringSSL. The OCSP
+		 * implementation within libcurl is not sufficient for the
+		 * Hotspot 2.0 OSU needs, so cannot use this with OpenSSL.
+		 */
+		if (ctx->ocsp != NO_OCSP)
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 1L);
+#endif /* OPENSSL_IS_BORINGSSL */
 #endif /* EAP_TLS_OPENSSL */
 	} else {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);

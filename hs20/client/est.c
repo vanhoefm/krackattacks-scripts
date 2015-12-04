@@ -16,6 +16,9 @@
 #include <openssl/asn1t.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#ifdef OPENSSL_IS_BORINGSSL
+#include <openssl/buf.h>
+#endif /* OPENSSL_IS_BORINGSSL */
 
 #include "common.h"
 #include "utils/base64.h"
@@ -238,8 +241,6 @@ ASN1_CHOICE(CsrAttrs) = {
 IMPLEMENT_ASN1_FUNCTIONS(CsrAttrs);
 
 
-#ifndef OPENSSL_IS_BORINGSSL
-
 static void add_csrattrs_oid(struct hs20_osu_client *ctx, ASN1_OBJECT *oid,
 			     STACK_OF(X509_EXTENSION) *exts)
 {
@@ -334,6 +335,23 @@ static void add_csrattrs(struct hs20_osu_client *ctx, CsrAttrs *csrattrs,
 	if (!csrattrs || ! csrattrs->attrs)
 		return;
 
+#ifdef OPENSSL_IS_BORINGSSL
+	num = sk_num(CHECKED_CAST(_STACK *, STACK_OF(AttrOrOID) *,
+				  csrattrs->attrs));
+	for (i = 0; i < num; i++) {
+		AttrOrOID *ao = sk_value(
+			CHECKED_CAST(_STACK *, const STACK_OF(AttrOrOID) *,
+				     csrattrs->attrs), i);
+		switch (ao->type) {
+		case 0:
+			add_csrattrs_oid(ctx, ao->d.oid, exts);
+			break;
+		case 1:
+			add_csrattrs_attr(ctx, ao->d.attribute, exts);
+			break;
+		}
+	}
+#else /* OPENSSL_IS_BORINGSSL */
 	num = SKM_sk_num(AttrOrOID, csrattrs->attrs);
 	for (i = 0; i < num; i++) {
 		AttrOrOID *ao = SKM_sk_value(AttrOrOID, csrattrs->attrs, i);
@@ -346,20 +364,14 @@ static void add_csrattrs(struct hs20_osu_client *ctx, CsrAttrs *csrattrs,
 			break;
 		}
 	}
-}
-
 #endif /* OPENSSL_IS_BORINGSSL */
+}
 
 
 static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 			char *csr_pem, char *est_req, char *old_cert,
 			CsrAttrs *csrattrs)
 {
-#ifdef OPENSSL_IS_BORINGSSL
-	wpa_printf(MSG_ERROR,
-		"EST: CSR generation not yet supported with BoringSSL");
-	return -1;
-#else /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *pctx = NULL;
 	EVP_PKEY *pkey = NULL;
 	RSA *rsa;
@@ -371,6 +383,7 @@ static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 	STACK_OF(X509_EXTENSION) *exts = NULL;
 	X509_EXTENSION *ex;
 	BIO *out;
+	CONF *ctmp = NULL;
 
 	wpa_printf(MSG_INFO, "Generate RSA private key");
 	write_summary(ctx, "Generate RSA private key");
@@ -452,20 +465,20 @@ static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 	if (!exts)
 		goto fail;
 
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints,
-				 "CA:FALSE");
+	ex = X509V3_EXT_nconf_nid(ctmp, NULL, NID_basic_constraints,
+				  "CA:FALSE");
 	if (ex == NULL ||
 	    !sk_X509_EXTENSION_push(exts, ex))
 		goto fail;
 
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_key_usage,
-				 "nonRepudiation,digitalSignature,keyEncipherment");
+	ex = X509V3_EXT_nconf_nid(ctmp, NULL, NID_key_usage,
+				  "nonRepudiation,digitalSignature,keyEncipherment");
 	if (ex == NULL ||
 	    !sk_X509_EXTENSION_push(exts, ex))
 		goto fail;
 
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_ext_key_usage,
-				 "1.3.6.1.4.1.40808.1.1.2");
+	ex = X509V3_EXT_nconf_nid(ctmp, NULL, NID_ext_key_usage,
+				  "1.3.6.1.4.1.40808.1.1.2");
 	if (ex == NULL ||
 	    !sk_X509_EXTENSION_push(exts, ex))
 		goto fail;
@@ -566,7 +579,6 @@ fail:
 	if (pctx)
 		EVP_PKEY_CTX_free(pctx);
 	return ret;
-#endif /* OPENSSL_IS_BORINGSSL */
 }
 
 

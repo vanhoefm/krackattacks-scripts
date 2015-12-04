@@ -498,7 +498,9 @@ static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 		char *txt;
 		size_t rlen;
 
+#if !defined(ANDROID) || !defined(OPENSSL_IS_BORINGSSL)
 		X509_REQ_print(out, req);
+#endif
 		rlen = BIO_ctrl_pending(out);
 		txt = os_malloc(rlen + 1);
 		if (txt) {
@@ -517,7 +519,9 @@ static int generate_csr(struct hs20_osu_client *ctx, char *key_pem,
 		FILE *f = fopen(csr_pem, "w");
 		if (f == NULL)
 			goto fail;
+#if !defined(ANDROID) || !defined(OPENSSL_IS_BORINGSSL)
 		X509_REQ_print_fp(f, req);
+#endif
 		if (!PEM_write_X509_REQ(f, req)) {
 			fclose(f);
 			goto fail;

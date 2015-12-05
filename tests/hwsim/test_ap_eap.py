@@ -1346,6 +1346,24 @@ def test_ap_wpa2_eap_tls(dev, apdev):
                 private_key="auth_serv/user.key")
     eap_reauth(dev[0], "TLS")
 
+def test_eap_tls_pkcs8_pkcs5_v2_des3(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and PKCS #8, PKCS #5 v2 DES3 key"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key.pkcs8",
+                private_key_passwd="whatever")
+
+def test_eap_tls_pkcs8_pkcs5_v15(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and PKCS #8, PKCS #5 v1.5 key"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key.pkcs8.pkcs5v15",
+                private_key_passwd="whatever")
+
 def test_ap_wpa2_eap_tls_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and config blobs"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

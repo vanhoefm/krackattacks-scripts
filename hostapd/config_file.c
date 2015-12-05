@@ -3206,13 +3206,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_free(bss->dump_msk_file);
 		bss->dump_msk_file = os_strdup(pos);
 #endif /* CONFIG_RADIUS_TEST */
+#ifdef CONFIG_PROXYARP
+	} else if (os_strcmp(buf, "proxy_arp") == 0) {
+		bss->proxy_arp = atoi(pos);
+#endif /* CONFIG_PROXYARP */
 #ifdef CONFIG_HS20
 	} else if (os_strcmp(buf, "hs20") == 0) {
 		bss->hs20 = atoi(pos);
 	} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 		bss->disable_dgaf = atoi(pos);
-	} else if (os_strcmp(buf, "proxy_arp") == 0) {
-		bss->proxy_arp = atoi(pos);
 	} else if (os_strcmp(buf, "na_mcast_to_ucast") == 0) {
 		bss->na_mcast_to_ucast = atoi(pos);
 	} else if (os_strcmp(buf, "osen") == 0) {

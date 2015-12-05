@@ -4589,6 +4589,167 @@ def GenerateAuthenticatorResponse(password, nt_response, peer_challenge,
     resp = hashlib.sha1(data).digest()
     return resp
 
+def test_eap_proto_ikev2_errors(dev, apdev):
+    """EAP-IKEv2 local error cases"""
+    check_eap_capa(dev[0], "IKEV2")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 5):
+        with alloc_fail(dev[0], i, "eap_ikev2_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="IKEV2", identity="ikev2 user",
+                           password="ike password",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "ikev2_encr_encrypt"),
+              (1, "ikev2_encr_decrypt"),
+              (1, "ikev2_derive_auth_data"),
+              (2, "ikev2_derive_auth_data"),
+              (1, "=ikev2_decrypt_payload"),
+              (1, "ikev2_encr_decrypt;ikev2_decrypt_payload"),
+              (1, "ikev2_encr_encrypt;ikev2_build_encrypted"),
+              (1, "ikev2_derive_sk_keys"),
+              (2, "ikev2_derive_sk_keys"),
+              (3, "ikev2_derive_sk_keys"),
+              (4, "ikev2_derive_sk_keys"),
+              (5, "ikev2_derive_sk_keys"),
+              (6, "ikev2_derive_sk_keys"),
+              (7, "ikev2_derive_sk_keys"),
+              (8, "ikev2_derive_sk_keys"),
+              (1, "eap_ikev2_derive_keymat;eap_ikev2_peer_keymat"),
+              (1, "eap_msg_alloc;eap_ikev2_build_msg"),
+              (1, "eap_ikev2_getKey"),
+              (1, "eap_ikev2_get_emsk"),
+              (1, "eap_ikev2_get_session_id"),
+              (1, "=ikev2_derive_keys"),
+              (2, "=ikev2_derive_keys"),
+              (1, "wpabuf_alloc;ikev2_process_kei"),
+              (1, "=ikev2_process_idi"),
+              (1, "ikev2_derive_auth_data;ikev2_build_auth"),
+              (1, "wpabuf_alloc;ikev2_build_sa_init"),
+              (2, "wpabuf_alloc;ikev2_build_sa_init"),
+              (3, "wpabuf_alloc;ikev2_build_sa_init"),
+              (4, "wpabuf_alloc;ikev2_build_sa_init"),
+              (5, "wpabuf_alloc;ikev2_build_sa_init"),
+              (6, "wpabuf_alloc;ikev2_build_sa_init"),
+              (1, "wpabuf_alloc;ikev2_build_sa_auth"),
+              (2, "wpabuf_alloc;ikev2_build_sa_auth"),
+              (1, "ikev2_build_auth;ikev2_build_sa_auth") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="IKEV2", identity="ikev2 user",
+                           password="ike password", erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ok = False
+            for j in range(10):
+                state = dev[0].request('GET_ALLOC_FAIL')
+                if state.startswith('0:'):
+                    ok = True
+                    break
+                time.sleep(0.1)
+            if not ok:
+                raise Exception("No allocation failure seen for %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "wpabuf_alloc;ikev2_build_notify"),
+              (2, "wpabuf_alloc;ikev2_build_notify"),
+              (1, "ikev2_build_encrypted;ikev2_build_notify") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="IKEV2", identity="ikev2 user",
+                           password="wrong password", erp="1",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ok = False
+            for j in range(10):
+                state = dev[0].request('GET_ALLOC_FAIL')
+                if state.startswith('0:'):
+                    ok = True
+                    break
+                time.sleep(0.1)
+            if not ok:
+                raise Exception("No allocation failure seen for %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "ikev2_integ_hash"),
+              (1, "ikev2_integ_hash;ikev2_decrypt_payload"),
+              (1, "os_get_random;ikev2_build_encrypted"),
+              (1, "ikev2_prf_plus;ikev2_derive_sk_keys"),
+              (1, "eap_ikev2_derive_keymat;eap_ikev2_peer_keymat"),
+              (1, "os_get_random;ikev2_build_sa_init"),
+              (2, "os_get_random;ikev2_build_sa_init"),
+              (1, "ikev2_integ_hash;eap_ikev2_validate_icv"),
+              (1, "hmac_sha1_vector;?ikev2_prf_hash;ikev2_derive_keys"),
+              (1, "hmac_sha1_vector;?ikev2_prf_hash;ikev2_derive_auth_data"),
+              (2, "hmac_sha1_vector;?ikev2_prf_hash;ikev2_derive_auth_data"),
+              (3, "hmac_sha1_vector;?ikev2_prf_hash;ikev2_derive_auth_data") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="IKEV2", identity="ikev2 user",
+                           password="ike password", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ok = False
+            for j in range(10):
+                state = dev[0].request('GET_FAIL')
+                if state.startswith('0:'):
+                    ok = True
+                    break
+                time.sleep(0.1)
+            if not ok:
+                raise Exception("No failure seen for %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    params = { "ssid": "eap-test2", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
+               "fragment_size": "50" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    tests = [ (1, "eap_ikev2_build_frag_ack"),
+              (1, "wpabuf_alloc;eap_ikev2_process_fragment") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test2", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="IKEV2", identity="ikev2 user",
+                           password="ike password", erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ok = False
+            for j in range(10):
+                state = dev[0].request('GET_ALLOC_FAIL')
+                if state.startswith('0:'):
+                    ok = True
+                    break
+                time.sleep(0.1)
+            if not ok:
+                raise Exception("No allocation failure seen for %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_eap_proto_mschapv2(dev, apdev):
     """EAP-MSCHAPv2 protocol tests"""
     check_eap_capa(dev[0], "MSCHAPV2")

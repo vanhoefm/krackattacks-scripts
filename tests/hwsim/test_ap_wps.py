@@ -9238,3 +9238,10 @@ def test_ap_wps_upnp_web_oom(dev, apdev, params):
             resp = conn.getresponse()
         except:
             pass
+
+def test_ap_wps_frag_ack_oom(dev, apdev):
+    """WPS and fragment ack OOM"""
+    dev[0].request("SET wps_fragment_size 50")
+    hapd = wps_start_ap(apdev[0])
+    with alloc_fail(hapd, 1, "eap_wsc_build_frag_ack"):
+        wps_run_pbc_fail_ap(apdev[0], dev[0], hapd)

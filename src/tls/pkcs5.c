@@ -11,6 +11,7 @@
 #include "common.h"
 #include "crypto/crypto.h"
 #include "crypto/md5.h"
+#include "crypto/sha1.h"
 #include "asn1.h"
 #include "pkcs5.h"
 
@@ -18,27 +19,244 @@
 struct pkcs5_params {
 	enum pkcs5_alg {
 		PKCS5_ALG_UNKNOWN,
-		PKCS5_ALG_MD5_DES_CBC
+		PKCS5_ALG_MD5_DES_CBC,
+		PKCS5_ALG_PBES2,
 	} alg;
-	u8 salt[8];
+	u8 salt[32];
 	size_t salt_len;
 	unsigned int iter_count;
+	enum pbes2_enc_alg {
+		PBES2_ENC_ALG_UNKNOWN,
+		PBES2_ENC_ALG_DES_EDE3_CBC,
+	} enc_alg;
+	u8 iv[8];
+	size_t iv_len;
 };
+
+
+static int oid_is_rsadsi(struct asn1_oid *oid)
+{
+	return oid->len >= 4 &&
+		oid->oid[0] == 1 /* iso */ &&
+		oid->oid[1] == 2 /* member-body */ &&
+		oid->oid[2] == 840 /* us */ &&
+		oid->oid[3] == 113549 /* rsadsi */;
+}
+
+
+static int pkcs5_is_oid(struct asn1_oid *oid, unsigned long alg)
+{
+	return oid->len == 7 &&
+		oid_is_rsadsi(oid) &&
+		oid->oid[4] == 1 /* pkcs */ &&
+		oid->oid[5] == 5 /* pkcs-5 */ &&
+		oid->oid[6] == alg;
+}
+
+
+static int enc_alg_is_oid(struct asn1_oid *oid, unsigned long alg)
+{
+	return oid->len == 6 &&
+		oid_is_rsadsi(oid) &&
+		oid->oid[4] == 3 /* encryptionAlgorithm */ &&
+		oid->oid[5] == alg;
+}
 
 
 static enum pkcs5_alg pkcs5_get_alg(struct asn1_oid *oid)
 {
-	if (oid->len == 7 &&
-	    oid->oid[0] == 1 /* iso */ &&
-	    oid->oid[1] == 2 /* member-body */ &&
-	    oid->oid[2] == 840 /* us */ &&
-	    oid->oid[3] == 113549 /* rsadsi */ &&
-	    oid->oid[4] == 1 /* pkcs */ &&
-	    oid->oid[5] == 5 /* pkcs-5 */ &&
-	    oid->oid[6] == 3 /* pbeWithMD5AndDES-CBC */)
+	if (pkcs5_is_oid(oid, 3)) /* pbeWithMD5AndDES-CBC (PBES1) */
 		return PKCS5_ALG_MD5_DES_CBC;
-
+	if (pkcs5_is_oid(oid, 13)) /* id-PBES2 (PBES2) */
+		return PKCS5_ALG_PBES2;
 	return PKCS5_ALG_UNKNOWN;
+}
+
+
+static int pkcs5_get_params_pbes2(struct pkcs5_params *params, const u8 *pos,
+				  const u8 *enc_alg_end)
+{
+	struct asn1_hdr hdr;
+	const u8 *end, *kdf_end;
+	struct asn1_oid oid;
+	char obuf[80];
+
+	/*
+	 * RFC 2898, Ch. A.4
+	 *
+	 * PBES2-params ::= SEQUENCE {
+	 *     keyDerivationFunc AlgorithmIdentifier {{PBES2-KDFs}},
+	 *     encryptionScheme AlgorithmIdentifier {{PBES2-Encs}} }
+	 *
+	 * PBES2-KDFs ALGORITHM-IDENTIFIER ::=
+	 *     { {PBKDF2-params IDENTIFIED BY id-PBKDF2}, ... }
+	 */
+
+	if (asn1_get_next(pos, enc_alg_end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected SEQUENCE (PBES2-params) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	pos = hdr.payload;
+	end = hdr.payload + hdr.length;
+
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected SEQUENCE (keyDerivationFunc) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+
+	pos = hdr.payload;
+	kdf_end = end = hdr.payload + hdr.length;
+
+	if (asn1_get_oid(pos, end - pos, &oid, &pos)) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Failed to parse OID (keyDerivationFunc algorithm)");
+		return -1;
+	}
+
+	asn1_oid_to_str(&oid, obuf, sizeof(obuf));
+	wpa_printf(MSG_DEBUG, "PKCS #5: PBES2 keyDerivationFunc algorithm %s",
+		   obuf);
+	if (!pkcs5_is_oid(&oid, 12)) /* id-PBKDF2 */ {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Unsupported PBES2 keyDerivationFunc algorithm %s",
+			   obuf);
+		return -1;
+	}
+
+	/*
+	 * RFC 2898, C.
+	 *
+	 * PBKDF2-params ::= SEQUENCE {
+	 *     salt CHOICE {
+	 *       specified OCTET STRING,
+	 *       otherSource AlgorithmIdentifier {{PBKDF2-SaltSources}}
+	 *     },
+	 *     iterationCount INTEGER (1..MAX),
+	 *     keyLength INTEGER (1..MAX) OPTIONAL,
+	 *     prf AlgorithmIdentifier {{PBKDF2-PRFs}} DEFAULT
+	 *     algid-hmacWithSHA1
+	 * }
+	 */
+
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected SEQUENCE (PBKDF2-params) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+
+	pos = hdr.payload;
+	end = hdr.payload + hdr.length;
+
+	/* For now, only support the salt CHOICE specified (OCTET STRING) */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING ||
+	    hdr.length > sizeof(params->salt)) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected OCTET STRING (salt.specified) - found class %d tag 0x%x size %d",
+			   hdr.class, hdr.tag, hdr.length);
+		return -1;
+	}
+	pos = hdr.payload + hdr.length;
+	os_memcpy(params->salt, hdr.payload, hdr.length);
+	params->salt_len = hdr.length;
+	wpa_hexdump(MSG_DEBUG, "PKCS #5: salt", params->salt, params->salt_len);
+
+	/* iterationCount INTEGER */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL || hdr.tag != ASN1_TAG_INTEGER) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected INTEGER - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	if (hdr.length == 1) {
+		params->iter_count = *hdr.payload;
+	} else if (hdr.length == 2) {
+		params->iter_count = WPA_GET_BE16(hdr.payload);
+	} else if (hdr.length == 4) {
+		params->iter_count = WPA_GET_BE32(hdr.payload);
+	} else {
+		wpa_hexdump(MSG_DEBUG,
+			    "PKCS #5: Unsupported INTEGER value (iterationCount)",
+			    hdr.payload, hdr.length);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "PKCS #5: iterationCount=0x%x",
+		   params->iter_count);
+	if (params->iter_count == 0 || params->iter_count > 0xffff) {
+		wpa_printf(MSG_INFO, "PKCS #5: Unsupported iterationCount=0x%x",
+			   params->iter_count);
+		return -1;
+	}
+
+	/* For now, ignore optional keyLength and prf */
+
+	pos = kdf_end;
+
+	/* encryptionScheme AlgorithmIdentifier {{PBES2-Encs}} */
+
+	if (asn1_get_next(pos, enc_alg_end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected SEQUENCE (encryptionScheme) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+
+	pos = hdr.payload;
+	end = hdr.payload + hdr.length;
+
+	if (asn1_get_oid(pos, end - pos, &oid, &pos)) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Failed to parse OID (encryptionScheme algorithm)");
+		return -1;
+	}
+
+	asn1_oid_to_str(&oid, obuf, sizeof(obuf));
+	wpa_printf(MSG_DEBUG, "PKCS #5: PBES2 encryptionScheme algorithm %s",
+		   obuf);
+	if (enc_alg_is_oid(&oid, 7)) {
+		params->enc_alg = PBES2_ENC_ALG_DES_EDE3_CBC;
+	} else {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Unsupported PBES2 encryptionScheme algorithm %s",
+			   obuf);
+		return -1;
+	}
+
+	/*
+	 * RFC 2898, B.2.2:
+	 * The parameters field associated with this OID in an
+	 * AlgorithmIdentifier shall have type OCTET STRING (SIZE(8)),
+	 * specifying the initialization vector for CBC mode.
+	 */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING ||
+	    hdr.length != 8) {
+		wpa_printf(MSG_DEBUG,
+			   "PKCS #5: Expected OCTET STRING (SIZE(8)) (IV) - found class %d tag 0x%x size %d",
+			   hdr.class, hdr.tag, hdr.length);
+		return -1;
+	}
+	os_memcpy(params->iv, hdr.payload, hdr.length);
+	params->iv_len = hdr.length;
+	wpa_hexdump(MSG_DEBUG, "PKCS #5: IV", params->iv, params->iv_len);
+
+	return 0;
 }
 
 
@@ -70,6 +288,11 @@ static int pkcs5_get_params(const u8 *enc_alg, size_t enc_alg_len,
 			   "algorithm %s", obuf);
 		return -1;
 	}
+
+	if (params->alg == PKCS5_ALG_PBES2)
+		return pkcs5_get_params_pbes2(params, pos, enc_alg_end);
+
+	/* PBES1 */
 
 	/*
 	 * PKCS#5, Section 8
@@ -136,6 +359,32 @@ static int pkcs5_get_params(const u8 *enc_alg, size_t enc_alg_len,
 }
 
 
+static struct crypto_cipher *
+pkcs5_crypto_init_pbes2(struct pkcs5_params *params, const char *passwd)
+{
+	u8 key[24];
+
+	if (params->enc_alg != PBES2_ENC_ALG_DES_EDE3_CBC ||
+	    params->iv_len != 8)
+		return NULL;
+
+	wpa_hexdump_ascii_key(MSG_DEBUG, "PKCS #5: PBES2 password for PBKDF2",
+			      passwd, os_strlen(passwd));
+	wpa_hexdump(MSG_DEBUG, "PKCS #5: PBES2 salt for PBKDF2",
+		    params->salt, params->salt_len);
+	wpa_printf(MSG_DEBUG, "PKCS #5: PBES2 PBKDF2 iterations: %u",
+		   params->iter_count);
+	if (pbkdf2_sha1(passwd, params->salt, params->salt_len,
+			params->iter_count, key, sizeof(key)) < 0)
+		return NULL;
+	wpa_hexdump_key(MSG_DEBUG, "PKCS #5: DES EDE3 key", key, sizeof(key));
+	wpa_hexdump(MSG_DEBUG, "PKCS #5: DES IV", params->iv, params->iv_len);
+
+	return crypto_cipher_init(CRYPTO_CIPHER_ALG_3DES, params->iv,
+				  key, sizeof(key));
+}
+
+
 static struct crypto_cipher * pkcs5_crypto_init(struct pkcs5_params *params,
 						const char *passwd)
 {
@@ -143,6 +392,9 @@ static struct crypto_cipher * pkcs5_crypto_init(struct pkcs5_params *params,
 	u8 hash[MD5_MAC_LEN];
 	const u8 *addr[2];
 	size_t len[2];
+
+	if (params->alg == PKCS5_ALG_PBES2)
+		return pkcs5_crypto_init_pbes2(params, passwd);
 
 	if (params->alg != PKCS5_ALG_MD5_DES_CBC)
 		return NULL;

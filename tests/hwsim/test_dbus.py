@@ -480,6 +480,7 @@ def test_dbus_wps_oom(dev, apdev):
     bssid = apdev[0]['bssid']
     dev[0].scan_for_bss(bssid, freq=2412)
 
+    time.sleep(0.05)
     for i in range(1, 3):
         with alloc_fail_dbus(dev[0], i, "=wpas_dbus_getter_bsss", "Get"):
             if_obj.Get(WPAS_DBUS_IFACE, "BSSs",

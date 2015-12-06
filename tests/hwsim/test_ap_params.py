@@ -6,10 +6,12 @@
 
 import logging
 logger = logging.getLogger()
+import os
 import subprocess
 
 import hwsim_utils
 import hostapd
+from tshark import run_tshark
 
 def test_ap_fragmentation_rts_set_high(dev, apdev):
     """WPA2-PSK AP with fragmentation and RTS thresholds larger than frame length"""
@@ -249,8 +251,9 @@ def test_ap_max_num_sta(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected association")
 
-def test_ap_max_num_sta_no_probe_resp(dev, apdev):
+def test_ap_max_num_sta_no_probe_resp(dev, apdev, params):
     """Maximum STA count and limit on Probe Response frames"""
+    logdir = params['logdir']
     dev[0].flush_scan_cache()
     ssid = "max"
     params = {}
@@ -262,9 +265,20 @@ def test_ap_max_num_sta_no_probe_resp(dev, apdev):
     dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     dev[0].scan(freq=2412, type="ONLY")
     dev[0].scan(freq=2412, type="ONLY")
-    if dev[0].get_bss(apdev[0]['bssid']) != None:
-        raise Exception("AP found unexpectedly")
+    seen = dev[0].get_bss(apdev[0]['bssid']) != None
     dev[1].scan(freq=2412, type="ONLY")
+    if seen:
+        out = run_tshark(os.path.join(logdir, "hwsim0.pcapng"),
+                         "wlan.fc.type_subtype == 5", ["wlan.da" ])
+        if out:
+            if dev[0].own_addr() not in out:
+                # Discovery happened through Beacon frame reception. That's not
+                # an error case.
+                seen = False
+            if dev[1].own_addr() not in out:
+                raise Exception("No Probe Response frames to dev[1] seen")
+        if seen:
+            raise Exception("AP found unexpectedly")
 
 def test_ap_tx_queue_params(dev, apdev):
     """Open AP with TX queue params set"""

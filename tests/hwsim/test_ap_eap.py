@@ -3424,6 +3424,7 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     if tk in buf:
         raise Exception("TK found from memory")
     if gtk in buf:
+        get_key_locations(buf, gtk, "GTK")
         raise Exception("GTK found from memory")
 
     logger.info("Checking keys in memory after disassociation")

@@ -19,7 +19,7 @@ import hwsim_utils
 import hostapd
 from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips, wait_fail_trigger
 from wpasupplicant import WpaSupplicant
-from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
+from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations, set_test_assoc_ie
 
 def check_hlr_auc_gw_support():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -4291,3 +4291,86 @@ def test_eap_tls_sha384(dev, apdev, params):
                    client_cert="auth_serv/sha384-user.pem",
                    private_key="auth_serv/sha384-user.key",
                    scan_freq="2412")
+
+def test_ap_wpa2_eap_assoc_rsn(dev, apdev):
+    """WPA2-Enterprise AP and association request RSN IE differences"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap-11w")
+    params["ieee80211w"] = "2"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    # Success cases with optional RSN IE fields removed one by one
+    tests = [ ("Normal wpa_supplicant assoc req RSN IE",
+               "30140100000fac040100000fac040100000fac010000"),
+              ("Extra PMKIDCount field in RSN IE",
+               "30160100000fac040100000fac040100000fac0100000000"),
+              ("Extra Group Management Cipher Suite in RSN IE",
+               "301a0100000fac040100000fac040100000fac0100000000000fac06"),
+              ("Extra undefined extension field in RSN IE",
+               "301c0100000fac040100000fac040100000fac0100000000000fac061122"),
+              ("RSN IE without RSN Capabilities",
+               "30120100000fac040100000fac040100000fac01"),
+              ("RSN IE without AKM", "300c0100000fac040100000fac04"),
+              ("RSN IE without pairwise", "30060100000fac04"),
+              ("RSN IE without group", "30020100") ]
+    for title, ie in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                       identity="gpsk user",
+                       password="abcdefghijklmnop0123456789abcdef",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ ("Normal wpa_supplicant assoc req RSN IE",
+               "30140100000fac040100000fac040100000fac01cc00"),
+              ("Group management cipher included in assoc req RSN IE",
+               "301a0100000fac040100000fac040100000fac01cc000000000fac06") ]
+    for title, ie in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect("test-wpa2-eap-11w", key_mgmt="WPA-EAP", ieee80211w="1",
+                       eap="GPSK", identity="gpsk user",
+                       password="abcdefghijklmnop0123456789abcdef",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ ("Invalid group cipher", "30060100000fac02", 41),
+              ("Invalid pairwise cipher", "300c0100000fac040100000fac02", 42) ]
+    for title, ie, status in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="GPSK",
+                       identity="gpsk user",
+                       password="abcdefghijklmnop0123456789abcdef",
+                       scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+        if ev is None:
+            raise Exception("Association rejection not reported")
+        if "status_code=" + str(status) not in ev:
+            raise Exception("Unexpected status code: " + ev)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+    tests = [ ("Management frame protection not enabled",
+               "30140100000fac040100000fac040100000fac010000", 31),
+              ("Unsupported management group cipher",
+               "301a0100000fac040100000fac040100000fac01cc000000000fac0b", 31) ]
+    for title, ie, status in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect("test-wpa2-eap-11w", key_mgmt="WPA-EAP", ieee80211w="1",
+                       eap="GPSK", identity="gpsk user",
+                       password="abcdefghijklmnop0123456789abcdef",
+                       scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+        if ev is None:
+            raise Exception("Association rejection not reported")
+        if "status_code=" + str(status) not in ev:
+            raise Exception("Unexpected status code: " + ev)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()

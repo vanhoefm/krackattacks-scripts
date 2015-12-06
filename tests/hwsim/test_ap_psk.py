@@ -2136,3 +2136,43 @@ def test_ap_cli_order(dev, apdev):
         raise Exception("AP startup failed")
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+
+def set_test_assoc_ie(dev, ie):
+    if "OK" not in dev.request("TEST_ASSOC_IE " + ie):
+        raise Exception("Could not set TEST_ASSOC_IE")
+
+def test_ap_wpa2_psk_assoc_rsn(dev, apdev):
+    """WPA2-PSK AP and association request RSN IE differences"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ ("Normal wpa_supplicant assoc req RSN IE",
+               "30140100000fac040100000fac040100000fac020000"),
+              ("RSN IE without RSN Capabilities",
+               "30120100000fac040100000fac040100000fac02") ]
+    for title, ie in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ ("WPA IE instead of RSN IE and only RSN enabled on AP",
+               "dd160050f20101000050f20201000050f20201000050f202", 40),
+              ("Empty RSN IE", "3000", 40),
+              ("RSN IE with truncated Version", "300101", 40),
+              ("RSN IE with only Version", "30020100", 43) ]
+    for title, ie, status in tests:
+        logger.info(title)
+        set_test_assoc_ie(dev[0], ie)
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+        if ev is None:
+            raise Exception("Association rejection not reported")
+        if "status_code=" + str(status) not in ev:
+            raise Exception("Unexpected status code: " + ev)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()

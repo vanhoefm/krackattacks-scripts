@@ -3325,7 +3325,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	switch (event) {
 	case EVENT_AUTH:
 #ifdef CONFIG_FST
-		wpas_fst_update_mbie(wpa_s, data->auth.ies, data->auth.ies_len);
+		if (!wpas_fst_update_mbie(wpa_s, data->auth.ies,
+					  data->auth.ies_len))
+			wpa_printf(MSG_DEBUG,
+				   "FST: MB IEs updated from auth IE");
 #endif /* CONFIG_FST */
 		sme_event_auth(wpa_s, data);
 		break;

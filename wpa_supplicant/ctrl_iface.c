@@ -6952,6 +6952,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->extra_roc_dur = 0;
 	wpa_s->test_failure = WPAS_TEST_FAILURE_NONE;
 	wpa_s->p2p_go_csa_on_inv = 0;
+	wpa_sm_set_test_assoc_ie(wpa_s->wpa, NULL);
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_s->disconnected = 0;
@@ -7839,6 +7840,35 @@ static int wpas_ctrl_event_test(struct wpa_supplicant *wpa_s, const char *cmd)
 
 	return eloop_register_timeout(0, 0, wpas_ctrl_event_test_cb, wpa_s,
 				      (void *) (intptr_t) count);
+}
+
+
+static int wpas_ctrl_test_assoc_ie(struct wpa_supplicant *wpa_s,
+				   const char *cmd)
+{
+	struct wpabuf *buf;
+	size_t len;
+
+	len = os_strlen(cmd);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	if (len == 0) {
+		buf = NULL;
+	} else {
+		buf = wpabuf_alloc(len);
+		if (buf == NULL)
+			return -1;
+
+		if (hexstr2bin(cmd, wpabuf_put(buf, len), len) < 0) {
+			wpabuf_free(buf);
+			return -1;
+		}
+	}
+
+	wpa_sm_set_test_assoc_ie(wpa_s->wpa, buf);
+	return 0;
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -8804,6 +8834,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpas_ctrl_get_fail(wpa_s, reply, reply_size);
 	} else if (os_strncmp(buf, "EVENT_TEST ", 11) == 0) {
 		if (wpas_ctrl_event_test(wpa_s, buf + 11) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "TEST_ASSOC_IE ", 14) == 0) {
+		if (wpas_ctrl_test_assoc_ie(wpa_s, buf + 14) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {

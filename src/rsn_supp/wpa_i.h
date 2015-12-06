@@ -134,6 +134,10 @@ struct wpa_sm {
 #ifdef CONFIG_P2P
 	u8 p2p_ip_addr[3 * 4];
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_TESTING_OPTIONS
+	struct wpabuf *test_assoc_ie;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

@@ -419,5 +419,6 @@ int wpa_tdls_enable_chan_switch(struct wpa_sm *sm, const u8 *addr,
 int wpa_tdls_disable_chan_switch(struct wpa_sm *sm, const u8 *addr);
 
 int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf);
+void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf);
 
 #endif /* WPA_H */

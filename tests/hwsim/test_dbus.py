@@ -5049,3 +5049,114 @@ def test_dbus_save_config(dev, apdev):
     except dbus.exceptions.DBusException, e:
         if not str(e).startswith("fi.w1.wpa_supplicant1.UnknownError: Not allowed to update configuration"):
             raise Exception("Unexpected error message for SaveConfig(): " + str(e))
+
+def test_dbus_vendor_elem(dev, apdev):
+    """D-Bus vendor element operations"""
+    try:
+        _test_dbus_vendor_elem(dev, apdev)
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 1 *")
+
+def _test_dbus_vendor_elem(dev, apdev):
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    dev[0].request("VENDOR_ELEM_REMOVE 1 *")
+
+    try:
+        ie = dbus.ByteArray("\x00\x00")
+        iface.VendorElemAdd(-1, ie)
+        raise Exception("Invalid VendorElemAdd() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Invalid ID" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemAdd[1]: " + str(e))
+
+    try:
+        ie = dbus.ByteArray("")
+        iface.VendorElemAdd(1, ie)
+        raise Exception("Invalid VendorElemAdd() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Invalid value" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemAdd[2]: " + str(e))
+
+    try:
+        ie = dbus.ByteArray("\x00\x01")
+        iface.VendorElemAdd(1, ie)
+        raise Exception("Invalid VendorElemAdd() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Parse error" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemAdd[3]: " + str(e))
+
+    try:
+        iface.VendorElemGet(-1)
+        raise Exception("Invalid VendorElemGet() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Invalid ID" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemGet[1]: " + str(e))
+
+    try:
+        iface.VendorElemGet(1)
+        raise Exception("Invalid VendorElemGet() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "ID value does not exist" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemGet[2]: " + str(e))
+
+    try:
+        ie = dbus.ByteArray("\x00\x00")
+        iface.VendorElemRem(-1, ie)
+        raise Exception("Invalid VendorElemRemove() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Invalid ID" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemRemove[1]: " + str(e))
+
+    try:
+        ie = dbus.ByteArray("")
+        iface.VendorElemRem(1, ie)
+        raise Exception("Invalid VendorElemRemove() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Invalid value" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemRemove[1]: " + str(e))
+
+    iface.VendorElemRem(1, "*")
+
+    ie = dbus.ByteArray("\x00\x01\x00")
+    iface.VendorElemAdd(1, ie)
+
+    val = iface.VendorElemGet(1)
+    if len(val) != len(ie):
+        raise Exception("Unexpected VendorElemGet length")
+    for i in range(len(val)):
+        if val[i] != dbus.Byte(ie[i]):
+            raise Exception("Unexpected VendorElemGet data")
+
+    ie2 = dbus.ByteArray("\xe0\x00")
+    iface.VendorElemAdd(1, ie2)
+
+    ies = ie + ie2
+    val = iface.VendorElemGet(1)
+    if len(val) != len(ies):
+        raise Exception("Unexpected VendorElemGet length[2]")
+    for i in range(len(val)):
+        if val[i] != dbus.Byte(ies[i]):
+            raise Exception("Unexpected VendorElemGet data[2]")
+
+    try:
+        test_ie = dbus.ByteArray("\x01\x01")
+        iface.VendorElemRem(1, test_ie)
+        raise Exception("Invalid VendorElemRemove() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "Parse error" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemRemove[1]: " + str(e))
+
+    iface.VendorElemRem(1, ie)
+    val = iface.VendorElemGet(1)
+    if len(val) != len(ie2):
+        raise Exception("Unexpected VendorElemGet length[3]")
+
+    iface.VendorElemRem(1, "*")
+    try:
+        iface.VendorElemGet(1)
+        raise Exception("Invalid VendorElemGet() accepted after removal")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e) or "ID value does not exist" not in str(e):
+            raise Exception("Unexpected error message for invalid VendorElemGet after removal: " + str(e))

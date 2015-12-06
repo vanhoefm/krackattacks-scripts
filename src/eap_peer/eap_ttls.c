@@ -71,6 +71,7 @@ static void * eap_ttls_init(struct eap_sm *sm)
 {
 	struct eap_ttls_data *data;
 	struct eap_peer_config *config = eap_get_config(sm);
+	int selected_non_eap;
 	char *selected;
 
 	data = os_zalloc(sizeof(*data));
@@ -78,26 +79,67 @@ static void * eap_ttls_init(struct eap_sm *sm)
 		return NULL;
 	data->ttls_version = EAP_TTLS_VERSION;
 	selected = "EAP";
+	selected_non_eap = 0;
 	data->phase2_type = EAP_TTLS_PHASE2_EAP;
 
+	/*
+	 * Either one auth= type or one or more autheap= methods can be
+	 * specified.
+	 */
 	if (config && config->phase2) {
+		const char *token, *last = NULL;
+
+		while ((token = cstr_token(config->phase2, " \t", &last))) {
+			if (os_strncmp(token, "auth=", 5) != 0)
+				continue;
+			token += 5;
+
+			if (last - token == 8 &&
+			    os_strncmp(token, "MSCHAPV2", 8) == 0) {
+				selected = "MSCHAPV2";
+				data->phase2_type = EAP_TTLS_PHASE2_MSCHAPV2;
+			} else if (last - token == 6 &&
+				   os_strncmp(token, "MSCHAP", 6) == 0) {
+				selected = "MSCHAP";
+				data->phase2_type = EAP_TTLS_PHASE2_MSCHAP;
+			} else if (last - token == 3 &&
+				   os_strncmp(token, "PAP", 3) == 0) {
+				selected = "PAP";
+				data->phase2_type = EAP_TTLS_PHASE2_PAP;
+			} else if (last - token == 4 &&
+				   os_strncmp(token, "CHAP", 4) == 0) {
+				selected = "CHAP";
+				data->phase2_type = EAP_TTLS_PHASE2_CHAP;
+			} else {
+				wpa_printf(MSG_ERROR,
+					   "EAP-TTLS: Unsupported Phase2 type '%s'",
+					   token);
+				eap_ttls_deinit(sm, data);
+				return NULL;
+			}
+
+			if (selected_non_eap) {
+				wpa_printf(MSG_ERROR,
+					   "EAP-TTLS: Only one Phase2 type can be specified");
+				eap_ttls_deinit(sm, data);
+				return NULL;
+			}
+
+			selected_non_eap = 1;
+		}
+
 		if (os_strstr(config->phase2, "autheap=")) {
+			if (selected_non_eap) {
+				wpa_printf(MSG_ERROR,
+					   "EAP-TTLS: Both auth= and autheap= params cannot be specified");
+				eap_ttls_deinit(sm, data);
+				return NULL;
+			}
 			selected = "EAP";
 			data->phase2_type = EAP_TTLS_PHASE2_EAP;
-		} else if (os_strstr(config->phase2, "auth=MSCHAPV2")) {
-			selected = "MSCHAPV2";
-			data->phase2_type = EAP_TTLS_PHASE2_MSCHAPV2;
-		} else if (os_strstr(config->phase2, "auth=MSCHAP")) {
-			selected = "MSCHAP";
-			data->phase2_type = EAP_TTLS_PHASE2_MSCHAP;
-		} else if (os_strstr(config->phase2, "auth=PAP")) {
-			selected = "PAP";
-			data->phase2_type = EAP_TTLS_PHASE2_PAP;
-		} else if (os_strstr(config->phase2, "auth=CHAP")) {
-			selected = "CHAP";
-			data->phase2_type = EAP_TTLS_PHASE2_CHAP;
 		}
 	}
+
 	wpa_printf(MSG_DEBUG, "EAP-TTLS: Phase2 type: %s", selected);
 
 	if (data->phase2_type == EAP_TTLS_PHASE2_EAP) {

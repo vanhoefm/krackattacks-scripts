@@ -2328,10 +2328,18 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		struct wpa_auth_config *conf;
 
 		conf = &sm->wpa_auth->conf;
-		res = wpa_write_ftie(conf, conf->r0_key_holder,
-				     conf->r0_key_holder_len,
-				     NULL, NULL, pos, kde + kde_len - pos,
-				     NULL, 0);
+		if (sm->assoc_resp_ftie &&
+		    kde + kde_len - pos >= 2 + sm->assoc_resp_ftie[1]) {
+			os_memcpy(pos, sm->assoc_resp_ftie,
+				  2 + sm->assoc_resp_ftie[1]);
+			res = 2 + sm->assoc_resp_ftie[1];
+		} else {
+			res = wpa_write_ftie(conf, conf->r0_key_holder,
+					     conf->r0_key_holder_len,
+					     NULL, NULL, pos,
+					     kde + kde_len - pos,
+					     NULL, 0);
+		}
 		if (res < 0) {
 			wpa_printf(MSG_ERROR, "FT: Failed to insert FTIE "
 				   "into EAPOL-Key Key Data");

@@ -364,13 +364,12 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		if (rsn_ie_buf == NULL)
 			return -1;
 		os_memcpy(rsn_ie_buf, wpa_ie, wpa_ie_len);
-		res = wpa_insert_pmkid(rsn_ie_buf, wpa_ie_len,
+		res = wpa_insert_pmkid(rsn_ie_buf, &wpa_ie_len,
 				       sm->pmk_r1_name);
 		if (res < 0) {
 			os_free(rsn_ie_buf);
 			return -1;
 		}
-		wpa_ie_len += res;
 
 		if (sm->assoc_resp_ies) {
 			os_memcpy(rsn_ie_buf + wpa_ie_len, sm->assoc_resp_ies,

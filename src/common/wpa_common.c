@@ -1280,13 +1280,13 @@ int wpa_compare_rsn_ie(int ft_initial_assoc,
 
 
 #ifdef CONFIG_IEEE80211R
-int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
+int wpa_insert_pmkid(u8 *ies, size_t *ies_len, const u8 *pmkid)
 {
 	u8 *start, *end, *rpos, *rend;
 	int added = 0;
 
 	start = ies;
-	end = ies + ies_len;
+	end = ies + *ies_len;
 
 	while (start < end) {
 		if (*start == WLAN_EID_RSN)
@@ -1339,11 +1339,29 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 		added += 2 + PMKID_LEN;
 		start[1] += 2 + PMKID_LEN;
 	} else {
-		/* PMKID-Count was included; use it */
-		if (WPA_GET_LE16(rpos) != 0) {
-			wpa_printf(MSG_ERROR, "FT: Unexpected PMKID "
-				   "in RSN IE in EAPOL-Key data");
+		u16 num_pmkid;
+
+		if (rend - rpos < 2)
 			return -1;
+		num_pmkid = WPA_GET_LE16(rpos);
+		/* PMKID-Count was included; use it */
+		if (num_pmkid != 0) {
+			u8 *after;
+
+			if (num_pmkid * PMKID_LEN > rend - rpos - 2)
+				return -1;
+			/*
+			 * PMKID may have been included in RSN IE in
+			 * (Re)Association Request frame, so remove the old
+			 * PMKID(s) first before adding the new one.
+			 */
+			wpa_printf(MSG_DEBUG,
+				   "FT: Remove %u old PMKID(s) from RSN IE",
+				   num_pmkid);
+			after = rpos + 2 + num_pmkid * PMKID_LEN;
+			os_memmove(rpos + 2, after, rend - after);
+			start[1] -= num_pmkid * PMKID_LEN;
+			added -= num_pmkid * PMKID_LEN;
 		}
 		WPA_PUT_LE16(rpos, 1);
 		rpos += 2;
@@ -1356,7 +1374,9 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 	wpa_hexdump(MSG_DEBUG, "FT: RSN IE after modification "
 		    "(PMKID inserted)", start, 2 + start[1]);
 
-	return added;
+	*ies_len += added;
+
+	return 0;
 }
 #endif /* CONFIG_IEEE80211R */
 

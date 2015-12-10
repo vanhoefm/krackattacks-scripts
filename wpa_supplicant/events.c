@@ -1518,6 +1518,10 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpas_wps_update_ap_info(wpa_s, scan_res);
 
+	if (wpa_s->wpa_state >= WPA_AUTHENTICATING &&
+	    wpa_s->wpa_state < WPA_COMPLETED)
+		goto scan_work_done;
+
 	wpa_scan_results_free(scan_res);
 
 	if (own_request && wpa_s->scan_work) {

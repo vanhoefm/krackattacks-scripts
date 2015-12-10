@@ -65,6 +65,42 @@ static BIGNUM * get_group5_prime(void)
 static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 				 const u8 *addr[], const size_t *len, u8 *mac)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	EVP_MD_CTX *ctx;
+	size_t i;
+	unsigned int mac_len;
+
+	if (TEST_FAIL())
+		return -1;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx)
+		return -1;
+	if (!EVP_DigestInit_ex(ctx, type, NULL)) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestInit_ex failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		EVP_MD_CTX_free(ctx);
+		return -1;
+	}
+	for (i = 0; i < num_elem; i++) {
+		if (!EVP_DigestUpdate(ctx, addr[i], len[i])) {
+			wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestUpdate "
+				   "failed: %s",
+				   ERR_error_string(ERR_get_error(), NULL));
+			EVP_MD_CTX_free(ctx);
+			return -1;
+		}
+	}
+	if (!EVP_DigestFinal(ctx, mac, &mac_len)) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestFinal failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		EVP_MD_CTX_free(ctx);
+		return -1;
+	}
+	EVP_MD_CTX_free(ctx);
+
+	return 0;
+#else
 	EVP_MD_CTX ctx;
 	size_t i;
 	unsigned int mac_len;
@@ -93,6 +129,7 @@ static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 	}
 
 	return 0;
+#endif
 }
 
 
@@ -681,7 +718,11 @@ void dh5_free(void *ctx)
 
 
 struct crypto_hash {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	HMAC_CTX *ctx;
+#else
 	HMAC_CTX ctx;
+#endif
 };
 
 
@@ -716,6 +757,19 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL)
 		return NULL;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	ctx->ctx = HMAC_CTX_new();
+	if (!ctx->ctx) {
+		os_free(ctx);
+		return NULL;
+	}
+
+	if (HMAC_Init_ex(ctx->ctx, key, key_len, md, NULL) != 1) {
+		HMAC_CTX_free(ctx->ctx);
+		bin_clear_free(ctx, sizeof(*ctx));
+		return NULL;
+	}
+#else
 	HMAC_CTX_init(&ctx->ctx);
 
 #if OPENSSL_VERSION_NUMBER < 0x00909000
@@ -726,6 +780,7 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 		return NULL;
 	}
 #endif /* openssl < 0.9.9 */
+#endif
 
 	return ctx;
 }
@@ -735,7 +790,11 @@ void crypto_hash_update(struct crypto_hash *ctx, const u8 *data, size_t len)
 {
 	if (ctx == NULL)
 		return;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	HMAC_Update(ctx->ctx, data, len);
+#else
 	HMAC_Update(&ctx->ctx, data, len);
+#endif
 }
 
 
@@ -748,11 +807,18 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 		return -2;
 
 	if (mac == NULL || len == NULL) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		HMAC_CTX_free(ctx->ctx);
+#endif
 		bin_clear_free(ctx, sizeof(*ctx));
 		return 0;
 	}
 
 	mdlen = *len;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	res = HMAC_Final(ctx->ctx, mac, &mdlen);
+	HMAC_CTX_free(ctx->ctx);
+#else
 #if OPENSSL_VERSION_NUMBER < 0x00909000
 	HMAC_Final(&ctx->ctx, mac, &mdlen);
 	res = 1;
@@ -760,6 +826,7 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 	res = HMAC_Final(&ctx->ctx, mac, &mdlen);
 #endif /* openssl < 0.9.9 */
 	HMAC_CTX_cleanup(&ctx->ctx);
+#endif
 	bin_clear_free(ctx, sizeof(*ctx));
 
 	if (res == 1) {
@@ -776,6 +843,30 @@ static int openssl_hmac_vector(const EVP_MD *type, const u8 *key,
 			       const u8 *addr[], const size_t *len, u8 *mac,
 			       unsigned int mdlen)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	HMAC_CTX *ctx;
+	size_t i;
+	int res;
+
+	if (TEST_FAIL())
+		return -1;
+
+	ctx = HMAC_CTX_new();
+	if (!ctx)
+		return -1;
+	res = HMAC_Init_ex(ctx, key, key_len, type, NULL);
+	if (res != 1)
+		goto done;
+
+	for (i = 0; i < num_elem; i++)
+		HMAC_Update(ctx, addr[i], len[i]);
+
+	res = HMAC_Final(ctx, mac, &mdlen);
+done:
+	HMAC_CTX_free(ctx);
+
+	return res == 1 ? 0 : -1;
+#else
 	HMAC_CTX ctx;
 	size_t i;
 	int res;
@@ -803,6 +894,7 @@ static int openssl_hmac_vector(const EVP_MD *type, const u8 *key,
 	HMAC_CTX_cleanup(&ctx);
 
 	return res == 1 ? 0 : -1;
+#endif
 }
 
 

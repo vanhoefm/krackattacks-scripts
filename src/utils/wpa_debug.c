@@ -148,7 +148,7 @@ int wpa_debug_open_linux_tracing(void)
 		strtok_r(line, " ", &tmp2);
 		tmp_path = strtok_r(NULL, " ", &tmp2);
 		fstype = strtok_r(NULL, " ", &tmp2);
-		if (strcmp(fstype, "debugfs") == 0) {
+		if (fstype && strcmp(fstype, "debugfs") == 0) {
 			path = tmp_path;
 			break;
 		}

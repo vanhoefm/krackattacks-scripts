@@ -25,6 +25,9 @@
 /** GAS query timeout in seconds */
 #define GAS_QUERY_TIMEOUT_PERIOD 2
 
+/* GAS query wait-time / duration in ms */
+#define GAS_QUERY_WAIT_TIME_INITIAL 1000
+#define GAS_QUERY_WAIT_TIME_COMEBACK 150
 
 /**
  * struct gas_query_pending - Pending GAS query
@@ -254,9 +257,8 @@ static int pmf_in_use(struct wpa_supplicant *wpa_s, const u8 *addr)
 
 
 static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
-			struct wpabuf *req)
+			struct wpabuf *req, unsigned int wait_time)
 {
-	unsigned int wait_time;
 	int res, prot = pmf_in_use(gas->wpa_s, query->addr);
 
 	wpa_printf(MSG_DEBUG, "GAS: Send action frame to " MACSTR " len=%u "
@@ -267,7 +269,6 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 		*categ = WLAN_ACTION_PROTECTED_DUAL;
 	}
 	os_get_reltime(&query->last_oper);
-	wait_time = 1000;
 	if (gas->wpa_s->max_remain_on_chan &&
 	    wait_time > gas->wpa_s->max_remain_on_chan)
 		wait_time = gas->wpa_s->max_remain_on_chan;
@@ -285,6 +286,7 @@ static void gas_query_tx_comeback_req(struct gas_query *gas,
 				      struct gas_query_pending *query)
 {
 	struct wpabuf *req;
+	unsigned int wait_time;
 
 	req = gas_build_comeback_req(query->dialog_token);
 	if (req == NULL) {
@@ -292,7 +294,10 @@ static void gas_query_tx_comeback_req(struct gas_query *gas,
 		return;
 	}
 
-	if (gas_query_tx(gas, query, req) < 0) {
+	wait_time = !query->offchannel_tx_started ?
+		GAS_QUERY_WAIT_TIME_INITIAL : GAS_QUERY_WAIT_TIME_COMEBACK;
+
+	if (gas_query_tx(gas, query, req, wait_time) < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
 			   MACSTR, MAC2STR(query->addr));
 		gas_query_done(gas, query, GAS_QUERY_INTERNAL_ERROR);
@@ -626,7 +631,8 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 
 	gas->work = work;
 
-	if (gas_query_tx(gas, query, query->req) < 0) {
+	if (gas_query_tx(gas, query, query->req,
+			 GAS_QUERY_WAIT_TIME_INITIAL) < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
 			   MACSTR, MAC2STR(query->addr));
 		gas_query_free(query, 1);

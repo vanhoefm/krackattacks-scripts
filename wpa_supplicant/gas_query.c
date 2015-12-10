@@ -319,6 +319,8 @@ static void gas_query_tx_comeback_req_delay(struct gas_query *gas,
 {
 	unsigned int secs, usecs;
 
+	offchannel_send_action_done(gas->wpa_s);
+
 	secs = (comeback_delay * 1024) / 1000000;
 	usecs = comeback_delay * 1024 - secs * 1000000;
 	wpa_printf(MSG_DEBUG, "GAS: Send comeback request to " MACSTR

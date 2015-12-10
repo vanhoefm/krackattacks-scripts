@@ -1927,6 +1927,12 @@ static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 		printf("Not connected to hostapd - command dropped.\n");
 		return -1;
 	}
+	if (ifname_prefix) {
+		os_snprintf(buf, sizeof(buf), "IFNAME=%s %s",
+			    ifname_prefix, cmd);
+		buf[sizeof(buf) - 1] = '\0';
+		cmd = buf;
+	}
 	len = sizeof(buf) - 1;
 	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len,
 			       wpa_cli_msg_cb);

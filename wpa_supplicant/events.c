@@ -1574,6 +1574,13 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 			return 0;
 		}
 
+		if (ssid != wpa_s->current_ssid &&
+		    wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+			wpa_s->own_disconnect_req = 1;
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		}
+
 		if (wpa_supplicant_connect(wpa_s, selected, ssid) < 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Connect failed");
 			return -1;

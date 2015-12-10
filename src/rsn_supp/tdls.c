@@ -2176,6 +2176,14 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 			   "ignore TPK M2 from " MACSTR, MAC2STR(src_addr));
 		return -1;
 	}
+
+	if (peer->tpk_success) {
+		wpa_printf(MSG_INFO, "TDLS: Ignore incoming TPK M2 retry, from "
+			   MACSTR " as TPK M3 was already sent",
+			   MAC2STR(src_addr));
+		return 0;
+	}
+
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
 	if (len < 3 + 2 + 1) {

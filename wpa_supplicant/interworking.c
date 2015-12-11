@@ -2775,7 +2775,8 @@ static void anqp_add_extra(struct wpa_supplicant *wpa_s,
 static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 					    struct wpa_bss *bss, const u8 *sa,
 					    u16 info_id,
-					    const u8 *data, size_t slen)
+					    const u8 *data, size_t slen,
+					    u8 dialog_token)
 {
 	const u8 *pos = data;
 	struct wpa_bss_anqp *anqp = NULL;
@@ -2885,7 +2886,8 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			switch (type) {
 			case HS20_ANQP_OUI_TYPE:
 				hs20_parse_rx_hs20_anqp_resp(wpa_s, bss, sa,
-							     pos, slen);
+							     pos, slen,
+							     dialog_token);
 				break;
 			default:
 				wpa_msg(wpa_s, MSG_DEBUG,
@@ -2988,7 +2990,7 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 			goto out_parse_done;
 		}
 		interworking_parse_rx_anqp_resp(wpa_s, bss, dst, info_id, pos,
-						slen);
+						slen, dialog_token);
 		pos += slen;
 	}
 

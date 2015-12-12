@@ -1721,7 +1721,7 @@ static u8 * eap_fast_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 	struct eap_fast_data *data = priv;
 	u8 *id;
 
-	if (!data->success)
+	if (!data->success || !data->session_id)
 		return NULL;
 
 	id = os_malloc(data->id_len);

@@ -455,7 +455,8 @@ int eap_fast_load_pac(struct eap_sm *sm, struct eap_fast_pac **pac_root,
 	}
 
 	if (pac) {
-		err = "PAC block not terminated with END";
+		if (!err)
+			err = "PAC block not terminated with END";
 		eap_fast_free_pac(pac);
 	}
 

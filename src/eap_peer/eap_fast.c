@@ -260,8 +260,9 @@ static void eap_fast_deinit(struct eap_sm *sm, void *priv)
 
 static int eap_fast_derive_msk(struct eap_fast_data *data)
 {
-	eap_fast_derive_eap_msk(data->simck, data->key_data);
-	eap_fast_derive_eap_emsk(data->simck, data->emsk);
+	if (eap_fast_derive_eap_msk(data->simck, data->key_data) < 0 ||
+	    eap_fast_derive_eap_emsk(data->simck, data->emsk) < 0)
+		return -1;
 	data->success = 1;
 	return 0;
 }

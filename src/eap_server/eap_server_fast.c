@@ -1564,7 +1564,10 @@ static u8 * eap_fast_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (eapKeyData == NULL)
 		return NULL;
 
-	eap_fast_derive_eap_msk(data->simck, eapKeyData);
+	if (eap_fast_derive_eap_msk(data->simck, eapKeyData) < 0) {
+		os_free(eapKeyData);
+		return NULL;
+	}
 	*len = EAP_FAST_KEY_LEN;
 
 	return eapKeyData;
@@ -1583,7 +1586,10 @@ static u8 * eap_fast_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (eapKeyData == NULL)
 		return NULL;
 
-	eap_fast_derive_eap_emsk(data->simck, eapKeyData);
+	if (eap_fast_derive_eap_emsk(data->simck, eapKeyData) < 0) {
+		os_free(eapKeyData);
+		return NULL;
+	}
 	*len = EAP_EMSK_LEN;
 
 	return eapKeyData;

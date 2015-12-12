@@ -5821,3 +5821,186 @@ def test_eap_proto_erp(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_fast_errors(dev, apdev):
+    """EAP-FAST local error cases"""
+    check_eap_capa(dev[0], "FAST")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 5):
+        with alloc_fail(dev[0], i, "eap_fast_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="FAST", anonymous_identity="FAST",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                           phase1="fast_provisioning=2",
+                           pac_file="blob://fast_pac_auth",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "wpabuf_alloc;eap_fast_tlv_eap_payload"),
+              (1, "eap_fast_derive_key;eap_fast_derive_key_auth"),
+              (1, "eap_msg_alloc;eap_peer_tls_phase2_nak"),
+              (1, "wpabuf_alloc;eap_fast_tlv_result"),
+              (1, "wpabuf_alloc;eap_fast_tlv_pac_ack"),
+              (1, "=eap_peer_tls_derive_session_id;eap_fast_process_crypto_binding"),
+              (1, "eap_peer_tls_decrypt;eap_fast_decrypt"),
+              (1, "eap_fast_getKey"),
+              (1, "eap_fast_get_session_id"),
+              (1, "eap_fast_get_emsk") ]
+    for count, func in tests:
+        dev[0].request("SET blob fast_pac_auth_errors ")
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="FAST", anonymous_identity="FAST",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                           phase1="fast_provisioning=2",
+                           pac_file="blob://fast_pac_auth_errors",
+                           erp="1",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_fast_derive_key;eap_fast_derive_key_provisioning"),
+              (1, "eap_mschapv2_getKey;eap_fast_get_phase2_key"),
+              (1, "=eap_fast_use_pac_opaque"),
+              (1, "eap_fast_copy_buf"),
+              (1, "=eap_fast_add_pac"),
+              (1, "=eap_fast_init_pac_data"),
+              (1, "=eap_fast_write_pac"),
+              (2, "=eap_fast_write_pac") ]
+    for count, func in tests:
+        dev[0].request("SET blob fast_pac_errors ")
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="FAST", anonymous_identity="FAST",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           phase1="fast_provisioning=1",
+                           pac_file="blob://fast_pac_errors",
+                           erp="1",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_fast_get_cmk;eap_fast_process_crypto_binding"),
+              (1, "eap_fast_derive_eap_msk;eap_fast_process_crypto_binding"),
+              (1, "eap_fast_derive_eap_emsk;eap_fast_process_crypto_binding") ]
+    for count, func in tests:
+        dev[0].request("SET blob fast_pac_auth_errors ")
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="FAST", anonymous_identity="FAST",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                           phase1="fast_provisioning=2",
+                           pac_file="blob://fast_pac_auth_errors",
+                           erp="1",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    dev[0].request("SET blob fast_pac_errors ")
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="FAST", anonymous_identity="FAST",
+                   identity="user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                   phase1="fast_provisioning=1",
+                   pac_file="blob://fast_pac_errors",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    # EAP-FAST: Only EAP-MSCHAPv2 is allowed during unauthenticated
+    # provisioning; reject phase2 type 6
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP failure")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Wrong password in Phase 2")
+    dev[0].request("SET blob fast_pac_errors ")
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="FAST", anonymous_identity="FAST",
+                   identity="user", password="wrong password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   phase1="fast_provisioning=1",
+                   pac_file="blob://fast_pac_errors",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP failure")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    tests = [ "FOOBAR\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nFOOBAR\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nSTART\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nPAC-Type=12345\nEND\n"
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nPAC-Key=12\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nPAC-Key=1\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nPAC-Key=1q\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nPAC-Opaque=1\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nA-ID=1\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nI-ID=1\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nA-ID-Info=1\nEND\n" ]
+    for pac in tests:
+        blob = binascii.hexlify(pac)
+        dev[0].request("SET blob fast_pac_errors " + blob)
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="FAST", anonymous_identity="FAST",
+                       identity="user", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                       phase1="fast_provisioning=2",
+                       pac_file="blob://fast_pac_errors",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=5)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nEND\n",
+              "wpa_supplicant EAP-FAST PAC file - version 1\nSTART\nEND\nSTART\nEND\nSTART\nEND\n" ]
+    for pac in tests:
+        blob = binascii.hexlify(pac)
+        dev[0].request("SET blob fast_pac_errors " + blob)
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="FAST", anonymous_identity="FAST",
+                       identity="user", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                       phase1="fast_provisioning=2",
+                       pac_file="blob://fast_pac_errors")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].request("SET blob fast_pac_errors ")

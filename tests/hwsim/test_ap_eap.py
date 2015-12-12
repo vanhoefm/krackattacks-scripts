@@ -21,6 +21,12 @@ from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips, wait_fail_tr
 from wpasupplicant import WpaSupplicant
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations, set_test_assoc_ie
 
+try:
+    import OpenSSL
+    openssl_imported = True
+except ImportError:
+    openssl_imported = False
+
 def check_hlr_auc_gw_support():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
         raise HwsimSkip("No hlr_auc_gw available")
@@ -59,6 +65,11 @@ def check_cert_probe_support(dev):
     tls = dev.request("GET tls_library")
     if not tls.startswith("OpenSSL") and not tls.startswith("internal"):
         raise HwsimSkip("Certificate probing not supported with this TLS library: " + tls)
+
+def check_ext_cert_check_support(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("ext_cert_check not supported with this TLS library: " + tls)
 
 def check_ocsp_support(dev):
     tls = dev.request("GET tls_library")
@@ -4374,3 +4385,128 @@ def test_ap_wpa2_eap_assoc_rsn(dev, apdev):
             raise Exception("Unexpected status code: " + ev)
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()
+
+def test_eap_tls_ext_cert_check(dev, apdev):
+    """EAP-TLS and external server certification validation"""
+    # With internal server certificate chain validation
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                        identity="tls user",
+                        ca_cert="auth_serv/ca.pem",
+                        client_cert="auth_serv/user.pem",
+                        private_key="auth_serv/user.key",
+                        phase1="tls_ext_cert_check=1", scan_freq="2412",
+                        only_add_network=True)
+    run_ext_cert_check(dev, apdev, id)
+
+def test_eap_ttls_ext_cert_check(dev, apdev):
+    """EAP-TTLS and external server certification validation"""
+    # Without internal server certificate chain validation
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                        identity="pap user", anonymous_identity="ttls",
+                        password="password", phase2="auth=PAP",
+                        phase1="tls_ext_cert_check=1", scan_freq="2412",
+                        only_add_network=True)
+    run_ext_cert_check(dev, apdev, id)
+
+def test_eap_peap_ext_cert_check(dev, apdev):
+    """EAP-PEAP and external server certification validation"""
+    # With internal server certificate chain validation
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                        identity="user", anonymous_identity="peap",
+                        ca_cert="auth_serv/ca.pem",
+                        password="password", phase2="auth=MSCHAPV2",
+                        phase1="tls_ext_cert_check=1", scan_freq="2412",
+                        only_add_network=True)
+    run_ext_cert_check(dev, apdev, id)
+
+def test_eap_fast_ext_cert_check(dev, apdev):
+    """EAP-FAST and external server certification validation"""
+    check_eap_capa(dev[0], "FAST")
+    # With internal server certificate chain validation
+    dev[0].request("SET blob fast_pac_auth_ext ")
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                        identity="user", anonymous_identity="FAST",
+                        ca_cert="auth_serv/ca.pem",
+                        password="password", phase2="auth=GTC",
+                        phase1="tls_ext_cert_check=1 fast_provisioning=2",
+                        pac_file="blob://fast_pac_auth_ext",
+                        scan_freq="2412",
+                        only_add_network=True)
+    run_ext_cert_check(dev, apdev, id)
+
+def run_ext_cert_check(dev, apdev, net_id):
+    check_ext_cert_check_support(dev[0])
+    if not openssl_imported:
+        raise HwsimSkip("OpenSSL python method not available")
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].select_network(net_id)
+    certs = {}
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PEER-CERT",
+                                "CTRL-REQ-EXT_CERT_CHECK",
+                                "CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("No peer server certificate event seen")
+        if "CTRL-EVENT-EAP-PEER-CERT" in ev:
+            depth = None
+            cert = None
+            vals = ev.split(' ')
+            for v in vals:
+                if v.startswith("depth="):
+                    depth = int(v.split('=')[1])
+                elif v.startswith("cert="):
+                    cert = v.split('=')[1]
+            if depth is not None and cert:
+                certs[depth] = binascii.unhexlify(cert)
+        elif "CTRL-EVENT-EAP-SUCCESS" in ev:
+            raise Exception("Unexpected EAP-Success")
+        elif "CTRL-REQ-EXT_CERT_CHECK" in ev:
+            id = ev.split(':')[0].split('-')[-1]
+            break
+    if 0 not in certs:
+        raise Exception("Server certificate not received")
+    if 1 not in certs:
+        raise Exception("Server certificate issuer not received")
+
+    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1,
+                                           certs[0])
+    cn = cert.get_subject().commonName
+    logger.info("Server certificate CN=" + cn)
+
+    issuer = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1,
+                                             certs[1])
+    icn = issuer.get_subject().commonName
+    logger.info("Issuer certificate CN=" + icn)
+
+    if cn != "server.w1.fi":
+        raise Exception("Unexpected server certificate CN: " + cn)
+    if icn != "Root CA":
+        raise Exception("Unexpected server certificate issuer CN: " + icn)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=0.1)
+    if ev:
+        raise Exception("Unexpected EAP-Success before external check result indication")
+
+    dev[0].request("CTRL-RSP-EXT_CERT_CHECK-" + id + ":good")
+    dev[0].wait_connected()
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    if "FAIL" in dev[0].request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+    dev[0].request("SET blob fast_pac_auth_ext ")
+    dev[0].request("RECONNECT")
+
+    ev = dev[0].wait_event(["CTRL-REQ-EXT_CERT_CHECK"], timeout=10)
+    if ev is None:
+        raise Exception("No peer server certificate event seen (2)")
+    id = ev.split(':')[0].split('-')[-1]
+    dev[0].request("CTRL-RSP-EXT_CERT_CHECK-" + id + ":bad")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

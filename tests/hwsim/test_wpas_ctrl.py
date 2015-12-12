@@ -1158,7 +1158,9 @@ def test_wpas_ctrl_country(dev, apdev):
         ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"], 10)
         if ev is None:
             raise Exception("regdom change event not seen")
-        if "init=CORE type=WORLD" not in ev:
+        # init=CORE was previously used due to invalid db.txt data for 00. For
+        # now, allow both it and the new init=USER after fixed db.txt.
+        if "init=CORE type=WORLD" not in ev and "init=USER type=WORLD" not in ev:
             raise Exception("Unexpected event contents: " + ev)
     finally:
         subprocess.call(['iw', 'reg', 'set', '00'])

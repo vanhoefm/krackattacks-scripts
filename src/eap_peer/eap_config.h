@@ -739,6 +739,20 @@ struct eap_peer_config {
 	 * erp - Whether EAP Re-authentication Protocol (ERP) is enabled
 	 */
 	int erp;
+
+	/**
+	 * pending_ext_cert_check - External server certificate check status
+	 *
+	 * This field should not be set in configuration step. It is only used
+	 * internally when control interface is used to request external
+	 * validation of server certificate chain.
+	 */
+	enum {
+		NO_CHECK = 0,
+		PENDING_CHECK,
+		EXT_CERT_CHECK_GOOD,
+		EXT_CERT_CHECK_BAD,
+	} pending_ext_cert_check;
 };
 
 

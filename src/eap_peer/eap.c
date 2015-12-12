@@ -48,6 +48,8 @@ static void eap_sm_parseEapReq(struct eap_sm *sm, const struct wpabuf *req);
 static const char * eap_sm_method_state_txt(EapMethodState state);
 static const char * eap_sm_decision_txt(EapDecision decision);
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
+			   const char *msg, size_t msglen);
 
 
 
@@ -320,11 +322,14 @@ SM_STATE(EAP, GET_METHOD)
 	wpa_printf(MSG_DEBUG, "EAP: Initialize selected EAP method: "
 		   "vendor %u method %u (%s)",
 		   sm->reqVendor, method, sm->m->name);
-	if (reinit)
+	if (reinit) {
 		sm->eap_method_priv = sm->m->init_for_reauth(
 			sm, sm->eap_method_priv);
-	else
+	} else {
+		sm->waiting_ext_cert_check = 0;
+		sm->ext_cert_check = 0;
 		sm->eap_method_priv = sm->m->init(sm);
+	}
 
 	if (sm->eap_method_priv == NULL) {
 		struct eap_peer_config *config = eap_get_config(sm);
@@ -1858,6 +1863,11 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
 	case TLS_CERT_CHAIN_SUCCESS:
 		eap_notify_status(sm, "remote certificate verification",
 				  "success");
+		if (sm->ext_cert_check) {
+			sm->waiting_ext_cert_check = 1;
+			eap_sm_request(sm, WPA_CTRL_REQ_EXT_CERT_CHECK,
+				       NULL, 0);
+		}
 		break;
 	case TLS_CERT_CHAIN_FAILURE:
 		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_TLS_CERT_ERROR
@@ -2180,10 +2190,10 @@ int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen, int verbose)
 #endif /* CONFIG_CTRL_IFACE */
 
 
-#if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 			   const char *msg, size_t msglen)
 {
+#if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 	struct eap_peer_config *config;
 	const char *txt = NULL;
 	char *tmp;
@@ -2232,16 +2242,17 @@ static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 	case WPA_CTRL_REQ_SIM:
 		txt = msg;
 		break;
+	case WPA_CTRL_REQ_EXT_CERT_CHECK:
+		break;
 	default:
 		return;
 	}
 
 	if (sm->eapol_cb->eap_param_needed)
 		sm->eapol_cb->eap_param_needed(sm->eapol_ctx, field, txt);
-}
-#else /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
-#define eap_sm_request(sm, type, msg, msglen) do { } while (0)
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+}
+
 
 const char * eap_sm_get_method_name(struct eap_sm *sm)
 {

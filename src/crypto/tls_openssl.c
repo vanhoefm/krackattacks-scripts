@@ -1583,7 +1583,8 @@ static void openssl_tls_cert_event(struct tls_connection *conn,
 		return;
 
 	os_memset(&ev, 0, sizeof(ev));
-	if (conn->cert_probe || context->cert_in_cb) {
+	if (conn->cert_probe || (conn->flags & TLS_CONN_EXT_CERT_CHECK) ||
+	    context->cert_in_cb) {
 		cert = get_x509_cert(err_cert);
 		ev.peer_cert.cert = cert;
 	}
@@ -1821,7 +1822,7 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	}
 #endif /* OPENSSL_IS_BORINGSSL */
 
-	if (preverify_ok && context->event_cb != NULL)
+	if (depth == 0 && preverify_ok && context->event_cb != NULL)
 		context->event_cb(context->cb_ctx,
 				  TLS_CERT_CHAIN_SUCCESS, NULL);
 

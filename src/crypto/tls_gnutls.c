@@ -347,6 +347,12 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (conn == NULL || params == NULL)
 		return -1;
 
+	if (params->flags & TLS_CONN_EXT_CERT_CHECK) {
+		wpa_printf(MSG_INFO,
+			   "GnuTLS: tls_ext_cert_check=1 not supported");
+		return -1;
+	}
+
 	if (params->subject_match) {
 		wpa_printf(MSG_INFO, "GnuTLS: subject_match not supported");
 		return -1;

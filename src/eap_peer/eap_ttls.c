@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-TTLS (RFC 5281)
- * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -58,6 +58,7 @@ struct eap_ttls_data {
 	size_t id_len;
 
 	struct wpabuf *pending_phase2_req;
+	struct wpabuf *pending_resp;
 
 #ifdef EAP_TNC
 	int ready_for_tnc;
@@ -153,6 +154,7 @@ static void eap_ttls_deinit(struct eap_sm *sm, void *priv)
 	eap_ttls_free_key(data);
 	os_free(data->session_id);
 	wpabuf_free(data->pending_phase2_req);
+	wpabuf_free(data->pending_resp);
 	os_free(data);
 }
 
@@ -1408,6 +1410,32 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 {
 	int res;
 
+	if (sm->waiting_ext_cert_check && data->pending_resp) {
+		struct eap_peer_config *config = eap_get_config(sm);
+
+		if (config->pending_ext_cert_check == EXT_CERT_CHECK_GOOD) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-TTLS: External certificate check succeeded - continue handshake");
+			*out_data = data->pending_resp;
+			data->pending_resp = NULL;
+			sm->waiting_ext_cert_check = 0;
+			return 0;
+		}
+
+		if (config->pending_ext_cert_check == EXT_CERT_CHECK_BAD) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-TTLS: External certificate check failed - force authentication failure");
+			ret->methodState = METHOD_DONE;
+			ret->decision = DECISION_FAIL;
+			sm->waiting_ext_cert_check = 0;
+			return 0;
+		}
+
+		wpa_printf(MSG_DEBUG,
+			   "EAP-TTLS: Continuing to wait external server certificate validation");
+		return 0;
+	}
+
 	res = eap_peer_tls_process_helper(sm, &data->ssl, EAP_TYPE_TTLS,
 					  data->ttls_version, identifier,
 					  in_data, out_data);
@@ -1416,6 +1444,15 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 		ret->methodState = METHOD_DONE;
 		ret->decision = DECISION_FAIL;
 		return -1;
+	}
+
+	if (sm->waiting_ext_cert_check) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-TTLS: Waiting external server certificate validation");
+		wpabuf_free(data->pending_resp);
+		data->pending_resp = *out_data;
+		*out_data = NULL;
+		return 0;
 	}
 
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
@@ -1557,6 +1594,8 @@ static void eap_ttls_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_ttls_data *data = priv;
 	wpabuf_free(data->pending_phase2_req);
 	data->pending_phase2_req = NULL;
+	wpabuf_free(data->pending_resp);
+	data->pending_resp = NULL;
 #ifdef EAP_TNC
 	data->ready_for_tnc = 0;
 	data->tnc_started = 0;

@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-FAST (RFC 4851)
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -67,6 +67,7 @@ struct eap_fast_data {
 	int simck_idx;
 
 	struct wpabuf *pending_phase2_req;
+	struct wpabuf *pending_resp;
 };
 
 
@@ -254,6 +255,7 @@ static void eap_fast_deinit(struct eap_sm *sm, void *priv)
 	os_memset(data->emsk, 0, EAP_EMSK_LEN);
 	os_free(data->session_id);
 	wpabuf_free(data->pending_phase2_req);
+	wpabuf_free(data->pending_resp);
 	os_free(data);
 }
 
@@ -1568,6 +1570,34 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 			res = 1;
 		}
 	} else {
+		if (sm->waiting_ext_cert_check && data->pending_resp) {
+			struct eap_peer_config *config = eap_get_config(sm);
+
+			if (config->pending_ext_cert_check ==
+			    EXT_CERT_CHECK_GOOD) {
+				wpa_printf(MSG_DEBUG,
+					   "EAP-FAST: External certificate check succeeded - continue handshake");
+				resp = data->pending_resp;
+				data->pending_resp = NULL;
+				sm->waiting_ext_cert_check = 0;
+				return resp;
+			}
+
+			if (config->pending_ext_cert_check ==
+			    EXT_CERT_CHECK_BAD) {
+				wpa_printf(MSG_DEBUG,
+					   "EAP-FAST: External certificate check failed - force authentication failure");
+				ret->methodState = METHOD_DONE;
+				ret->decision = DECISION_FAIL;
+				sm->waiting_ext_cert_check = 0;
+				return NULL;
+			}
+
+			wpa_printf(MSG_DEBUG,
+				   "EAP-FAST: Continuing to wait external server certificate validation");
+			return NULL;
+		}
+
 		/* Continue processing TLS handshake (phase 1). */
 		res = eap_peer_tls_process_helper(sm, &data->ssl,
 						  EAP_TYPE_FAST,
@@ -1579,6 +1609,14 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 			ret->methodState = METHOD_DONE;
 			ret->decision = DECISION_FAIL;
 			return resp;
+		}
+
+		if (sm->waiting_ext_cert_check) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-FAST: Waiting external server certificate validation");
+			wpabuf_free(data->pending_resp);
+			data->pending_resp = resp;
+			return NULL;
 		}
 
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
@@ -1645,6 +1683,8 @@ static void eap_fast_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	data->key_block_p = NULL;
 	wpabuf_free(data->pending_phase2_req);
 	data->pending_phase2_req = NULL;
+	wpabuf_free(data->pending_resp);
+	data->pending_resp = NULL;
 }
 
 

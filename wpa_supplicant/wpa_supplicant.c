@@ -5556,6 +5556,16 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_SCANNING && !wpa_s->scanning)
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		break;
+	case WPA_CTRL_REQ_EXT_CERT_CHECK:
+		if (eap->pending_ext_cert_check != PENDING_CHECK)
+			return -1;
+		if (os_strcmp(value, "good") == 0)
+			eap->pending_ext_cert_check = EXT_CERT_CHECK_GOOD;
+		else if (os_strcmp(value, "bad") == 0)
+			eap->pending_ext_cert_check = EXT_CERT_CHECK_BAD;
+		else
+			return -1;
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown field '%s'", field);
 		return -1;

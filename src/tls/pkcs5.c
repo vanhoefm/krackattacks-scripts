@@ -1,6 +1,6 @@
 /*
  * PKCS #5 (Password-based Encryption)
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -21,8 +21,9 @@ struct pkcs5_params {
 		PKCS5_ALG_UNKNOWN,
 		PKCS5_ALG_MD5_DES_CBC,
 		PKCS5_ALG_PBES2,
+		PKCS5_ALG_SHA1_3DES_CBC,
 	} alg;
-	u8 salt[32];
+	u8 salt[64];
 	size_t salt_len;
 	unsigned int iter_count;
 	enum pbes2_enc_alg {
@@ -63,10 +64,23 @@ static int enc_alg_is_oid(struct asn1_oid *oid, unsigned long alg)
 }
 
 
+static int pkcs12_is_pbe_oid(struct asn1_oid *oid, unsigned long alg)
+{
+	return oid->len == 8 &&
+		oid_is_rsadsi(oid) &&
+		oid->oid[4] == 1 /* pkcs */ &&
+		oid->oid[5] == 12 /* pkcs-12 */ &&
+		oid->oid[6] == 1 /* pkcs-12PbeIds */ &&
+		oid->oid[7] == alg;
+}
+
+
 static enum pkcs5_alg pkcs5_get_alg(struct asn1_oid *oid)
 {
 	if (pkcs5_is_oid(oid, 3)) /* pbeWithMD5AndDES-CBC (PBES1) */
 		return PKCS5_ALG_MD5_DES_CBC;
+	if (pkcs12_is_pbe_oid(oid, 3)) /* pbeWithSHAAnd3-KeyTripleDES-CBC */
+		return PKCS5_ALG_SHA1_3DES_CBC;
 	if (pkcs5_is_oid(oid, 13)) /* id-PBES2 (PBES2) */
 		return PKCS5_ALG_PBES2;
 	return PKCS5_ALG_UNKNOWN;
@@ -299,6 +313,13 @@ static int pkcs5_get_params(const u8 *enc_alg, size_t enc_alg_len,
 	 * PBEParameter ::= SEQUENCE {
 	 *   salt OCTET STRING SIZE(8),
 	 *   iterationCount INTEGER }
+	 *
+	 * Note: The same implementation can be used to parse the PKCS #12
+	 * version described in RFC 7292, C:
+	 * pkcs-12PbeParams ::= SEQUENCE {
+	 *     salt        OCTET STRING,
+	 *     iterations  INTEGER
+	 * }
 	 */
 
 	if (asn1_get_next(pos, enc_alg_end - pos, &hdr) < 0 ||
@@ -312,11 +333,11 @@ static int pkcs5_get_params(const u8 *enc_alg, size_t enc_alg_len,
 	pos = hdr.payload;
 	end = hdr.payload + hdr.length;
 
-	/* salt OCTET STRING SIZE(8) */
+	/* salt OCTET STRING SIZE(8) (PKCS #5) or OCTET STRING (PKCS #12) */
 	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
 	    hdr.class != ASN1_CLASS_UNIVERSAL ||
 	    hdr.tag != ASN1_TAG_OCTETSTRING ||
-	    hdr.length != 8) {
+	    hdr.length > sizeof(params->salt)) {
 		wpa_printf(MSG_DEBUG, "PKCS #5: Expected OCTETSTRING SIZE(8) "
 			   "(salt) - found class %d tag 0x%x size %d",
 			   hdr.class, hdr.tag, hdr.length);
@@ -385,6 +406,148 @@ pkcs5_crypto_init_pbes2(struct pkcs5_params *params, const char *passwd)
 }
 
 
+static void add_byte_array_mod(u8 *a, const u8 *b, size_t len)
+{
+	size_t i;
+	unsigned int carry = 0;
+
+	for (i = len - 1; i < len; i--) {
+		carry = carry + a[i] + b[i];
+		a[i] = carry & 0xff;
+		carry >>= 8;
+	}
+}
+
+
+static int pkcs12_key_gen(const u8 *pw, size_t pw_len, const u8 *salt,
+			  size_t salt_len, u8 id, unsigned int iter,
+			  size_t out_len, u8 *out)
+{
+	unsigned int u, v, S_len, P_len, i;
+	u8 *D = NULL, *I = NULL, *B = NULL, *pos;
+	int res = -1;
+
+	/* RFC 7292, B.2 */
+	u = SHA1_MAC_LEN;
+	v = 64;
+
+	/* D = copies of ID */
+	D = os_malloc(v);
+	if (!D)
+		goto done;
+	os_memset(D, id, v);
+
+	/* S = copies of salt; P = copies of password, I = S || P */
+	S_len = v * ((salt_len + v - 1) / v);
+	P_len = v * ((pw_len + v - 1) / v);
+	I = os_malloc(S_len + P_len);
+	if (!I)
+		goto done;
+	pos = I;
+	if (salt_len) {
+		for (i = 0; i < S_len; i++)
+			*pos++ = salt[i % salt_len];
+	}
+	if (pw_len) {
+		for (i = 0; i < P_len; i++)
+			*pos++ = pw[i % pw_len];
+	}
+
+	B = os_malloc(v);
+	if (!B)
+		goto done;
+
+	for (;;) {
+		u8 hash[SHA1_MAC_LEN];
+		const u8 *addr[2];
+		size_t len[2];
+
+		addr[0] = D;
+		len[0] = v;
+		addr[1] = I;
+		len[1] = S_len + P_len;
+		if (sha1_vector(2, addr, len, hash) < 0)
+			goto done;
+
+		addr[0] = hash;
+		len[0] = SHA1_MAC_LEN;
+		for (i = 1; i < iter; i++) {
+			if (sha1_vector(1, addr, len, hash) < 0)
+				goto done;
+		}
+
+		if (out_len <= u) {
+			os_memcpy(out, hash, out_len);
+			res = 0;
+			goto done;
+		}
+
+		os_memcpy(out, hash, u);
+		out += u;
+		out_len -= u;
+
+		/* I_j = (I_j + B + 1) mod 2^(v*8) */
+		/* B = copies of Ai (final hash value) */
+		for (i = 0; i < v; i++)
+			B[i] = hash[i % u];
+		inc_byte_array(B, v);
+		for (i = 0; i < S_len + P_len; i += v)
+			add_byte_array_mod(&I[i], B, v);
+	}
+
+done:
+	os_free(B);
+	os_free(I);
+	os_free(D);
+	return res;
+}
+
+
+#define PKCS12_ID_ENC 1
+#define PKCS12_ID_IV 2
+#define PKCS12_ID_MAC 3
+
+static struct crypto_cipher *
+pkcs12_crypto_init_sha1(struct pkcs5_params *params, const char *passwd)
+{
+	unsigned int i;
+	u8 *pw;
+	size_t pw_len;
+	u8 key[24];
+	u8 iv[8];
+
+	if (params->alg != PKCS5_ALG_SHA1_3DES_CBC)
+		return NULL;
+
+	pw_len = passwd ? os_strlen(passwd) : 0;
+	pw = os_malloc(2 * (pw_len + 1));
+	if (!pw)
+		return NULL;
+	if (pw_len) {
+		for (i = 0; i <= pw_len; i++)
+			WPA_PUT_BE16(&pw[2 * i], passwd[i]);
+		pw_len = 2 * (pw_len + 1);
+	}
+
+	if (pkcs12_key_gen(pw, pw_len, params->salt, params->salt_len,
+			   PKCS12_ID_ENC, params->iter_count,
+			   sizeof(key), key) < 0 ||
+	    pkcs12_key_gen(pw, pw_len, params->salt, params->salt_len,
+			   PKCS12_ID_IV, params->iter_count,
+			   sizeof(iv), iv) < 0) {
+		os_free(pw);
+		return NULL;
+	}
+
+	os_free(pw);
+
+	wpa_hexdump_key(MSG_DEBUG, "PKCS #12: DES key", key, sizeof(key));
+	wpa_hexdump_key(MSG_DEBUG, "PKCS #12: DES IV", iv, sizeof(iv));
+
+	return crypto_cipher_init(CRYPTO_CIPHER_ALG_3DES, iv, key, sizeof(key));
+}
+
+
 static struct crypto_cipher * pkcs5_crypto_init(struct pkcs5_params *params,
 						const char *passwd)
 {
@@ -395,6 +558,9 @@ static struct crypto_cipher * pkcs5_crypto_init(struct pkcs5_params *params,
 
 	if (params->alg == PKCS5_ALG_PBES2)
 		return pkcs5_crypto_init_pbes2(params, passwd);
+
+	if (params->alg == PKCS5_ALG_SHA1_3DES_CBC)
+		return pkcs12_crypto_init_sha1(params, passwd);
 
 	if (params->alg != PKCS5_ALG_MD5_DES_CBC)
 		return NULL;

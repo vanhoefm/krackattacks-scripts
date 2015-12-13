@@ -1,6 +1,6 @@
 /*
  * TLSv1 client - read handshake message
- * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -35,6 +35,43 @@ static int tls_version_disabled(struct tlsv1_client *conn, u16 ver)
 		 ver == TLS_VERSION_1_1) ||
 		((conn->flags & TLS_CONN_DISABLE_TLSv1_2) &&
 		 ver == TLS_VERSION_1_2));
+}
+
+
+static int tls_process_server_hello_extensions(struct tlsv1_client *conn,
+					       const u8 *pos, size_t len)
+{
+	const u8 *end = pos + len;
+
+	wpa_hexdump(MSG_MSGDUMP, "TLSv1: ServerHello extensions",
+		    pos, len);
+	while (pos < end) {
+		u16 ext, elen;
+
+		if (end - pos < 4) {
+			wpa_printf(MSG_INFO, "TLSv1: Truncated ServerHello extension header");
+			return -1;
+		}
+
+		ext = WPA_GET_BE16(pos);
+		pos += 2;
+		elen = WPA_GET_BE16(pos);
+		pos += 2;
+
+		if (elen > end - pos) {
+			wpa_printf(MSG_INFO, "TLSv1: Truncated ServerHello extension");
+			return -1;
+		}
+
+		wpa_printf(MSG_DEBUG, "TLSv1: ServerHello ExtensionType %u",
+			   ext);
+		wpa_hexdump(MSG_DEBUG, "TLSv1: ServerHello extension data",
+			    pos, elen);
+
+		pos += elen;
+	}
+
+	return 0;
 }
 
 
@@ -177,8 +214,24 @@ static int tls_process_server_hello(struct tlsv1_client *conn, u8 ct,
 	}
 	pos++;
 
+	if (end - pos >= 2) {
+		u16 ext_len;
+
+		ext_len = WPA_GET_BE16(pos);
+		pos += 2;
+		if (end - pos < ext_len) {
+			wpa_printf(MSG_INFO,
+				   "TLSv1: Invalid ServerHello extension length: %u (left: %u)",
+				   ext_len, (unsigned int) (end - pos));
+			goto decode_error;
+		}
+
+		if (tls_process_server_hello_extensions(conn, pos, ext_len))
+			goto decode_error;
+		pos += ext_len;
+	}
+
 	if (end != pos) {
-		/* TODO: ServerHello extensions */
 		wpa_hexdump(MSG_DEBUG, "TLSv1: Unexpected extra data in the "
 			    "end of ServerHello", pos, end - pos);
 		goto decode_error;

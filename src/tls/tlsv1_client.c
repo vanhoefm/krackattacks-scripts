@@ -1,6 +1,6 @@
 /*
  * TLS v1.0/v1.1/v1.2 client (RFC 2246, RFC 4346, RFC 5246)
- * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -11,6 +11,7 @@
 #include "common.h"
 #include "crypto/sha1.h"
 #include "crypto/tls.h"
+#include "x509v3.h"
 #include "tlsv1_common.h"
 #include "tlsv1_record.h"
 #include "tlsv1_client.h"
@@ -494,6 +495,7 @@ void tlsv1_client_deinit(struct tlsv1_client *conn)
 	tlsv1_client_free_dh(conn);
 	tlsv1_cred_free(conn->cred);
 	wpabuf_free(conn->partial_input);
+	x509_certificate_chain_free(conn->server_cert);
 	os_free(conn);
 }
 

@@ -1010,6 +1010,7 @@ OBJS += ../src/tls/tlsv1_cred.o
 OBJS += ../src/tls/tlsv1_client.o
 OBJS += ../src/tls/tlsv1_client_write.o
 OBJS += ../src/tls/tlsv1_client_read.o
+OBJS += ../src/tls/tlsv1_client_ocsp.o
 OBJS += ../src/tls/asn1.o
 OBJS += ../src/tls/rsa.o
 OBJS += ../src/tls/x509v3.o

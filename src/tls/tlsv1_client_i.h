@@ -36,6 +36,7 @@ struct tlsv1_client {
 	unsigned int session_ticket_included:1;
 	unsigned int use_session_ticket:1;
 	unsigned int cert_in_cb:1;
+	unsigned int ocsp_resp_received:1;
 
 	struct crypto_public_key *server_rsa_key;
 
@@ -70,6 +71,8 @@ struct tlsv1_client {
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);
 	void *cb_ctx;
+
+	struct x509_certificate *server_cert;
 };
 
 
@@ -86,5 +89,12 @@ u8 * tlsv1_client_handshake_write(struct tlsv1_client *conn, size_t *out_len,
 int tlsv1_client_process_handshake(struct tlsv1_client *conn, u8 ct,
 				   const u8 *buf, size_t *len,
 				   u8 **out_data, size_t *out_len);
+
+enum tls_ocsp_result {
+	TLS_OCSP_NO_RESPONSE, TLS_OCSP_INVALID, TLS_OCSP_GOOD, TLS_OCSP_REVOKED
+};
+
+enum tls_ocsp_result tls_process_ocsp_response(struct tlsv1_client *conn,
+					       const u8 *resp, size_t len);
 
 #endif /* TLSV1_CLIENT_I_H */

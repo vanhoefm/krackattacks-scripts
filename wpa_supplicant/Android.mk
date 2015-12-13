@@ -981,6 +981,7 @@ OBJS += src/tls/tlsv1_cred.c
 OBJS += src/tls/tlsv1_client.c
 OBJS += src/tls/tlsv1_client_write.c
 OBJS += src/tls/tlsv1_client_read.c
+OBJS += src/tls/tlsv1_client_ocsp.c
 OBJS += src/tls/asn1.c
 OBJS += src/tls/rsa.c
 OBJS += src/tls/x509v3.c

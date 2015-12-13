@@ -1,6 +1,6 @@
 /*
  * TLSv1 client - write handshake message
- * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -154,6 +154,44 @@ u8 * tls_send_client_hello(struct tlsv1_client *conn, size_t *out_len)
 		os_memcpy(pos, conn->client_hello_ext,
 			  conn->client_hello_ext_len);
 		pos += conn->client_hello_ext_len;
+	}
+
+	if (conn->flags & TLS_CONN_REQUEST_OCSP) {
+		wpa_printf(MSG_DEBUG,
+			   "TLSv1: Add status_request extension for OCSP stapling");
+		/* ExtensionsType extension_type = status_request(5) */
+		WPA_PUT_BE16(pos, TLS_EXT_STATUS_REQUEST);
+		pos += 2;
+		/* opaque extension_data<0..2^16-1> length */
+		WPA_PUT_BE16(pos, 5);
+		pos += 2;
+
+		/*
+		 * RFC 6066, 8:
+		 * struct {
+		 *     CertificateStatusType status_type;
+		 *     select (status_type) {
+		 *         case ocsp: OCSPStatusRequest;
+		 *     } request;
+		 * } CertificateStatusRequest;
+		 *
+		 * enum { ocsp(1), (255) } CertificateStatusType;
+		 */
+		*pos++ = 1; /* status_type = ocsp(1) */
+
+		/*
+		 * struct {
+		 *     ResponderID responder_id_list<0..2^16-1>;
+		 *     Extensions  request_extensions;
+		 * } OCSPStatusRequest;
+		 *
+		 * opaque ResponderID<1..2^16-1>;
+		 * opaque Extensions<0..2^16-1>;
+		 */
+		WPA_PUT_BE16(pos, 0); /* responder_id_list(empty) */
+		pos += 2;
+		WPA_PUT_BE16(pos, 0); /* request_extensions(empty) */
+		pos += 2;
 	}
 
 	if (pos == ext_start + 2)

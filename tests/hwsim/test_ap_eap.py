@@ -80,8 +80,8 @@ def check_ocsp_support(dev):
 
 def check_pkcs12_support(dev):
     tls = dev.request("GET tls_library")
-    if tls.startswith("internal"):
-        raise HwsimSkip("PKCS#12 not supported with this TLS library: " + tls)
+    #if tls.startswith("internal"):
+    #    raise HwsimSkip("PKCS#12 not supported with this TLS library: " + tls)
 
 def check_dh_dsa_support(dev):
     tls = dev.request("GET tls_library")
@@ -2581,6 +2581,7 @@ def test_ap_wpa2_eap_fast_server_oom(dev, apdev):
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",

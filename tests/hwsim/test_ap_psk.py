@@ -1678,6 +1678,7 @@ def find_wpas_process(dev):
 
 def read_process_memory(pid, key=None):
     buf = bytes()
+    logger.info("Reading process memory (pid=%d)" % pid)
     with open('/proc/%d/maps' % pid, 'r') as maps, \
          open('/proc/%d/mem' % pid, 'r') as mem:
         for l in maps.readlines():
@@ -1693,11 +1694,15 @@ def read_process_memory(pid, key=None):
                 continue
             if not perm.startswith('rw'):
                 continue
+            for name in [ "[heap]", "[stack]" ]:
+                if name in l:
+                    logger.info("%s 0x%x-0x%x is at %d-%d" % (name, start, end, len(buf), len(buf) + (end - start)))
             mem.seek(start)
             data = mem.read(end - start)
             buf += data
             if key and key in data:
                 logger.info("Key found in " + l)
+    logger.info("Total process memory read: %d bytes" % len(buf))
     return buf
 
 def verify_not_present(buf, key, fname, keyname):
@@ -1718,6 +1723,13 @@ def get_key_locations(buf, key, keyname):
         if pos < 0:
             break
         logger.info("Found %s at %d" % (keyname, pos))
+        context = 128;
+        start = pos - context if pos > context else 0
+        before = binascii.hexlify(buf[start:pos])
+        context += len(key)
+        end = pos + context if pos < len(buf) - context else len(buf) - context
+        after = binascii.hexlify(buf[pos + len(key):end])
+        logger.debug("Memory context %d-%d: %s|%s|%s" % (start, end, before, binascii.hexlify(key), after))
         count += 1
         pos += len(key)
     return count

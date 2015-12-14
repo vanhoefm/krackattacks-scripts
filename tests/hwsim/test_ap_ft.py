@@ -600,7 +600,11 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
 
     dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
                    scan_freq="2412")
+    # The decrypted copy of GTK is freed only after the CTRL-EVENT-CONNECTED
+    # event has been delivered, so verify that wpa_supplicant has returned to
+    # eloop before reading process memory.
     time.sleep(1)
+    dev[0].ping()
 
     buf = read_process_memory(pid, pmk)
 

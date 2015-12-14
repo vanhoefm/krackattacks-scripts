@@ -246,7 +246,11 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
                    ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
                    erp="1", scan_freq="2412")
 
+    # The decrypted copy of GTK is freed only after the CTRL-EVENT-CONNECTED
+    # event has been delivered, so verify that wpa_supplicant has returned to
+    # eloop before reading process memory.
     time.sleep(1)
+    dev[0].ping()
     buf = read_process_memory(pid, password)
 
     dev[0].request("DISCONNECT")

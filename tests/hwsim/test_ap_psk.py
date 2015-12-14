@@ -1766,7 +1766,11 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, pmk, "PMK")
 
     dev[0].connect_network(id, timeout=20)
+    # The decrypted copy of GTK is freed only after the CTRL-EVENT-CONNECTED
+    # event has been delivered, so verify that wpa_supplicant has returned to
+    # eloop before reading process memory.
     time.sleep(1)
+    dev[0].ping()
 
     buf = read_process_memory(pid, pmk)
 

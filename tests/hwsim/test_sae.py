@@ -272,7 +272,11 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     id = dev[0].connect("test-sae", psk=password, key_mgmt="SAE",
                         scan_freq="2412")
 
+    # The decrypted copy of GTK is freed only after the CTRL-EVENT-CONNECTED
+    # event has been delivered, so verify that wpa_supplicant has returned to
+    # eloop before reading process memory.
     time.sleep(1)
+    dev[0].ping()
     buf = read_process_memory(pid, password)
 
     dev[0].request("DISCONNECT")

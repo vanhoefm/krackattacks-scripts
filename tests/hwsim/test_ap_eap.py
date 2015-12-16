@@ -2597,6 +2597,21 @@ def int_eap_server_params():
                "private_key": "auth_serv/server.key" }
     return params
 
+def test_ap_wpa2_eap_tls_ocsp_key_id(dev, apdev, params):
+    """EAP-TLS and OCSP certificate signed OCSP response using key ID"""
+    check_ocsp_support(dev[0])
+    ocsp = os.path.join(params['logdir'], "ocsp-server-cache-key-id.der")
+    if not os.path.exists(ocsp):
+        raise HwsimSkip("No OCSP response available")
+    params = int_eap_server_params()
+    params["ocsp_stapling_response"] = ocsp
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   scan_freq="2412")
+
 def test_ap_wpa2_eap_tls_ocsp_ca_signed_good(dev, apdev, params):
     """EAP-TLS and CA signed OCSP response (good)"""
     check_ocsp_support(dev[0])

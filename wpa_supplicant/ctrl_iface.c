@@ -6704,6 +6704,28 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 
+static int wpas_ctrl_iface_signal_monitor(struct wpa_supplicant *wpa_s,
+					  const char *cmd)
+{
+	const char *pos;
+	int threshold = 0;
+	int hysteresis = 0;
+
+	if (wpa_s->bgscan && wpa_s->bgscan_priv) {
+		wpa_printf(MSG_DEBUG,
+			   "Reject SIGNAL_MONITOR command - bgscan is active");
+		return -1;
+	}
+	pos = os_strstr(cmd, "THRESHOLD=");
+	if (pos)
+		threshold = atoi(pos + 10);
+	pos = os_strstr(cmd, "HYSTERESIS=");
+	if (pos)
+		hysteresis = atoi(pos + 11);
+	return wpa_drv_signal_monitor(wpa_s, threshold, hysteresis);
+}
+
+
 static int wpas_ctrl_iface_get_pref_freq_list(
 	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
 {
@@ -8769,6 +8791,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "SIGNAL_POLL", 11) == 0) {
 		reply_len = wpa_supplicant_signal_poll(wpa_s, reply,
 						       reply_size);
+	} else if (os_strncmp(buf, "SIGNAL_MONITOR", 14) == 0) {
+		if (wpas_ctrl_iface_signal_monitor(wpa_s, buf + 14))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "PKTCNT_POLL", 11) == 0) {
 		reply_len = wpa_supplicant_pktcnt_poll(wpa_s, reply,
 						       reply_size);

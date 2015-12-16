@@ -64,6 +64,291 @@ static int ocsp_responder_id_match(struct x509_certificate *signer,
 }
 
 
+static unsigned int ocsp_hash_data(struct asn1_oid *alg, const u8 *data,
+				   size_t data_len, u8 *hash)
+{
+	const u8 *addr[1] = { data };
+	size_t len[1] = { data_len };
+	char buf[100];
+
+	if (x509_sha1_oid(alg)) {
+		if (sha1_vector(1, addr, len, hash) < 0)
+			return 0;
+		wpa_hexdump(MSG_MSGDUMP, "OCSP: Hash (SHA1)", hash, 20);
+		return 20;
+	}
+
+	if (x509_sha256_oid(alg)) {
+		if (sha256_vector(1, addr, len, hash) < 0)
+			return 0;
+		wpa_hexdump(MSG_MSGDUMP, "OCSP: Hash (SHA256)", hash, 32);
+		return 32;
+	}
+
+	if (x509_sha384_oid(alg)) {
+		if (sha384_vector(1, addr, len, hash) < 0)
+			return 0;
+		wpa_hexdump(MSG_MSGDUMP, "OCSP: Hash (SHA384)", hash, 48);
+		return 48;
+	}
+
+	if (x509_sha512_oid(alg)) {
+		if (sha512_vector(1, addr, len, hash) < 0)
+			return 0;
+		wpa_hexdump(MSG_MSGDUMP, "OCSP: Hash (SHA512)", hash, 64);
+		return 64;
+	}
+
+
+	asn1_oid_to_str(alg, buf, sizeof(buf));
+	wpa_printf(MSG_DEBUG, "OCSP: Could not calculate hash with alg %s",
+		   buf);
+	return 0;
+}
+
+
+static int tls_process_ocsp_single_response(struct tlsv1_client *conn,
+					    struct x509_certificate *cert,
+					    struct x509_certificate *issuer,
+					    const u8 *resp, size_t len,
+					    enum tls_ocsp_result *res)
+{
+	struct asn1_hdr hdr;
+	const u8 *pos, *end;
+	struct x509_algorithm_identifier alg;
+	const u8 *name_hash, *key_hash;
+	size_t name_hash_len, key_hash_len;
+	const u8 *serial_number;
+	size_t serial_number_len;
+	u8 hash[64];
+	unsigned int hash_len;
+	unsigned int cert_status;
+	os_time_t update;
+	struct os_time now;
+
+	wpa_hexdump(MSG_MSGDUMP, "OCSP: SingleResponse", resp, len);
+
+	/*
+	 * SingleResponse ::= SEQUENCE {
+	 *    certID                       CertID,
+	 *    certStatus                   CertStatus,
+	 *    thisUpdate                   GeneralizedTime,
+	 *    nextUpdate         [0]       EXPLICIT GeneralizedTime OPTIONAL,
+	 *    singleExtensions   [1]       EXPLICIT Extensions OPTIONAL }
+	 */
+
+	/* CertID ::= SEQUENCE */
+	if (asn1_get_next(resp, len, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG,
+			   "OCSP: Expected SEQUENCE (CertID) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	pos = hdr.payload;
+	end = hdr.payload + hdr.length;
+
+	/*
+	 * CertID ::= SEQUENCE {
+	 *    hashAlgorithm           AlgorithmIdentifier,
+	 *    issuerNameHash          OCTET STRING,
+	 *    issuerKeyHash           OCTET STRING,
+	 *    serialNumber            CertificateSerialNumber }
+	 */
+
+	/* hashAlgorithm  AlgorithmIdentifier */
+	if (x509_parse_algorithm_identifier(pos, end - pos, &alg, &pos))
+		return -1;
+
+	/* issuerNameHash  OCTET STRING */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING) {
+		wpa_printf(MSG_DEBUG,
+			   "OCSP: Expected OCTET STRING (issuerNameHash) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	name_hash = hdr.payload;
+	name_hash_len = hdr.length;
+	wpa_hexdump(MSG_DEBUG, "OCSP: issuerNameHash",
+		    name_hash, name_hash_len);
+	pos = hdr.payload + hdr.length;
+
+	wpa_hexdump(MSG_DEBUG, "OCSP: Issuer subject DN",
+		    issuer->subject_dn, issuer->subject_dn_len);
+	hash_len = ocsp_hash_data(&alg.oid, issuer->subject_dn,
+				  issuer->subject_dn_len, hash);
+	if (hash_len == 0 || name_hash_len != hash_len ||
+	    os_memcmp(name_hash, hash, hash_len) != 0) {
+		wpa_printf(MSG_DEBUG, "OCSP: issuerNameHash mismatch");
+		wpa_hexdump(MSG_DEBUG, "OCSP: Calculated issuerNameHash",
+			    hash, hash_len);
+		return -1;
+	}
+
+	/* issuerKeyHash  OCTET STRING */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING) {
+		wpa_printf(MSG_DEBUG,
+			   "OCSP: Expected OCTET STRING (issuerKeyHash) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	key_hash = hdr.payload;
+	key_hash_len = hdr.length;
+	wpa_hexdump(MSG_DEBUG, "OCSP: issuerKeyHash", key_hash, key_hash_len);
+	pos = hdr.payload + hdr.length;
+
+	hash_len = ocsp_hash_data(&alg.oid, issuer->public_key,
+				  issuer->public_key_len, hash);
+	if (hash_len == 0 || key_hash_len != hash_len ||
+	    os_memcmp(key_hash, hash, hash_len) != 0) {
+		wpa_printf(MSG_DEBUG, "OCSP: issuerKeyHash mismatch");
+		wpa_hexdump(MSG_DEBUG, "OCSP: Calculated issuerKeyHash",
+			    hash, hash_len);
+		return -1;
+	}
+
+	/* serialNumber CertificateSerialNumber ::= INTEGER */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_INTEGER ||
+	    hdr.length < 1 || hdr.length > X509_MAX_SERIAL_NUM_LEN) {
+		wpa_printf(MSG_DEBUG, "OCSP: No INTEGER tag found for serialNumber; class=%d tag=0x%x length=%u",
+			   hdr.class, hdr.tag, hdr.length);
+		return -1;
+	}
+	serial_number = hdr.payload;
+	serial_number_len = hdr.length;
+	while (serial_number_len > 0 && serial_number[0] == 0) {
+		serial_number++;
+		serial_number_len--;
+	}
+	wpa_hexdump(MSG_MSGDUMP, "OCSP: serialNumber", serial_number,
+		    serial_number_len);
+
+	if (serial_number_len != cert->serial_number_len ||
+	    os_memcmp(serial_number, cert->serial_number,
+		      serial_number_len) != 0) {
+		wpa_printf(MSG_DEBUG, "OCSP: serialNumber mismatch");
+		return -1;
+	}
+
+	pos = end;
+	end = resp + len;
+
+	/* certStatus CertStatus ::= CHOICE */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_CONTEXT_SPECIFIC) {
+		wpa_printf(MSG_DEBUG,
+			   "OCSP: Expected CHOICE (CertStatus) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	cert_status = hdr.tag;
+	wpa_printf(MSG_DEBUG, "OCSP: certStatus=%u", cert_status);
+	wpa_hexdump(MSG_DEBUG, "OCSP: CertStatus additional data",
+		    hdr.payload, hdr.length);
+	pos = hdr.payload + hdr.length;
+
+	os_get_time(&now);
+	/* thisUpdate  GeneralizedTime */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_GENERALIZEDTIME ||
+	    x509_parse_time(hdr.payload, hdr.length, hdr.tag, &update) < 0) {
+		wpa_printf(MSG_DEBUG, "OCSP: Failed to parse thisUpdate");
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "OCSP: thisUpdate %lu", (unsigned long) update);
+	pos = hdr.payload + hdr.length;
+	if ((unsigned long) now.sec < (unsigned long) update) {
+		wpa_printf(MSG_DEBUG,
+			   "OCSP: thisUpdate time in the future (response not yet valid)");
+		return -1;
+	}
+
+	/* nextUpdate  [0]  EXPLICIT GeneralizedTime OPTIONAL */
+	if (pos < end) {
+		if (asn1_get_next(pos, end - pos, &hdr) < 0)
+			return -1;
+		if (hdr.class == ASN1_CLASS_CONTEXT_SPECIFIC && hdr.tag == 0) {
+			const u8 *next = hdr.payload + hdr.length;
+
+			if (asn1_get_next(hdr.payload, hdr.length, &hdr) < 0 ||
+			    hdr.class != ASN1_CLASS_UNIVERSAL ||
+			    hdr.tag != ASN1_TAG_GENERALIZEDTIME ||
+			    x509_parse_time(hdr.payload, hdr.length, hdr.tag,
+					    &update) < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "OCSP: Failed to parse nextUpdate");
+				return -1;
+			}
+			wpa_printf(MSG_DEBUG, "OCSP: nextUpdate %lu",
+				   (unsigned long) update);
+			pos = next;
+			if ((unsigned long) now.sec > (unsigned long) update) {
+				wpa_printf(MSG_DEBUG, "OCSP: nextUpdate time in the past (response has expired)");
+				return -1;
+			}
+		}
+	}
+
+	/* singleExtensions  [1]  EXPLICIT Extensions OPTIONAL */
+	if (pos < end) {
+		wpa_hexdump(MSG_MSGDUMP, "OCSP: singleExtensions",
+			    pos, end - pos);
+		/* Ignore for now */
+	}
+
+	if (cert_status == 0 /* good */)
+		*res = TLS_OCSP_GOOD;
+	else if (cert_status == 1 /* revoked */)
+		*res = TLS_OCSP_REVOKED;
+	else
+		return -1;
+	return 0;
+}
+
+
+static enum tls_ocsp_result
+tls_process_ocsp_responses(struct tlsv1_client *conn,
+			   struct x509_certificate *issuer, const u8 *resp,
+			   size_t len)
+{
+	struct asn1_hdr hdr;
+	const u8 *pos, *end;
+	enum tls_ocsp_result res;
+
+	pos = resp;
+	end = resp + len;
+	while (pos < end) {
+		/* SingleResponse ::= SEQUENCE */
+		if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+		    hdr.class != ASN1_CLASS_UNIVERSAL ||
+		    hdr.tag != ASN1_TAG_SEQUENCE) {
+			wpa_printf(MSG_DEBUG,
+				   "OCSP: Expected SEQUENCE (SingleResponse) - found class %d tag 0x%x",
+				   hdr.class, hdr.tag);
+			return TLS_OCSP_INVALID;
+		}
+		if (tls_process_ocsp_single_response(conn, conn->server_cert,
+						     issuer,
+						     hdr.payload, hdr.length,
+						     &res) == 0)
+			return res;
+		pos = hdr.payload + hdr.length;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "OCSP: Did not find a response matching the server certificate");
+	return TLS_OCSP_NO_RESPONSE;
+}
+
+
 static enum tls_ocsp_result
 tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 				size_t len)
@@ -369,7 +654,8 @@ tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 		    return TLS_OCSP_INVALID;
 	}
 
-	/* TODO: Check responses */
+	return tls_process_ocsp_responses(conn, issuer, responses,
+					  responses_len);
 
 no_resp:
 	x509_free_name(&name);

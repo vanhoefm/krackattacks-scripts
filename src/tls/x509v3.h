@@ -91,6 +91,7 @@ struct x509_certificate {
 #define X509_EXT_KEY_USAGE_ANY			(1 << 0)
 #define X509_EXT_KEY_USAGE_SERVER_AUTH		(1 << 1)
 #define X509_EXT_KEY_USAGE_CLIENT_AUTH		(1 << 2)
+#define X509_EXT_KEY_USAGE_OCSP			(1 << 3)
 
 	/*
 	 * The DER format certificate follows struct x509_certificate. These
@@ -113,10 +114,21 @@ enum {
 };
 
 void x509_certificate_free(struct x509_certificate *cert);
+int x509_parse_algorithm_identifier(const u8 *buf, size_t len,
+				    struct x509_algorithm_identifier *id,
+				    const u8 **next);
+int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
+		    const u8 **next);
+int x509_parse_time(const u8 *buf, size_t len, u8 asn1_tag, os_time_t *val);
 struct x509_certificate * x509_certificate_parse(const u8 *buf, size_t len);
+void x509_free_name(struct x509_name *name);
 void x509_name_string(struct x509_name *name, char *buf, size_t len);
 int x509_name_compare(struct x509_name *a, struct x509_name *b);
 void x509_certificate_chain_free(struct x509_certificate *cert);
+int x509_check_signature(struct x509_certificate *issuer,
+			 struct x509_algorithm_identifier *signature,
+			 const u8 *sign_value, size_t sign_value_len,
+			 const u8 *signed_data, size_t signed_data_len);
 int x509_certificate_check_signature(struct x509_certificate *issuer,
 				     struct x509_certificate *cert);
 int x509_certificate_chain_validate(struct x509_certificate *trusted,

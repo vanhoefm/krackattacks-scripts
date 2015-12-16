@@ -1,6 +1,6 @@
 /*
  * X.509v3 certificate parsing and processing (RFC 3280 profile)
- * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -14,7 +14,7 @@
 #include "x509v3.h"
 
 
-static void x509_free_name(struct x509_name *name)
+void x509_free_name(struct x509_name *name)
 {
 	size_t i;
 
@@ -177,9 +177,9 @@ int x509_name_compare(struct x509_name *a, struct x509_name *b)
 }
 
 
-static int x509_parse_algorithm_identifier(
-	const u8 *buf, size_t len,
-	struct x509_algorithm_identifier *id, const u8 **next)
+int x509_parse_algorithm_identifier(const u8 *buf, size_t len,
+				    struct x509_algorithm_identifier *id,
+				    const u8 **next)
 {
 	struct asn1_hdr hdr;
 	const u8 *pos, *end;
@@ -288,8 +288,8 @@ static int x509_parse_public_key(const u8 *buf, size_t len,
 }
 
 
-static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
-			   const u8 **next)
+int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
+		    const u8 **next)
 {
 	struct asn1_hdr hdr;
 	const u8 *pos, *end, *set_pos, *set_end, *seq_pos, *seq_end;
@@ -536,8 +536,7 @@ done:
 }
 
 
-static int x509_parse_time(const u8 *buf, size_t len, u8 asn1_tag,
-			   os_time_t *val)
+int x509_parse_time(const u8 *buf, size_t len, u8 asn1_tag, os_time_t *val)
 {
 	const char *pos;
 	int year, month, day, hour, min, sec;
@@ -1122,6 +1121,15 @@ static int x509_id_kp_client_auth_oid(struct asn1_oid *oid)
 }
 
 
+static int x509_id_kp_ocsp_oid(struct asn1_oid *oid)
+{
+	/* id-kp */
+	return oid->len == 9 &&
+		x509_id_kp_oid(oid) &&
+		oid->oid[8] == 9 /* id-kp-OCSPSigning */;
+}
+
+
 static int x509_parse_ext_ext_key_usage(struct x509_certificate *cert,
 					const u8 *pos, size_t len)
 {
@@ -1164,6 +1172,9 @@ static int x509_parse_ext_ext_key_usage(struct x509_certificate *cert,
 		} else if (x509_id_kp_client_auth_oid(&oid)) {
 			os_strlcpy(buf, "id-kp-clientAuth", sizeof(buf));
 			cert->ext_key_usage |= X509_EXT_KEY_USAGE_CLIENT_AUTH;
+		} else if (x509_id_kp_ocsp_oid(&oid)) {
+			os_strlcpy(buf, "id-kp-OCSPSigning", sizeof(buf));
+			cert->ext_key_usage |= X509_EXT_KEY_USAGE_OCSP;
 		} else {
 			asn1_oid_to_str(&oid, buf, sizeof(buf));
 		}
@@ -1705,6 +1716,17 @@ struct x509_certificate * x509_certificate_parse(const u8 *buf, size_t len)
 int x509_certificate_check_signature(struct x509_certificate *issuer,
 				     struct x509_certificate *cert)
 {
+	return x509_check_signature(issuer, &cert->signature,
+				    cert->sign_value, cert->sign_value_len,
+				    cert->tbs_cert_start, cert->tbs_cert_len);
+}
+
+
+int x509_check_signature(struct x509_certificate *issuer,
+			 struct x509_algorithm_identifier *signature,
+			 const u8 *sign_value, size_t sign_value_len,
+			 const u8 *signed_data, size_t signed_data_len)
+{
 	struct crypto_public_key *pk;
 	u8 *data;
 	const u8 *pos, *end, *next, *da_end;
@@ -1713,10 +1735,12 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	struct asn1_oid oid;
 	u8 hash[64];
 	size_t hash_len;
+	const u8 *addr[1] = { signed_data };
+	size_t len[1] = { signed_data_len };
 
-	if (!x509_pkcs_oid(&cert->signature.oid) ||
-	    cert->signature.oid.len != 7 ||
-	    cert->signature.oid.oid[5] != 1 /* pkcs-1 */) {
+	if (!x509_pkcs_oid(&signature->oid) ||
+	    signature->oid.len != 7 ||
+	    signature->oid.oid[5] != 1 /* pkcs-1 */) {
 		wpa_printf(MSG_DEBUG, "X509: Unrecognized signature "
 			   "algorithm");
 		return -1;
@@ -1727,15 +1751,15 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	if (pk == NULL)
 		return -1;
 
-	data_len = cert->sign_value_len;
+	data_len = sign_value_len;
 	data = os_malloc(data_len);
 	if (data == NULL) {
 		crypto_public_key_free(pk);
 		return -1;
 	}
 
-	if (crypto_public_key_decrypt_pkcs1(pk, cert->sign_value,
-					    cert->sign_value_len, data,
+	if (crypto_public_key_decrypt_pkcs1(pk, sign_value,
+					    sign_value_len, data,
 					    &data_len) < 0) {
 		wpa_printf(MSG_DEBUG, "X509: Failed to decrypt signature");
 		crypto_public_key_free(pk);
@@ -1798,12 +1822,11 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	}
 
 	if (x509_sha1_oid(&oid)) {
-		if (cert->signature.oid.oid[6] !=
-		    5 /* sha-1WithRSAEncryption */) {
+		if (signature->oid.oid[6] != 5 /* sha-1WithRSAEncryption */) {
 			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm SHA1 "
 				   "does not match with certificate "
 				   "signatureAlgorithm (%lu)",
-				   cert->signature.oid.oid[6]);
+				   signature->oid.oid[6]);
 			os_free(data);
 			return -1;
 		}
@@ -1811,12 +1834,12 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	}
 
 	if (x509_sha256_oid(&oid)) {
-		if (cert->signature.oid.oid[6] !=
+		if (signature->oid.oid[6] !=
 		    11 /* sha2561WithRSAEncryption */) {
 			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm SHA256 "
 				   "does not match with certificate "
 				   "signatureAlgorithm (%lu)",
-				   cert->signature.oid.oid[6]);
+				   signature->oid.oid[6]);
 			os_free(data);
 			return -1;
 		}
@@ -1824,12 +1847,11 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	}
 
 	if (x509_sha384_oid(&oid)) {
-		if (cert->signature.oid.oid[6] !=
-		    12 /* sha384WithRSAEncryption */) {
+		if (signature->oid.oid[6] != 12 /* sha384WithRSAEncryption */) {
 			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm SHA384 "
 				   "does not match with certificate "
 				   "signatureAlgorithm (%lu)",
-				   cert->signature.oid.oid[6]);
+				   signature->oid.oid[6]);
 			os_free(data);
 			return -1;
 		}
@@ -1837,12 +1859,11 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	}
 
 	if (x509_sha512_oid(&oid)) {
-		if (cert->signature.oid.oid[6] !=
-		    13 /* sha512WithRSAEncryption */) {
+		if (signature->oid.oid[6] != 13 /* sha512WithRSAEncryption */) {
 			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm SHA512 "
 				   "does not match with certificate "
 				   "signatureAlgorithm (%lu)",
-				   cert->signature.oid.oid[6]);
+				   signature->oid.oid[6]);
 			os_free(data);
 			return -1;
 		}
@@ -1856,12 +1877,11 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	}
 	switch (oid.oid[5]) {
 	case 5: /* md5 */
-		if (cert->signature.oid.oid[6] != 4 /* md5WithRSAEncryption */)
-		{
+		if (signature->oid.oid[6] != 4 /* md5WithRSAEncryption */) {
 			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm MD5 does "
 				   "not match with certificate "
 				   "signatureAlgorithm (%lu)",
-				   cert->signature.oid.oid[6]);
+				   signature->oid.oid[6]);
 			os_free(data);
 			return -1;
 		}
@@ -1892,38 +1912,33 @@ skip_digest_oid:
 	wpa_hexdump(MSG_MSGDUMP, "X509: Decrypted Digest",
 		    hdr.payload, hdr.length);
 
-	switch (cert->signature.oid.oid[6]) {
+	switch (signature->oid.oid[6]) {
 	case 4: /* md5WithRSAEncryption */
-		md5_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
-			   hash);
+		md5_vector(1, addr, len, hash);
 		hash_len = 16;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (MD5)",
 			    hash, hash_len);
 		break;
 	case 5: /* sha-1WithRSAEncryption */
-		sha1_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
-			    hash);
+		sha1_vector(1, addr, len, hash);
 		hash_len = 20;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA1)",
 			    hash, hash_len);
 		break;
 	case 11: /* sha256WithRSAEncryption */
-		sha256_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
-			      hash);
+		sha256_vector(1, addr, len, hash);
 		hash_len = 32;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA256)",
 			    hash, hash_len);
 		break;
 	case 12: /* sha384WithRSAEncryption */
-		sha384_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
-			      hash);
+		sha384_vector(1, addr, len, hash);
 		hash_len = 48;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA384)",
 			    hash, hash_len);
 		break;
 	case 13: /* sha512WithRSAEncryption */
-		sha512_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
-			      hash);
+		sha512_vector(1, addr, len, hash);
 		hash_len = 64;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA512)",
 			    hash, hash_len);
@@ -1931,7 +1946,7 @@ skip_digest_oid:
 	case 2: /* md2WithRSAEncryption */
 	default:
 		wpa_printf(MSG_INFO, "X509: Unsupported certificate signature "
-			   "algorithm (%lu)", cert->signature.oid.oid[6]);
+			   "algorithm (%lu)", signature->oid.oid[6]);
 		os_free(data);
 		return -1;
 	}

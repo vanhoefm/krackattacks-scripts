@@ -45,10 +45,13 @@ struct x509_name {
 	struct asn1_oid rid; /* registeredID */
 };
 
+#define X509_MAX_SERIAL_NUM_LEN 20
+
 struct x509_certificate {
 	struct x509_certificate *next;
 	enum { X509_CERT_V1 = 0, X509_CERT_V2 = 1, X509_CERT_V3 = 2 } version;
-	unsigned long serial_number;
+	u8 serial_number[X509_MAX_SERIAL_NUM_LEN];
+	size_t serial_number_len;
 	struct x509_algorithm_identifier signature;
 	struct x509_name issuer;
 	struct x509_name subject;

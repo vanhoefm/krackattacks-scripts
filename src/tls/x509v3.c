@@ -1401,21 +1401,23 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 
 	/* serialNumber CertificateSerialNumber ::= INTEGER */
 	if (hdr.class != ASN1_CLASS_UNIVERSAL ||
-	    hdr.tag != ASN1_TAG_INTEGER) {
+	    hdr.tag != ASN1_TAG_INTEGER ||
+	    hdr.length < 1 || hdr.length > X509_MAX_SERIAL_NUM_LEN) {
 		wpa_printf(MSG_DEBUG, "X509: No INTEGER tag found for "
-			   "serialNumber; class=%d tag=0x%x",
-			   hdr.class, hdr.tag);
+			   "serialNumber; class=%d tag=0x%x length=%u",
+			   hdr.class, hdr.tag, hdr.length);
 		return -1;
 	}
 
-	pos = hdr.payload;
-	left = hdr.length;
-	while (left) {
-		cert->serial_number <<= 8;
-		cert->serial_number |= *pos++;
-		left--;
+	pos = hdr.payload + hdr.length;
+	while (hdr.length > 0 && hdr.payload[0] == 0) {
+		hdr.payload++;
+		hdr.length--;
 	}
-	wpa_printf(MSG_MSGDUMP, "X509: serialNumber %lu", cert->serial_number);
+	os_memcpy(cert->serial_number, hdr.payload, hdr.length);
+	cert->serial_number_len = hdr.length;
+	wpa_hexdump(MSG_MSGDUMP, "X509: serialNumber", cert->serial_number,
+		    cert->serial_number_len);
 
 	/* signature AlgorithmIdentifier */
 	if (x509_parse_algorithm_identifier(pos, end - pos, &cert->signature,

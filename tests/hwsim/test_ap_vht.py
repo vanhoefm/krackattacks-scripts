@@ -42,6 +42,11 @@ def test_ap_vht80(dev, apdev):
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
         est = dev[0].get_bss(bssid)['est_throughput']
         if est != "390001":
             raise Exception("Unexpected BSS est_throughput: " + est)

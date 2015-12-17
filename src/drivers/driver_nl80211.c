@@ -1520,11 +1520,16 @@ static void nl80211_check_global(struct nl80211_global *global)
 
 static void wpa_driver_nl80211_rfkill_blocked(void *ctx)
 {
+	struct wpa_driver_nl80211_data *drv = ctx;
+
 	wpa_printf(MSG_DEBUG, "nl80211: RFKILL blocked");
+
 	/*
-	 * This may be for any interface; use ifdown event to disable
-	 * interface.
+	 * rtnetlink ifdown handler will report interfaces other than the P2P
+	 * Device interface as disabled.
 	 */
+	if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
 }
 
 
@@ -1541,7 +1546,12 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 	if (is_p2p_net_interface(drv->nlmode))
 		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
 
-	/* rtnetlink ifup handler will report interface as enabled */
+	/*
+	 * rtnetlink ifup handler will report interfaces other than the P2P
+	 * Device interface as enabled.
+	 */
+	if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
 }
 
 
@@ -2241,20 +2251,22 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 	} else {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not yet enable "
 			   "interface '%s' due to rfkill", bss->ifname);
-		if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
-			return 0;
-		drv->if_disabled = 1;
+		if (nlmode != NL80211_IFTYPE_P2P_DEVICE)
+			drv->if_disabled = 1;
+
 		send_rfkill_event = 1;
 	}
 
-	if (!drv->hostapd)
+	if (!drv->hostapd && nlmode != NL80211_IFTYPE_P2P_DEVICE)
 		netlink_send_oper_ifla(drv->global->netlink, drv->ifindex,
 				       1, IF_OPER_DORMANT);
 
-	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-			       bss->addr))
-		return -1;
-	os_memcpy(drv->perm_addr, bss->addr, ETH_ALEN);
+	if (nlmode != NL80211_IFTYPE_P2P_DEVICE) {
+		if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
+				       bss->addr))
+			return -1;
+		os_memcpy(drv->perm_addr, bss->addr, ETH_ALEN);
+	}
 
 	if (send_rfkill_event) {
 		eloop_register_timeout(0, 0, wpa_driver_nl80211_send_rfkill,

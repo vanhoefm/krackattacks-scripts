@@ -14,6 +14,7 @@ import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from rfkill import RFKill
 from utils import HwsimSkip
+from hwsim import HWSimRadio
 
 def get_rfkill(dev):
     phy = dev.get_driver_status_field("phyname")
@@ -115,6 +116,69 @@ def test_rfkill_autogo(dev, apdev):
     finally:
         rfk0.unblock()
         rfk1.unblock()
+
+def _test_rfkill_p2p_discovery(dev0, dev1):
+    """rfkill block/unblock P2P Discovery"""
+    rfk0 = get_rfkill(dev0)
+    rfk1 = get_rfkill(dev1)
+
+    try:
+        addr0 = dev0.p2p_dev_addr()
+
+        logger.info("rfkill block 0")
+        rfk0.block()
+        logger.info("rfkill block 1")
+        rfk1.block()
+
+        for i in range(10):
+            time.sleep(0.1)
+            if dev0.get_status_field("wpa_state") == "INTERFACE_DISABLED" and dev1.get_status_field("wpa_state") == "INTERFACE_DISABLED":
+                break
+
+	if "OK" in dev0.p2p_listen():
+	    raise Exception("P2P Listen success although in rfkill")
+
+	if "OK" in dev1.p2p_find():
+	    raise Exception("P2P Find success although in rfkill")
+
+        dev0.dump_monitor()
+        dev1.dump_monitor()
+
+        logger.info("rfkill unblock 0")
+        rfk0.unblock()
+        logger.info("rfkill unblock 1")
+        rfk1.unblock()
+
+        for i in range(10):
+            time.sleep(0.1)
+            if dev0.get_status_field("wpa_state") != "INTERFACE_DISABLED" and dev1.get_status_field("wpa_state") != "INTERFACE_DISABLED":
+                break
+
+	if not "OK" in dev0.p2p_listen():
+	    raise Exception("P2P Listen failed after unblocking rfkill")
+
+	if not dev1.discover_peer(addr0, social=True):
+	    raise Exception("Failed to discover peer after unblocking rfkill")
+
+    finally:
+        rfk0.unblock()
+        rfk1.unblock()
+        dev0.p2p_stop_find()
+        dev1.p2p_stop_find()
+        dev0.dump_monitor()
+        dev1.dump_monitor()
+
+def test_rfkill_p2p_discovery(dev, apdev):
+    """rfkill block/unblock P2P Discovery"""
+    _test_rfkill_p2p_discovery(dev[0], dev[1])
+
+def test_rfkill_p2p_discovery_p2p_dev(dev, apdev):
+    """rfkill block/unblock P2P Discovery with P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+	_test_rfkill_p2p_discovery(dev[0], wpas)
+	_test_rfkill_p2p_discovery(wpas, dev[1])
 
 def test_rfkill_hostapd(dev, apdev):
     """rfkill block/unblock during and prior to hostapd operations"""

@@ -15,6 +15,7 @@ from hostapd import Hostapd
 import hostapd
 from utils import HwsimSkip, skip_with_fips
 from wlantest import Wlantest
+from test_ap_vht import vht_supported
 
 def start_ap_wpa2_psk(ifname):
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
@@ -369,6 +370,149 @@ def test_ap_open_tdls_vht(dev, apdev):
         teardown_tdls(dev[0], dev[1], apdev[0])
         setup_tdls(dev[1], dev[0], apdev[0])
         teardown_tdls(dev[1], dev[0], apdev[0], wildcard=True)
+    finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def test_ap_open_tdls_vht80(dev, apdev):
+    """Open AP and two stations using TDLS with VHT 80"""
+    params = { "ssid": "test-open",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "36",
+               "ht_capab": "[HT40+]",
+               "ieee80211n": "1",
+               "ieee80211ac": "1",
+               "vht_capab": "",
+               "vht_oper_chwidth": "1",
+               "vht_oper_centr_freq_seg0_idx": "42" }
+    try:
+        hapd = None
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        wlantest_setup()
+        connect_2sta_open(dev, hapd, scan_freq="5180")
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "WIDTH=80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        setup_tdls(dev[0], dev[1], apdev[0])
+        for i in range(10):
+            check_connectivity(dev[0], dev[1], hapd)
+        for i in range(2):
+            cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
+                                   stdout=subprocess.PIPE)
+            res = cmd.stdout.read()
+            cmd.stdout.close()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, res))
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def test_ap_open_tdls_vht80plus80(dev, apdev):
+    """Open AP and two stations using TDLS with VHT 80+80"""
+    params = { "ssid": "test-open",
+               "country_code": "US",
+               "hw_mode": "a",
+               "channel": "36",
+               "ht_capab": "[HT40+]",
+               "ieee80211n": "1",
+               "ieee80211ac": "1",
+               "vht_capab": "",
+               "vht_oper_chwidth": "3",
+               "vht_oper_centr_freq_seg0_idx": "42",
+               "vht_oper_centr_freq_seg1_idx": "155" }
+    try:
+        hapd = None
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        wlantest_setup()
+        connect_2sta_open(dev, hapd, scan_freq="5180")
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80+80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        if "CENTER_FRQ1=5210" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+        if "CENTER_FRQ2=5775" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
+        setup_tdls(dev[0], dev[1], apdev[0])
+        for i in range(10):
+            check_connectivity(dev[0], dev[1], hapd)
+        for i in range(2):
+            cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
+                                   stdout=subprocess.PIPE)
+            res = cmd.stdout.read()
+            cmd.stdout.close()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, res))
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def test_ap_open_tdls_vht160(dev, apdev):
+    """Open AP and two stations using TDLS with VHT 160"""
+    params = { "ssid": "test-open",
+               "country_code": "ZA",
+               "hw_mode": "a",
+               "channel": "104",
+               "ht_capab": "[HT40-]",
+               "ieee80211n": "1",
+               "ieee80211ac": "1",
+               "vht_oper_chwidth": "2",
+               "vht_oper_centr_freq_seg0_idx": "114" }
+    try:
+        hapd = None
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=2)
+        if not ev:
+            cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
+            reg = cmd.stdout.readlines()
+            for r in reg:
+                if "5490" in r and "DFS" in r:
+                    raise HwsimSkip("ZA regulatory rule did not have DFS requirement removed")
+            raise Exception("AP setup timed out")
+        wlantest_setup()
+        connect_2sta_open(dev, hapd, scan_freq="5520")
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "WIDTH=160 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        setup_tdls(dev[0], dev[1], apdev[0])
+        for i in range(10):
+            check_connectivity(dev[0], dev[1], hapd)
+        for i in range(2):
+            cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
+                                   stdout=subprocess.PIPE)
+            res = cmd.stdout.read()
+            cmd.stdout.close()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, res))
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
     finally:
         dev[0].request("DISCONNECT")
         dev[1].request("DISCONNECT")

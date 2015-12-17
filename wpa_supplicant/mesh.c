@@ -193,6 +193,29 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 			   ssid->frequency);
 		goto out_free;
 	}
+	if (ssid->ht40)
+		conf->secondary_channel = ssid->ht40;
+	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211A && ssid->vht) {
+		conf->vht_oper_chwidth = ssid->max_oper_chwidth;
+		switch (conf->vht_oper_chwidth) {
+		case VHT_CHANWIDTH_80MHZ:
+		case VHT_CHANWIDTH_80P80MHZ:
+			ieee80211_freq_to_chan(
+				ssid->frequency,
+				&conf->vht_oper_centr_freq_seg0_idx);
+			conf->vht_oper_centr_freq_seg0_idx += ssid->ht40 * 2;
+			break;
+		case VHT_CHANWIDTH_160MHZ:
+			ieee80211_freq_to_chan(
+				ssid->frequency,
+				&conf->vht_oper_centr_freq_seg0_idx);
+			conf->vht_oper_centr_freq_seg0_idx += ssid->ht40 * 2;
+			conf->vht_oper_centr_freq_seg0_idx += 40 / 5;
+			break;
+		}
+		ieee80211_freq_to_chan(ssid->vht_center_freq2,
+				       &conf->vht_oper_centr_freq_seg1_idx);
+	}
 
 	if (ssid->mesh_basic_rates == NULL) {
 		/*
@@ -334,6 +357,28 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	ibss_mesh_setup_freq(wpa_s, ssid, &params.freq);
 	wpa_s->mesh_ht_enabled = !!params.freq.ht_enabled;
 	wpa_s->mesh_vht_enabled = !!params.freq.vht_enabled;
+	if (params.freq.ht_enabled && params.freq.sec_channel_offset)
+		ssid->ht40 = params.freq.sec_channel_offset;
+	if (wpa_s->mesh_vht_enabled) {
+		ssid->vht = 1;
+		switch (params.freq.bandwidth) {
+		case 80:
+			if (params.freq.center_freq2) {
+				ssid->max_oper_chwidth = VHT_CHANWIDTH_80P80MHZ;
+				ssid->vht_center_freq2 =
+					params.freq.center_freq2;
+			} else {
+				ssid->max_oper_chwidth = VHT_CHANWIDTH_80MHZ;
+			}
+			break;
+		case 160:
+			ssid->max_oper_chwidth = VHT_CHANWIDTH_160MHZ;
+			break;
+		default:
+			ssid->max_oper_chwidth = VHT_CHANWIDTH_USE_HT;
+			break;
+		}
+	}
 	if (ssid->beacon_int > 0)
 		params.beacon_int = ssid->beacon_int;
 	else if (wpa_s->conf->beacon_int > 0)

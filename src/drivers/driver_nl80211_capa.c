@@ -487,6 +487,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
+	if (tb[NL80211_ATTR_WIPHY])
+		drv->wiphy_idx = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+
 	if (tb[NL80211_ATTR_WIPHY_NAME])
 		os_strlcpy(drv->phyname,
 			   nla_get_string(tb[NL80211_ATTR_WIPHY_NAME]),

@@ -55,6 +55,8 @@ struct x509_certificate {
 	struct x509_algorithm_identifier signature;
 	struct x509_name issuer;
 	struct x509_name subject;
+	u8 *subject_dn;
+	size_t subject_dn_len;
 	os_time_t not_before;
 	os_time_t not_after;
 	struct x509_algorithm_identifier public_key_alg;

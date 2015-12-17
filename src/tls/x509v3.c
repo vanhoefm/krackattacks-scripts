@@ -55,6 +55,7 @@ void x509_certificate_free(struct x509_certificate *cert)
 	x509_free_name(&cert->subject);
 	os_free(cert->public_key);
 	os_free(cert->sign_value);
+	os_free(cert->subject_dn);
 	os_free(cert);
 }
 
@@ -1435,8 +1436,15 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 		return -1;
 
 	/* subject Name */
+	const u8 *subject_dn;
+	subject_dn = pos;
 	if (x509_parse_name(pos, end - pos, &cert->subject, &pos))
 		return -1;
+	cert->subject_dn = os_malloc(pos - subject_dn);
+	if (!cert->subject_dn)
+		return -1;
+	cert->subject_dn_len = pos - subject_dn;
+	os_memcpy(cert->subject_dn, subject_dn, cert->subject_dn_len);
 	x509_name_string(&cert->subject, sbuf, sizeof(sbuf));
 	wpa_printf(MSG_MSGDUMP, "X509: subject %s", sbuf);
 

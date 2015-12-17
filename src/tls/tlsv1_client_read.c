@@ -889,11 +889,21 @@ static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 			goto skip;
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 			  TLS_ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+		if (conn->server_cert)
+			tls_cert_chain_failure_event(
+				conn, 0, conn->server_cert,
+				TLS_FAIL_UNSPECIFIED,
+				"bad certificate status response");
 		return -1;
 	case TLS_OCSP_INVALID:
 		if (!(conn->flags & TLS_CONN_REQUIRE_OCSP))
 			goto skip; /* ignore - process as if no response */
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
+		if (conn->server_cert)
+			tls_cert_chain_failure_event(
+				conn, 0, conn->server_cert,
+				TLS_FAIL_UNSPECIFIED,
+				"bad certificate status response");
 		return -1;
 	case TLS_OCSP_GOOD:
 		wpa_printf(MSG_DEBUG, "TLSv1: OCSP response good");

@@ -934,6 +934,29 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
                 password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
 
+def test_ap_wpa2_eap_ttls_invalid_phase2(dev, apdev):
+    """EAP-TTLS with invalid phase2 parameter values"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    tests = [ "auth=MSCHAPv2", "auth=MSCHAPV2 autheap=MD5",
+              "autheap=MD5 auth=MSCHAPV2", "auth=PAP auth=CHAP" ]
+    for t in tests:
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="DOMAIN\mschapv2 user",
+                       anonymous_identity="ttls", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2=t,
+                       wait_connect=False, scan_freq="2412")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=10)
+        if ev is None or "method=21" not in ev:
+            raise Exception("EAP-TTLS not started")
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method",
+                                "CTRL-EVENT-CONNECTED"], timeout=5)
+        if ev is None or "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("No EAP-TTLS failure reported for phase2=" + t)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
 def test_ap_wpa2_eap_ttls_mschapv2_suffix_match(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
     check_domain_match_full(dev[0])

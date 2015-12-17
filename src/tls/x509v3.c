@@ -1553,7 +1553,7 @@ static int x509_digest_oid(struct asn1_oid *oid)
 }
 
 
-static int x509_sha1_oid(struct asn1_oid *oid)
+int x509_sha1_oid(struct asn1_oid *oid)
 {
 	return oid->len == 6 &&
 		oid->oid[0] == 1 /* iso */ &&
@@ -1579,21 +1579,21 @@ static int x509_sha2_oid(struct asn1_oid *oid)
 }
 
 
-static int x509_sha256_oid(struct asn1_oid *oid)
+int x509_sha256_oid(struct asn1_oid *oid)
 {
 	return x509_sha2_oid(oid) &&
 		oid->oid[8] == 1 /* sha256 */;
 }
 
 
-static int x509_sha384_oid(struct asn1_oid *oid)
+int x509_sha384_oid(struct asn1_oid *oid)
 {
 	return x509_sha2_oid(oid) &&
 		oid->oid[8] == 2 /* sha384 */;
 }
 
 
-static int x509_sha512_oid(struct asn1_oid *oid)
+int x509_sha512_oid(struct asn1_oid *oid)
 {
 	return x509_sha2_oid(oid) &&
 		oid->oid[8] == 3 /* sha512 */;

@@ -142,4 +142,9 @@ x509_certificate_get_subject(struct x509_certificate *chain,
 			     struct x509_name *name);
 int x509_certificate_self_signed(struct x509_certificate *cert);
 
+int x509_sha1_oid(struct asn1_oid *oid);
+int x509_sha256_oid(struct asn1_oid *oid);
+int x509_sha384_oid(struct asn1_oid *oid);
+int x509_sha512_oid(struct asn1_oid *oid);
+
 #endif /* X509V3_H */

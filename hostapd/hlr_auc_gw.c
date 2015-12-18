@@ -284,7 +284,7 @@ static int read_gsm_triplets(const char *fname)
 
 	f = fopen(fname, "r");
 	if (f == NULL) {
-		printf("Could not open GSM tripler data file '%s'\n", fname);
+		printf("Could not open GSM triplet data file '%s'\n", fname);
 		return -1;
 	}
 

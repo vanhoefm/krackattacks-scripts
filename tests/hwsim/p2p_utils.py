@@ -118,9 +118,12 @@ def invite(inv, resp, extra=None, persistent_reconnect=True):
     inv.global_request(cmd)
 
 def check_result(go, cli):
-    ev = go.wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+    ev = go.wait_global_event(["P2P-GROUP-STARTED",
+                               "Failed to start AP functionality"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group re-invocation (on GO)")
+    if "P2P-GROUP-STARTED" not in ev:
+        raise Exception("GO failed to start the group for re-invocation")
     if "[PERSISTENT]" not in ev:
         raise Exception("Re-invoked group not marked persistent")
     go_res = go.group_form_result(ev)

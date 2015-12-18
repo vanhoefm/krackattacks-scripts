@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import base64
 import binascii
 import struct
 import time
@@ -2218,12 +2219,15 @@ def test_ap_hs20_fetch_osu(dev, apdev):
             pass
     try:
         dev[1].scan_for_bss(bssid, freq="2412")
+        dev[2].scan_for_bss(bssid, freq="2412")
         dev[0].request("SET osu_dir " + dir)
         dev[0].request("FETCH_OSU")
         if "FAIL" not in dev[1].request("HS20_ICON_REQUEST foo w1fi_logo"):
             raise Exception("Invalid HS20_ICON_REQUEST accepted")
         if "OK" not in dev[1].request("HS20_ICON_REQUEST " + bssid + " w1fi_logo"):
             raise Exception("HS20_ICON_REQUEST failed")
+        if "OK" not in dev[2].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON failed")
         icons = 0
         while True:
             ev = dev[0].wait_event(["OSU provider fetch completed",
@@ -2267,6 +2271,60 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         raise Exception("Timeout on icon fetch")
     if "Icon Binary File" not in ev:
         raise Exception("Unexpected ANQP element")
+
+    ev = dev[2].wait_event(["RX-HS20-ICON"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on RX-HS20-ICON")
+    event_icon_len = ev.split(' ')[3]
+    if " w1fi_logo " not in ev:
+        raise Exception("RX-HS20-ICON did not have the expected file name")
+    if bssid not in ev:
+        raise Exception("RX-HS20-ICON did not have the expected BSSID")
+    if "FAIL" in dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 0 10"):
+        raise Exception("GET_HS20_ICON 0..10 failed")
+    if "FAIL" in dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 5 10"):
+        raise Exception("GET_HS20_ICON 5..15 failed")
+    if "FAIL" not in  dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 100000 10"):
+        raise Exception("Unexpected success of GET_HS20_ICON with too large offset")
+    icon = ""
+    pos = 0
+    while True:
+        if pos > 100000:
+            raise Exception("Unexpectedly long icon")
+        res = dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo %d 1000" % pos)
+        if res.startswith("FAIL"):
+            break
+        icon += base64.b64decode(res)
+        pos += 1000
+    hex = binascii.hexlify(icon)
+    if not hex.startswith("0009696d6167652f706e677d1d"):
+        raise Exception("Unexpected beacon binary header: " + hex)
+    with open('w1fi_logo.png', 'r') as f:
+        data = f.read()
+        if icon[13:] != data:
+            raise Exception("Unexpected icon data")
+    if len(icon) != int(event_icon_len):
+        raise Exception("Unexpected RX-HS20-ICON event length: " + event_icon_len)
+
+    for i in range(3):
+        if "OK" not in dev[i].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON failed [2]")
+    for i in range(3):
+        ev = dev[i].wait_event(["RX-HS20-ICON"], timeout=5)
+        if ev is None:
+            raise Exception("Timeout on RX-HS20-ICON [2]")
+
+    if "FAIL" not in dev[2].request("DEL_HS20_ICON foo w1fi_logo"):
+        raise Exception("Invalid DEL_HS20_ICON accepted")
+    if "OK" not in dev[2].request("DEL_HS20_ICON " + bssid + " w1fi_logo"):
+        raise Exception("DEL_HS20_ICON failed")
+    if "OK" not in dev[1].request("DEL_HS20_ICON " + bssid):
+        raise Exception("DEL_HS20_ICON failed")
+    if "OK" not in dev[0].request("DEL_HS20_ICON "):
+        raise Exception("DEL_HS20_ICON failed")
+    for i in range(3):
+        if "FAIL" not in dev[i].request("DEL_HS20_ICON "):
+            raise Exception("DEL_HS20_ICON accepted when no icons left")
 
 def test_ap_hs20_fetch_osu_stop(dev, apdev):
     """Hotspot 2.0 OSU provider fetch stopped"""

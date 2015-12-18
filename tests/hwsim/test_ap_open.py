@@ -213,7 +213,7 @@ def test_ap_open_out_of_memory(dev, apdev):
 
     hapd_out_of_mem(hapd, apdev[1], 1, "hostapd_driver_init")
 
-    for i in range(1, 4):
+    for i in range(1, 3):
         hapd_out_of_mem(hapd, apdev[1], i, "=wpa_driver_nl80211_drv_init")
 
     # eloop_register_read_sock() call from i802_init()

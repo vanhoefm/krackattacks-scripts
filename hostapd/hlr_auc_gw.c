@@ -371,7 +371,6 @@ static int read_gsm_triplets(const char *fname)
 			ret = -1;
 			break;
 		}
-		pos = pos2 + 1;
 
 		g->next = gsm_db;
 		gsm_db = g;

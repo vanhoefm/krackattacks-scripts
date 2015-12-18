@@ -1913,3 +1913,34 @@ def test_wpas_ctrl_sched_scan_plans(dev, apdev):
     dev[0].request("SET sched_scan_plans foo")
     dev[0].request("SET sched_scan_plans 10:100 20:200 30")
     dev[0].request("SET sched_scan_plans ")
+
+def test_wpas_ctrl_signal_monitor(dev, apdev):
+    """wpa_supplicant SIGNAL_MONITOR command"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="simple:1:-45:2")
+    dev[2].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+    tests = [ " THRESHOLD=-45", " THRESHOLD=-44 HYSTERESIS=5", "" ]
+    try:
+        if "FAIL" in dev[2].request("SIGNAL_MONITOR THRESHOLD=-1 HYSTERESIS=5"):
+            raise Exception("SIGNAL_MONITOR command failed")
+        for t in tests:
+            if "OK" not in dev[0].request("SIGNAL_MONITOR" + t):
+                raise Exception("SIGNAL_MONITOR command failed: " + t)
+        if "FAIL" not in dev[1].request("SIGNAL_MONITOR THRESHOLD=-44 HYSTERESIS=5"):
+            raise Exception("SIGNAL_MONITOR command accepted while using bgscan")
+        ev = dev[2].wait_event(["CTRL-EVENT-SIGNAL-CHANGE"], timeout=10)
+        if ev is None:
+            raise Exception("No signal change event seen")
+        if "above=0" not in ev:
+            raise Exception("Unexpected signal change event contents: " + ev)
+    finally:
+        dev[0].request("SIGNAL_MONITOR")
+        dev[1].request("SIGNAL_MONITOR")
+        dev[2].request("SIGNAL_MONITOR")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    dev[1].wait_disconnected()

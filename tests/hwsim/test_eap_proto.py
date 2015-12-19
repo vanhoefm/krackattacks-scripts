@@ -6004,3 +6004,81 @@ def test_eap_proto_fast_errors(dev, apdev):
         dev[0].wait_disconnected()
 
     dev[0].request("SET blob fast_pac_errors ")
+
+def test_eap_proto_peap_errors(dev, apdev):
+    """EAP-PEAP local error cases"""
+    check_eap_capa(dev[0], "PEAP")
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 5):
+        with alloc_fail(dev[0], i, "eap_peap_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PEAP", anonymous_identity="peap",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_mschapv2_getKey;eap_peap_get_isk;eap_peap_derive_cmk"),
+              (1, "eap_msg_alloc;eap_tlv_build_result"),
+              (1, "eap_mschapv2_init;eap_peap_phase2_request"),
+              (1, "eap_peer_tls_decrypt;eap_peap_decrypt"),
+              (1, "wpabuf_alloc;=eap_peap_decrypt"),
+              (1, "eap_peer_tls_encrypt;eap_peap_decrypt"),
+              (1, "eap_peer_tls_process_helper;eap_peap_process"),
+              (1, "eap_peer_tls_derive_key;eap_peap_process"),
+              (1, "eap_peer_tls_derive_session_id;eap_peap_process"),
+              (1, "eap_peap_getKey"),
+              (1, "eap_peap_get_session_id") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PEAP", anonymous_identity="peap",
+                           identity="user", password="password",
+                           phase1="peapver=0 crypto_binding=2",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "peap_prfplus;eap_peap_derive_cmk"),
+              (1, "eap_tlv_add_cryptobinding;eap_tlv_build_result"),
+              (1, "peap_prfplus;eap_peap_getKey") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PEAP", anonymous_identity="peap",
+                           identity="user", password="password",
+                           phase1="peapver=0 crypto_binding=2",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1,
+                    "eap_peer_tls_phase2_nak;eap_peap_phase2_request"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PEAP", anonymous_identity="peap",
+                       identity="cert user", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()

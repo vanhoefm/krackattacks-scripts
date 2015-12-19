@@ -70,8 +70,8 @@ struct eap_peap_data {
 };
 
 
-static int eap_peap_parse_phase1(struct eap_peap_data *data,
-				 const char *phase1)
+static void eap_peap_parse_phase1(struct eap_peap_data *data,
+				  const char *phase1)
 {
 	const char *pos;
 
@@ -126,8 +126,6 @@ static int eap_peap_parse_phase1(struct eap_peap_data *data,
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH version 2 enabled");
 	}
 #endif /* EAP_TNC */
-
-	return 0;
 }
 
 
@@ -145,11 +143,8 @@ static void * eap_peap_init(struct eap_sm *sm)
 	data->peap_outer_success = 2;
 	data->crypto_binding = OPTIONAL_BINDING;
 
-	if (config && config->phase1 &&
-	    eap_peap_parse_phase1(data, config->phase1) < 0) {
-		eap_peap_deinit(sm, data);
-		return NULL;
-	}
+	if (config && config->phase1)
+		eap_peap_parse_phase1(data, config->phase1);
 
 	if (eap_peer_select_phase2_methods(config, "auth=",
 					   &data->phase2_types,

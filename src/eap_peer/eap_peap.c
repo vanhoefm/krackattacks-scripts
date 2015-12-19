@@ -334,7 +334,8 @@ static int eap_tlv_add_cryptobinding(struct eap_sm *sm,
 		    addr[0], len[0]);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-PEAP: Compound_MAC data 2",
 		    addr[1], len[1]);
-	hmac_sha1_vector(data->cmk, 20, 2, addr, len, mac);
+	if (hmac_sha1_vector(data->cmk, 20, 2, addr, len, mac) < 0)
+		return -1;
 	wpa_hexdump(MSG_MSGDUMP, "EAP-PEAP: Compound_MAC", mac, SHA1_MAC_LEN);
 	data->crypto_binding_used = 1;
 

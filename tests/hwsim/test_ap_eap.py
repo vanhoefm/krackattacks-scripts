@@ -1372,6 +1372,33 @@ def test_ap_wpa2_eap_peap_params(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection")
 
+    tests = [ ("peap-ver0", ""),
+              ("peap-ver1", ""),
+              ("peap-ver0", "peapver=0"),
+              ("peap-ver1", "peapver=1") ]
+    for anon,phase1 in tests:
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                       identity="user", anonymous_identity=anon,
+                       password="password", phase1=phase1,
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ ("peap-ver0", "peapver=1"),
+              ("peap-ver1", "peapver=0") ]
+    for anon,phase1 in tests:
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                       identity="user", anonymous_identity=anon,
+                       password="password", phase1=phase1,
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       wait_connect=False, scan_freq="2412")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+        if ev is None:
+            raise Exception("No EAP-Failure seen")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_peap_eap_tls(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-TLS"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

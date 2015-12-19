@@ -3935,6 +3935,29 @@ def test_eap_peap_session_resumption(dev, apdev):
     if dev[0].get_status_field("tls_session_reused") != '1':
         raise Exception("Session resumption not used on the second connection")
 
+def test_eap_peap_session_resumption_crypto_binding(dev, apdev):
+    """EAP-PEAP session resumption with crypto binding"""
+    params = int_eap_server_params()
+    params['tls_session_lifetime'] = '60'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    check_tls_session_resumption_capa(dev[0], hapd)
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password",
+                phase1="peapver=0 crypto_binding=2",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    if dev[0].get_status_field("tls_session_reused") != '0':
+        raise Exception("Unexpected session resumption on the first connection")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Key handshake with the AP timed out")
+    if dev[0].get_status_field("tls_session_reused") != '1':
+        raise Exception("Session resumption not used on the second connection")
+
 def test_eap_peap_no_session_resumption(dev, apdev):
     """EAP-PEAP session resumption disabled on server"""
     params = int_eap_server_params()

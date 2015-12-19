@@ -4750,6 +4750,10 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 
 	wpas_sched_scan_plans_set(wpa_s, wpa_s->conf->sched_scan_plans);
 
+#ifdef CONFIG_HS20
+	hs20_init(wpa_s);
+#endif /* CONFIG_HS20 */
+
 	return 0;
 }
 

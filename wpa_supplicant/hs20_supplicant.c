@@ -189,7 +189,6 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 	struct wpa_bss *bss;
 	int res;
 	struct icon_entry *icon_entry;
-	struct icon_entry *picon_entry;
 
 	bss = wpa_bss_get_bssid(wpa_s, dst);
 	if (!bss) {
@@ -232,14 +231,7 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 		icon_entry->file_name[payload_len] = '\0';
 		icon_entry->dialog_token = res;
 
-		if (wpa_s->icon_head == NULL) {
-			wpa_s->icon_head = icon_entry;
-		} else {
-			picon_entry = wpa_s->icon_head;
-			while (picon_entry->next)
-				picon_entry = picon_entry->next;
-			picon_entry->next = icon_entry;
-		}
+		dl_list_add(&wpa_s->icon_head, &icon_entry->list);
 	}
 
 	return ret;
@@ -252,7 +244,7 @@ static struct icon_entry * hs20_find_icon(struct wpa_supplicant *wpa_s,
 {
 	struct icon_entry *icon;
 
-	for (icon = wpa_s->icon_head; icon; icon = icon->next) {
+	dl_list_for_each(icon, &wpa_s->icon_head, struct icon_entry, list) {
 		if (os_memcmp(icon->bssid, bssid, ETH_ALEN) == 0 &&
 		    os_strcmp(icon->file_name, file_name) == 0 && icon->image)
 			return icon;
@@ -275,9 +267,6 @@ int hs20_get_icon(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	wpa_printf(MSG_DEBUG, "HS20: Get icon " MACSTR " %s @ %u +%u (%u)",
 		   MAC2STR(bssid), file_name, (unsigned int) offset,
 		   (unsigned int) size, (unsigned int) buf_len);
-
-	if (!wpa_s->icon_head)
-		return -1;
 
 	icon = hs20_find_icon(wpa_s, bssid, file_name);
 	if (!icon || !icon->image || offset >= icon->image_len)
@@ -318,8 +307,7 @@ static void hs20_free_icon_entry(struct icon_entry *icon)
 int hs20_del_icon(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		  const char *file_name)
 {
-	struct icon_entry **picon_entry;
-	struct icon_entry *icon_entry;
+	struct icon_entry *icon, *tmp;
 	int count = 0;
 
 	if (!bssid)
@@ -331,22 +319,15 @@ int hs20_del_icon(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		wpa_printf(MSG_DEBUG, "HS20: Delete stored icons for "
 			   MACSTR " file name %s", MAC2STR(bssid), file_name);
 
-	picon_entry = &wpa_s->icon_head;
-	while (*picon_entry) {
-		if ((!bssid ||
-		     os_memcmp((*picon_entry)->bssid, bssid, ETH_ALEN) == 0) &&
+	dl_list_for_each_safe(icon, tmp, &wpa_s->icon_head, struct icon_entry,
+			      list) {
+		if ((!bssid || os_memcmp(icon->bssid, bssid, ETH_ALEN) == 0) &&
 		    (!file_name ||
-		     os_strcmp((*picon_entry)->file_name, file_name) == 0)) {
-			icon_entry = *picon_entry;
-			*picon_entry = icon_entry->next;
-
-			hs20_free_icon_entry(icon_entry);
+		     os_strcmp(icon->file_name, file_name) == 0)) {
+			dl_list_del(&icon->list);
+			hs20_free_icon_entry(icon);
 			count++;
-			continue;
 		}
-		if (*picon_entry == NULL)
-			break;
-		picon_entry = &(*picon_entry)->next;
 	}
 	return count == 0 ? -1 : 0;
 }
@@ -386,7 +367,7 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 	u16 data_len;
 	struct icon_entry *icon;
 
-	for (icon = wpa_s->icon_head; icon; icon = icon->next) {
+	dl_list_for_each(icon, &wpa_s->icon_head, struct icon_entry, list) {
 		if (icon->dialog_token == dialog_token && !icon->image &&
 		    os_memcmp(icon->bssid, sa, ETH_ALEN) == 0) {
 			icon->image = os_malloc(slen);
@@ -1154,9 +1135,16 @@ void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
 }
 
 
+void hs20_init(struct wpa_supplicant *wpa_s)
+{
+	dl_list_init(&wpa_s->icon_head);
+}
+
+
 void hs20_deinit(struct wpa_supplicant *wpa_s)
 {
 	eloop_cancel_timeout(hs20_continue_icon_fetch, wpa_s, NULL);
 	hs20_free_osu_prov(wpa_s);
-	hs20_del_icon(wpa_s, NULL, NULL);
+	if (wpa_s->icon_head.next)
+		hs20_del_icon(wpa_s, NULL, NULL);
 }

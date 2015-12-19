@@ -36,6 +36,7 @@ int hs20_fetch_osu(struct wpa_supplicant *wpa_s);
 void hs20_cancel_fetch_osu(struct wpa_supplicant *wpa_s);
 void hs20_icon_fetch_failed(struct wpa_supplicant *wpa_s);
 void hs20_start_osu_scan(struct wpa_supplicant *wpa_s);
+void hs20_init(struct wpa_supplicant *wpa_s);
 void hs20_deinit(struct wpa_supplicant *wpa_s);
 int hs20_get_icon(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		  const char *file_name, size_t offset, size_t size,

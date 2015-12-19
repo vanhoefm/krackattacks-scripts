@@ -426,7 +426,7 @@ enum wpa_supplicant_test_failure {
 };
 
 struct icon_entry {
-	struct icon_entry *next;
+	struct dl_list list;
 	u8 bssid[ETH_ALEN];
 	u8 dialog_token;
 	char *file_name;
@@ -914,7 +914,7 @@ struct wpa_supplicant {
 	unsigned int fetch_osu_icon_in_progress:1;
 	struct wpa_bss *interworking_gas_bss;
 	unsigned int osu_icon_id;
-	struct icon_entry *icon_head;
+	struct dl_list icon_head; /* struct icon_entry */
 	struct osu_provider *osu_prov;
 	size_t osu_prov_count;
 	struct os_reltime osu_icon_fetch_start;

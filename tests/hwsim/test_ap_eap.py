@@ -1339,6 +1339,18 @@ def test_ap_wpa2_eap_peap_params(dev, apdev):
                 phase1="peapver=0 peaplabel=1",
                 expect_failure=True)
     dev[0].request("REMOVE_NETWORK all")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                   identity="user",
+                   anonymous_identity="peap", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   phase1="peap_outer_success=0",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("No EAP success seen")
+    # This won't succeed to connect with peap_outer_success=0, so stop here.
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
     eap_connect(dev[1], apdev[0], "PEAP", "user", password="password",
                 ca_cert="auth_serv/ca.pem",
                 phase1="peap_outer_success=1",

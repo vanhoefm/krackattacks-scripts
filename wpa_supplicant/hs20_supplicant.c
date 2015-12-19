@@ -357,6 +357,25 @@ static void hs20_set_osu_access_permission(const char *osu_dir,
 	}
 }
 
+
+static void hs20_remove_duplicate_icons(struct wpa_supplicant *wpa_s,
+					struct icon_entry *new_icon)
+{
+	struct icon_entry *icon, *tmp;
+
+	dl_list_for_each_safe(icon, tmp, &wpa_s->icon_head, struct icon_entry,
+			      list) {
+		if (icon == new_icon)
+			continue;
+		if (os_memcmp(icon->bssid, new_icon->bssid, ETH_ALEN) == 0 &&
+		    os_strcmp(icon->file_name, new_icon->file_name) == 0) {
+			dl_list_del(&icon->list);
+			hs20_free_icon_entry(icon);
+		}
+	}
+}
+
+
 static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 					 const u8 *sa, const u8 *pos,
 					 size_t slen, u8 dialog_token)
@@ -375,6 +394,7 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 				return -1;
 			os_memcpy(icon->image, pos, slen);
 			icon->image_len = slen;
+			hs20_remove_duplicate_icons(wpa_s, icon);
 			wpa_msg(wpa_s, MSG_INFO,
 				"RX-HS20-ICON " MACSTR " %s %u",
 				MAC2STR(sa), icon->file_name,

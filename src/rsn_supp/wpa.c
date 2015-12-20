@@ -1670,14 +1670,14 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		}
 		if (aes_unwrap(sm->ptk.kek, sm->ptk.kek_len, *key_data_len / 8,
 			       key_data, buf)) {
-			os_free(buf);
+			bin_clear_free(buf, *key_data_len);
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: AES unwrap failed - "
 				"could not decrypt EAPOL-Key key data");
 			return -1;
 		}
 		os_memcpy(key_data, buf, *key_data_len);
-		os_free(buf);
+		bin_clear_free(buf, *key_data_len);
 		WPA_PUT_BE16(key->key_data_length, *key_data_len);
 	} else {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,

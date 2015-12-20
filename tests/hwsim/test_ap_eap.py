@@ -1460,6 +1460,22 @@ def test_ap_wpa2_eap_tls_blob(dev, apdev):
                 client_cert="blob://usercert",
                 private_key="blob://userkey")
 
+def test_ap_wpa2_eap_tls_blob_missing(dev, apdev):
+    """EAP-TLS and config blob missing"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user",
+                   ca_cert="blob://testing-blob-does-not-exist",
+                   client_cert="blob://testing-blob-does-not-exist",
+                   private_key="blob://testing-blob-does-not-exist",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"], timeout=10)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12"""
     check_pkcs12_support(dev[0])

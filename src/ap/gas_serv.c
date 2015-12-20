@@ -101,6 +101,7 @@ gas_serv_dialog_find(struct hostapd_data *hapd, const u8 *addr,
 		if (sta->gas_dialog[i].dialog_token != dialog_token ||
 		    !sta->gas_dialog[i].valid)
 			continue;
+		ap_sta_replenish_timeout(hapd, sta, 5);
 		return &sta->gas_dialog[i];
 	}
 	wpa_printf(MSG_DEBUG, "ANQP: Could not find dialog for "

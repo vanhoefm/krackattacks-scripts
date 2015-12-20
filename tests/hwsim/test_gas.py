@@ -612,6 +612,13 @@ def init_gas(hapd, bssid, dev):
         raise Exception("Unexpected dialog token change")
     return query, dialog_token
 
+def allow_gas_initial_req(hapd, dialog_token):
+    msg = hapd.mgmt_rx(timeout=1)
+    if msg is not None:
+        gas = parse_gas(msg['payload'])
+        if gas['action'] != GAS_INITIAL_REQUEST or dialog_token == gas['dialog_token']:
+            raise Exception("Unexpected management frame")
+
 def test_gas_malformed_comeback_resp(dev, apdev):
     """GAS malformed comeback response frames"""
     hapd = start_ap(apdev[0])
@@ -671,9 +678,7 @@ def test_gas_malformed_comeback_resp(dev, apdev):
     resp = action_response(query)
     resp['payload'] = anqp_initial_resp(dialog_token, 0) + struct.pack('<H', 0)
     send_gas_resp(hapd, resp)
-    ev = hapd.wait_event(["MGMT-RX"], timeout=1)
-    if ev is not None:
-        raise Exception("Unexpected management frame")
+    allow_gas_initial_req(hapd, dialog_token)
     expect_gas_result(dev[0], "TIMEOUT")
 
     logger.debug("Too short comeback response")
@@ -682,9 +687,7 @@ def test_gas_malformed_comeback_resp(dev, apdev):
     resp['payload'] = struct.pack('<BBBH', ACTION_CATEG_PUBLIC,
                                   GAS_COMEBACK_RESPONSE, dialog_token, 0)
     send_gas_resp(hapd, resp)
-    ev = hapd.wait_event(["MGMT-RX"], timeout=1)
-    if ev is not None:
-        raise Exception("Unexpected management frame")
+    allow_gas_initial_req(hapd, dialog_token)
     expect_gas_result(dev[0], "TIMEOUT")
 
     logger.debug("Too short comeback response(2)")
@@ -694,9 +697,7 @@ def test_gas_malformed_comeback_resp(dev, apdev):
                                   GAS_COMEBACK_RESPONSE, dialog_token, 0, 0x80,
                                   0)
     send_gas_resp(hapd, resp)
-    ev = hapd.wait_event(["MGMT-RX"], timeout=1)
-    if ev is not None:
-        raise Exception("Unexpected management frame")
+    allow_gas_initial_req(hapd, dialog_token)
     expect_gas_result(dev[0], "TIMEOUT")
 
     logger.debug("Maximum comeback response fragment claiming more fragments")

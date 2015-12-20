@@ -22,7 +22,7 @@ def test_tnc_peap_soh(dev, apdev):
                    ca_cert="auth_serv/ca.pem",
                    phase1="peapver=0 tnc=soh cryptobinding=0",
                    phase2="auth=MSCHAPV2",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[0].wait_connected(timeout=10)
 
     dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -30,7 +30,7 @@ def test_tnc_peap_soh(dev, apdev):
                    ca_cert="auth_serv/ca.pem",
                    phase1="peapver=0 tnc=soh1 cryptobinding=1",
                    phase2="auth=MSCHAPV2",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[1].wait_connected(timeout=10)
 
     dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -38,7 +38,7 @@ def test_tnc_peap_soh(dev, apdev):
                    ca_cert="auth_serv/ca.pem",
                    phase1="peapver=0 tnc=soh2 cryptobinding=2",
                    phase2="auth=MSCHAPV2",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[2].wait_connected(timeout=10)
 
 def test_tnc_peap_soh_errors(dev, apdev):
@@ -87,7 +87,7 @@ def test_tnc_ttls(dev, apdev):
                    anonymous_identity="ttls", password="password",
                    phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca.pem",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[0].wait_connected(timeout=10)
 
 def test_tnc_ttls_fragmentation(dev, apdev):
@@ -107,7 +107,7 @@ def test_tnc_ttls_fragmentation(dev, apdev):
                    phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca.pem",
                    fragment_size="150",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[0].wait_connected(timeout=10)
 
 def test_tnc_ttls_errors(dev, apdev):
@@ -189,5 +189,5 @@ def test_tnc_fast(dev, apdev):
                    phase1="fast_provisioning=2",
                    pac_file="blob://fast_pac_auth_tnc",
                    ca_cert="auth_serv/ca.pem",
-                   wait_connect=False)
+                   scan_freq="2412", wait_connect=False)
     dev[0].wait_connected(timeout=10)

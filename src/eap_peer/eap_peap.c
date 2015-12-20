@@ -646,6 +646,7 @@ static int eap_peap_phase2_request(struct eap_sm *sm,
 					if (*resp == NULL) {
 						ret->methodState = METHOD_DONE;
 						ret->decision = DECISION_FAIL;
+						wpabuf_free(buf);
 						return -1;
 					}
 					wpabuf_put_buf(*resp, buf);

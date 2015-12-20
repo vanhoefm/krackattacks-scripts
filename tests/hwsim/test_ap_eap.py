@@ -884,6 +884,12 @@ def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
                 fragment_size="200")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    eap_connect(dev[0], apdev[0], "TTLS", "mschap user",
+                anonymous_identity="ttls",
+                password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP")
 
 def test_ap_wpa2_eap_ttls_mschap_incorrect_password(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAP - incorrect password"""

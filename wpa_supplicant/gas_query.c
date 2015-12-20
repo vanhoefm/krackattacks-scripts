@@ -319,7 +319,10 @@ static void gas_query_tx_comeback_req_delay(struct gas_query *gas,
 {
 	unsigned int secs, usecs;
 
-	offchannel_send_action_done(gas->wpa_s);
+	if (query->offchannel_tx_started) {
+		offchannel_send_action_done(gas->wpa_s);
+		query->offchannel_tx_started = 0;
+	}
 
 	secs = (comeback_delay * 1024) / 1000000;
 	usecs = comeback_delay * 1024 - secs * 1000000;

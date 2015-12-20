@@ -6082,3 +6082,109 @@ def test_eap_proto_peap_errors(dev, apdev):
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
+
+def test_eap_proto_ttls_errors(dev, apdev):
+    """EAP-TTLS local error cases"""
+    check_eap_capa(dev[0], "TTLS")
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 5):
+        with alloc_fail(dev[0], i, "eap_ttls_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TTLS", anonymous_identity="ttls",
+                           identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem",
+                           phase2="autheap=MSCHAPV2",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "eap_peer_tls_derive_key;eap_ttls_v0_derive_key",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_peer_tls_derive_session_id;eap_ttls_v0_derive_key",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "wpabuf_alloc;eap_ttls_phase2_request_mschapv2",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_peer_tls_derive_key;eap_ttls_phase2_request_mschapv2",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_peer_tls_encrypt;eap_ttls_encrypt_response;eap_ttls_implicit_identity_request",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_peer_tls_decrypt;eap_ttls_decrypt",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_ttls_getKey",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_ttls_get_session_id",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_ttls_get_emsk",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "wpabuf_alloc;eap_ttls_phase2_request_mschap",
+               "mschap user", "auth=MSCHAP"),
+              (1, "eap_peer_tls_derive_key;eap_ttls_phase2_request_mschap",
+               "mschap user", "auth=MSCHAP"),
+              (1, "wpabuf_alloc;eap_ttls_phase2_request_chap",
+               "chap user", "auth=CHAP"),
+              (1, "eap_peer_tls_derive_key;eap_ttls_phase2_request_chap",
+               "chap user", "auth=CHAP"),
+              (1, "wpabuf_alloc;eap_ttls_phase2_request_pap",
+               "pap user", "auth=PAP"),
+              (1, "wpabuf_alloc;eap_ttls_avp_encapsulate",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_mschapv2_init;eap_ttls_phase2_request_eap_method",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_sm_buildIdentity;eap_ttls_phase2_request_eap",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_ttls_avp_encapsulate;eap_ttls_phase2_request_eap",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_ttls_parse_attr_eap",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_peer_tls_encrypt;eap_ttls_encrypt_response;eap_ttls_process_decrypted",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_ttls_fake_identity_request",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_msg_alloc;eap_tls_process_output",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_msg_alloc;eap_peer_tls_build_ack",
+               "user", "autheap=MSCHAPV2"),
+              (1, "tls_connection_decrypt;eap_peer_tls_decrypt",
+               "user", "autheap=MSCHAPV2"),
+              (1, "eap_peer_tls_phase2_nak;eap_ttls_phase2_request_eap_method",
+               "cert user", "autheap=MSCHAPV2") ]
+    for count, func, identity, phase2 in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TTLS", anonymous_identity="ttls",
+                           identity=identity, password="password",
+                           ca_cert="auth_serv/ca.pem", phase2=phase2,
+                           erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL",
+                              note="Allocation failure not triggered for: %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "os_get_random;eap_ttls_phase2_request_mschapv2"),
+              (1, "mschapv2_derive_response;eap_ttls_phase2_request_mschapv2") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TTLS", anonymous_identity="ttls",
+                           identity="DOMAIN\mschapv2 user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_FAIL",
+                              note="Test failure not triggered for: %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

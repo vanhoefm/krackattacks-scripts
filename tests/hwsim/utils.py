@@ -51,12 +51,12 @@ class fail_test(object):
             if self._dev.request("GET_FAIL") != "0:%s" % self._funcs:
                 raise Exception("Test failure did not trigger")
 
-def wait_fail_trigger(dev, cmd):
+def wait_fail_trigger(dev, cmd, note="Failure not triggered"):
     for i in range(0, 40):
         if dev.request(cmd).startswith("0:"):
             break
         if i == 39:
-            raise Exception("Failure not triggered")
+            raise Exception(note)
         time.sleep(0.05)
 
 def require_under_vm():

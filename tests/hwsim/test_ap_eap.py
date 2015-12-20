@@ -945,7 +945,8 @@ def test_ap_wpa2_eap_ttls_invalid_phase2(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     tests = [ "auth=MSCHAPv2", "auth=MSCHAPV2 autheap=MD5",
-              "autheap=MD5 auth=MSCHAPV2", "auth=PAP auth=CHAP" ]
+              "autheap=MD5 auth=MSCHAPV2", "auth=PAP auth=CHAP",
+              "autheap=MD5 autheap=FOO autheap=MSCHAPV2" ]
     for t in tests:
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                        identity="DOMAIN\mschapv2 user",

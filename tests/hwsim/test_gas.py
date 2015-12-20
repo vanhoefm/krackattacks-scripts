@@ -925,7 +925,8 @@ def test_gas_anqp_oom_hapd(dev, apdev):
     with alloc_fail(hapd, 1, "gas_anqp_build_comeback_resp"):
         hapd.set("gas_frag_limit", "50")
 
-        # This query will time out due to the AP not sending a response (OOM).
+        # The first attempt of this query will time out due to the AP not
+        # sending a response (OOM), but the retry succeeds.
         dev[0].request("FETCH_ANQP")
         ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
         if ev is None:
@@ -934,13 +935,13 @@ def test_gas_anqp_oom_hapd(dev, apdev):
         ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
         if ev is None:
             raise Exception("GAS query timed out")
-        if "result=TIMEOUT" not in ev:
+        if "result=SUCCESS" not in ev:
             raise Exception("Unexpected result: " + ev)
 
         ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
         if ev is None:
             raise Exception("ANQP-QUERY-DONE event not seen")
-        if "result=FAILURE" not in ev:
+        if "result=SUCCESS" not in ev:
             raise Exception("Unexpected result: " + ev)
 
 def test_gas_anqp_extra_elements(dev, apdev):

@@ -1406,6 +1406,11 @@ def test_ap_wpa2_eap_peap_params(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
 
+    eap_connect(dev[0], apdev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="tls_allow_md5=1 tls_disable_session_ticket=1 tls_disable_tlsv1_0=0 tls_disable_tlsv1_1=0 tls_disable_tlsv1_2=0 tls_ext_cert_check=0",
+                phase2="auth=MSCHAPV2")
+
 def test_ap_wpa2_eap_peap_eap_tls(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-TLS"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

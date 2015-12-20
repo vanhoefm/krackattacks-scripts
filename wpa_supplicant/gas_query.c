@@ -366,7 +366,7 @@ static void gas_query_tx_comeback_req_delay(struct gas_query *gas,
 {
 	unsigned int secs, usecs;
 
-	if (query->offchannel_tx_started) {
+	if (comeback_delay > 1 && query->offchannel_tx_started) {
 		offchannel_send_action_done(gas->wpa_s);
 		query->offchannel_tx_started = 0;
 	}

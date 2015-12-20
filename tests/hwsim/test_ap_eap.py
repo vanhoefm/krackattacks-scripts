@@ -1476,6 +1476,15 @@ def test_ap_wpa2_eap_tls_blob_missing(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
 
+def test_ap_wpa2_eap_tls_with_tls_len(dev, apdev):
+    """EAP-TLS and TLS Message Length in unfragmented packets"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                phase1="include_tls_length=1",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
+
 def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12"""
     check_pkcs12_support(dev[0])

@@ -8,7 +8,7 @@
 import os.path
 
 import hostapd
-from utils import HwsimSkip, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_eap import int_eap_server_params, check_eap_capa
 
 def test_tnc_peap_soh(dev, apdev):
@@ -40,6 +40,37 @@ def test_tnc_peap_soh(dev, apdev):
                    phase2="auth=MSCHAPV2",
                    wait_connect=False)
     dev[2].wait_connected(timeout=10)
+
+def test_tnc_peap_soh_errors(dev, apdev):
+    """TNC PEAP-SoH local error cases"""
+    params = int_eap_server_params()
+    params["tnc"] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "tncc_build_soh"),
+              (1, "eap_msg_alloc;=eap_peap_phase2_request") ]
+    for count, func in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                           eap="PEAP", identity="user", password="password",
+                           ca_cert="auth_serv/ca.pem",
+                           phase1="peapver=0 tnc=soh cryptobinding=0",
+                           phase2="auth=MSCHAPV2",
+                           scan_freq="2412", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    with fail_test(dev[0], 1, "os_get_random;tncc_build_soh"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                       eap="PEAP", identity="user", password="password",
+                       ca_cert="auth_serv/ca.pem",
+                       phase1="peapver=0 tnc=soh cryptobinding=0",
+                       phase2="auth=MSCHAPV2",
+                       scan_freq="2412", wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
 
 def test_tnc_ttls(dev, apdev):
     """TNC TTLS"""

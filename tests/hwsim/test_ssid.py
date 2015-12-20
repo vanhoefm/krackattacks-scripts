@@ -60,6 +60,15 @@ def test_ssid_utf8(dev, apdev):
     if len(sta3) != 0:
         raise Exception("Unexpected STA iteration result (did not stop)")
 
+def clear_scan_cache(hapd, dev):
+    # clear BSS table to avoid issues in following test cases
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    hapd.disable()
+    dev[0].flush_scan_cache()
+    dev[1].flush_scan_cache()
+
 def test_ssid_hidden(dev, apdev):
     """Hidden SSID"""
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
@@ -70,14 +79,7 @@ def test_ssid_hidden(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
-    dev[0].request("DISCONNECT")
-    dev[1].request("DISCONNECT")
-    # clear BSS table to avoid issues in following test cases
-    hapd.disable()
-    dev[0].request("BSS_FLUSH 0")
-    dev[0].request("SCAN freq=2412 only_new=1")
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].request("SCAN freq=2412 only_new=1")
+    clear_scan_cache(hapd, dev)
 
 def test_ssid_hidden2(dev, apdev):
     """Hidden SSID using zero octets as payload"""
@@ -89,14 +91,7 @@ def test_ssid_hidden2(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
-    dev[0].request("DISCONNECT")
-    dev[1].request("DISCONNECT")
-    # clear BSS table to avoid issues in following test cases
-    hapd.disable()
-    dev[0].request("BSS_FLUSH 0")
-    dev[0].request("SCAN freq=2412 only_new=1")
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].request("SCAN freq=2412 only_new=1")
+    clear_scan_cache(hapd, dev)
 
 def test_ssid_hidden_wpa2(dev, apdev):
     """Hidden SSID with WPA2-PSK"""
@@ -109,11 +104,4 @@ def test_ssid_hidden_wpa2(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
-    dev[0].request("DISCONNECT")
-    dev[1].request("DISCONNECT")
-    # clear BSS table to avoid issues in following test cases
-    hapd.disable()
-    dev[0].request("BSS_FLUSH 0")
-    dev[0].request("SCAN freq=2412 only_new=1")
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].request("SCAN freq=2412 only_new=1")
+    clear_scan_cache(hapd, dev)

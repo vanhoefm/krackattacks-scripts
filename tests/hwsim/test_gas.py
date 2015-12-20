@@ -235,35 +235,53 @@ def test_gas_concurrent_connect(dev, apdev):
     if "CTRL-EVENT-CONNECTED" not in ev:
         raise Exception("Unexpected operation order")
 
-def test_gas_fragment(dev, apdev):
-    """GAS fragmentation"""
-    hapd = start_ap(apdev[0])
-    hapd.set("gas_frag_limit", "50")
+def gas_fragment_and_comeback(dev, apdev, frag_limit=0, comeback_delay=0):
+    hapd = start_ap(apdev)
+    if frag_limit:
+        hapd.set("gas_frag_limit", str(frag_limit))
+    if comeback_delay:
+        hapd.set("gas_comeback_delay", str(comeback_delay))
 
-    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
-    dev[0].request("FETCH_ANQP")
-    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=5)
+    dev.scan_for_bss(apdev['bssid'], freq="2412", force_scan=True)
+    dev.request("FETCH_ANQP")
+    ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=5)
     if ev is None:
         raise Exception("No GAS-QUERY-DONE event")
     if "result=SUCCESS" not in ev:
         raise Exception("Unexpected GAS result: " + ev)
     for i in range(0, 13):
-        ev = dev[0].wait_event(["RX-ANQP", "RX-HS20-ANQP"], timeout=5)
+        ev = dev.wait_event(["RX-ANQP", "RX-HS20-ANQP"], timeout=5)
         if ev is None:
             raise Exception("Operation timed out")
-    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=1)
+    ev = dev.wait_event(["ANQP-QUERY-DONE"], timeout=1)
     if ev is None:
         raise Exception("No ANQP-QUERY-DONE event")
     if "result=SUCCESS" not in ev:
         raise Exception("Unexpected ANQP result: " + ev)
+
+def test_gas_fragment(dev, apdev):
+    """GAS fragmentation"""
+    gas_fragment_and_comeback(dev[0], apdev[0], frag_limit=50)
 
 def test_gas_fragment_mcc(dev, apdev):
     """GAS fragmentation with mac80211_hwsim MCC enabled"""
     with HWSimRadio(n_channels=2) as (radio, iface):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
-        ndev = [ wpas ]
-        test_gas_fragment(ndev, apdev)
+        gas_fragment_and_comeback(wpas, apdev[0], frag_limit=50)
+
+def test_gas_fragment_with_comeback_delay(dev, apdev):
+    """GAS fragmentation and comeback delay"""
+    gas_fragment_and_comeback(dev[0], apdev[0], frag_limit=50,
+                              comeback_delay=500)
+
+def test_gas_fragment_with_comeback_delay_mcc(dev, apdev):
+    """GAS fragmentation and comeback delay with mac80211_hwsim MCC enabled"""
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        gas_fragment_and_comeback(wpas, apdev[0], frag_limit=50,
+                                  comeback_delay=500)
 
 def test_gas_comeback_delay(dev, apdev):
     """GAS comeback delay"""

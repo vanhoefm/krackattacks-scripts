@@ -356,10 +356,8 @@ u8 * eap_peer_tls_derive_session_id(struct eap_sm *sm,
 	struct tls_random keys;
 	u8 *out;
 
-	if (tls_connection_get_random(sm->ssl_ctx, data->conn, &keys))
-		return NULL;
-
-	if (keys.client_random == NULL || keys.server_random == NULL)
+	if (tls_connection_get_random(sm->ssl_ctx, data->conn, &keys) ||
+	    keys.client_random == NULL || keys.server_random == NULL)
 		return NULL;
 
 	*len = 1 + keys.client_random_len + keys.server_random_len;

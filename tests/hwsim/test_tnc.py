@@ -8,7 +8,7 @@
 import os.path
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail, wait_fail_trigger
 from test_ap_eap import int_eap_server_params, check_eap_capa
 
 def test_tnc_peap_soh(dev, apdev):
@@ -78,6 +78,64 @@ def test_tnc_ttls_fragmentation(dev, apdev):
                    fragment_size="150",
                    wait_connect=False)
     dev[0].wait_connected(timeout=10)
+
+def test_tnc_ttls_errors(dev, apdev):
+    """TNC TTLS local error cases"""
+    if not os.path.exists("tnc/libhostap_imc.so"):
+        raise HwsimSkip("No IMC installed")
+    check_eap_capa(dev[0], "MSCHAPV2")
+
+    params = int_eap_server_params()
+    params["tnc"] = "1"
+    params["fragment_size"] = "150"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "eap_ttls_process_phase2_eap;eap_ttls_process_tnc_start",
+               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+              (1, "eap_ttls_process_phase2_eap;eap_ttls_process_tnc_start",
+               "mschap user", "auth=MSCHAP"),
+              (1, "=eap_tnc_init", "chap user", "auth=CHAP"),
+              (1, "tncc_init;eap_tnc_init", "pap user", "auth=PAP"),
+              (1, "eap_msg_alloc;eap_tnc_build_frag_ack",
+               "pap user", "auth=PAP"),
+              (1, "eap_msg_alloc;eap_tnc_build_msg",
+               "pap user", "auth=PAP"),
+              (1, "wpabuf_alloc;=eap_tnc_process_fragment",
+               "pap user", "auth=PAP"),
+              (1, "eap_msg_alloc;=eap_tnc_process", "pap user", "auth=PAP"),
+              (1, "wpabuf_alloc;=eap_tnc_process", "pap user", "auth=PAP"),
+              (1, "dup_binstr;tncc_process_if_tnccs", "pap user", "auth=PAP"),
+              (1, "tncc_get_base64;tncc_process_if_tnccs",
+               "pap user", "auth=PAP"),
+              (1, "tncc_if_tnccs_start", "pap user", "auth=PAP"),
+              (1, "tncc_if_tnccs_end", "pap user", "auth=PAP"),
+              (1, "tncc_parse_imc", "pap user", "auth=PAP"),
+              (2, "tncc_parse_imc", "pap user", "auth=PAP"),
+              (3, "tncc_parse_imc", "pap user", "auth=PAP"),
+              (1, "os_readfile;tncc_read_config", "pap user", "auth=PAP"),
+              (1, "tncc_init", "pap user", "auth=PAP"),
+              (1, "TNC_TNCC_ReportMessageTypes", "pap user", "auth=PAP"),
+              (1, "base64_encode;TNC_TNCC_SendMessage", "pap user", "auth=PAP"),
+              (1, "=TNC_TNCC_SendMessage", "pap user", "auth=PAP"),
+              (1, "tncc_get_base64;tncc_process_if_tnccs",
+               "pap user", "auth=PAP") ]
+    for count, func, identity, phase2 in tests:
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                           scan_freq="2412",
+                           eap="TTLS", anonymous_identity="ttls",
+                           identity=identity, password="password",
+                           ca_cert="auth_serv/ca.pem", phase2=phase2,
+                           fragment_size="150", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL",
+                              note="Allocation failure not triggered for: %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+            dev[0].dump_monitor()
 
 def test_tnc_fast(dev, apdev):
     """TNC FAST"""

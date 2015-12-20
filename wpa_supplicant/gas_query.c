@@ -40,6 +40,7 @@ struct gas_query_pending {
 	u8 next_frag_id;
 	unsigned int wait_comeback:1;
 	unsigned int offchannel_tx_started:1;
+	unsigned int retry:1;
 	int freq;
 	u16 status_code;
 	struct wpabuf *req;
@@ -66,6 +67,10 @@ struct gas_query {
 
 static void gas_query_tx_comeback_timeout(void *eloop_data, void *user_ctx);
 static void gas_query_timeout(void *eloop_data, void *user_ctx);
+static void gas_query_rx_comeback_timeout(void *eloop_data, void *user_ctx);
+static void gas_query_tx_initial_req(struct gas_query *gas,
+				     struct gas_query_pending *query);
+static int gas_query_new_dialog_token(struct gas_query *gas, const u8 *dst);
 
 
 static int ms_from_time(struct os_reltime *last)
@@ -154,6 +159,7 @@ static void gas_query_done(struct gas_query *gas,
 		offchannel_send_action_done(gas->wpa_s);
 	eloop_cancel_timeout(gas_query_tx_comeback_timeout, gas, query);
 	eloop_cancel_timeout(gas_query_timeout, gas, query);
+	eloop_cancel_timeout(gas_query_rx_comeback_timeout, gas, query);
 	dl_list_del(&query->list);
 	query->cb(query->ctx, query->addr, query->dialog_token, result,
 		  query->adv_proto, query->resp, query->status_code);
@@ -238,6 +244,13 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 		eloop_cancel_timeout(gas_query_timeout, gas, query);
 		eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
 				       gas_query_timeout, gas, query);
+		if (query->wait_comeback && !query->retry) {
+			eloop_cancel_timeout(gas_query_rx_comeback_timeout,
+					     gas, query);
+			eloop_register_timeout(
+				0, (GAS_QUERY_WAIT_TIME_COMEBACK + 10) * 1000,
+				gas_query_rx_comeback_timeout, gas, query);
+		}
 	}
 	if (result == OFFCHANNEL_SEND_ACTION_FAILED) {
 		eloop_cancel_timeout(gas_query_timeout, gas, query);
@@ -294,7 +307,7 @@ static void gas_query_tx_comeback_req(struct gas_query *gas,
 		return;
 	}
 
-	wait_time = !query->offchannel_tx_started ?
+	wait_time = (query->retry || !query->offchannel_tx_started) ?
 		GAS_QUERY_WAIT_TIME_INITIAL : GAS_QUERY_WAIT_TIME_COMEBACK;
 
 	if (gas_query_tx(gas, query, req, wait_time) < 0) {
@@ -304,6 +317,35 @@ static void gas_query_tx_comeback_req(struct gas_query *gas,
 	}
 
 	wpabuf_free(req);
+}
+
+
+static void gas_query_rx_comeback_timeout(void *eloop_data, void *user_ctx)
+{
+	struct gas_query *gas = eloop_data;
+	struct gas_query_pending *query = user_ctx;
+	int dialog_token;
+
+	wpa_printf(MSG_DEBUG,
+		   "GAS: No response to comeback request received (retry=%u)",
+		   query->retry);
+	if (gas->current != query || query->retry)
+		return;
+	dialog_token = gas_query_new_dialog_token(gas, query->addr);
+	if (dialog_token < 0)
+		return;
+	wpa_printf(MSG_DEBUG,
+		   "GAS: Retry GAS query due to comeback response timeout");
+	query->retry = 1;
+	query->dialog_token = dialog_token;
+	*(wpabuf_mhead_u8(query->req) + 2) = dialog_token;
+	query->wait_comeback = 0;
+	query->next_frag_id = 0;
+	wpabuf_free(query->adv_proto);
+	query->adv_proto = NULL;
+	eloop_cancel_timeout(gas_query_tx_comeback_timeout, gas, query);
+	eloop_cancel_timeout(gas_query_timeout, gas, query);
+	gas_query_tx_initial_req(gas, query);
 }
 
 
@@ -381,6 +423,7 @@ static void gas_query_rx_comeback(struct gas_query *gas,
 		   "comeback_delay=%u)",
 		   MAC2STR(query->addr), query->dialog_token, frag_id,
 		   more_frags, comeback_delay);
+	eloop_cancel_timeout(gas_query_rx_comeback_timeout, gas, query);
 
 	if ((size_t) 2 + adv_proto[1] != wpabuf_len(query->adv_proto) ||
 	    os_memcmp(adv_proto, wpabuf_head(query->adv_proto),
@@ -630,7 +673,13 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 	}
 
 	gas->work = work;
+	gas_query_tx_initial_req(gas, query);
+}
 
+
+static void gas_query_tx_initial_req(struct gas_query *gas,
+				     struct gas_query_pending *query)
+{
 	if (gas_query_tx(gas, query, query->req,
 			 GAS_QUERY_WAIT_TIME_INITIAL) < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
@@ -644,7 +693,24 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 		   query->dialog_token);
 	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
 			       gas_query_timeout, gas, query);
+}
 
+
+static int gas_query_new_dialog_token(struct gas_query *gas, const u8 *dst)
+{
+	static int next_start = 0;
+	int dialog_token;
+
+	for (dialog_token = 0; dialog_token < 256; dialog_token++) {
+		if (gas_query_dialog_token_available(
+			    gas, dst, (next_start + dialog_token) % 256))
+			break;
+	}
+	if (dialog_token == 256)
+		return -1; /* Too many pending queries */
+	dialog_token = (next_start + dialog_token) % 256;
+	next_start = (dialog_token + 1) % 256;
+	return dialog_token;
 }
 
 
@@ -669,20 +735,13 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 {
 	struct gas_query_pending *query;
 	int dialog_token;
-	static int next_start = 0;
 
 	if (wpabuf_len(req) < 3)
 		return -1;
 
-	for (dialog_token = 0; dialog_token < 256; dialog_token++) {
-		if (gas_query_dialog_token_available(
-			    gas, dst, (next_start + dialog_token) % 256))
-			break;
-	}
-	if (dialog_token == 256)
-		return -1; /* Too many pending queries */
-	dialog_token = (next_start + dialog_token) % 256;
-	next_start = (dialog_token + 1) % 256;
+	dialog_token = gas_query_new_dialog_token(gas, dst);
+	if (dialog_token < 0)
+		return -1;
 
 	query = os_zalloc(sizeof(*query));
 	if (query == NULL)

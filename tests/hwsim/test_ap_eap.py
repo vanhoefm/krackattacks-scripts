@@ -2167,6 +2167,40 @@ def test_ap_wpa2_eap_eke(dev, apdev):
     eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello1",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_eke_many(dev, apdev, params):
+    """WPA2-Enterprise connection using EAP-EKE (many connections) [long]"""
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    success = 0
+    fail = 0
+    for i in range(100):
+        for j in range(3):
+            dev[j].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="EKE",
+                           identity="eke user", password="hello",
+                           phase1="dhgroup=3 encr=1 prf=1 mac=1",
+                           scan_freq="2412", wait_connect=False)
+        for j in range(3):
+            ev = dev[j].wait_event(["CTRL-EVENT-CONNECTED",
+                                    "CTRL-EVENT-DISCONNECTED"], timeout=15)
+            if ev is None:
+                raise Exception("No connected/disconnected event")
+            if "CTRL-EVENT-DISCONNECTED" in ev:
+                fail += 1
+                # The RADIUS server limits on active sessions can be hit when
+                # going through this test case, so try to give some more time
+                # for the server to remove sessions.
+                logger.info("Failed to connect i=%d j=%d" % (i, j))
+                dev[j].request("REMOVE_NETWORK all")
+                time.sleep(1)
+            else:
+                success += 1
+                dev[j].request("REMOVE_NETWORK all")
+                dev[j].wait_disconnected()
+            dev[j].dump_monitor()
+    logger.info("Total success=%d failure=%d" % (success, fail))
+
 def test_ap_wpa2_eap_eke_serverid_nai(dev, apdev):
     """WPA2-Enterprise connection using EAP-EKE with serverid NAI"""
     params = int_eap_server_params()

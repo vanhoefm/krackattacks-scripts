@@ -635,6 +635,7 @@ int eap_eke_prot(struct eap_eke_session *sess,
 
 	if (*prot_len < block_size + data_len + pad + icv_len) {
 		wpa_printf(MSG_INFO, "EAP-EKE: Not enough room for Prot() data");
+		return -1;
 	}
 	pos = prot;
 

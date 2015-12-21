@@ -50,6 +50,7 @@ EAP_TYPE_AKA_PRIME = 50
 EAP_TYPE_GPSK = 51
 EAP_TYPE_PWD = 52
 EAP_TYPE_EKE = 53
+EAP_TYPE_EXPANDED = 254
 
 # Type field in EAP-Initiate and EAP-Finish messages
 EAP_ERP_TYPE_REAUTH_START = 1
@@ -6188,3 +6189,112 @@ def test_eap_proto_ttls_errors(dev, apdev):
                               note="Test failure not triggered for: %d:%s" % (count, func))
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_eap_proto_expanded(dev, apdev):
+    """EAP protocol tests with expanded header"""
+    global eap_proto_expanded_test_done
+    eap_proto_expanded_test_done = False
+
+    def expanded_handler(ctx, req):
+        logger.info("expanded_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge in expanded header")
+            return struct.pack(">BBHB3BLBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 3,
+                               EAP_TYPE_EXPANDED, 0, 0, 0, EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid expanded EAP length")
+            return struct.pack(">BBHB3BH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 2,
+                               EAP_TYPE_EXPANDED, 0, 0, 0, EAP_TYPE_MD5)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid expanded frame type")
+            return struct.pack(">BBHB3BL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_EXPANDED, 0, 0, 1, EAP_TYPE_MD5)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MSCHAPv2 Challenge")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1 + 16 + 6,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1 + 16 + 6, 16) + 16*'A' + 'foobar'
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid expanded frame type")
+            return struct.pack(">BBHB3BL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_EXPANDED, 0, 0, 1, EAP_TYPE_MSCHAPV2)
+
+        logger.info("No more test responses available - test case completed")
+        global eap_proto_expanded_test_done
+        eap_proto_expanded_test_done = True
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(expanded_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        i = 0
+        while not eap_proto_expanded_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
+            if i == 4:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password="password",
+                               wait_connect=False)
+            else:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MD5", identity="user", password="password",
+                               wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            if i in [ 1 ]:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+                if ev is None:
+                    raise Exception("Timeout on EAP method start")
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            elif i in [ 2, 3 ]:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                       timeout=5)
+                if ev is None:
+                    raise Exception("Timeout on EAP proposed method")
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            else:
+                time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

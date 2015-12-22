@@ -37,6 +37,8 @@ struct tls_global {
 			 union tls_event_data *data);
 	void *cb_ctx;
 	int cert_in_cb;
+
+	char *ocsp_stapling_response;
 };
 
 struct tls_connection {
@@ -133,6 +135,7 @@ void tls_deinit(void *ssl_ctx)
 		if (global->params_set)
 			gnutls_certificate_free_credentials(global->xcred);
 		os_free(global->session_data);
+		os_free(global->ocsp_stapling_response);
 		os_free(global);
 	}
 
@@ -602,6 +605,44 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 }
 
 
+#if GNUTLS_VERSION_NUMBER >= 0x030103
+static int server_ocsp_status_req(gnutls_session_t session, void *ptr,
+				  gnutls_datum_t *resp)
+{
+	struct tls_global *global = ptr;
+	char *cached;
+	size_t len;
+
+	if (!global->ocsp_stapling_response) {
+		wpa_printf(MSG_DEBUG, "GnuTLS: OCSP status callback - no response configured");
+		return GNUTLS_E_NO_CERTIFICATE_STATUS;
+	}
+
+	cached = os_readfile(global->ocsp_stapling_response, &len);
+	if (!cached) {
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: OCSP status callback - could not read response file (%s)",
+			   global->ocsp_stapling_response);
+		return GNUTLS_E_NO_CERTIFICATE_STATUS;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "GnuTLS: OCSP status callback - send cached response");
+	resp->data = gnutls_malloc(len);
+	if (!resp->data) {
+		os_free(resp);
+		return GNUTLS_E_MEMORY_ERROR;
+	}
+
+	os_memcpy(resp->data, cached, len);
+	resp->size = len;
+	os_free(cached);
+
+	return GNUTLS_E_SUCCESS;
+}
+#endif /* 3.1.3 */
+
+
 int tls_global_set_params(void *tls_ctx,
 			  const struct tls_connection_params *params)
 {
@@ -695,6 +736,17 @@ int tls_global_set_params(void *tls_ctx,
 			goto fail;
 		}
 	}
+
+#if GNUTLS_VERSION_NUMBER >= 0x030103
+	os_free(global->ocsp_stapling_response);
+	if (params->ocsp_stapling_response)
+		global->ocsp_stapling_response =
+			os_strdup(params->ocsp_stapling_response);
+	else
+		global->ocsp_stapling_response = NULL;
+	gnutls_certificate_set_ocsp_status_request_function(
+		global->xcred, server_ocsp_status_req, global);
+#endif /* 3.1.3 */
 
 	global->params_set = 1;
 

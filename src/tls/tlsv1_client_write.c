@@ -192,6 +192,46 @@ u8 * tls_send_client_hello(struct tlsv1_client *conn, size_t *out_len)
 		pos += 2;
 		WPA_PUT_BE16(pos, 0); /* request_extensions(empty) */
 		pos += 2;
+
+		wpa_printf(MSG_DEBUG,
+			   "TLSv1: Add status_request_v2 extension for OCSP stapling");
+		/* ExtensionsType extension_type = status_request_v2(17) */
+		WPA_PUT_BE16(pos, TLS_EXT_STATUS_REQUEST_V2);
+		pos += 2;
+		/* opaque extension_data<0..2^16-1> length */
+		WPA_PUT_BE16(pos, 7);
+		pos += 2;
+
+		/*
+		 * RFC 6961, 2.2:
+		 * struct {
+		 *     CertificateStatusType status_type;
+		 *     uint16 request_length;
+		 *     select (status_type) {
+		 *         case ocsp: OCSPStatusRequest;
+		 *         case ocsp_multi: OCSPStatusRequest;
+		 *     } request;
+		 * } CertificateStatusRequestItemV2;
+		 *
+		 * enum { ocsp(1), ocsp_multi(2), (255) } CertificateStatusType;
+		 *
+		 * struct {
+		 * CertificateStatusRequestItemV2
+		 *     certificate_status_req_list<1..2^16-1>;
+		 * } CertificateStatusRequestListV2;
+		 */
+
+		/* certificate_status_req_list<1..2^16-1> */
+		WPA_PUT_BE16(pos, 5);
+		pos += 2;
+
+		/* CertificateStatusRequestItemV2 */
+		*pos++ = 2; /* status_type = ocsp_multi(2) */
+		/* OCSPStatusRequest as shown above for v1 */
+		WPA_PUT_BE16(pos, 0); /* responder_id_list(empty) */
+		pos += 2;
+		WPA_PUT_BE16(pos, 0); /* request_extensions(empty) */
+		pos += 2;
 	}
 
 	if (pos == ext_start + 2)

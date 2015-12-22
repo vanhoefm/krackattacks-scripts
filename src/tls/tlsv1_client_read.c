@@ -790,13 +790,37 @@ fail:
 }
 
 
+static enum tls_ocsp_result
+tls_process_certificate_status_ocsp_response(struct tlsv1_client *conn,
+					     const u8 *pos, size_t len)
+{
+	const u8 *end = pos + len;
+	u32 ocsp_resp_len;
+
+	/* opaque OCSPResponse<1..2^24-1>; */
+	if (end - pos < 3) {
+		wpa_printf(MSG_INFO, "TLSv1: Too short OCSPResponse");
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
+		return TLS_OCSP_INVALID;
+	}
+	ocsp_resp_len = WPA_GET_BE24(pos);
+	pos += 3;
+	if (end - pos < ocsp_resp_len) {
+		wpa_printf(MSG_INFO, "TLSv1: Truncated OCSPResponse");
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
+		return TLS_OCSP_INVALID;
+	}
+
+	return tls_process_ocsp_response(conn, pos, ocsp_resp_len);
+}
+
+
 static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 					   const u8 *in_data, size_t *in_len)
 {
 	const u8 *pos, *end;
 	size_t left, len;
 	u8 type, status_type;
-	u32 ocsp_resp_len;
 	enum tls_ocsp_result res;
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
@@ -850,6 +874,7 @@ static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 	 *     CertificateStatusType status_type;
 	 *     select (status_type) {
 	 *         case ocsp: OCSPResponse;
+	 *         case ocsp_multi: OCSPResponseList;
 	 *     } response;
 	 * } CertificateStatus;
 	 */
@@ -862,53 +887,72 @@ static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 	wpa_printf(MSG_DEBUG, "TLSv1: CertificateStatus status_type %u",
 		   status_type);
 
-	if (status_type != 1 /* ocsp */) {
+	if (status_type == 1 /* ocsp */) {
+		res = tls_process_certificate_status_ocsp_response(
+			conn, pos, end - pos);
+	} else if (status_type == 2 /* ocsp_multi */) {
+		int good = 0, revoked = 0;
+		u32 resp_len;
+
+		res = TLS_OCSP_NO_RESPONSE;
+
+		/*
+		 * opaque OCSPResponse<0..2^24-1>;
+		 *
+		 * struct {
+		 *   OCSPResponse ocsp_response_list<1..2^24-1>;
+		 * } OCSPResponseList;
+		 */
+		if (end - pos < 3) {
+			wpa_printf(MSG_DEBUG,
+				   "TLSv1: Truncated OCSPResponseList");
+			res = TLS_OCSP_INVALID;
+			goto done;
+		}
+		resp_len = WPA_GET_BE24(pos);
+		pos += 3;
+		if (end - pos < resp_len) {
+			wpa_printf(MSG_DEBUG,
+				   "TLSv1: Truncated OCSPResponseList(len=%u)",
+				   resp_len);
+			res = TLS_OCSP_INVALID;
+			goto done;
+		}
+		end = pos + resp_len;
+
+		while (end - pos >= 3) {
+			resp_len = WPA_GET_BE24(pos);
+			pos += 3;
+			if (resp_len > end - pos) {
+				wpa_printf(MSG_DEBUG,
+					   "TLSv1: Truncated OCSPResponse(len=%u; left=%d) in ocsp_multi",
+					   resp_len, (int) (end - pos));
+				res = TLS_OCSP_INVALID;
+				break;
+			}
+			if (!resp_len)
+				continue; /* Skip an empty response */
+			res = tls_process_certificate_status_ocsp_response(
+				conn, pos - 3, resp_len + 3);
+			if (res == TLS_OCSP_REVOKED)
+				revoked++;
+			else if (res == TLS_OCSP_GOOD)
+				good++;
+			pos += resp_len;
+		}
+
+		if (revoked)
+			res = TLS_OCSP_REVOKED;
+		else if (good)
+			res = TLS_OCSP_GOOD;
+	} else {
 		wpa_printf(MSG_DEBUG,
 			   "TLSv1: Ignore unsupported CertificateStatus");
 		goto skip;
 	}
 
-	/* opaque OCSPResponse<1..2^24-1>; */
-	if (end - pos < 3) {
-		wpa_printf(MSG_INFO, "TLSv1: Too short OCSPResponse");
-		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
-		return -1;
-	}
-	ocsp_resp_len = WPA_GET_BE24(pos);
-	pos += 3;
-	if (end - pos < ocsp_resp_len) {
-		wpa_printf(MSG_INFO, "TLSv1: Truncated OCSPResponse");
-		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
-		return -1;
-	}
-
-	res = tls_process_ocsp_response(conn, pos, ocsp_resp_len);
-	switch (res) {
-	case TLS_OCSP_NO_RESPONSE:
-		if (!(conn->flags & TLS_CONN_REQUIRE_OCSP))
-			goto skip;
-		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
-			  TLS_ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
-		if (conn->server_cert)
-			tls_cert_chain_failure_event(
-				conn, 0, conn->server_cert,
-				TLS_FAIL_UNSPECIFIED,
-				"bad certificate status response");
-		return -1;
-	case TLS_OCSP_INVALID:
-		if (!(conn->flags & TLS_CONN_REQUIRE_OCSP))
-			goto skip; /* ignore - process as if no response */
-		tls_alert(conn, TLS_ALERT_LEVEL_FATAL, TLS_ALERT_DECODE_ERROR);
-		if (conn->server_cert)
-			tls_cert_chain_failure_event(
-				conn, 0, conn->server_cert,
-				TLS_FAIL_UNSPECIFIED,
-				"bad certificate status response");
-		return -1;
-	case TLS_OCSP_GOOD:
-		wpa_printf(MSG_DEBUG, "TLSv1: OCSP response good");
-		break;
-	case TLS_OCSP_REVOKED:
+done:
+	if (res == TLS_OCSP_REVOKED) {
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 			  TLS_ALERT_CERTIFICATE_REVOKED);
 		if (conn->server_cert)
@@ -917,6 +961,19 @@ static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 				"certificate revoked");
 		return -1;
 	}
+
+	if ((conn->flags & TLS_CONN_REQUIRE_OCSP) && res != TLS_OCSP_GOOD) {
+		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+			  res == TLS_OCSP_INVALID ? TLS_ALERT_DECODE_ERROR :
+			  TLS_ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+		if (conn->server_cert)
+			tls_cert_chain_failure_event(
+				conn, 0, conn->server_cert,
+				TLS_FAIL_UNSPECIFIED,
+				"bad certificate status response");
+		return -1;
+	}
+
 	conn->ocsp_resp_received = 1;
 
 skip:

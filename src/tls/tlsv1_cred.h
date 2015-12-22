@@ -26,6 +26,7 @@ struct tlsv1_credentials {
 	size_t dh_g_len;
 
 	char *ocsp_stapling_response;
+	char *ocsp_stapling_response_multi;
 };
 
 

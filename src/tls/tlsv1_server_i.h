@@ -56,6 +56,8 @@ struct tlsv1_server {
 
 	int use_session_ticket;
 	unsigned int status_request:1;
+	unsigned int status_request_v2:1;
+	unsigned int status_request_multi:1;
 
 	u8 *dh_secret;
 	size_t dh_secret_len;

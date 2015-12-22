@@ -111,6 +111,18 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 		pos += 2;
 	}
 
+	if (conn->status_request_v2) {
+		/*
+		  Add a status_request_v2 extension with empty extension_data
+		*/
+		/* ExtensionsType extension_type = status_request_v2(17) */
+		WPA_PUT_BE16(pos, TLS_EXT_STATUS_REQUEST_V2);
+		pos += 2;
+		/* opaque extension_data<0..2^16-1> length */
+		WPA_PUT_BE16(pos, 0);
+		pos += 2;
+	}
+
 	if (conn->session_ticket && conn->session_ticket_cb) {
 		int res = conn->session_ticket_cb(
 			conn->session_ticket_cb_ctx,
@@ -264,30 +276,31 @@ static int tls_write_server_certificate(struct tlsv1_server *conn,
 
 
 static int tls_write_server_certificate_status(struct tlsv1_server *conn,
-					       u8 **msgpos, u8 *end)
+					       u8 **msgpos, u8 *end,
+					       int ocsp_multi,
+					       char *ocsp_resp,
+					       size_t ocsp_resp_len)
 {
 	u8 *pos, *rhdr, *hs_start, *hs_length;
-	char *resp;
-	size_t rlen, len;
+	size_t rlen;
 
-	if (!conn->status_request)
-		return 0; /* Client did not request certificate status */
-	if (!conn->cred->ocsp_stapling_response)
-		return 0; /* No cached OCSP stapling response */
-	resp = os_readfile(conn->cred->ocsp_stapling_response, &len);
-	if (!resp)
-		return 0; /* No cached OCSP stapling response */
+	if (!ocsp_resp) {
+		 /*
+		  * Client did not request certificate status or there is no
+		  * matching response cached.
+		  */
+		return 0;
+	}
 
 	pos = *msgpos;
-	if (TLS_RECORD_HEADER_LEN + 1 + 3 + 1 + 3 + len >
+	if (TLS_RECORD_HEADER_LEN + 1 + 3 + 1 + 3 + ocsp_resp_len >
 	    (unsigned int) (end - pos)) {
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_INTERNAL_ERROR);
-		os_free(resp);
 		return -1;
 	}
 
-	tlsv1_server_log(conn, "Send CertificateStatus");
+	tlsv1_server_log(conn, "Send CertificateStatus (multi=%d)", ocsp_multi);
 	rhdr = pos;
 	pos += TLS_RECORD_HEADER_LEN;
 
@@ -307,20 +320,27 @@ static int tls_write_server_certificate_status(struct tlsv1_server *conn,
 	 *     CertificateStatusType status_type;
 	 *     select (status_type) {
 	 *         case ocsp: OCSPResponse;
+	 *         case ocsp_multi: OCSPResponseList;
 	 *     } response;
 	 * } CertificateStatus;
 	 *
 	 * opaque OCSPResponse<1..2^24-1>;
+	 *
+	 * struct {
+	 *   OCSPResponse ocsp_response_list<1..2^24-1>;
+	 * } OCSPResponseList;
 	 */
 
 	/* CertificateStatusType status_type */
-	*pos++ = 1; /* ocsp(1) */
+	if (ocsp_multi)
+		*pos++ = 2; /* ocsp_multi(2) */
+	else
+		*pos++ = 1; /* ocsp(1) */
 	/* uint24 length of OCSPResponse */
-	WPA_PUT_BE24(pos, len);
+	WPA_PUT_BE24(pos, ocsp_resp_len);
 	pos += 3;
-	os_memcpy(pos, resp, len);
-	os_free(resp);
-	pos += len;
+	os_memcpy(pos, ocsp_resp, ocsp_resp_len);
+	pos += ocsp_resp_len;
 
 	WPA_PUT_BE24(hs_length, pos - hs_length - 3);
 
@@ -908,34 +928,46 @@ static u8 * tls_send_server_hello(struct tlsv1_server *conn, size_t *out_len)
 {
 	u8 *msg, *end, *pos;
 	size_t msglen;
+	int ocsp_multi = 0;
+	char *ocsp_resp = NULL;
+	size_t ocsp_resp_len = 0;
 
 	*out_len = 0;
 
-	msglen = 1000 + tls_server_cert_chain_der_len(conn);
-	if (conn->status_request && conn->cred->ocsp_stapling_response) {
-		char *resp;
-		size_t len;
-
-		resp = os_readfile(conn->cred->ocsp_stapling_response, &len);
-		if (resp) {
-			msglen += 10 + len;
-			os_free(resp);
-		}
+	if (conn->status_request_multi &&
+	    conn->cred->ocsp_stapling_response_multi) {
+		ocsp_resp = os_readfile(
+			conn->cred->ocsp_stapling_response_multi,
+			&ocsp_resp_len);
+		ocsp_multi = 1;
+	} else if ((conn->status_request || conn->status_request_v2) &&
+		   conn->cred->ocsp_stapling_response) {
+		ocsp_resp = os_readfile(conn->cred->ocsp_stapling_response,
+					&ocsp_resp_len);
 	}
+	if (!ocsp_resp)
+		ocsp_resp_len = 0;
+
+	msglen = 1000 + tls_server_cert_chain_der_len(conn) + ocsp_resp_len;
 
 	msg = os_malloc(msglen);
-	if (msg == NULL)
+	if (msg == NULL) {
+		os_free(ocsp_resp);
 		return NULL;
+	}
 
 	pos = msg;
 	end = msg + msglen;
 
 	if (tls_write_server_hello(conn, &pos, end) < 0) {
 		os_free(msg);
+		os_free(ocsp_resp);
 		return NULL;
 	}
 
 	if (conn->use_session_ticket) {
+		os_free(ocsp_resp);
+
 		/* Abbreviated handshake using session ticket; RFC 4507 */
 		if (tls_write_server_change_cipher_spec(conn, &pos, end) < 0 ||
 		    tls_write_server_finished(conn, &pos, end) < 0) {
@@ -952,13 +984,16 @@ static u8 * tls_send_server_hello(struct tlsv1_server *conn, size_t *out_len)
 
 	/* Full handshake */
 	if (tls_write_server_certificate(conn, &pos, end) < 0 ||
-	    tls_write_server_certificate_status(conn, &pos, end) < 0 ||
+	    tls_write_server_certificate_status(conn, &pos, end, ocsp_multi,
+						ocsp_resp, ocsp_resp_len) < 0 ||
 	    tls_write_server_key_exchange(conn, &pos, end) < 0 ||
 	    tls_write_server_certificate_request(conn, &pos, end) < 0 ||
 	    tls_write_server_hello_done(conn, &pos, end) < 0) {
 		os_free(msg);
+		os_free(ocsp_resp);
 		return NULL;
 	}
+	os_free(ocsp_resp);
 
 	*out_len = pos - msg;
 

@@ -270,7 +270,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 				 * much we can do here without knowing what
 				 * exactly caused the server to misbehave.
 				 */
-				wpa_dbg(sm->ctx->msg_ctx, MSG_INFO,
+				wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 					"RSN: PMKID mismatch - authentication server may have derived different MSK?!");
 				return -1;
 			}

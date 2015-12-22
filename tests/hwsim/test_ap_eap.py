@@ -2727,7 +2727,8 @@ def int_eap_server_params():
                "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
                "ca_cert": "auth_serv/ca.pem",
                "server_cert": "auth_serv/server.pem",
-               "private_key": "auth_serv/server.key" }
+               "private_key": "auth_serv/server.key",
+               "dh_file": "auth_serv/dh.conf" }
     return params
 
 def test_ap_wpa2_eap_tls_ocsp_key_id(dev, apdev, params):

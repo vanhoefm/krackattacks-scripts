@@ -196,8 +196,10 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 
 	if (config->ocsp)
 		params->flags |= TLS_CONN_REQUEST_OCSP;
-	if (config->ocsp == 2)
+	if (config->ocsp >= 2)
 		params->flags |= TLS_CONN_REQUIRE_OCSP;
+	if (config->ocsp == 3)
+		params->flags |= TLS_CONN_REQUIRE_OCSP_ALL;
 	data->conn = tls_connection_init(data->ssl_ctx);
 	if (data->conn == NULL) {
 		wpa_printf(MSG_INFO, "SSL: Failed to initialize new TLS "

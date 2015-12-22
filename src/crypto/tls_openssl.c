@@ -3890,6 +3890,12 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (conn == NULL)
 		return -1;
 
+	if (params->flags & TLS_CONN_REQUIRE_OCSP_ALL) {
+		wpa_printf(MSG_INFO,
+			   "OpenSSL: ocsp=3 not supported");
+		return -1;
+	}
+
 	/*
 	 * If the engine isn't explicitly configured, and any of the
 	 * cert/key fields are actually PKCS#11 URIs, then automatically

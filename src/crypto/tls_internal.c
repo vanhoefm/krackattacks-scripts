@@ -200,6 +200,12 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (conn->client == NULL)
 		return -1;
 
+	if (params->flags & TLS_CONN_REQUIRE_OCSP_ALL) {
+		wpa_printf(MSG_INFO,
+			   "TLS: ocsp=3 not supported");
+		return -1;
+	}
+
 	if (params->flags & TLS_CONN_EXT_CERT_CHECK) {
 		wpa_printf(MSG_INFO,
 			   "TLS: tls_ext_cert_check=1 not supported");

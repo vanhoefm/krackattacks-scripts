@@ -136,6 +136,8 @@ if [ ! -r $LOGDIR/ocsp-server-cache.der ]; then
     cp $DIR/auth_serv/ocsp-server-cache.der $LOGDIR/ocsp-server-cache.der
 fi
 
+cp $DIR/auth_serv/ocsp-multi-server-cache.der $LOGDIR/ocsp-multi-server-cache.der
+
 openssl ocsp -index $DIR/auth_serv/index.txt \
     -rsigner $DIR/auth_serv/ocsp-responder.pem \
     -rkey $DIR/auth_serv/ocsp-responder.key \

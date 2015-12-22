@@ -14,6 +14,8 @@ logger = logging.getLogger()
 import os
 import socket
 import SocketServer
+import struct
+import tempfile
 
 import hwsim_utils
 import hostapd
@@ -77,6 +79,16 @@ def check_ocsp_support(dev):
     #    raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
     #if "BoringSSL" in tls:
     #    raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
+
+def check_ocsp_multi_support(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("internal"):
+        raise HwsimSkip("OCSP-multi not supported with this TLS library: " + tls)
+    as_hapd = hostapd.Hostapd("as")
+    res = as_hapd.request("GET tls_library")
+    del as_hapd
+    if not res.startswith("internal"):
+        raise HwsimSkip("Authentication server does not support ocsp_multi")
 
 def check_pkcs12_support(dev):
     tls = dev.request("GET tls_library")
@@ -2721,6 +2733,17 @@ def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
                 private_key="auth_serv/user.pkcs12",
                 private_key_passwd="whatever", ocsp=2)
 
+def test_ap_wpa2_eap_tls_ocsp_multi(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and verifying OCSP-multi"""
+    check_ocsp_multi_support(dev[0])
+    check_pkcs12_support(dev[0])
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                private_key="auth_serv/user.pkcs12",
+                private_key_passwd="whatever", ocsp=2)
+
 def int_eap_server_params():
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
@@ -3000,6 +3023,66 @@ def test_ap_wpa2_eap_ttls_optional_ocsp_unknown(dev, apdev, params):
                    identity="pap user", ca_cert="auth_serv/ca.pem",
                    anonymous_identity="ttls", password="password",
                    phase2="auth=PAP", ocsp=1, scan_freq="2412")
+
+def test_ap_wpa2_eap_tls_ocsp_multi_revoked(dev, apdev, params):
+    """EAP-TLS and CA signed OCSP multi response (revoked)"""
+    check_ocsp_support(dev[0])
+    check_ocsp_multi_support(dev[0])
+
+    ocsp_revoked = os.path.join(params['logdir'],
+                                "ocsp-resp-ca-signed-revoked.der")
+    if not os.path.exists(ocsp_revoked):
+        raise HwsimSkip("No OCSP response (revoked) available")
+    ocsp_unknown = os.path.join(params['logdir'],
+                                "ocsp-resp-ca-signed-unknown.der")
+    if not os.path.exists(ocsp_unknown):
+        raise HwsimSkip("No OCSP response(unknown) available")
+
+    with open(ocsp_revoked, "r") as f:
+        resp_revoked = f.read()
+    with open(ocsp_unknown, "r") as f:
+        resp_unknown = f.read()
+
+    fd, fn = tempfile.mkstemp()
+    try:
+        # This is not really a valid order of the OCSPResponse items in the
+        # list, but this works for now to verify parsing and processing of
+        # multiple responses.
+        f = os.fdopen(fd, 'w')
+        f.write(struct.pack(">L", len(resp_unknown))[1:4])
+        f.write(resp_unknown)
+        f.write(struct.pack(">L", len(resp_revoked))[1:4])
+        f.write(resp_revoked)
+        f.write(struct.pack(">L", 0)[1:4])
+        f.write(struct.pack(">L", len(resp_unknown))[1:4])
+        f.write(resp_unknown)
+        f.close()
+
+        params = int_eap_server_params()
+        params["ocsp_stapling_response_multi"] = fn
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user", ca_cert="auth_serv/ca.pem",
+                       private_key="auth_serv/user.pkcs12",
+                       private_key_passwd="whatever", ocsp=1,
+                       wait_connect=False, scan_freq="2412")
+        count = 0
+        while True:
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS",
+                                    "CTRL-EVENT-EAP-SUCCESS"])
+            if ev is None:
+                raise Exception("Timeout on EAP status")
+            if "CTRL-EVENT-EAP-SUCCESS" in ev:
+                raise Exception("Unexpected EAP-Success")
+            if 'bad certificate status response' in ev:
+                break
+            if 'certificate revoked' in ev:
+                break
+            count = count + 1
+            if count > 10:
+                raise Exception("Unexpected number of EAP status messages")
+    finally:
+        os.unlink(fn)
 
 def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""

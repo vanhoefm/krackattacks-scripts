@@ -2132,6 +2132,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "ocsp_stapling_response") == 0) {
 		os_free(bss->ocsp_stapling_response);
 		bss->ocsp_stapling_response = os_strdup(pos);
+	} else if (os_strcmp(buf, "ocsp_stapling_response_multi") == 0) {
+		os_free(bss->ocsp_stapling_response_multi);
+		bss->ocsp_stapling_response_multi = os_strdup(pos);
 	} else if (os_strcmp(buf, "dh_file") == 0) {
 		os_free(bss->dh_file);
 		bss->dh_file = os_strdup(pos);

@@ -341,6 +341,7 @@ struct hostapd_bss_config {
 	int check_crl;
 	unsigned int tls_session_lifetime;
 	char *ocsp_stapling_response;
+	char *ocsp_stapling_response_multi;
 	char *dh_file;
 	char *openssl_ciphers;
 	u8 *pac_opaque_encr_key;

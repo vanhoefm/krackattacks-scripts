@@ -36,6 +36,7 @@ void tlsv1_cred_free(struct tlsv1_credentials *cred)
 	crypto_private_key_free(cred->key);
 	os_free(cred->dh_p);
 	os_free(cred->dh_g);
+	os_free(cred->ocsp_stapling_response);
 	os_free(cred);
 }
 

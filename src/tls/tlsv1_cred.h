@@ -24,6 +24,8 @@ struct tlsv1_credentials {
 	size_t dh_p_len;
 	u8 *dh_g; /* generator */
 	size_t dh_g_len;
+
+	char *ocsp_stapling_response;
 };
 
 

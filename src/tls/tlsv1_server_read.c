@@ -267,6 +267,8 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 						  ext_len);
 					conn->session_ticket_len = ext_len;
 				}
+			} else if (ext_type == TLS_EXT_STATUS_REQUEST) {
+				conn->status_request = 1;
 			}
 
 			pos += ext_len;

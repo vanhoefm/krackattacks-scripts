@@ -331,6 +331,10 @@ int tls_global_set_params(void *tls_ctx,
 		return -1;
 	}
 
+	if (params->ocsp_stapling_response)
+		cred->ocsp_stapling_response =
+			os_strdup(params->ocsp_stapling_response);
+
 	return 0;
 #else /* CONFIG_TLS_INTERNAL_SERVER */
 	return -1;

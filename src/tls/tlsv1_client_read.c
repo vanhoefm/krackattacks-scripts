@@ -822,6 +822,8 @@ static int tls_process_certificate_status(struct tlsv1_client *conn, u8 ct,
 	size_t left, len;
 	u8 type, status_type;
 	enum tls_ocsp_result res;
+	struct x509_certificate *cert;
+	int depth;
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
 		wpa_printf(MSG_DEBUG,
@@ -955,11 +957,37 @@ done:
 	if (res == TLS_OCSP_REVOKED) {
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 			  TLS_ALERT_CERTIFICATE_REVOKED);
-		if (conn->server_cert)
-			tls_cert_chain_failure_event(
-				conn, 0, conn->server_cert, TLS_FAIL_REVOKED,
-				"certificate revoked");
+		for (cert = conn->server_cert, depth = 0; cert;
+		     cert = cert->next, depth++) {
+			if (cert->ocsp_revoked) {
+				tls_cert_chain_failure_event(
+					conn, depth, cert, TLS_FAIL_REVOKED,
+					"certificate revoked");
+			}
+		}
 		return -1;
+	}
+
+	if (conn->flags & TLS_CONN_REQUIRE_OCSP_ALL) {
+		/*
+		 * Verify that each certificate on the chain that is not part
+		 * of the trusted certificates has a good status. If not,
+		 * terminate handshake.
+		 */
+		for (cert = conn->server_cert, depth = 0; cert;
+		     cert = cert->next, depth++) {
+			if (!cert->ocsp_good) {
+				tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					  TLS_ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+				tls_cert_chain_failure_event(
+					conn, depth, cert,
+					TLS_FAIL_UNSPECIFIED,
+					"bad certificate status response");
+				return -1;
+			}
+			if (cert->issuer_trusted)
+				break;
+		}
 	}
 
 	if ((conn->flags & TLS_CONN_REQUIRE_OCSP) && res != TLS_OCSP_GOOD) {

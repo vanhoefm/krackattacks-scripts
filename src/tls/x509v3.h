@@ -106,6 +106,11 @@ struct x509_certificate {
 	size_t cert_len;
 	const u8 *tbs_cert_start;
 	size_t tbs_cert_len;
+
+	/* Meta data used for certificate validation */
+	unsigned int ocsp_good:1;
+	unsigned int ocsp_revoked:1;
+	unsigned int issuer_trusted:1;
 };
 
 enum {

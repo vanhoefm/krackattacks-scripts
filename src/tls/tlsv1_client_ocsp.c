@@ -316,6 +316,7 @@ static int tls_process_ocsp_single_response(struct tlsv1_client *conn,
 
 static enum tls_ocsp_result
 tls_process_ocsp_responses(struct tlsv1_client *conn,
+			   struct x509_certificate *cert,
 			   struct x509_certificate *issuer, const u8 *resp,
 			   size_t len)
 {
@@ -335,8 +336,7 @@ tls_process_ocsp_responses(struct tlsv1_client *conn,
 				   hdr.class, hdr.tag);
 			return TLS_OCSP_INVALID;
 		}
-		if (tls_process_ocsp_single_response(conn, conn->server_cert,
-						     issuer,
+		if (tls_process_ocsp_single_response(conn, cert, issuer,
 						     hdr.payload, hdr.length,
 						     &res) == 0)
 			return res;
@@ -350,8 +350,9 @@ tls_process_ocsp_responses(struct tlsv1_client *conn,
 
 
 static enum tls_ocsp_result
-tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
-				size_t len)
+tls_process_basic_ocsp_response(struct tlsv1_client *conn,
+				struct x509_certificate *srv_cert,
+				const u8 *resp, size_t len)
 {
 	struct asn1_hdr hdr;
 	const u8 *pos, *end;
@@ -365,6 +366,7 @@ tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 	struct x509_name name; /* used if key_hash == NULL */
 	char buf[100];
 	os_time_t produced_at;
+	enum tls_ocsp_result res;
 
 	wpa_hexdump(MSG_MSGDUMP, "OCSP: BasicOCSPResponse", resp, len);
 
@@ -594,20 +596,20 @@ tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 		/* Ignore for now. */
 	}
 
-	if (!conn->server_cert) {
+	if (!srv_cert) {
 		wpa_printf(MSG_DEBUG,
 			   "OCSP: Server certificate not known - cannot check OCSP response");
 		goto no_resp;
 	}
 
-	if (conn->server_cert->next) {
+	if (srv_cert->next) {
 		/* Issuer has already been verified in the chain */
-		issuer = conn->server_cert->next;
+		issuer = srv_cert->next;
 	} else {
 		/* Find issuer from the set of trusted certificates */
 		for (issuer = conn->cred ? conn->cred->trusted_certs : NULL;
 		     issuer; issuer = issuer->next) {
-			if (x509_name_compare(&conn->server_cert->issuer,
+			if (x509_name_compare(&srv_cert->issuer,
 					      &issuer->subject) == 0)
 				break;
 		}
@@ -625,7 +627,7 @@ tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 	} else {
 		for (signer = certs; signer; signer = signer->next) {
 			if (!ocsp_responder_id_match(signer, &name, key_hash) ||
-			    x509_name_compare(&conn->server_cert->issuer,
+			    x509_name_compare(&srv_cert->issuer,
 					      &issuer->subject) != 0 ||
 			    !(signer->ext_key_usage &
 			      X509_EXT_KEY_USAGE_OCSP) ||
@@ -654,8 +656,13 @@ tls_process_basic_ocsp_response(struct tlsv1_client *conn, const u8 *resp,
 		    return TLS_OCSP_INVALID;
 	}
 
-	return tls_process_ocsp_responses(conn, issuer, responses,
-					  responses_len);
+	res = tls_process_ocsp_responses(conn, srv_cert, issuer,
+					 responses, responses_len);
+	if (res == TLS_OCSP_REVOKED)
+		srv_cert->ocsp_revoked = 1;
+	else if (res == TLS_OCSP_GOOD)
+		srv_cert->ocsp_good = 1;
+	return res;
 
 no_resp:
 	x509_free_name(&name);
@@ -677,6 +684,9 @@ enum tls_ocsp_result tls_process_ocsp_response(struct tlsv1_client *conn,
 	u8 resp_status;
 	struct asn1_oid oid;
 	char obuf[80];
+	struct x509_certificate *cert;
+	enum tls_ocsp_result res = TLS_OCSP_NO_RESPONSE;
+	enum tls_ocsp_result res_first = res;
 
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: OCSPResponse", resp, len);
 
@@ -769,5 +779,25 @@ enum tls_ocsp_result tls_process_ocsp_response(struct tlsv1_client *conn,
 		return TLS_OCSP_INVALID;
 	}
 
-	return tls_process_basic_ocsp_response(conn, hdr.payload, hdr.length);
+	cert = conn->server_cert;
+	while (cert) {
+		if (!cert->ocsp_good && !cert->ocsp_revoked) {
+			char sbuf[128];
+
+			x509_name_string(&cert->subject, sbuf, sizeof(sbuf));
+			wpa_printf(MSG_DEBUG,
+				   "OCSP: Trying to find certificate status for %s",
+				   sbuf);
+
+			res = tls_process_basic_ocsp_response(conn, cert,
+							      hdr.payload,
+							      hdr.length);
+			if (cert == conn->server_cert)
+				res_first = res;
+		}
+		if (res == TLS_OCSP_REVOKED || cert->issuer_trusted)
+			break;
+		cert = cert->next;
+	}
+	return res == TLS_OCSP_REVOKED ? res : res_first;
 }

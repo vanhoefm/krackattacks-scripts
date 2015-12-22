@@ -1339,6 +1339,7 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 	size_t left;
 	char sbuf[128];
 	unsigned long value;
+	const u8 *subject_dn;
 
 	/* tbsCertificate TBSCertificate ::= SEQUENCE */
 	if (asn1_get_next(buf, len, &hdr) < 0 ||
@@ -1436,7 +1437,6 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 		return -1;
 
 	/* subject Name */
-	const u8 *subject_dn;
 	subject_dn = pos;
 	if (x509_parse_name(pos, end - pos, &cert->subject, &pos))
 		return -1;

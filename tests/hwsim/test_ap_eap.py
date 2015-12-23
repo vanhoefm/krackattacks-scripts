@@ -3024,6 +3024,248 @@ def test_ap_wpa2_eap_ttls_optional_ocsp_unknown(dev, apdev, params):
                    anonymous_identity="ttls", password="password",
                    phase2="auth=PAP", ocsp=1, scan_freq="2412")
 
+def test_ap_wpa2_eap_tls_intermediate_ca(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA"""
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
+    params["server_cert"] = "auth_serv/iCA-server/server.pem"
+    params["private_key"] = "auth_serv/iCA-server/server.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user",
+                   ca_cert="auth_serv/iCA-user/ca-and-root.pem",
+                   client_cert="auth_serv/iCA-user/user.pem",
+                   private_key="auth_serv/iCA-user/user.key",
+                   scan_freq="2412")
+
+def root_ocsp(cert):
+    ca = "auth_serv/ca.pem"
+
+    fd2, fn2 = tempfile.mkstemp()
+    os.close(fd2)
+
+    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-cert", cert,
+            "-no_nonce", "-sha256", "-text" ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    res = cmd.stdout.read() + "\n" + cmd.stderr.read()
+    cmd.stdout.close()
+    cmd.stderr.close()
+    logger.info("OCSP request:\n" + res)
+
+    fd, fn = tempfile.mkstemp()
+    os.close(fd)
+    arg = [ "openssl", "ocsp", "-index", "rootCA/index.txt",
+            "-rsigner", ca, "-rkey", "auth_serv/caa-key.pem",
+            "-CA", ca, "-issuer", ca, "-verify_other", ca, "-trust_other",
+            "-ndays", "7", "-reqin", fn2, "-resp_no_certs", "-respout", fn,
+            "-text" ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    res = cmd.stdout.read() + "\n" + cmd.stderr.read()
+    cmd.stdout.close()
+    cmd.stderr.close()
+    logger.info("OCSP response:\n" + res)
+    os.unlink(fn2)
+    return fn
+
+def ica_ocsp(cert):
+    prefix = "auth_serv/iCA-server/"
+    ca = prefix + "cacert.pem"
+    cert = prefix + cert
+
+    fd2, fn2 = tempfile.mkstemp()
+    os.close(fd2)
+
+    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-cert", cert,
+            "-no_nonce", "-sha256", "-text" ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    res = cmd.stdout.read() + "\n" + cmd.stderr.read()
+    cmd.stdout.close()
+    cmd.stderr.close()
+    logger.info("OCSP request:\n" + res)
+
+    fd, fn = tempfile.mkstemp()
+    os.close(fd)
+    arg = [ "openssl", "ocsp", "-index", prefix + "index.txt",
+            "-rsigner", ca, "-rkey", prefix + "private/cakey.pem",
+            "-CA", ca, "-issuer", ca, "-verify_other", ca, "-trust_other",
+            "-ndays", "7", "-reqin", fn2, "-resp_no_certs", "-respout", fn,
+            "-text" ]
+    cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    res = cmd.stdout.read() + "\n" + cmd.stderr.read()
+    cmd.stdout.close()
+    cmd.stderr.close()
+    logger.info("OCSP response:\n" + res)
+    os.unlink(fn2)
+    return fn
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP on server certificate"""
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
+    params["server_cert"] = "auth_serv/iCA-server/server.pem"
+    params["private_key"] = "auth_serv/iCA-server/server.key"
+    fn = ica_ocsp("server.pem")
+    params["ocsp_stapling_response"] = fn
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user",
+                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
+                       client_cert="auth_serv/iCA-user/user.pem",
+                       private_key="auth_serv/iCA-user/user.key",
+                       scan_freq="2412", ocsp=2)
+    finally:
+        os.unlink(fn)
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP on revoked server certificate"""
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
+    params["server_cert"] = "auth_serv/iCA-server/server-revoked.pem"
+    params["private_key"] = "auth_serv/iCA-server/server-revoked.key"
+    fn = ica_ocsp("server-revoked.pem")
+    params["ocsp_stapling_response"] = fn
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user",
+                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
+                       client_cert="auth_serv/iCA-user/user.pem",
+                       private_key="auth_serv/iCA-user/user.key",
+                       scan_freq="2412", ocsp=1, wait_connect=False)
+        count = 0
+        while True:
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS",
+                                    "CTRL-EVENT-EAP-SUCCESS"])
+            if ev is None:
+                raise Exception("Timeout on EAP status")
+            if "CTRL-EVENT-EAP-SUCCESS" in ev:
+                raise Exception("Unexpected EAP-Success")
+            if 'bad certificate status response' in ev:
+                break
+            if 'certificate revoked' in ev:
+                break
+            count = count + 1
+            if count > 10:
+                raise Exception("Unexpected number of EAP status messages")
+
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+        if ev is None:
+            raise Exception("Timeout on EAP failure report")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    finally:
+        os.unlink(fn)
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_multi_missing_resp(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP multi missing response"""
+    check_ocsp_support(dev[0])
+    check_ocsp_multi_support(dev[0])
+
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
+    params["server_cert"] = "auth_serv/iCA-server/server.pem"
+    params["private_key"] = "auth_serv/iCA-server/server.key"
+    fn = ica_ocsp("server.pem")
+    params["ocsp_stapling_response"] = fn
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user",
+                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
+                       client_cert="auth_serv/iCA-user/user.pem",
+                       private_key="auth_serv/iCA-user/user.key",
+                       scan_freq="2412", ocsp=3, wait_connect=False)
+        count = 0
+        while True:
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS",
+                                    "CTRL-EVENT-EAP-SUCCESS"])
+            if ev is None:
+                raise Exception("Timeout on EAP status")
+            if "CTRL-EVENT-EAP-SUCCESS" in ev:
+                raise Exception("Unexpected EAP-Success")
+            if 'bad certificate status response' in ev:
+                break
+            if 'certificate revoked' in ev:
+                break
+            count = count + 1
+            if count > 10:
+                raise Exception("Unexpected number of EAP status messages")
+
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+        if ev is None:
+            raise Exception("Timeout on EAP failure report")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    finally:
+        os.unlink(fn)
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_multi(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP multi OK"""
+    check_ocsp_support(dev[0])
+    check_ocsp_multi_support(dev[0])
+
+    params = int_eap_server_params()
+    params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
+    params["server_cert"] = "auth_serv/iCA-server/server.pem"
+    params["private_key"] = "auth_serv/iCA-server/server.key"
+    fn = ica_ocsp("server.pem")
+    fn2 = root_ocsp("auth_serv/iCA-server/cacert.pem")
+    params["ocsp_stapling_response"] = fn
+
+    with open(fn, "r") as f:
+        resp_server = f.read()
+    with open(fn2, "r") as f:
+        resp_ica = f.read()
+
+    fd3, fn3 = tempfile.mkstemp()
+    try:
+        f = os.fdopen(fd3, 'w')
+        f.write(struct.pack(">L", len(resp_server))[1:4])
+        f.write(resp_server)
+        f.write(struct.pack(">L", len(resp_ica))[1:4])
+        f.write(resp_ica)
+        f.close()
+
+        params["ocsp_stapling_response_multi"] = fn3
+
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user",
+                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
+                       client_cert="auth_serv/iCA-user/user.pem",
+                       private_key="auth_serv/iCA-user/user.key",
+                       scan_freq="2412", ocsp=3, wait_connect=False)
+        count = 0
+        while True:
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS",
+                                    "CTRL-EVENT-EAP-SUCCESS"])
+            if ev is None:
+                raise Exception("Timeout on EAP status")
+            if "CTRL-EVENT-EAP-SUCCESS" in ev:
+                raise Exception("Unexpected EAP-Success")
+            if 'bad certificate status response' in ev:
+                break
+            if 'certificate revoked' in ev:
+                break
+            count = count + 1
+            if count > 10:
+                raise Exception("Unexpected number of EAP status messages")
+
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+        if ev is None:
+            raise Exception("Timeout on EAP failure report")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    finally:
+        os.unlink(fn)
+        os.unlink(fn2)
+        os.unlink(fn3)
+
 def test_ap_wpa2_eap_tls_ocsp_multi_revoked(dev, apdev, params):
     """EAP-TLS and CA signed OCSP multi response (revoked)"""
     check_ocsp_support(dev[0])

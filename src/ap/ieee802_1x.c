@@ -475,6 +475,7 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 {
 	char buf[128];
 	struct hostapd_radius_attr *attr;
+	int len;
 
 	if (!hostapd_config_get_radius_attr(req_attr,
 					    RADIUS_ATTR_NAS_IP_ADDRESS) &&
@@ -506,15 +507,15 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 
-	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":%s",
-		    MAC2STR(hapd->own_addr),
-		    wpa_ssid_txt(hapd->conf->ssid.ssid,
-				 hapd->conf->ssid.ssid_len));
-	buf[sizeof(buf) - 1] = '\0';
+	len = os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":",
+			  MAC2STR(hapd->own_addr));
+	os_memcpy(&buf[len], hapd->conf->ssid.ssid,
+		  hapd->conf->ssid.ssid_len);
+	len += hapd->conf->ssid.ssid_len;
 	if (!hostapd_config_get_radius_attr(req_attr,
 					    RADIUS_ATTR_CALLED_STATION_ID) &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_CALLED_STATION_ID,
-				 (u8 *) buf, os_strlen(buf))) {
+				 (u8 *) buf, len)) {
 		wpa_printf(MSG_ERROR, "Could not add Called-Station-Id");
 		return -1;
 	}

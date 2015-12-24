@@ -350,11 +350,6 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 	ret->decision = DECISION_UNCOND_SUCC;
 	ret->allowNotifications = TRUE;
 
-	if (data->out_buf) {
-		data->state = PROC_MSG;
-		return eap_tnc_build_msg(data, ret, id);
-	}
-
 	if (tncs_done) {
 		resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TNC, 1,
 				     EAP_CODE_RESPONSE, eap_get_id(reqData));

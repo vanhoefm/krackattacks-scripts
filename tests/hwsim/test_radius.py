@@ -209,6 +209,19 @@ def test_radius_acct(dev, apdev):
     if acc_e < acc_s + 1:
         raise Exception("Unexpected RADIUS server auth MIB value")
 
+def test_radius_acct_non_ascii_ssid(dev, apdev):
+    """RADIUS Accounting and non-ASCII SSID"""
+    params = hostapd.wpa2_eap_params()
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    ssid2 = "740665007374"
+    params['ssid2'] = ssid2
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid2=ssid2, key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef")
+
 def test_radius_acct_pmksa_caching(dev, apdev):
     """RADIUS Accounting with PMKSA caching"""
     as_hapd = hostapd.Hostapd("as")

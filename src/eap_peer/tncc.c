@@ -694,6 +694,8 @@ enum tncc_process_res tncc_process_if_tnccs(struct tncc_data *tncc,
 	enum tncc_process_res res = TNCCS_PROCESS_OK_NO_RECOMMENDATION;
 	int recommendation_msg = 0;
 
+	wpa_hexdump_ascii(MSG_MSGDUMP, "TNC: Received IF-TNCCS message",
+			  msg, len);
 	buf = dup_binstr(msg, len);
 	if (buf == NULL)
 		return TNCCS_PROCESS_ERROR;

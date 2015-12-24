@@ -675,6 +675,14 @@ def test_p2p_channel_5ghz_165_169_us(dev):
     finally:
         set_country("00")
 
+def wait_go_down_up(dev):
+    ev = dev.wait_group_event(["AP-DISABLED"], timeout=5)
+    if ev is None:
+        raise Exception("AP-DISABLED not seen after P2P-REMOVE-AND-REFORM-GROUP")
+    ev = dev.wait_group_event(["AP-ENABLED"], timeout=5)
+    if ev is None:
+        raise Exception("AP-ENABLED not seen after P2P-REMOVE-AND-REFORM-GROUP")
+
 def test_p2p_go_move_reg_change(dev, apdev):
     """P2P GO move due to regulatory change"""
     try:
@@ -702,6 +710,8 @@ def test_p2p_go_move_reg_change(dev, apdev):
                                      timeout=10)
         if ev is None:
             raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
+        if "P2P-REMOVE-AND-REFORM-GROUP" in ev:
+            wait_go_down_up(dev[0])
 
         freq2 = dev[0].get_group_status_field('freq')
         if freq1 == freq2:
@@ -801,6 +811,8 @@ def _test_p2p_go_move_scm(dev, apdev):
                                       "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
             raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
+        if "P2P-REMOVE-AND-REFORM-GROUP" in ev:
+            wait_go_down_up(dev[0])
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -847,6 +859,8 @@ def _test_p2p_go_move_scm_peer_supports(dev, apdev):
                                       "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
             raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
+        if "P2P-REMOVE-AND-REFORM-GROUP" in ev:
+            wait_go_down_up(dev[0])
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -945,6 +959,8 @@ def _test_p2p_go_move_scm_multi(dev, apdev):
                                       "AP-CSA-FINISHED"], timeout=3)
         if ev is None:
             raise Exception("P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
+        if "P2P-REMOVE-AND-REFORM-GROUP" in ev:
+            wait_go_down_up(dev[0])
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
@@ -959,6 +975,8 @@ def _test_p2p_go_move_scm_multi(dev, apdev):
                                       "AP-CSA-FINISHED"], timeout=5)
         if ev is None:
             raise Exception("(2) P2P-REMOVE-AND-REFORM-GROUP or AP-CSA-FINISHED not seen")
+        if "P2P-REMOVE-AND-REFORM-GROUP" in ev:
+            wait_go_down_up(dev[0])
 
         freq = dev[0].get_group_status_field('freq')
         if freq != '2437':

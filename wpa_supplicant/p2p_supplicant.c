@@ -774,13 +774,6 @@ static u8 p2ps_group_capability(void *ctx, u8 incoming, u8 role,
 
 	case P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW:
 	case P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_CLIENT:
-		/*
-		 * Peer has an active GO, so if the role allows it and
-		 * we do not have any active roles, become client.
-		 */
-		if ((role & P2PS_SETUP_CLIENT) && !go_wpa_s && !cli_wpa_s)
-			return P2PS_SETUP_CLIENT;
-
 		if (cli_wpa_s)
 			conncap = P2PS_SETUP_GROUP_OWNER;
 		else {

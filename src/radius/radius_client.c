@@ -308,7 +308,7 @@ static int radius_client_handle_send_error(struct radius_client_data *radius,
 	int _errno = errno;
 	wpa_printf(MSG_INFO, "send[RADIUS,s=%d]: %s", s, strerror(errno));
 	if (_errno == ENOTCONN || _errno == EDESTADDRREQ || _errno == EINVAL ||
-	    _errno == EBADF || _errno == ENETUNREACH) {
+	    _errno == EBADF || _errno == ENETUNREACH || _errno == EACCES) {
 		hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO,
 			       "Send failed - maybe interface status changed -"

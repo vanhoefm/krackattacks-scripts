@@ -6298,3 +6298,372 @@ def test_eap_proto_expanded(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_tnc(dev, apdev):
+    """EAP-TNC protocol tests"""
+    check_eap_capa(dev[0], "TNC")
+    global eap_proto_tnc_test_done
+    eap_proto_tnc_test_done = False
+
+    def tnc_handler(ctx, req):
+        logger.info("tnc_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNC start with unsupported version")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x20)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNC without Flags field")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_TNC)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Message underflow due to missing Message Length")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0xa1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid Message Length")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TNC, 0xa1, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid Message Length")
+            return struct.pack(">BBHBBL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4,
+                               EAP_TYPE_TNC, 0xe1, 75001)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Start with Message Length")
+            return struct.pack(">BBHBBL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4,
+                               EAP_TYPE_TNC, 0xa1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Server used start flag again")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmentation and unexpected payload in ack")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x01)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBHBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 1,
+                               EAP_TYPE_TNC, 0x01, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Server fragmenting and fragment overflow")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TNC, 0xe1, 2, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2,
+                               EAP_TYPE_TNC, 0x01, 2, 3)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Server fragmenting and no message length in a fragment")
+            return struct.pack(">BBHBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 1,
+                               EAP_TYPE_TNC, 0x61, 2)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNC start followed by invalid TNCCS-Batch")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "FOO"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNC start followed by invalid TNCCS-Batch (2)")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "</TNCCS-Batch><TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNCCS-Batch missing BatchId attribute")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch    foo=3></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected IF-TNCCS BatchId")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch    BatchId=123456789></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing IMC-IMV-Message and TNCC-TNCS-Message end tags")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><IMC-IMV-Message><TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing IMC-IMV-Message and TNCC-TNCS-Message Type")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><IMC-IMV-Message></IMC-IMV-Message><TNCC-TNCS-Message></TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing TNCC-TNCS-Message XML end tag")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><XML></TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing TNCC-TNCS-Message Base64 start tag")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type></TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing TNCC-TNCS-Message Base64 end tag")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><Base64>abc</TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNCC-TNCS-Message Base64 message")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><Base64>aGVsbG8=</Base64></TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid TNCC-TNCS-Message XML message")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = "<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><XML>hello</XML></TNCC-TNCS-Message></TNCCS-Batch>"
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing TNCCS-Recommendation type")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = '<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><XML><TNCCS-Recommendation foo=1></TNCCS-Recommendation></XML></TNCC-TNCS-Message></TNCCS-Batch>'
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNCCS-Recommendation type=none")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = '<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><XML><TNCCS-Recommendation type="none"></TNCCS-Recommendation></XML></TNCC-TNCS-Message></TNCCS-Batch>'
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TNCCS-Recommendation type=isolate")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TNC, 0x21)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Received TNCCS-Batch: " + req[6:])
+            resp = '<TNCCS-Batch BatchId=2><TNCC-TNCS-Message><Type>00000001</Type><XML><TNCCS-Recommendation type="isolate"></TNCCS-Recommendation></XML></TNCC-TNCS-Message></TNCCS-Batch>'
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(resp),
+                               EAP_TYPE_TNC, 0x01) + resp
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        logger.info("No more test responses available - test case completed")
+        global eap_proto_tnc_test_done
+        eap_proto_tnc_test_done = True
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(tnc_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        i = 0
+        while not eap_proto_tnc_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
+            frag = 1400
+            if i == 8:
+                frag = 150
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TNC", identity="tnc", fragment_size=str(frag),
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD",
+                                    "CTRL-EVENT-EAP-STATUS"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP method start")
+            time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

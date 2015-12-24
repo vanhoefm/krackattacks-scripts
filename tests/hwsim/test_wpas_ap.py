@@ -334,3 +334,26 @@ def test_wpas_ap_disable(dev):
     if ev is None:
         raise Exception("AP-DISABLED event not seen")
     dev[0].wait_disconnected()
+
+def test_wpas_ap_acs(dev):
+    """wpa_supplicant AP mode - ACS"""
+    res = dev[0].get_capability("acs")
+    if res is None or "ACS" not in res:
+        raise HwsimSkip("ACS not supported")
+
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2417")
+    dev[0].set_network(id, "scan_freq", "2417")
+    dev[0].set_network(id, "acs", "1")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+
+    # ACS prefers channels 1, 6, 11
+    freq = dev[0].get_status_field('freq')
+    if freq == "2417":
+        raise Exception("Unexpected operating channel selected")
+
+    dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq=freq)

@@ -500,6 +500,7 @@ free:
 
 int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			  struct ieee802_11_elems *elems, const u8 *cat,
+			  const u8 *chosen_pmk,
 			  const u8 *start, size_t elems_len)
 {
 	int ret = 0;
@@ -512,6 +513,12 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	const u8 *aad[] = { sta->addr, wpa_s->own_addr, cat };
 	const size_t aad_len[] = { ETH_ALEN, ETH_ALEN,
 				   (elems->mic - 2) - cat };
+
+	if (chosen_pmk && os_memcmp(chosen_pmk, sta->sae->pmkid, PMKID_LEN)) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"Mesh RSN: Invalid PMKID (Chosen PMK did not match calculated PMKID)");
+		return -1;
+	}
 
 	if (!elems->mic || elems->mic_len < AES_BLOCK_SIZE) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Mesh RSN: missing mic ie");

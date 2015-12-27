@@ -74,8 +74,8 @@ static int mesh_mpm_parse_peer_mgmt(struct wpa_supplicant *wpa_s,
 
 	/* remove optional PMK at end */
 	if (len >= 16) {
-		len -= 16;
 		mpm_ie->pmk = ie + len - 16;
+		len -= 16;
 	}
 
 	if ((action_field == PLINK_OPEN && len != 4) ||
@@ -1014,6 +1014,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	if ((mconf->security & MESH_CONF_SEC_AMPE) &&
 	    mesh_rsn_process_ampe(wpa_s, sta, &elems,
 				  &mgmt->u.action.category,
+				  peer_mgmt_ie.pmk,
 				  ies, ie_len)) {
 		wpa_printf(MSG_DEBUG, "MPM: RSN process rejected frame");
 		return;

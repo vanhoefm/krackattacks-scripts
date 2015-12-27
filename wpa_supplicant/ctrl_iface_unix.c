@@ -1058,6 +1058,9 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);
 
+	if (priv->sock == -1)
+		return;
+
 	for (;;) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE - %s - wait for monitor to "
 			   "attach", priv->wpa_s->ifname);

@@ -5227,7 +5227,7 @@ int wpa_supplicant_run(struct wpa_global *global)
 
 	if (global->params.wait_for_monitor) {
 		for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
-			if (wpa_s->ctrl_iface)
+			if (wpa_s->ctrl_iface && !wpa_s->p2p_mgmt)
 				wpa_supplicant_ctrl_iface_wait(
 					wpa_s->ctrl_iface);
 	}

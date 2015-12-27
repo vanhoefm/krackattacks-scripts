@@ -1735,9 +1735,6 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 	if (nl80211_init_bss(bss))
 		goto failed;
 
-	if (linux_iface_up(drv->global->ioctl_sock, ifname) > 0)
-		drv->start_iface_up = 1;
-
 	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr, 1, driver_params))
 		goto failed;
 
@@ -2239,6 +2236,11 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 
 	if (!bss->if_dynamic && nl80211_get_ifmode(bss) == NL80211_IFTYPE_AP)
 		bss->static_ap = 1;
+
+	if (first &&
+	    nl80211_get_ifmode(bss) != NL80211_IFTYPE_P2P_DEVICE &&
+	    linux_iface_up(drv->global->ioctl_sock, bss->ifname) > 0)
+		drv->start_iface_up = 1;
 
 	if (wpa_driver_nl80211_capa(drv))
 		return -1;

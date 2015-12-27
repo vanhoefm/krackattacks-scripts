@@ -816,6 +816,7 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	os_memset(keyseed, 0, sizeof(keyseed));
 	os_memcpy(sae->tmp->kck, keys, SAE_KCK_LEN);
 	os_memcpy(sae->pmk, keys + SAE_KCK_LEN, SAE_PMK_LEN);
+	os_memcpy(sae->pmkid, val, SAE_PMKID_LEN);
 	os_memset(keys, 0, sizeof(keys));
 	wpa_hexdump_key(MSG_DEBUG, "SAE: KCK", sae->tmp->kck, SAE_KCK_LEN);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: PMK", sae->pmk, SAE_PMK_LEN);

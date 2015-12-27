@@ -328,10 +328,7 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 
 void mesh_rsn_get_pmkid(struct mesh_rsn *rsn, struct sta_info *sta, u8 *pmkid)
 {
-	/* don't expect wpa auth to cache the pmkid for now */
-	rsn_pmkid(sta->sae->pmk, PMK_LEN, rsn->wpa_s->own_addr,
-		  sta->addr, pmkid,
-		  wpa_key_mgmt_sha256(wpa_auth_sta_key_mgmt(sta->wpa_sm)));
+	os_memcpy(pmkid, sta->sae->pmkid, SAE_PMKID_LEN);
 }
 
 

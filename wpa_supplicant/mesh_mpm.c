@@ -20,11 +20,11 @@
 #include "mesh_rsn.h"
 
 struct mesh_peer_mgmt_ie {
-	const u8 *proto_id;
-	const u8 *llid;
-	const u8 *plid;
-	const u8 *reason;
-	const u8 *pmk;
+	const u8 *proto_id; /* Mesh Peering Protocol Identifier (2 octets) */
+	const u8 *llid; /* Local Link ID (2 octets) */
+	const u8 *plid; /* Peer Link ID (conditional, 2 octets) */
+	const u8 *reason; /* Reason Code (conditional, 2 octets) */
+	const u8 *chosen_pmk; /* Chosen PMK (optional, 16 octets) */
 };
 
 static void plink_timer(void *eloop_ctx, void *user_data);
@@ -72,10 +72,10 @@ static int mesh_mpm_parse_peer_mgmt(struct wpa_supplicant *wpa_s,
 {
 	os_memset(mpm_ie, 0, sizeof(*mpm_ie));
 
-	/* remove optional PMK at end */
-	if (len >= 16) {
-		mpm_ie->pmk = ie + len - 16;
-		len -= 16;
+	/* Remove optional Chosen PMK field at end */
+	if (len >= SAE_PMKID_LEN) {
+		mpm_ie->chosen_pmk = ie + len - SAE_PMKID_LEN;
+		len -= SAE_PMKID_LEN;
 	}
 
 	if ((action_field == PLINK_OPEN && len != 4) ||
@@ -101,8 +101,8 @@ static int mesh_mpm_parse_peer_mgmt(struct wpa_supplicant *wpa_s,
 		len -= 2;
 	}
 
-	/* plid, present for confirm, and possibly close */
-	if (len)
+	/* Peer Link ID, present for confirm, and possibly close */
+	if (len >= 2)
 		mpm_ie->plid = ie;
 
 	return 0;
@@ -1014,7 +1014,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	if ((mconf->security & MESH_CONF_SEC_AMPE) &&
 	    mesh_rsn_process_ampe(wpa_s, sta, &elems,
 				  &mgmt->u.action.category,
-				  peer_mgmt_ie.pmk,
+				  peer_mgmt_ie.chosen_pmk,
 				  ies, ie_len)) {
 		wpa_printf(MSG_DEBUG, "MPM: RSN process rejected frame");
 		return;

@@ -326,7 +326,7 @@ static void tls_cert_chain_failure_event(struct tlsv1_client *conn, int depth,
 	union tls_event_data ev;
 	char subject[128];
 
-	if (!conn->event_cb)
+	if (!conn->event_cb || !cert)
 		return;
 
 	os_memset(&ev, 0, sizeof(ev));

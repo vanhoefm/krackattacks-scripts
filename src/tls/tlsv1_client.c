@@ -111,7 +111,6 @@ int tls_derive_keys(struct tlsv1_client *conn,
 		pos += conn->rl.iv_size;
 		/* server_write_IV */
 		os_memcpy(conn->rl.read_iv, pos, conn->rl.iv_size);
-		pos += conn->rl.iv_size;
 	} else {
 		/*
 		 * Use IV field to set the mask value for TLS v1.1. A fixed

@@ -345,26 +345,32 @@ def test_grpform_force_chan_conflict(dev):
 
 def test_grpform_pref_chan_go(dev):
     """P2P group formation preferred channel selection by GO"""
-    dev[0].request("SET p2p_pref_chan 81:7")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
-                                           r_dev=dev[1], r_intent=0,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if i_res['freq'] != "2442":
-        raise Exception("Unexpected channel - did not follow GO's p2p_pref_chan")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_pref_chan 81:7")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if i_res['freq'] != "2442":
+            raise Exception("Unexpected channel - did not follow GO's p2p_pref_chan")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_pref_chan ")
 
 def test_grpform_pref_chan_go_overridden(dev):
     """P2P group formation preferred channel selection by GO overridden by client"""
-    dev[1].request("SET p2p_pref_chan 81:7")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
-                                           i_freq=2422,
-                                           r_dev=dev[1], r_intent=15,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if i_res['freq'] != "2422":
-        raise Exception("Unexpected channel - did not follow client's forced channel")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[1].request("SET p2p_pref_chan 81:7")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
+                                               i_freq=2422,
+                                               r_dev=dev[1], r_intent=15,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if i_res['freq'] != "2422":
+            raise Exception("Unexpected channel - did not follow client's forced channel")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[1].request("SET p2p_pref_chan ")
 
 def test_grpform_no_go_freq_forcing_chan(dev):
     """P2P group formation with no-GO freq forcing channel"""

@@ -465,16 +465,20 @@ def test_persistent_group_already_running(dev):
 
 def test_persistent_group_add_cli_chan(dev):
     """P2P persistent group formation and re-invocation with p2p_add_cli_chan=1"""
-    dev[0].request("SET p2p_add_cli_chan 1")
-    dev[1].request("SET p2p_add_cli_chan 1")
-    form(dev[0], dev[1])
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].scan(freq="2412", only_new=True)
-    dev[1].scan(freq="2437", only_new=True)
-    dev[1].scan(freq="2462", only_new=True)
-    dev[1].request("BSS_FLUSH 0")
-    invite_from_cli(dev[0], dev[1])
-    invite_from_go(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_add_cli_chan 1")
+        dev[1].request("SET p2p_add_cli_chan 1")
+        form(dev[0], dev[1])
+        dev[1].request("BSS_FLUSH 0")
+        dev[1].scan(freq="2412", only_new=True)
+        dev[1].scan(freq="2437", only_new=True)
+        dev[1].scan(freq="2462", only_new=True)
+        dev[1].request("BSS_FLUSH 0")
+        invite_from_cli(dev[0], dev[1])
+        invite_from_go(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_add_cli_chan 0")
+        dev[1].request("SET p2p_add_cli_chan 0")
 
 def test_persistent_invalid_group_add(dev):
     """Invalid P2P_GROUP_ADD command"""

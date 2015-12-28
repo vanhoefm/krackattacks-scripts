@@ -402,51 +402,67 @@ def test_grpform_no_5ghz_world_roaming(dev):
 
 def test_grpform_no_5ghz_add_cli(dev):
     """P2P group formation with passive scan 5 GHz and p2p_add_cli_chan=1"""
-    dev[0].request("SET p2p_add_cli_chan 1")
-    dev[1].request("SET p2p_add_cli_chan 1")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
-                                           r_dev=dev[1], r_intent=14,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if int(i_res['freq']) > 4000:
-        raise Exception("Unexpected channel - did not follow world roaming rules")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_add_cli_chan 1")
+        dev[1].request("SET p2p_add_cli_chan 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
+                                               r_dev=dev[1], r_intent=14,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if int(i_res['freq']) > 4000:
+            raise Exception("Unexpected channel - did not follow world roaming rules")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_add_cli_chan 0")
+        dev[1].request("SET p2p_add_cli_chan 0")
 
 def test_grpform_no_5ghz_add_cli2(dev):
     """P2P group formation with passive scan 5 GHz and p2p_add_cli_chan=1 (reverse)"""
-    dev[0].request("SET p2p_add_cli_chan 1")
-    dev[1].request("SET p2p_add_cli_chan 1")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=14,
-                                           r_dev=dev[1], r_intent=0,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if int(i_res['freq']) > 4000:
-        raise Exception("Unexpected channel - did not follow world roaming rules")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_add_cli_chan 1")
+        dev[1].request("SET p2p_add_cli_chan 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=14,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if int(i_res['freq']) > 4000:
+            raise Exception("Unexpected channel - did not follow world roaming rules")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_add_cli_chan 0")
+        dev[1].request("SET p2p_add_cli_chan 0")
 
 def test_grpform_no_5ghz_add_cli3(dev):
     """P2P group formation with passive scan 5 GHz and p2p_add_cli_chan=1 (intent 15)"""
-    dev[0].request("SET p2p_add_cli_chan 1")
-    dev[1].request("SET p2p_add_cli_chan 1")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
-                                           r_dev=dev[1], r_intent=15,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if int(i_res['freq']) > 4000:
-        raise Exception("Unexpected channel - did not follow world roaming rules")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_add_cli_chan 1")
+        dev[1].request("SET p2p_add_cli_chan 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
+                                               r_dev=dev[1], r_intent=15,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if int(i_res['freq']) > 4000:
+            raise Exception("Unexpected channel - did not follow world roaming rules")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_add_cli_chan 0")
+        dev[1].request("SET p2p_add_cli_chan 0")
 
 def test_grpform_no_5ghz_add_cli4(dev):
     """P2P group formation with passive scan 5 GHz and p2p_add_cli_chan=1 (reverse; intent 15)"""
-    dev[0].request("SET p2p_add_cli_chan 1")
-    dev[1].request("SET p2p_add_cli_chan 1")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
-                                           r_dev=dev[1], r_intent=0,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if int(i_res['freq']) > 4000:
-        raise Exception("Unexpected channel - did not follow world roaming rules")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_add_cli_chan 1")
+        dev[1].request("SET p2p_add_cli_chan 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if int(i_res['freq']) > 4000:
+            raise Exception("Unexpected channel - did not follow world roaming rules")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[0].request("SET p2p_add_cli_chan 0")
+        dev[1].request("SET p2p_add_cli_chan 0")
 
 def test_grpform_incorrect_pin(dev):
     """P2P GO Negotiation with incorrect PIN"""

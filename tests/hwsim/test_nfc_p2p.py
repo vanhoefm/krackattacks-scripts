@@ -41,6 +41,12 @@ def check_ip_addr(res):
 
 def test_nfc_p2p_go_neg(dev):
     """NFC connection handover to form a new P2P group (initiator becomes GO)"""
+    try:
+        _test_nfc_p2p_go_neg(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
+
+def _test_nfc_p2p_go_neg(dev):
     set_ip_addr_info(dev[0])
     ip = dev[0].request("GET ip_addr_go")
     if ip != "192.168.42.1":
@@ -86,6 +92,12 @@ def test_nfc_p2p_go_neg(dev):
 
 def test_nfc_p2p_go_neg_ip_pool_oom(dev):
     """NFC connection handover to form a new P2P group and IP pool OOM"""
+    try:
+        _test_nfc_p2p_go_neg_ip_pool_oom(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
+
+def _test_nfc_p2p_go_neg_ip_pool_oom(dev):
     set_ip_addr_info(dev[0])
     ip = dev[0].request("GET ip_addr_go")
     if ip != "192.168.42.1":
@@ -132,6 +144,12 @@ def test_nfc_p2p_go_neg_ip_pool_oom(dev):
 
 def test_nfc_p2p_go_neg_reverse(dev):
     """NFC connection handover to form a new P2P group (responder becomes GO)"""
+    try:
+        _test_nfc_p2p_go_neg_reverse(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
+
+def _test_nfc_p2p_go_neg_reverse(dev):
     set_ip_addr_info(dev[1])
     dev[0].global_request("SET p2p_go_intent 3")
     logger.info("Perform NFC connection handover")
@@ -311,7 +329,12 @@ def test_nfc_p2p_client(dev):
 
 def test_nfc_p2p_static_handover_tagdev_client(dev):
     """NFC static handover to form a new P2P group (NFC Tag device becomes P2P Client)"""
+    try:
+        _test_nfc_p2p_static_handover_tagdev_client(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
 
+def _test_nfc_p2p_static_handover_tagdev_client(dev):
     set_ip_addr_info(dev[0])
 
     logger.info("Perform NFC connection handover")
@@ -358,7 +381,12 @@ def test_nfc_p2p_static_handover_tagdev_client(dev):
 
 def test_nfc_p2p_static_handover_tagdev_client_group_iface(dev):
     """NFC static handover to form a new P2P group (NFC Tag device becomes P2P Client with group iface)"""
+    try:
+        _test_nfc_p2p_static_handover_tagdev_client_group_iface(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
 
+def _test_nfc_p2p_static_handover_tagdev_client_group_iface(dev):
     set_ip_addr_info(dev[0])
 
     logger.info("Perform NFC connection handover")
@@ -406,7 +434,12 @@ def test_nfc_p2p_static_handover_tagdev_client_group_iface(dev):
 
 def test_nfc_p2p_static_handover_tagdev_go(dev):
     """NFC static handover to form a new P2P group (NFC Tag device becomes GO)"""
+    try:
+        _test_nfc_p2p_static_handover_tagdev_go(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
 
+def _test_nfc_p2p_static_handover_tagdev_go(dev):
     set_ip_addr_info(dev[1])
 
     logger.info("Perform NFC connection handover")
@@ -453,7 +486,12 @@ def test_nfc_p2p_static_handover_tagdev_go(dev):
 
 def test_nfc_p2p_static_handover_tagdev_go_forced_freq(dev):
     """NFC static handover to form a new P2P group on forced channel (NFC Tag device becomes GO)"""
+    try:
+        _test_nfc_p2p_static_handover_tagdev_go_forced_freq(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
 
+def _test_nfc_p2p_static_handover_tagdev_go_forced_freq(dev):
     set_ip_addr_info(dev[1])
 
     logger.info("Perform NFC connection handover")
@@ -643,6 +681,12 @@ def test_nfc_p2p_go_legacy_handover(dev):
 
 def test_nfc_p2p_ip_addr_assignment(dev):
     """NFC connection handover and legacy station IP address assignment"""
+    try:
+        _test_nfc_p2p_ip_addr_assignment(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
+
+def _test_nfc_p2p_ip_addr_assignment(dev):
     set_ip_addr_info(dev[1])
     dev[0].global_request("SET p2p_go_intent 3")
     logger.info("Perform NFC connection handover")
@@ -698,6 +742,12 @@ def test_nfc_p2p_ip_addr_assignment(dev):
 
 def test_nfc_p2p_ip_addr_assignment2(dev):
     """NFC connection handover and IP address assignment for two clients"""
+    try:
+        _test_nfc_p2p_ip_addr_assignment2(dev)
+    finally:
+        dev[0].global_request("SET p2p_go_intent 7")
+
+def _test_nfc_p2p_ip_addr_assignment2(dev):
     set_ip_addr_info(dev[1])
     dev[0].global_request("SET p2p_go_intent 3")
     logger.info("Perform NFC connection handover")

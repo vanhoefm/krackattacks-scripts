@@ -154,6 +154,12 @@ def test_nfc_wps_password_token_ap(dev, apdev):
 
 def test_nfc_wps_handover_init(dev, apdev):
     """Connect to WPS AP with NFC connection handover and move to configured state"""
+    try:
+        _test_nfc_wps_handover_init(dev, apdev)
+    finally:
+        dev[0].request("SET ignore_old_scan_res 0")
+
+def _test_nfc_wps_handover_init(dev, apdev):
     dev[0].request("SET ignore_old_scan_res 1")
     ssid = "test-wps-nfc-handover-init"
     hostapd.add_ap(apdev[0]['ifname'],
@@ -398,8 +404,11 @@ def start_ap_er(er, ap, ssid):
                      "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
     logger.info("Learn AP configuration")
     er.dump_monitor()
-    er.request("SET ignore_old_scan_res 1")
-    er.wps_reg(ap['bssid'], ap_pin)
+    try:
+        er.request("SET ignore_old_scan_res 1")
+        er.wps_reg(ap['bssid'], ap_pin)
+    finally:
+        er.request("SET ignore_old_scan_res 0")
 
     logger.info("Start ER")
     er.request("WPS_ER_STOP")
@@ -420,6 +429,7 @@ def test_nfc_wps_er_pw_token(dev, apdev):
         _test_nfc_wps_er_pw_token(dev, apdev)
     finally:
         dev[0].request("WPS_ER_STOP")
+        dev[1].request("SET ignore_old_scan_res 0")
 
 def _test_nfc_wps_er_pw_token(dev, apdev):
     ssid = "wps-nfc-er-pw-token"
@@ -449,6 +459,7 @@ def test_nfc_wps_er_config_token(dev, apdev):
         _test_nfc_wps_er_config_token(dev, apdev)
     finally:
         dev[0].request("WPS_ER_STOP")
+        dev[1].request("SET ignore_old_scan_res 0")
 
 def _test_nfc_wps_er_config_token(dev, apdev):
     ssid = "wps-nfc-er-config-token"
@@ -502,6 +513,7 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
         _test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev)
     finally:
         dev[0].request("WPS_ER_STOP")
+        dev[1].request("SET ignore_old_scan_res 0")
 
 def _test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-sta"
@@ -536,6 +548,7 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
         _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev)
     finally:
         dev[0].request("WPS_ER_STOP")
+        dev[1].request("SET ignore_old_scan_res 0")
 
 def _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-er"

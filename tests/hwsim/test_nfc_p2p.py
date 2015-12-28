@@ -580,6 +580,13 @@ def test_nfc_p2p_static_handover_join_tagdev_go(dev):
 
 def test_nfc_p2p_static_handover_join_tagdev_client(dev):
     """NFC static handover to join a P2P group (NFC Tag device is the P2P Client)"""
+    try:
+        _test_nfc_p2p_static_handover_join_tagdev_client(dev)
+    finally:
+        dev[1].global_request("SET ignore_old_scan_res 0")
+        dev[2].global_request("SET ignore_old_scan_res 0")
+
+def _test_nfc_p2p_static_handover_join_tagdev_client(dev):
     set_ip_addr_info(dev[0])
     logger.info("Start autonomous GO")
     dev[0].p2p_start_go()

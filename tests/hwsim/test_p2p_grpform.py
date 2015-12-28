@@ -368,21 +368,27 @@ def test_grpform_pref_chan_go_overridden(dev):
 
 def test_grpform_no_go_freq_forcing_chan(dev):
     """P2P group formation with no-GO freq forcing channel"""
-    dev[1].request("SET p2p_no_go_freq 100-200,300,4000-6000")
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
-                                           r_dev=dev[1], r_intent=15,
-                                           test_data=False)
-    check_grpform_results(i_res, r_res)
-    if int(i_res['freq']) > 4000:
-        raise Exception("Unexpected channel - did not follow no-GO freq")
-    remove_group(dev[0], dev[1])
+    try:
+        dev[1].request("SET p2p_no_go_freq 100-200,300,4000-6000")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
+                                               r_dev=dev[1], r_intent=15,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        if int(i_res['freq']) > 4000:
+            raise Exception("Unexpected channel - did not follow no-GO freq")
+        remove_group(dev[0], dev[1])
+    finally:
+        dev[1].request("SET p2p_no_go_freq ")
 
 def test_grpform_no_go_freq_conflict(dev):
     """P2P group formation fails due to no-GO range forced by client"""
-    dev[1].request("SET p2p_no_go_freq 2000-3000")
-    go_neg_pin_authorized(i_dev=dev[0], i_intent=0, i_freq=2422,
-                          r_dev=dev[1], r_intent=15,
-                          expect_failure=True, i_go_neg_status=7)
+    try:
+        dev[1].request("SET p2p_no_go_freq 2000-3000")
+        go_neg_pin_authorized(i_dev=dev[0], i_intent=0, i_freq=2422,
+                              r_dev=dev[1], r_intent=15,
+                              expect_failure=True, i_go_neg_status=7)
+    finally:
+        dev[1].request("SET p2p_no_go_freq ")
 
 def test_grpform_no_5ghz_world_roaming(dev):
     """P2P group formation with world roaming regulatory"""

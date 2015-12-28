@@ -6,6 +6,21 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
+ifdef LIBS
+# If LIBS is set with some global build system defaults, clone those for
+# LIBS_c, LIBS_h, and LIBS_n to cover hostapd_cli, hlr_auc_gw, and
+# nt_password_hash as well.
+ifndef LIBS_c
+LIBS_c := $(LIBS)
+endif
+ifndef LIBS_h
+LIBS_h := $(LIBS)
+endif
+ifndef LIBS_n
+LIBS_n := $(LIBS)
+endif
+endif
+
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS += -I$(abspath ../src)
 CFLAGS += -I$(abspath ../src/utils)

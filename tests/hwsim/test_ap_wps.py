@@ -4931,6 +4931,7 @@ def test_ap_wps_probe_req_ie_oom(dev, apdev):
         if ev is None:
             raise Exception("Association not seen")
     dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
 
     with alloc_fail(dev[0], 1, "wps_ie_encapsulate"):
         dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
@@ -4938,6 +4939,11 @@ def test_ap_wps_probe_req_ie_oom(dev, apdev):
         if ev is None:
             raise Exception("Association not seen")
     dev[0].request("WPS_CANCEL")
+    hapd.disable()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    time.sleep(0.2)
+    dev[0].flush_scan_cache()
 
 def test_ap_wps_assoc_req_ie_oom(dev, apdev):
     """WPS AssocReq IE OOM"""

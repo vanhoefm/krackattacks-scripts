@@ -297,7 +297,6 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 			 255);
 	}
 	/* Wipe variables */
-	i = 0;
 	os_memset(context->buffer, 0, 64);
 	os_memset(context->state, 0, 20);
 	os_memset(context->count, 0, 8);

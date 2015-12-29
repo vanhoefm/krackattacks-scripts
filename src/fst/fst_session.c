@@ -447,7 +447,9 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 		 * the initiator’s MAC address, in which case, the responder
 		 * shall delete the received FST Setup Request.
 		 */
-		if (os_memcmp(mgmt->da, mgmt->sa, ETH_ALEN) > 0) {
+		if (fst_session_is_ready_pending(s) &&
+		    /* waiting for Setup Response */
+		    os_memcmp(mgmt->da, mgmt->sa, ETH_ALEN) > 0) {
 			fst_printf_session(s, MSG_WARNING,
 					   "FST Request dropped due to MAC comparison (our MAC is "
 					   MACSTR ")",
@@ -455,23 +457,26 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 			return;
 		}
 
-		if (!fst_session_is_ready_pending(s)) {
-			fst_printf_session(s, MSG_WARNING,
-					   "FST Request from " MACSTR
-					   " dropped due to inappropriate state %s",
-					   MAC2STR(mgmt->da),
-					   fst_session_state_name(s->state));
-			return;
-		}
+		/*
+		 * State is SETUP_COMPLETION (either in transition or not) or
+		 * TRANSITION_DONE (in transition).
+		 * Setup Request arriving in this state could mean:
+		 * 1. peer sent it before receiving our Setup Request (race
+		 *    condition)
+		 * 2. peer didn't receive our Setup Response. Peer is retrying
+		 *    after STT timeout
+		 * 3. peer's FST state machines are out of sync due to some
+		 *    other reason
+		 *
+		 * We will reset our session and create a new one instead.
+		 */
 
+		fst_printf_session(s, MSG_WARNING,
+			"resetting due to FST request");
 
 		/*
 		 * If FST Setup Request arrived with the same FSTS ID as one we
-		 * initialized before, it means the other side either didn't
-		 * receive our FST Request or skipped it for some reason (for
-		 * example, due to numerical MAC comparison).
-		 *
-		 * In this case, there's no need to tear down the session.
+		 * initialized before, there's no need to tear down the session.
 		 * Moreover, as FSTS ID is the same, the other side will
 		 * associate this tear down with the session it initiated that
 		 * will break the sync.
@@ -483,7 +488,6 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 					   "Skipping TearDown as the FST request has the same FSTS ID as initiated");
 		fst_session_set_state(s, FST_SESSION_STATE_INITIAL, &evext);
 		fst_session_stt_disarm(s);
-		fst_printf_session(s, MSG_WARNING, "reset due to FST request");
 	}
 
 	s = fst_session_create(g);

@@ -4825,8 +4825,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		bss = wpa_bss_get(wpa_s, wpa_s->pending_join_iface_addr,
 				  wpa_s->p2p_join_ssid,
 				  wpa_s->p2p_join_ssid_len);
-	}
-	if (!bss) {
+	} else if (!bss) {
 		wpa_printf(MSG_DEBUG, "P2P: Trying to find target GO BSS entry based on BSSID "
 			   MACSTR, MAC2STR(wpa_s->pending_join_iface_addr));
 		bss = wpa_bss_get_bssid_latest(wpa_s,

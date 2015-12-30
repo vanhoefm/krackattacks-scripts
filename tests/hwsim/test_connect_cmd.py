@@ -163,6 +163,14 @@ def test_connect_cmd_disconnect_event(dev, apdev):
     time.sleep(0.1)
     wpas.dump_monitor()
 
+    # Clean up to avoid causing issue for following test cases
+    wpas.request("REMOVE_NETWORK all")
+    wpas.wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=2)
+    wpas.flush_scan_cache()
+    wpas.dump_monitor()
+    wpas.interface_remove("wlan5")
+    del wpas
+
 def test_connect_cmd_roam(dev, apdev):
     """cfg80211 connect command to trigger roam"""
     params = { "ssid": "sta-connect" }

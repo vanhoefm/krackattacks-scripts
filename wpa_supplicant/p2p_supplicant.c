@@ -3950,7 +3950,8 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 				    size_t persist_ssid_size, int response_done,
 				    int prov_start, const char *session_info,
 				    const u8 *feat_cap, size_t feat_cap_len,
-				    unsigned int freq)
+				    unsigned int freq,
+				    const u8 *group_ssid, size_t group_ssid_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	u8 mac[ETH_ALEN];
@@ -4124,7 +4125,8 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
 					dev, adv_mac, ses_mac,
 					grp_mac, adv_id, ses_id, 0, 0,
-					NULL, 0, 0, 0, NULL, NULL, 0, 0);
+					NULL, 0, 0, 0, NULL, NULL, 0, 0,
+					NULL, 0);
 				return;
 			}
 
@@ -4191,16 +4193,24 @@ static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
 	}
 
 	if (conncap == P2PS_SETUP_CLIENT) {
+		char ssid_hex[32 * 2 + 1];
+
+		if (group_ssid)
+			wpa_snprintf_hex(ssid_hex, sizeof(ssid_hex),
+					 group_ssid, group_ssid_len);
+		else
+			ssid_hex[0] = '\0';
 		wpa_msg_global(wpa_s, MSG_INFO,
 			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
 			       " status=%d conncap=%x"
 			       " adv_id=%x adv_mac=" MACSTR
 			       " session=%x mac=" MACSTR
-			       " dev_passwd_id=%d join=" MACSTR "%s",
+			       " dev_passwd_id=%d join=" MACSTR "%s%s%s",
 			       MAC2STR(dev), status, conncap,
 			       adv_id, MAC2STR(adv_mac),
 			       ses_id, MAC2STR(ses_mac),
-			       passwd_id, MAC2STR(grp_mac), feat_cap_str);
+			       passwd_id, MAC2STR(grp_mac), feat_cap_str,
+			       group_ssid ? " group_ssid=" : "", ssid_hex);
 	} else {
 		wpa_msg_global(wpa_s, MSG_INFO,
 			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR

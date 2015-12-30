@@ -1074,7 +1074,8 @@ struct p2p_config {
 				   size_t persist_ssid_size, int response_done,
 				   int prov_start, const char *session_info,
 				   const u8 *feat_cap, size_t feat_cap_len,
-				   unsigned int freq);
+				   unsigned int freq, const u8 *group_ssid,
+				   size_t group_ssid_len);
 
 	/**
 	 * prov_disc_resp_cb - Callback for indicating completion of PD Response

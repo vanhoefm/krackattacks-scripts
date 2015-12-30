@@ -4190,6 +4190,10 @@ def test_rsn_ie_proto_eap_sta(dev, apdev):
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
 
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
 def check_tls_session_resumption_capa(dev, hapd):
     tls = hapd.request("GET tls_library")
     if not tls.startswith("OpenSSL"):

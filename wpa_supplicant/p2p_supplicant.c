@@ -4925,7 +4925,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 
 start:
 	/* Start join operation immediately */
-	wpas_p2p_join_start(wpa_s, 0, NULL, 0);
+	wpas_p2p_join_start(wpa_s, 0, wpa_s->p2p_join_ssid,
+			    wpa_s->p2p_join_ssid_len);
 }
 
 

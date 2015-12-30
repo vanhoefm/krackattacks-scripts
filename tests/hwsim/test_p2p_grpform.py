@@ -1099,3 +1099,21 @@ def test_grpform_go_neg_dup_on_restart(dev):
 
     lower.dump_monitor()
     higher.dump_monitor()
+
+def test_grpform_go_neg_stopped(dev):
+    """GO Negotiation stopped after TX start"""
+    addr0 = dev[0].p2p_dev_addr()
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_stop_find()
+    if "OK" not in dev[1].request("P2P_CONNECT %s pbc" % addr0):
+        raise Exception("Could not request GO Negotiation")
+    dev[1].p2p_stop_find()
+    dev[1].p2p_listen()
+    dev[0].p2p_find(social=True)
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=1.2)
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    if ev is None:
+        raise Exception("Did not find peer quickly enough after stopped P2P_CONNECT")

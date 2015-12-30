@@ -136,7 +136,7 @@ def eap_connect(dev, ap, method, identity,
 def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
                    expect_failure=False, local_error_report=False,
                    maybe_local_error=False):
-    ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
     ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD",
@@ -1576,7 +1576,7 @@ def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
                    wait_connect=False, scan_freq="2412")
 
     for dev in (dev[0], dev[1]):
-        ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
         if ev is None:
             raise Exception("Association and EAP start timed out")
 
@@ -1706,7 +1706,7 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
                    domain_suffix_match="incorrect.example.com",
                    wait_connect=False, scan_freq="2412")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
@@ -1760,7 +1760,7 @@ def test_ap_wpa2_eap_tls_neg_domain_match(dev, apdev):
                    domain_match="w1.fi",
                    wait_connect=False, scan_freq="2412")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
@@ -1813,7 +1813,7 @@ def test_ap_wpa2_eap_tls_neg_subject_match(dev, apdev):
                    subject_match="/C=FI/O=w1.fi/CN=example.com",
                    wait_connect=False, scan_freq="2412")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
@@ -1882,7 +1882,7 @@ def _test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev, match):
                    altsubject_match=match,
                    wait_connect=False, scan_freq="2412")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
@@ -1951,7 +1951,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="probe", ca_cert="probe://",
                    wait_connect=False, scan_freq="2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-PEER-CERT depth=0"], timeout=10)
@@ -1972,7 +1972,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
                    password="password", phase2="auth=MSCHAPV2",
                    ca_cert="hash://server/sha256/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca6a",
                    wait_connect=False, scan_freq="2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
     if ev is None:
         raise Exception("Association and EAP start timed out")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"], timeout=10)
@@ -2008,7 +2008,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash_invalid(dev, apdev):
                    ca_cert="hash://server/sha256/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca6Q",
                    wait_connect=False, scan_freq="2412")
     for i in range(0, 3):
-        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
         if ev is None:
             raise Exception("Association and EAP start timed out")
         ev = dev[i].wait_event(["EAP: Failed to initialize EAP method: vendor 0 method 21 (TTLS)"], timeout=5)
@@ -3698,7 +3698,7 @@ def test_ap_wpa2_eap_expanded_nak(dev, apdev):
 
     found = False
     for i in range(0, 5):
-        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"], timeout=10)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"], timeout=16)
         if ev is None:
             raise Exception("Association and EAP start timed out")
         if "refuse proposed method" in ev:
@@ -3765,7 +3765,7 @@ def test_ap_wpa2_eap_non_ascii_identity(dev, apdev):
     dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="a\x80", password="password", wait_connect=False)
     for i in range(0, 2):
-        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
         if ev is None:
             raise Exception("Association and EAP start timed out")
         ev = dev[i].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
@@ -3781,7 +3781,7 @@ def test_ap_wpa2_eap_non_ascii_identity2(dev, apdev):
     dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="a\x80", password="password", wait_connect=False)
     for i in range(0, 2):
-        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=16)
         if ev is None:
             raise Exception("Association and EAP start timed out")
         ev = dev[i].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)

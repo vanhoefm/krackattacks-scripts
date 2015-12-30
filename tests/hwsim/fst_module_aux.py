@@ -256,11 +256,13 @@ class FstDevice:
         function"""
         if self.peer_obj is None:
             raise Exception("Peer wasn't added before starting session")
+        self.dump_monitor()
         grp = ' ' + self.fst_group if self.fst_group != '' else ''
         sid = self.grequest("FST-MANAGER SESSION_ADD" + grp)
         sid = sid.strip()
         if sid.startswith("FAIL"):
             raise Exception("Cannot add FST session with groupid ==" + grp)
+        self.dump_monitor()
         return sid
 
     def set_session_param(self, params):
@@ -316,6 +318,7 @@ class FstDevice:
         in "self" while others are passed to this function explicitly. If
         old_iface is None, current iface is used; if old_iface is an empty
         string."""
+        self.dump_monitor()
         oldiface = old_iface if old_iface is not None else self.iface
         s = self.set_session_param(sid + ' old_ifname=' + oldiface)
         if not s.startswith("OK"):
@@ -336,6 +339,7 @@ class FstDevice:
             s = self.set_session_param(sid + " llt=" + self.fst_llt)
             if not s.startswith("OK"):
                 raise Exception("Cannot set FST session llt:" + s)
+        self.dump_monitor()
 
     def send_iface_attach_request(self, ifname, group, llt, priority):
         request = "FST-ATTACH " + ifname + ' ' + group
@@ -508,6 +512,7 @@ class FstDevice:
         Returns: REASON_SWITCH - the session has been transferred successfully
         or a REASON_... reported by the reset event."""
         request = "FST-MANAGER SESSION_TRANSFER"
+        self.dump_monitor()
         if sid != '':
             request += ' ' + sid
         s = self.grequest(request)
@@ -527,6 +532,7 @@ class FstDevice:
                 raise Exception("Unrecognized FST event: " % ev)
             if event['new_state'] == 'INITIAL':
                 result = event['reason']
+        self.dump_monitor()
         return result
 
     def wait_for_tear_down(self):
@@ -674,6 +680,11 @@ class FstAP (FstDevice):
     def get_ssid(self):
         return self.ssid
 
+    def dump_monitor(self):
+        """Dump control interface monitor events"""
+        if self.instance:
+            self.instance.dump_monitor()
+
 #
 # FstSTA class
 #
@@ -704,9 +715,11 @@ class FstSTA (FstDevice):
         the STA will be removed when the fst wpa_supplicant process is killed by
         fstap.cleanup()."""
         h = self.get_instance()
+        h.dump_monitor()
         if len(self.fst_group) != 0:
             self.remove_all_sessions()
             self.send_iface_detach_request(self.iface)
+            h.dump_monitor()
         h.interface_remove(self.iface)
         h.close_ctrl()
         del h
@@ -751,8 +764,10 @@ class FstSTA (FstDevice):
         no_wait=True. Note, request("SCAN_RESULTS") can be used to get all the
         results at once."""
         h = self.get_instance()
+        h.dump_monitor()
         h.scan(None, freq, no_wait, only_new)
         r = h.get_bss('0')
+        h.dump_monitor()
         return r
 
     def connect(self, ap, **kwargs):
@@ -761,7 +776,9 @@ class FstSTA (FstDevice):
             raise Exception("Bad AP object to connect to")
         h = self.get_instance()
         hap = ap.get_instance()
+        h.dump_monitor()
         h.connect(ap.get_ssid(), **kwargs)
+        h.dump_monitor()
         self.connected = ap
 
     def connect_to_external_ap(self, ap, ssid, check_connection=True, **kwargs):
@@ -769,6 +786,7 @@ class FstSTA (FstDevice):
         if not isinstance(ap, hostapd.Hostapd):
             raise Exception("Bad AP object to connect to")
         h = self.get_instance()
+        h.dump_monitor()
         h.connect(ssid, **kwargs)
         self.connected = ap
         if check_connection:
@@ -776,17 +794,20 @@ class FstSTA (FstDevice):
             if ev is None:
                 self.connected = None
                 raise Exception("No connection event received from %s" % ssid)
+            h.dump_monitor()
 
     def disconnect(self, check_disconnect=True):
         """Disconnects from the AP the station is currently connected to"""
         if self.connected is not None:
             h = self.get_instance()
+            h.dump_monitor()
             h.request("DISCONNECT")
             if check_disconnect:
                 hap = self.connected.get_instance()
                 ev = hap.wait_event([ "AP-STA-DISCONNECTED" ], timeout=10)
                 if ev is None:
                     raise Exception("No disconnection event received from %s" % self.connected.get_ssid())
+                h.dump_monitor()
             self.connected = None
 
 
@@ -795,10 +816,17 @@ class FstSTA (FstDevice):
         to"""
         if self.connected is not None:
             h = self.get_instance()
+            h.dump_monitor()
             h.request("DISCONNECT")
             if check_disconnect:
                 hap = self.connected
                 ev = hap.wait_event([ "AP-STA-DISCONNECTED" ], timeout=10)
                 if ev is None:
                     raise Exception("No disconnection event received from AP")
+                h.dump_monitor()
             self.connected = None
+
+    def dump_monitor(self):
+        """Dump control interface monitor events"""
+        if self.instance:
+            self.instance.dump_monitor()

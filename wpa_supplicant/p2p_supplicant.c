@@ -4779,7 +4779,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 					 wpa_s->p2p_pd_before_go_neg,
 					 wpa_s->p2p_go_ht40,
 					 wpa_s->p2p_go_vht,
-					 wpa_s->p2p_go_max_oper_chwidth);
+					 wpa_s->p2p_go_max_oper_chwidth,
+					 NULL, 0);
 			return;
 		}
 
@@ -5303,6 +5304,8 @@ exit_free:
  * @vht:  Start GO with VHT support
  * @vht_chwidth: Channel width supported by GO operating with VHT support
  *	(VHT_CHANWIDTH_*).
+ * @group_ssid: Specific Group SSID for join or %NULL if not set
+ * @group_ssid_len: Length of @group_ssid in octets
  * Returns: 0 or new PIN (if pin was %NULL) on success, -1 on unspecified
  *	failure, -2 on failure due to channel not currently available,
  *	-3 if forced channel is not supported
@@ -5312,7 +5315,8 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		     int persistent_group, int auto_join, int join, int auth,
 		     int go_intent, int freq, unsigned int vht_center_freq2,
 		     int persistent_id, int pd, int ht40, int vht,
-		     unsigned int vht_chwidth)
+		     unsigned int vht_chwidth, const u8 *group_ssid,
+		     size_t group_ssid_len)
 {
 	int force_freq = 0, pref_freq = 0;
 	int ret = 0, res;
@@ -5395,7 +5399,8 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		}
 		wpa_s->user_initiated_pd = 1;
 		if (wpas_p2p_join(wpa_s, iface_addr, dev_addr, wps_method,
-				  auto_join, freq, NULL, 0) < 0)
+				  auto_join, freq,
+				  group_ssid, group_ssid_len) < 0)
 			return -1;
 		return ret;
 	}
@@ -7773,7 +7778,7 @@ static int wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 			 wpa_s->p2p_pd_before_go_neg,
 			 wpa_s->p2p_go_ht40,
 			 wpa_s->p2p_go_vht,
-			 wpa_s->p2p_go_max_oper_chwidth);
+			 wpa_s->p2p_go_max_oper_chwidth, NULL, 0);
 	return ret;
 }
 
@@ -8308,7 +8313,9 @@ static int wpas_p2p_nfc_join_group(struct wpa_supplicant *wpa_s,
 	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 				WPS_NFC, 0, 0, 1, 0, wpa_s->conf->p2p_go_intent,
 				params->go_freq, wpa_s->p2p_go_vht_center_freq2,
-				-1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth);
+				-1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth,
+				params->go_ssid_len ? params->go_ssid : NULL,
+				params->go_ssid_len);
 }
 
 
@@ -8385,7 +8392,8 @@ static int wpas_p2p_nfc_init_go_neg(struct wpa_supplicant *wpa_s,
 	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 				WPS_NFC, 0, 0, 0, 0, wpa_s->conf->p2p_go_intent,
 				forced_freq, wpa_s->p2p_go_vht_center_freq2,
-				-1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth);
+				-1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth,
+				NULL, 0);
 }
 
 
@@ -8400,7 +8408,8 @@ static int wpas_p2p_nfc_resp_go_neg(struct wpa_supplicant *wpa_s,
 	res = wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 			       WPS_NFC, 0, 0, 0, 1, wpa_s->conf->p2p_go_intent,
 			       forced_freq, wpa_s->p2p_go_vht_center_freq2,
-			       -1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth);
+			       -1, 0, 1, 1, wpa_s->p2p_go_max_oper_chwidth,
+			       NULL, 0);
 	if (res)
 		return res;
 

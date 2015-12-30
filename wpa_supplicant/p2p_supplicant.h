@@ -34,10 +34,11 @@ struct wpa_supplicant * wpas_get_p2p_client_iface(struct wpa_supplicant *wpa_s,
 						  const u8 *peer_dev_addr);
 int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		     const char *pin, enum p2p_wps_method wps_method,
-		     int persistent_group, int auto_join, int join,
-		     int auth, int go_intent, int freq,
-		     unsigned int vht_center_freq2, int persistent_id,
-		     int pd, int ht40, int vht, unsigned int max_oper_chwidth);
+		     int persistent_group, int auto_join, int join, int auth,
+		     int go_intent, int freq, unsigned int vht_center_freq2,
+		     int persistent_id, int pd, int ht40, int vht,
+		     unsigned int vht_chwidth, const u8 *group_ssid,
+		     size_t group_ssid_len);
 int wpas_p2p_handle_frequency_conflicts(struct wpa_supplicant *wpa_s,
                                           int freq, struct wpa_ssid *ssid);
 int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,

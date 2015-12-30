@@ -5100,6 +5100,11 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
 			wpa_printf(MSG_DEBUG, "P2P: Join target GO operating frequency from BSS table: %d MHz (SSID %s)",
 				   bss->freq,
 				   wpa_ssid_txt(bss->ssid, bss->ssid_len));
+		} else if (ssid && ssid_len) {
+			res.ssid_len = ssid_len;
+			os_memcpy(res.ssid, ssid, ssid_len);
+			wpa_printf(MSG_DEBUG, "P2P: Join target GO (SSID %s)",
+				   wpa_ssid_txt(ssid, ssid_len));
 		}
 	}
 

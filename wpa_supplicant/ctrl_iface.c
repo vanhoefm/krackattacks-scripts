@@ -4911,6 +4911,8 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	int freq = 0;
 	int pd;
 	int ht40, vht, max_oper_chwidth, chwidth = 0, freq2 = 0;
+	u8 _group_ssid[SSID_MAX_LEN], *group_ssid = NULL;
+	size_t group_ssid_len = 0;
 
 	if (!wpa_s->global->p2p_init_wpa_s)
 		return -1;
@@ -4923,7 +4925,7 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad|p2ps]
 	 * [persistent|persistent=<network id>]
 	 * [join] [auth] [go_intent=<0..15>] [freq=<in MHz>] [provdisc]
-	 * [ht40] [vht] [auto] */
+	 * [ht40] [vht] [auto] [ssid=<hexdump>] */
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -4983,6 +4985,22 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	if (max_oper_chwidth < 0)
 		return -1;
 
+	pos2 = os_strstr(pos, " ssid=");
+	if (pos2) {
+		char *end;
+
+		pos2 += 6;
+		end = os_strchr(pos2, ' ');
+		if (!end)
+			group_ssid_len = os_strlen(pos2) / 2;
+		else
+			group_ssid_len = (end - pos2) / 2;
+		if (group_ssid_len == 0 || group_ssid_len > SSID_MAX_LEN ||
+		    hexstr2bin(pos2, _group_ssid, group_ssid_len) < 0)
+			return -1;
+		group_ssid = _group_ssid;
+	}
+
 	if (os_strncmp(pos, "pin", 3) == 0) {
 		/* Request random PIN (to be displayed) and enable the PIN */
 		wps_method = WPS_PIN_DISPLAY;
@@ -5008,7 +5026,8 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
 				   persistent_group, automatic, join,
 				   auth, go_intent, freq, freq2, persistent_id,
-				   pd, ht40, vht, max_oper_chwidth, NULL, 0);
+				   pd, ht40, vht, max_oper_chwidth,
+				   group_ssid, group_ssid_len);
 	if (new_pin == -2) {
 		os_memcpy(buf, "FAIL-CHANNEL-UNAVAILABLE\n", 25);
 		return 25;

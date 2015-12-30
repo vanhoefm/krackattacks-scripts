@@ -151,6 +151,7 @@ join-a-group style PD instead of GO Negotiation style PD.
 p2p_connect <peer device address> <pbc|pin|PIN#|p2ps> [display|keypad|p2ps]
 	[persistent|persistent=<network id>] [join|auth]
 	[go_intent=<0..15>] [freq=<in MHz>] [ht40] [vht] [provdisc] [auto]
+	[ssid=<hexdump>]
 
 Start P2P group formation with a discovered P2P peer. This includes
 optional group owner negotiation, group interface setup, provisioning,
@@ -194,6 +195,12 @@ connection.
 "auto" can be used to request wpa_supplicant to automatically figure
 out whether the peer device is operating as a GO and if so, use
 join-a-group operation rather than GO Negotiation.
+
+"ssid=<hexdump>" can be used to specify the Group SSID for join
+operations. This allows the P2P Client interface to filter scan results
+based on SSID to avoid selecting an incorrect BSS entry in case the same
+P2P Device or Interface address have been used in multiple groups
+recently.
 
 P2PS attribute changes to p2p_connect command:
 

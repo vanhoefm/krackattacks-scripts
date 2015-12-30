@@ -5091,8 +5091,13 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
 		res.ssid_len = ssid_len;
 		os_memcpy(res.ssid, ssid, ssid_len);
 	} else {
-		bss = wpa_bss_get_bssid_latest(wpa_s,
-					       wpa_s->pending_join_iface_addr);
+		if (ssid && ssid_len) {
+			bss = wpa_bss_get(wpa_s, wpa_s->pending_join_iface_addr,
+					  ssid, ssid_len);
+		} else {
+			bss = wpa_bss_get_bssid_latest(
+				wpa_s, wpa_s->pending_join_iface_addr);
+		}
 		if (bss) {
 			res.freq = bss->freq;
 			res.ssid_len = bss->ssid_len;

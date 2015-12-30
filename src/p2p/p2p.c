@@ -1221,6 +1221,10 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
 	p2p_clear_timeout(p2p);
+	if (p2p->pending_listen_freq) {
+		p2p_dbg(p2p, "Clear pending_listen_freq for p2p_find");
+		p2p->pending_listen_freq = 0;
+	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 	p2p->find_type = type;
 	p2p_device_clear_reported(p2p);

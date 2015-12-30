@@ -188,7 +188,7 @@ def fst_start_session(apdev, test_params, bad_param_type, start_on_ap,
                         exception_text = "Failure. Bad parameter was not detected (%s)" % bad_param_names[bad_param_type]
                     raise Exception(exception_text)
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 def fst_initiate_session(apdev, test_params, bad_param_type, init_on_ap):
     """This function makes the necessary preparations and then adds, sets and
@@ -326,7 +326,7 @@ def fst_initiate_session(apdev, test_params, bad_param_type, init_on_ap):
                 else:
                     raise Exception("Failure. Bad parameter was not detected (%s)" % bad_param_names[bad_param_type])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 def fst_transfer_session(apdev, test_params, bad_param_type, init_on_ap,
                          rsn=False):
@@ -385,7 +385,7 @@ def fst_transfer_session(apdev, test_params, bad_param_type, init_on_ap,
                 else:
                     raise Exception("Failure. Bad parameter was not detected (%s)" % bad_param_names[bad_param_type])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 
 def fst_tear_down_session(apdev, test_params, bad_param_type, init_on_ap):
@@ -453,7 +453,7 @@ def fst_tear_down_session(apdev, test_params, bad_param_type, init_on_ap):
                 else:
                     raise Exception("Failure. Bad parameter was not detected (%s)" % bad_param_names[bad_param_type])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 
 #enum - remove session scenarios
@@ -528,7 +528,7 @@ def fst_remove_session(apdev, test_params, remove_session_scenario, init_on_ap):
                 else:
                     raise Exception("Failure. Remove scenario ended in an unexpected way (%s)" % remove_scenario_names[remove_session_scenario])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 
 #enum - frame types
@@ -612,7 +612,7 @@ def fst_send_unexpected_frame(apdev, test_params, frame_type, send_from_ap, addi
                 else:
                     raise Exception("Failure. Frame was not ignored (%s)" % frame_type_names[frame_type])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 
 #enum - bad session transfer scenarios
@@ -733,7 +733,7 @@ def fst_bad_transfer(apdev, test_params, bad_scenario_type, init_on_ap):
             else:
                 raise Exception("Failure. Bad scenario was handled incorrectly (%s)" % bad_scenario_names[bad_scenario_type])
         else:
-            print "Failure. Unexpected exception"
+            logger.info("Failure. Unexpected exception")
 
 def test_fst_sta_connect_to_non_fst_ap(dev, apdev, test_params):
     """FST STA connecting to non-FST AP"""

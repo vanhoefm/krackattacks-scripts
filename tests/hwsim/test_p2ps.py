@@ -250,10 +250,10 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra="", go_ev=None):
     conf_methods_map = {"8": "p2ps", "1": "display", "5": "keypad"}
     peer0 = ev0.split()[1]
     peer1 = ev1.split()[1]
-    status0, conncap0, adv_id0, adv_mac0, mac0, session0, dev_passwd_id0, go0, join0, feature_cap0, persist0 =\
-        p2ps_parse_event(ev0, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist")
-    status1, conncap1, adv_id1, adv_mac1, mac1, session1, dev_passwd_id1, go1, join1, feature_cap1, persist1 =\
-        p2ps_parse_event(ev1, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist")
+    status0, conncap0, adv_id0, adv_mac0, mac0, session0, dev_passwd_id0, go0, join0, feature_cap0, persist0, group_ssid0 =\
+        p2ps_parse_event(ev0, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist", "group_ssid")
+    status1, conncap1, adv_id1, adv_mac1, mac1, session1, dev_passwd_id1, go1, join1, feature_cap1, persist1, group_ssid1 =\
+        p2ps_parse_event(ev1, "status", "conncap", "adv_id", "adv_mac", "mac", "session", "dev_passwd_id", "go", "join", "feature_cap", "persist", "group_ssid")
 
     if status0 != "0" and status0 != "12":
         raise Exception("PD failed on " + dev0.p2p_dev_addr())
@@ -349,9 +349,9 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra="", go_ev=None):
             dev1.group_form_result(ev)
         else:
             if conncap0 == "2" and conncap1 == "4":  # dev0 CLI, dev1 GO
-                dev_cli, dev_go, go_if, join_address, go_method, cli_method = dev0, dev1, go1, join0, method1, method0
+                dev_cli, dev_go, go_if, join_address, go_method, cli_method, join_ssid = dev0, dev1, go1, join0, method1, method0, group_ssid0
             elif conncap0 == "4" and conncap1 == "2":  # dev0 GO, dev1 CLI
-                dev_cli, dev_go, go_if, join_address, go_method, cli_method = dev1, dev0, go0, join1, method0, method1
+                dev_cli, dev_go, go_if, join_address, go_method, cli_method, join_ssid = dev1, dev0, go0, join1, method0, method1, group_ssid1
             else:
                 raise Exception("Bad connection capabilities")
 
@@ -374,7 +374,11 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra="", go_ev=None):
                 ev = dev_go.group_request("WPS_PIN any " + pin)
                 if ev is None:
                     raise Exception("Failed to initiate pin authorization on registrar side")
-            if "OK" not in dev_cli.global_request("P2P_CONNECT " + join_address + " " + pin + " " + cli_method + join_extra + " persistent join"):
+            if join_ssid:
+                group_ssid_txt = " ssid=" + join_ssid
+            else:
+                group_ssid_txt = ""
+            if "OK" not in dev_cli.global_request("P2P_CONNECT " + join_address + " " + pin + " " + cli_method + join_extra + " persistent join" + group_ssid_txt):
                 raise Exception("P2P_CONNECT failed on " + dev_cli.p2p_dev_addr())
             ev = dev_cli.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
             if ev is None:

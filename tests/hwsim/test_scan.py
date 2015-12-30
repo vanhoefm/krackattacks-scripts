@@ -169,7 +169,11 @@ def test_scan_bss_expiration_age(dev, apdev):
             raise Exception("BSS_EXPIRE_AGE failed")
         hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
         bssid = apdev[0]['bssid']
-        dev[0].scan(freq="2412")
+        # Allow couple more retries to avoid reporting errors during heavy load
+        for i in range(5):
+            dev[0].scan(freq="2412")
+            if bssid in dev[0].request("SCAN_RESULTS"):
+                break
         if bssid not in dev[0].request("SCAN_RESULTS"):
             raise Exception("BSS not found in initial scan")
         hapd.request("DISABLE")
@@ -633,13 +637,21 @@ def test_scan_setband(dev, apdev):
         if "OK" not in dev[2].request("SET setband 2G"):
             raise Exception("Failed to set setband")
 
-        for i in range(3):
-            dev[i].request("SCAN only_new=1")
+        # Allow a retry to avoid reporting errors during heavy load
+        for j in range(5):
+            for i in range(3):
+                dev[i].request("SCAN only_new=1")
 
-        for i in range(3):
-            ev = dev[i].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
-            if ev is None:
-                raise Exception("Scan timed out")
+            for i in range(3):
+                ev = dev[i].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+                if ev is None:
+                    raise Exception("Scan timed out")
+
+            res0 = dev[0].request("SCAN_RESULTS")
+            res1 = dev[1].request("SCAN_RESULTS")
+            res2 = dev[2].request("SCAN_RESULTS")
+            if bssid in res0 and bssid2 in res0 and bssid in res1 and bssid2 in res2:
+                break
 
         res = dev[0].request("SCAN_RESULTS")
         if bssid not in res or bssid2 not in res:
@@ -816,8 +828,12 @@ def test_scan_specify_ssid(dev, apdev):
     bss = dev[0].get_bss(bssid)
     if bss is not None and bss['ssid'] == 'test-hidden':
         raise Exception("BSS entry for hidden AP present unexpectedly")
-    check_scan(dev[0], "freq=2412 ssid 414243 ssid 746573742d68696464656e ssid 616263313233 use_id=1")
-    bss = dev[0].get_bss(bssid)
+    # Allow couple more retries to avoid reporting errors during heavy load
+    for i in range(5):
+        check_scan(dev[0], "freq=2412 ssid 414243 ssid 746573742d68696464656e ssid 616263313233 use_id=1")
+        bss = dev[0].get_bss(bssid)
+        if bss and 'test-hidden' in dev[0].request("SCAN_RESULTS"):
+            break
     if bss is None:
         raise Exception("BSS entry for hidden AP not found")
     if 'test-hidden' not in dev[0].request("SCAN_RESULTS"):

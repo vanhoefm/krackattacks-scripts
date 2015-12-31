@@ -619,7 +619,6 @@ class WpaSupplicant:
             cmd = cmd + " provdisc"
         if "OK" in self.global_request(cmd):
             if timeout == 0:
-                self.dump_monitor()
                 return None
             go_neg_res = None
             ev = self.wait_global_event(["P2P-GO-NEG-SUCCESS",

@@ -2723,6 +2723,45 @@ def test_ap_wpa2_eap_fast_server_oom(dev, apdev):
 
     dev[0].select_network(id, freq="2412")
 
+def test_ap_wpa2_eap_fast_cipher_suites(dev, apdev):
+    """EAP-FAST and different TLS cipher suites"""
+    check_eap_capa(dev[0], "FAST")
+    tls = dev[0].request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("TLS library is not OpenSSL: " + tls)
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET blob fast_pac_ciphers ")
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                phase1="fast_provisioning=2",
+                pac_file="blob://fast_pac_ciphers")
+    res = dev[0].get_status_field('EAP TLS cipher')
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    if res != "DHE-RSA-AES256-SHA":
+        raise Exception("Unexpected cipher suite for provisioning: " + res)
+
+    tests = [ "DHE-RSA-AES128-SHA",
+              "RC4-SHA",
+              "AES128-SHA",
+              "AES256-SHA",
+              "DHE-RSA-AES256-SHA" ]
+    for cipher in tests:
+        eap_connect(dev[0], apdev[0], "FAST", "user",
+                    openssl_ciphers=cipher,
+                    anonymous_identity="FAST", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                    pac_file="blob://fast_pac_ciphers")
+        res = dev[0].get_status_field('EAP TLS cipher')
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        if res != cipher:
+            raise Exception("Unexpected TLS cipher info (configured %s): %s" % (cipher, res))
+
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
     check_ocsp_support(dev[0])

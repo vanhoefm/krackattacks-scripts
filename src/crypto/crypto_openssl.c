@@ -772,14 +772,10 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 #else
 	HMAC_CTX_init(&ctx->ctx);
 
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL);
-#else /* openssl < 0.9.9 */
 	if (HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL) != 1) {
 		bin_clear_free(ctx, sizeof(*ctx));
 		return NULL;
 	}
-#endif /* openssl < 0.9.9 */
 #endif
 
 	return ctx;
@@ -819,12 +815,7 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 	res = HMAC_Final(ctx->ctx, mac, &mdlen);
 	HMAC_CTX_free(ctx->ctx);
 #else
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Final(&ctx->ctx, mac, &mdlen);
-	res = 1;
-#else /* openssl < 0.9.9 */
 	res = HMAC_Final(&ctx->ctx, mac, &mdlen);
-#endif /* openssl < 0.9.9 */
 	HMAC_CTX_cleanup(&ctx->ctx);
 #endif
 	bin_clear_free(ctx, sizeof(*ctx));
@@ -875,22 +866,13 @@ done:
 		return -1;
 
 	HMAC_CTX_init(&ctx);
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Init_ex(&ctx, key, key_len, type, NULL);
-#else /* openssl < 0.9.9 */
 	if (HMAC_Init_ex(&ctx, key, key_len, type, NULL) != 1)
 		return -1;
-#endif /* openssl < 0.9.9 */
 
 	for (i = 0; i < num_elem; i++)
 		HMAC_Update(&ctx, addr[i], len[i]);
 
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Final(&ctx, mac, &mdlen);
-	res = 1;
-#else /* openssl < 0.9.9 */
 	res = HMAC_Final(&ctx, mac, &mdlen);
-#endif /* openssl < 0.9.9 */
 	HMAC_CTX_cleanup(&ctx);
 
 	return res == 1 ? 0 : -1;

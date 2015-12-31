@@ -1446,7 +1446,7 @@ static int eap_fast_clear_pac_opaque_ext(struct eap_sm *sm,
 static int eap_fast_set_provisioning_ciphers(struct eap_sm *sm,
 					     struct eap_fast_data *data)
 {
-	u8 ciphers[5];
+	u8 ciphers[7];
 	int count = 0;
 
 	if (data->provisioning_allowed & EAP_FAST_PROV_UNAUTH) {
@@ -1458,7 +1458,9 @@ static int eap_fast_set_provisioning_ciphers(struct eap_sm *sm,
 	if (data->provisioning_allowed & EAP_FAST_PROV_AUTH) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Enabling authenticated "
 			   "provisioning TLS cipher suites");
+		ciphers[count++] = TLS_CIPHER_RSA_DHE_AES256_SHA;
 		ciphers[count++] = TLS_CIPHER_RSA_DHE_AES128_SHA;
+		ciphers[count++] = TLS_CIPHER_AES256_SHA;
 		ciphers[count++] = TLS_CIPHER_AES128_SHA;
 		ciphers[count++] = TLS_CIPHER_RC4_SHA;
 	}

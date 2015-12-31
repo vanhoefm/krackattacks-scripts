@@ -3407,7 +3407,7 @@ int tls_connection_resumed(void *ssl_ctx, struct tls_connection *conn)
 int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 				   u8 *ciphers)
 {
-	char buf[100], *pos, *end;
+	char buf[500], *pos, *end;
 	u8 *c;
 	int ret;
 
@@ -3434,6 +3434,12 @@ int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 			break;
 		case TLS_CIPHER_ANON_DH_AES128_SHA:
 			suite = "ADH-AES128-SHA";
+			break;
+		case TLS_CIPHER_RSA_DHE_AES256_SHA:
+			suite = "DHE-RSA-AES256-SHA";
+			break;
+		case TLS_CIPHER_AES256_SHA:
+			suite = "AES256-SHA";
 			break;
 		default:
 			wpa_printf(MSG_DEBUG, "TLS: Unsupported "

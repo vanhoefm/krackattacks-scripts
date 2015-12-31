@@ -412,11 +412,13 @@ static int eap_fast_update_icmk(struct eap_sm *sm, struct eap_fast_data *data)
 static void * eap_fast_init(struct eap_sm *sm)
 {
 	struct eap_fast_data *data;
-	u8 ciphers[5] = {
+	u8 ciphers[7] = {
 		TLS_CIPHER_ANON_DH_AES128_SHA,
 		TLS_CIPHER_AES128_SHA,
 		TLS_CIPHER_RSA_DHE_AES128_SHA,
 		TLS_CIPHER_RC4_SHA,
+		TLS_CIPHER_RSA_DHE_AES256_SHA,
+		TLS_CIPHER_AES256_SHA,
 		TLS_CIPHER_NONE
 	};
 

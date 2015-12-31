@@ -76,6 +76,19 @@ static size_t SSL_get_server_random(const SSL *ssl, unsigned char *out,
 	return SSL3_RANDOM_SIZE;
 }
 
+
+static size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
+					 unsigned char *out, size_t outlen)
+{
+	if (!session || session->master_key_length < 0 ||
+	    (size_t) session->master_key_length > outlen)
+		return 0;
+	if ((size_t) session->master_key_length < outlen)
+		outlen = session->master_key_length;
+	os_memcpy(out, session->master_key, outlen);
+	return outlen;
+}
+
 #endif
 
 #ifdef ANDROID
@@ -3031,74 +3044,6 @@ static int openssl_tls_prf(struct tls_connection *conn,
 		   "mode");
 	return -1;
 #else /* CONFIG_FIPS */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	SSL *ssl;
-	u8 *rnd;
-	int ret = -1;
-	int skip = 0;
-	u8 *tmp_out = NULL;
-	u8 *_out = out;
-	const char *ver;
-
-	/*
-	 * TLS library did not support key generation, so get the needed TLS
-	 * session parameters and use an internal implementation of TLS PRF to
-	 * derive the key.
-	 */
-
-	if (conn == NULL)
-		return -1;
-	ssl = conn->ssl;
-	if (ssl == NULL || ssl->s3 == NULL || ssl->session == NULL ||
-	    ssl->session->master_key_length <= 0)
-		return -1;
-	ver = SSL_get_version(ssl);
-
-	if (skip_keyblock) {
-		skip = openssl_get_keyblock_size(ssl);
-		if (skip < 0)
-			return -1;
-		tmp_out = os_malloc(skip + out_len);
-		if (!tmp_out)
-			return -1;
-		_out = tmp_out;
-	}
-
-	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
-	if (!rnd) {
-		os_free(tmp_out);
-		return -1;
-	}
-
-	if (server_random_first) {
-		os_memcpy(rnd, ssl->s3->server_random, SSL3_RANDOM_SIZE);
-		os_memcpy(rnd + SSL3_RANDOM_SIZE, ssl->s3->client_random,
-			SSL3_RANDOM_SIZE);
-	} else {
-		os_memcpy(rnd, ssl->s3->client_random, SSL3_RANDOM_SIZE);
-		os_memcpy(rnd + SSL3_RANDOM_SIZE, ssl->s3->server_random,
-			SSL3_RANDOM_SIZE);
-	}
-
-	if (os_strcmp(ver, "TLSv1.2") == 0) {
-		tls_prf_sha256(ssl->session->master_key,
-			       ssl->session->master_key_length,
-			       label, rnd, 2 * SSL3_RANDOM_SIZE,
-			       _out, skip + out_len);
-		ret = 0;
-	} else if (tls_prf_sha1_md5(ssl->session->master_key,
-				    ssl->session->master_key_length,
-				    label, rnd, 2 * SSL3_RANDOM_SIZE,
-				    _out, skip + out_len) == 0) {
-		ret = 0;
-	}
-	os_free(rnd);
-	if (ret == 0 && skip_keyblock)
-		os_memcpy(out, _out + skip, out_len);
-	bin_clear_free(tmp_out, skip);
-
-	return ret;
-#else
 	SSL *ssl;
 	SSL_SESSION *sess;
 	u8 *rnd;
@@ -3176,7 +3121,6 @@ static int openssl_tls_prf(struct tls_connection *conn,
 	bin_clear_free(tmp_out, skip);
 
 	return ret;
-#endif
 #endif /* CONFIG_FIPS */
 }
 

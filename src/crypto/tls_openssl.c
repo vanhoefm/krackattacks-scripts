@@ -2379,9 +2379,7 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 		 */
 		res = 0;
 #else /* OPENSSL_VERSION_NUMBER >= 0x10002000L */
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
 		SSL_CTX_clear_extra_chain_certs(data->ssl);
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10001000L */
 		while ((cert = sk_X509_pop(certs)) != NULL) {
 			X509_NAME_oneline(X509_get_subject_name(cert), buf,
 					  sizeof(buf));
@@ -3173,21 +3171,17 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
 		       int skip_keyblock, u8 *out, size_t out_len)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-	SSL *ssl;
 	if (conn == NULL)
 		return -1;
 	if (server_random_first || skip_keyblock)
 		return openssl_tls_prf(conn, label,
 				       server_random_first, skip_keyblock,
 				       out, out_len);
-	ssl = conn->ssl;
-	if (SSL_export_keying_material(ssl, out, out_len, label,
+	if (SSL_export_keying_material(conn->ssl, out, out_len, label,
 				       os_strlen(label), NULL, 0, 0) == 1) {
 		wpa_printf(MSG_DEBUG, "OpenSSL: Using internal PRF");
 		return 0;
 	}
-#endif
 	return openssl_tls_prf(conn, label, server_random_first,
 			       skip_keyblock, out, out_len);
 }
@@ -3448,11 +3442,7 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 
 int tls_connection_resumed(void *ssl_ctx, struct tls_connection *conn)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
 	return conn ? SSL_cache_hit(conn->ssl) : 0;
-#else
-	return conn ? conn->ssl->hit : 0;
-#endif
 }
 
 

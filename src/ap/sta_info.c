@@ -253,7 +253,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
 	sae_clear_retransmit_timer(hapd, sta);
 
-	ieee802_1x_free_station(sta);
+	ieee802_1x_free_station(hapd, sta);
 	wpa_auth_sta_deinit(sta->wpa_sm);
 	rsn_preauth_free_station(hapd, sta);
 #ifndef CONFIG_NO_RADIUS
@@ -487,7 +487,7 @@ skip_poll:
 			sta->acct_terminate_cause =
 				RADIUS_ACCT_TERMINATE_CAUSE_IDLE_TIMEOUT;
 		accounting_sta_stop(hapd, sta);
-		ieee802_1x_free_station(sta);
+		ieee802_1x_free_station(hapd, sta);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "disassociated due to "
 			       "inactivity");
@@ -722,7 +722,7 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DISASSOC, 0,
 			       ap_handle_timer, hapd, sta);
 	accounting_sta_stop(hapd, sta);
-	ieee802_1x_free_station(sta);
+	ieee802_1x_free_station(hapd, sta);
 
 	sta->disassoc_reason = reason;
 	sta->flags |= WLAN_STA_PENDING_DISASSOC_CB;
@@ -761,7 +761,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,
 			       ap_handle_timer, hapd, sta);
 	accounting_sta_stop(hapd, sta);
-	ieee802_1x_free_station(sta);
+	ieee802_1x_free_station(hapd, sta);
 
 	sta->deauth_reason = reason;
 	sta->flags |= WLAN_STA_PENDING_DEAUTH_CB;

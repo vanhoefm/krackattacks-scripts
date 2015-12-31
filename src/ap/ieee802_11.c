@@ -2010,7 +2010,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	/* Stop Accounting and IEEE 802.1X sessions, but leave the STA
 	 * authenticated. */
 	accounting_sta_stop(hapd, sta);
-	ieee802_1x_free_station(sta);
+	ieee802_1x_free_station(hapd, sta);
 	if (sta->ipaddr)
 		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
 	ap_sta_ip6addr_del(hapd, sta);

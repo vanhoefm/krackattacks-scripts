@@ -518,7 +518,7 @@ def test_grpform_reject(dev):
         raise Exception("P2P_REJECT failed")
     dev[1].request("P2P_STOP_FIND")
     dev[1].p2p_go_neg_init(addr0, None, "pbc")
-    ev = dev[1].wait_global_event(["GO-NEG-FAILURE"], timeout=10)
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("Rejection not reported")
     if "status=11" not in ev:
@@ -590,7 +590,7 @@ def test_go_neg_two_peers(dev):
     if ev is None:
         raise Exception("timeout on GO Neg RX event")
     dev[2].request("P2P_CONNECT " + addr0 + " pbc")
-    ev = dev[2].wait_global_event(["GO-NEG-FAILURE"], timeout=10)
+    ev = dev[2].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("Rejection not reported")
     if "status=5" not in ev:

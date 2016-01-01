@@ -19,6 +19,10 @@
 int wps_version_number = 0x20;
 int wps_testing_dummy_cred = 0;
 int wps_corrupt_pkhash = 0;
+int wps_force_auth_types_in_use = 0;
+u16 wps_force_auth_types = 0;
+int wps_force_encr_types_in_use = 0;
+u16 wps_force_encr_types = 0;
 #endif /* CONFIG_WPS_TESTING */
 
 

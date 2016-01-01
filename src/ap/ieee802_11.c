@@ -1737,7 +1737,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_WPS */
 
 #ifdef CONFIG_P2P
-	if (sta->p2p_ie) {
+	if (sta->p2p_ie && hapd->p2p_group) {
 		struct wpabuf *p2p_resp_ie;
 		enum p2p_status_code status;
 		switch (status_code) {

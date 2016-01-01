@@ -731,7 +731,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 
 #ifdef CONFIG_P2P
-	if (hapd->p2p && elems.wps_ie) {
+	if (hapd->p2p && hapd->p2p_group && elems.wps_ie) {
 		struct wpabuf *wps;
 		wps = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
 		if (wps && !p2p_group_match_dev_type(hapd->p2p_group, wps)) {
@@ -744,7 +744,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 		wpabuf_free(wps);
 	}
 
-	if (hapd->p2p && elems.p2p) {
+	if (hapd->p2p && hapd->p2p_group && elems.p2p) {
 		struct wpabuf *p2p;
 		p2p = ieee802_11_vendor_ie_concat(ie, ie_len, P2P_IE_VENDOR_TYPE);
 		if (p2p && !p2p_group_match_dev_id(hapd->p2p_group, p2p)) {

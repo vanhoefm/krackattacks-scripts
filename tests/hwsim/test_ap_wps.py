@@ -397,6 +397,64 @@ def test_ap_wps_conf_pin(dev, apdev):
     hapd.request("WPS_PIN any " + pin)
     dev[1].wait_connected(timeout=30)
 
+def test_ap_wps_conf_pin_mixed_mode(dev, apdev):
+    """WPS PIN provisioning with configured AP (WPA+WPA2)"""
+    ssid = "test-wps-conf-pin-mixed"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "3",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "wpa_pairwise": "TKIP" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    logger.info("WPS provisioning step")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    dev[0].wait_connected(timeout=30)
+    status = dev[0].get_status()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP' or status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected encryption/key_mgmt configuration: pairwise=%s group=%s key_mgmt=%s" % (status['pairwise_cipher'], status['group_cipher'], status['key_mgmt']))
+
+    logger.info("WPS provisioning step (auth_types=0x1b)")
+    if "OK" not in dev[0].request("SET wps_force_auth_types 0x1b"):
+        raise Exception("Failed to set wps_force_auth_types 0x1b")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    dev[0].wait_connected(timeout=30)
+    status = dev[0].get_status()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP' or status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected encryption/key_mgmt configuration: pairwise=%s group=%s key_mgmt=%s" % (status['pairwise_cipher'], status['group_cipher'], status['key_mgmt']))
+
+    logger.info("WPS provisioning step (auth_types=0 encr_types=0)")
+    if "OK" not in dev[0].request("SET wps_force_auth_types 0"):
+        raise Exception("Failed to set wps_force_auth_types 0")
+    if "OK" not in dev[0].request("SET wps_force_encr_types 0"):
+        raise Exception("Failed to set wps_force_encr_types 0")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    dev[0].wait_connected(timeout=30)
+    status = dev[0].get_status()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP' or status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected encryption/key_mgmt configuration: pairwise=%s group=%s key_mgmt=%s" % (status['pairwise_cipher'], status['group_cipher'], status['key_mgmt']))
+
+    dev[0].request("SET wps_force_auth_types ")
+    dev[0].request("SET wps_force_encr_types ")
+
 def test_ap_wps_conf_pin_v1(dev, apdev):
     """WPS PIN provisioning with configured WPS v1.0 AP"""
     ssid = "test-wps-conf-pin-v1"

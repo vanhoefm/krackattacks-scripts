@@ -357,3 +357,30 @@ def test_wpas_ap_acs(dev):
         raise Exception("Unexpected operating channel selected")
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq=freq)
+
+def test_wpas_ap_and_assoc_req_p2p_ie(dev):
+    """wpa_supplicant AP mode - unexpected P2P IE in Association Request"""
+    try:
+        _test_wpas_ap_and_assoc_req_p2p_ie(dev)
+    finally:
+        dev[1].request("VENDOR_ELEM_REMOVE 13 *")
+        dev[0].request("P2P_SET disabled 0")
+
+def _test_wpas_ap_and_assoc_req_p2p_ie(dev):
+    dev[0].request("P2P_SET disabled 1")
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+
+    dev[1].request("VENDOR_ELEM_ADD 13 dd04506f9a09")
+    dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2016, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -445,6 +445,8 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 	os_memcpy(hapd->wps->ssid, cred->ssid, cred->ssid_len);
 	hapd->wps->ssid_len = cred->ssid_len;
 	hapd->wps->encr_types = cred->encr_type;
+	hapd->wps->encr_types_rsn = cred->encr_type;
+	hapd->wps->encr_types_wpa = cred->encr_type;
 	hapd->wps->auth_types = cred->auth_type;
 	hapd->wps->ap_encr_type = cred->encr_type;
 	hapd->wps->ap_auth_type = cred->auth_type;
@@ -1068,10 +1070,14 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X)
 			wps->auth_types |= WPS_AUTH_WPA2;
 
-		if (conf->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP))
+		if (conf->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) {
 			wps->encr_types |= WPS_ENCR_AES;
-		if (conf->rsn_pairwise & WPA_CIPHER_TKIP)
+			wps->encr_types_rsn |= WPS_ENCR_AES;
+		}
+		if (conf->rsn_pairwise & WPA_CIPHER_TKIP) {
 			wps->encr_types |= WPS_ENCR_TKIP;
+			wps->encr_types_rsn |= WPS_ENCR_TKIP;
+		}
 	}
 
 	if (conf->wpa & WPA_PROTO_WPA) {
@@ -1080,10 +1086,14 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X)
 			wps->auth_types |= WPS_AUTH_WPA;
 
-		if (conf->wpa_pairwise & WPA_CIPHER_CCMP)
+		if (conf->wpa_pairwise & WPA_CIPHER_CCMP) {
 			wps->encr_types |= WPS_ENCR_AES;
-		if (conf->wpa_pairwise & WPA_CIPHER_TKIP)
+			wps->encr_types_wpa |= WPS_ENCR_AES;
+		}
+		if (conf->wpa_pairwise & WPA_CIPHER_TKIP) {
 			wps->encr_types |= WPS_ENCR_TKIP;
+			wps->encr_types_wpa |= WPS_ENCR_TKIP;
+		}
 	}
 
 	if (conf->ssid.security_policy == SECURITY_PLAINTEXT) {
@@ -1123,6 +1133,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		/* Override parameters to enable security by default */
 		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
 		wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
+		wps->encr_types_rsn = WPS_ENCR_AES | WPS_ENCR_TKIP;
+		wps->encr_types_wpa = WPS_ENCR_AES | WPS_ENCR_TKIP;
 	}
 
 	wps->ap_settings = conf->ap_settings;

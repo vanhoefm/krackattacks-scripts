@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup
- * Copyright (c) 2007-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2016, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -662,6 +662,16 @@ struct wps_context {
 	 * encr_types - Enabled encryption types (bit field of WPS_ENCR_*)
 	 */
 	u16 encr_types;
+
+	/**
+	 * encr_types_rsn - Enabled encryption types for RSN (WPS_ENCR_*)
+	 */
+	u16 encr_types_rsn;
+
+	/**
+	 * encr_types_wpa - Enabled encryption types for WPA (WPS_ENCR_*)
+	 */
+	u16 encr_types_wpa;
 
 	/**
 	 * auth_types - Authentication types (bit field of WPS_AUTH_*)

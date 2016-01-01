@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - Registrar
- * Copyright (c) 2008-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2016, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1606,6 +1606,9 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	wps->cred.ssid_len = wps->wps->ssid_len;
 
 	/* Select the best authentication and encryption type */
+	wpa_printf(MSG_DEBUG,
+		   "WPS: Own auth types 0x%x - masked Enrollee auth types 0x%x",
+		   wps->wps->auth_types, wps->auth_type);
 	if (wps->auth_type & WPS_AUTH_WPA2PSK)
 		wps->auth_type = WPS_AUTH_WPA2PSK;
 	else if (wps->auth_type & WPS_AUTH_WPAPSK)
@@ -1619,6 +1622,14 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	}
 	wps->cred.auth_type = wps->auth_type;
 
+	wpa_printf(MSG_DEBUG,
+		   "WPS: Own encr types 0x%x (rsn: 0x%x, wpa: 0x%x) - masked Enrollee encr types 0x%x",
+		   wps->wps->encr_types, wps->wps->encr_types_rsn,
+		   wps->wps->encr_types_wpa, wps->encr_type);
+	if (wps->wps->ap && wps->auth_type == WPS_AUTH_WPA2PSK)
+		wps->encr_type &= wps->wps->encr_types_rsn;
+	else if (wps->wps->ap && wps->auth_type == WPS_AUTH_WPAPSK)
+		wps->encr_type &= wps->wps->encr_types_wpa;
 	if (wps->auth_type == WPS_AUTH_WPA2PSK ||
 	    wps->auth_type == WPS_AUTH_WPAPSK) {
 		if (wps->encr_type & WPS_ENCR_AES)

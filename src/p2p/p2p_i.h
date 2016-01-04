@@ -308,6 +308,18 @@ struct p2p_data {
 	 */
 	int num_p2p_sd_queries;
 
+	/**
+	 * sd_query_no_ack - The first peer (Dev Addr) that did not ACK SD Query
+	 *
+	 * This is used to track the first peer that did not ACK an SD Query
+	 * within a single P2P Search iteration. All zeros address means no such
+	 * peer was yet seen. This information is used to allow a new Listen and
+	 * Search phases to be once every pending SD Query has been sent once to
+	 * each peer instead of looping all pending attempts continuously until
+	 * running out of retry maximums.
+	 */
+	u8 sd_query_no_ack[ETH_ALEN];
+
 	/* GO Negotiation data */
 
 	/**

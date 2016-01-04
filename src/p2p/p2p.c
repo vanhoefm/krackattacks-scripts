@@ -1228,6 +1228,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 	p2p->find_type = type;
 	p2p_device_clear_reported(p2p);
+	os_memset(p2p->sd_query_no_ack, 0, ETH_ALEN);
 	p2p_set_state(p2p, P2P_SEARCH);
 	p2p->search_delay = search_delay;
 	p2p->in_search_delay = 0;
@@ -3163,13 +3164,18 @@ int p2p_set_country(struct p2p_data *p2p, const char *country)
 
 static int p2p_pre_find_operation(struct p2p_data *p2p, struct p2p_device *dev)
 {
+	int res;
+
 	if (dev->sd_pending_bcast_queries == 0) {
 		/* Initialize with total number of registered broadcast
 		 * SD queries. */
 		dev->sd_pending_bcast_queries = p2p->num_p2p_sd_queries;
 	}
 
-	if (p2p_start_sd(p2p, dev) == 0)
+	res = p2p_start_sd(p2p, dev);
+	if (res == -2)
+		return -2;
+	if (res == 0)
 		return 1;
 
 	if (dev->req_config_methods &&
@@ -3189,7 +3195,7 @@ static int p2p_pre_find_operation(struct p2p_data *p2p, struct p2p_device *dev)
 void p2p_continue_find(struct p2p_data *p2p)
 {
 	struct p2p_device *dev;
-	int found;
+	int found, res;
 
 	p2p_set_state(p2p, P2P_SEARCH);
 
@@ -3202,10 +3208,13 @@ void p2p_continue_find(struct p2p_data *p2p)
 		}
 		if (!found)
 			continue;
-		if (p2p_pre_find_operation(p2p, dev) > 0) {
+		res = p2p_pre_find_operation(p2p, dev);
+		if (res > 0) {
 			p2p->last_p2p_find_oper = dev;
 			return;
 		}
+		if (res == -2)
+			goto skip_sd;
 	}
 
 	/*
@@ -3213,14 +3222,19 @@ void p2p_continue_find(struct p2p_data *p2p)
 	 * iteration device.
 	 */
 	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
-		if (p2p_pre_find_operation(p2p, dev) > 0) {
+		res = p2p_pre_find_operation(p2p, dev);
+		if (res > 0) {
 			p2p->last_p2p_find_oper = dev;
 			return;
 		}
+		if (res == -2)
+			goto skip_sd;
 		if (dev == p2p->last_p2p_find_oper)
 			break;
 	}
 
+skip_sd:
+	os_memset(p2p->sd_query_no_ack, 0, ETH_ALEN);
 	p2p_listen_in_find(p2p, 1);
 }
 
@@ -3232,8 +3246,17 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
 	if (!success) {
-		if (p2p->sd_peer)
+		if (p2p->sd_peer) {
+			if (is_zero_ether_addr(p2p->sd_query_no_ack)) {
+				os_memcpy(p2p->sd_query_no_ack,
+					  p2p->sd_peer->info.p2p_device_addr,
+					  ETH_ALEN);
+				p2p_dbg(p2p,
+					"First SD Query no-ACK in this search iteration: "
+					MACSTR, MAC2STR(p2p->sd_query_no_ack));
+			}
 			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+		}
 		p2p->sd_peer = NULL;
 		if (p2p->state != P2P_IDLE)
 			p2p_continue_find(p2p);

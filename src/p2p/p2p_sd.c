@@ -288,6 +288,14 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	query = p2p_pending_sd_req(p2p, dev);
 	if (query == NULL)
 		return -1;
+	if (p2p->state == P2P_SEARCH &&
+	    os_memcmp(p2p->sd_query_no_ack, dev->info.p2p_device_addr,
+		      ETH_ALEN) == 0) {
+		p2p_dbg(p2p, "Do not start Service Discovery with " MACSTR
+			" due to it being the first no-ACK peer in this search iteration",
+			MAC2STR(dev->info.p2p_device_addr));
+		return -2;
+	}
 
 	p2p_dbg(p2p, "Start Service Discovery with " MACSTR,
 		MAC2STR(dev->info.p2p_device_addr));

@@ -124,7 +124,9 @@ def test_discovery_group_client(dev):
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     logger.info("Try to discover a P2P client in a group")
     if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
+        stop_p2p_find_and_wait(dev[2])
         if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
+            stop_p2p_find_and_wait(dev[2])
             if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
                 raise Exception("Could not discover group client")
 
@@ -159,6 +161,15 @@ def test_discovery_group_client(dev):
         if ev is None:
             raise Exception("Timeout on waiting for GO Negotiation Request")
 
+def stop_p2p_find_and_wait(dev):
+    dev.request("P2P_STOP_FIND")
+    for i in range(10):
+        res = dev.get_driver_status_field("scan_state")
+        if "SCAN_STARTED" not in res and "SCAN_REQUESTED" not in res:
+            break
+        logger.debug("Waiting for final P2P_FIND scan to complete")
+        time.sleep(0.02)
+
 def test_discovery_ctrl_char_in_devname(dev):
     """P2P device discovery and control character in Device Name"""
     try:
@@ -177,7 +188,9 @@ def _test_discovery_ctrl_char_in_devname(dev):
     dev[1].scan_for_bss(bssid, freq=2422)
     dev[1].p2p_connect_group(addr0, pin, timeout=60, freq=2422)
     if not dev[2].discover_peer(addr1, social=False, freq=2422, timeout=5):
+        stop_p2p_find_and_wait(dev[2])
         if not dev[2].discover_peer(addr1, social=False, freq=2422, timeout=5):
+            stop_p2p_find_and_wait(dev[2])
             if not dev[2].discover_peer(addr1, social=False, freq=2422,
                                         timeout=5):
                 raise Exception("Could not discover group client")

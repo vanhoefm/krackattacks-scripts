@@ -6973,6 +6973,14 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 
 	wpas_abort_ongoing_scan(wpa_s);
 
+	if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+		/*
+		 * Avoid possible auto connect re-connection on getting
+		 * disconnected due to state flush.
+		 */
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+	}
+
 #ifdef CONFIG_P2P
 	wpas_p2p_cancel(p2p_wpa_s);
 	p2p_ctrl_flush(p2p_wpa_s);

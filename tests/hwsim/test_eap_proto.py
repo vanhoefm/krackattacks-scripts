@@ -960,6 +960,290 @@ def test_eap_proto_leap(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def test_eap_proto_leap_errors(dev, apdev):
+    """EAP-LEAP protocol tests (error paths)"""
+    check_eap_capa(dev[0], "LEAP")
+
+    def leap_handler2(ctx, req):
+        logger.info("leap_handler2 - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(leap_handler2)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        with alloc_fail(dev[0], 1, "eap_leap_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_leap_process_request"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user",
+                           password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with alloc_fail(dev[0], 1, "eap_leap_process_success"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "os_get_random;eap_leap_process_success"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "eap_leap_process_response"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user",
+                           password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "nt_password_hash;eap_leap_process_response"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "hash_nt_password_hash;eap_leap_process_response"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with alloc_fail(dev[0], 1, "eap_leap_getKey"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user",
+                           password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "eap_leap_getKey"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user",
+                           password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "nt_password_hash;eap_leap_getKey"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1, "hash_nt_password_hash;eap_leap_getKey"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+    finally:
+        stop_radius_server(srv)
+
 def test_eap_proto_md5(dev, apdev):
     """EAP-MD5 protocol tests"""
     check_eap_capa(dev[0], "MD5")

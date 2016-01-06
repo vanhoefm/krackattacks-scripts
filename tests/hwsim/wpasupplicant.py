@@ -776,6 +776,7 @@ class WpaSupplicant:
         if not self.discover_peer(go_addr, social=social, freq=freq):
             if social or not self.discover_peer(go_addr, social=social):
                 raise Exception("GO " + go_addr + " not found")
+        self.p2p_stop_find()
         self.dump_monitor()
         cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
         if freq:
@@ -784,9 +785,13 @@ class WpaSupplicant:
             if timeout == 0:
                 self.dump_monitor()
                 return None
-            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout)
+            ev = self.wait_global_event(["P2P-GROUP-STARTED",
+                                         "P2P-GROUP-FORMATION-FAILURE"],
+                                        timeout)
             if ev is None:
                 raise Exception("Joining the group timed out")
+            if "P2P-GROUP-STARTED" not in ev:
+                raise Exception("Failed to join the group")
             self.dump_monitor()
             return self.group_form_result(ev)
         raise Exception("P2P_CONNECT(join) failed")

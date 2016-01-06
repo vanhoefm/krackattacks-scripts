@@ -119,7 +119,8 @@ def test_discovery_group_client(dev):
     logger.info("Connect a client to the GO")
     pin = dev[1].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, freq=int(res['freq']),
+                             timeout=60)
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     logger.info("Try to discover a P2P client in a group")

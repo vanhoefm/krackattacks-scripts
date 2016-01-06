@@ -285,11 +285,12 @@ def test_nfc_p2p_both_go(dev):
 def test_nfc_p2p_client(dev):
     """NFC connection handover when one device is P2P client"""
     logger.info("Start autonomous GOs")
-    dev[0].p2p_start_go()
+    go_res = dev[0].p2p_start_go()
     logger.info("Connect one device as a P2P client")
     pin = dev[1].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin,
+                             freq=int(go_res['freq']), timeout=60)
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
 
@@ -319,7 +320,8 @@ def test_nfc_p2p_client(dev):
     logger.info("Connect to group based on upper layer trigger")
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), pin,
+                             freq=int(go_res['freq']), timeout=60)
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])

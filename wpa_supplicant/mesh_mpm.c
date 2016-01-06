@@ -669,10 +669,13 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 		return;
 	}
 
-	if (conf->security == MESH_CONF_SEC_NONE)
-		mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
-	else
+	if (conf->security == MESH_CONF_SEC_NONE) {
+		if (sta->plink_state < PLINK_OPEN_SENT ||
+		    sta->plink_state > PLINK_ESTAB)
+			mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
+	} else {
 		mesh_rsn_auth_sae_sta(wpa_s, sta);
+	}
 }
 
 

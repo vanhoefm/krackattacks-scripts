@@ -1392,6 +1392,43 @@ def test_eap_proto_otp(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def test_eap_proto_otp_errors(dev, apdev):
+    """EAP-OTP local error cases"""
+    def otp_handler2(ctx, req):
+        logger.info("otp_handler2 - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge included")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_OTP,
+                               ord('A'))
+
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(otp_handler2)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_otp_process"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="OTP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+    finally:
+        stop_radius_server(srv)
+
 EAP_GPSK_OPCODE_GPSK_1 = 1
 EAP_GPSK_OPCODE_GPSK_2 = 2
 EAP_GPSK_OPCODE_GPSK_3 = 3

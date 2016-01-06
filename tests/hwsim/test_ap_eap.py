@@ -2536,6 +2536,24 @@ def test_ap_wpa2_eap_vendor_test(dev, apdev):
     eap_connect(dev[1], apdev[0], "VENDOR-TEST", "vendor-test",
                 password="pending")
 
+def test_ap_wpa2_eap_vendor_test_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP vendor test (OOM)"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ "eap_vendor_test_init",
+              "eap_msg_alloc;eap_vendor_test_process",
+              "eap_vendor_test_getKey" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                           scan_freq="2412",
+                           eap="VENDOR-TEST", identity="vendor-test",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and unauthenticated provisioning"""
     check_eap_capa(dev[0], "FAST")

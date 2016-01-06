@@ -2215,6 +2215,7 @@ def test_eap_proto_eke_errors(dev, apdev):
               (1, "eap_eke_build_msg;eap_eke_process_id", None),
               (1, "wpabuf_alloc;eap_eke_process_id", None),
               (1, "=eap_eke_process_id", None),
+              (1, "wpabuf_alloc;=eap_eke_process_id", None),
               (1, "wpabuf_alloc;eap_eke_process_id", None),
               (1, "eap_eke_build_msg;eap_eke_process_commit", None),
               (1, "wpabuf_resize;eap_eke_process_commit", None),

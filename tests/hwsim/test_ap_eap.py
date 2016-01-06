@@ -176,6 +176,9 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
 
     if status["suppPortStatus"] != "Authorized":
         raise Exception("Port not authorized")
+    if "selectedMethod" not in status:
+        logger.info("Status: " + str(status))
+        raise Exception("No selectedMethod in status")
     if method not in status["selectedMethod"]:
         raise Exception("Incorrect EAP method status")
     if sha256:

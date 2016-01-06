@@ -1095,6 +1095,25 @@ def test_ap_wpa2_eap_ttls_eap_gtc_server_oom(dev, apdev):
             if hapd.request("GET_ALLOC_FAIL").startswith('0'):
                 break
 
+def test_ap_wpa2_eap_ttls_eap_gtc_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC (OOM)"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ "eap_gtc_init",
+              "eap_msg_alloc;eap_gtc_process" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                           scan_freq="2412",
+                           eap="TTLS", identity="user",
+                           anonymous_identity="ttls", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_ttls_eap_md5(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-MD5"""
     check_eap_capa(dev[0], "MD5")

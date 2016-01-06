@@ -2607,6 +2607,56 @@ def test_eap_proto_pax(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def test_eap_proto_pax_errors(dev, apdev):
+    """EAP-PAX local error cases"""
+    check_eap_capa(dev[0], "PAX")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for i in range(1, 3):
+        with alloc_fail(dev[0], i, "eap_pax_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PAX", identity="pax.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ "eap_msg_alloc;eap_pax_alloc_resp;eap_pax_process_std_1",
+              "eap_msg_alloc;eap_pax_alloc_resp;eap_pax_process_std_3",
+              "eap_pax_getKey",
+              "eap_pax_get_emsk",
+              "eap_pax_get_session_id" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PAX", identity="pax.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           erp="1", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ (1, "os_get_random;eap_pax_process_std_1"),
+              (1, "eap_pax_initial_key_derivation"),
+              (1, "eap_pax_mac;eap_pax_process_std_3"),
+              (2, "eap_pax_mac;eap_pax_process_std_3"),
+              (1, "eap_pax_kdf;eap_pax_getKey"),
+              (1, "eap_pax_kdf;eap_pax_get_emsk") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PAX", identity="pax.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           erp="1", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_eap_proto_psk(dev, apdev):
     """EAP-PSK protocol tests"""
     def psk_handler(ctx, req):

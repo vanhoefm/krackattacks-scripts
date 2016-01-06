@@ -29,6 +29,7 @@ import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
+from utils import wait_fail_trigger
 
 def wps_start_ap(apdev, ssid="test-wps-conf"):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -9309,3 +9310,80 @@ def test_ap_wps_frag_ack_oom(dev, apdev):
     hapd = wps_start_ap(apdev[0])
     with alloc_fail(hapd, 1, "eap_wsc_build_frag_ack"):
         wps_run_pbc_fail_ap(apdev[0], dev[0], hapd)
+
+def wait_scan_stopped(dev):
+    dev.request("ABORT_SCAN")
+    for i in range(50):
+        res = dev.get_driver_status_field("scan_state")
+        if "SCAN_STARTED" not in res and "SCAN_REQUESTED" not in res:
+            break
+        logger.debug("Waiting for scan to complete")
+        time.sleep(0.1)
+
+def test_ap_wps_eap_wsc_errors(dev, apdev):
+    """WPS and EAP-WSC error cases"""
+    ssid = "test-wps-conf-pin"
+    appin = "12345670"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "fragment_size": "300", "ap_pin": appin }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+
+    dev[0].wps_reg(bssid, appin + " new_ssid=a", "new ssid", "WPA2PSK", "CCMP",
+                   "new passphrase", no_wait=True)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=10)
+    if ev is None:
+        raise Exception("WPS-FAIL not reported")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    wait_scan_stopped(dev[0])
+    dev[0].dump_monitor()
+
+    dev[0].wps_reg(bssid, appin, "new ssid", "FOO", "CCMP",
+                   "new passphrase", no_wait=True)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=10)
+    if ev is None:
+        raise Exception("WPS-FAIL not reported")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    wait_scan_stopped(dev[0])
+    dev[0].dump_monitor()
+
+    dev[0].wps_reg(bssid, appin, "new ssid", "WPA2PSK", "FOO",
+                   "new passphrase", no_wait=True)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=10)
+    if ev is None:
+        raise Exception("WPS-FAIL not reported")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    wait_scan_stopped(dev[0])
+    dev[0].dump_monitor()
+
+    dev[0].wps_reg(bssid, appin + "new_key=a", "new ssid", "WPA2PSK", "CCMP",
+                   "new passphrase", no_wait=True)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=10)
+    if ev is None:
+        raise Exception("WPS-FAIL not reported")
+    dev[0].request("WPS_CANCEL")
+    dev[0].wait_disconnected()
+    wait_scan_stopped(dev[0])
+    dev[0].dump_monitor()
+
+    tests = [ "eap_wsc_init",
+              "eap_msg_alloc;eap_wsc_build_msg",
+              "wpabuf_alloc;eap_wsc_process_fragment" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].request("WPS_PIN %s %s" % (bssid, pin))
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("WPS_CANCEL")
+            dev[0].wait_disconnected()
+            wait_scan_stopped(dev[0])
+            dev[0].dump_monitor()

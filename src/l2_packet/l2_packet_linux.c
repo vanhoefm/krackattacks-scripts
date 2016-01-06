@@ -206,6 +206,11 @@ static void l2_packet_receive_br(int sock, void *eloop_ctx, void *sock_ctx)
 	wpa_printf(MSG_DEBUG, "%s: src=" MACSTR " len=%d",
 		   __func__, MAC2STR(ll.sll_addr), (int) res);
 
+	if (os_memcmp(ll.sll_addr, l2->own_addr, ETH_ALEN) == 0) {
+		wpa_printf(MSG_DEBUG, "%s: Drop RX of own frame", __func__);
+		return;
+	}
+
 	addr[0] = buf;
 	len[0] = res;
 	sha1_vector(1, addr, len, hash);

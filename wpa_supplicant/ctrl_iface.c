@@ -6982,9 +6982,9 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	}
 
 #ifdef CONFIG_P2P
+	wpas_p2p_group_remove(p2p_wpa_s, "*");
 	wpas_p2p_cancel(p2p_wpa_s);
 	p2p_ctrl_flush(p2p_wpa_s);
-	wpas_p2p_group_remove(p2p_wpa_s, "*");
 	wpas_p2p_service_flush(p2p_wpa_s);
 	p2p_wpa_s->global->p2p_disabled = 0;
 	p2p_wpa_s->global->p2p_per_sta_psk = 0;

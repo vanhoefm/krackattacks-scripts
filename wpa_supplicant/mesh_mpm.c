@@ -715,8 +715,8 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 	eloop_cancel_timeout(plink_timer, wpa_s, sta);
 
 	/* Send ctrl event */
-	wpa_msg_ctrl(wpa_s, MSG_INFO, MESH_PEER_CONNECTED MACSTR,
-		     MAC2STR(sta->addr));
+	wpa_msg(wpa_s, MSG_INFO, MESH_PEER_CONNECTED MACSTR,
+		MAC2STR(sta->addr));
 }
 
 
@@ -854,9 +854,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 				" closed with reason %d",
 				MAC2STR(sta->addr), reason);
 
-			wpa_msg_ctrl(wpa_s, MSG_INFO,
-				     MESH_PEER_DISCONNECTED MACSTR,
-				     MAC2STR(sta->addr));
+			wpa_msg(wpa_s, MSG_INFO, MESH_PEER_DISCONNECTED MACSTR,
+				MAC2STR(sta->addr));
 
 			hapd->num_plinks--;
 

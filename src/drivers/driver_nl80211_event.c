@@ -1136,7 +1136,7 @@ static void nl80211_new_peer_candidate(struct wpa_driver_nl80211_data *drv,
 		return;
 
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
-	wpa_printf(MSG_DEBUG, "nl80211: New peer candidate" MACSTR,
+	wpa_printf(MSG_DEBUG, "nl80211: New peer candidate " MACSTR,
 		   MAC2STR(addr));
 
 	os_memset(&data, 0, sizeof(data));

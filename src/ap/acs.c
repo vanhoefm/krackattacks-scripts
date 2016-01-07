@@ -599,8 +599,7 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 	wpa_printf(MSG_DEBUG, "ACS: Survey analysis for selected bandwidth %d MHz",
 		   n_chans == 1 ? 20 :
 		   n_chans == 2 ? 40 :
-		   n_chans == 4 ? 80 :
-		   -1);
+		   80);
 
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		double total_weight;

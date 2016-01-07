@@ -33,8 +33,9 @@ struct l2_packet_data {
 #ifndef CONFIG_NO_LINUX_PACKET_SOCKET_WAR
 	/* For working around Linux packet socket behavior and regression. */
 	int fd_br_rx;
-	int last_from_br;
+	int last_from_br, last_from_br_prev;
 	u8 last_hash[SHA1_MAC_LEN];
+	u8 last_hash_prev[SHA1_MAC_LEN];
 	unsigned int num_rx_br;
 #endif /* CONFIG_NO_LINUX_PACKET_SOCKET_WAR */
 };
@@ -171,6 +172,14 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 				   __func__);
 			return;
 		}
+		if (l2->last_from_br_prev &&
+		    os_memcmp(hash, l2->last_hash_prev, SHA1_MAC_LEN) == 0) {
+			wpa_printf(MSG_DEBUG, "%s: Drop duplicate RX(prev)",
+				   __func__);
+			return;
+		}
+		os_memcpy(l2->last_hash_prev, l2->last_hash, SHA1_MAC_LEN);
+		l2->last_from_br_prev = l2->last_from_br;
 		os_memcpy(l2->last_hash, hash, SHA1_MAC_LEN);
 	}
 
@@ -219,6 +228,13 @@ static void l2_packet_receive_br(int sock, void *eloop_ctx, void *sock_ctx)
 		wpa_printf(MSG_DEBUG, "%s: Drop duplicate RX", __func__);
 		return;
 	}
+	if (!l2->last_from_br_prev &&
+	    os_memcmp(hash, l2->last_hash_prev, SHA1_MAC_LEN) == 0) {
+		wpa_printf(MSG_DEBUG, "%s: Drop duplicate RX(prev)", __func__);
+		return;
+	}
+	os_memcpy(l2->last_hash_prev, l2->last_hash, SHA1_MAC_LEN);
+	l2->last_from_br_prev = l2->last_from_br;
 	l2->last_from_br = 1;
 	os_memcpy(l2->last_hash, hash, SHA1_MAC_LEN);
 	l2->rx_callback(l2->rx_callback_ctx, ll.sll_addr, buf, res);

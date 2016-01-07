@@ -933,6 +933,9 @@ enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
 		return HOSTAPD_CHAN_ACS;
 	}
 
+	if (!iface->current_mode)
+		return HOSTAPD_CHAN_INVALID;
+
 	acs_cleanup(iface);
 
 	err = acs_request_scan(iface);

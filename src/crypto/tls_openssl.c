@@ -2234,6 +2234,17 @@ static int tls_connection_client_cert(struct tls_connection *conn,
 	if (client_cert == NULL && client_cert_blob == NULL)
 		return 0;
 
+#ifdef PKCS12_FUNCS
+#if OPENSSL_VERSION_NUMBER < 0x10002000L
+	/*
+	 * Clear previously set extra chain certificates, if any, from PKCS#12
+	 * processing in tls_parse_pkcs12() to allow OpenSSL to build a new
+	 * chain properly.
+	 */
+	SSL_CTX_clear_extra_chain_certs(conn->ssl_ctx);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10002000L */
+#endif /* PKCS12_FUNCS */
+
 	if (client_cert_blob &&
 	    SSL_use_certificate_ASN1(conn->ssl, (u8 *) client_cert_blob,
 				     client_cert_blob_len) == 1) {

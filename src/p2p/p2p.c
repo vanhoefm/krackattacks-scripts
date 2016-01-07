@@ -3465,9 +3465,11 @@ int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
 		 * operation was started.
 		 */
 		p2p_dbg(p2p, "Ignore old scan result for " MACSTR
-			" (rx_time=%u.%06u)",
+			" (rx_time=%u.%06u find_start=%u.%06u)",
 			MAC2STR(bssid), (unsigned int) rx_time->sec,
-			(unsigned int) rx_time->usec);
+			(unsigned int) rx_time->usec,
+			(unsigned int) p2p->find_start.sec,
+			(unsigned int) p2p->find_start.usec);
 		return 0;
 	}
 

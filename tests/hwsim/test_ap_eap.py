@@ -686,6 +686,34 @@ def _test_ap_wpa2_eap_sim_ext_replace_sim3(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
 
+def test_ap_wpa2_eap_sim_ext_auth_fail(dev, apdev):
+    """EAP-SIM with external GSM auth and auth failing"""
+    try:
+        _test_ap_wpa2_eap_sim_ext_auth_fail(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_sim_ext_auth_fail(dev, apdev):
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="SIM", key_mgmt="WPA-EAP",
+                        identity="1232010000000000",
+                        wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    rid = p[0].split('-')[3]
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-FAIL")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_sim_oom(dev, apdev):
     """EAP-SIM and OOM"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -930,6 +958,34 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
         time.sleep(0.1)
         dev[0].dump_monitor()
 
+def test_ap_wpa2_eap_aka_ext_auth_fail(dev, apdev):
+    """EAP-AKA with external UMTS auth and auth failing"""
+    try:
+        _test_ap_wpa2_eap_aka_ext_auth_fail(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_aka_ext_auth_fail(dev, apdev):
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="AKA", key_mgmt="WPA-EAP",
+                        identity="0232010000000000",
+                        wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    rid = p[0].split('-')[3]
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-FAIL")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
     check_hlr_auc_gw_support()
@@ -1010,6 +1066,34 @@ def test_ap_wpa2_eap_aka_prime_sql(dev, apdev, params):
         cur.execute("UPDATE reauth SET counter='1001' WHERE permanent='6555444333222111'")
     logger.info("AKA' reauth with max reauth count reached")
     eap_reauth(dev[0], "AKA'")
+
+def test_ap_wpa2_eap_aka_prime_ext_auth_fail(dev, apdev):
+    """EAP-AKA' with external UMTS auth and auth failing"""
+    try:
+        _test_ap_wpa2_eap_aka_prime_ext_auth_fail(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_aka_prime_ext_auth_fail(dev, apdev):
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="AKA'", key_mgmt="WPA-EAP",
+                        identity="6555444333222111",
+                        wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    rid = p[0].split('-')[3]
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-FAIL")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
 
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""

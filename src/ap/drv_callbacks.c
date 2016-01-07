@@ -956,8 +956,6 @@ static struct hostapd_channel_data * hostapd_get_mode_channel(
 
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		chan = &iface->current_mode->channels[i];
-		if (!chan)
-			return NULL;
 		if ((unsigned int) chan->freq == freq)
 			return chan;
 	}

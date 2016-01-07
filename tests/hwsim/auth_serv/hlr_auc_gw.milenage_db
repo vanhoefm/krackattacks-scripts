@@ -8,6 +8,9 @@
 # IMSI Ki OPc AMF SQN
 232010000000000 90dca4eda45b53cf0f12d7c9c3bc6a89 cb9cccc4b9258e6dca4760379fb82581 61df 000000000000
 
+# Modified version of the previous to allow testing with replaced SIM.
+232010000000009 a0dca4eda45b53cf0f12d7c9c3bc6a89 cb9cccc4b9258e6dca4760379fb82581 61df 000000000000
+
 # These values are from Test Set 19 which has the AMF separation bit set to 1
 # and as such, is suitable for EAP-AKA' test.
 555444333222111 5122250214c33e723a5dd523fc145fc0 981d464c7c52eb6e5036234984ad0bcf c3ab 16f3b3f70fc1

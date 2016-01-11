@@ -1181,6 +1181,7 @@ static void nl80211_new_station_event(struct wpa_driver_nl80211_data *drv,
 
 
 static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
+				      struct i802_bss *bss,
 				      struct nlattr **tb)
 {
 	u8 *addr;
@@ -1193,7 +1194,7 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 		   MAC2STR(addr));
 
 	if (is_ap_interface(drv->nlmode) && drv->device_ap_sme) {
-		drv_event_disassoc(drv->ctx, addr);
+		drv_event_disassoc(bss->ctx, addr);
 		return;
 	}
 
@@ -1202,7 +1203,7 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 
 	os_memset(&data, 0, sizeof(data));
 	os_memcpy(data.ibss_peer_lost.peer, addr, ETH_ALEN);
-	wpa_supplicant_event(drv->ctx, EVENT_IBSS_PEER_LOST, &data);
+	wpa_supplicant_event(bss->ctx, EVENT_IBSS_PEER_LOST, &data);
 }
 
 
@@ -2155,7 +2156,7 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		nl80211_new_station_event(drv, bss, tb);
 		break;
 	case NL80211_CMD_DEL_STATION:
-		nl80211_del_station_event(drv, tb);
+		nl80211_del_station_event(drv, bss, tb);
 		break;
 	case NL80211_CMD_SET_REKEY_OFFLOAD:
 		nl80211_rekey_offload_event(drv, tb);

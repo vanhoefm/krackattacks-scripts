@@ -11,7 +11,7 @@ import os
 import time
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail, wait_fail_trigger
 from test_ap_eap import int_eap_server_params
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -415,3 +415,74 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, rIK, "rIK")
     verify_not_present(buf, rRK, fname, "rRK")
     verify_not_present(buf, rIK, fname, "rIK")
+
+def test_erp_anonymous_identity(dev, apdev):
+    """ERP and anonymous identity"""
+    check_erp_capa(dev[0])
+    params = int_eap_server_params()
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['eap_server_erp'] = '1'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("ERP_FLUSH")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="erp-ttls@example.com",
+                   anonymous_identity="anonymous@example.com",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                   erp="1", scan_freq="2412")
+    for i in range(3):
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=15)
+        dev[0].request("RECONNECT")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("EAP success timed out")
+        if "EAP re-authentication completed successfully" not in ev:
+            raise Exception("Did not use ERP")
+        dev[0].wait_connected(timeout=15, error="Reconnection timed out")
+
+def test_erp_home_realm_oom(dev, apdev):
+    """ERP and home realm OOM"""
+    check_erp_capa(dev[0])
+    params = int_eap_server_params()
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['eap_server_erp'] = '1'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    for count in range(1, 3):
+        with alloc_fail(dev[0], count, "eap_home_realm"):
+            dev[0].request("ERP_FLUSH")
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                           identity="erp-ttls@example.com",
+                           anonymous_identity="anonymous@example.com",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                           erp="1", scan_freq="2412", wait_connect=False)
+            dev[0].wait_connected(timeout=10)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    for count in range(1, 3):
+        dev[0].request("ERP_FLUSH")
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412", wait_connect=False)
+        dev[0].wait_connected(timeout=10)
+        if range > 1:
+            continue
+        with alloc_fail(dev[0], count, "eap_home_realm"):
+            dev[0].request("DISCONNECT")
+            dev[0].wait_disconnected(timeout=15)
+            dev[0].request("RECONNECT")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()

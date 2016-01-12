@@ -7039,3 +7039,57 @@ def test_eap_proto_tnc(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_canned_success_after_identity(dev, apdev):
+    """EAP protocol tests for canned EAP-Success after identity"""
+    check_eap_capa(dev[0], "MD5")
+    def eap_canned_success_handler(ctx, req):
+        logger.info("eap_canned_success_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(eap_canned_success_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       phase1="allow_canned_success=1",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    finally:
+        stop_radius_server(srv)

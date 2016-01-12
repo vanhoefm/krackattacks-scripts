@@ -11,7 +11,7 @@ import os
 import time
 
 import hostapd
-from utils import HwsimSkip, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_eap import int_eap_server_params
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -486,3 +486,81 @@ def test_erp_home_realm_oom(dev, apdev):
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_erp_local_errors(dev, apdev):
+    """ERP and local error cases"""
+    check_erp_capa(dev[0])
+    params = int_eap_server_params()
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['eap_server_erp'] = '1'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("ERP_FLUSH")
+    with alloc_fail(dev[0], 1, "eap_peer_erp_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    for count in range(1, 6):
+        dev[0].request("ERP_FLUSH")
+        with fail_test(dev[0], count, "hmac_sha256_kdf;eap_peer_erp_init"):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                           identity="erp-ttls@example.com",
+                           anonymous_identity="anonymous@example.com",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                           erp="1", scan_freq="2412")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    dev[0].request("ERP_FLUSH")
+    with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_peer_erp_reauth_start"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=15)
+        dev[0].request("RECONNECT")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].request("ERP_FLUSH")
+    with fail_test(dev[0], 1, "hmac_sha256;eap_peer_erp_reauth_start"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=15)
+        dev[0].request("RECONNECT")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].request("ERP_FLUSH")
+    with fail_test(dev[0], 1, "hmac_sha256;eap_peer_finish"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=15)
+        dev[0].request("RECONNECT")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()

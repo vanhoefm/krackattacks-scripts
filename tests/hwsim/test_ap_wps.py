@@ -30,6 +30,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
 from utils import wait_fail_trigger
+from test_ap_eap import int_eap_server_params
 
 def wps_start_ap(apdev, ssid="test-wps-conf"):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -9387,3 +9388,115 @@ def test_ap_wps_eap_wsc_errors(dev, apdev):
             dev[0].wait_disconnected()
             wait_scan_stopped(dev[0])
             dev[0].dump_monitor()
+
+def test_ap_wps_eap_wsc(dev, apdev):
+    """WPS and EAP-WSC in network profile"""
+    params = int_eap_server_params()
+    params["wps_state"] = "2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    logger.info("Unexpected identity")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-unexpected",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("No phase1 parameter")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("No PIN/PBC in phase1")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   phase1="foo", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Invalid pkhash in phase1")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   phase1="foo pkhash=q pbc=1", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Zero fragment_size")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   fragment_size="0", phase1="pin=12345670", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["WPS-M2D"], timeout=5)
+    if ev is None:
+        raise Exception("No M2D seen")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Missing new_auth")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   phase1="pin=12345670 new_ssid=aa", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Missing new_encr")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   phase1="pin=12345670 new_auth=WPA2PSK new_ssid=aa", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    logger.info("Missing new_key")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="WSC", identity="WFA-SimpleConfig-Enrollee-1-0",
+                   phase1="pin=12345670 new_auth=WPA2PSK new_ssid=aa new_encr=CCMP",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP method start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

@@ -1776,7 +1776,6 @@ static u8 * eap_ttls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 int eap_peer_ttls_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_TTLS, "TTLS");
@@ -1795,8 +1794,5 @@ int eap_peer_ttls_register(void)
 	eap->init_for_reauth = eap_ttls_init_for_reauth;
 	eap->get_emsk = eap_ttls_get_emsk;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }

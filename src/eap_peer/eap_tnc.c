@@ -410,7 +410,6 @@ fail:
 int eap_peer_tnc_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_TNC, "TNC");
@@ -421,8 +420,5 @@ int eap_peer_tnc_register(void)
 	eap->deinit = eap_tnc_deinit;
 	eap->process = eap_tnc_process;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }

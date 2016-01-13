@@ -390,7 +390,6 @@ static u8 * eap_tls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 int eap_peer_tls_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_TLS, "TLS");
@@ -409,10 +408,7 @@ int eap_peer_tls_register(void)
 	eap->init_for_reauth = eap_tls_init_for_reauth;
 	eap->get_emsk = eap_tls_get_emsk;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }
 
 
@@ -420,7 +416,6 @@ int eap_peer_tls_register(void)
 int eap_peer_unauth_tls_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_UNAUTH_TLS,
@@ -439,10 +434,7 @@ int eap_peer_unauth_tls_register(void)
 	eap->init_for_reauth = eap_tls_init_for_reauth;
 	eap->get_emsk = eap_tls_get_emsk;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }
 #endif /* EAP_UNAUTH_TLS */
 
@@ -451,7 +443,6 @@ int eap_peer_unauth_tls_register(void)
 int eap_peer_wfa_unauth_tls_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_WFA_NEW,
@@ -471,9 +462,6 @@ int eap_peer_wfa_unauth_tls_register(void)
 	eap->init_for_reauth = eap_tls_init_for_reauth;
 	eap->get_emsk = eap_tls_get_emsk;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }
 #endif /* CONFIG_HS20 */

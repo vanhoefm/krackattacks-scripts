@@ -7093,3 +7093,182 @@ def test_eap_canned_success_after_identity(dev, apdev):
         dev[0].wait_disconnected()
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_wsc(dev, apdev):
+    """EAP-WSC protocol tests"""
+    global eap_proto_wsc_test_done, eap_proto_wsc_wait_failure
+    eap_proto_wsc_test_done = False
+
+    def wsc_handler(ctx, req):
+        logger.info("wsc_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        global eap_proto_wsc_wait_failure
+        eap_proto_wsc_wait_failure = False
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing Flags field")
+            return struct.pack(">BBHB3BLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 1,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Message underflow (missing Message Length field)")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x02)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid Message Length (> 50000)")
+            return struct.pack(">BBHB3BLBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 4,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x02, 65535)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid Message Length (< current payload)")
+            return struct.pack(">BBHB3BLBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 5,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x02, 0, 0xff)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected Op-Code 5 in WAIT_START state")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               5, 0x00)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid WSC Start to start the sequence")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x00)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No Message Length field in a fragmented packet")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               4, 0x01)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid WSC Start to start the sequence")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x00)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first fragmented packet")
+            return struct.pack(">BBHB3BLBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 5,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               4, 0x03, 10, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected Op-Code 5 in fragment (expected 4)")
+            return struct.pack(">BBHB3BLBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 3,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               5, 0x01, 2)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid WSC Start to start the sequence")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x00)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first fragmented packet")
+            return struct.pack(">BBHB3BLBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 5,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               4, 0x03, 2, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragment overflow")
+            return struct.pack(">BBHB3BLBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 4,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               4, 0x01, 2, 3)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid WSC Start to start the sequence")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x00)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected Op-Code 5 in WAIT_FRAG_ACK state")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               5, 0x00)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid WSC Start")
+            return struct.pack(">BBHB3BLBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 2,
+                               EAP_TYPE_EXPANDED, 0x00, 0x37, 0x2a, 1,
+                               1, 0x00)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("No more test responses available - test case completed")
+            global eap_proto_wsc_test_done
+            eap_proto_wsc_test_done = True
+            eap_proto_wsc_wait_failure = True
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(wsc_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        i = 0
+        while not eap_proto_wsc_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
+            fragment_size = 1398 if i != 9 else 50
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", eap="WSC",
+                           fragment_size=str(fragment_size),
+                           identity="WFA-SimpleConfig-Enrollee-1-0",
+                           phase1="pin=12345670",
+                           scan_freq="2412", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP method start")
+            if eap_proto_wsc_wait_failure:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            else:
+                time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

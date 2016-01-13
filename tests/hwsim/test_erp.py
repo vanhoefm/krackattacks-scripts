@@ -428,7 +428,7 @@ def test_erp_anonymous_identity(dev, apdev):
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
-                   identity="erp-ttls@example.com",
+                   identity="erp-ttls",
                    anonymous_identity="anonymous@example.com",
                    password="password",
                    ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
@@ -459,6 +459,20 @@ def test_erp_home_realm_oom(dev, apdev):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                            identity="erp-ttls@example.com",
+                           anonymous_identity="anonymous@example.com",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                           erp="1", scan_freq="2412", wait_connect=False)
+            dev[0].wait_connected(timeout=10)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    for count in range(1, 3):
+        with alloc_fail(dev[0], count, "eap_home_realm"):
+            dev[0].request("ERP_FLUSH")
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                           identity="erp-ttls",
                            anonymous_identity="anonymous@example.com",
                            password="password",
                            ca_cert="auth_serv/ca.pem", phase2="auth=PAP",

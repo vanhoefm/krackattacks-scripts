@@ -1363,7 +1363,6 @@ static u8 * eap_peap_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 int eap_server_peap_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_server_method_alloc(EAP_SERVER_METHOD_INTERFACE_VERSION,
 				      EAP_VENDOR_IETF, EAP_TYPE_PEAP, "PEAP");
@@ -1380,8 +1379,5 @@ int eap_server_peap_register(void)
 	eap->isSuccess = eap_peap_isSuccess;
 	eap->getSessionId = eap_peap_get_session_id;
 
-	ret = eap_server_method_register(eap);
-	if (ret)
-		eap_server_method_free(eap);
-	return ret;
+	return eap_server_method_register(eap);
 }

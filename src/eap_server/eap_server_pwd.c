@@ -1094,7 +1094,6 @@ static u8 * eap_pwd_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 int eap_server_pwd_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 	struct timeval tp;
 	struct timezone tz;
 	u32 sr;
@@ -1121,9 +1120,6 @@ int eap_server_pwd_register(void)
 	eap->isSuccess = eap_pwd_is_success;
 	eap->getSessionId = eap_pwd_get_session_id;
 
-	ret = eap_server_method_register(eap);
-	if (ret)
-		eap_server_method_free(eap);
-	return ret;
+	return eap_server_method_register(eap);
 }
 

@@ -2787,8 +2787,21 @@ def test_eap_proto_psk_errors(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="eap-test")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
-    for i in range(1, 6):
+    for i in range(1, 3):
         with alloc_fail(dev[0], i, "eap_psk_init"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PSK", identity="psk.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    for i in range(1, 4):
+        with fail_test(dev[0], i, "eap_psk_key_setup;eap_psk_init"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="PSK", identity="psk.user@example.com",
                            password_hex="0123456789abcdef0123456789abcdef",
@@ -2806,18 +2819,6 @@ def test_eap_proto_psk_errors(dev, apdev):
               (1, "=eap_psk_process_3"),
               (2, "=eap_psk_process_3"),
               (1, "eap_msg_alloc;eap_psk_process_3"),
-              (1, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (2, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (3, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (4, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (5, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (6, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (7, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (8, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (9, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (10, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt;eap_psk_process_3"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt;eap_psk_process_3"),
               (1, "eap_psk_getKey"),
               (1, "eap_psk_get_session_id"),
               (1, "eap_psk_get_emsk") ]
@@ -2831,15 +2832,8 @@ def test_eap_proto_psk_errors(dev, apdev):
                                    timeout=15)
             if ev is None:
                 raise Exception("Timeout on EAP start")
-            ok = False
-            for j in range(10):
-                state = dev[0].request('GET_ALLOC_FAIL')
-                if state.startswith('0:'):
-                    ok = True
-                    break
-                time.sleep(0.1)
-            if not ok:
-                raise Exception("No allocation failure seen for %d:%s" % (count, func))
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL",
+                              note="No allocation failure seen for %d:%s" % (count, func))
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
@@ -2850,7 +2844,19 @@ def test_eap_proto_psk_errors(dev, apdev):
               (3, "aes_128_eax_decrypt;eap_psk_process_3"),
               (1, "aes_128_eax_encrypt;eap_psk_process_3"),
               (2, "aes_128_eax_encrypt;eap_psk_process_3"),
-              (3, "aes_128_eax_encrypt;eap_psk_process_3") ]
+              (3, "aes_128_eax_encrypt;eap_psk_process_3"),
+              (1, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (2, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (3, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (4, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (5, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (6, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (7, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (8, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (9, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (10, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
+              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt;eap_psk_process_3"),
+              (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt;eap_psk_process_3") ]
     for count, func in tests:
         with fail_test(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -2861,15 +2867,8 @@ def test_eap_proto_psk_errors(dev, apdev):
                                    timeout=15)
             if ev is None:
                 raise Exception("Timeout on EAP start")
-            ok = False
-            for j in range(10):
-                state = dev[0].request('GET_FAIL')
-                if state.startswith('0:'):
-                    ok = True
-                    break
-                time.sleep(0.1)
-            if not ok:
-                raise Exception("No failure seen for %d:%s" % (count, func))
+            wait_fail_trigger(dev[0], "GET_FAIL",
+                              note="No failure seen for %d:%s" % (count, func))
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 

@@ -731,7 +731,7 @@ def test_ap_wpa2_eap_sim_oom(dev, apdev):
               (11, "milenage_f2345"),
               (12, "milenage_f2345") ]
     for count, func in tests:
-        with alloc_fail(dev[0], count, func):
+        with fail_test(dev[0], count, func):
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
                            identity="1232010000000000",
                            password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
@@ -2708,16 +2708,7 @@ def test_ap_wpa2_eap_psk_oom(dev, apdev):
     skip_with_fips(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
-    tests = [ (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt"),
-              (1, "omac1_aes_128;aes_128_eax_encrypt"),
-              (2, "omac1_aes_128;aes_128_eax_encrypt"),
-              (3, "omac1_aes_128;aes_128_eax_encrypt"),
-              (1, "=aes_128_eax_encrypt"),
-              (1, "omac1_aes_vector"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt"),
-              (1, "omac1_aes_128;aes_128_eax_decrypt"),
-              (2, "omac1_aes_128;aes_128_eax_decrypt"),
-              (3, "omac1_aes_128;aes_128_eax_decrypt"),
+    tests = [ (1, "=aes_128_eax_encrypt"),
               (1, "=aes_128_eax_decrypt") ]
     for count, func in tests:
         with alloc_fail(dev[0], count, func):
@@ -2728,13 +2719,35 @@ def test_ap_wpa2_eap_psk_oom(dev, apdev):
             ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
             if ev is None:
                 raise Exception("EAP method not selected")
-            for i in range(10):
-                if "0:" in dev[0].request("GET_ALLOC_FAIL"):
-                    break
-                time.sleep(0.02)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL",
+                              note="Failure not triggered: %d:%s" % (count, func))
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
 
-    with alloc_fail(dev[0], 1, "aes_128_encrypt_block"):
+    tests = [ (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt"),
+              (1, "omac1_aes_128;aes_128_eax_encrypt"),
+              (2, "omac1_aes_128;aes_128_eax_encrypt"),
+              (3, "omac1_aes_128;aes_128_eax_encrypt"),
+              (1, "omac1_aes_vector"),
+              (1, "omac1_aes_128;aes_128_eax_decrypt"),
+              (2, "omac1_aes_128;aes_128_eax_decrypt"),
+              (3, "omac1_aes_128;aes_128_eax_decrypt"),
+              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PSK",
+                           identity="psk.user@example.com",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False, scan_freq="2412")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+            if ev is None:
+                raise Exception("EAP method not selected")
+            wait_fail_trigger(dev[0], "GET_FAIL",
+                              note="Failure not triggered: %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    with fail_test(dev[0], 1, "aes_128_encrypt_block"):
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PSK",
                            identity="psk.user@example.com",
                            password_hex="0123456789abcdef0123456789abcdef",
@@ -2743,6 +2756,7 @@ def test_ap_wpa2_eap_psk_oom(dev, apdev):
             if ev is None:
                 raise Exception("EAP method failure not reported")
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
 
 def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     """WPA-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""

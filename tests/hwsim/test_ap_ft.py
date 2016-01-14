@@ -789,7 +789,7 @@ def test_ap_ft_oom(dev, apdev):
     dev[0].scan_for_bss(dst, freq="2412")
     with alloc_fail(dev[0], 1, "wpa_ft_gen_req_ies"):
         dev[0].roam(dst)
-    with alloc_fail(dev[0], 1, "wpa_ft_mic"):
+    with fail_test(dev[0], 1, "wpa_ft_mic"):
         dev[0].roam(dst, fail_test=True)
     with fail_test(dev[0], 1, "os_get_random;wpa_ft_prepare_auth_request"):
         dev[0].roam(dst, fail_test=True)

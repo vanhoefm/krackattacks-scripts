@@ -65,41 +65,41 @@ static void usage(void)
 	       "  -B = run daemon in the background\n"
 	       "  -c = Configuration file\n"
 	       "  -C = ctrl_interface parameter (only used if -c is not)\n"
-	       "  -i = interface name\n"
-	       "  -I = additional configuration file\n"
 	       "  -d = increase debugging verbosity (-dd even more)\n"
 	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n"
-	       "  -e = entropy file\n");
+	       "  -e = entropy file\n"
 #ifdef CONFIG_DEBUG_FILE
-	printf("  -f = log output to debug file instead of stdout\n");
+	       "  -f = log output to debug file instead of stdout\n"
 #endif /* CONFIG_DEBUG_FILE */
-	printf("  -g = global ctrl_interface\n"
+	       "  -g = global ctrl_interface\n"
 	       "  -G = global ctrl_interface group\n"
-	       "  -K = include keys (passwords, etc.) in debug output\n");
-#ifdef CONFIG_DEBUG_SYSLOG
-	printf("  -s = log output to syslog instead of stdout\n");
-#endif /* CONFIG_DEBUG_SYSLOG */
-#ifdef CONFIG_DEBUG_LINUX_TRACING
-	printf("  -T = record to Linux tracing in addition to logging\n");
-	printf("       (records all messages regardless of debug verbosity)\n");
-#endif /* CONFIG_DEBUG_LINUX_TRACING */
-	printf("  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
+	       "  -i = interface name\n"
+	       "  -I = additional configuration file\n"
+	       "  -K = include keys (passwords, etc.) in debug output\n"
 	       "  -L = show license (BSD)\n"
+#ifdef CONFIG_P2P
+	       "  -m = Configuration file for the P2P Device interface\n"
+#endif /* CONFIG_P2P */
+	       "  -N = start describing new interface\n"
 	       "  -o = override driver parameter for new interfaces\n"
 	       "  -O = override ctrl_interface parameter for new interfaces\n"
 	       "  -p = driver parameters\n"
 	       "  -P = PID file\n"
-	       "  -q = decrease debugging verbosity (-qq even less)\n");
+	       "  -q = decrease debugging verbosity (-qq even less)\n"
+#ifdef CONFIG_DEBUG_SYSLOG
+	       "  -s = log output to syslog instead of stdout\n"
+#endif /* CONFIG_DEBUG_SYSLOG */
+	       "  -t = include timestamp in debug messages\n"
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	       "  -T = record to Linux tracing in addition to logging\n"
+	       "       (records all messages regardless of debug verbosity)\n"
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 #ifdef CONFIG_DBUS
-	printf("  -u = enable DBus control interface\n");
+	       "  -u = enable DBus control interface\n"
 #endif /* CONFIG_DBUS */
-	printf("  -v = show version\n"
-	       "  -W = wait for a control interface monitor before starting\n"
-#ifdef CONFIG_P2P
-	       "  -m = Configuration file for the P2P Device interface\n"
-#endif /* CONFIG_P2P */
-	       "  -N = start describing new interface\n");
+	       "  -v = show version\n"
+	       "  -W = wait for a control interface monitor before starting\n");
 
 	printf("example:\n"
 	       "  wpa_supplicant -D%s -iwlan0 -c/etc/wpa_supplicant.conf\n",

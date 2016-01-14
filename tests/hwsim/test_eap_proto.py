@@ -5928,9 +5928,21 @@ def test_eap_proto_pwd_errors(dev, apdev):
     with alloc_fail(dev[0], 1, "eap_pwd_get_session_id"):
         dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                        eap="PWD", identity="pwd user",
+                       fragment_size="0",
                        password="secret password")
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
+
+    funcs = [ "eap_pwd_getkey", "eap_pwd_get_emsk" ]
+    for func in funcs:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PWD", identity="pwd user",
+                           password="secret password", erp="1",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
 
     for i in range(1, 7):
         with alloc_fail(dev[0], i, "eap_pwd_perform_id_exchange"):
@@ -6010,25 +6022,17 @@ def test_eap_proto_pwd_errors(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
-    for i in range(1, 4):
+    for i in range(1, 5):
         with alloc_fail(dev[0], i, "eap_msg_alloc;=eap_pwd_process"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="PWD", identity="pwd user",
-                           password="secret password",
+                           password="secret password", fragment_size="50",
                            wait_connect=False)
             ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
                                    timeout=15)
             if ev is None:
                 raise Exception("Timeout on EAP start")
-            ok = False
-            for j in range(10):
-                state = dev[0].request('GET_ALLOC_FAIL')
-                if state.startswith('0:'):
-                    ok = True
-                    break
-                time.sleep(0.1)
-            if not ok:
-                raise Exception("No allocation failure seen")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
@@ -6042,6 +6046,33 @@ def test_eap_proto_pwd_errors(dev, apdev):
         raise Exception("EAP-pwd not started")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+    with fail_test(dev[0], 1,
+                   "hash_nt_password_hash;eap_pwd_perform_id_exchange"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PWD", identity="pwd-hash",
+                       password_hex="hash:e3718ece8ab74792cbbfffd316d2d19a",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+        if ev is None:
+            raise Exception("No EAP-Failure reported")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    params = { "ssid": "eap-test2", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
+               "pwd_group": "19", "fragment_size": "40" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;=eap_pwd_process"):
+        dev[0].connect("eap-test2", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PWD", identity="pwd user",
+                       password="secret password",
+                       wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
 
 def test_eap_proto_erp(dev, apdev):
     """ERP protocol tests"""

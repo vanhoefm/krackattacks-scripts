@@ -116,8 +116,15 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	}
 	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS | WLAN_STA_WPS2);
 
-	res = hostapd_check_acl(hapd, addr, NULL);
-	if (res != HOSTAPD_ACL_ACCEPT) {
+	/*
+	 * ACL configurations to the drivers (implementing AP SME and ACL
+	 * offload) without hostapd's knowledge, can result in a disconnection
+	 * though the driver accepts the connection. Skip the hostapd check for
+	 * ACL if the driver supports ACL offload to avoid potentially
+	 * conflicting ACL rules.
+	 */
+	if (hapd->iface->drv_max_acl_mac_addrs == 0 &&
+	    hostapd_check_acl(hapd, addr, NULL) != HOSTAPD_ACL_ACCEPT) {
 		wpa_printf(MSG_INFO, "STA " MACSTR " not allowed to connect",
 			   MAC2STR(addr));
 		reason = WLAN_REASON_UNSPECIFIED;

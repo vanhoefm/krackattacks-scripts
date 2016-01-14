@@ -256,6 +256,9 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 	EVP_CIPHER_CTX *ctx;
 	const EVP_CIPHER *type;
 
+	if (TEST_FAIL())
+		return NULL;
+
 	type = aes_get_evp_cipher(len);
 	if (type == NULL)
 		return NULL;
@@ -305,6 +308,9 @@ void * aes_decrypt_init(const u8 *key, size_t len)
 {
 	EVP_CIPHER_CTX *ctx;
 	const EVP_CIPHER *type;
+
+	if (TEST_FAIL())
+		return NULL;
 
 	type = aes_get_evp_cipher(len);
 	if (type == NULL)

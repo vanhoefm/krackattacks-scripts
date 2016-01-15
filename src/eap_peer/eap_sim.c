@@ -249,6 +249,7 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 			return eap_sim_ext_sim_req(sm, data);
 	}
 
+#ifdef PCSC_FUNCS
 	if (conf->pcsc) {
 		if (scard_gsm_auth(sm->scard_ctx, data->rand[0],
 				   data->sres[0], data->kc[0]) ||
@@ -263,6 +264,7 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 		}
 		return 0;
 	}
+#endif /* PCSC_FUNCS */
 
 #ifdef CONFIG_SIM_SIMULATOR
 	if (conf->password) {

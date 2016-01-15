@@ -35,6 +35,7 @@ struct eap_ttls_data {
 	void *phase2_priv;
 	int phase2_success;
 	int phase2_start;
+	EapDecision decision_succ;
 
 	enum phase2_types {
 		EAP_TTLS_PHASE2_EAP,
@@ -1547,6 +1548,7 @@ static void eap_ttls_check_auth_status(struct eap_sm *sm,
 			wpa_printf(MSG_DEBUG, "EAP-TTLS: Authentication "
 				   "completed successfully");
 			data->phase2_success = 1;
+			data->decision_succ = ret->decision;
 #ifdef EAP_TNC
 			if (!data->ready_for_tnc && !data->tnc_started) {
 				/*
@@ -1564,6 +1566,18 @@ static void eap_ttls_check_auth_status(struct eap_sm *sm,
 			wpa_printf(MSG_DEBUG, "EAP-TTLS: Authentication "
 				   "completed successfully (MAY_CONT)");
 			data->phase2_success = 1;
+			data->decision_succ = ret->decision;
+	} else if (data->decision_succ != DECISION_FAIL &&
+		   data->phase2_success &&
+		   !data->ssl.tls_out) {
+		/*
+		 * This is needed to cover the case where the final Phase 2
+		 * message gets fragmented since fragmentation clears
+		 * decision back to FAIL.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "EAP-TTLS: Restore success decision after fragmented frame sent completely");
+		ret->decision = data->decision_succ;
 	}
 }
 
@@ -1638,6 +1652,7 @@ static void eap_ttls_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	data->pending_phase2_req = NULL;
 	wpabuf_free(data->pending_resp);
 	data->pending_resp = NULL;
+	data->decision_succ = DECISION_FAIL;
 #ifdef EAP_TNC
 	data->ready_for_tnc = 0;
 	data->tnc_started = 0;

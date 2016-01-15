@@ -4549,8 +4549,9 @@ retry:
 			goto fail;
 	}
 
-	if (nl80211_ht_vht_overrides(msg, params) < 0)
-		return -1;
+	ret = nl80211_ht_vht_overrides(msg, params);
+	if (ret < 0)
+		goto fail;
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;

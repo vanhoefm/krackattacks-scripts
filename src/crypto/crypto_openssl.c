@@ -32,11 +32,30 @@
 #include "crypto.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-/* Compatibility wrapper for older versions. */
+/* Compatibility wrappers for older versions. */
+
 static int EVP_CIPHER_CTX_reset(EVP_CIPHER_CTX *ctx)
 {
 	return EVP_CIPHER_CTX_cleanup(ctx);
 }
+
+
+static HMAC_CTX * HMAC_CTX_new(void)
+{
+	HMAC_CTX *ctx;
+
+	ctx = os_zalloc(sizeof(*ctx));
+	if (ctx)
+		HMAC_CTX_init(ctx);
+	return ctx;
+}
+
+
+static void HMAC_CTX_free(HMAC_CTX *ctx)
+{
+	bin_clear_free(ctx, sizeof(*ctx));
+}
+
 #endif /* OpenSSL version < 1.1.0 */
 
 static BIGNUM * get_group5_prime(void)
@@ -733,11 +752,7 @@ void dh5_free(void *ctx)
 
 
 struct crypto_hash {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	HMAC_CTX *ctx;
-#else
-	HMAC_CTX ctx;
-#endif
 };
 
 
@@ -772,7 +787,6 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL)
 		return NULL;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	ctx->ctx = HMAC_CTX_new();
 	if (!ctx->ctx) {
 		os_free(ctx);
@@ -784,14 +798,6 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 		bin_clear_free(ctx, sizeof(*ctx));
 		return NULL;
 	}
-#else
-	HMAC_CTX_init(&ctx->ctx);
-
-	if (HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL) != 1) {
-		bin_clear_free(ctx, sizeof(*ctx));
-		return NULL;
-	}
-#endif
 
 	return ctx;
 }
@@ -801,11 +807,7 @@ void crypto_hash_update(struct crypto_hash *ctx, const u8 *data, size_t len)
 {
 	if (ctx == NULL)
 		return;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	HMAC_Update(ctx->ctx, data, len);
-#else
-	HMAC_Update(&ctx->ctx, data, len);
-#endif
 }
 
 
@@ -818,21 +820,14 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 		return -2;
 
 	if (mac == NULL || len == NULL) {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 		HMAC_CTX_free(ctx->ctx);
-#endif
 		bin_clear_free(ctx, sizeof(*ctx));
 		return 0;
 	}
 
 	mdlen = *len;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	res = HMAC_Final(ctx->ctx, mac, &mdlen);
 	HMAC_CTX_free(ctx->ctx);
-#else
-	res = HMAC_Final(&ctx->ctx, mac, &mdlen);
-	HMAC_CTX_cleanup(&ctx->ctx);
-#endif
 	bin_clear_free(ctx, sizeof(*ctx));
 
 	if (res == 1) {
@@ -849,7 +844,6 @@ static int openssl_hmac_vector(const EVP_MD *type, const u8 *key,
 			       const u8 *addr[], const size_t *len, u8 *mac,
 			       unsigned int mdlen)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	HMAC_CTX *ctx;
 	size_t i;
 	int res;
@@ -872,26 +866,6 @@ done:
 	HMAC_CTX_free(ctx);
 
 	return res == 1 ? 0 : -1;
-#else
-	HMAC_CTX ctx;
-	size_t i;
-	int res;
-
-	if (TEST_FAIL())
-		return -1;
-
-	HMAC_CTX_init(&ctx);
-	if (HMAC_Init_ex(&ctx, key, key_len, type, NULL) != 1)
-		return -1;
-
-	for (i = 0; i < num_elem; i++)
-		HMAC_Update(&ctx, addr[i], len[i]);
-
-	res = HMAC_Final(&ctx, mac, &mdlen);
-	HMAC_CTX_cleanup(&ctx);
-
-	return res == 1 ? 0 : -1;
-#endif
 }
 
 

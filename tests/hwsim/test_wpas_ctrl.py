@@ -15,7 +15,7 @@ import hostapd
 import hwsim_utils
 from hwsim import HWSimRadio
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail
+from utils import alloc_fail, fail_test
 from test_wpas_ap import wait_ap_ready
 
 def test_wpas_ctrl_network(dev):
@@ -1695,8 +1695,6 @@ def _test_wpas_ctrl_oom(dev):
                3, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
               ('WPS_NFC_TOKEN NDEF', 'FAIL',
                4, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
-              ('WPS_NFC_TOKEN NDEF', 'FAIL',
-               5, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
               ('NFC_REPORT_HANDOVER ROLE TYPE 00 00', 'FAIL',
                1, 'wpas_ctrl_nfc_report_handover'),
               ('NFC_REPORT_HANDOVER ROLE TYPE 00 00', 'FAIL',
@@ -1707,8 +1705,6 @@ def _test_wpas_ctrl_oom(dev):
                1, 'ndef_build_record'),
               ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
                1, 'wpas_p2p_nfc_handover'),
-              ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', 'FAIL',
-               2, 'wpas_p2p_nfc_handover'),
               ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
                1, 'wps_build_nfc_handover_req_p2p'),
               ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', 'FAIL',
@@ -1717,16 +1713,6 @@ def _test_wpas_ctrl_oom(dev):
                1, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
               ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', None,
                1, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG', 'FAIL',
-               2, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', 'FAIL',
-               2, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG', 'FAIL',
-               3, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', 'FAIL',
-               3, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
-              ('NFC_GET_HANDOVER_SEL NDEF P2P-CR', 'FAIL',
-               4, 'wpas_ctrl_nfc_get_handover_sel_p2p'),
               ('P2P_ASP_PROVISION_RESP 00:11:22:33:44:55 id=1', 'FAIL',
                1, 'p2p_parse_asp_provision_cmd'),
               ('P2P_SERV_DISC_REQ 00:11:22:33:44:55 02000001', 'FAIL',
@@ -1787,7 +1773,7 @@ def _test_wpas_ctrl_oom(dev):
         with alloc_fail(dev[0], count, func):
             res = dev[0].request(cmd)
             if exp and exp not in res:
-                raise Exception("Unexpected success for '%s' during OOM" % cmd)
+                raise Exception("Unexpected success for '%s' during OOM (%d:%s)" % (cmd, count, func))
 
     tests = [ ('FOO', None,
                1, 'wpa_supplicant_global_ctrl_iface_process'),
@@ -1798,6 +1784,22 @@ def _test_wpas_ctrl_oom(dev):
             res = dev[0].global_request(cmd)
             if exp and exp not in res:
                 raise Exception("Unexpected success for '%s' during OOM" % cmd)
+
+def test_wpas_ctrl_error(dev):
+    """Various wpa_supplicant ctrl_iface error cases"""
+    tests = [ ('WPS_NFC_TOKEN NDEF', 'FAIL',
+               1, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
+              ('WPS_NFC_TOKEN NDEF', 'FAIL',
+               2, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
+              ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
+               1, 'wpas_p2p_nfc_handover'),
+              ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
+               1, 'wps_build_nfc_handover_req_p2p') ]
+    for cmd,exp,count,func in tests:
+        with fail_test(dev[0], count, func):
+            res = dev[0].request(cmd)
+            if exp and exp not in res:
+                raise Exception("Unexpected success for '%s' during failure testing (%d:%s)" % (cmd, count, func))
 
 def test_wpas_ctrl_socket_full(dev, apdev, test_params):
     """wpa_supplicant control socket and full send buffer"""

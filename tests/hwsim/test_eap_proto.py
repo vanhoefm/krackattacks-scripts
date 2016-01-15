@@ -5609,6 +5609,14 @@ def test_eap_proto_mschapv2(dev, apdev):
             logger.info("Test: Failure")
             return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge - invalid ms_len and workaround disabled")
+            return struct.pack(">BBHBBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 4 + 1 + 16 + 6,
+                               EAP_TYPE_MSCHAPV2,
+                               1, 0, 4 + 1 + 16 + 6 + 1, 16) + 16*'A' + 'foobar'
+
         return None
 
     srv = start_radius_server(mschapv2_handler)
@@ -5616,7 +5624,7 @@ def test_eap_proto_mschapv2(dev, apdev):
     try:
         hapd = start_ap(apdev[0]['ifname'])
 
-        for i in range(0, 15):
+        for i in range(0, 16):
             logger.info("RUN: %d" % i)
             if i == 12:
                 dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -5627,6 +5635,11 @@ def test_eap_proto_mschapv2(dev, apdev):
                 dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                                eap="MSCHAPV2", identity="user",
                                phase2="mschapv2_retry=0",
+                               password="password", wait_connect=False)
+            elif i == 15:
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               eap_workaround="0",
                                password="password", wait_connect=False)
             else:
                 dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -5696,6 +5709,48 @@ def test_eap_proto_mschapv2_errors(dev, apdev):
     """EAP-MSCHAPv2 protocol tests (error paths)"""
     check_eap_capa(dev[0], "MSCHAPV2")
 
+    def mschapv2_fail_password_expired(ctx):
+        logger.info("Test: Failure before challenge - password expired")
+        payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
+        return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                           4 + 1 + 4 + len(payload),
+                           EAP_TYPE_MSCHAPV2,
+                           4, 0, 4 + len(payload)) + payload
+
+    def mschapv2_success_after_password_change(ctx, req=None):
+        logger.info("Test: Success after password change")
+        if req is None or len(req) != 591:
+            payload = "S=1122334455667788990011223344556677889900"
+        else:
+            data = req[9:]
+            enc_pw = data[0:516]
+            data = data[516:]
+            enc_hash = data[0:16]
+            data = data[16:]
+            peer_challenge = data[0:16]
+            data = data[16:]
+            # Reserved
+            data = data[8:]
+            nt_response = data[0:24]
+            data = data[24:]
+            flags = data
+            logger.info("enc_hash: " + enc_hash.encode("hex"))
+            logger.info("peer_challenge: " + peer_challenge.encode("hex"))
+            logger.info("nt_response: " + nt_response.encode("hex"))
+            logger.info("flags: " + flags.encode("hex"))
+
+            auth_challenge = binascii.unhexlify("00112233445566778899aabbccddeeff")
+            logger.info("auth_challenge: " + auth_challenge.encode("hex"))
+
+            auth_resp = GenerateAuthenticatorResponse("new-pw", nt_response,
+                                                      peer_challenge,
+                                                      auth_challenge, "user")
+            payload = "S=" + auth_resp.encode('hex').upper()
+        return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
+                           4 + 1 + 4 + len(payload),
+                           EAP_TYPE_MSCHAPV2,
+                           3, 0, 4 + len(payload)) + payload
+
     def mschapv2_handler(ctx, req):
         logger.info("mschapv2_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:
@@ -5708,37 +5763,93 @@ def test_eap_proto_mschapv2_errors(dev, apdev):
 
         idx += 1
         if ctx['num'] == idx:
-            logger.info("Test: Failure before challenge - password expired")
-            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
-            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 4 + len(payload),
-                               EAP_TYPE_MSCHAPV2,
-                               4, 0, 4 + len(payload)) + payload
+            return mschapv2_fail_password_expired(ctx)
         idx += 1
         if ctx['num'] == idx:
-            logger.info("Test: Success after password change")
-            payload = "S=1122334455667788990011223344556677889900"
-            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 4 + len(payload),
-                               EAP_TYPE_MSCHAPV2,
-                               3, 0, 4 + len(payload)) + payload
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
         idx += 1
         if ctx['num'] == idx:
-            logger.info("Test: Failure before challenge - password expired")
-            payload = 'E=648 R=1 C=00112233445566778899aabbccddeeff V=3 M=Password expired'
-            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 4 + len(payload),
-                               EAP_TYPE_MSCHAPV2,
-                               4, 0, 4 + len(payload)) + payload
+            return mschapv2_fail_password_expired(ctx)
         idx += 1
         if ctx['num'] == idx:
-            logger.info("Test: Success after password change")
-            payload = "S=1122334455667788990011223344556677889900"
-            return struct.pack(">BBHBBBH", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 4 + len(payload),
-                               EAP_TYPE_MSCHAPV2,
-                               3, 0, 4 + len(payload)) + payload
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_fail_password_expired(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return mschapv2_success_after_password_change(ctx, req)
+        idx += 1
+        if ctx['num'] == idx:
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
         return None
 
@@ -5747,31 +5858,60 @@ def test_eap_proto_mschapv2_errors(dev, apdev):
     try:
         hapd = start_ap(apdev[0]['ifname'])
 
-        with fail_test(dev[0], 1, "eap_mschapv2_change_password"):
-            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="MSCHAPV2", identity="user",
-                           password="password", wait_connect=False)
-            ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
-            if ev is None:
-                raise Exception("Timeout on new password request")
-            id = ev.split(':')[0].split('-')[-1]
-            dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
-            wait_fail_trigger(dev[0], "GET_FAIL")
-            dev[0].request("REMOVE_NETWORK all")
-            dev[0].wait_disconnected(timeout=1)
+        tests = [ "os_get_random;eap_mschapv2_change_password",
+                  "generate_nt_response;eap_mschapv2_change_password",
+                  "get_master_key;eap_mschapv2_change_password",
+                  "nt_password_hash;eap_mschapv2_change_password",
+                  "old_nt_password_hash_encrypted_with_new_nt_password_hash" ]
+        for func in tests:
+            with fail_test(dev[0], 1, func):
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password="password", wait_connect=False)
+                ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on new password request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+                time.sleep(0.1)
+                wait_fail_trigger(dev[0], "GET_FAIL")
+                dev[0].request("REMOVE_NETWORK all")
+                dev[0].wait_disconnected(timeout=1)
 
-        with fail_test(dev[0], 1, "get_master_key;eap_mschapv2_change_password"):
-            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="MSCHAPV2", identity="user",
-                           password="password", wait_connect=False)
-            ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
-            if ev is None:
-                raise Exception("Timeout on new password request")
-            id = ev.split(':')[0].split('-')[-1]
-            dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
-            wait_fail_trigger(dev[0], "GET_FAIL")
-            dev[0].request("REMOVE_NETWORK all")
-            dev[0].wait_disconnected(timeout=1)
+        tests = [ "encrypt_pw_block_with_password_hash;eap_mschapv2_change_password",
+                  "nt_password_hash;eap_mschapv2_change_password",
+                  "nt_password_hash;eap_mschapv2_success" ]
+        for func in tests:
+            with fail_test(dev[0], 1, func):
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                               wait_connect=False)
+                ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on new password request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+                time.sleep(0.1)
+                wait_fail_trigger(dev[0], "GET_FAIL")
+                dev[0].request("REMOVE_NETWORK all")
+                dev[0].wait_disconnected(timeout=1)
+
+        tests = [ "eap_msg_alloc;eap_mschapv2_change_password" ]
+        for func in tests:
+            with alloc_fail(dev[0], 1, func):
+                dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                               eap="MSCHAPV2", identity="user",
+                               password="password", wait_connect=False)
+                ev = dev[0].wait_event(["CTRL-REQ-NEW_PASSWORD"], timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on new password request")
+                id = ev.split(':')[0].split('-')[-1]
+                dev[0].request("CTRL-RSP-NEW_PASSWORD-" + id + ":new-pw")
+                time.sleep(0.1)
+                wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+                dev[0].request("REMOVE_NETWORK all")
+                dev[0].wait_disconnected(timeout=1)
     finally:
         stop_radius_server(srv)
 

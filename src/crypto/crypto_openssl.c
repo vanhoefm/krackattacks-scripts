@@ -56,6 +56,23 @@ static void HMAC_CTX_free(HMAC_CTX *ctx)
 	bin_clear_free(ctx, sizeof(*ctx));
 }
 
+
+static EVP_MD_CTX * EVP_MD_CTX_new(void)
+{
+	EVP_MD_CTX *ctx;
+
+	ctx = os_zalloc(sizeof(*ctx));
+	if (ctx)
+		EVP_MD_CTX_init(ctx);
+	return ctx;
+}
+
+
+static void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
+{
+	bin_clear_free(ctx, sizeof(*ctx));
+}
+
 #endif /* OpenSSL version < 1.1.0 */
 
 static BIGNUM * get_group5_prime(void)
@@ -92,7 +109,6 @@ static BIGNUM * get_group5_prime(void)
 static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 				 const u8 *addr[], const size_t *len, u8 *mac)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	EVP_MD_CTX *ctx;
 	size_t i;
 	unsigned int mac_len;
@@ -127,36 +143,6 @@ static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 	EVP_MD_CTX_free(ctx);
 
 	return 0;
-#else
-	EVP_MD_CTX ctx;
-	size_t i;
-	unsigned int mac_len;
-
-	if (TEST_FAIL())
-		return -1;
-
-	EVP_MD_CTX_init(&ctx);
-	if (!EVP_DigestInit_ex(&ctx, type, NULL)) {
-		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestInit_ex failed: %s",
-			   ERR_error_string(ERR_get_error(), NULL));
-		return -1;
-	}
-	for (i = 0; i < num_elem; i++) {
-		if (!EVP_DigestUpdate(&ctx, addr[i], len[i])) {
-			wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestUpdate "
-				   "failed: %s",
-				   ERR_error_string(ERR_get_error(), NULL));
-			return -1;
-		}
-	}
-	if (!EVP_DigestFinal(&ctx, mac, &mac_len)) {
-		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestFinal failed: %s",
-			   ERR_error_string(ERR_get_error(), NULL));
-		return -1;
-	}
-
-	return 0;
-#endif
 }
 
 

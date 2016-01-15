@@ -721,7 +721,9 @@ def test_eap_proto_sake_errors(dev, apdev):
               ( 1, "=eap_sake_process_challenge" ),
               ( 1, "eap_sake_compute_mic;eap_sake_process_challenge" ),
               ( 1, "eap_sake_build_msg;eap_sake_process_confirm" ),
+              ( 1, "eap_sake_compute_mic;eap_sake_process_confirm" ),
               ( 2, "eap_sake_compute_mic;eap_sake_process_confirm" ),
+              ( 3, "eap_sake_compute_mic;eap_sake_process_confirm" ),
               ( 1, "eap_sake_getKey" ),
               ( 1, "eap_sake_get_emsk" ),
               ( 1, "eap_sake_get_session_id" ) ]

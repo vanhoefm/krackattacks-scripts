@@ -1140,6 +1140,22 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->p2p_go_freq_change_policy != DEFAULT_P2P_GO_FREQ_MOVE)
 		fprintf(f, "p2p_go_freq_change_policy=%u\n",
 			config->p2p_go_freq_change_policy);
+	if (WPA_GET_BE32(config->ip_addr_go))
+		fprintf(f, "ip_addr_go=%u.%u.%u.%u\n",
+			config->ip_addr_go[0], config->ip_addr_go[1],
+			config->ip_addr_go[2], config->ip_addr_go[3]);
+	if (WPA_GET_BE32(config->ip_addr_mask))
+		fprintf(f, "ip_addr_mask=%u.%u.%u.%u\n",
+			config->ip_addr_mask[0], config->ip_addr_mask[1],
+			config->ip_addr_mask[2], config->ip_addr_mask[3]);
+	if (WPA_GET_BE32(config->ip_addr_start))
+		fprintf(f, "ip_addr_start=%u.%u.%u.%u\n",
+			config->ip_addr_start[0], config->ip_addr_start[1],
+			config->ip_addr_start[2], config->ip_addr_start[3]);
+	if (WPA_GET_BE32(config->ip_addr_end))
+		fprintf(f, "ip_addr_end=%u.%u.%u.%u\n",
+			config->ip_addr_end[0], config->ip_addr_end[1],
+			config->ip_addr_end[2], config->ip_addr_end[3]);
 #endif /* CONFIG_P2P */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",

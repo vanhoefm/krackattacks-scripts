@@ -2613,6 +2613,12 @@ def test_ap_wpa2_eap_ikev2(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
                 password="ike-password", expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
+                password="ike password", fragment_size="0")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
 
 def test_ap_wpa2_eap_ikev2_as_frag(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2 with server fragmentation"""

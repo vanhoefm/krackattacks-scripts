@@ -65,3 +65,23 @@ def test_ap_roam_set_bssid(dev, apdev):
     dev[0].set_network(id, "bssid", "")
     dev[0].set_network(id, "bssid", apdev[0]['bssid'])
     dev[0].set_network(id, "bssid", apdev[1]['bssid'])
+
+def test_ap_roam_wpa2_psk_race(dev, apdev):
+    """Roam between two WPA2-PSK APs and try to hit a disconnection race"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+
+    params['channel'] = '2'
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2417)
+    dev[0].roam(apdev[1]['bssid'])
+    hwsim_utils.test_connectivity(dev[0], hapd1)
+    dev[0].roam(apdev[0]['bssid'])
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    # Wait at least two seconds to trigger the previous issue with the
+    # disconnection callback.
+    for i in range(3):
+        time.sleep(0.8)
+        hwsim_utils.test_connectivity(dev[0], hapd0)

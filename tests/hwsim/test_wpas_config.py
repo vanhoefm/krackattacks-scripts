@@ -29,6 +29,14 @@ def check_config(config):
         raise Exception("Missing network")
     if "wps_priority=5\n" not in data:
         raise Exception("Missing wps_priority")
+    if "ip_addr_go=192.168.1.1\n" not in data:
+        raise Exception("Missing ip_addr_go")
+    if "ip_addr_mask=255.255.255.0\n" not in data:
+        raise Exception("Missing ip_addr_mask")
+    if "ip_addr_start=192.168.1.10\n" not in data:
+        raise Exception("Missing ip_addr_start")
+    if "ip_addr_end=192.168.1.20\n" not in data:
+        raise Exception("Missing ip_addr_end")
     return data
 
 def test_wpas_config_file(dev):
@@ -92,6 +100,10 @@ def test_wpas_config_file(dev):
         ev = wpas.wait_event(["CRED-MODIFIED 0 password"])
 
         wpas.request("SET blob foo 12345678")
+        wpas.request("SET ip_addr_go 192.168.1.1")
+        wpas.request("SET ip_addr_mask 255.255.255.0")
+        wpas.request("SET ip_addr_start 192.168.1.10")
+        wpas.request("SET ip_addr_end 192.168.1.20")
 
         if "OK" not in wpas.request("SAVE_CONFIG"):
             raise Exception("Failed to save configuration file")

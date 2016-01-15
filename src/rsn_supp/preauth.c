@@ -18,7 +18,7 @@
 #include "wpa_i.h"
 
 
-#ifdef IEEE8021X_EAPOL
+#if defined(IEEE8021X_EAPOL) && !defined(CONFIG_NO_WPA)
 
 #define PMKID_CANDIDATE_PRIO_SCAN 1000
 
@@ -538,4 +538,4 @@ int rsn_preauth_in_progress(struct wpa_sm *sm)
 	return sm->preauth_eapol != NULL;
 }
 
-#endif /* IEEE8021X_EAPOL */
+#endif /* IEEE8021X_EAPOL && !CONFIG_NO_WPA */

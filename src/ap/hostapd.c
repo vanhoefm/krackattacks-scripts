@@ -2634,6 +2634,7 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 	hostapd_prune_associations(hapd, sta->addr);
+	ap_sta_clear_disconnect_timeouts(hapd, sta);
 
 	/* IEEE 802.11F (IAPP) */
 	if (hapd->conf->ieee802_11f)

@@ -249,8 +249,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_cancel_timeout(ap_handle_session_timer, hapd, sta);
 	eloop_cancel_timeout(ap_handle_session_warning_timer, hapd, sta);
-	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
-	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
+	ap_sta_clear_disconnect_timeouts(hapd, sta);
 	sae_clear_retransmit_timer(hapd, sta);
 
 	ieee802_1x_free_station(hapd, sta);
@@ -1114,6 +1113,22 @@ void ap_sta_disassoc_cb(struct hostapd_data *hapd, struct sta_info *sta)
 	sta->flags &= ~WLAN_STA_PENDING_DISASSOC_CB;
 	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
 	ap_sta_disassoc_cb_timeout(hapd, sta);
+}
+
+
+void ap_sta_clear_disconnect_timeouts(struct hostapd_data *hapd,
+				      struct sta_info *sta)
+{
+	if (eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta) > 0)
+		wpa_printf(MSG_DEBUG,
+			   "%s: Removed ap_sta_deauth_cb_timeout timeout for "
+			   MACSTR,
+			   hapd->conf->iface, MAC2STR(sta->addr));
+	if (eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta) > 0)
+		wpa_printf(MSG_DEBUG,
+			   "%s: Removed ap_sta_disassoc_cb_timeout timeout for "
+			   MACSTR,
+			   hapd->conf->iface, MAC2STR(sta->addr));
 }
 
 

@@ -236,6 +236,8 @@ static inline int ap_sta_is_authorized(struct sta_info *sta)
 
 void ap_sta_deauth_cb(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_sta_disassoc_cb(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_clear_disconnect_timeouts(struct hostapd_data *hapd,
+				      struct sta_info *sta);
 
 int ap_sta_flags_txt(u32 flags, char *buf, size_t buflen);
 

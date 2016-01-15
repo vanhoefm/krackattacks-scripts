@@ -945,7 +945,8 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(
 		if (os_strcmp(entry.key, "DeviceName") == 0) {
 			char *devname;
 
-			if (entry.type != DBUS_TYPE_STRING)
+			if (entry.type != DBUS_TYPE_STRING ||
+			    os_strlen(entry.str_value) > WPS_DEV_NAME_MAX_LEN)
 				goto error;
 
 			devname = os_strdup(entry.str_value);

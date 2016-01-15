@@ -525,7 +525,9 @@ static void fst_session_handle_setup_response(struct fst_session *s,
 	enum hostapd_hw_mode hw_mode;
 	u8 channel;
 	union fst_session_state_switch_extra evext = {
-		.to_initial = {0},
+		.to_initial = {
+			.reject_code = 0,
+		},
 	};
 
 	if (iface != s->data.old_iface) {

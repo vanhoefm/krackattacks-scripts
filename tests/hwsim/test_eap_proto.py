@@ -4672,6 +4672,10 @@ def test_eap_proto_aka_prime_errors(dev, apdev):
 def test_eap_proto_ikev2(dev, apdev):
     """EAP-IKEv2 protocol tests"""
     check_eap_capa(dev[0], "IKEV2")
+
+    global eap_proto_ikev2_test_done
+    eap_proto_ikev2_test_done = False
+
     def ikev2_handler(ctx, req):
         logger.info("ikev2_handler - RX " + req.encode("hex"))
         if 'num' not in ctx:
@@ -5104,23 +5108,37 @@ def test_eap_proto_ikev2(dev, apdev):
             ike = ''
             return build_ike(ctx['id'], next=37, flags=0x20, ike=ike)
 
-        return None
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("No more test responses available - test case completed")
+            global eap_proto_ikev2_test_done
+            eap_proto_ikev2_test_done = True
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_IKEV2)
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
     srv = start_radius_server(ikev2_handler)
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
 
-        for i in range(49):
+        i = 0
+        while not eap_proto_ikev2_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="IKEV2", identity="user",
                            password="password",
                            wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
             ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
                                    timeout=15)
             if ev is None:
-                raise Exception("Timeout on EAP start")
-            if i in [ 40, 45 ]:
+                raise Exception("Timeout on EAP method start")
+            if i in [ 41, 46 ]:
                 ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
                                        timeout=10)
                 if ev is None:
@@ -5128,6 +5146,10 @@ def test_eap_proto_ikev2(dev, apdev):
             else:
                 time.sleep(0.05)
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+            dev[0].dump_monitor()
+            dev[1].dump_monitor()
+            dev[2].dump_monitor()
     finally:
         stop_radius_server(srv)
 

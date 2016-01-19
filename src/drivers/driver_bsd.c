@@ -966,7 +966,7 @@ wpa_driver_bsd_set_wpa_internal(void *priv, int wpa, int privacy)
 	int ret = 0;
 
 	wpa_printf(MSG_DEBUG, "%s: wpa=%d privacy=%d",
-		__FUNCTION__, wpa, privacy);
+		__func__, wpa, privacy);
 
 	if (!wpa && wpa_driver_bsd_set_wpa_ie(priv, NULL, 0) < 0)
 		ret = -1;
@@ -981,7 +981,7 @@ wpa_driver_bsd_set_wpa_internal(void *priv, int wpa, int privacy)
 static int
 wpa_driver_bsd_set_wpa(void *priv, int enabled)
 {
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __FUNCTION__, enabled);
+	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
 
 	return wpa_driver_bsd_set_wpa_internal(priv, enabled ? 3 : 0, enabled);
 }

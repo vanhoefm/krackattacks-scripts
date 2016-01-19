@@ -62,6 +62,7 @@ struct bsd_driver_data {
 
 	struct l2_packet_data *sock_xmit;/* raw packet xmit socket */
 	char	ifname[IFNAMSIZ+1];	/* interface name */
+	int	flags;
 	unsigned int ifindex;		/* interface index */
 	void	*ctx;
 	struct wpa_driver_capa capa;	/* driver capability */
@@ -287,6 +288,7 @@ bsd_ctrl_iface(void *priv, int enable)
 			   strerror(errno));
 		return -1;
 	}
+	drv->flags = ifr.ifr_flags;
 
 	if (enable) {
 		if (ifr.ifr_flags & IFF_UP)
@@ -304,6 +306,7 @@ bsd_ctrl_iface(void *priv, int enable)
 		return -1;
 	}
 
+	drv->flags = ifr.ifr_flags;
 	return 0;
 }
 
@@ -1289,15 +1292,20 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		drv = bsd_get_drvindex(global, ifm->ifm_index);
 		if (drv == NULL)
 			return;
-		if ((rtm->rtm_flags & RTF_UP) == 0) {
-			os_strlcpy(event.interface_status.ifname, drv->ifname,
-				   sizeof(event.interface_status.ifname));
-			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
+		if ((ifm->ifm_flags & IFF_UP) == 0 &&
+		    (drv->flags & IFF_UP) != 0) {
 			wpa_printf(MSG_DEBUG, "RTM_IFINFO: Interface '%s' DOWN",
-				   event.interface_status.ifname);
-			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS,
-					     &event);
+				   drv->ifname);
+			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED,
+					     NULL);
+		} else if ((ifm->ifm_flags & IFF_UP) != 0 &&
+		    (drv->flags & IFF_UP) == 0) {
+			wpa_printf(MSG_DEBUG, "RTM_IFINFO: Interface '%s' UP",
+				   drv->ifname);
+			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED,
+					     NULL);
 		}
+		drv->flags = ifm->ifm_flags;
 		break;
 	}
 }

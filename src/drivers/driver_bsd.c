@@ -94,6 +94,9 @@ bsd_set80211(void *priv, int op, int val, const void *arg, int arg_len)
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req ireq;
 
+	if (drv->ifindex == 0)
+		return -1;
+
 	os_memset(&ireq, 0, sizeof(ireq));
 	os_strlcpy(ireq.i_name, drv->ifname, sizeof(ireq.i_name));
 	ireq.i_type = op;
@@ -881,7 +884,8 @@ bsd_deinit(void *priv)
 {
 	struct bsd_driver_data *drv = priv;
 
-	bsd_ctrl_iface(drv, 0);
+	if (drv->ifindex != 0)
+		bsd_ctrl_iface(drv, 0);
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
 	os_free(drv);
@@ -1226,6 +1230,8 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		switch (ifan->ifan_what) {
 		case IFAN_DEPARTURE:
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
+			drv->ifindex = 0;
+			break;
 		default:
 			return;
 		}
@@ -1576,16 +1582,21 @@ wpa_driver_bsd_deinit(void *priv)
 {
 	struct bsd_driver_data *drv = priv;
 
-	wpa_driver_bsd_set_wpa(drv, 0);
+	if (drv->ifindex != 0) {
+		wpa_driver_bsd_set_wpa(drv, 0);
 
-	/* NB: mark interface down */
-	bsd_ctrl_iface(drv, 0);
+		/* NB: mark interface down */
+		bsd_ctrl_iface(drv, 0);
 
-	wpa_driver_bsd_set_wpa_internal(drv, drv->prev_wpa, drv->prev_privacy);
+		wpa_driver_bsd_set_wpa_internal(drv, drv->prev_wpa,
+						drv->prev_privacy);
 
-	if (set80211param(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming) < 0)
-		wpa_printf(MSG_DEBUG, "%s: failed to restore roaming state",
-			__func__);
+		if (set80211param(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming)
+		    < 0)
+			wpa_printf(MSG_DEBUG,
+				   "%s: failed to restore roaming state",
+				   __func__);
+	}
 
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);

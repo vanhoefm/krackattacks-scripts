@@ -686,7 +686,7 @@ static void vlan_newlink(const char *ifname, struct hostapd_data *hapd)
 {
 	char br_name[IFNAMSIZ];
 	struct hostapd_vlan *vlan;
-	int untagged;
+	int untagged, *tagged, i;
 
 	wpa_printf(MSG_DEBUG, "VLAN: vlan_newlink(%s)", ifname);
 
@@ -702,6 +702,7 @@ static void vlan_newlink(const char *ifname, struct hostapd_data *hapd)
 	vlan->configured = 1;
 
 	untagged = vlan->vlan_desc.untagged;
+	tagged = vlan->vlan_desc.tagged;
 
 	if (untagged > 0 && untagged <= MAX_VLAN_ID) {
 		vlan_bridge_name(br_name, hapd, untagged);
@@ -710,6 +711,17 @@ static void vlan_newlink(const char *ifname, struct hostapd_data *hapd)
 
 		if (!br_addif(br_name, ifname))
 			vlan->clean |= DVLAN_CLEAN_WLAN_PORT;
+	}
+
+	for (i = 0; i < MAX_NUM_TAGGED_VLAN && tagged[i]; i++) {
+		if (tagged[i] == untagged ||
+		    tagged[i] <= 0 || tagged[i] > MAX_VLAN_ID ||
+		    (i > 0 && tagged[i] == tagged[i - 1]))
+			continue;
+		vlan_bridge_name(br_name, hapd, tagged[i]);
+		vlan_get_bridge(br_name, hapd, tagged[i]);
+		vlan_newlink_tagged(DYNAMIC_VLAN_NAMING_WITH_DEVICE,
+				    ifname, br_name, tagged[i], hapd);
 	}
 
 	ifconfig_up(ifname);
@@ -781,7 +793,20 @@ static void vlan_dellink(const char *ifname, struct hostapd_data *hapd)
 
 	if (vlan->configured) {
 		int untagged = vlan->vlan_desc.untagged;
+		int *tagged = vlan->vlan_desc.tagged;
 		char br_name[IFNAMSIZ];
+		int i;
+
+		for (i = 0; i < MAX_NUM_TAGGED_VLAN && tagged[i]; i++) {
+			if (tagged[i] == untagged ||
+			    tagged[i] <= 0 || tagged[i] > MAX_VLAN_ID ||
+			    (i > 0 && tagged[i] == tagged[i - 1]))
+				continue;
+			vlan_bridge_name(br_name, hapd, tagged[i]);
+			vlan_dellink_tagged(DYNAMIC_VLAN_NAMING_WITH_DEVICE,
+					    ifname, br_name, tagged[i], hapd);
+			vlan_put_bridge(br_name, hapd, tagged[i]);
+		}
 
 		if (untagged > 0 && untagged <= MAX_VLAN_ID) {
 			vlan_bridge_name(br_name, hapd, untagged);
@@ -792,6 +817,15 @@ static void vlan_dellink(const char *ifname, struct hostapd_data *hapd)
 			vlan_put_bridge(br_name, hapd, untagged);
 		}
 	}
+
+	/*
+	 * Ensure this VLAN interface is actually removed even if
+	 * NEWLINK message is only received later.
+	 */
+	if (if_nametoindex(vlan->ifname) && vlan_if_remove(hapd, vlan))
+		wpa_printf(MSG_ERROR,
+			   "VLAN: Could not remove VLAN iface: %s: %s",
+			   vlan->ifname, strerror(errno));
 
 	if (vlan == first)
 		hapd->conf->vlan = vlan->next;
@@ -1006,15 +1040,17 @@ static void vlan_dynamic_remove(struct hostapd_data *hapd,
 	while (vlan) {
 		next = vlan->next;
 
+#ifdef CONFIG_FULL_DYNAMIC_VLAN
+		/* vlan_dellink() takes care of cleanup and interface removal */
+		if (vlan->vlan_id != VLAN_ID_WILDCARD)
+			vlan_dellink(vlan->ifname, hapd);
+#else /* CONFIG_FULL_DYNAMIC_VLAN */
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
 		    vlan_if_remove(hapd, vlan)) {
 			wpa_printf(MSG_ERROR, "VLAN: Could not remove VLAN "
 				   "iface: %s: %s",
 				   vlan->ifname, strerror(errno));
 		}
-#ifdef CONFIG_FULL_DYNAMIC_VLAN
-		if (vlan->clean)
-			vlan_dellink(vlan->ifname, hapd);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 		vlan = next;

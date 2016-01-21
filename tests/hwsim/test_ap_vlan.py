@@ -244,7 +244,9 @@ def ap_vlan_iface_test_and_prepare_environ():
 
 def test_ap_vlan_iface_cleanup_multibss(dev, apdev):
     """AP VLAN operation in multi-BSS multi-VLAN case"""
+    ap_vlan_iface_cleanup_multibss(dev, apdev, 'multi-bss-iface.conf')
 
+def ap_vlan_iface_cleanup_multibss(dev, apdev, cfgfile):
     # AP VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID
     # check that multiple bss do not interfere with each other with respect
     # to deletion of bridge and tagged interface.
@@ -271,7 +273,7 @@ def test_ap_vlan_iface_cleanup_multibss(dev, apdev):
         ifname = apdev[0]['ifname']
 
         # start the actual test
-        hostapd.add_iface(ifname, 'multi-bss-iface.conf')
+        hostapd.add_iface(ifname, cfgfile)
         hapd = hostapd.Hostapd(ifname)
         hapd1 = hostapd.Hostapd("wlan3-2", 1)
         hapd1.enable()
@@ -384,6 +386,15 @@ def test_ap_vlan_iface_cleanup_multibss(dev, apdev):
         hapd.request("DISABLE")
     finally:
         ap_vlan_iface_cleanup_multibss_cleanup()
+
+def test_ap_vlan_iface_cleanup_multibss_per_sta_vif(dev, apdev):
+    """AP VLAN operation in multi-BSS multi-VLAN case with per-sta-vif set"""
+
+    # AP VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID
+    # check that multiple bss do not interfere with each other with respect
+    # to deletion of bridge and tagged interface. per_sta_vif is enabled.
+    ap_vlan_iface_cleanup_multibss(dev, apdev,
+                                   'multi-bss-iface-per_sta_vif.conf')
 
 def test_ap_vlan_without_station(dev, apdev, p):
     """AP VLAN with WPA2-PSK and no station"""

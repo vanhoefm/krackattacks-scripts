@@ -831,11 +831,35 @@ int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		vlan_desc = NULL;
 
 	/* Check if there is something to do */
-	if (!vlan_compare(vlan_desc, sta->vlan_desc))
+	if (hapd->conf->ssid.per_sta_vif && !sta->vlan_id) {
+		/* This sta is lacking its own vif */
+	} else if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED &&
+		   !hapd->conf->ssid.per_sta_vif && sta->vlan_id) {
+		/* sta->vlan_id needs to be reset */
+	} else if (!vlan_compare(vlan_desc, sta->vlan_desc)) {
 		return 0; /* nothing to change */
+	}
 
 	/* Now the real VLAN changed or the STA just needs its own vif */
-	if (vlan_desc->notempty) {
+	if (hapd->conf->ssid.per_sta_vif) {
+		/* Assign a new vif, always */
+		/* find a free vlan_id sufficiently big */
+		vlan_id = ap_sta_get_free_vlan_id(hapd);
+		/* Get wildcard VLAN */
+		for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
+			if (vlan->vlan_id == VLAN_ID_WILDCARD)
+				break;
+		}
+		if (!vlan) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "per_sta_vif missing wildcard");
+			vlan_id = 0;
+			ret = -1;
+			goto done;
+		}
+	} else if (vlan_desc && vlan_desc->notempty) {
 		for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
 			if (!vlan_compare(&vlan->vlan_desc, vlan_desc))
 				break;

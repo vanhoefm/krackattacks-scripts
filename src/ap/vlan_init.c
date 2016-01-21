@@ -686,7 +686,7 @@ static void vlan_newlink(const char *ifname, struct hostapd_data *hapd)
 {
 	char br_name[IFNAMSIZ];
 	struct hostapd_vlan *vlan;
-	int untagged, *tagged, i;
+	int untagged, *tagged, i, notempty;
 
 	wpa_printf(MSG_DEBUG, "VLAN: vlan_newlink(%s)", ifname);
 
@@ -701,10 +701,16 @@ static void vlan_newlink(const char *ifname, struct hostapd_data *hapd)
 
 	vlan->configured = 1;
 
+	notempty = vlan->vlan_desc.notempty;
 	untagged = vlan->vlan_desc.untagged;
 	tagged = vlan->vlan_desc.tagged;
 
-	if (untagged > 0 && untagged <= MAX_VLAN_ID) {
+	if (!notempty) {
+		/* Non-VLAN STA */
+		if (hapd->conf->bridge[0] &&
+		    !br_addif(hapd->conf->bridge, ifname))
+			vlan->clean |= DVLAN_CLEAN_WLAN_PORT;
+	} else if (untagged > 0 && untagged <= MAX_VLAN_ID) {
 		vlan_bridge_name(br_name, hapd, untagged);
 
 		vlan_get_bridge(br_name, hapd, untagged);
@@ -792,6 +798,7 @@ static void vlan_dellink(const char *ifname, struct hostapd_data *hapd)
 		return;
 
 	if (vlan->configured) {
+		int notempty = vlan->vlan_desc.notempty;
 		int untagged = vlan->vlan_desc.untagged;
 		int *tagged = vlan->vlan_desc.tagged;
 		char br_name[IFNAMSIZ];
@@ -808,7 +815,12 @@ static void vlan_dellink(const char *ifname, struct hostapd_data *hapd)
 			vlan_put_bridge(br_name, hapd, tagged[i]);
 		}
 
-		if (untagged > 0 && untagged <= MAX_VLAN_ID) {
+		if (!notempty) {
+			/* Non-VLAN STA */
+			if (hapd->conf->bridge[0] &&
+			    (vlan->clean & DVLAN_CLEAN_WLAN_PORT))
+				br_delif(hapd->conf->bridge, ifname);
+		} else if (untagged > 0 && untagged <= MAX_VLAN_ID) {
 			vlan_bridge_name(br_name, hapd, untagged);
 
 			if (vlan->clean & DVLAN_CLEAN_WLAN_PORT)
@@ -1064,7 +1076,8 @@ int vlan_init(struct hostapd_data *hapd)
 	hapd->full_dynamic_vlan = full_dynamic_vlan_init(hapd);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
-	if (hapd->conf->ssid.dynamic_vlan != DYNAMIC_VLAN_DISABLED &&
+	if ((hapd->conf->ssid.dynamic_vlan != DYNAMIC_VLAN_DISABLED ||
+	     hapd->conf->ssid.per_sta_vif) &&
 	    !hapd->conf->vlan) {
 		/* dynamic vlans enabled but no (or empty) vlan_file given */
 		struct hostapd_vlan *vlan;

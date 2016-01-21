@@ -1097,23 +1097,23 @@ static void handle_auth(struct hostapd_data *hapd,
 	sta->last_seq_ctrl = seq_ctrl;
 	sta->last_subtype = WLAN_FC_STYPE_AUTH;
 
-	if (vlan_id.notempty) {
-		if (!hostapd_vlan_valid(hapd->conf->vlan, &vlan_id)) {
-			hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
-				       HOSTAPD_LEVEL_INFO,
-				       "Invalid VLAN %d%s received from RADIUS server",
-				       vlan_id.untagged,
-				       vlan_id.tagged[0] ? "+" : "");
-			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-			goto fail;
-		}
-		if (ap_sta_set_vlan(hapd, sta, &vlan_id) < 0) {
-			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-			goto fail;
-		}
+	if (vlan_id.notempty &&
+	    !hostapd_vlan_valid(hapd->conf->vlan, &vlan_id)) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
+			       HOSTAPD_LEVEL_INFO,
+			       "Invalid VLAN %d%s received from RADIUS server",
+			       vlan_id.untagged,
+			       vlan_id.tagged[0] ? "+" : "");
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	if (ap_sta_set_vlan(hapd, sta, &vlan_id) < 0) {
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto fail;
+	}
+	if (sta->vlan_id)
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO, "VLAN ID %d", sta->vlan_id);
-	}
 
 	hostapd_free_psk_list(sta->psk);
 	if (hapd->conf->wpa_psk_radius != PSK_RADIUS_IGNORED) {

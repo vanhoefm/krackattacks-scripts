@@ -38,6 +38,7 @@ static void pmksa_cache_set_expiration(struct rsn_pmksa_cache *pmksa);
 
 static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 {
+	os_free(entry->vlan_desc);
 	os_free(entry->identity);
 	wpabuf_free(entry->cui);
 #ifndef CONFIG_NO_RADIUS
@@ -126,6 +127,8 @@ static void pmksa_cache_set_expiration(struct rsn_pmksa_cache *pmksa)
 static void pmksa_cache_from_eapol_data(struct rsn_pmksa_cache_entry *entry,
 					struct eapol_state_machine *eapol)
 {
+	struct vlan_description *vlan_desc;
+
 	if (eapol == NULL)
 		return;
 
@@ -146,15 +149,26 @@ static void pmksa_cache_from_eapol_data(struct rsn_pmksa_cache_entry *entry,
 #endif /* CONFIG_NO_RADIUS */
 
 	entry->eap_type_authsrv = eapol->eap_type_authsrv;
-	entry->vlan_id = ((struct sta_info *) eapol->sta)->vlan_id;
+
+	vlan_desc = ((struct sta_info *) eapol->sta)->vlan_desc;
+	if (vlan_desc && vlan_desc->notempty) {
+		entry->vlan_desc = os_zalloc(sizeof(struct vlan_description));
+		if (entry->vlan_desc)
+			*entry->vlan_desc = *vlan_desc;
+	} else {
+		entry->vlan_desc = NULL;
+	}
 
 	entry->acct_multi_session_id = eapol->acct_multi_session_id;
 }
 
 
-void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
+void pmksa_cache_to_eapol_data(struct hostapd_data *hapd,
+			       struct rsn_pmksa_cache_entry *entry,
 			       struct eapol_state_machine *eapol)
 {
+	struct sta_info *sta;
+
 	if (entry == NULL || eapol == NULL)
 		return;
 
@@ -185,7 +199,8 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 	}
 
 	eapol->eap_type_authsrv = entry->eap_type_authsrv;
-	((struct sta_info *) eapol->sta)->vlan_id = entry->vlan_id;
+	sta = (struct sta_info *) eapol->sta;
+	ap_sta_set_vlan(hapd, sta, entry->vlan_desc);
 
 	eapol->acct_multi_session_id = entry->acct_multi_session_id;
 }
@@ -335,7 +350,13 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 	radius_copy_class(&entry->radius_class, &old_entry->radius_class);
 #endif /* CONFIG_NO_RADIUS */
 	entry->eap_type_authsrv = old_entry->eap_type_authsrv;
-	entry->vlan_id = old_entry->vlan_id;
+	if (old_entry->vlan_desc) {
+		entry->vlan_desc = os_zalloc(sizeof(struct vlan_description));
+		if (entry->vlan_desc)
+			*entry->vlan_desc = *old_entry->vlan_desc;
+	} else {
+		entry->vlan_desc = NULL;
+	}
 	entry->opportunistic = 1;
 
 	pmksa_cache_link_entry(pmksa, entry);

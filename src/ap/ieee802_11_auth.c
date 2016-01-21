@@ -35,7 +35,7 @@ struct hostapd_cached_radius_acl {
 	struct hostapd_cached_radius_acl *next;
 	u32 session_timeout;
 	u32 acct_interim_interval;
-	int vlan_id;
+	struct vlan_description vlan_id;
 	struct hostapd_sta_wpa_psk_short *psk;
 	char *identity;
 	char *radius_cui;
@@ -99,7 +99,8 @@ static void copy_psk_list(struct hostapd_sta_wpa_psk_short **psk,
 
 static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 				 u32 *session_timeout,
-				 u32 *acct_interim_interval, int *vlan_id,
+				 u32 *acct_interim_interval,
+				 struct vlan_description *vlan_id,
 				 struct hostapd_sta_wpa_psk_short **psk,
 				 char **identity, char **radius_cui)
 {
@@ -222,7 +223,8 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
  * @vlan_id: Buffer for returning VLAN ID
  * Returns: HOSTAPD_ACL_ACCEPT, HOSTAPD_ACL_REJECT, or HOSTAPD_ACL_PENDING
  */
- int hostapd_check_acl(struct hostapd_data *hapd, const u8 *addr, int *vlan_id)
+int hostapd_check_acl(struct hostapd_data *hapd, const u8 *addr,
+		      struct vlan_description *vlan_id)
 {
 	if (hostapd_maclist_found(hapd->conf->accept_mac,
 				  hapd->conf->num_accept_mac, addr, vlan_id))
@@ -260,7 +262,8 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
  */
 int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    const u8 *msg, size_t len, u32 *session_timeout,
-			    u32 *acct_interim_interval, int *vlan_id,
+			    u32 *acct_interim_interval,
+			    struct vlan_description *vlan_id,
 			    struct hostapd_sta_wpa_psk_short **psk,
 			    char **identity, char **radius_cui)
 {
@@ -271,7 +274,7 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 	if (acct_interim_interval)
 		*acct_interim_interval = 0;
 	if (vlan_id)
-		*vlan_id = 0;
+		os_memset(vlan_id, 0, sizeof(*vlan_id));
 	if (psk)
 		*psk = NULL;
 	if (identity)
@@ -556,7 +559,8 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 			cache->acct_interim_interval = 0;
 		}
 
-		cache->vlan_id = radius_msg_get_vlanid(msg);
+		cache->vlan_id.untagged = radius_msg_get_vlanid(msg);
+		cache->vlan_id.notempty = !!cache->vlan_id.untagged;
 
 		decode_tunnel_passwords(hapd, shared_secret, shared_secret_len,
 					msg, req, cache);
@@ -579,17 +583,17 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 		    !cache->psk)
 			cache->accepted = HOSTAPD_ACL_REJECT;
 
-		if (cache->vlan_id &&
-		    !hostapd_vlan_id_valid(hapd->conf->vlan, cache->vlan_id)) {
+		if (cache->vlan_id.notempty &&
+		    !hostapd_vlan_valid(hapd->conf->vlan, &cache->vlan_id)) {
 			hostapd_logger(hapd, query->addr,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,
-				       "Invalid VLAN ID %d received from RADIUS server",
-				       cache->vlan_id);
-			cache->vlan_id = 0;
+				       "Invalid VLAN %d received from RADIUS server",
+				       cache->vlan_id.untagged);
+			os_memset(&cache->vlan_id, 0, sizeof(cache->vlan_id));
 		}
 		if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_REQUIRED &&
-		    !cache->vlan_id)
+		    !cache->vlan_id.notempty)
 			cache->accepted = HOSTAPD_ACL_REJECT;
 	} else
 		cache->accepted = HOSTAPD_ACL_REJECT;

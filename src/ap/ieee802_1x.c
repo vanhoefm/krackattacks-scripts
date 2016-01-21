@@ -222,7 +222,7 @@ static void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 		   MAC2STR(sta->addr));
 
 #ifndef CONFIG_NO_VLAN
-	if (sta->vlan_id > 0 && sta->vlan_id <= MAX_VLAN_ID) {
+	if (sta->vlan_id > 0) {
 		wpa_printf(MSG_ERROR, "Using WEP with vlans is not supported.");
 		return;
 	}
@@ -1151,7 +1151,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		sta->eapol_sm->authFail = FALSE;
 		if (sta->eapol_sm->eap)
 			eap_sm_notify_cached(sta->eapol_sm->eap);
-		pmksa_cache_to_eapol_data(pmksa, sta->eapol_sm);
+		pmksa_cache_to_eapol_data(hapd, pmksa, sta->eapol_sm);
 		ap_sta_bind_vlan(hapd, sta);
 	} else {
 		if (reassoc) {
@@ -1617,10 +1617,13 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	struct hostapd_data *hapd = data;
 	struct sta_info *sta;
 	u32 session_timeout = 0, termination_action, acct_interim_interval;
-	int session_timeout_set, vlan_id = 0;
+	int session_timeout_set;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
 	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
+	struct vlan_description vlan_desc;
+
+	os_memset(&vlan_desc, 0, sizeof(vlan_desc));
 
 	sm = ieee802_1x_search_radius_identifier(hapd, hdr->identifier);
 	if (sm == NULL) {
@@ -1684,27 +1687,27 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
-		if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED)
-			vlan_id = 0;
 #ifndef CONFIG_NO_VLAN
-		else
-			vlan_id = radius_msg_get_vlanid(msg);
-		if (vlan_id > 0 &&
-		    hostapd_vlan_id_valid(hapd->conf->vlan, vlan_id)) {
-			hostapd_logger(hapd, sta->addr,
-				       HOSTAPD_MODULE_RADIUS,
-				       HOSTAPD_LEVEL_INFO,
-				       "VLAN ID %d", vlan_id);
-		} else if (vlan_id > 0) {
+		if (hapd->conf->ssid.dynamic_vlan != DYNAMIC_VLAN_DISABLED) {
+			vlan_desc.untagged = radius_msg_get_vlanid(msg);
+			vlan_desc.notempty = !!vlan_desc.untagged;
+		}
+
+		if (vlan_desc.notempty &&
+		    !hostapd_vlan_valid(hapd->conf->vlan, &vlan_desc)) {
 			sta->eapol_sm->authFail = TRUE;
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,
-				       "Invalid VLAN ID %d received from RADIUS server",
-				       vlan_id);
+				       "Invalid VLAN %d received from RADIUS server",
+				       vlan_desc.untagged);
+			os_memset(&vlan_desc, 0, sizeof(vlan_desc));
+			ap_sta_set_vlan(hapd, sta, &vlan_desc);
 			break;
-		} else if (hapd->conf->ssid.dynamic_vlan ==
-			   DYNAMIC_VLAN_REQUIRED) {
+		}
+
+		if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_REQUIRED &&
+		    !vlan_desc.notempty) {
 			sta->eapol_sm->authFail = TRUE;
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE8021X,
@@ -1715,7 +1718,18 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		}
 #endif /* CONFIG_NO_VLAN */
 
-		sta->vlan_id = vlan_id;
+		if (ap_sta_set_vlan(hapd, sta, &vlan_desc) < 0)
+			break;
+
+#ifndef CONFIG_NO_VLAN
+		if (sta->vlan_id > 0) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_RADIUS,
+				       HOSTAPD_LEVEL_INFO,
+				       "VLAN ID %d", sta->vlan_id);
+		}
+#endif /* CONFIG_NO_VLAN */
+
 		if ((sta->flags & WLAN_STA_ASSOC) &&
 		    ap_sta_bind_vlan(hapd, sta) < 0)
 			break;

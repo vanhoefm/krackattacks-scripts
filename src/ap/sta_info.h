@@ -15,6 +15,7 @@
 #endif /* CONFIG_MESH */
 
 #include "list.h"
+#include "vlan.h"
 
 /* STA flags */
 #define WLAN_STA_AUTH BIT(0)
@@ -118,6 +119,7 @@ struct sta_info {
 	struct rsn_preauth_interface *preauth_iface;
 
 	int vlan_id; /* 0: none, >0: VID */
+	struct vlan_description *vlan_desc;
 	int vlan_id_bound; /* updated by ap_sta_bind_vlan() */
 	 /* PSKs from RADIUS authentication server */
 	struct hostapd_sta_wpa_psk_short *psk;
@@ -220,6 +222,8 @@ int ap_sta_wps_cancel(struct hostapd_data *hapd,
 		      struct sta_info *sta, void *ctx);
 #endif /* CONFIG_WPS */
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta);
+int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
+		    struct vlan_description *vlan_desc);
 void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
 int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta);

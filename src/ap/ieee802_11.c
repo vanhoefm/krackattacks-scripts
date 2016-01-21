@@ -886,13 +886,15 @@ static void handle_auth(struct hostapd_data *hapd,
 	u16 fc;
 	const u8 *challenge = NULL;
 	u32 session_timeout, acct_interim_interval;
-	int vlan_id = 0;
+	struct vlan_description vlan_id;
 	struct hostapd_sta_wpa_psk_short *psk = NULL;
 	u8 resp_ies[2 + WLAN_AUTH_CHALLENGE_LEN];
 	size_t resp_ies_len = 0;
 	char *identity = NULL;
 	char *radius_cui = NULL;
 	u16 seq_ctrl;
+
+	os_memset(&vlan_id, 0, sizeof(vlan_id));
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
 		wpa_printf(MSG_INFO, "handle_auth - too short payload (len=%lu)",
@@ -1095,16 +1097,19 @@ static void handle_auth(struct hostapd_data *hapd,
 	sta->last_seq_ctrl = seq_ctrl;
 	sta->last_subtype = WLAN_FC_STYPE_AUTH;
 
-	if (vlan_id > 0) {
-		if (!hostapd_vlan_id_valid(hapd->conf->vlan, vlan_id)) {
+	if (vlan_id.notempty) {
+		if (!hostapd_vlan_valid(hapd->conf->vlan, &vlan_id)) {
 			hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
-				       HOSTAPD_LEVEL_INFO, "Invalid VLAN ID "
-				       "%d received from RADIUS server",
-				       vlan_id);
+				       HOSTAPD_LEVEL_INFO,
+				       "Invalid VLAN %d received from RADIUS server",
+				       vlan_id.untagged);
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			goto fail;
 		}
-		sta->vlan_id = vlan_id;
+		if (ap_sta_set_vlan(hapd, sta, &vlan_id) < 0) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO, "VLAN ID %d", sta->vlan_id);
 	}

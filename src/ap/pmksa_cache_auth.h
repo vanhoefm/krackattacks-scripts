@@ -28,7 +28,7 @@ struct rsn_pmksa_cache_entry {
 	struct wpabuf *cui;
 	struct radius_class_data radius_class;
 	u8 eap_type_authsrv;
-	int vlan_id;
+	struct vlan_description *vlan_desc;
 	int opportunistic;
 
 	u64 acct_multi_session_id;
@@ -56,7 +56,8 @@ struct rsn_pmksa_cache_entry *
 pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 		    const struct rsn_pmksa_cache_entry *old_entry,
 		    const u8 *aa, const u8 *pmkid);
-void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
+void pmksa_cache_to_eapol_data(struct hostapd_data *hapd,
+			       struct rsn_pmksa_cache_entry *entry,
 			       struct eapol_state_machine *eapol);
 void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 			    struct rsn_pmksa_cache_entry *entry);

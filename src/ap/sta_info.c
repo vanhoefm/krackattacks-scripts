@@ -34,6 +34,7 @@
 #include "wnm_ap.h"
 #include "ndisc_snoop.h"
 #include "sta_info.h"
+#include "vlan.h"
 
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
 				       struct sta_info *sta);
@@ -266,6 +267,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	 * vlan_remove_dynamic() can check that no stations are left on the
 	 * AP_VLAN netdev.
 	 */
+	if (sta->vlan_id)
+		vlan_remove_dynamic(hapd, sta->vlan_id);
 	if (sta->vlan_id_bound) {
 		/*
 		 * Need to remove the STA entry before potentially removing the
@@ -802,6 +805,78 @@ int ap_sta_wps_cancel(struct hostapd_data *hapd,
 #endif /* CONFIG_WPS */
 
 
+int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
+		    struct vlan_description *vlan_desc)
+{
+	struct hostapd_vlan *vlan = NULL, *wildcard_vlan = NULL;
+	int old_vlan_id, vlan_id = 0, ret = 0;
+
+	if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED) {
+		vlan_desc = NULL;
+	} else if (vlan_desc && vlan_desc->notempty) {
+		if (!vlan_compare(vlan_desc, sta->vlan_desc))
+			return 0; /* nothing to change */
+
+		for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
+			if (!vlan_compare(&vlan->vlan_desc, vlan_desc))
+				break;
+			if (vlan->vlan_id == VLAN_ID_WILDCARD)
+				wildcard_vlan = vlan;
+		}
+		if (vlan) {
+			vlan_id = vlan->vlan_id;
+		} else if (wildcard_vlan) {
+			vlan = wildcard_vlan;
+			vlan_id = vlan_desc->untagged;
+		} else {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "missing VLAN and wildcard for vlan=%d",
+				       vlan_desc->untagged);
+			vlan_id = 0;
+			ret = -1;
+			goto done;
+		}
+	}
+
+	if (vlan && vlan->vlan_id == VLAN_ID_WILDCARD) {
+		vlan = vlan_add_dynamic(hapd, vlan, vlan_id, vlan_desc);
+		if (vlan == NULL) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "could not add dynamic VLAN interface for vlan=%d",
+				       vlan_desc->untagged);
+			vlan_id = 0;
+			ret = -1;
+			goto done;
+		}
+
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "added new dynamic VLAN interface '%s'",
+			       vlan->ifname);
+	} else if (vlan && vlan->dynamic_vlan > 0) {
+		vlan->dynamic_vlan++;
+		hostapd_logger(hapd, sta->addr,
+			       HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "updated existing dynamic VLAN interface '%s'",
+			       vlan->ifname);
+	}
+done:
+	old_vlan_id = sta->vlan_id;
+	sta->vlan_id = vlan_id;
+	sta->vlan_desc = vlan ? &vlan->vlan_desc : NULL;
+
+	if (vlan_id != old_vlan_id && old_vlan_id)
+		vlan_remove_dynamic(hapd, old_vlan_id);
+
+	return ret;
+}
+
+
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta)
 {
 #ifndef CONFIG_NO_VLAN
@@ -814,20 +889,11 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta)
 	if (hapd->conf->ssid.vlan[0])
 		iface = hapd->conf->ssid.vlan;
 
-	if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED)
-		sta->vlan_id = 0;
-	else if (sta->vlan_id > 0) {
-		struct hostapd_vlan *wildcard_vlan = NULL;
-		vlan = hapd->conf->vlan;
-		while (vlan) {
+	if (sta->vlan_id > 0) {
+		for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
 			if (vlan->vlan_id == sta->vlan_id)
 				break;
-			if (vlan->vlan_id == VLAN_ID_WILDCARD)
-				wildcard_vlan = vlan;
-			vlan = vlan->next;
 		}
-		if (!vlan)
-			vlan = wildcard_vlan;
 		if (vlan)
 			iface = vlan->ifname;
 	}
@@ -847,24 +913,7 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta)
 			       sta->vlan_id);
 		ret = -1;
 		goto done;
-	} else if (sta->vlan_id > 0 && vlan->vlan_id == VLAN_ID_WILDCARD) {
-		vlan = vlan_add_dynamic(hapd, vlan, sta->vlan_id);
-		if (vlan == NULL) {
-			hostapd_logger(hapd, sta->addr,
-				       HOSTAPD_MODULE_IEEE80211,
-				       HOSTAPD_LEVEL_DEBUG, "could not add "
-				       "dynamic VLAN interface for vlan_id=%d",
-				       sta->vlan_id);
-			ret = -1;
-			goto done;
-		}
-
-		iface = vlan->ifname;
-		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_DEBUG, "added new dynamic VLAN "
-			       "interface '%s'", iface);
-	} else if (vlan && vlan->vlan_id == sta->vlan_id &&
-		   vlan->dynamic_vlan > 0) {
+	} else if (vlan && vlan->dynamic_vlan > 0) {
 		vlan->dynamic_vlan++;
 		hostapd_logger(hapd, sta->addr,
 			       HOSTAPD_MODULE_IEEE80211,

@@ -712,11 +712,13 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		}
 	}
 	if (sm->pmksa && pmkid) {
+		struct vlan_description *vlan_desc;
+
+		vlan_desc = sm->pmksa->vlan_desc;
 		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
-				 "PMKID found from PMKSA cache "
-				 "eap_type=%d vlan_id=%d",
+				 "PMKID found from PMKSA cache eap_type=%d vlan=%d",
 				 sm->pmksa->eap_type_authsrv,
-				 sm->pmksa->vlan_id);
+				 vlan_desc ? vlan_desc->untagged : 0);
 		os_memcpy(wpa_auth->dot11RSNAPMKIDUsed, pmkid, PMKID_LEN);
 	}
 

@@ -1322,7 +1322,7 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		struct sta_info *sta;
-		int vlan_id;
+		struct vlan_description vlan_id;
 
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 		if (ret)
@@ -1334,7 +1334,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 					    hapd->conf->deny_mac,
 					    hapd->conf->num_deny_mac, sta->addr,
 					    &vlan_id) &&
-				    (!vlan_id || vlan_id == sta->vlan_id))
+				    (!vlan_id.notempty ||
+				     !vlan_compare(&vlan_id, sta->vlan_desc)))
 					ap_sta_disconnect(
 						hapd, sta, sta->addr,
 						WLAN_REASON_UNSPECIFIED);
@@ -1346,7 +1347,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 					    hapd->conf->accept_mac,
 					    hapd->conf->num_accept_mac,
 					    sta->addr, &vlan_id) ||
-				    (vlan_id && vlan_id != sta->vlan_id))
+				    (vlan_id.notempty &&
+				     vlan_compare(&vlan_id, sta->vlan_desc)))
 					ap_sta_disconnect(
 						hapd, sta, sta->addr,
 						WLAN_REASON_UNSPECIFIED);

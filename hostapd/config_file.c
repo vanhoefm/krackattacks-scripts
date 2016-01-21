@@ -97,6 +97,8 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 		}
 
 		vlan->vlan_id = vlan_id;
+		vlan->vlan_desc.untagged = vlan_id;
+		vlan->vlan_desc.notempty = !!vlan_id;
 		os_strlcpy(vlan->ifname, pos, sizeof(vlan->ifname));
 		vlan->next = bss->vlan;
 		bss->vlan = vlan;
@@ -197,7 +199,10 @@ static int hostapd_config_read_maclist(const char *fname,
 
 		*acl = newacl;
 		os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
-		(*acl)[*num].vlan_id = vlan_id;
+		os_memset(&(*acl)[*num].vlan_id, 0,
+			  sizeof((*acl)[*num].vlan_id));
+		(*acl)[*num].vlan_id.untagged = vlan_id;
+		(*acl)[*num].vlan_id.notempty = !!vlan_id;
 		(*num)++;
 	}
 

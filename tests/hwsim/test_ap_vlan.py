@@ -89,6 +89,19 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
     hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
+def test_ap_vlan_wpa2_radius_2(dev, apdev):
+    """AP VLAN with WPA2-Enterprise and RADIUS EGRESS_VLANID attributes"""
+    params = hostapd.wpa2_eap_params(ssid="test-vlan")
+    params['dynamic_vlan'] = "1";
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
+                   identity="vlan1b",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+
 def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID"""
     as_params = { "ssid": "as",

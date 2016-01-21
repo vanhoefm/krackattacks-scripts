@@ -535,3 +535,33 @@ def test_ap_vlan_wpa2_radius_tagged(dev, apdev):
     finally:
         subprocess.call(['ifconfig', ifname, 'down'])
         subprocess.call(['ip', 'link', 'del', ifname])
+
+def test_ap_vlan_wpa2_radius_mixed(dev, apdev):
+    """AP VLAN with WPA2-Enterprise and tagged+untagged VLANs"""
+    ifname = 'wlan0.1'
+    try:
+        params = hostapd.wpa2_eap_params(ssid="test-vlan")
+        params['dynamic_vlan'] = "1"
+        params["vlan_naming"] = "1"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
+                       identity="vlan12mixed",
+                       password_hex="0123456789abcdef0123456789abcdef",
+                       scan_freq="2412")
+
+        # Add tagged VLAN interface to wpa_supplicant interface for testing
+        subprocess.call(['ip', 'link', 'add', 'link', dev[0].ifname,
+                         'name', ifname, 'type', 'vlan', 'id', '1'])
+        subprocess.call(['ifconfig', ifname, 'up'])
+
+        logger.info("Test connectivity in untagged VLAN 2")
+        hwsim_utils.run_connectivity_test(dev[0], hapd, 0,
+                                          ifname1=dev[0].ifname,
+                                          ifname2="brvlan2")
+        logger.info("Test connectivity in tagged VLAN 1")
+        hwsim_utils.run_connectivity_test(dev[0], hapd, 0, ifname1=ifname,
+                                          ifname2="brvlan1")
+    finally:
+        subprocess.call(['ifconfig', ifname, 'down'])
+        subprocess.call(['ip', 'link', 'del', ifname])

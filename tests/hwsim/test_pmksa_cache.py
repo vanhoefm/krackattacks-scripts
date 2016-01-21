@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import hostapd
+import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from utils import alloc_fail
 from test_ap_eap import eap_connect
@@ -508,6 +509,9 @@ def test_pmksa_cache_preauth_vlan_used(dev, apdev):
         eap_connect(dev[0], apdev[0], "PAX", "vlan1",
                     password_hex="0123456789abcdef0123456789abcdef")
 
+        # Verify connectivity in the correct VLAN
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+
         params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
         params['bridge'] = 'ap-br0'
         params['rsn_preauth'] = '1'
@@ -549,6 +553,9 @@ def test_pmksa_cache_preauth_vlan_used(dev, apdev):
             raise Exception("No PMKSA cache entry")
         if pmksa['pmkid'] != pmksa2['pmkid']:
             raise Exception("Unexpected PMKID change")
+
+        # Verify connectivity in the correct VLAN
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
 
         # Disconnect the STA from both APs to avoid forceful ifdown by the
         # test script on a VLAN that this has an associated STA. That used to

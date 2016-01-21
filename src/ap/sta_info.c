@@ -805,18 +805,37 @@ int ap_sta_wps_cancel(struct hostapd_data *hapd,
 #endif /* CONFIG_WPS */
 
 
+static int ap_sta_get_free_vlan_id(struct hostapd_data *hapd)
+{
+	struct hostapd_vlan *vlan;
+	int vlan_id = MAX_VLAN_ID + 2;
+
+retry:
+	for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
+		if (vlan->vlan_id == vlan_id) {
+			vlan_id++;
+			goto retry;
+		}
+	}
+	return vlan_id;
+}
+
+
 int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		    struct vlan_description *vlan_desc)
 {
 	struct hostapd_vlan *vlan = NULL, *wildcard_vlan = NULL;
 	int old_vlan_id, vlan_id = 0, ret = 0;
 
-	if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED) {
+	if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED)
 		vlan_desc = NULL;
-	} else if (vlan_desc && vlan_desc->notempty) {
-		if (!vlan_compare(vlan_desc, sta->vlan_desc))
-			return 0; /* nothing to change */
 
+	/* Check if there is something to do */
+	if (!vlan_compare(vlan_desc, sta->vlan_desc))
+		return 0; /* nothing to change */
+
+	/* Now the real VLAN changed or the STA just needs its own vif */
+	if (vlan_desc->notempty) {
 		for (vlan = hapd->conf->vlan; vlan; vlan = vlan->next) {
 			if (!vlan_compare(&vlan->vlan_desc, vlan_desc))
 				break;
@@ -828,12 +847,17 @@ int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		} else if (wildcard_vlan) {
 			vlan = wildcard_vlan;
 			vlan_id = vlan_desc->untagged;
+			if (vlan_desc->tagged[0]) {
+				/* Tagged VLAN configuration */
+				vlan_id = ap_sta_get_free_vlan_id(hapd);
+			}
 		} else {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,
-				       "missing VLAN and wildcard for vlan=%d",
-				       vlan_desc->untagged);
+				       "missing vlan and wildcard for vlan=%d%s",
+				       vlan_desc->untagged,
+				       vlan_desc->tagged[0] ? "+" : "");
 			vlan_id = 0;
 			ret = -1;
 			goto done;
@@ -846,8 +870,9 @@ int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,
-				       "could not add dynamic VLAN interface for vlan=%d",
-				       vlan_desc->untagged);
+				       "could not add dynamic VLAN interface for vlan=%d%s",
+				       vlan_desc->untagged,
+				       vlan_desc->tagged[0] ? "+" : "");
 			vlan_id = 0;
 			ret = -1;
 			goto done;

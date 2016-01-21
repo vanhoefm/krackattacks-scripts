@@ -80,6 +80,7 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_ACCT_INPUT_GIGAWORDS = 52,
        RADIUS_ATTR_ACCT_OUTPUT_GIGAWORDS = 53,
        RADIUS_ATTR_EVENT_TIMESTAMP = 55,
+       RADIUS_ATTR_EGRESS_VLANID = 56,
        RADIUS_ATTR_NAS_PORT_TYPE = 61,
        RADIUS_ATTR_TUNNEL_TYPE = 64,
        RADIUS_ATTR_TUNNEL_MEDIUM_TYPE = 65,
@@ -274,7 +275,8 @@ radius_msg_add_attr_user_password(struct radius_msg *msg,
 				  const u8 *data, size_t data_len,
 				  const u8 *secret, size_t secret_len);
 int radius_msg_get_attr(struct radius_msg *msg, u8 type, u8 *buf, size_t len);
-int radius_msg_get_vlanid(struct radius_msg *msg);
+int radius_msg_get_vlanid(struct radius_msg *msg, int *untagged, int numtagged,
+			  int *tagged);
 char * radius_msg_get_tunnel_password(struct radius_msg *msg, int *keylen,
 				      const u8 *secret, size_t secret_len,
 				      struct radius_msg *sent_msg, size_t n);

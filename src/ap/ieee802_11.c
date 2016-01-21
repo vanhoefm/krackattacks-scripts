@@ -1101,8 +1101,9 @@ static void handle_auth(struct hostapd_data *hapd,
 		if (!hostapd_vlan_valid(hapd->conf->vlan, &vlan_id)) {
 			hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,
-				       "Invalid VLAN %d received from RADIUS server",
-				       vlan_id.untagged);
+				       "Invalid VLAN %d%s received from RADIUS server",
+				       vlan_id.untagged,
+				       vlan_id.tagged[0] ? "+" : "");
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			goto fail;
 		}

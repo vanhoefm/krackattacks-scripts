@@ -673,9 +673,17 @@ int hostapd_vlan_valid(struct hostapd_vlan *vlan,
 		       struct vlan_description *vlan_desc)
 {
 	struct hostapd_vlan *v = vlan;
+	int i;
 
-	if (!vlan_desc->notempty || vlan_desc->untagged <= 0 ||
+	if (!vlan_desc->notempty || vlan_desc->untagged < 0 ||
 	    vlan_desc->untagged > MAX_VLAN_ID)
+		return 0;
+	for (i = 0; i < MAX_NUM_TAGGED_VLAN; i++) {
+		if (vlan_desc->tagged[i] < 0 ||
+		    vlan_desc->tagged[i] > MAX_VLAN_ID)
+			return 0;
+	}
+	if (!vlan_desc->untagged && !vlan_desc->tagged[0])
 		return 0;
 
 	while (v) {

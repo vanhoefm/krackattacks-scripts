@@ -7729,6 +7729,8 @@ static int wpas_ctrl_iface_data_test_config(struct wpa_supplicant *wpa_s,
 					    char *cmd)
 {
 	int enabled = atoi(cmd);
+	char *pos;
+	const char *ifname;
 
 	if (!enabled) {
 		if (wpa_s->l2_test) {
@@ -7742,7 +7744,13 @@ static int wpas_ctrl_iface_data_test_config(struct wpa_supplicant *wpa_s,
 	if (wpa_s->l2_test)
 		return 0;
 
-	wpa_s->l2_test = l2_packet_init(wpa_s->ifname, wpa_s->own_addr,
+	pos = os_strstr(cmd, " ifname=");
+	if (pos)
+		ifname = pos + 8;
+	else
+		ifname = wpa_s->ifname;
+
+	wpa_s->l2_test = l2_packet_init(ifname, wpa_s->own_addr,
 					ETHERTYPE_IP, wpas_data_test_rx,
 					wpa_s, 1);
 	if (wpa_s->l2_test == NULL)

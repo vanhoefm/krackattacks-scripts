@@ -140,6 +140,10 @@ ifdef CONFIG_ELOOP_EPOLL
 CFLAGS += -DCONFIG_ELOOP_EPOLL
 endif
 
+ifdef CONFIG_ELOOP_KQUEUE
+CFLAGS += -DCONFIG_ELOOP_KQUEUE
+endif
+
 OBJS += ../src/utils/common.o
 OBJS_c += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o

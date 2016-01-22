@@ -1128,7 +1128,7 @@ int main(int argc, char *argv[])
 		interfaces = iface;
 	}
 
-	if (daemonize && os_daemonize(pid_file))
+	if (daemonize && os_daemonize(pid_file) && eloop_sock_requeue())
 		goto out;
 
 	eloop_register_signal_terminate(wpa_priv_terminate, NULL);

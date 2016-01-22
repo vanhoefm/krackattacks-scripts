@@ -5221,7 +5221,8 @@ int wpa_supplicant_run(struct wpa_global *global)
 	struct wpa_supplicant *wpa_s;
 
 	if (global->params.daemonize &&
-	    wpa_supplicant_daemon(global->params.pid_file))
+	    (wpa_supplicant_daemon(global->params.pid_file) ||
+	     eloop_sock_requeue()))
 		return -1;
 
 	if (global->params.wait_for_monitor) {

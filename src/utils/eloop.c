@@ -525,6 +525,12 @@ static void eloop_sock_table_dispatch(struct epoll_event *events, int nfds)
 #endif /* CONFIG_ELOOP_EPOLL */
 
 
+int eloop_sock_requeue(void)
+{
+	return 0;
+}
+
+
 static void eloop_sock_table_destroy(struct eloop_sock_table *table)
 {
 	if (table) {

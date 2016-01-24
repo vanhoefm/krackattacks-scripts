@@ -41,6 +41,7 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 	size_t len;
 	int i;
 	struct wpabuf *b;
+	struct os_time now;
 
 	msg = radius_msg_new(RADIUS_CODE_ACCOUNTING_REQUEST,
 			     radius_client_get_id(hapd->radius));
@@ -159,6 +160,14 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 		}
 	}
 
+	os_get_time(&now);
+	if (now.sec > 1000000000 &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_EVENT_TIMESTAMP,
+				       now.sec)) {
+		wpa_printf(MSG_INFO, "Could not add Event-Timestamp");
+		goto fail;
+	}
+
 	return msg;
 
  fail:
@@ -261,7 +270,6 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	int cause = sta->acct_terminate_cause;
 	struct hostap_sta_driver_data data;
 	struct os_reltime now_r, diff;
-	struct os_time now;
 	u32 gigawords;
 
 	if (!hapd->conf->radius->acct_server)
@@ -276,7 +284,6 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	}
 
 	os_get_reltime(&now_r);
-	os_get_time(&now);
 	os_reltime_sub(&now_r, &sta->acct_session_start, &diff);
 	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_SESSION_TIME,
 				       diff.sec)) {
@@ -331,12 +338,6 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 			wpa_printf(MSG_INFO, "Could not add Acct-Output-Gigawords");
 			goto fail;
 		}
-	}
-
-	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_EVENT_TIMESTAMP,
-				       now.sec)) {
-		wpa_printf(MSG_INFO, "Could not add Event-Timestamp");
-		goto fail;
 	}
 
 	if (eloop_terminated())

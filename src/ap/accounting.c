@@ -446,14 +446,6 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 	if (!msg)
 		return;
 
-	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_TERMINATE_CAUSE,
-				       RADIUS_ACCT_TERMINATE_CAUSE_NAS_REBOOT))
-	{
-		wpa_printf(MSG_INFO, "Could not add Acct-Terminate-Cause");
-		radius_msg_free(msg);
-		return;
-	}
-
 	if (radius_client_send(hapd->radius, msg, RADIUS_ACCT, NULL) < 0)
 		radius_msg_free(msg);
 }

@@ -583,8 +583,8 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 		m2d->dev_password_id, m2d->config_error);
 	wpas_notify_wps_event_m2d(wpa_s, m2d);
 #ifdef CONFIG_P2P
-	if (wpa_s->parent && wpa_s->parent != wpa_s) {
-		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_M2D
+	if (wpa_s->p2pdev && wpa_s->p2pdev != wpa_s) {
+		wpa_msg(wpa_s->p2pdev, MSG_INFO, WPS_EVENT_M2D
 			"dev_password_id=%d config_error=%d",
 			m2d->dev_password_id, m2d->config_error);
 	}
@@ -617,8 +617,8 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 			WPS_EVENT_FAIL "msg=%d config_error=%d reason=%d (%s)",
 			fail->msg, fail->config_error, fail->error_indication,
 			wps_ei_str(fail->error_indication));
-		if (wpa_s->parent && wpa_s->parent != wpa_s)
-			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+		if (wpa_s->p2pdev && wpa_s->p2pdev != wpa_s)
+			wpa_msg(wpa_s->p2pdev, MSG_INFO, WPS_EVENT_FAIL
 				"msg=%d config_error=%d reason=%d (%s)",
 				fail->msg, fail->config_error,
 				fail->error_indication,
@@ -627,8 +627,8 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO,
 			WPS_EVENT_FAIL "msg=%d config_error=%d",
 			fail->msg, fail->config_error);
-		if (wpa_s->parent && wpa_s->parent != wpa_s)
-			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+		if (wpa_s->p2pdev && wpa_s->p2pdev != wpa_s)
+			wpa_msg(wpa_s->p2pdev, MSG_INFO, WPS_EVENT_FAIL
 				"msg=%d config_error=%d",
 				fail->msg, fail->config_error);
 	}

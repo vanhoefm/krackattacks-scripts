@@ -2490,8 +2490,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 
 	params.p2p = ssid->p2p_group;
 
-	if (wpa_s->parent->set_sta_uapsd)
-		params.uapsd = wpa_s->parent->sta_uapsd;
+	if (wpa_s->p2pdev->set_sta_uapsd)
+		params.uapsd = wpa_s->p2pdev->sta_uapsd;
 	else
 		params.uapsd = -1;
 
@@ -3510,6 +3510,7 @@ wpa_supplicant_alloc(struct wpa_supplicant *parent)
 	wpa_s->scan_interval = 5;
 	wpa_s->new_connection = 1;
 	wpa_s->parent = parent ? parent : wpa_s;
+	wpa_s->p2pdev = wpa_s->parent;
 	wpa_s->sched_scanning = 0;
 
 	dl_list_init(&wpa_s->bss_tmp_disallowed);
@@ -6248,7 +6249,7 @@ wpas_vendor_elem(struct wpa_supplicant *wpa_s, enum wpa_vendor_elem_frame frame)
 	case VENDOR_ELEM_P2P_INV_RESP:
 	case VENDOR_ELEM_P2P_ASSOC_REQ:
 	case VENDOR_ELEM_P2P_ASSOC_RESP:
-		return wpa_s->parent;
+		return wpa_s->p2pdev;
 #endif /* CONFIG_P2P */
 	default:
 		return wpa_s;

@@ -1207,7 +1207,7 @@ static int match_group_where_peer_is_client(struct p2p_group *group,
 					 cfg->ssid_len);
 	if (wpa_s_go != NULL && wpa_s_go == data->wpa_s) {
 		wpas_dbus_signal_peer_groups_changed(
-			data->wpa_s->parent, data->info->p2p_device_addr);
+			data->wpa_s->p2pdev, data->info->p2p_device_addr);
 		return 0;
 	}
 
@@ -1224,7 +1224,7 @@ static void signal_peer_groups_changed(struct p2p_peer_info *info,
 	wpa_s_go = wpas_get_p2p_client_iface(data->wpa_s,
 					     info->p2p_device_addr);
 	if (wpa_s_go != NULL && wpa_s_go == data->wpa_s) {
-		wpas_dbus_signal_peer_groups_changed(data->wpa_s->parent,
+		wpas_dbus_signal_peer_groups_changed(data->wpa_s->p2pdev,
 						     info->p2p_device_addr);
 		return;
 	}

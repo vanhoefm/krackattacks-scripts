@@ -262,12 +262,12 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->force_per_enrollee_psk = wpa_s->global->p2p_per_sta_psk;
 
 	if (ssid->p2p_group) {
-		os_memcpy(bss->ip_addr_go, wpa_s->parent->conf->ip_addr_go, 4);
-		os_memcpy(bss->ip_addr_mask, wpa_s->parent->conf->ip_addr_mask,
+		os_memcpy(bss->ip_addr_go, wpa_s->p2pdev->conf->ip_addr_go, 4);
+		os_memcpy(bss->ip_addr_mask, wpa_s->p2pdev->conf->ip_addr_mask,
 			  4);
 		os_memcpy(bss->ip_addr_start,
-			  wpa_s->parent->conf->ip_addr_start, 4);
-		os_memcpy(bss->ip_addr_end, wpa_s->parent->conf->ip_addr_end,
+			  wpa_s->p2pdev->conf->ip_addr_start, 4);
+		os_memcpy(bss->ip_addr_end, wpa_s->p2pdev->conf->ip_addr_end,
 			  4);
 	}
 #endif /* CONFIG_P2P */
@@ -487,14 +487,14 @@ static void ap_wps_event_cb(void *ctx, enum wps_event event,
 	if (event == WPS_EV_FAIL) {
 		struct wps_event_fail *fail = &data->fail;
 
-		if (wpa_s->parent && wpa_s->parent != wpa_s &&
+		if (wpa_s->p2pdev && wpa_s->p2pdev != wpa_s &&
 		    wpa_s == wpa_s->global->p2p_group_formation) {
 			/*
 			 * src/ap/wps_hostapd.c has already sent this on the
 			 * main interface, so only send on the parent interface
 			 * here if needed.
 			 */
-			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+			wpa_msg(wpa_s->p2pdev, MSG_INFO, WPS_EVENT_FAIL
 				"msg=%d config_error=%d",
 				fail->msg, fail->config_error);
 		}
@@ -639,8 +639,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		params.p2p = 1;
 #endif /* CONFIG_P2P */
 
-	if (wpa_s->parent->set_ap_uapsd)
-		params.uapsd = wpa_s->parent->ap_uapsd;
+	if (wpa_s->p2pdev->set_ap_uapsd)
+		params.uapsd = wpa_s->p2pdev->ap_uapsd;
 	else if (params.p2p && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP_UAPSD))
 		params.uapsd = 1; /* mandatory for P2P GO */
 	else
@@ -719,7 +719,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		}
 
 		hapd_iface->bss[i]->msg_ctx = wpa_s;
-		hapd_iface->bss[i]->msg_ctx_parent = wpa_s->parent;
+		hapd_iface->bss[i]->msg_ctx_parent = wpa_s->p2pdev;
 		hapd_iface->bss[i]->public_action_cb = ap_public_action_rx;
 		hapd_iface->bss[i]->public_action_cb_ctx = wpa_s;
 		hapd_iface->bss[i]->vendor_action_cb = ap_vendor_action_rx;
@@ -1320,8 +1320,8 @@ int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
 	hapd = wpa_s->ap_iface->bss[0];
 	wps = hapd->wps;
 
-	if (wpa_s->parent->conf->wps_nfc_dh_pubkey == NULL ||
-	    wpa_s->parent->conf->wps_nfc_dh_privkey == NULL) {
+	if (wpa_s->p2pdev->conf->wps_nfc_dh_pubkey == NULL ||
+	    wpa_s->p2pdev->conf->wps_nfc_dh_privkey == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: No NFC DH key known");
 		return -1;
 	}
@@ -1330,9 +1330,9 @@ int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
 	wpabuf_free(wps->dh_pubkey);
 	wpabuf_free(wps->dh_privkey);
 	wps->dh_privkey = wpabuf_dup(
-		wpa_s->parent->conf->wps_nfc_dh_privkey);
+		wpa_s->p2pdev->conf->wps_nfc_dh_privkey);
 	wps->dh_pubkey = wpabuf_dup(
-		wpa_s->parent->conf->wps_nfc_dh_pubkey);
+		wpa_s->p2pdev->conf->wps_nfc_dh_pubkey);
 	if (wps->dh_privkey == NULL || wps->dh_pubkey == NULL) {
 		wps->dh_ctx = NULL;
 		wpabuf_free(wps->dh_pubkey);

@@ -148,8 +148,7 @@ static void pmksa_cache_from_eapol_data(struct rsn_pmksa_cache_entry *entry,
 	entry->eap_type_authsrv = eapol->eap_type_authsrv;
 	entry->vlan_id = ((struct sta_info *) eapol->sta)->vlan_id;
 
-	entry->acct_multi_session_id_hi = eapol->acct_multi_session_id_hi;
-	entry->acct_multi_session_id_lo = eapol->acct_multi_session_id_lo;
+	entry->acct_multi_session_id = eapol->acct_multi_session_id;
 }
 
 
@@ -188,8 +187,7 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 	eapol->eap_type_authsrv = entry->eap_type_authsrv;
 	((struct sta_info *) eapol->sta)->vlan_id = entry->vlan_id;
 
-	eapol->acct_multi_session_id_hi = entry->acct_multi_session_id_hi;
-	eapol->acct_multi_session_id_lo = entry->acct_multi_session_id_lo;
+	eapol->acct_multi_session_id = entry->acct_multi_session_id;
 }
 
 
@@ -471,12 +469,11 @@ static int das_attr_match(struct rsn_pmksa_cache_entry *entry,
 	if (attr->acct_multi_session_id) {
 		char buf[20];
 
-		if (attr->acct_multi_session_id_len != 17)
+		if (attr->acct_multi_session_id_len != 16)
 			return 0;
-		os_snprintf(buf, sizeof(buf), "%08X+%08X",
-			    entry->acct_multi_session_id_hi,
-			    entry->acct_multi_session_id_lo);
-		if (os_memcmp(attr->acct_multi_session_id, buf, 17) != 0)
+		os_snprintf(buf, sizeof(buf), "%016lX",
+			    (long unsigned int) entry->acct_multi_session_id);
+		if (os_memcmp(attr->acct_multi_session_id, buf, 16) != 0)
 			return 0;
 		match++;
 	}

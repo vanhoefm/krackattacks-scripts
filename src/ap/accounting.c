@@ -55,10 +55,10 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 
 		if ((hapd->conf->wpa & 2) &&
 		    !hapd->conf->disable_pmksa_caching &&
-		    sta->eapol_sm && sta->eapol_sm->acct_multi_session_id_hi) {
-			os_snprintf(buf, sizeof(buf), "%08X+%08X",
-				    sta->eapol_sm->acct_multi_session_id_hi,
-				    sta->eapol_sm->acct_multi_session_id_lo);
+		    sta->eapol_sm && sta->eapol_sm->acct_multi_session_id) {
+			os_snprintf(buf, sizeof(buf), "%016lX",
+				    (long unsigned int)
+				    sta->eapol_sm->acct_multi_session_id);
 			if (!radius_msg_add_attr(
 				    msg, RADIUS_ATTR_ACCT_MULTI_SESSION_ID,
 				    (u8 *) buf, os_strlen(buf))) {
@@ -236,8 +236,8 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_INFO,
-		       "starting accounting session %08X-%08X",
-		       sta->acct_session_id_hi, sta->acct_session_id_lo);
+		       "starting accounting session %016lX",
+		       (long unsigned int) sta->acct_session_id);
 
 	os_get_reltime(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
@@ -386,22 +386,22 @@ void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta)
 		eloop_cancel_timeout(accounting_interim_update, hapd, sta);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO,
-			       "stopped accounting session %08X-%08X",
-			       sta->acct_session_id_hi,
-			       sta->acct_session_id_lo);
+			       "stopped accounting session %016lX",
+			       (long unsigned int) sta->acct_session_id);
 		sta->acct_session_started = 0;
 	}
 }
 
 
-void accounting_sta_get_id(struct hostapd_data *hapd,
-				  struct sta_info *sta)
+int accounting_sta_get_id(struct hostapd_data *hapd, struct sta_info *sta)
 {
-	sta->acct_session_id_lo = hapd->acct_session_id_lo++;
-	if (hapd->acct_session_id_lo == 0) {
-		hapd->acct_session_id_hi++;
-	}
-	sta->acct_session_id_hi = hapd->acct_session_id_hi;
+	/*
+	 * Acct-Session-Id should be globally and temporarily unique.
+	 * A high quality random number is required therefore.
+	 * This could be be improved by switching to a GUID.
+	 */
+	return os_get_random((u8 *) &sta->acct_session_id,
+			     sizeof(sta->acct_session_id));
 }
 
 
@@ -460,17 +460,6 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
  */
 int accounting_init(struct hostapd_data *hapd)
 {
-	struct os_time now;
-
-	/* Acct-Session-Id should be unique over reboots. Using a random number
-	 * is preferred. If that is not available, take the current time. Mix
-	 * in microseconds to make this more likely to be unique. */
-	os_get_time(&now);
-	if (os_get_random((u8 *) &hapd->acct_session_id_hi,
-			  sizeof(hapd->acct_session_id_hi)) < 0)
-		hapd->acct_session_id_hi = now.sec;
-	hapd->acct_session_id_hi ^= now.usec;
-
 	if (radius_client_register(hapd->radius, RADIUS_ACCT,
 				   accounting_receive, hapd))
 		return -1;

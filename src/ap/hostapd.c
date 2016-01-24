@@ -673,7 +673,7 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 
 	if (attr->acct_session_id) {
 		num_attr++;
-		if (attr->acct_session_id_len != 17) {
+		if (attr->acct_session_id_len != 16) {
 			wpa_printf(MSG_DEBUG,
 				   "RADIUS DAS: Acct-Session-Id cannot match");
 			return NULL;
@@ -683,10 +683,9 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
 			if (!sta->radius_das_match)
 				continue;
-			os_snprintf(buf, sizeof(buf), "%08X-%08X",
-				    sta->acct_session_id_hi,
-				    sta->acct_session_id_lo);
-			if (os_memcmp(attr->acct_session_id, buf, 17) != 0)
+			os_snprintf(buf, sizeof(buf), "%016lX",
+				    (long unsigned int) sta->acct_session_id);
+			if (os_memcmp(attr->acct_session_id, buf, 16) != 0)
 				sta->radius_das_match = 0;
 			else
 				count++;
@@ -702,7 +701,7 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 
 	if (attr->acct_multi_session_id) {
 		num_attr++;
-		if (attr->acct_multi_session_id_len != 17) {
+		if (attr->acct_multi_session_id_len != 16) {
 			wpa_printf(MSG_DEBUG,
 				   "RADIUS DAS: Acct-Multi-Session-Id cannot match");
 			return NULL;
@@ -713,14 +712,14 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 			if (!sta->radius_das_match)
 				continue;
 			if (!sta->eapol_sm ||
-			    !sta->eapol_sm->acct_multi_session_id_hi) {
+			    !sta->eapol_sm->acct_multi_session_id) {
 				sta->radius_das_match = 0;
 				continue;
 			}
-			os_snprintf(buf, sizeof(buf), "%08X+%08X",
-				    sta->eapol_sm->acct_multi_session_id_hi,
-				    sta->eapol_sm->acct_multi_session_id_lo);
-			if (os_memcmp(attr->acct_multi_session_id, buf, 17) !=
+			os_snprintf(buf, sizeof(buf), "%016lX",
+				    (long unsigned int)
+				    sta->eapol_sm->acct_multi_session_id);
+			if (os_memcmp(attr->acct_multi_session_id, buf, 16) !=
 			    0)
 				sta->radius_das_match = 0;
 			else

@@ -30,9 +30,6 @@ struct eapol_authenticator {
 
 	u8 *default_wep_key;
 	u8 default_wep_key_idx;
-
-	u32 acct_multi_session_id_hi;
-	u32 acct_multi_session_id_lo;
 };
 
 
@@ -173,8 +170,7 @@ struct eapol_state_machine {
 
 	int remediation;
 
-	u32 acct_multi_session_id_hi;
-	u32 acct_multi_session_id_lo;
+	u64 acct_multi_session_id;
 };
 
 #endif /* EAPOL_AUTH_SM_I_H */

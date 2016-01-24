@@ -866,10 +866,16 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 		sm->radius_cui = wpabuf_alloc_copy(radius_cui,
 						   os_strlen(radius_cui));
 
-	sm->acct_multi_session_id_lo = eapol->acct_multi_session_id_lo++;
-	if (eapol->acct_multi_session_id_lo == 0)
-		eapol->acct_multi_session_id_hi++;
-	sm->acct_multi_session_id_hi = eapol->acct_multi_session_id_hi;
+	/*
+	 * Acct-Multi-Session-Id should be globally and temporarily unique.
+	 * A high quality random number is required therefore.
+	 * This could be be improved by switching to a GUID.
+	 */
+	if (os_get_random((u8 *) &sm->acct_multi_session_id,
+			  sizeof(sm->acct_multi_session_id)) < 0) {
+		eapol_auth_free(sm);
+		return NULL;
+	}
 
 	return sm;
 }
@@ -1274,7 +1280,6 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 					     struct eapol_auth_cb *cb)
 {
 	struct eapol_authenticator *eapol;
-	struct os_time now;
 
 	eapol = os_zalloc(sizeof(*eapol));
 	if (eapol == NULL)
@@ -1302,12 +1307,6 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 	eapol->cb.eapol_event = cb->eapol_event;
 	eapol->cb.erp_get_key = cb->erp_get_key;
 	eapol->cb.erp_add_key = cb->erp_add_key;
-
-	/* Acct-Multi-Session-Id should be unique over reboots. If reliable
-	 * clock is not available, this could be replaced with reboot counter,
-	 * etc. */
-	os_get_time(&now);
-	eapol->acct_multi_session_id_hi = now.sec;
 
 	return eapol;
 }

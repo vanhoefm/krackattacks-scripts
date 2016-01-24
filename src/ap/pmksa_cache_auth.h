@@ -31,8 +31,7 @@ struct rsn_pmksa_cache_entry {
 	int vlan_id;
 	int opportunistic;
 
-	u32 acct_multi_session_id_hi;
-	u32 acct_multi_session_id_lo;
+	u64 acct_multi_session_id;
 };
 
 struct rsn_pmksa_cache;

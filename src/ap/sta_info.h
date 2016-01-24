@@ -101,8 +101,7 @@ struct sta_info {
 	/* IEEE 802.1X related data */
 	struct eapol_state_machine *eapol_sm;
 
-	u32 acct_session_id_hi;
-	u32 acct_session_id_lo;
+	u64 acct_session_id;
 	struct os_reltime acct_session_start;
 	int acct_session_started;
 	int acct_terminate_cause; /* Acct-Terminate-Cause */

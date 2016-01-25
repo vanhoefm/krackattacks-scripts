@@ -418,7 +418,7 @@ fail:
 	p2p->pending_action_state = P2P_PENDING_INVITATION_RESPONSE;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
-			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
+			    wpabuf_head(resp), wpabuf_len(resp), 50) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 	}
 

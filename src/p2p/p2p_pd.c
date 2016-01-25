@@ -997,7 +997,7 @@ out:
 		if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 				    p2p->cfg->dev_addr,
 				    wpabuf_head(resp), wpabuf_len(resp),
-				    200) < 0)
+				    50) < 0)
 			p2p_dbg(p2p, "Failed to send Action frame");
 		else
 			p2p->send_action_in_progress = 1;

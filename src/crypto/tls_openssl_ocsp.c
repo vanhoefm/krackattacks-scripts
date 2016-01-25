@@ -562,6 +562,8 @@ enum ocsp_result check_ocsp_resp(SSL_CTX *ssl_ctx, SSL *ssl, X509 *cert,
 
 	if (basic->certs) {
 		untrusted = sk_X509_dup(basic->certs);
+		if (!untrusted)
+			goto fail;
 
 		num = sk_X509_num(basic->certs);
 		for (i = 0; i < num; i++) {

@@ -448,6 +448,16 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 	if (!msg)
 		return;
 
+	if (hapd->acct_session_id) {
+		char buf[20];
+
+		os_snprintf(buf, sizeof(buf), "%016lX",
+			    (long unsigned int) hapd->acct_session_id);
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_ACCT_SESSION_ID,
+					 (u8 *) buf, os_strlen(buf)))
+			wpa_printf(MSG_ERROR, "Could not add Acct-Session-Id");
+	}
+
 	if (radius_client_send(hapd->radius, msg, RADIUS_ACCT, NULL) < 0)
 		radius_msg_free(msg);
 }
@@ -460,6 +470,15 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
  */
 int accounting_init(struct hostapd_data *hapd)
 {
+	/*
+	 * Acct-Session-Id should be globally and temporarily unique.
+	 * A high quality random number is required therefore.
+	 * This could be be improved by switching to a GUID.
+	 */
+	if (os_get_random((u8 *) &hapd->acct_session_id,
+			  sizeof(hapd->acct_session_id)) < 0)
+		return -1;
+
 	if (radius_client_register(hapd->radius, RADIUS_ACCT,
 				   accounting_receive, hapd))
 		return -1;

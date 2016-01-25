@@ -76,17 +76,18 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	if (!hostapd_config_get_radius_attr(hapd->conf->radius_acct_req_attr,
-					    RADIUS_ATTR_ACCT_AUTHENTIC) &&
-	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_AUTHENTIC,
-				       hapd->conf->ieee802_1x ?
-				       RADIUS_ACCT_AUTHENTIC_RADIUS :
-				       RADIUS_ACCT_AUTHENTIC_LOCAL)) {
-		wpa_printf(MSG_INFO, "Could not add Acct-Authentic");
-		goto fail;
-	}
-
 	if (sta) {
+		if (!hostapd_config_get_radius_attr(
+			    hapd->conf->radius_acct_req_attr,
+			    RADIUS_ATTR_ACCT_AUTHENTIC) &&
+		    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_AUTHENTIC,
+					       hapd->conf->ieee802_1x ?
+					       RADIUS_ACCT_AUTHENTIC_RADIUS :
+					       RADIUS_ACCT_AUTHENTIC_LOCAL)) {
+			wpa_printf(MSG_INFO, "Could not add Acct-Authentic");
+			goto fail;
+		}
+
 		/* Use 802.1X identity if available */
 		val = ieee802_1x_get_identity(sta->eapol_sm, &len);
 

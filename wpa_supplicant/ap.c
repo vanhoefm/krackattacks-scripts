@@ -92,6 +92,7 @@ no_vht:
 	conf->vht_oper_centr_freq_seg0_idx =
 		conf->channel + conf->secondary_channel * 2;
 #endif /* CONFIG_P2P */
+	conf->vht_oper_chwidth = VHT_CHANWIDTH_USE_HT;
 }
 #endif /* CONFIG_IEEE80211N */
 

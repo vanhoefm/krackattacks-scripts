@@ -52,21 +52,6 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 
 	if (sta) {
 		radius_msg_make_authenticator(msg, (u8 *) sta, sizeof(*sta));
-
-		if ((hapd->conf->wpa & 2) &&
-		    !hapd->conf->disable_pmksa_caching &&
-		    sta->eapol_sm && sta->eapol_sm->acct_multi_session_id) {
-			os_snprintf(buf, sizeof(buf), "%016lX",
-				    (long unsigned int)
-				    sta->eapol_sm->acct_multi_session_id);
-			if (!radius_msg_add_attr(
-				    msg, RADIUS_ATTR_ACCT_MULTI_SESSION_ID,
-				    (u8 *) buf, os_strlen(buf))) {
-				wpa_printf(MSG_INFO,
-					   "Could not add Acct-Multi-Session-Id");
-				goto fail;
-			}
-		}
 	} else {
 		radius_msg_make_authenticator(msg, (u8 *) hapd, sizeof(*hapd));
 	}

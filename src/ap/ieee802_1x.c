@@ -448,6 +448,21 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		}
 	}
 
+	if ((hapd->conf->wpa & 2) &&
+	    !hapd->conf->disable_pmksa_caching &&
+	    sta->eapol_sm && sta->eapol_sm->acct_multi_session_id) {
+		os_snprintf(buf, sizeof(buf), "%016lX",
+			    (long unsigned int)
+			    sta->eapol_sm->acct_multi_session_id);
+		if (!radius_msg_add_attr(
+			    msg, RADIUS_ATTR_ACCT_MULTI_SESSION_ID,
+			    (u8 *) buf, os_strlen(buf))) {
+			wpa_printf(MSG_INFO,
+				   "Could not add Acct-Multi-Session-Id");
+			return -1;
+		}
+	}
+
 #ifdef CONFIG_IEEE80211R
 	if (hapd->conf->wpa && wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) &&
 	    sta->wpa_sm &&

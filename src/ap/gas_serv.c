@@ -786,6 +786,24 @@ static void anqp_add_icon_binary_file(struct hostapd_data *hapd,
 #endif /* CONFIG_HS20 */
 
 
+static size_t anqp_get_required_len(struct hostapd_data *hapd,
+				    const u16 *infoid,
+				    unsigned int num_infoid)
+{
+	size_t len = 0;
+	unsigned int i;
+
+	for (i = 0; i < num_infoid; i++) {
+		struct anqp_element *elem = get_anqp_elem(hapd, infoid[i]);
+
+		if (elem)
+			len += 2 + 2 + wpabuf_len(elem->payload);
+	}
+
+	return len;
+}
+
+
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
@@ -803,7 +821,7 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		len += 1000;
 	if (request & ANQP_REQ_ICON_REQUEST)
 		len += 65536;
-	len += num_extra_req * 1000;
+	len += anqp_get_required_len(hapd, extra_req, num_extra_req);
 
 	buf = wpabuf_alloc(len);
 	if (buf == NULL)

@@ -2463,13 +2463,18 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 
 	if (certs) {
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
-		SSL_clear_chain_certs(ssl);
+		if (ssl)
+			SSL_clear_chain_certs(ssl);
+		else
+			SSL_CTX_clear_chain_certs(data->ssl);
 		while ((cert = sk_X509_pop(certs)) != NULL) {
 			X509_NAME_oneline(X509_get_subject_name(cert), buf,
 					  sizeof(buf));
 			wpa_printf(MSG_DEBUG, "TLS: additional certificate"
 				   " from PKCS12: subject='%s'", buf);
-			if (SSL_add1_chain_cert(ssl, cert) != 1) {
+			if ((ssl && SSL_add1_chain_cert(ssl, cert) != 1) ||
+			    (!ssl && SSL_CTX_add1_chain_cert(data->ssl,
+							     cert) != 1)) {
 				tls_show_errors(MSG_DEBUG, __func__,
 						"Failed to add additional certificate");
 				res = -1;
@@ -2481,9 +2486,16 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 		}
 		sk_X509_free(certs);
 #ifndef OPENSSL_IS_BORINGSSL
-		res = SSL_build_cert_chain(ssl,
-					   SSL_BUILD_CHAIN_FLAG_CHECK |
-					   SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR);
+		if (ssl)
+			res = SSL_build_cert_chain(
+				ssl,
+				SSL_BUILD_CHAIN_FLAG_CHECK |
+				SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR);
+		else
+			res = SSL_CTX_build_cert_chain(
+				data->ssl,
+				SSL_BUILD_CHAIN_FLAG_CHECK |
+				SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR);
 		if (!res) {
 			tls_show_errors(MSG_DEBUG, __func__,
 					"Failed to build certificate chain");

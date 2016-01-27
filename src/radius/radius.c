@@ -893,25 +893,11 @@ int radius_msg_copy_attr(struct radius_msg *dst, struct radius_msg *src,
 
 /* Create Request Authenticator. The value should be unique over the lifetime
  * of the shared secret between authenticator and authentication server.
- * Use one-way MD5 hash calculated from current timestamp and some data given
- * by the caller. */
-void radius_msg_make_authenticator(struct radius_msg *msg,
-				   const u8 *data, size_t len)
+ */
+int radius_msg_make_authenticator(struct radius_msg *msg)
 {
-	struct os_time tv;
-	long int l;
-	const u8 *addr[3];
-	size_t elen[3];
-
-	os_get_time(&tv);
-	l = os_random();
-	addr[0] = (u8 *) &tv;
-	elen[0] = sizeof(tv);
-	addr[1] = data;
-	elen[1] = len;
-	addr[2] = (u8 *) &l;
-	elen[2] = sizeof(l);
-	md5_vector(3, addr, elen, msg->hdr->authenticator);
+	return os_get_random((u8 *) &msg->hdr->authenticator,
+			     sizeof(msg->hdr->authenticator));
 }
 
 

@@ -165,7 +165,10 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 	if (msg == NULL)
 		return -1;
 
-	radius_msg_make_authenticator(msg, addr, ETH_ALEN);
+	if (radius_msg_make_authenticator(msg) < 0) {
+		wpa_printf(MSG_INFO, "Could not make Request Authenticator");
+		goto fail;
+	}
 
 	os_snprintf(buf, sizeof(buf), RADIUS_ADDR_FORMAT, MAC2STR(addr));
 	if (!radius_msg_add_attr(msg, RADIUS_ATTR_USER_NAME, (u8 *) buf,

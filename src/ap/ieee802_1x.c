@@ -602,7 +602,10 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		return;
 	}
 
-	radius_msg_make_authenticator(msg, (u8 *) sta, sizeof(*sta));
+	if (radius_msg_make_authenticator(msg) < 0) {
+		wpa_printf(MSG_INFO, "Could not make Request Authenticator");
+		goto fail;
+	}
 
 	if (sm->identity &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_USER_NAME,

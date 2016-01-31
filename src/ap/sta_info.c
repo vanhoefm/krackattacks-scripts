@@ -238,7 +238,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 #ifdef CONFIG_MESH
 	if (hapd->mesh_sta_free_cb)
-		hapd->mesh_sta_free_cb(sta);
+		hapd->mesh_sta_free_cb(hapd, sta);
 #endif /* CONFIG_MESH */
 
 	if (set_beacon)

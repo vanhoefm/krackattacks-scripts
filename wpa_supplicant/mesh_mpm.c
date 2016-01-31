@@ -1095,8 +1095,10 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 
 
 /* called by ap_free_sta */
-void mesh_mpm_free_sta(struct sta_info *sta)
+void mesh_mpm_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 {
+	if (sta->plink_state == PLINK_ESTAB)
+		hapd->num_plinks--;
 	eloop_cancel_timeout(plink_timer, ELOOP_ALL_CTX, sta);
 	eloop_cancel_timeout(mesh_auth_timer, ELOOP_ALL_CTX, sta);
 }

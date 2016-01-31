@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import logging
 logger = logging.getLogger()
+import os
 import select
 import struct
 import threading
@@ -6963,6 +6964,194 @@ def test_eap_proto_expanded(dev, apdev):
                 if ev is None:
                     raise Exception("Timeout on EAP failure")
             else:
+                time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected(timeout=1)
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_proto_tls(dev, apdev):
+    """EAP-TLS protocol tests"""
+    check_eap_capa(dev[0], "TLS")
+    global eap_proto_tls_test_done, eap_proto_tls_test_wait
+    eap_proto_tls_test_done = False
+    eap_proto_tls_test_wait = False
+
+    def tls_handler(ctx, req):
+        logger.info("tls_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] += 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        global eap_proto_tls_test_wait
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too much payload in TLS/Start: TLS Message Length (0 bytes) smaller than this fragment (1 bytes)")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TLS, 0xa0, 0, 1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmented TLS/Start")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TLS, 0xe0, 2, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too long fragment of TLS/Start: Invalid reassembly state: tls_in_left=2 tls_in_len=0 in_len=0")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2,
+                               EAP_TYPE_TLS, 0x00, 2, 3)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TLS/Start")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TLS, 0x20)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmented TLS message")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TLS, 0xc0, 2, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid TLS message: no Flags octet included + workaround")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_TLS)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too long fragment of TLS message: more data than TLS message length indicated")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2,
+                               EAP_TYPE_TLS, 0x00, 2, 3)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmented TLS/Start and truncated Message Length field")
+            return struct.pack(">BBHBB3B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 3,
+                               EAP_TYPE_TLS, 0xe0, 1, 2, 3)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TLS/Start")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TLS, 0x20)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmented TLS message")
+            return struct.pack(">BBHBBLB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + 1,
+                               EAP_TYPE_TLS, 0xc0, 2, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid TLS message: no Flags octet included + workaround disabled")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_TLS)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TLS/Start")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TLS, 0x20)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Fragmented TLS message (long; first)")
+            payload = 1450*'A'
+            return struct.pack(">BBHBBL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4 + len(payload),
+                               EAP_TYPE_TLS, 0xc0, 65536) + payload
+        # "Too long TLS fragment (size over 64 kB)" on the last one
+        for i in range(44):
+            idx += 1
+            if ctx['num'] == idx:
+                logger.info("Test: Fragmented TLS message (long; cont %d)" % i)
+                eap_proto_tls_test_wait = True
+                payload = 1470*'A'
+                return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                                   4 + 1 + 1 + len(payload),
+                                   EAP_TYPE_TLS, 0x40) + payload
+        eap_proto_tls_test_wait = False
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: TLS/Start")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_TLS, 0x20)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Non-ACK to more-fragment message")
+            return struct.pack(">BBHBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 1,
+                               EAP_TYPE_TLS, 0x00, 255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        logger.info("No more test responses available - test case completed")
+        global eap_proto_tls_test_done
+        eap_proto_tls_test_done = True
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(tls_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        i = 0
+        while not eap_proto_tls_test_done:
+            i += 1
+            logger.info("Running connection iteration %d" % i)
+            workaround = "0" if i == 6 else "1"
+            fragment_size = "100" if i == 8 else "1400"
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TLS", identity="tls user",
+                           ca_cert="auth_serv/ca.pem",
+                           client_cert="auth_serv/user.pem",
+                           private_key="auth_serv/user.key",
+                           eap_workaround=workaround,
+                           fragment_size=fragment_size,
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD",
+                                    "CTRL-EVENT-EAP-STATUS"], timeout=5)
+            if ev is None:
+                raise Exception("Timeout on EAP method start")
+            time.sleep(0.1)
+            start = os.times()[4]
+            while eap_proto_tls_test_wait:
+                now = os.times()[4]
+                if now - start > 10:
+                    break
                 time.sleep(0.1)
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected(timeout=1)

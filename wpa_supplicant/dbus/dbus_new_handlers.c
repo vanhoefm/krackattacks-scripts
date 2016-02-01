@@ -2645,6 +2645,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(
 	     !wpa_dbus_dict_string_array_add_element(
 		     &iter_array, "ap")) ||
 	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_P2P_CAPABLE) &&
+	     !wpa_s->conf->p2p_disabled &&
 	     !wpa_dbus_dict_string_array_add_element(
 		     &iter_array, "p2p")) ||
 	    !wpa_dbus_dict_end_string_array(&iter_dict,

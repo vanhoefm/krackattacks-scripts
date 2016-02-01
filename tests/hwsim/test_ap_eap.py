@@ -5406,3 +5406,94 @@ def run_ext_cert_check(dev, apdev, net_id):
         raise Exception("EAP-Failure not reported")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_eap_tls_errors(dev, apdev):
+    """EAP-TLS error cases"""
+    params = int_eap_server_params()
+    params['fragment_size'] = '100'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(dev[0], 1,
+                    "eap_peer_tls_reassemble_fragment"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user", ca_cert="auth_serv/ca.pem",
+                       client_cert="auth_serv/user.pem",
+                       private_key="auth_serv/user.key",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_tls_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user", ca_cert="auth_serv/ca.pem",
+                       client_cert="auth_serv/user.pem",
+                       private_key="auth_serv/user.key",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_peer_tls_ssl_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                       identity="tls user", ca_cert="auth_serv/ca.pem",
+                       client_cert="auth_serv/user.pem",
+                       private_key="auth_serv/user.key",
+                       engine="1",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        ev = dev[0].wait_event(["CTRL-REQ-PIN"], timeout=5)
+        if ev is None:
+            raise Exception("No CTRL-REQ-PIN seen")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    tests = [ "eap_peer_tls_derive_key;eap_tls_success",
+              "eap_peer_tls_derive_session_id;eap_tls_success",
+              "eap_tls_getKey",
+              "eap_tls_get_emsk",
+              "eap_tls_get_session_id" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                           identity="tls user", ca_cert="auth_serv/ca.pem",
+                           client_cert="auth_serv/user.pem",
+                           private_key="auth_serv/user.key",
+                           erp="1",
+                           wait_connect=False, scan_freq="2412")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_unauth_tls_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="UNAUTH-TLS",
+                       identity="unauth-tls", ca_cert="auth_serv/ca.pem",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_peer_tls_ssl_init;eap_unauth_tls_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="UNAUTH-TLS",
+                       identity="unauth-tls", ca_cert="auth_serv/ca.pem",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_wfa_unauth_tls_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                       eap="WFA-UNAUTH-TLS",
+                       identity="osen@example.com", ca_cert="auth_serv/ca.pem",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    with alloc_fail(dev[0], 1, "eap_peer_tls_ssl_init;eap_wfa_unauth_tls_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                       eap="WFA-UNAUTH-TLS",
+                       identity="osen@example.com", ca_cert="auth_serv/ca.pem",
+                       wait_connect=False, scan_freq="2412")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()

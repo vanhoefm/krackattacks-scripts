@@ -594,3 +594,43 @@ def test_persistent_group_cancel_on_cli2(dev):
     if "FAIL" not in dev[0].global_request("P2P_CANCEL"):
         raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
     terminate_group(dev[0], dev[1])
+
+def test_persistent_group_peer_dropped(dev):
+    """P2P persistent group formation and re-invocation with peer having dropped group"""
+    form(dev[0], dev[1], reverse_init=True)
+    invite_from_cli(dev[0], dev[1])
+
+    logger.info("Remove group on the GO and try to invite from the client")
+    dev[0].request("REMOVE_NETWORK all")
+    invite(dev[1], dev[0])
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
+    if ev is None:
+        raise Exception("No invitation result seen")
+    if "status=8" not in ev:
+        raise Exception("Unexpected invitation result: " + ev)
+    networks = dev[1].list_networks(p2p=True)
+    if len(networks) > 0:
+        raise Exception("Unexpected network block on client")
+
+    logger.info("Verify that a new group can be formed")
+    form(dev[0], dev[1], reverse_init=True)
+
+def test_persistent_group_peer_dropped2(dev):
+    """P2P persistent group formation and re-invocation with peer having dropped group (2)"""
+    form(dev[0], dev[1])
+    invite_from_go(dev[0], dev[1])
+
+    logger.info("Remove group on the client and try to invite from the GO")
+    dev[1].request("REMOVE_NETWORK all")
+    invite(dev[0], dev[1])
+    ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
+    if ev is None:
+        raise Exception("No invitation result seen")
+    if "status=8" not in ev:
+        raise Exception("Unexpected invitation result: " + ev)
+    networks = dev[1].list_networks(p2p=True)
+    if len(networks) > 0:
+        raise Exception("Unexpected network block on client")
+
+    logger.info("Verify that a new group can be formed")
+    form(dev[0], dev[1])

@@ -600,8 +600,10 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 	if (left >= RSN_SELECTOR_LEN) {
 		data->group_cipher = rsn_selector_to_bitfield(pos);
 		if (!wpa_cipher_valid_group(data->group_cipher)) {
-			wpa_printf(MSG_DEBUG, "%s: invalid group cipher 0x%x",
-				   __func__, data->group_cipher);
+			wpa_printf(MSG_DEBUG,
+				   "%s: invalid group cipher 0x%x (%08x)",
+				   __func__, data->group_cipher,
+				   WPA_GET_BE32(pos));
 			return -1;
 		}
 		pos += RSN_SELECTOR_LEN;

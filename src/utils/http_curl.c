@@ -644,13 +644,25 @@ static void i2r_LogotypeImageInfo(LogotypeImageInfo *info, BIO *out, int indent)
 	} else {
 		BIO_printf(out, "%*stype: default (1)\n", indent, "");
 	}
+	val = ASN1_INTEGER_get(info->fileSize);
+	BIO_printf(out, "%*sfileSize: %ld\n", indent, "", val);
 	val = ASN1_INTEGER_get(info->xSize);
 	BIO_printf(out, "%*sxSize: %ld\n", indent, "", val);
 	val = ASN1_INTEGER_get(info->ySize);
 	BIO_printf(out, "%*sySize: %ld\n", indent, "", val);
 	if (info->resolution) {
-		BIO_printf(out, "%*sresolution\n", indent, "");
-		/* TODO */
+		BIO_printf(out, "%*sresolution [%d]\n", indent, "",
+			   info->resolution->type);
+		switch (info->resolution->type) {
+		case 0:
+			val = ASN1_INTEGER_get(info->resolution->d.numBits);
+			BIO_printf(out, "%*snumBits: %ld\n", indent, "", val);
+			break;
+		case 1:
+			val = ASN1_INTEGER_get(info->resolution->d.tableSize);
+			BIO_printf(out, "%*stableSize: %ld\n", indent, "", val);
+			break;
+		}
 	}
 	if (info->language) {
 		BIO_printf(out, "%*slanguage: ", indent, "");

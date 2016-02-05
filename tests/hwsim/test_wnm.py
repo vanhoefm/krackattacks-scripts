@@ -672,6 +672,17 @@ def test_wnm_bss_tm_global(dev, apdev):
     finally:
         stop_wnm_tm(hapd, dev[0])
 
+def test_wnm_bss_tm_op_class_0(dev, apdev):
+    """WNM BSS Transition Management with invalid operating class"""
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "US", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, invalid op class specified for channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:59,0x0000,0,149,7 neighbor=00:11:22:33:44:5b,0x0000,0,1,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])
+
 def test_wnm_action_proto(dev, apdev):
     """WNM Action protocol testing"""
     params = { "ssid": "test-wnm" }

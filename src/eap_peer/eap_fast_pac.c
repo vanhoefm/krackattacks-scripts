@@ -802,8 +802,10 @@ int eap_fast_load_pac_bin(struct eap_sm *sm, struct eap_fast_pac **pac_root,
 	while (pos < end) {
 		u16 val;
 
-		if (end - pos < 2 + EAP_FAST_PAC_KEY_LEN + 2 + 2)
+		if (end - pos < 2 + EAP_FAST_PAC_KEY_LEN + 2 + 2) {
+			pac = NULL;
 			goto parse_fail;
+		}
 
 		pac = os_zalloc(sizeof(*pac));
 		if (pac == NULL)

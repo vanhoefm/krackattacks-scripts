@@ -3996,6 +3996,19 @@ def test_ap_wpa2_eap_ttls_server_pkcs12(dev, apdev):
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
                    scan_freq="2412")
 
+def test_ap_wpa2_eap_ttls_server_pkcs12_extra(dev, apdev):
+    """EAP-TTLS and server PKCS#12 file with extra certs"""
+    skip_with_fips(dev[0])
+    params = int_eap_server_params()
+    del params["server_cert"]
+    params["private_key"] = "auth_serv/server-extra.pkcs12"
+    params["private_key_passwd"] = "whatever"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   scan_freq="2412")
+
 def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP and setting DH params"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

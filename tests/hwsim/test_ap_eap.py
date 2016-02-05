@@ -2987,6 +2987,102 @@ def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
     if ev is None:
         raise Exception("Timeout on EAP failure report")
 
+def test_ap_wpa2_eap_fast_binary_pac_errors(dev, apdev):
+    """EAP-FAST and binary PAC errors"""
+    check_eap_capa(dev[0], "FAST")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "=eap_fast_save_pac_bin"),
+              (1, "eap_fast_write_pac"),
+              (2, "eap_fast_write_pac"), ]
+    for count, func in tests:
+        if "OK" not in dev[0].request("SET blob fast_pac_bin_errors "):
+            raise Exception("Could not set blob")
+
+        with alloc_fail(dev[0], count, func):
+            eap_connect(dev[0], apdev[0], "FAST", "user",
+                        anonymous_identity="FAST", password="password",
+                        ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                        phase1="fast_provisioning=1 fast_pac_format=binary",
+                        pac_file="blob://fast_pac_bin_errors")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    tests = [ "00", "000000000000", "6ae4920c0001",
+              "6ae4920c000000",
+              "6ae4920c0000" + "0000" + 32*"00" + "ffff" + "0000",
+              "6ae4920c0000" + "0000" + 32*"00" + "0001" + "0000",
+              "6ae4920c0000" + "0000" + 32*"00" + "0000" + "0001",
+              "6ae4920c0000" + "0000" + 32*"00" + "0000" + "0008" + "00040000" + "0007000100"]
+    for t in tests:
+        if "OK" not in dev[0].request("SET blob fast_pac_bin_errors " + t):
+            raise Exception("Could not set blob")
+
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                       identity="user", anonymous_identity="FAST",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1 fast_pac_format=binary",
+                       pac_file="blob://fast_pac_bin_errors",
+                       scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                               timeout=5)
+        if ev is None:
+            raise Exception("Failure not reported")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    pac = "6ae4920c0000" + "0000" + 32*"00" + "0000" + "0000"
+    tests = [ (1, "eap_fast_load_pac_bin"),
+              (2, "eap_fast_load_pac_bin"),
+              (3, "eap_fast_load_pac_bin") ]
+    for count, func in tests:
+        if "OK" not in dev[0].request("SET blob fast_pac_bin_errors " + pac):
+            raise Exception("Could not set blob")
+
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                           identity="user", anonymous_identity="FAST",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           phase1="fast_provisioning=1 fast_pac_format=binary",
+                           pac_file="blob://fast_pac_bin_errors",
+                           scan_freq="2412", wait_connect=False)
+            ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"],
+                                   timeout=5)
+            if ev is None:
+                raise Exception("Failure not reported")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    pac = "6ae4920c0000" + "0000" + 32*"00" + "0000" + "0005" + "0011223344"
+    if "OK" not in dev[0].request("SET blob fast_pac_bin_errors " + pac):
+        raise Exception("Could not set blob")
+
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                phase1="fast_provisioning=1 fast_pac_format=binary",
+                pac_file="blob://fast_pac_bin_errors")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    pac = "6ae4920c0000" + "0000" + 32*"00" + "0000" + "0009" + "00040000" + "0007000100"
+    tests = [ (1, "eap_fast_pac_get_a_id"),
+              (2, "eap_fast_pac_get_a_id") ]
+    for count, func in tests:
+        if "OK" not in dev[0].request("SET blob fast_pac_bin_errors " + pac):
+            raise Exception("Could not set blob")
+        with alloc_fail(dev[0], count, func):
+            eap_connect(dev[0], apdev[0], "FAST", "user",
+                        anonymous_identity="FAST", password="password",
+                        ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                        phase1="fast_provisioning=1 fast_pac_format=binary",
+                        pac_file="blob://fast_pac_bin_errors")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
     check_eap_capa(dev[0], "FAST")

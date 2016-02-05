@@ -429,6 +429,7 @@ static int wnm_nei_get_chan(struct wpa_supplicant *wpa_s, u8 op_class, u8 chan)
 {
 	struct wpa_bss *bss = wpa_s->current_bss;
 	const char *country = NULL;
+	int freq;
 
 	if (bss) {
 		const u8 *elem = wpa_bss_get_ie(bss, WLAN_EID_COUNTRY);
@@ -437,7 +438,21 @@ static int wnm_nei_get_chan(struct wpa_supplicant *wpa_s, u8 op_class, u8 chan)
 			country = (const char *) (elem + 2);
 	}
 
-	return ieee80211_chan_to_freq(country, op_class, chan);
+	freq = ieee80211_chan_to_freq(country, op_class, chan);
+	if (freq <= 0 && op_class == 0) {
+		/*
+		 * Some APs do not advertise correct operating class
+		 * information. Try to determine the most likely operating
+		 * frequency based on the channel number.
+		 */
+		if (chan >= 1 && chan <= 13)
+			freq = 2407 + chan * 5;
+		else if (chan == 14)
+			freq = 2484;
+		else if (chan >= 36 && chan <= 169)
+			freq = 5000 + chan * 5;
+	}
+	return freq;
 }
 
 

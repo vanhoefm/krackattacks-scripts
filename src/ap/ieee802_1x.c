@@ -1165,10 +1165,8 @@ void ieee802_1x_free_station(struct hostapd_data *hapd, struct sta_info *sta)
 #ifndef CONFIG_NO_RADIUS
 	radius_msg_free(sm->last_recv_radius);
 	radius_free_class(&sm->radius_class);
-	wpabuf_free(sm->radius_cui);
 #endif /* CONFIG_NO_RADIUS */
 
-	os_free(sm->identity);
 	eapol_auth_free(sm);
 }
 

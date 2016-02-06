@@ -884,6 +884,9 @@ void eapol_auth_free(struct eapol_state_machine *sm)
 	eloop_cancel_timeout(eapol_sm_step_cb, sm, NULL);
 	if (sm->eap)
 		eap_server_sm_deinit(sm->eap);
+
+	wpabuf_free(sm->radius_cui);
+	os_free(sm->identity);
 	os_free(sm);
 }
 

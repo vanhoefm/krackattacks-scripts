@@ -663,3 +663,39 @@ def test_mesh_wpa_auth_init_oom(dev, apdev):
         ev = dev[0].wait_event(["MESH-GROUP-STARTED"], timeout=0.2)
         if ev is not None:
             raise Exception("Unexpected mesh group start during OOM")
+
+def test_wpas_mesh_reconnect(dev, apdev):
+    """Secure mesh network plink counting during reconnection"""
+    check_mesh_support(dev[0])
+    try:
+        _test_wpas_mesh_reconnect(dev)
+    finally:
+        dev[0].request("SET max_peer_links 99")
+
+def _test_wpas_mesh_reconnect(dev):
+    dev[0].request("SET max_peer_links 2")
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].set_network(id, "beacon_int", "100")
+    dev[0].mesh_group_add(id)
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    for i in range(3):
+        # Drop incoming management frames to avoid handling link close
+        dev[0].request("SET ext_mgmt_frame_handling 1")
+        dev[1].mesh_group_remove()
+        check_mesh_group_removed(dev[1])
+        dev[1].request("FLUSH")
+        dev[0].request("SET ext_mgmt_frame_handling 0")
+        id = add_mesh_secure_net(dev[1])
+        dev[1].mesh_group_add(id)
+        check_mesh_group_added(dev[1])
+        check_mesh_peer_connected(dev[1])
+        dev[0].dump_monitor()
+        dev[1].dump_monitor()

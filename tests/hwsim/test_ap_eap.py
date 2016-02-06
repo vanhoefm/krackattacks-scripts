@@ -3083,6 +3083,195 @@ def test_ap_wpa2_eap_fast_binary_pac_errors(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
+def test_ap_wpa2_eap_fast_text_pac_errors(dev, apdev):
+    """EAP-FAST and text PAC errors"""
+    check_eap_capa(dev[0], "FAST")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ (1, "eap_fast_parse_hex;eap_fast_parse_pac_key"),
+              (1, "eap_fast_parse_hex;eap_fast_parse_pac_opaque"),
+              (1, "eap_fast_parse_hex;eap_fast_parse_a_id"),
+              (1, "eap_fast_parse_start"),
+              (1, "eap_fast_save_pac") ]
+    for count, func in tests:
+        dev[0].request("FLUSH")
+        if "OK" not in dev[0].request("SET blob fast_pac_text_errors "):
+            raise Exception("Could not set blob")
+
+        with alloc_fail(dev[0], count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                           identity="user", anonymous_identity="FAST",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           phase1="fast_provisioning=1",
+                           pac_file="blob://fast_pac_text_errors",
+                           scan_freq="2412", wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    pac = "wpa_supplicant EAP-FAST PAC file - version 1\n"
+    pac += "START\n"
+    pac += "PAC-Type\n"
+    pac += "END\n"
+    if "OK" not in dev[0].request("SET blob fast_pac_text_errors " + pac.encode("hex")):
+        raise Exception("Could not set blob")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                   identity="user", anonymous_identity="FAST",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   phase1="fast_provisioning=1",
+                   pac_file="blob://fast_pac_text_errors",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["EAP: Failed to initialize EAP method"], timeout=5)
+    if ev is None:
+        raise Exception("Failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    dev[0].request("FLUSH")
+    if "OK" not in dev[0].request("SET blob fast_pac_text_errors "):
+        raise Exception("Could not set blob")
+
+    with alloc_fail(dev[0], 1, "eap_fast_add_pac_data"):
+        for i in range(3):
+            params = int_eap_server_params()
+            params['ssid'] = "test-wpa2-eap-2"
+            params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+            params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+            params['eap_fast_a_id_info'] = "test server %d" % i
+
+            hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+            dev[0].connect("test-wpa2-eap-2", key_mgmt="WPA-EAP", eap="FAST",
+                           identity="user", anonymous_identity="FAST",
+                           password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                           phase1="fast_provisioning=1",
+                           pac_file="blob://fast_pac_text_errors",
+                           scan_freq="2412", wait_connect=False)
+            dev[0].wait_connected()
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+            hapd2.disable()
+
+def test_ap_wpa2_eap_fast_pac_truncate(dev, apdev):
+    """EAP-FAST and PAC list truncation"""
+    check_eap_capa(dev[0], "FAST")
+    if "OK" not in dev[0].request("SET blob fast_pac_truncate "):
+        raise Exception("Could not set blob")
+    for i in range(5):
+        params = int_eap_server_params()
+        params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+        params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+        params['eap_fast_a_id_info'] = "test server %d" % i
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                       identity="user", anonymous_identity="FAST",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1 fast_max_pac_list_len=2",
+                       pac_file="blob://fast_pac_truncate",
+                       scan_freq="2412", wait_connect=False)
+        dev[0].wait_connected()
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+        hapd.disable()
+
+def test_ap_wpa2_eap_fast_pac_refresh(dev, apdev):
+    """EAP-FAST and PAC refresh"""
+    check_eap_capa(dev[0], "FAST")
+    if "OK" not in dev[0].request("SET blob fast_pac_refresh "):
+        raise Exception("Could not set blob")
+    for i in range(2):
+        params = int_eap_server_params()
+        params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+        params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+        params['eap_fast_a_id_info'] = "test server %d" % i
+        params['pac_key_refresh_time'] = "1"
+        params['pac_key_lifetime'] = "10"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                       identity="user", anonymous_identity="FAST",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1",
+                       pac_file="blob://fast_pac_refresh",
+                       scan_freq="2412", wait_connect=False)
+        dev[0].wait_connected()
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+        hapd.disable()
+
+    for i in range(2):
+        params = int_eap_server_params()
+        params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+        params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+        params['eap_fast_a_id_info'] = "test server %d" % i
+        params['pac_key_refresh_time'] = "10"
+        params['pac_key_lifetime'] = "10"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                       identity="user", anonymous_identity="FAST",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1",
+                       pac_file="blob://fast_pac_refresh",
+                       scan_freq="2412", wait_connect=False)
+        dev[0].wait_connected()
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+        hapd.disable()
+
+def test_ap_wpa2_eap_fast_pac_lifetime(dev, apdev):
+    """EAP-FAST and PAC lifetime"""
+    check_eap_capa(dev[0], "FAST")
+    if "OK" not in dev[0].request("SET blob fast_pac_refresh "):
+        raise Exception("Could not set blob")
+
+    i = 0
+    params = int_eap_server_params()
+    params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+    params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+    params['eap_fast_a_id_info'] = "test server %d" % i
+    params['pac_key_refresh_time'] = "0"
+    params['pac_key_lifetime'] = "2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                        identity="user", anonymous_identity="FAST",
+                        password="password",
+                        ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                        phase1="fast_provisioning=2",
+                        pac_file="blob://fast_pac_refresh",
+                        scan_freq="2412", wait_connect=False)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    time.sleep(3)
+    dev[0].request("PMKSA_FLUSH")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("No EAP-Failure seen after expired PAC")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].select_network(id)
+    dev[0].wait_connected()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
     check_eap_capa(dev[0], "FAST")

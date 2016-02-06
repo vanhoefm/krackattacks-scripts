@@ -1656,3 +1656,14 @@ u8 radius_msg_find_unlisted_attr(struct radius_msg *msg, u8 *attrs)
 
 	return 0;
 }
+
+
+int radius_gen_session_id(u8 *id, size_t len)
+{
+	/*
+	 * Acct-Session-Id and Acct-Multi-Session-Id should be globally and
+	 * temporarily unique. A high quality random number is required
+	 * therefore. This could be be improved by switching to a GUID.
+	 */
+	return os_get_random(id, len);
+}

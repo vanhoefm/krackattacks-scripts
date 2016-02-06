@@ -379,13 +379,8 @@ void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta)
 
 int accounting_sta_get_id(struct hostapd_data *hapd, struct sta_info *sta)
 {
-	/*
-	 * Acct-Session-Id should be globally and temporarily unique.
-	 * A high quality random number is required therefore.
-	 * This could be be improved by switching to a GUID.
-	 */
-	return os_get_random((u8 *) &sta->acct_session_id,
-			     sizeof(sta->acct_session_id));
+	return radius_gen_session_id((u8 *) &sta->acct_session_id,
+				     sizeof(sta->acct_session_id));
 }
 
 
@@ -454,13 +449,8 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
  */
 int accounting_init(struct hostapd_data *hapd)
 {
-	/*
-	 * Acct-Session-Id should be globally and temporarily unique.
-	 * A high quality random number is required therefore.
-	 * This could be be improved by switching to a GUID.
-	 */
-	if (os_get_random((u8 *) &hapd->acct_session_id,
-			  sizeof(hapd->acct_session_id)) < 0)
+	if (radius_gen_session_id((u8 *) &hapd->acct_session_id,
+				  sizeof(hapd->acct_session_id)) < 0)
 		return -1;
 
 	if (radius_client_register(hapd->radius, RADIUS_ACCT,

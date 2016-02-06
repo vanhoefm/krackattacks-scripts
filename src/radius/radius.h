@@ -319,4 +319,6 @@ int radius_copy_class(struct radius_class_data *dst,
 
 u8 radius_msg_find_unlisted_attr(struct radius_msg *msg, u8 *attrs);
 
+int radius_gen_session_id(u8 *id, size_t len);
+
 #endif /* RADIUS_H */

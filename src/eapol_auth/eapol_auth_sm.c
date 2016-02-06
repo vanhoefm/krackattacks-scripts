@@ -866,16 +866,13 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 		sm->radius_cui = wpabuf_alloc_copy(radius_cui,
 						   os_strlen(radius_cui));
 
-	/*
-	 * Acct-Multi-Session-Id should be globally and temporarily unique.
-	 * A high quality random number is required therefore.
-	 * This could be be improved by switching to a GUID.
-	 */
-	if (os_get_random((u8 *) &sm->acct_multi_session_id,
-			  sizeof(sm->acct_multi_session_id)) < 0) {
+#ifndef CONFIG_NO_RADIUS
+	if (radius_gen_session_id((u8 *) &sm->acct_multi_session_id,
+				  sizeof(sm->acct_multi_session_id)) < 0) {
 		eapol_auth_free(sm);
 		return NULL;
 	}
+#endif /* CONFIG_NO_RADIUS */
 
 	return sm;
 }

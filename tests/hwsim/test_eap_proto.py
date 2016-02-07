@@ -7760,3 +7760,54 @@ def test_eap_proto_wsc(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_canned_success_before_method(dev, apdev):
+    """EAP protocol tests for canned EAP-Success before any method"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    hapd.request("SET ext_eapol_frame_io 1")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   phase1="allow_canned_success=1",
+                   eap="MD5", identity="user", password="password",
+                   wait_connect=False)
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+
+    res = dev[0].request("EAPOL_RX " + bssid + " 0200000403020004")
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP success")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+def test_eap_canned_failure_before_method(dev, apdev):
+    """EAP protocol tests for canned EAP-Failure before any method"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", scan_freq="2412",
+                   phase1="allow_canned_success=1",
+                   eap="MD5", identity="user", password="password",
+                   wait_connect=False)
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+
+    res = dev[0].request("EAPOL_RX " + bssid + " 0200000404020004")
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAP failure")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

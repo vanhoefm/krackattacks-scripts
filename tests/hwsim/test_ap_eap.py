@@ -5795,3 +5795,58 @@ def test_eap_tls_errors(dev, apdev):
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
+
+def test_ap_wpa2_eap_status(dev, apdev):
+    """EAP state machine status information"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                   identity="cert user",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=TLS",
+                   ca_cert2="auth_serv/ca.pem",
+                   client_cert2="auth_serv/user.pem",
+                   private_key2="auth_serv/user.key",
+                   scan_freq="2412", wait_connect=False)
+    success = False
+    states = []
+    method_states = []
+    decisions = []
+    req_methods = []
+    selected_methods = []
+    for i in range(100000):
+        s = dev[0].get_status(extra="VERBOSE")
+        if 'EAP state' in s:
+            state = s['EAP state']
+            if state:
+                if state not in states:
+                    states.append(state)
+                if state == "SUCCESS":
+                    success = True
+                    break
+        if 'methodState' in s:
+            val = s['methodState']
+            if val not in method_states:
+                method_states.append(val)
+        if 'decision' in s:
+            val = s['decision']
+            if val not in decisions:
+                decisions.append(val)
+        if 'reqMethod' in s:
+            val = s['reqMethod']
+            if val not in req_methods:
+                req_methods.append(val)
+        if 'selectedMethod' in s:
+            val = s['selectedMethod']
+            if val not in selected_methods:
+                selected_methods.append(val)
+    logger.info("Iterations: %d" % i)
+    logger.info("EAP states: " + str(states))
+    logger.info("methodStates: " + str(method_states))
+    logger.info("decisions: " + str(decisions))
+    logger.info("reqMethods: " + str(req_methods))
+    logger.info("selectedMethods: " + str(selected_methods))
+    if not success:
+        raise Exception("EAP did not succeed")
+    dev[0].wait_connected()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

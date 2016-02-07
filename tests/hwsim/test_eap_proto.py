@@ -7811,3 +7811,37 @@ def test_eap_canned_failure_before_method(dev, apdev):
         raise Exception("Timeout on EAP failure")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_eap_nak_oom(dev, apdev):
+    """EAP-Nak OOM"""
+    check_eap_capa(dev[0], "MD5")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_sm_buildNak"):
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="sake user", password="password",
+                       wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+def test_eap_nak_expanded(dev, apdev):
+    """EAP-Nak with expanded method"""
+    check_eap_capa(dev[0], "MD5")
+    check_eap_capa(dev[0], "VENDOR-TEST")
+    params = hostapd.wpa2_eap_params(ssid="eap-test")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="VENDOR-TEST WSC",
+                   identity="sake user", password="password",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=10)
+    if ev is None or "NAK" not in ev:
+        raise Exception("No NAK event seen")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("No EAP-Failure seen")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

@@ -1520,15 +1520,9 @@ static void eap_sm_processNotify(struct eap_sm *sm, const struct wpabuf *req)
 
 static struct wpabuf * eap_sm_buildNotify(int id)
 {
-	struct wpabuf *resp;
-
 	wpa_printf(MSG_DEBUG, "EAP: Generating EAP-Response Notification");
-	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_NOTIFICATION, 0,
-			     EAP_CODE_RESPONSE, id);
-	if (resp == NULL)
-		return NULL;
-
-	return resp;
+	return eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_NOTIFICATION, 0,
+			EAP_CODE_RESPONSE, id);
 }
 
 

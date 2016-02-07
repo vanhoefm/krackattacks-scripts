@@ -384,6 +384,73 @@ def test_eap_proto(dev, apdev):
     finally:
         stop_radius_server(srv)
 
+def test_eap_proto_notification_errors(dev, apdev):
+    """EAP Notification errors"""
+    def eap_handler(ctx, req):
+        logger.info("eap_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('A'))
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('A'))
+
+        return None
+
+    srv = start_radius_server(eap_handler)
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        with alloc_fail(dev[0], 1, "eap_sm_processNotify"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="MD5", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with alloc_fail(dev[0], 1, "eap_msg_alloc;sm_EAP_NOTIFICATION_Enter"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="MD5", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+    finally:
+        stop_radius_server(srv)
+
 EAP_SAKE_VERSION = 2
 
 EAP_SAKE_SUBTYPE_CHALLENGE = 1

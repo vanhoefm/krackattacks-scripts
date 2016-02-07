@@ -1197,7 +1197,9 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
 	vhdr = (struct radius_attr_vendor *) pos;
 	vhdr->vendor_type = RADIUS_VENDOR_ATTR_MS_MPPE_SEND_KEY;
 	pos = (u8 *) (vhdr + 1);
-	salt = os_random() | 0x8000;
+	if (os_get_random((u8 *) &salt, sizeof(salt)) < 0)
+		return 0;
+	salt |= 0x8000;
 	WPA_PUT_BE16(pos, salt);
 	pos += 2;
 	encrypt_ms_key(send_key, send_key_len, salt, req_authenticator, secret,

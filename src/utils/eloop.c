@@ -165,7 +165,7 @@ int eloop_init(void)
 #ifdef CONFIG_ELOOP_EPOLL
 	eloop.epollfd = epoll_create1(0);
 	if (eloop.epollfd < 0) {
-		wpa_printf(MSG_ERROR, "%s: epoll_create1 failed. %s\n",
+		wpa_printf(MSG_ERROR, "%s: epoll_create1 failed. %s",
 			   __func__, strerror(errno));
 		return -1;
 	}
@@ -319,8 +319,8 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 		temp_events = os_realloc_array(eloop.epoll_events, next,
 					       sizeof(struct epoll_event));
 		if (temp_events == NULL) {
-			wpa_printf(MSG_ERROR, "%s: malloc for epoll failed. "
-				   "%s\n", __func__, strerror(errno));
+			wpa_printf(MSG_ERROR, "%s: malloc for epoll failed: %s",
+				   __func__, strerror(errno));
 			return -1;
 		}
 
@@ -404,8 +404,8 @@ static void eloop_sock_table_remove_sock(struct eloop_sock_table *table,
 	eloop_trace_sock_add_ref(table);
 #ifdef CONFIG_ELOOP_EPOLL
 	if (epoll_ctl(eloop.epollfd, EPOLL_CTL_DEL, sock, NULL) < 0) {
-		wpa_printf(MSG_ERROR, "%s: epoll_ctl(DEL) for fd=%d "
-			   "failed. %s\n", __func__, sock, strerror(errno));
+		wpa_printf(MSG_ERROR, "%s: epoll_ctl(DEL) for fd=%d failed: %s",
+			   __func__, sock, strerror(errno));
 		return;
 	}
 	os_memset(&eloop.fd_table[sock], 0, sizeof(struct eloop_sock));

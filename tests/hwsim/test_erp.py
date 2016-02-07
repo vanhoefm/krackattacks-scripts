@@ -578,3 +578,14 @@ def test_erp_local_errors(dev, apdev):
         wait_fail_trigger(dev[0], "GET_FAIL")
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
+
+    dev[0].request("ERP_FLUSH")
+    with alloc_fail(dev[0], 1, "eap_peer_erp_init"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="erp-ttls@example.com",
+                       anonymous_identity="anonymous@example.com",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                       erp="1", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=15)

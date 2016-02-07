@@ -1386,13 +1386,10 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 	return 0;
 }
 
-#endif /* PCSC_FUNCS */
-
 
 static int eap_sm_set_scard_pin(struct eap_sm *sm,
 				struct eap_peer_config *conf)
 {
-#ifdef PCSC_FUNCS
 	if (scard_set_pin(sm->scard_ctx, conf->pin)) {
 		/*
 		 * Make sure the same PIN is not tried again in order to avoid
@@ -1406,23 +1403,19 @@ static int eap_sm_set_scard_pin(struct eap_sm *sm,
 		return -1;
 	}
 	return 0;
-#else /* PCSC_FUNCS */
-	return -1;
-#endif /* PCSC_FUNCS */
 }
+
 
 static int eap_sm_get_scard_identity(struct eap_sm *sm,
 				     struct eap_peer_config *conf)
 {
-#ifdef PCSC_FUNCS
 	if (eap_sm_set_scard_pin(sm, conf))
 		return -1;
 
 	return eap_sm_imsi_identity(sm, conf);
-#else /* PCSC_FUNCS */
-	return -1;
-#endif /* PCSC_FUNCS */
 }
+
+#endif /* PCSC_FUNCS */
 
 
 /**
@@ -1466,23 +1459,27 @@ struct wpabuf * eap_sm_buildIdentity(struct eap_sm *sm, int id, int encrypted)
 				  identity, identity_len);
 	}
 
-	if (identity == NULL) {
-		wpa_printf(MSG_WARNING, "EAP: buildIdentity: identity "
-			   "configuration was not available");
-		if (config->pcsc) {
+	if (config->pcsc) {
+#ifdef PCSC_FUNCS
+		if (!identity) {
 			if (eap_sm_get_scard_identity(sm, config) < 0)
 				return NULL;
 			identity = config->identity;
 			identity_len = config->identity_len;
-			wpa_hexdump_ascii(MSG_DEBUG, "permanent identity from "
-					  "IMSI", identity, identity_len);
-		} else {
-			eap_sm_request_identity(sm);
+			wpa_hexdump_ascii(MSG_DEBUG,
+					  "permanent identity from IMSI",
+					  identity, identity_len);
+		} else if (eap_sm_set_scard_pin(sm, config) < 0) {
 			return NULL;
 		}
-	} else if (config->pcsc) {
-		if (eap_sm_set_scard_pin(sm, config) < 0)
-			return NULL;
+#else /* PCSC_FUNCS */
+		return NULL;
+#endif /* PCSC_FUNCS */
+	} else if (!identity) {
+		wpa_printf(MSG_WARNING,
+			"EAP: buildIdentity: identity configuration was not available");
+		eap_sm_request_identity(sm);
+		return NULL;
 	}
 
 	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_IDENTITY, identity_len,

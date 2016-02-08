@@ -453,6 +453,8 @@ no_wps:
 			wpabuf_dup(wpa_s->conf->ap_vendor_elements);
 	}
 
+	bss->pbss = ssid->pbss;
+
 	return 0;
 }
 

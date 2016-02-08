@@ -2345,9 +2345,11 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		}
 		params.bssid_hint = bss->bssid;
 		params.freq_hint = bss->freq;
+		params.pbss = bss_is_pbss(bss);
 	} else {
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;
+		params.pbss = ssid->pbss;
 	}
 
 	if (ssid->mode == WPAS_MODE_IBSS && ssid->bssid_set &&

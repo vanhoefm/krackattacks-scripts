@@ -148,6 +148,17 @@ static inline int bss_is_dmg(const struct wpa_bss *bss)
 	return bss->freq > 45000;
 }
 
+/**
+ * Test whether a BSS is a PBSS.
+ * This checks whether a BSS is a DMG-band PBSS. PBSS is used for P2P DMG
+ * network.
+ */
+static inline int bss_is_pbss(struct wpa_bss *bss)
+{
+	return bss_is_dmg(bss) &&
+		(bss->caps & IEEE80211_CAP_DMG_MASK) == IEEE80211_CAP_DMG_PBSS;
+}
+
 static inline void wpa_bss_update_level(struct wpa_bss *bss, int new_level)
 {
 	if (bss != NULL && new_level < 0)

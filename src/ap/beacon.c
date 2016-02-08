@@ -1217,6 +1217,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 		params->osen = 1;
 	}
 #endif /* CONFIG_HS20 */
+	params->pbss = hapd->conf->pbss;
 	return 0;
 }
 

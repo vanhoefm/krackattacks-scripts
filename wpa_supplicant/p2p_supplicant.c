@@ -1898,6 +1898,8 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 		 */
 		ssid->pairwise_cipher = WPA_CIPHER_GCMP;
 		ssid->group_cipher = WPA_CIPHER_GCMP;
+		/* P2P GO in 60 GHz is always a PCP (PBSS) */
+		ssid->pbss = 1;
 	}
 	if (os_strlen(params->passphrase) > 0) {
 		ssid->passphrase = os_strdup(params->passphrase);

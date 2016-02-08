@@ -360,6 +360,15 @@ struct wpa_ssid {
 	} mode;
 
 	/**
+	 * pbss - Whether to use PBSS. Relevant to DMG networks only.
+	 * Used together with mode configuration. When mode is AP, it
+	 * means to start a PCP instead of a regular AP. When mode is INFRA it
+	 * means connect to a PCP instead of AP. P2P_GO and P2P_GROUP_FORMATION
+	 * modes must use PBSS in DMG network.
+	 */
+	int pbss;
+
+	/**
 	 * disabled - Whether this network is currently disabled
 	 *
 	 * 0 = this network can be used (default).

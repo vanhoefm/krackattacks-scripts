@@ -860,6 +860,12 @@ struct wpa_driver_associate_params {
 	 * RRM (Radio Resource Measurements)
 	 */
 	int rrm_used;
+
+	/**
+	 * pbss - If set, connect to a PCP in a PBSS. Otherwise, connect to an
+	 * AP as usual. Valid for DMG network only.
+	 */
+	int pbss;
 };
 
 enum hide_ssid {
@@ -1087,6 +1093,12 @@ struct wpa_driver_ap_params {
 	 * reenable - Whether this is to re-enable beaconing
 	 */
 	int reenable;
+
+	/**
+	 * pbss - Whether to start a PCP (in PBSS) instead of an AP in
+	 * infrastructure BSS. Valid only for DMG network.
+	 */
+	int pbss;
 };
 
 struct wpa_driver_mesh_bss_params {

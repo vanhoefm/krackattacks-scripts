@@ -450,7 +450,7 @@ dfs_get_valid_channel(struct hostapd_iface *iface,
 		return NULL;
 
 	if (os_get_random((u8 *) &_rand, sizeof(_rand)) < 0)
-		_rand = os_random();
+		return NULL;
 	chan_idx = _rand % num_available_chandefs;
 	dfs_find_channel(iface, &chan, chan_idx, skip_radar);
 

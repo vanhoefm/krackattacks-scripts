@@ -235,20 +235,18 @@ unsigned int wps_pin_valid(unsigned int pin)
  * wps_generate_pin - Generate a random PIN
  * Returns: Eight digit PIN (i.e., including the checksum digit)
  */
-unsigned int wps_generate_pin(void)
+int wps_generate_pin(unsigned int *pin)
 {
 	unsigned int val;
 
 	/* Generate seven random digits for the PIN */
-	if (random_get_bytes((unsigned char *) &val, sizeof(val)) < 0) {
-		struct os_time now;
-		os_get_time(&now);
-		val = os_random() ^ now.sec ^ now.usec;
-	}
+	if (random_get_bytes((unsigned char *) &val, sizeof(val)) < 0)
+		return -1;
 	val %= 10000000;
 
 	/* Append checksum digit */
-	return val * 10 + wps_pin_checksum(val);
+	*pin = val * 10 + wps_pin_checksum(val);
+	return 0;
 }
 
 

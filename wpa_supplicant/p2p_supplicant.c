@@ -2578,7 +2578,13 @@ static void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 	params[sizeof(params) - 1] = '\0';
 
 	if (config_methods & WPS_CONFIG_DISPLAY) {
-		generated_pin = wps_generate_pin();
+		if (wps_generate_pin(&generated_pin) < 0) {
+			wpa_printf(MSG_DEBUG, "P2P: Could not generate PIN");
+			wpas_notify_p2p_provision_discovery(
+				wpa_s, peer, 0 /* response */,
+				P2P_PROV_DISC_INFO_UNAVAILABLE, 0, 0);
+			return;
+		}
 		wpas_prov_disc_local_display(wpa_s, peer, params,
 					     generated_pin);
 	} else if (config_methods & WPS_CONFIG_KEYPAD)
@@ -2623,7 +2629,13 @@ static void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 	if (config_methods & WPS_CONFIG_DISPLAY)
 		wpas_prov_disc_local_keypad(wpa_s, peer, params);
 	else if (config_methods & WPS_CONFIG_KEYPAD) {
-		generated_pin = wps_generate_pin();
+		if (wps_generate_pin(&generated_pin) < 0) {
+			wpa_printf(MSG_DEBUG, "P2P: Could not generate PIN");
+			wpas_notify_p2p_provision_discovery(
+				wpa_s, peer, 0 /* response */,
+				P2P_PROV_DISC_INFO_UNAVAILABLE, 0, 0);
+			return;
+		}
 		wpas_prov_disc_local_display(wpa_s, peer, params,
 					     generated_pin);
 	} else if (config_methods & WPS_CONFIG_PUSHBUTTON)
@@ -5366,7 +5378,8 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	if (pin)
 		os_strlcpy(wpa_s->p2p_pin, pin, sizeof(wpa_s->p2p_pin));
 	else if (wps_method == WPS_PIN_DISPLAY) {
-		ret = wps_generate_pin();
+		if (wps_generate_pin((unsigned int *) &ret) < 0)
+			return -1;
 		res = os_snprintf(wpa_s->p2p_pin, sizeof(wpa_s->p2p_pin),
 				  "%08d", ret);
 		if (os_snprintf_error(sizeof(wpa_s->p2p_pin), res))

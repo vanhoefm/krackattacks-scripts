@@ -1627,7 +1627,8 @@ const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout)
 	unsigned int pin;
 	struct wps_ap_pin_data data;
 
-	pin = wps_generate_pin();
+	if (wps_generate_pin(&pin) < 0)
+		return NULL;
 	os_snprintf(data.pin_txt, sizeof(data.pin_txt), "%08u", pin);
 	data.timeout = timeout;
 	hostapd_wps_for_each(hapd, wps_ap_pin_set, &data);

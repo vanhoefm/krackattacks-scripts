@@ -207,16 +207,17 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 		if (!sta->challenge) {
 			/* Generate a pseudo-random challenge */
 			u8 key[8];
-			struct os_time now;
-			int r;
+
 			sta->challenge = os_zalloc(WLAN_AUTH_CHALLENGE_LEN);
 			if (sta->challenge == NULL)
 				return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
-			os_get_time(&now);
-			r = os_random();
-			os_memcpy(key, &now.sec, 4);
-			os_memcpy(key + 4, &r, 4);
+			if (os_get_random(key, sizeof(key)) < 0) {
+				os_free(sta->challenge);
+				sta->challenge = NULL;
+				return WLAN_STATUS_UNSPECIFIED_FAILURE;
+			}
+
 			rc4_skip(key, sizeof(key), 0,
 				 sta->challenge, WLAN_AUTH_CHALLENGE_LEN);
 		}

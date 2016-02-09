@@ -178,8 +178,13 @@ static void eap_pwd_build_id_req(struct eap_sm *sm, struct eap_pwd_data *data,
 		return;
 	}
 
-	/* an lfsr is good enough to generate unpredictable tokens */
-	data->token = os_random();
+	if (os_get_random((u8 *) &data->token, sizeof(data->token)) < 0) {
+		wpabuf_free(data->outbuf);
+		data->outbuf = NULL;
+		eap_pwd_state(data, FAILURE);
+		return;
+	}
+
 	wpabuf_put_be16(data->outbuf, data->group_num);
 	wpabuf_put_u8(data->outbuf, EAP_PWD_DEFAULT_RAND_FUNC);
 	wpabuf_put_u8(data->outbuf, EAP_PWD_DEFAULT_PRF);

@@ -8,6 +8,11 @@
  */
 
 #include "includes.h"
+
+#include "common.h"
+#include "eloop.h"
+#include "driver.h"
+
 #include <sys/ioctl.h>
 #include <net/if.h>
 #ifdef __linux__
@@ -22,10 +27,6 @@
 #ifdef __sun__
 #include <sys/sockio.h>
 #endif /* __sun__ */
-
-#include "common.h"
-#include "eloop.h"
-#include "driver.h"
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)

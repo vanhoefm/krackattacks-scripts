@@ -9,13 +9,6 @@
  */
 
 #include "utils/includes.h"
-#include <net/if.h>
-#include <sys/ioctl.h>
-#ifdef CONFIG_FULL_DYNAMIC_VLAN
-#include <linux/sockios.h>
-#include <linux/if_vlan.h>
-#include <linux/if_bridge.h>
-#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 #include "utils/common.h"
 #include "hostapd.h"
@@ -24,6 +17,14 @@
 #include "wpa_auth.h"
 #include "vlan_init.h"
 #include "vlan_util.h"
+
+#include <net/if.h>
+#include <sys/ioctl.h>
+#ifdef CONFIG_FULL_DYNAMIC_VLAN
+#include <linux/sockios.h>
+#include <linux/if_vlan.h>
+#include <linux/if_bridge.h>
+#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN

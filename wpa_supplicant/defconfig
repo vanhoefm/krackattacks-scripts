@@ -270,6 +270,9 @@ CONFIG_BACKEND=file
 # Should we use epoll instead of select? Select is used by default.
 #CONFIG_ELOOP_EPOLL=y
 
+# Should we use kqueue instead of select? Select is used by default.
+#CONFIG_ELOOP_KQUEUE=y
+
 # Select layer 2 packet implementation
 # linux = Linux packet socket (default)
 # pcap = libpcap/libdnet/WinPcap

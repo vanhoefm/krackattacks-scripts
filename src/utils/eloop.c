@@ -239,7 +239,7 @@ static int eloop_sock_queue(int sock, eloop_event_type type)
 	default:
 		filter = 0;
 	}
-	EV_SET(&ke, sock, filter, EV_ADD, 0, 0, NULL);
+	EV_SET(&ke, sock, filter, EV_ADD, 0, 0, 0);
 	if (kevent(eloop.kqueuefd, &ke, 1, NULL, 0, NULL) == -1) {
 		wpa_printf(MSG_ERROR, "%s: kevent(ADD) for fd=%d failed: %s",
 			   __func__, sock, strerror(errno));
@@ -411,7 +411,7 @@ static void eloop_sock_table_remove_sock(struct eloop_sock_table *table,
 	os_memset(&eloop.fd_table[sock], 0, sizeof(struct eloop_sock));
 #endif /* CONFIG_ELOOP_EPOLL */
 #ifdef CONFIG_ELOOP_KQUEUE
-	EV_SET(&ke, sock, 0, EV_DELETE, 0, 0, NULL);
+	EV_SET(&ke, sock, 0, EV_DELETE, 0, 0, 0);
 	if (kevent(eloop.kqueuefd, &ke, 1, NULL, 0, NULL) < 0) {
 		wpa_printf(MSG_ERROR, "%s: kevent(DEL) for fd=%d failed: %s",
 			   __func__, sock, strerror(errno));
@@ -1333,7 +1333,7 @@ void eloop_wait_for_read_sock(int sock)
 	kfd = kqueue();
 	if (kfd == -1)
 		return;
-	EV_SET(&ke1, sock, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, NULL);
+	EV_SET(&ke1, sock, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, 0);
 	kevent(kfd, &ke1, 1, &ke2, 1, NULL);
 	close(kfd);
 #endif /* CONFIG_ELOOP_KQUEUE */

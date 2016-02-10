@@ -183,12 +183,12 @@ wpa_get_wowlan_triggers(const char *wowlan_triggers,
 
 	start = buf;
 	while (*start != '\0') {
-		while (isblank(*start))
+		while (isblank((unsigned char) *start))
 			start++;
 		if (*start == '\0')
 			break;
 		end = start;
-		while (!isblank(*end) && *end != '\0')
+		while (!isblank((unsigned char) *end) && *end != '\0')
 			end++;
 		last = *end == '\0';
 		*end = '\0';

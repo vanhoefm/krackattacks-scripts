@@ -1877,13 +1877,13 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 
 	/* cmd: <vendor id> <subcommand id> [<hex formatted data>] */
 	vendor_id = strtoul(cmd, &pos, 16);
-	if (!isblank(*pos))
+	if (!isblank((unsigned char) *pos))
 		return -EINVAL;
 
 	subcmd = strtoul(pos, &pos, 10);
 
 	if (*pos != '\0') {
-		if (!isblank(*pos++))
+		if (!isblank((unsigned char) *pos++))
 			return -EINVAL;
 		data_len = os_strlen(pos);
 	}

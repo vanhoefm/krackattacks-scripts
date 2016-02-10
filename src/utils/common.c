@@ -86,7 +86,7 @@ int hwaddr_masked_aton(const char *txt, u8 *addr, u8 *mask, u8 maskable)
 		return -1;
 
 	/* check for optional mask */
-	if (*r == '\0' || isspace(*r)) {
+	if (*r == '\0' || isspace((unsigned char) *r)) {
 		/* no mask specified, assume default */
 		os_memset(mask, 0xff, ETH_ALEN);
 	} else if (maskable && *r == '/') {

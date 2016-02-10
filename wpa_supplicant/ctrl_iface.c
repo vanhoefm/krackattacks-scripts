@@ -4712,7 +4712,7 @@ static int p2ps_ctrl_parse_cpt_priority(const char *pos, u8 *cpt)
 			return -1;
 		}
 
-		if (isblank(*last)) {
+		if (isblank((unsigned char) *last)) {
 			i++;
 			break;
 		}
@@ -6917,13 +6917,13 @@ static int wpa_supplicant_vendor_cmd(struct wpa_supplicant *wpa_s, char *cmd,
 
 	/* cmd: <vendor id> <subcommand id> [<hex formatted data>] */
 	vendor_id = strtoul(cmd, &pos, 16);
-	if (!isblank(*pos))
+	if (!isblank((unsigned char) *pos))
 		return -EINVAL;
 
 	subcmd = strtoul(pos, &pos, 10);
 
 	if (*pos != '\0') {
-		if (!isblank(*pos++))
+		if (!isblank((unsigned char) *pos++))
 			return -EINVAL;
 		data_len = os_strlen(pos);
 	}

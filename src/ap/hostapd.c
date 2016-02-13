@@ -683,8 +683,8 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
 			if (!sta->radius_das_match)
 				continue;
-			os_snprintf(buf, sizeof(buf), "%016lX",
-				    (long unsigned int) sta->acct_session_id);
+			os_snprintf(buf, sizeof(buf), "%016llX",
+				    (unsigned long long) sta->acct_session_id);
 			if (os_memcmp(attr->acct_session_id, buf, 16) != 0)
 				sta->radius_das_match = 0;
 			else
@@ -716,8 +716,8 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 				sta->radius_das_match = 0;
 				continue;
 			}
-			os_snprintf(buf, sizeof(buf), "%016lX",
-				    (long unsigned int)
+			os_snprintf(buf, sizeof(buf), "%016llX",
+				    (unsigned long long)
 				    sta->eapol_sm->acct_multi_session_id);
 			if (os_memcmp(attr->acct_multi_session_id, buf, 16) !=
 			    0)

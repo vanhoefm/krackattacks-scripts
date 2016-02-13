@@ -492,8 +492,8 @@ static int das_attr_match(struct rsn_pmksa_cache_entry *entry,
 
 		if (attr->acct_multi_session_id_len != 16)
 			return 0;
-		os_snprintf(buf, sizeof(buf), "%016lX",
-			    (long unsigned int) entry->acct_multi_session_id);
+		os_snprintf(buf, sizeof(buf), "%016llX",
+			    (unsigned long long) entry->acct_multi_session_id);
 		if (os_memcmp(attr->acct_multi_session_id, buf, 16) != 0)
 			return 0;
 		match++;

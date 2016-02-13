@@ -220,8 +220,8 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_INFO,
-		       "starting accounting session %016lX",
-		       (long unsigned int) sta->acct_session_id);
+		       "starting accounting session %016llX",
+		       (unsigned long long) sta->acct_session_id);
 
 	os_get_reltime(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
@@ -370,8 +370,8 @@ void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta)
 		eloop_cancel_timeout(accounting_interim_update, hapd, sta);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO,
-			       "stopped accounting session %016lX",
-			       (long unsigned int) sta->acct_session_id);
+			       "stopped accounting session %016llX",
+			       (unsigned long long) sta->acct_session_id);
 		sta->acct_session_started = 0;
 	}
 }
@@ -430,8 +430,8 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 	if (hapd->acct_session_id) {
 		char buf[20];
 
-		os_snprintf(buf, sizeof(buf), "%016lX",
-			    (long unsigned int) hapd->acct_session_id);
+		os_snprintf(buf, sizeof(buf), "%016llX",
+			    (unsigned long long) hapd->acct_session_id);
 		if (!radius_msg_add_attr(msg, RADIUS_ATTR_ACCT_SESSION_ID,
 					 (u8 *) buf, os_strlen(buf)))
 			wpa_printf(MSG_ERROR, "Could not add Acct-Session-Id");

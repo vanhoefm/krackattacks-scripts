@@ -405,6 +405,14 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 	char buf[128];
 
 	if (!hostapd_config_get_radius_attr(req_attr,
+					    RADIUS_ATTR_SERVICE_TYPE) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_SERVICE_TYPE,
+				       RADIUS_SERVICE_TYPE_FRAMED)) {
+		wpa_printf(MSG_ERROR, "Could not add Service-Type");
+		return -1;
+	}
+
+	if (!hostapd_config_get_radius_attr(req_attr,
 					    RADIUS_ATTR_NAS_PORT) &&
 	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT, sta->aid)) {
 		wpa_printf(MSG_ERROR, "Could not add NAS-Port");

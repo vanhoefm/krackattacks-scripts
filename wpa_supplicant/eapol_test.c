@@ -258,6 +258,13 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 		goto fail;
 	}
 
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_SERVICE_TYPE) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_SERVICE_TYPE,
+				       RADIUS_SERVICE_TYPE_FRAMED)) {
+		printf("Could not add Service-Type\n");
+		goto fail;
+	}
+
 	os_snprintf(buf, sizeof(buf), "%s", e->connect_info);
 	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_CONNECT_INFO) &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_CONNECT_INFO,

@@ -1420,6 +1420,8 @@ static int tls_match_altsubject_component(X509 *cert, int type,
 			found++;
 	}
 
+	sk_GENERAL_NAME_pop_free(ext, GENERAL_NAME_free);
+
 	return found;
 }
 
@@ -1532,9 +1534,11 @@ static int tls_match_suffix(X509 *cert, const char *match, int full)
 		    1) {
 			wpa_printf(MSG_DEBUG, "TLS: %s in dNSName found",
 				   full ? "Match" : "Suffix match");
+			sk_GENERAL_NAME_pop_free(ext, GENERAL_NAME_free);
 			return 1;
 		}
 	}
+	sk_GENERAL_NAME_pop_free(ext, GENERAL_NAME_free);
 
 	if (dns_name) {
 		wpa_printf(MSG_DEBUG, "TLS: None of the dNSName(s) matched");
@@ -1731,6 +1735,7 @@ static void openssl_tls_cert_event(struct tls_connection *conn,
 		pos += gen->d.ia5->length;
 		*pos = '\0';
 	}
+	sk_GENERAL_NAME_pop_free(ext, GENERAL_NAME_free);
 
 	for (alt = 0; alt < num_altsubject; alt++)
 		ev.peer_cert.altsubject[alt] = altsubject[alt];

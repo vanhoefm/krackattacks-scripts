@@ -6724,14 +6724,27 @@ static int wpas_ctrl_iface_wnm_sleep(struct wpa_supplicant *wpa_s, char *cmd)
 
 static int wpas_ctrl_iface_wnm_bss_query(struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int query_reason;
+	int query_reason, list = 0;
 
 	query_reason = atoi(cmd);
 
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: WNM_BSS_QUERY query_reason=%d",
-		   query_reason);
+	cmd = os_strchr(cmd, ' ');
+	if (cmd) {
+		cmd++;
+		if (os_strncmp(cmd, "list", 4) == 0) {
+			list = 1;
+		} else {
+			wpa_printf(MSG_DEBUG, "WNM Query: Invalid option %s",
+				   cmd);
+			return -1;
+		}
+	}
 
-	return wnm_send_bss_transition_mgmt_query(wpa_s, query_reason);
+	wpa_printf(MSG_DEBUG,
+		   "CTRL_IFACE: WNM_BSS_QUERY query_reason=%d%s",
+		   query_reason, list ? " candidate list" : "");
+
+	return wnm_send_bss_transition_mgmt_query(wpa_s, query_reason, list);
 }
 
 #endif /* CONFIG_WNM */

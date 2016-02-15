@@ -1165,16 +1165,17 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 
 int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
-				       u8 query_reason)
+				       u8 query_reason, int cand_list)
 {
-	u8 buf[1000], *pos;
+	u8 buf[2000], *pos;
 	struct ieee80211_mgmt *mgmt;
 	size_t len;
 	int ret;
 
 	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Query to "
-		   MACSTR " query_reason=%u",
-		   MAC2STR(wpa_s->bssid), query_reason);
+		   MACSTR " query_reason=%u%s",
+		   MAC2STR(wpa_s->bssid), query_reason,
+		   cand_list ? " candidate list" : "");
 
 	mgmt = (struct ieee80211_mgmt *) buf;
 	os_memset(&buf, 0, sizeof(buf));
@@ -1188,6 +1189,9 @@ int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
 	mgmt->u.action.u.bss_tm_query.dialog_token = 1;
 	mgmt->u.action.u.bss_tm_query.query_reason = query_reason;
 	pos = mgmt->u.action.u.bss_tm_query.variable;
+
+	if (cand_list)
+		pos += wnm_add_cand_list(wpa_s, pos, buf + sizeof(buf) - pos);
 
 	len = pos - (u8 *) &mgmt->u.action.category;
 

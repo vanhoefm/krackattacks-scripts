@@ -282,6 +282,10 @@ ifdef CONFIG_IEEE80211AC
 CFLAGS += -DCONFIG_IEEE80211AC
 endif
 
+ifdef CONFIG_MBO
+CFLAGS += -DCONFIG_MBO
+endif
+
 include ../src/drivers/drivers.mak
 OBJS += $(DRV_AP_OBJS)
 CFLAGS += $(DRV_AP_CFLAGS)

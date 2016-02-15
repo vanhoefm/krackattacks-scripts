@@ -387,6 +387,9 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 		buflen += 5 + 2 + sizeof(struct ieee80211_vht_capabilities) +
 			2 + sizeof(struct ieee80211_vht_operation);
 	}
+
+	buflen += hostapd_mbo_ie_len(hapd);
+
 	resp = os_zalloc(buflen);
 	if (resp == NULL)
 		return NULL;
@@ -517,6 +520,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_hs20_indication(hapd, pos);
 	pos = hostapd_eid_osen(hapd, pos);
 #endif /* CONFIG_HS20 */
+
+	pos = hostapd_eid_mbo(hapd, pos, (u8 *) resp + buflen - pos);
 
 	if (hapd->conf->vendor_elements) {
 		os_memcpy(pos, wpabuf_head(hapd->conf->vendor_elements),
@@ -980,6 +985,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_IEEE80211AC */
 
+	tail_len += hostapd_mbo_ie_len(hapd);
+
 	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to set beacon data");
@@ -1132,6 +1139,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	tailpos = hostapd_eid_hs20_indication(hapd, tailpos);
 	tailpos = hostapd_eid_osen(hapd, tailpos);
 #endif /* CONFIG_HS20 */
+
+	tailpos = hostapd_eid_mbo(hapd, tailpos, tail + tail_len - tailpos);
 
 	if (hapd->conf->vendor_elements) {
 		os_memcpy(tailpos, wpabuf_head(hapd->conf->vendor_elements),

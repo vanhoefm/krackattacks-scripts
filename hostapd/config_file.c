@@ -3300,6 +3300,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "subscr_remediation_method") == 0) {
 		bss->subscr_remediation_method = atoi(pos);
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+	} else if (os_strcmp(buf, "mbo") == 0) {
+		bss->mbo_enabled = atoi(pos);
+#endif /* CONFIG_MBO */
 #ifdef CONFIG_TESTING_OPTIONS
 #define PARSE_TEST_PROBABILITY(_val)				\
 	} else if (os_strcmp(buf, #_val) == 0) {		\

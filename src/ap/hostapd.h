@@ -281,6 +281,10 @@ struct hostapd_data {
 
 	struct l2_packet_data *l2_test;
 #endif /* CONFIG_TESTING_OPTIONS */
+
+#ifdef CONFIG_MBO
+	unsigned int mbo_assoc_disallow;
+#endif /* CONFIG_MBO */
 };
 
 

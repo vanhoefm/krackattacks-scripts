@@ -508,3 +508,45 @@ u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid)
 
 	return pos;
 }
+
+
+#ifdef CONFIG_MBO
+
+u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid, size_t len)
+{
+	u8 mbo[6], *mbo_pos = mbo;
+	u8 *pos = eid;
+
+	if (!hapd->conf->mbo_enabled)
+		return eid;
+
+	*mbo_pos++ = MBO_ATTR_ID_AP_CAPA_IND;
+	*mbo_pos++ = 1;
+	/* Not Cellular aware */
+	*mbo_pos++ = 0;
+
+	if (hapd->mbo_assoc_disallow) {
+		*mbo_pos++ = MBO_ATTR_ID_ASSOC_DISALLOW;
+		*mbo_pos++ = 1;
+		*mbo_pos++ = hapd->mbo_assoc_disallow;
+	}
+
+	pos += mbo_add_ie(pos, len, mbo, mbo_pos - mbo);
+
+	return pos;
+}
+
+
+u8 hostapd_mbo_ie_len(struct hostapd_data *hapd)
+{
+	if (!hapd->conf->mbo_enabled)
+		return 0;
+
+	/*
+	 * MBO IE header (6) + Capability Indication attribute (3) +
+	 * Association Disallowed attribute (3) = 12
+	 */
+	return 6 + 3 + (hapd->mbo_assoc_disallow ? 3 : 0);
+}
+
+#endif /* CONFIG_MBO */

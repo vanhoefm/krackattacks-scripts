@@ -1915,6 +1915,8 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		p = hostapd_eid_p2p_manage(hapd, p);
 #endif /* CONFIG_P2P_MANAGER */
 
+	p = hostapd_eid_mbo(hapd, p, buf + sizeof(buf) - p);
+
 	send_len += p - reply->u.assoc_resp.variable;
 
 	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0) {
@@ -2047,6 +2049,13 @@ static void handle_assoc(struct hostapd_data *hapd,
 		resp = WLAN_STATUS_ASSOC_DENIED_LISTEN_INT_TOO_LARGE;
 		goto fail;
 	}
+
+#ifdef CONFIG_MBO
+	if (hapd->conf->mbo_enabled && hapd->mbo_assoc_disallow) {
+		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+		goto fail;
+	}
+#endif /* CONFIG_MBO */
 
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
 	 * is used */

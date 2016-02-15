@@ -575,6 +575,10 @@ struct hostapd_bss_config {
 	char *no_auth_if_seen_on;
 
 	int pbss;
+
+#ifdef CONFIG_MBO
+	int mbo_enabled;
+#endif /* CONFIG_MBO */
 };
 
 

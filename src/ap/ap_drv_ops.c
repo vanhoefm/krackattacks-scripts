@@ -204,6 +204,25 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_HS20 */
 
+#ifdef CONFIG_MBO
+	if (hapd->conf->mbo_enabled) {
+		pos = hostapd_eid_mbo(hapd, buf, sizeof(buf));
+		if (pos != buf) {
+			if (wpabuf_resize(&beacon, pos - buf) != 0)
+				goto fail;
+			wpabuf_put_data(beacon, buf, pos - buf);
+
+			if (wpabuf_resize(&proberesp, pos - buf) != 0)
+				goto fail;
+			wpabuf_put_data(proberesp, buf, pos - buf);
+
+			if (wpabuf_resize(&assocresp, pos - buf) != 0)
+				goto fail;
+			wpabuf_put_data(assocresp, buf, pos - buf);
+		}
+	}
+#endif /* CONFIG_MBO */
+
 	if (hapd->conf->vendor_elements) {
 		size_t add = wpabuf_len(hapd->conf->vendor_elements);
 		if (wpabuf_resize(&beacon, add) == 0)

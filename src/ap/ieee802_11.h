@@ -109,4 +109,25 @@ static inline void sae_clear_retransmit_timer(struct hostapd_data *hapd,
 }
 #endif /* CONFIG_SAE */
 
+#ifdef CONFIG_MBO
+
+u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid, size_t len);
+
+u8 hostapd_mbo_ie_len(struct hostapd_data *hapd);
+
+#else /* CONFIG_MBO */
+
+static inline u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid,
+				   size_t len)
+{
+	return eid;
+}
+
+static inline u8 hostapd_mbo_ie_len(struct hostapd_data *hapd)
+{
+	return 0;
+}
+
+#endif /* CONFIG_MBO */
+
 #endif /* IEEE802_11_H */

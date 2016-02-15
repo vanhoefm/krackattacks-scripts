@@ -1320,6 +1320,25 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 	} else if (os_strcasecmp(cmd, "ext_eapol_frame_io") == 0) {
 		hapd->ext_eapol_frame_io = atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_MBO
+	} else if (os_strcasecmp(cmd, "mbo_assoc_disallow") == 0) {
+		int val;
+
+		if (!hapd->conf->mbo_enabled)
+			return -1;
+
+		val = atoi(value);
+		if (val < 0 || val > 1)
+			return -1;
+
+		hapd->mbo_assoc_disallow = val;
+		ieee802_11_update_beacons(hapd->iface);
+
+		/*
+		 * TODO: Need to configure drivers that do AP MLME offload with
+		 * disallowing station logic.
+		 */
+#endif /* CONFIG_MBO */
 	} else {
 		struct sta_info *sta;
 		struct vlan_description vlan_id;

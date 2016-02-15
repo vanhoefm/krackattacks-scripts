@@ -885,6 +885,8 @@ struct ieee80211_ampe_ie {
 #define WFD_OUI_TYPE 10
 #define HS20_IE_VENDOR_TYPE 0x506f9a10
 #define OSEN_IE_VENDOR_TYPE 0x506f9a12
+#define MBO_IE_VENDOR_TYPE 0x506f9a16
+#define MBO_OUI_TYPE 22
 
 #define WMM_OUI_TYPE 2
 #define WMM_OUI_SUBTYPE_INFORMATION_ELEMENT 0
@@ -1026,6 +1028,85 @@ enum wmm_ac {
 
 #define HS20_DEAUTH_REASON_CODE_BSS 0
 #define HS20_DEAUTH_REASON_CODE_ESS 1
+
+/* MBO v0.0_r19, 4.2: MBO Attributes */
+/* Table 4-5: MBO Attributes */
+enum mbo_attr_id {
+	MBO_ATTR_ID_AP_CAPA_IND = 1,
+	MBO_ATTR_ID_NON_PREF_CHAN_REPORT = 2,
+	MBO_ATTR_ID_CELL_DATA_CAPA = 3,
+	MBO_ATTR_ID_ASSOC_DISALLOW = 4,
+	MBO_ATTR_ID_CELL_DATA_PREF = 5,
+	MBO_ATTR_ID_TRANSITION_REASON = 6,
+	MBO_ATTR_ID_TRANSITION_REJECT_REASON = 7,
+	MBO_ATTR_ID_ASSOC_RETRY_DELAY = 8,
+};
+
+/* MBO v0.0_r19, 4.2.1: MBO AP Capability Indication Attribute */
+/* Table 4-7: MBO AP Capability Indication Field Values */
+#define MBO_AP_CAPA_CELL_AWARE BIT(6)
+
+/* MBO v0.0_r19, 4.2.2: Non-preferred Channel Report Attribute */
+/* Table 4-10: Reason Code Field Values */
+enum mbo_non_pref_chan_reason {
+	MBO_NON_PREF_CHAN_REASON_UNSPECIFIED = 0,
+	MBO_NON_PREF_CHAN_REASON_RSSI = 1,
+	MBO_NON_PREF_CHAN_REASON_EXT_INTERFERENCE = 2,
+	MBO_NON_PREF_CHAN_REASON_INT_INTERFERENCE = 3,
+};
+
+/* MBO v0.0_r19, 4.2.3: Cellular Data Capabilities Attribute */
+/* Table 4-13: Cellular Data Connectivity Field */
+enum mbo_cellular_capa {
+	MBO_CELL_CAPA_AVAILABLE = 1,
+	MBO_CELL_CAPA_NOT_AVAILABLE = 2,
+	MBO_CELL_CAPA_NOT_SUPPORTED = 3,
+};
+
+/* MBO v0.0_r19, 4.2.4: Association Disallowed Attribute */
+/* Table 4-15: Reason Code Field Values */
+enum mbo_assoc_disallow_reason {
+	MBO_ASSOC_DISALLOW_REASON_UNSPECIFIED = 1,
+	MBO_ASSOC_DISALLOW_REASON_MAX_STA = 2,
+	MBO_ASSOC_DISALLOW_REASON_AIR_INTERFERENCE = 3,
+	MBO_ASSOC_DISALLOW_REASON_AUTH_SERVER_OVERLOAD = 4,
+	MBO_ASSOC_DISALLOW_REASON_LOW_RSSI = 5,
+};
+
+/* MBO v0.0_r19, 4.2.5: Cellular Data Connection Preference Attribute */
+/* Table 4-17: Cellular Preference Field Values */
+enum mbo_cell_pref {
+	MBO_CELL_PREF_EXCLUDED = 0,
+	MBO_CELL_PREF_NO_USE = 1,
+	MBO_CELL_PREF_USE = 255
+};
+
+/* MBO v0.0_r19, 4.2.6: Transition Reason Code Attribute */
+/* Table 4-19: Transition Reason Code Field Values */
+enum mbo_transition_reason {
+	MBO_TRANSITION_REASON_UNSPECIFIED = 0,
+	MBO_TRANSITION_REASON_FRAME_LOSS = 1,
+	MBO_TRANSITION_REASON_DELAY = 2,
+	MBO_TRANSITION_REASON_BANDWIDTH = 3,
+	MBO_TRANSITION_REASON_LOAD_BALANCE = 4,
+	MBO_TRANSITION_REASON_RSSI = 5,
+	MBO_TRANSITION_REASON_RETRANSMISSIONS = 6,
+	MBO_TRANSITION_REASON_INTERFERENCE = 7,
+	MBO_TRANSITION_REASON_GRAY_ZONE = 8,
+	MBO_TRANSITION_REASON_PREMIUM_AP = 9,
+};
+
+/* MBO v0.0_r19, 4.2.7: Transition Rejection Reason Code Attribute */
+/* Table 4-21: Transition Rejection Reason Code Field Values */
+enum mbo_transition_reject_reason {
+	MBO_TRANSITION_REJECT_REASON_UNSPECIFIED = 0,
+	MBO_TRANSITION_REJECT_REASON_FRAME_LOSS = 1,
+	MBO_TRANSITION_REJECT_REASON_DELAY = 2,
+	MBO_TRANSITION_REJECT_REASON_QOS_CAPACITY = 3,
+	MBO_TRANSITION_REJECT_REASON_RSSI = 4,
+	MBO_TRANSITION_REJECT_REASON_INTERFERENCE = 5,
+	MBO_TRANSITION_REJECT_REASON_SERVICES = 6,
+};
 
 /* Wi-Fi Direct (P2P) */
 

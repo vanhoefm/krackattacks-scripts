@@ -2254,26 +2254,6 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	os_memset(wpa_s->p2p_ip_addr_info, 0, sizeof(wpa_s->p2p_ip_addr_info));
 #endif /* CONFIG_P2P */
 
-#ifdef CONFIG_HS20
-	if (is_hs20_network(wpa_s, ssid, bss)) {
-		struct wpabuf *hs20;
-		hs20 = wpabuf_alloc(20);
-		if (hs20) {
-			int pps_mo_id = hs20_get_pps_mo_id(wpa_s, ssid);
-			size_t len;
-
-			wpas_hs20_add_indication(hs20, pps_mo_id);
-			len = sizeof(wpa_ie) - wpa_ie_len;
-			if (wpabuf_len(hs20) <= len) {
-				os_memcpy(wpa_ie + wpa_ie_len,
-					  wpabuf_head(hs20), wpabuf_len(hs20));
-				wpa_ie_len += wpabuf_len(hs20);
-			}
-			wpabuf_free(hs20);
-		}
-	}
-#endif /* CONFIG_HS20 */
-
 #ifdef CONFIG_MBO
 	if (bss) {
 		mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
@@ -2313,6 +2293,27 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			os_memcpy(pos, ext_capab, ext_capab_len);
 		}
 	}
+
+#ifdef CONFIG_HS20
+	if (is_hs20_network(wpa_s, ssid, bss)) {
+		struct wpabuf *hs20;
+
+		hs20 = wpabuf_alloc(20);
+		if (hs20) {
+			int pps_mo_id = hs20_get_pps_mo_id(wpa_s, ssid);
+			size_t len;
+
+			wpas_hs20_add_indication(hs20, pps_mo_id);
+			len = sizeof(wpa_ie) - wpa_ie_len;
+			if (wpabuf_len(hs20) <= len) {
+				os_memcpy(wpa_ie + wpa_ie_len,
+					  wpabuf_head(hs20), wpabuf_len(hs20));
+				wpa_ie_len += wpabuf_len(hs20);
+			}
+			wpabuf_free(hs20);
+		}
+	}
+#endif /* CONFIG_HS20 */
 
 	if (wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ]) {
 		struct wpabuf *buf = wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ];

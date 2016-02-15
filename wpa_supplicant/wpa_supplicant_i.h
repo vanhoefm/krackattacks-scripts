@@ -1206,4 +1206,7 @@ void fst_wpa_supplicant_fill_iface_obj(struct wpa_supplicant *wpa_s,
 
 int wpas_sched_scan_plans_set(struct wpa_supplicant *wpa_s, const char *cmd);
 
+struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
+				   u16 num_modes, enum hostapd_hw_mode mode);
+
 #endif /* WPA_SUPPLICANT_I_H */

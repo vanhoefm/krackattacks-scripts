@@ -6252,3 +6252,17 @@ int wpas_vendor_elem_remove(struct wpa_supplicant *wpa_s, int frame,
 
 	return -1;
 }
+
+
+struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
+				   u16 num_modes, enum hostapd_hw_mode mode)
+{
+	u16 i;
+
+	for (i = 0; i < num_modes; i++) {
+		if (modes[i].mode == mode)
+			return &modes[i];
+	}
+
+	return NULL;
+}

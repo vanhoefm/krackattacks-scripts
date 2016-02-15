@@ -1322,21 +1322,6 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 }
 
 
-static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
-					  u16 num_modes,
-					  enum hostapd_hw_mode mode)
-{
-	u16 i;
-
-	for (i = 0; i < num_modes; i++) {
-		if (modes[i].mode == mode)
-			return &modes[i];
-	}
-
-	return NULL;
-}
-
-
 static void wpa_obss_scan_freqs_list(struct wpa_supplicant *wpa_s,
 				     struct wpa_driver_scan_params *params)
 {

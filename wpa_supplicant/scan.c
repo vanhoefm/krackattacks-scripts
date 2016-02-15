@@ -521,21 +521,6 @@ static int non_p2p_network_enabled(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_P2P */
 
 
-static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
-					  u16 num_modes,
-					  enum hostapd_hw_mode mode)
-{
-	u16 i;
-
-	for (i = 0; i < num_modes; i++) {
-		if (modes[i].mode == mode)
-			return &modes[i];
-	}
-
-	return NULL;
-}
-
-
 static void wpa_setband_scan_freqs_list(struct wpa_supplicant *wpa_s,
 					enum hostapd_hw_mode band,
 					struct wpa_driver_scan_params *params)

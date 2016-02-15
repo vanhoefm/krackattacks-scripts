@@ -546,6 +546,14 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s)
 			continue;
 		}
 
+		if (wpa_is_bss_tmp_disallowed(wpa_s, target->bssid)) {
+			wpa_printf(MSG_DEBUG,
+				   "MBO: Candidate BSS " MACSTR
+				   " retry delay is not over yet",
+				   MAC2STR(nei->bssid));
+			continue;
+		}
+
 		if (target->level < bss->level && target->level < -80) {
 			wpa_printf(MSG_DEBUG, "Candidate BSS " MACSTR
 				   " (pref %d) does not have sufficient signal level (%d)",
@@ -821,6 +829,9 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 {
 	unsigned int beacon_int;
 	u8 valid_int;
+#ifdef CONFIG_MBO
+	const u8 *vendor;
+#endif /* CONFIG_MBO */
 
 	if (end - pos < 5)
 		return;
@@ -880,6 +891,12 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
 	}
+
+#ifdef CONFIG_MBO
+	vendor = get_ie(pos, end - pos, WLAN_EID_VENDOR_SPECIFIC);
+	if (vendor)
+		wpas_mbo_ie_trans_req(wpa_s, vendor + 2, vendor[1]);
+#endif /* CONFIG_MBO */
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED) {
 		unsigned int valid_ms;

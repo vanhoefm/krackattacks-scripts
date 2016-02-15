@@ -270,6 +270,12 @@ extern "C" {
 /* BSS Transition Management Response frame received */
 #define BSS_TM_RESP "BSS-TM-RESP "
 
+/* MBO IE with cellular data connection preference received */
+#define MBO_CELL_PREFERENCE "MBO-CELL-PREFERENCE "
+
+/* BSS Transition Management Request received with MBO transition reason */
+#define MBO_TRANSITION_REASON "MBO-TRANSITION-REASON "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

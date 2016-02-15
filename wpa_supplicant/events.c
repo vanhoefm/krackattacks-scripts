@@ -1076,6 +1076,12 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 				assoc_disallow[2]);
 			continue;
 		}
+
+		if (wpa_is_bss_tmp_disallowed(wpa_s, bss->bssid)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"   skip - MBO retry delay has not passed yet");
+			continue;
+		}
 #endif /* CONFIG_MBO */
 
 		/* Matching configuration found */
@@ -2541,7 +2547,8 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 	    !disallowed_bssid(wpa_s, fast_reconnect->bssid) &&
 	    !disallowed_ssid(wpa_s, fast_reconnect->ssid,
 			     fast_reconnect->ssid_len) &&
-	    !wpas_temp_disabled(wpa_s, fast_reconnect_ssid)) {
+	    !wpas_temp_disabled(wpa_s, fast_reconnect_ssid) &&
+	    !wpa_is_bss_tmp_disallowed(wpa_s, fast_reconnect->bssid)) {
 #ifndef CONFIG_NO_SCAN_PROCESSING
 		wpa_dbg(wpa_s, MSG_DEBUG, "Try to reconnect to the same BSS");
 		if (wpa_supplicant_connect(wpa_s, fast_reconnect,

@@ -620,3 +620,99 @@ int wpas_mbo_supp_op_class_ie(struct wpa_supplicant *wpa_s, int freq, u8 *pos,
 	wpabuf_free(buf);
 	return res;
 }
+
+
+void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *mbo_ie,
+			   size_t len)
+{
+	const u8 *pos, *cell_pref = NULL, *reason = NULL;
+	u8 id, elen;
+	u16 disallowed_sec = 0;
+
+	if (len <= 4 || WPA_GET_BE24(mbo_ie) != OUI_WFA ||
+	    mbo_ie[3] != MBO_OUI_TYPE)
+		return;
+
+	pos = mbo_ie + 4;
+	len -= 4;
+
+	while (len >= 2) {
+		id = *pos++;
+		elen = *pos++;
+		len -= 2;
+
+		if (elen > len)
+			goto fail;
+
+		switch (id) {
+		case MBO_ATTR_ID_CELL_DATA_PREF:
+			if (elen != 1)
+				goto fail;
+
+			if (wpa_s->conf->mbo_cell_capa ==
+			    MBO_CELL_CAPA_AVAILABLE)
+				cell_pref = pos;
+			else
+				wpa_printf(MSG_DEBUG,
+					   "MBO: Station does not support Cellular data connection");
+			break;
+		case MBO_ATTR_ID_TRANSITION_REASON:
+			if (elen != 1)
+				goto fail;
+
+			reason = pos;
+			break;
+		case MBO_ATTR_ID_ASSOC_RETRY_DELAY:
+			if (elen != 2)
+				goto fail;
+
+			if (wpa_s->wnm_mode &
+			    WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED) {
+				wpa_printf(MSG_DEBUG,
+					   "MBO: Unexpected association retry delay, BSS is terminating");
+				goto fail;
+			} else if (wpa_s->wnm_mode &
+				   WNM_BSS_TM_REQ_DISASSOC_IMMINENT) {
+				disallowed_sec = WPA_GET_LE16(pos);
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "MBO: Association retry delay attribute not in disassoc imminent mode");
+			}
+
+			break;
+		case MBO_ATTR_ID_AP_CAPA_IND:
+		case MBO_ATTR_ID_NON_PREF_CHAN_REPORT:
+		case MBO_ATTR_ID_CELL_DATA_CAPA:
+		case MBO_ATTR_ID_ASSOC_DISALLOW:
+		case MBO_ATTR_ID_TRANSITION_REJECT_REASON:
+			wpa_printf(MSG_DEBUG,
+				   "MBO: Attribute %d should not be included in BTM Request frame",
+				   id);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "MBO: Unknown attribute id %u",
+				   id);
+			return;
+		}
+
+		pos += elen;
+		len -= elen;
+	}
+
+	if (cell_pref)
+		wpa_msg(wpa_s, MSG_INFO, MBO_CELL_PREFERENCE "preference=%u",
+			*cell_pref);
+
+	if (reason)
+		wpa_msg(wpa_s, MSG_INFO, MBO_TRANSITION_REASON "reason=%u",
+			*reason);
+
+	if (disallowed_sec && wpa_s->current_bss)
+		wpa_bss_tmp_disallow(wpa_s, wpa_s->current_bss->bssid,
+				     disallowed_sec);
+
+	return;
+fail:
+	wpa_printf(MSG_DEBUG, "MBO IE parsing failed (id=%u len=%u left=%zu)",
+		   id, elen, len);
+}

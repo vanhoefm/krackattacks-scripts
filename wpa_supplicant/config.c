@@ -2286,6 +2286,9 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->wowlan_triggers);
 	os_free(config->fst_group_id);
 	os_free(config->sched_scan_plans);
+#ifdef CONFIG_MBO
+	os_free(config->non_pref_chan);
+#endif /* CONFIG_MBO */
 
 	os_free(config);
 }
@@ -4265,6 +4268,9 @@ static const struct global_parse_data global_fields[] = {
 #endif /* CONFIG_FST */
 	{ INT_RANGE(wpa_rsc_relaxation, 0, 1), 0 },
 	{ STR(sched_scan_plans), CFG_CHANGED_SCHED_SCAN_PLANS },
+#ifdef CONFIG_MBO
+	{ STR(non_pref_chan), 0 },
+#endif /*CONFIG_MBO */
 };
 
 #undef FUNC

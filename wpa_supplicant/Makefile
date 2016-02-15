@@ -864,6 +864,10 @@ CFLAGS += -DCONFIG_IEEE80211AC
 endif
 endif
 
+ifdef CONFIG_MBO
+CFLAGS += -DCONFIG_MBO
+endif
+
 ifdef NEED_AP_MLME
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o

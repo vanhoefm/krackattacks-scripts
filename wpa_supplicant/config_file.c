@@ -1327,6 +1327,12 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->sched_scan_plans)
 		fprintf(f, "sched_scan_plans=%s\n", config->sched_scan_plans);
+
+#ifdef CONFIG_MBO
+	if (config->non_pref_chan)
+		fprintf(f, "non_pref_chan=%s\n", config->non_pref_chan);
+#endif /* CONFIG_MBO */
+
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

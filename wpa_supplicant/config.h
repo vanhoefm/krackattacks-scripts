@@ -1275,6 +1275,16 @@ struct wpa_config {
 	 * format: <interval:iterations> <interval2:iterations2> ... <interval>
 	 */
 	 char *sched_scan_plans;
+
+#ifdef CONFIG_MBO
+	/**
+	 * non_pref_chan - Non-preferred channels list, separated by spaces.
+	 *
+	 * format: op_class:chan:preference:reason<:detail>
+	 * Detail is optional.
+	 */
+	char *non_pref_chan;
+#endif /* CONFIG_MBO */
 };
 
 

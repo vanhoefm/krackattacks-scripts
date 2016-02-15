@@ -1535,20 +1535,7 @@ static int wpa_scan_get_max_rate(const struct wpa_scan_res *res)
  */
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
 {
-	const u8 *end, *pos;
-
-	pos = (const u8 *) (res + 1);
-	end = pos + res->ie_len;
-
-	while (end - pos > 1) {
-		if (2 + pos[1] > end - pos)
-			break;
-		if (pos[0] == ie)
-			return pos;
-		pos += 2 + pos[1];
-	}
-
-	return NULL;
+	return get_ie((const u8 *) (res + 1), res->ie_len, ie);
 }
 
 

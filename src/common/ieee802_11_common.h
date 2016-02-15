@@ -125,4 +125,7 @@ int mb_ies_info_by_ies(struct mb_ies_info *info, const u8 *ies_buf,
 struct wpabuf * mb_ies_by_info(struct mb_ies_info *info);
 
 const char * fc2str(u16 fc);
+
+const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
+
 #endif /* IEEE802_11_COMMON_H */

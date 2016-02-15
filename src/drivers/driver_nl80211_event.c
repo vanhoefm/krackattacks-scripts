@@ -335,9 +335,9 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		event.assoc_info.req_ies_len = nla_len(req_ie);
 
 		if (cmd == NL80211_CMD_ROAM) {
-			ssid = nl80211_get_ie(event.assoc_info.req_ies,
-					      event.assoc_info.req_ies_len,
-					      WLAN_EID_SSID);
+			ssid = get_ie(event.assoc_info.req_ies,
+				      event.assoc_info.req_ies_len,
+				      WLAN_EID_SSID);
 			if (ssid && ssid[1] > 0 && ssid[1] <= 32) {
 				drv->ssid_len = ssid[1];
 				os_memcpy(drv->ssid, ssid + 2, ssid[1]);

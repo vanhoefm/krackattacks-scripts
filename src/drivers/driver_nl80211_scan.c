@@ -15,6 +15,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "common/qca-vendor.h"
 #include "driver_nl80211.h"
 
@@ -522,28 +523,6 @@ int wpa_driver_nl80211_stop_sched_scan(void *priv)
 }
 
 
-const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie)
-{
-	const u8 *end, *pos;
-
-	if (ies == NULL)
-		return NULL;
-
-	pos = ies;
-	end = ies + ies_len;
-
-	while (end - pos > 1) {
-		if (2 + pos[1] > end - pos)
-			break;
-		if (pos[0] == ie)
-			return pos;
-		pos += 2 + pos[1];
-	}
-
-	return NULL;
-}
-
-
 static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
 				 const u8 *ie, size_t ie_len)
 {
@@ -553,7 +532,7 @@ static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
 	if (drv->filter_ssids == NULL)
 		return 0;
 
-	ssid = nl80211_get_ie(ie, ie_len, WLAN_EID_SSID);
+	ssid = get_ie(ie, ie_len, WLAN_EID_SSID);
 	if (ssid == NULL)
 		return 1;
 
@@ -714,9 +693,9 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 		if (os_memcmp(res->res[i]->bssid, r->bssid, ETH_ALEN) != 0)
 			continue;
 
-		s1 = nl80211_get_ie((u8 *) (res->res[i] + 1),
-				    res->res[i]->ie_len, WLAN_EID_SSID);
-		s2 = nl80211_get_ie((u8 *) (r + 1), r->ie_len, WLAN_EID_SSID);
+		s1 = get_ie((u8 *) (res->res[i] + 1),
+			    res->res[i]->ie_len, WLAN_EID_SSID);
+		s2 = get_ie((u8 *) (r + 1), r->ie_len, WLAN_EID_SSID);
 		if (s1 == NULL || s2 == NULL || s1[1] != s2[1] ||
 		    os_memcmp(s1, s2, 2 + s1[1]) != 0)
 			continue;

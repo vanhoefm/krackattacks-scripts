@@ -816,10 +816,10 @@ static int addr_in_list(const u8 *addr, const u8 *list, size_t num)
 }
 
 
-static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
-					    int i, struct wpa_bss *bss,
-					    struct wpa_ssid *group,
-					    int only_first_ssid)
+struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
+				     int i, struct wpa_bss *bss,
+				     struct wpa_ssid *group,
+				     int only_first_ssid)
 {
 	u8 wpa_ie_len, rsn_ie_len;
 	int wpa;

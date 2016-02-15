@@ -482,6 +482,21 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 
 	sme_auth_handle_rrm(wpa_s, bss);
 
+#ifdef CONFIG_MBO
+	if (wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
+		u8 *pos;
+		size_t len;
+		int res;
+
+		pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
+		len = sizeof(wpa_s->sme.assoc_req_ie) -
+			wpa_s->sme.assoc_req_ie_len;
+		res = wpas_mbo_ie(wpa_s, pos, len);
+		if (res >= 0)
+			wpa_s->sme.assoc_req_ie_len += res;
+	}
+#endif /* CONFIG_MBO */
+
 #ifdef CONFIG_SAE
 	if (!skip_auth && params.auth_alg == WPA_AUTH_ALG_SAE &&
 	    pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid, ssid, 0) == 0)

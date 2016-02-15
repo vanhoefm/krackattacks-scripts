@@ -1016,6 +1016,18 @@ struct wpa_supplicant {
 	const struct wpabuf *fst_ies;
 	struct wpabuf *received_mb_ies;
 #endif /* CONFIG_FST */
+
+#ifdef CONFIG_MBO
+	/* Multiband operation non-preferred channel */
+	struct wpa_mbo_non_pref_channel {
+		enum mbo_non_pref_chan_reason reason;
+		u8 oper_class;
+		u8 chan;
+		u8 reason_detail;
+		u8 preference;
+	} *non_pref_chan;
+	size_t non_pref_chan_num;
+#endif /* CONFIG_MBO */
 };
 
 
@@ -1127,6 +1139,12 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 					      const u8 *src,
 					      const u8 *frame, size_t len,
 					      int rssi);
+
+
+/* MBO functions */
+int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len);
+int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
+				  const char *non_pref_chan);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

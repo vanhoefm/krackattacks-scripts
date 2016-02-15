@@ -823,6 +823,7 @@ endif
 endif
 
 ifdef CONFIG_MBO
+OBJS += mbo.c
 L_CFLAGS += -DCONFIG_MBO
 endif
 

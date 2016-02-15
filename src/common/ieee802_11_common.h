@@ -128,4 +128,6 @@ const char * fc2str(u16 fc);
 
 const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
 
+size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len);
+
 #endif /* IEEE802_11_COMMON_H */

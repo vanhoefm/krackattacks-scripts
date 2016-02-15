@@ -549,6 +549,12 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->sched_scan_plans_num = 0;
 	os_free(wpa_s->sched_scan_plans);
 	wpa_s->sched_scan_plans = NULL;
+
+#ifdef CONFIG_MBO
+	wpa_s->non_pref_chan_num = 0;
+	os_free(wpa_s->non_pref_chan);
+	wpa_s->non_pref_chan = NULL;
+#endif /* CONFIG_MBO */
 }
 
 
@@ -1421,6 +1427,9 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 		if (wpa_s->conf->hs20)
 			*pos |= 0x40; /* Bit 46 - WNM-Notification */
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+		*pos |= 0x40; /* Bit 46 - WNM-Notification */
+#endif /* CONFIG_MBO */
 		break;
 	case 6: /* Bits 48-55 */
 		break;
@@ -2295,6 +2304,20 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		}
 	}
 #endif /* CONFIG_FST */
+
+#ifdef CONFIG_MBO
+	if (wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
+		u8 *pos;
+		size_t len;
+		int res;
+
+		pos = wpa_ie + wpa_ie_len;
+		len = sizeof(wpa_ie) - wpa_ie_len;
+		res = wpas_mbo_ie(wpa_s, pos, len);
+		if (res >= 0)
+			wpa_ie_len += res;
+	}
+#endif /* CONFIG_MBO */
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
@@ -4764,6 +4787,9 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_HS20
 	hs20_init(wpa_s);
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+	wpas_mbo_update_non_pref_chan(wpa_s, wpa_s->conf->non_pref_chan);
+#endif /* CONFIG_MBO */
 
 	return 0;
 }

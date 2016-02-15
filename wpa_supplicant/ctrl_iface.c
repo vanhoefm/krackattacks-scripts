@@ -490,6 +490,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	} else if (os_strcasecmp(cmd, "setband") == 0) {
 		ret = wpas_ctrl_set_band(wpa_s, value);
+#ifdef CONFIG_MBO
+	} else if (os_strcasecmp(cmd, "non_pref_chan") == 0) {
+		ret = wpas_mbo_update_non_pref_chan(wpa_s, value);
+#endif /* CONFIG_MBO */
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

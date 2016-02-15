@@ -34,12 +34,6 @@
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 /* Compatibility wrappers for older versions. */
 
-static int EVP_CIPHER_CTX_reset(EVP_CIPHER_CTX *ctx)
-{
-	return EVP_CIPHER_CTX_cleanup(ctx);
-}
-
-
 static HMAC_CTX * HMAC_CTX_new(void)
 {
 	HMAC_CTX *ctx;
@@ -209,7 +203,7 @@ int rc4_skip(const u8 *key, size_t keylen, size_t skip,
 
 out:
 	if (ctx)
-		EVP_CIPHER_CTX_reset(ctx);
+		EVP_CIPHER_CTX_free(ctx);
 	return res;
 #endif /* OPENSSL_NO_RC4 */
 }
@@ -304,7 +298,6 @@ void aes_encrypt_deinit(void *ctx)
 		wpa_printf(MSG_ERROR, "OpenSSL: Unexpected padding length %d "
 			   "in AES encrypt", len);
 	}
-	EVP_CIPHER_CTX_reset(c);
 	EVP_CIPHER_CTX_free(c);
 }
 
@@ -357,7 +350,6 @@ void aes_decrypt_deinit(void *ctx)
 		wpa_printf(MSG_ERROR, "OpenSSL: Unexpected padding length %d "
 			   "in AES decrypt", len);
 	}
-	EVP_CIPHER_CTX_reset(c);
 	EVP_CIPHER_CTX_free(c);
 }
 
@@ -416,7 +408,7 @@ int aes_128_cbc_encrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
 	    clen == (int) data_len &&
 	    EVP_EncryptFinal_ex(ctx, buf, &len) == 1 && len == 0)
 		res = 0;
-	EVP_CIPHER_CTX_reset(ctx);
+	EVP_CIPHER_CTX_free(ctx);
 
 	return res;
 }
@@ -443,7 +435,7 @@ int aes_128_cbc_decrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
 	    plen == (int) data_len &&
 	    EVP_DecryptFinal_ex(ctx, buf, &len) == 1 && len == 0)
 		res = 0;
-	EVP_CIPHER_CTX_reset(ctx);
+	EVP_CIPHER_CTX_free(ctx);
 
 	return res;
 
@@ -557,7 +549,7 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 	    !EVP_CIPHER_CTX_set_key_length(ctx->enc, key_len) ||
 	    !EVP_EncryptInit_ex(ctx->enc, NULL, NULL, key, iv)) {
 		if (ctx->enc)
-			EVP_CIPHER_CTX_reset(ctx->enc);
+			EVP_CIPHER_CTX_free(ctx->enc);
 		os_free(ctx);
 		return NULL;
 	}
@@ -567,9 +559,9 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 	    !EVP_DecryptInit_ex(ctx->dec, cipher, NULL, NULL, NULL) ||
 	    !EVP_CIPHER_CTX_set_key_length(ctx->dec, key_len) ||
 	    !EVP_DecryptInit_ex(ctx->dec, NULL, NULL, key, iv)) {
-		EVP_CIPHER_CTX_reset(ctx->enc);
+		EVP_CIPHER_CTX_free(ctx->enc);
 		if (ctx->dec)
-			EVP_CIPHER_CTX_reset(ctx->dec);
+			EVP_CIPHER_CTX_free(ctx->dec);
 		os_free(ctx);
 		return NULL;
 	}
@@ -601,8 +593,8 @@ int crypto_cipher_decrypt(struct crypto_cipher *ctx, const u8 *crypt,
 
 void crypto_cipher_deinit(struct crypto_cipher *ctx)
 {
-	EVP_CIPHER_CTX_reset(ctx->enc);
-	EVP_CIPHER_CTX_reset(ctx->dec);
+	EVP_CIPHER_CTX_free(ctx->enc);
+	EVP_CIPHER_CTX_free(ctx->dec);
 	os_free(ctx);
 }
 

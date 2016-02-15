@@ -456,6 +456,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_FST */
 
+	sme_auth_handle_rrm(wpa_s, bss);
+
 #ifdef CONFIG_MBO
 	mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
 	if (mbo) {
@@ -497,8 +499,6 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			wpa_s->sme.assoc_req_ie_len += wpabuf_len(buf);
 		}
 	}
-
-	sme_auth_handle_rrm(wpa_s, bss);
 
 #ifdef CONFIG_MBO
 	if (mbo) {

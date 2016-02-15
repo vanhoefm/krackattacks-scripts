@@ -941,6 +941,7 @@ void * tls_init(const struct tls_config *conf)
 			os_free(tls_global);
 			tls_global = NULL;
 		}
+		os_free(data);
 		return NULL;
 	}
 	data->ssl = ssl;

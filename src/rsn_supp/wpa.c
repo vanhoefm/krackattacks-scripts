@@ -249,7 +249,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 			    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 			    !wpa_key_mgmt_ft(sm->key_mgmt)) {
 				sa = pmksa_cache_add(sm->pmksa,
-						     sm->pmk, pmk_len,
+						     sm->pmk, pmk_len, NULL,
 						     NULL, 0,
 						     src_addr, sm->own_addr,
 						     sm->network_ctx,
@@ -1297,7 +1297,7 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	if (sm->proto == WPA_PROTO_RSN && wpa_key_mgmt_suite_b(sm->key_mgmt)) {
 		struct rsn_pmksa_cache_entry *sa;
 
-		sa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len,
+		sa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len, NULL,
 				     sm->ptk.kck, sm->ptk.kck_len,
 				     sm->bssid, sm->own_addr,
 				     sm->network_ctx, sm->key_mgmt);
@@ -2391,12 +2391,13 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
  * @pmk: The new PMK
  * @pmk_len: The length of the new PMK in bytes
+ * @pmkid: Calculated PMKID
  * @bssid: AA to add into PMKSA cache or %NULL to not cache the PMK
  *
  * Configure the PMK for WPA state machine.
  */
 void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
-		    const u8 *bssid)
+		    const u8 *pmkid, const u8 *bssid)
 {
 	if (sm == NULL)
 		return;
@@ -2411,7 +2412,7 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 #endif /* CONFIG_IEEE80211R */
 
 	if (bssid) {
-		pmksa_cache_add(sm->pmksa, pmk, pmk_len, NULL, 0,
+		pmksa_cache_add(sm->pmksa, pmk, pmk_len, pmkid, NULL, 0,
 				bssid, sm->own_addr,
 				sm->network_ctx, sm->key_mgmt);
 	}

@@ -247,6 +247,7 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  * @pmk: The new pairwise master key
  * @pmk_len: PMK length in bytes, usually PMK_LEN (32)
+ * @pmkid: Calculated PMKID
  * @kck: Key confirmation key or %NULL if not yet derived
  * @kck_len: KCK length in bytes
  * @aa: Authenticator address
@@ -263,7 +264,7 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
  */
 struct rsn_pmksa_cache_entry *
 pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
-		     const u8 *pmk, size_t pmk_len,
+		     const u8 *pmk, size_t pmk_len, const u8 *pmkid,
 		     const u8 *kck, size_t kck_len,
 		     const u8 *aa, const u8 *spa, int session_timeout,
 		     struct eapol_state_machine *eapol, int akmp)
@@ -282,7 +283,9 @@ pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
 		return NULL;
 	os_memcpy(entry->pmk, pmk, pmk_len);
 	entry->pmk_len = pmk_len;
-	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+	if (pmkid)
+		os_memcpy(entry->pmkid, pmkid, PMKID_LEN);
+	else if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
 		rsn_pmkid_suite_b_192(kck, kck_len, aa, spa, entry->pmkid);
 	else if (wpa_key_mgmt_suite_b(akmp))
 		rsn_pmkid_suite_b(kck, kck_len, aa, spa, entry->pmkid);

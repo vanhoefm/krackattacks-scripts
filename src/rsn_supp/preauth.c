@@ -93,7 +93,7 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol,
 			wpa_hexdump_key(MSG_DEBUG, "RSN: PMK from pre-auth",
 					pmk, pmk_len);
 			sm->pmk_len = pmk_len;
-			pmksa_cache_add(sm->pmksa, pmk, pmk_len,
+			pmksa_cache_add(sm->pmksa, pmk, pmk_len, NULL,
 					NULL, 0,
 					sm->preauth_bssid, sm->own_addr,
 					sm->network_ctx,

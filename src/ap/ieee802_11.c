@@ -665,7 +665,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
 			sta->sae->state = SAE_ACCEPTED;
 			wpa_auth_pmksa_add_sae(hapd->wpa_auth, sta->addr,
-					       sta->sae->pmk);
+					       sta->sae->pmk, sta->sae->pmkid);
 		}
 		break;
 	case SAE_ACCEPTED:

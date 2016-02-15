@@ -1293,7 +1293,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		int psk_set = 0;
 
 		if (ssid->psk_set) {
-			wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN, NULL);
+			wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN, NULL,
+				       NULL);
 			psk_set = 1;
 		}
 #ifndef CONFIG_NO_PBKDF2
@@ -1304,7 +1305,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				    4096, psk, PMK_LEN);
 		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 					psk, PMK_LEN);
-			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL, NULL);
 			psk_set = 1;
 			os_memset(psk, 0, sizeof(psk));
 		}
@@ -1342,7 +1343,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				wpa_hexdump_key(MSG_MSGDUMP, "PSK (from "
 						"external passphrase)",
 						psk, PMK_LEN);
-				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL,
+					       NULL);
 				psk_set = 1;
 				os_memset(psk, 0, sizeof(psk));
 			} else
@@ -1355,7 +1357,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 					ext_password_free(pw);
 					return -1;
 				}
-				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL,
+					       NULL);
 				psk_set = 1;
 				os_memset(psk, 0, sizeof(psk));
 			} else {

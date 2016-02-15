@@ -48,7 +48,7 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 	const u8 *pmkid);
 struct rsn_pmksa_cache_entry *
 pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
-		     const u8 *pmk, size_t pmk_len,
+		     const u8 *pmk, size_t pmk_len, const u8 *pmkid,
 		     const u8 *kck, size_t kck_len,
 		     const u8 *aa, const u8 *spa, int session_timeout,
 		     struct eapol_state_machine *eapol, int akmp);

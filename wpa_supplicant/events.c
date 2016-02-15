@@ -827,6 +827,9 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	const u8 *ie;
 	struct wpa_ssid *ssid;
 	int osen;
+#ifdef CONFIG_MBO
+	const u8 *assoc_disallow;
+#endif /* CONFIG_MBO */
 
 	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	wpa_ie_len = ie ? ie[1] : 0;
@@ -1064,6 +1067,16 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 				(unsigned int) diff.usec);
 			continue;
 		}
+#ifdef CONFIG_MBO
+		assoc_disallow = wpas_mbo_get_bss_attr(
+			bss, MBO_ATTR_ID_ASSOC_DISALLOW);
+		if (assoc_disallow && assoc_disallow[1] >= 1) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"   skip - MBO association disallowed (reason %u)",
+				assoc_disallow[2]);
+			continue;
+		}
+#endif /* CONFIG_MBO */
 
 		/* Matching configuration found */
 		return ssid;

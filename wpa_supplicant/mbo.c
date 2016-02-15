@@ -36,6 +36,24 @@ static int wpas_mbo_validate_non_pref_chan(u8 oper_class, u8 chan, u8 reason)
 }
 
 
+const u8 * wpas_mbo_get_bss_attr(struct wpa_bss *bss, enum mbo_attr_id attr)
+{
+	const u8 *mbo, *end;
+
+	if (!bss)
+		return NULL;
+
+	mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
+	if (!mbo)
+		return NULL;
+
+	end = mbo + 2 + mbo[1];
+	mbo += MBO_IE_HEADER;
+
+	return get_ie(mbo, end - mbo, attr);
+}
+
+
 static void wpas_mbo_non_pref_chan_attr_body(struct wpa_supplicant *wpa_s,
 					     struct wpabuf *mbo,
 					     u8 start, u8 end)

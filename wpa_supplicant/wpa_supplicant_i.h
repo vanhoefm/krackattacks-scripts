@@ -1027,6 +1027,7 @@ struct wpa_supplicant {
 		u8 preference;
 	} *non_pref_chan;
 	size_t non_pref_chan_num;
+	u8 mbo_wnm_token;
 #endif /* CONFIG_MBO */
 };
 

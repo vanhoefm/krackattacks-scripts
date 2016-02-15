@@ -68,15 +68,40 @@ static void wpas_mbo_non_pref_chan_attr(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpas_mbo_non_pref_chan_attrs(struct wpa_supplicant *wpa_s,
-					 struct wpabuf *mbo)
+static void wpas_mbo_non_pref_chan_subelem_hdr(struct wpabuf *mbo, u8 len)
+{
+	wpabuf_put_u8(mbo, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(mbo, len); /* Length */
+	wpabuf_put_be24(mbo, OUI_WFA);
+	wpabuf_put_u8(mbo, MBO_ATTR_ID_NON_PREF_CHAN_REPORT);
+}
 
+
+static void wpas_mbo_non_pref_chan_subelement(struct wpa_supplicant *wpa_s,
+					      struct wpabuf *mbo, u8 start,
+					      u8 end)
+{
+	size_t size = end - start + 8;
+
+	if (size + 2 > wpabuf_tailroom(mbo))
+		return;
+
+	wpas_mbo_non_pref_chan_subelem_hdr(mbo, size);
+	wpas_mbo_non_pref_chan_attr_body(wpa_s, mbo, start, end);
+}
+
+
+static void wpas_mbo_non_pref_chan_attrs(struct wpa_supplicant *wpa_s,
+					 struct wpabuf *mbo, int subelement)
 {
 	u8 i, start = 0;
 	struct wpa_mbo_non_pref_channel *start_pref;
 
-	if (!wpa_s->non_pref_chan || !wpa_s->non_pref_chan_num)
+	if (!wpa_s->non_pref_chan || !wpa_s->non_pref_chan_num) {
+		if (subelement)
+			wpas_mbo_non_pref_chan_subelem_hdr(mbo, 4);
 		return;
+	}
 	start_pref = &wpa_s->non_pref_chan[0];
 
 	for (i = 1; i <= wpa_s->non_pref_chan_num; i++) {
@@ -89,7 +114,12 @@ static void wpas_mbo_non_pref_chan_attrs(struct wpa_supplicant *wpa_s,
 		    non_pref->reason != start_pref->reason ||
 		    non_pref->reason_detail != start_pref->reason_detail ||
 		    non_pref->preference != start_pref->preference) {
-			wpas_mbo_non_pref_chan_attr(wpa_s, mbo, start, i);
+			if (subelement)
+				wpas_mbo_non_pref_chan_subelement(wpa_s, mbo,
+								  start, i);
+			else
+				wpas_mbo_non_pref_chan_attr(wpa_s, mbo, start,
+							    i);
 
 			if (!non_pref)
 				return;
@@ -116,7 +146,7 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 		return 0;
 
 	/* Add non-preferred channels attribute */
-	wpas_mbo_non_pref_chan_attrs(wpa_s, mbo);
+	wpas_mbo_non_pref_chan_attrs(wpa_s, mbo, 0);
 
 	res = mbo_add_ie(buf, len, wpabuf_head_u8(mbo), wpabuf_len(mbo));
 	if (!res)
@@ -124,6 +154,45 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 
 	wpabuf_free(mbo);
 	return res;
+}
+
+
+static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s)
+{
+	struct wpabuf *buf;
+	int res;
+
+	/*
+	 * Send WNM-Notification Request frame only in case of a change in
+	 * non-preferred channels list during association, if the AP supports
+	 * MBO.
+	 */
+	if (wpa_s->wpa_state != WPA_COMPLETED || !wpa_s->current_bss ||
+	    !wpa_bss_get_vendor_ie(wpa_s->current_bss, MBO_IE_VENDOR_TYPE))
+		return;
+
+	buf = wpabuf_alloc(512);
+	if (!buf)
+		return;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_WNM);
+	wpabuf_put_u8(buf, WNM_NOTIFICATION_REQ);
+	wpa_s->mbo_wnm_token++;
+	if (wpa_s->mbo_wnm_token == 0)
+		wpa_s->mbo_wnm_token++;
+	wpabuf_put_u8(buf, wpa_s->mbo_wnm_token);
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC); /* Type */
+
+	wpas_mbo_non_pref_chan_attrs(wpa_s, buf, 1);
+
+	res = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				  wpa_s->own_addr, wpa_s->bssid,
+				  wpabuf_head(buf), wpabuf_len(buf), 0);
+	if (res < 0)
+		wpa_printf(MSG_DEBUG,
+			   "Failed to send WNM-Notification Request frame with non-preferred channel list");
+
+	wpabuf_free(buf);
 }
 
 
@@ -252,6 +321,7 @@ update:
 	os_free(wpa_s->non_pref_chan);
 	wpa_s->non_pref_chan = chans;
 	wpa_s->non_pref_chan_num = num;
+	wpas_mbo_send_wnm_notification(wpa_s);
 
 	return 0;
 

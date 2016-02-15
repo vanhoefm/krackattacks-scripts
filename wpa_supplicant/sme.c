@@ -208,6 +208,9 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	u8 ext_capab[18];
 	int ext_capab_len;
 	int skip_auth;
+#ifdef CONFIG_MBO
+	const u8 *mbo;
+#endif /* CONFIG_MBO */
 
 	if (bss == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
@@ -453,6 +456,21 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_FST */
 
+#ifdef CONFIG_MBO
+	mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
+	if (mbo) {
+		int len;
+
+		len = wpas_mbo_supp_op_class_ie(
+			wpa_s, bss->freq,
+			wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len,
+			sizeof(wpa_s->sme.assoc_req_ie) -
+			wpa_s->sme.assoc_req_ie_len);
+		if (len > 0)
+			wpa_s->sme.assoc_req_ie_len += len;
+	}
+#endif /* CONFIG_MBO */
+
 	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
 					     sizeof(ext_capab));
 	if (ext_capab_len > 0) {
@@ -483,17 +501,15 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	sme_auth_handle_rrm(wpa_s, bss);
 
 #ifdef CONFIG_MBO
-	if (wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
-		u8 *pos;
-		size_t len;
-		int res;
+	if (mbo) {
+		int len;
 
-		pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
-		len = sizeof(wpa_s->sme.assoc_req_ie) -
-			wpa_s->sme.assoc_req_ie_len;
-		res = wpas_mbo_ie(wpa_s, pos, len);
-		if (res >= 0)
-			wpa_s->sme.assoc_req_ie_len += res;
+		len = wpas_mbo_ie(wpa_s, wpa_s->sme.assoc_req_ie +
+				  wpa_s->sme.assoc_req_ie_len,
+				  sizeof(wpa_s->sme.assoc_req_ie) -
+				  wpa_s->sme.assoc_req_ie_len);
+		if (len >= 0)
+			wpa_s->sme.assoc_req_ie_len += len;
 	}
 #endif /* CONFIG_MBO */
 

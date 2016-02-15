@@ -2053,6 +2053,9 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
        struct ieee80211_vht_capabilities vhtcaps;
        struct ieee80211_vht_capabilities vhtcaps_mask;
 #endif /* CONFIG_VHT_OVERRIDES */
+#ifdef CONFIG_MBO
+	const u8 *mbo = NULL;
+#endif /* CONFIG_MBO */
 
 	if (deinit) {
 		if (work->started) {
@@ -2257,6 +2260,22 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 #endif /* CONFIG_HS20 */
 
+#ifdef CONFIG_MBO
+	if (bss) {
+		mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
+		if (mbo) {
+			int len;
+
+			len = wpas_mbo_supp_op_class_ie(wpa_s, bss->freq,
+							wpa_ie + wpa_ie_len,
+							sizeof(wpa_ie) -
+							wpa_ie_len);
+			if (len > 0)
+				wpa_ie_len += len;
+		}
+	}
+#endif /* CONFIG_MBO */
+
 	/*
 	 * Workaround: Add Extended Capabilities element only if the AP
 	 * included this element in Beacon/Probe Response frames. Some older
@@ -2306,16 +2325,13 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 #endif /* CONFIG_FST */
 
 #ifdef CONFIG_MBO
-	if (wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
-		u8 *pos;
-		size_t len;
-		int res;
+	if (mbo) {
+		int len;
 
-		pos = wpa_ie + wpa_ie_len;
-		len = sizeof(wpa_ie) - wpa_ie_len;
-		res = wpas_mbo_ie(wpa_s, pos, len);
-		if (res >= 0)
-			wpa_ie_len += res;
+		len = wpas_mbo_ie(wpa_s, wpa_ie + wpa_ie_len,
+				  sizeof(wpa_ie) - wpa_ie_len);
+		if (len >= 0)
+			wpa_ie_len += len;
 	}
 #endif /* CONFIG_MBO */
 

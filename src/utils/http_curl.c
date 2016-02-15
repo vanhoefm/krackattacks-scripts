@@ -1216,6 +1216,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 		wpa_printf(MSG_INFO, "OpenSSL: Could not find current server certificate from OCSP response%s",
 			   (ctx->ocsp == MANDATORY_OCSP) ? "" :
 			   " (OCSP not required)");
+		OCSP_CERTID_free(id);
 		OCSP_BASICRESP_free(basic);
 		OCSP_RESPONSE_free(rsp);
 		if (ctx->ocsp == MANDATORY_OCSP)
@@ -1223,6 +1224,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 			ctx->last_err = "Could not find current server certificate from OCSP response";
 		return (ctx->ocsp == MANDATORY_OCSP) ? 0 : 1;
 	}
+	OCSP_CERTID_free(id);
 
 	if (!OCSP_check_validity(this_update, next_update, 5 * 60, -1)) {
 		tls_show_errors(__func__, "OpenSSL: OCSP status times invalid");

@@ -185,6 +185,7 @@ struct rfkill_data * rfkill_init(struct rfkill_config *cfg)
 	if (!found)
 		goto fail2;
 
+	free(phy);
 	eloop_register_read_sock(rfkill->fd, rfkill_receive, rfkill, NULL);
 
 	return rfkill;

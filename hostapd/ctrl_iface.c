@@ -884,6 +884,8 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 	int ret;
 	u8 nei_rep[1000];
 	u8 *nei_pos = nei_rep;
+	u8 mbo[10];
+	size_t mbo_len = 0;
 
 	if (hwaddr_aton(cmd, addr)) {
 		wpa_printf(MSG_DEBUG, "Invalid STA MAC address");
@@ -1049,10 +1051,66 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 	if (os_strstr(cmd, " disassoc_imminent=1"))
 		req_mode |= WNM_BSS_TM_REQ_DISASSOC_IMMINENT;
 
+#ifdef CONFIG_MBO
+	pos = os_strstr(cmd, "mbo=");
+	if (pos) {
+		unsigned int mbo_reason, cell_pref, reassoc_delay;
+		u8 *mbo_pos = mbo;
+
+		ret = sscanf(pos, "mbo=%u:%u:%u", &mbo_reason,
+			     &reassoc_delay, &cell_pref);
+		if (ret != 3) {
+			wpa_printf(MSG_DEBUG,
+				   "MBO requires three arguments: mbo=<reason>:<reassoc_delay>:<cell_pref>");
+			return -1;
+		}
+
+		if (mbo_reason > MBO_TRANSITION_REASON_PREMIUM_AP) {
+			wpa_printf(MSG_DEBUG,
+				   "Invalid MBO transition reason code %u",
+				   mbo_reason);
+			return -1;
+		}
+
+		/* Valid values for Cellular preference are: 0, 1, 255 */
+		if (cell_pref != 0 && cell_pref != 1 && cell_pref != 255) {
+			wpa_printf(MSG_DEBUG,
+				   "Invalid MBO cellular capability %u",
+				   cell_pref);
+			return -1;
+		}
+
+		if (reassoc_delay > 65535 ||
+		    (reassoc_delay &&
+		     !(req_mode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT))) {
+			wpa_printf(MSG_DEBUG,
+				   "MBO: Assoc retry delay is only valid in disassoc imminent mode");
+			return -1;
+		}
+
+		*mbo_pos++ = MBO_ATTR_ID_TRANSITION_REASON;
+		*mbo_pos++ = 1;
+		*mbo_pos++ = mbo_reason;
+		*mbo_pos++ = MBO_ATTR_ID_CELL_DATA_PREF;
+		*mbo_pos++ = 1;
+		*mbo_pos++ = cell_pref;
+
+		if (reassoc_delay) {
+			*mbo_pos++ = MBO_ATTR_ID_ASSOC_RETRY_DELAY;
+			*mbo_pos++ = 2;
+			WPA_PUT_LE16(mbo_pos, reassoc_delay);
+			mbo_pos += 2;
+		}
+
+		mbo_len = mbo_pos - mbo;
+	}
+#endif /* CONFIG_MBO */
+
 	ret = wnm_send_bss_tm_req(hapd, sta, req_mode, disassoc_timer,
 				  valid_int, bss_term_dur, url,
 				  nei_pos > nei_rep ? nei_rep : NULL,
-				  nei_pos - nei_rep);
+				  nei_pos - nei_rep, mbo_len ? mbo : NULL,
+				  mbo_len);
 	os_free(url);
 	return ret;
 }

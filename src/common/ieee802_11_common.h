@@ -9,6 +9,8 @@
 #ifndef IEEE802_11_COMMON_H
 #define IEEE802_11_COMMON_H
 
+#include "defs.h"
+
 #define MAX_NOF_MB_IES_SUPPORTED 5
 
 struct mb_ies_info {
@@ -125,6 +127,19 @@ int mb_ies_info_by_ies(struct mb_ies_info *info, const u8 *ies_buf,
 struct wpabuf * mb_ies_by_info(struct mb_ies_info *info);
 
 const char * fc2str(u16 fc);
+
+struct oper_class_map {
+	enum hostapd_hw_mode mode;
+	u8 op_class;
+	u8 min_chan;
+	u8 max_chan;
+	u8 inc;
+	enum { BW20, BW40PLUS, BW40MINUS, BW80, BW2160, BW160, BW80P80 } bw;
+	enum { P2P_SUPP, NO_P2P_SUPP } p2p;
+};
+
+extern const struct oper_class_map global_op_class[];
+extern size_t global_op_class_size;
 
 const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
 

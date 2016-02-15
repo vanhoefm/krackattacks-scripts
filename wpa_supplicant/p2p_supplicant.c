@@ -3324,45 +3324,6 @@ static int has_channel(struct wpa_global *global,
 }
 
 
-struct p2p_oper_class_map {
-	enum hostapd_hw_mode mode;
-	u8 op_class;
-	u8 min_chan;
-	u8 max_chan;
-	u8 inc;
-	enum { BW20, BW40PLUS, BW40MINUS, BW80, BW2160, BW160, BW80P80 } bw;
-};
-
-static const struct p2p_oper_class_map op_class[] = {
-	{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1, BW20 },
-#if 0 /* Do not enable HT40 on 2 GHz for now */
-	{ HOSTAPD_MODE_IEEE80211G, 83, 1, 9, 1, BW40PLUS },
-	{ HOSTAPD_MODE_IEEE80211G, 84, 5, 13, 1, BW40MINUS },
-#endif
-	{ HOSTAPD_MODE_IEEE80211A, 115, 36, 48, 4, BW20 },
-	{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4, BW20 },
-	{ HOSTAPD_MODE_IEEE80211A, 125, 149, 169, 4, BW20 },
-	{ HOSTAPD_MODE_IEEE80211A, 116, 36, 44, 8, BW40PLUS },
-	{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8, BW40MINUS },
-	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8, BW40PLUS },
-	{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8, BW40MINUS },
-
-	/*
-	 * IEEE P802.11ac/D7.0 Table E-4 actually talks about channel center
-	 * frequency index 42, 58, 106, 122, 138, 155 with channel spacing of
-	 * 80 MHz, but currently use the following definition for simplicity
-	 * (these center frequencies are not actual channels, which makes
-	 * has_channel() fail). wpas_p2p_verify_80mhz() should take care of
-	 * removing invalid channels.
-	 */
-	{ HOSTAPD_MODE_IEEE80211A, 128, 36, 161, 4, BW80 },
-	{ HOSTAPD_MODE_IEEE80211A, 130, 36, 161, 4, BW80P80 },
-	{ HOSTAPD_MODE_IEEE80211A, 129, 50, 114, 16, BW160 },
-	{ HOSTAPD_MODE_IEEE80211AD, 180, 1, 4, 1, BW2160 },
-	{ -1, 0, 0, 0, 0, BW20 }
-};
-
-
 static int wpas_p2p_get_center_80mhz(struct wpa_supplicant *wpa_s,
 				     struct hostapd_hw_modes *mode,
 				     u8 channel)
@@ -3539,10 +3500,13 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 
 	cla = cli_cla = 0;
 
-	for (op = 0; op_class[op].op_class; op++) {
-		const struct p2p_oper_class_map *o = &op_class[op];
+	for (op = 0; global_op_class[op].op_class; op++) {
+		const struct oper_class_map *o = &global_op_class[op];
 		u8 ch;
 		struct p2p_reg_class *reg = NULL, *cli_reg = NULL;
+
+		if (o->p2p == NO_P2P_SUPP)
+			continue;
 
 		mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, o->mode);
 		if (mode == NULL)
@@ -3598,9 +3562,12 @@ int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 	int op;
 	enum chan_allowed ret;
 
-	for (op = 0; op_class[op].op_class; op++) {
-		const struct p2p_oper_class_map *o = &op_class[op];
+	for (op = 0; global_op_class[op].op_class; op++) {
+		const struct oper_class_map *o = &global_op_class[op];
 		u8 ch;
+
+		if (o->p2p == NO_P2P_SUPP)
+			continue;
 
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
 			if (o->mode != HOSTAPD_MODE_IEEE80211A ||

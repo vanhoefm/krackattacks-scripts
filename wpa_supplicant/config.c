@@ -3561,6 +3561,10 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->cert_in_cb = DEFAULT_CERT_IN_CB;
 	config->wpa_rsc_relaxation = DEFAULT_WPA_RSC_RELAXATION;
 
+#ifdef CONFIG_MBO
+	config->mbo_cell_capa = DEFAULT_MBO_CELL_CAPA;
+#endif /* CONFIG_MBO */
+
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);
 	if (driver_param)
@@ -4270,6 +4274,8 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(sched_scan_plans), CFG_CHANGED_SCHED_SCAN_PLANS },
 #ifdef CONFIG_MBO
 	{ STR(non_pref_chan), 0 },
+	{ INT_RANGE(mbo_cell_capa, MBO_CELL_CAPA_AVAILABLE,
+		    MBO_CELL_CAPA_NOT_SUPPORTED), 0 },
 #endif /*CONFIG_MBO */
 };
 

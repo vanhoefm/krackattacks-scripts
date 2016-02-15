@@ -490,6 +490,12 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 		wpabuf_put_buf(extra_ie, wpa_s->fst_ies);
 #endif /* CONFIG_FST */
 
+#ifdef CONFIG_MBO
+	/* Send cellular capabilities for potential MBO STAs */
+	if (wpabuf_resize(&extra_ie, 9) == 0)
+		wpas_mbo_scan_ie(wpa_s, extra_ie);
+#endif /* CONFIG_MBO */
+
 	return extra_ie;
 }
 

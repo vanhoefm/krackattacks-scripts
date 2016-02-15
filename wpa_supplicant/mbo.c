@@ -136,8 +136,7 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 	struct wpabuf *mbo;
 	int res;
 
-	if (!wpa_s->non_pref_chan || !wpa_s->non_pref_chan_num ||
-	    len < MBO_IE_HEADER + 7)
+	if (len < MBO_IE_HEADER + 3 + 7)
 		return 0;
 
 	/* Leave room for the MBO IE header */
@@ -147,6 +146,14 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 
 	/* Add non-preferred channels attribute */
 	wpas_mbo_non_pref_chan_attrs(wpa_s, mbo, 0);
+
+	/*
+	 * Send cellular capabilities attribute even if AP does not advertise
+	 * cellular capabilities.
+	 */
+	wpabuf_put_u8(mbo, MBO_ATTR_ID_CELL_DATA_CAPA);
+	wpabuf_put_u8(mbo, 1);
+	wpabuf_put_u8(mbo, wpa_s->conf->mbo_cell_capa);
 
 	res = mbo_add_ie(buf, len, wpabuf_head_u8(mbo), wpabuf_len(mbo));
 	if (!res)
@@ -329,4 +336,17 @@ fail:
 	os_free(chans);
 	os_free(cmd);
 	return -1;
+}
+
+
+void wpas_mbo_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ie)
+{
+	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(ie, 7);
+	wpabuf_put_be24(ie, OUI_WFA);
+	wpabuf_put_u8(ie, MBO_OUI_TYPE);
+
+	wpabuf_put_u8(ie, MBO_ATTR_ID_CELL_DATA_CAPA);
+	wpabuf_put_u8(ie, 1);
+	wpabuf_put_u8(ie, wpa_s->conf->mbo_cell_capa);
 }

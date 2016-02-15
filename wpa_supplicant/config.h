@@ -40,6 +40,7 @@
 #define DEFAULT_CERT_IN_CB 1
 #define DEFAULT_P2P_GO_CTWINDOW 0
 #define DEFAULT_WPA_RSC_RELAXATION 1
+#define DEFAULT_MBO_CELL_CAPA MBO_CELL_CAPA_NOT_SUPPORTED
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1284,6 +1285,11 @@ struct wpa_config {
 	 * Detail is optional.
 	 */
 	char *non_pref_chan;
+
+	/**
+	 * mbo_cell_capa - Cellular capabilities for MBO
+	 */
+	enum mbo_cellular_capa mbo_cell_capa;
 #endif /* CONFIG_MBO */
 };
 

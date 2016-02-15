@@ -1146,6 +1146,7 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len);
 int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
 				  const char *non_pref_chan);
+void wpas_mbo_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ie);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

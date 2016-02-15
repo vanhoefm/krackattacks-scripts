@@ -620,6 +620,14 @@ static void wnm_send_bss_transition_mgmt_resp(
 		pos += ETH_ALEN;
 	}
 
+#ifdef CONFIG_MBO
+	if (status != WNM_BSS_TM_ACCEPT) {
+		pos += wpas_mbo_ie_bss_trans_reject(
+			wpa_s, pos, buf + sizeof(buf) - pos,
+			MBO_TRANSITION_REJECT_REASON_UNSPECIFIED);
+	}
+#endif /* CONFIG_MBO */
+
 	len = pos - (u8 *) &mgmt->u.action.category;
 
 	res = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,

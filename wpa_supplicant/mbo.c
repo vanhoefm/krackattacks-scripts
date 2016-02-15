@@ -716,3 +716,17 @@ fail:
 	wpa_printf(MSG_DEBUG, "MBO IE parsing failed (id=%u len=%u left=%zu)",
 		   id, elen, len);
 }
+
+
+size_t wpas_mbo_ie_bss_trans_reject(struct wpa_supplicant *wpa_s, u8 *pos,
+				    size_t len,
+				    enum mbo_transition_reject_reason reason)
+{
+	u8 reject_attr[3];
+
+	reject_attr[0] = MBO_ATTR_ID_TRANSITION_REJECT_REASON;
+	reject_attr[1] = 1;
+	reject_attr[2] = reason;
+
+	return mbo_add_ie(pos, len, reject_attr, sizeof(reject_attr));
+}

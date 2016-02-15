@@ -1164,6 +1164,9 @@ int wpas_mbo_supp_op_class_ie(struct wpa_supplicant *wpa_s, int freq, u8 *pos,
 			      size_t len);
 void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *ie,
 			   size_t len);
+size_t wpas_mbo_ie_bss_trans_reject(struct wpa_supplicant *wpa_s, u8 *pos,
+				    size_t len,
+				    enum mbo_transition_reject_reason reason);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

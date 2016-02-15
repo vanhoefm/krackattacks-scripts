@@ -182,7 +182,8 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 }
 
 
-static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s)
+static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s,
+					   const u8 *data, size_t len)
 {
 	struct wpabuf *buf;
 	int res;
@@ -196,7 +197,7 @@ static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s)
 	    !wpa_bss_get_vendor_ie(wpa_s->current_bss, MBO_IE_VENDOR_TYPE))
 		return;
 
-	buf = wpabuf_alloc(512);
+	buf = wpabuf_alloc(4 + len);
 	if (!buf)
 		return;
 
@@ -208,7 +209,7 @@ static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s)
 	wpabuf_put_u8(buf, wpa_s->mbo_wnm_token);
 	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC); /* Type */
 
-	wpas_mbo_non_pref_chan_attrs(wpa_s, buf, 1);
+	wpabuf_put_data(buf, data, len);
 
 	res = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
 				  wpa_s->own_addr, wpa_s->bssid,
@@ -217,6 +218,21 @@ static void wpas_mbo_send_wnm_notification(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG,
 			   "Failed to send WNM-Notification Request frame with non-preferred channel list");
 
+	wpabuf_free(buf);
+}
+
+
+static void wpas_mbo_non_pref_chan_changed(struct wpa_supplicant *wpa_s)
+{
+	struct wpabuf *buf;
+
+	buf = wpabuf_alloc(512);
+	if (!buf)
+		return;
+
+	wpas_mbo_non_pref_chan_attrs(wpa_s, buf, 1);
+	wpas_mbo_send_wnm_notification(wpa_s, wpabuf_head_u8(buf),
+				       wpabuf_len(buf));
 	wpabuf_free(buf);
 }
 
@@ -346,7 +362,7 @@ update:
 	os_free(wpa_s->non_pref_chan);
 	wpa_s->non_pref_chan = chans;
 	wpa_s->non_pref_chan_num = num;
-	wpas_mbo_send_wnm_notification(wpa_s);
+	wpas_mbo_non_pref_chan_changed(wpa_s);
 
 	return 0;
 
@@ -729,4 +745,27 @@ size_t wpas_mbo_ie_bss_trans_reject(struct wpa_supplicant *wpa_s, u8 *pos,
 	reject_attr[2] = reason;
 
 	return mbo_add_ie(pos, len, reject_attr, sizeof(reject_attr));
+}
+
+
+void wpas_mbo_update_cell_capa(struct wpa_supplicant *wpa_s, u8 mbo_cell_capa)
+{
+	u8 cell_capa[7];
+
+	if (wpa_s->conf->mbo_cell_capa == mbo_cell_capa) {
+		wpa_printf(MSG_DEBUG,
+			   "MBO: Cellular capability already set to %u",
+			   mbo_cell_capa);
+		return;
+	}
+
+	wpa_s->conf->mbo_cell_capa = mbo_cell_capa;
+
+	cell_capa[0] = WLAN_EID_VENDOR_SPECIFIC;
+	cell_capa[1] = 5; /* Length */
+	WPA_PUT_BE24(cell_capa + 2, OUI_WFA);
+	cell_capa[5] = MBO_ATTR_ID_CELL_DATA_CAPA;
+	cell_capa[6] = mbo_cell_capa;
+
+	wpas_mbo_send_wnm_notification(wpa_s, cell_capa, 7);
 }

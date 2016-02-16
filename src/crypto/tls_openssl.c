@@ -2538,7 +2538,6 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 				res = -1;
 				break;
 			}
-			X509_free(cert);
 		}
 		sk_X509_pop_free(certs, X509_free);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10002000L */

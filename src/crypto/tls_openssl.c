@@ -2488,13 +2488,15 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 				tls_show_errors(MSG_DEBUG, __func__,
 						"Failed to add additional certificate");
 				res = -1;
+				X509_free(cert);
 				break;
 			}
+			X509_free(cert);
 		}
 		if (!res) {
 			/* Try to continue anyway */
 		}
-		sk_X509_free(certs);
+		sk_X509_pop_free(certs, X509_free);
 #ifndef OPENSSL_IS_BORINGSSL
 		if (ssl)
 			res = SSL_build_cert_chain(
@@ -2532,11 +2534,13 @@ static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 			 */
 			if (SSL_CTX_add_extra_chain_cert(data->ssl, cert) != 1)
 			{
+				X509_free(cert);
 				res = -1;
 				break;
 			}
+			X509_free(cert);
 		}
-		sk_X509_free(certs);
+		sk_X509_pop_free(certs, X509_free);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10002000L */
 	}
 

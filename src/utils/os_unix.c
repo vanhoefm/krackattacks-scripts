@@ -372,6 +372,7 @@ void os_program_deinit(void)
 	if (total)
 		wpa_printf(MSG_INFO, "MEMLEAK: total %lu bytes",
 			   (unsigned long) total);
+	wpa_trace_deinit();
 #endif /* WPA_TRACE */
 }
 

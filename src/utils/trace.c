@@ -366,4 +366,11 @@ void wpa_trace_check_ref(const void *addr)
 	}
 }
 
+
+void wpa_trace_deinit(void)
+{
+	free(syms);
+	syms = NULL;
+}
+
 #endif /* WPA_TRACE */

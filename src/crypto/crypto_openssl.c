@@ -47,6 +47,7 @@ static HMAC_CTX * HMAC_CTX_new(void)
 
 static void HMAC_CTX_free(HMAC_CTX *ctx)
 {
+	HMAC_CTX_cleanup(ctx);
 	bin_clear_free(ctx, sizeof(*ctx));
 }
 

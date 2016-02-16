@@ -251,19 +251,20 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_NO_RC4 */
 
 
-static void send_auth_reply(struct hostapd_data *hapd,
-			    const u8 *dst, const u8 *bssid,
-			    u16 auth_alg, u16 auth_transaction, u16 resp,
-			    const u8 *ies, size_t ies_len)
+static int send_auth_reply(struct hostapd_data *hapd,
+			   const u8 *dst, const u8 *bssid,
+			   u16 auth_alg, u16 auth_transaction, u16 resp,
+			   const u8 *ies, size_t ies_len)
 {
 	struct ieee80211_mgmt *reply;
 	u8 *buf;
 	size_t rlen;
+	int reply_res = WLAN_STATUS_UNSPECIFIED_FAILURE;
 
 	rlen = IEEE80211_HDRLEN + sizeof(reply->u.auth) + ies_len;
 	buf = os_zalloc(rlen);
 	if (buf == NULL)
-		return;
+		return -1;
 
 	reply = (struct ieee80211_mgmt *) buf;
 	reply->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
@@ -284,9 +285,13 @@ static void send_auth_reply(struct hostapd_data *hapd,
 		   MAC2STR(dst), auth_alg, auth_transaction,
 		   resp, (unsigned long) ies_len);
 	if (hostapd_drv_send_mlme(hapd, reply, rlen, 0) < 0)
-		wpa_printf(MSG_INFO, "send_auth_reply: send");
+		wpa_printf(MSG_INFO, "send_auth_reply: send failed");
+	else
+		reply_res = WLAN_STATUS_SUCCESS;
 
 	os_free(buf);
+
+	return reply_res;
 }
 
 
@@ -297,15 +302,23 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta;
+	int reply_res;
 
-	send_auth_reply(hapd, dst, bssid, WLAN_AUTH_FT, auth_transaction,
-			status, ies, ies_len);
-
-	if (status != WLAN_STATUS_SUCCESS)
-		return;
+	reply_res = send_auth_reply(hapd, dst, bssid, WLAN_AUTH_FT,
+				    auth_transaction, status, ies, ies_len);
 
 	sta = ap_get_sta(hapd, dst);
 	if (sta == NULL)
+		return;
+
+	if (sta->added_unassoc && (reply_res != WLAN_STATUS_SUCCESS ||
+				   status != WLAN_STATUS_SUCCESS)) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+		return;
+	}
+
+	if (status != WLAN_STATUS_SUCCESS)
 		return;
 
 	hostapd_logger(hapd, dst, HOSTAPD_MODULE_IEEE80211,
@@ -370,18 +383,19 @@ static int auth_sae_send_commit(struct hostapd_data *hapd,
 				const u8 *bssid, int update)
 {
 	struct wpabuf *data;
+	int reply_res;
 
 	data = auth_build_sae_commit(hapd, sta, update);
 	if (data == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
-	send_auth_reply(hapd, sta->addr, bssid,
-			WLAN_AUTH_SAE, 1, WLAN_STATUS_SUCCESS,
-			wpabuf_head(data), wpabuf_len(data));
+	reply_res = send_auth_reply(hapd, sta->addr, bssid, WLAN_AUTH_SAE, 1,
+				    WLAN_STATUS_SUCCESS, wpabuf_head(data),
+				    wpabuf_len(data));
 
 	wpabuf_free(data);
 
-	return WLAN_STATUS_SUCCESS;
+	return reply_res;
 }
 
 
@@ -390,18 +404,19 @@ static int auth_sae_send_confirm(struct hostapd_data *hapd,
 				 const u8 *bssid)
 {
 	struct wpabuf *data;
+	int reply_res;
 
 	data = auth_build_sae_confirm(hapd, sta);
 	if (data == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
-	send_auth_reply(hapd, sta->addr, bssid,
-			WLAN_AUTH_SAE, 2, WLAN_STATUS_SUCCESS,
-			wpabuf_head(data), wpabuf_len(data));
+	reply_res = send_auth_reply(hapd, sta->addr, bssid, WLAN_AUTH_SAE, 2,
+				    WLAN_STATUS_SUCCESS, wpabuf_head(data),
+				    wpabuf_len(data));
 
 	wpabuf_free(data);
 
-	return WLAN_STATUS_SUCCESS;
+	return reply_res;
 }
 
 
@@ -699,15 +714,20 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    const struct ieee80211_mgmt *mgmt, size_t len,
 			    u16 auth_transaction, u16 status_code)
 {
-	u16 resp = WLAN_STATUS_SUCCESS;
+	int resp = WLAN_STATUS_SUCCESS;
 	struct wpabuf *data = NULL;
 
 	if (!sta->sae) {
-		if (auth_transaction != 1 || status_code != WLAN_STATUS_SUCCESS)
-			return;
+		if (auth_transaction != 1 ||
+		    status_code != WLAN_STATUS_SUCCESS) {
+			resp = -1;
+			goto remove_sta;
+		}
 		sta->sae = os_zalloc(sizeof(*sta->sae));
-		if (sta->sae == NULL)
-			return;
+		if (!sta->sae) {
+			resp = -1;
+			goto remove_sta;
+		}
 		sta->sae->state = SAE_NOTHING;
 		sta->sae->sync = 0;
 	}
@@ -747,7 +767,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			if (sta->sae->tmp->anti_clogging_token == NULL) {
 				wpa_printf(MSG_ERROR,
 					   "SAE: Failed to alloc for anti-clogging token");
-				return;
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				goto remove_sta;
 			}
 
 			/*
@@ -757,10 +778,11 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			 * Authentication frame, and the commit-scalar and
 			 * COMMIT-ELEMENT previously sent.
 			 */
-			if (auth_sae_send_commit(hapd, sta, mgmt->bssid, 0)) {
+			resp = auth_sae_send_commit(hapd, sta, mgmt->bssid, 0);
+			if (resp != WLAN_STATUS_SUCCESS) {
 				wpa_printf(MSG_ERROR,
 					   "SAE: Failed to send commit message");
-				return;
+				goto remove_sta;
 			}
 			sta->sae->state = SAE_COMMITTED;
 			sta->sae->sync = 0;
@@ -769,7 +791,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 
 		if (status_code != WLAN_STATUS_SUCCESS)
-			return;
+			goto remove_sta;
 
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
@@ -779,14 +801,15 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_printf(MSG_DEBUG,
 				   "SAE: Drop commit message from " MACSTR " due to reflection attack",
 				   MAC2STR(sta->addr));
-			return;
+			goto remove_sta;
 		}
 		if (token && check_sae_token(hapd, sta->addr, token, token_len)
 		    < 0) {
 			wpa_printf(MSG_DEBUG, "SAE: Drop commit message with "
 				   "incorrect token from " MACSTR,
 				   MAC2STR(sta->addr));
-			return;
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto remove_sta;
 		}
 
 		if (resp != WLAN_STATUS_SUCCESS)
@@ -811,7 +834,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			       "SAE authentication (RX confirm, status=%u)",
 			       status_code);
 		if (status_code != WLAN_STATUS_SUCCESS)
-			return;
+			goto remove_sta;
 		if (sta->sae->state >= SAE_CONFIRMED ||
 		    !(hapd->conf->mesh & MESH_ENABLED)) {
 			if (sae_check_confirm(sta->sae, mgmt->u.auth.variable,
@@ -828,7 +851,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			       "unexpected SAE authentication transaction %u (status=%u)",
 			       auth_transaction, status_code);
 		if (status_code != WLAN_STATUS_SUCCESS)
-			return;
+			goto remove_sta;
 		resp = WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION;
 	}
 
@@ -838,6 +861,13 @@ reply:
 				auth_transaction, resp,
 				data ? wpabuf_head(data) : (u8 *) "",
 				data ? wpabuf_len(data) : 0);
+	}
+
+remove_sta:
+	if (sta->added_unassoc && (resp != WLAN_STATUS_SUCCESS ||
+				   status_code != WLAN_STATUS_SUCCESS)) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
 	}
 	wpabuf_free(data);
 }
@@ -883,7 +913,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	u16 auth_alg, auth_transaction, status_code;
 	u16 resp = WLAN_STATUS_SUCCESS;
 	struct sta_info *sta = NULL;
-	int res;
+	int res, reply_res;
 	u16 fc;
 	const u8 *challenge = NULL;
 	u32 session_timeout, acct_interim_interval;
@@ -1148,6 +1178,46 @@ static void handle_auth(struct hostapd_data *hapd,
 	else
 		ap_sta_no_session_timeout(hapd, sta);
 
+	/*
+	 * If the driver supports full AP client state, add a station to the
+	 * driver before sending authentication reply to make sure the driver
+	 * has resources, and not to go through the entire authentication and
+	 * association handshake, and fail it at the end.
+	 *
+	 * If this is not the first transaction, in a multi-step authentication
+	 * algorithm, the station already exists in the driver
+	 * (sta->added_unassoc = 1) so skip it.
+	 *
+	 * In mesh mode, the station was already added to the driver when the
+	 * NEW_PEER_CANDIDATE event is received.
+	 */
+	if (FULL_AP_CLIENT_STATE_SUPP(hapd->iface->drv_flags) &&
+	    !(hapd->conf->mesh & MESH_ENABLED) &&
+	    !(sta->added_unassoc)) {
+		/*
+		 * If a station that is already associated to the AP, is trying
+		 * to authenticate again, remove the STA entry, in order to make
+		 * sure the STA PS state gets cleared and configuration gets
+		 * updated. To handle this, station's added_unassoc flag is
+		 * cleared once the station has completed association.
+		 */
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_AUTH |
+				WLAN_STA_AUTHORIZED);
+
+		if (hostapd_sta_add(hapd, sta->addr, 0, 0, 0, 0, 0,
+				    NULL, NULL, sta->flags, 0, 0, 0)) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_NOTICE,
+				       "Could not add STA to kernel driver");
+			resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+			goto fail;
+		}
+
+		sta->added_unassoc = 1;
+	}
+
 	switch (auth_alg) {
 	case WLAN_AUTH_OPEN:
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -1221,8 +1291,15 @@ static void handle_auth(struct hostapd_data *hapd,
 	os_free(radius_cui);
 	hostapd_free_psk_list(psk);
 
-	send_auth_reply(hapd, mgmt->sa, mgmt->bssid, auth_alg,
-			auth_transaction + 1, resp, resp_ies, resp_ies_len);
+	reply_res = send_auth_reply(hapd, mgmt->sa, mgmt->bssid, auth_alg,
+				    auth_transaction + 1, resp, resp_ies,
+				    resp_ies_len);
+
+	if (sta && sta->added_unassoc && (resp != WLAN_STATUS_SUCCESS ||
+					  reply_res != WLAN_STATUS_SUCCESS)) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
 }
 
 
@@ -1662,9 +1739,9 @@ static void send_deauth(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
-static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
-			    u16 status_code, int reassoc, const u8 *ies,
-			    size_t ies_len)
+static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
+			   u16 status_code, int reassoc, const u8 *ies,
+			   size_t ies_len)
 {
 	int send_len;
 	u8 buf[sizeof(struct ieee80211_mgmt) + 1024];
@@ -1784,9 +1861,13 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	send_len += p - reply->u.assoc_resp.variable;
 
-	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0)
+	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0) {
 		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",
 			   strerror(errno));
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	return WLAN_STATUS_SUCCESS;
 }
 
 
@@ -1795,7 +1876,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 			 int reassoc)
 {
 	u16 capab_info, listen_interval, seq_ctrl, fc;
-	u16 resp = WLAN_STATUS_SUCCESS;
+	u16 resp = WLAN_STATUS_SUCCESS, reply_res;
 	const u8 *pos;
 	int left, i;
 	struct sta_info *sta;
@@ -1862,6 +1943,12 @@ static void handle_assoc(struct hostapd_data *hapd,
 		wpa_printf(MSG_DEBUG, "FT: Allow STA " MACSTR " to associate "
 			   "prior to authentication since it is using "
 			   "over-the-DS FT", MAC2STR(mgmt->sa));
+
+		/*
+		 * Mark station as authenticated, to avoid adding station
+		 * entry in the driver as associated and not authenticated
+		 */
+		sta->flags |= WLAN_STA_AUTH;
 	} else
 #endif /* CONFIG_IEEE80211R */
 	if (sta == NULL || (sta->flags & WLAN_STA_AUTH) == 0) {
@@ -1989,7 +2076,12 @@ static void handle_assoc(struct hostapd_data *hapd,
 	sta->timeout_next = STA_NULLFUNC;
 
  fail:
-	send_assoc_resp(hapd, sta, resp, reassoc, pos, left);
+	reply_res = send_assoc_resp(hapd, sta, resp, reassoc, pos, left);
+	if (sta->added_unassoc && (resp != WLAN_STATUS_SUCCESS ||
+				   reply_res != WLAN_STATUS_SUCCESS)) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
 }
 
 
@@ -2031,6 +2123,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
 	ap_sta_ip6addr_del(hapd, sta);
 	hostapd_drv_sta_remove(hapd, sta->addr);
+	sta->added_unassoc = 0;
 
 	if (sta->timeout_next == STA_NULLFUNC ||
 	    sta->timeout_next == STA_DISASSOC) {
@@ -2407,16 +2500,10 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 	u16 auth_alg, auth_transaction, status_code;
 	struct sta_info *sta;
 
-	if (!ok) {
-		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_NOTICE,
-			       "did not acknowledge authentication response");
-		return;
-	}
-
-	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
-		wpa_printf(MSG_INFO, "handle_auth_cb - too short payload (len=%lu)",
-			   (unsigned long) len);
+	sta = ap_get_sta(hapd, mgmt->da);
+	if (!sta) {
+		wpa_printf(MSG_INFO, "handle_auth_cb: STA " MACSTR " not found",
+			   MAC2STR(mgmt->da));
 		return;
 	}
 
@@ -2424,11 +2511,17 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 	auth_transaction = le_to_host16(mgmt->u.auth.auth_transaction);
 	status_code = le_to_host16(mgmt->u.auth.status_code);
 
-	sta = ap_get_sta(hapd, mgmt->da);
-	if (!sta) {
-		wpa_printf(MSG_INFO, "handle_auth_cb: STA " MACSTR " not found",
-			   MAC2STR(mgmt->da));
-		return;
+	if (!ok) {
+		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_NOTICE,
+			       "did not acknowledge authentication response");
+		goto fail;
+	}
+
+	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
+		wpa_printf(MSG_INFO, "handle_auth_cb - too short payload (len=%lu)",
+			   (unsigned long) len);
+		goto fail;
 	}
 
 	if (status_code == WLAN_STATUS_SUCCESS &&
@@ -2437,6 +2530,15 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "authenticated");
 		sta->flags |= WLAN_STA_AUTH;
+		if (sta->added_unassoc)
+			hostapd_set_sta_flags(hapd, sta);
+		return;
+	}
+
+fail:
+	if (status_code != WLAN_STATUS_SUCCESS && sta->added_unassoc) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
 	}
 }
 
@@ -2475,13 +2577,6 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	struct ieee80211_ht_capabilities ht_cap;
 	struct ieee80211_vht_capabilities vht_cap;
 
-	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_resp) :
-				      sizeof(mgmt->u.assoc_resp))) {
-		wpa_printf(MSG_INFO, "handle_assoc_cb(reassoc=%d) - too short payload (len=%lu)",
-			   reassoc, (unsigned long) len);
-		return;
-	}
-
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
 		wpa_printf(MSG_INFO, "handle_assoc_cb: STA " MACSTR " not found",
@@ -2489,12 +2584,20 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		return;
 	}
 
+	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_resp) :
+				      sizeof(mgmt->u.assoc_resp))) {
+		wpa_printf(MSG_INFO,
+			   "handle_assoc_cb(reassoc=%d) - too short payload (len=%lu)",
+			   reassoc, (unsigned long) len);
+		goto remove_sta;
+	}
+
 	if (!ok) {
 		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "did not acknowledge association response");
 		sta->flags &= ~WLAN_STA_ASSOC_REQ_OK;
-		return;
+		goto remove_sta;
 	}
 
 	if (reassoc)
@@ -2540,8 +2643,14 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	 * Remove the STA entry in order to make sure the STA PS state gets
 	 * cleared and configuration gets updated in case of reassociation back
 	 * to the same AP.
+	 *
+	 * This is relevant for cases, such as FT over the DS, where a station
+	 * reassociates back to the same AP but skips the authentication flow
+	 * and if working with a driver that doesn't support full AP client
+	 * state.
 	 */
-	hostapd_drv_sta_remove(hapd, sta->addr);
+	if (!sta->added_unassoc)
+		hostapd_drv_sta_remove(hapd, sta->addr);
 
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT)
@@ -2557,16 +2666,26 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 			    sta->listen_interval,
 			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
 			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
-			    sta->flags, sta->qosinfo, sta->vht_opmode)) {
+			    sta->flags, sta->qosinfo, sta->vht_opmode,
+			    sta->added_unassoc)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
-			       "Could not add STA to kernel driver");
-
+			       "Could not %s STA to kernel driver",
+			       sta->added_unassoc ? "set" : "add");
 		ap_sta_disconnect(hapd, sta, sta->addr,
 				  WLAN_REASON_DISASSOC_AP_BUSY);
-
+		if (sta->added_unassoc)
+			goto remove_sta;
 		return;
 	}
+
+	/*
+	 * added_unassoc flag is set for a station that was added to the driver
+	 * in unassociated state. Clear this flag once the station has completed
+	 * association, to make sure the STA entry will be cleared from the
+	 * driver in case of reassociation back to the same AP.
+	 */
+	sta->added_unassoc = 0;
 
 	if (sta->flags & WLAN_STA_WDS) {
 		int ret;
@@ -2601,6 +2720,12 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
 
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
+
+remove_sta:
+	if (sta->added_unassoc) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
 }
 
 

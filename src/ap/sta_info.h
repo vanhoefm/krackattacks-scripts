@@ -88,6 +88,7 @@ struct sta_info {
 	unsigned int session_timeout_set:1;
 	unsigned int radius_das_match:1;
 	unsigned int ecsa_supported:1;
+	unsigned int added_unassoc:1;
 
 	u16 auth_alg;
 

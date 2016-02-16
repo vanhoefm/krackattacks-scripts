@@ -170,8 +170,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	ap_sta_ip6addr_del(hapd, sta);
 
 	if (!hapd->iface->driver_ap_teardown &&
-	    !(sta->flags & WLAN_STA_PREAUTH))
+	    !(sta->flags & WLAN_STA_PREAUTH)) {
 		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
 
 	ap_sta_hash_del(hapd, sta);
 	ap_sta_list_del(hapd, sta);
@@ -275,8 +277,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		 * VLAN.
 		 */
 		if (hapd->iface->driver_ap_teardown &&
-		    !(sta->flags & WLAN_STA_PREAUTH))
+		    !(sta->flags & WLAN_STA_PREAUTH)) {
 			hostapd_drv_sta_remove(hapd, sta->addr);
+			sta->added_unassoc = 0;
+		}
 		vlan_remove_dynamic(hapd, sta->vlan_id_bound);
 	}
 #endif /* CONFIG_NO_VLAN */
@@ -673,6 +677,7 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 			   hapd->conf->iface, MAC2STR(sta->addr));
 		return -1;
 	}
+	sta->added_unassoc = 0;
 	return 0;
 }
 

@@ -33,6 +33,10 @@ u32 hostapd_sta_flags_to_drv(u32 flags)
 		res |= WPA_STA_SHORT_PREAMBLE;
 	if (flags & WLAN_STA_MFP)
 		res |= WPA_STA_MFP;
+	if (flags & WLAN_STA_AUTH)
+		res |= WPA_STA_AUTHENTICATED;
+	if (flags & WLAN_STA_ASSOC)
+		res |= WPA_STA_ASSOCIATED;
 	return res;
 }
 
@@ -390,7 +394,7 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 		    u16 listen_interval,
 		    const struct ieee80211_ht_capabilities *ht_capab,
 		    const struct ieee80211_vht_capabilities *vht_capab,
-		    u32 flags, u8 qosinfo, u8 vht_opmode)
+		    u32 flags, u8 qosinfo, u8 vht_opmode, int set)
 {
 	struct hostapd_sta_add_params params;
 
@@ -412,6 +416,7 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 	params.vht_opmode = vht_opmode;
 	params.flags = hostapd_sta_flags_to_drv(flags);
 	params.qosinfo = qosinfo;
+	params.set = set;
 	return hapd->driver->sta_add(hapd->drv_priv, &params);
 }
 

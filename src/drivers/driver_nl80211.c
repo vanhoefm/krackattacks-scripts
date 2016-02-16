@@ -3748,6 +3748,8 @@ static u32 sta_flags_nl80211(int flags)
 		f |= BIT(NL80211_STA_FLAG_TDLS_PEER);
 	if (flags & WPA_STA_AUTHENTICATED)
 		f |= BIT(NL80211_STA_FLAG_AUTHENTICATED);
+	if (flags & WPA_STA_ASSOCIATED)
+		f |= BIT(NL80211_STA_FLAG_ASSOCIATED);
 
 	return f;
 }
@@ -3800,7 +3802,17 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	if (!msg || nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr))
 		goto fail;
 
-	if (!params->set || (params->flags & WPA_STA_TDLS_PEER)) {
+	/*
+	 * Set the below properties only in one of the following cases:
+	 * 1. New station is added, already associated.
+	 * 2. Set WPA_STA_TDLS_PEER station.
+	 * 3. Set an already added unassociated station, if driver supports
+	 * full AP client state. (Set these properties after station became
+	 * associated will be rejected by the driver).
+	 */
+	if (!params->set || (params->flags & WPA_STA_TDLS_PEER) ||
+	    (params->set && FULL_AP_CLIENT_STATE_SUPP(drv->capa.flags) &&
+	     (params->flags & WPA_STA_ASSOCIATED))) {
 		wpa_hexdump(MSG_DEBUG, "  * supported rates",
 			    params->supp_rates, params->supp_rates_len);
 		wpa_printf(MSG_DEBUG, "  * capability=0x%x",
@@ -3848,9 +3860,12 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			/*
 			 * cfg80211 validates that AID is non-zero, so we have
 			 * to make this a non-zero value for the TDLS case where
-			 * a dummy STA entry is used for now.
+			 * a dummy STA entry is used for now and for a station
+			 * that is still not associated.
 			 */
-			wpa_printf(MSG_DEBUG, "  * aid=1 (TDLS workaround)");
+			wpa_printf(MSG_DEBUG, "  * aid=1 (%s workaround)",
+				   (params->flags & WPA_STA_TDLS_PEER) ?
+				   "TDLS" : "UNASSOC_STA");
 			if (nla_put_u16(msg, NL80211_ATTR_STA_AID, 1))
 				goto fail;
 		}
@@ -3862,6 +3877,15 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	} else if (params->aid && (params->flags & WPA_STA_TDLS_PEER)) {
 		wpa_printf(MSG_DEBUG, "  * peer_aid=%u", params->aid);
 		if (nla_put_u16(msg, NL80211_ATTR_PEER_AID, params->aid))
+			goto fail;
+	} else if (FULL_AP_CLIENT_STATE_SUPP(drv->capa.flags) &&
+		   (params->flags & WPA_STA_ASSOCIATED)) {
+		wpa_printf(MSG_DEBUG, "  * aid=%u", params->aid);
+		wpa_printf(MSG_DEBUG, "  * listen_interval=%u",
+			   params->listen_interval);
+		if (nla_put_u16(msg, NL80211_ATTR_STA_AID, params->aid) ||
+		    nla_put_u16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
+				params->listen_interval))
 			goto fail;
 	}
 
@@ -3893,6 +3917,36 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	os_memset(&upd, 0, sizeof(upd));
 	upd.set = sta_flags_nl80211(params->flags);
 	upd.mask = upd.set | sta_flags_nl80211(params->flags_mask);
+
+	/*
+	 * If the driver doesn't support full AP client state, ignore ASSOC/AUTH
+	 * flags, as nl80211 driver moves a new station, by default, into
+	 * associated state.
+	 *
+	 * On the other hand, if the driver supports that feature and the
+	 * station is added in unauthenticated state, set the
+	 * authenticated/associated bits in the mask to prevent moving this
+	 * station to associated state before it is actually associated.
+	 *
+	 * This is irrelevant for mesh mode where the station is added to the
+	 * driver as authenticated already, and ASSOCIATED isn't part of the
+	 * nl80211 API.
+	 */
+	if (!is_mesh_interface(drv->nlmode)) {
+		if (!FULL_AP_CLIENT_STATE_SUPP(drv->capa.flags)) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Ignore ASSOC/AUTH flags since driver doesn't support full AP client state");
+			upd.mask &= ~(BIT(NL80211_STA_FLAG_ASSOCIATED) |
+				      BIT(NL80211_STA_FLAG_AUTHENTICATED));
+		} else if (!params->set &&
+			   !(params->flags & WPA_STA_TDLS_PEER)) {
+			if (!(params->flags & WPA_STA_AUTHENTICATED))
+				upd.mask |= BIT(NL80211_STA_FLAG_AUTHENTICATED);
+			if (!(params->flags & WPA_STA_ASSOCIATED))
+				upd.mask |= BIT(NL80211_STA_FLAG_ASSOCIATED);
+		}
+	}
+
 	wpa_printf(MSG_DEBUG, "  * flags set=0x%x mask=0x%x",
 		   upd.set, upd.mask);
 	if (nla_put(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd))

@@ -1260,7 +1260,12 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_SUPPORT_HW_MODE_ANY	0x0000004000000000ULL
 /** Driver supports simultaneous off-channel operations */
 #define WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS	0x0000008000000000ULL
+/** Driver supports full AP client state */
+#define WPA_DRIVER_FLAGS_FULL_AP_CLIENT_STATE	0x0000010000000000ULL
 	u64 flags;
+
+#define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \
+	(drv_flags & WPA_DRIVER_FLAGS_FULL_AP_CLIENT_STATE)
 
 #define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001
 #define WPA_DRIVER_SMPS_MODE_DYNAMIC			0x00000002
@@ -1508,6 +1513,7 @@ struct wpa_bss_params {
 #define WPA_STA_MFP BIT(3)
 #define WPA_STA_TDLS_PEER BIT(4)
 #define WPA_STA_AUTHENTICATED BIT(5)
+#define WPA_STA_ASSOCIATED BIT(6)
 
 enum tdls_oper {
 	TDLS_DISCOVERY_REQ,
@@ -2369,12 +2375,17 @@ struct wpa_driver_ops {
 	 * @params: Station parameters
 	 * Returns: 0 on success, -1 on failure
 	 *
-	 * This function is used to add a station entry to the driver once the
-	 * station has completed association. This is only used if the driver
+	 * This function is used to add or set (params->set 1) a station
+	 * entry in the driver. Adding STA entries is used only if the driver
 	 * does not take care of association processing.
 	 *
-	 * With TDLS, this function is also used to add or set (params->set 1)
-	 * TDLS peer entries.
+	 * With drivers that don't support full AP client state, this function
+	 * is used to add a station entry to the driver once the station has
+	 * completed association.
+	 *
+	 * With TDLS, this function is used to add or set (params->set 1)
+	 * TDLS peer entries (even with drivers that do not support full AP
+	 * client state).
 	 */
 	int (*sta_add)(void *priv, struct hostapd_sta_add_params *params);
 

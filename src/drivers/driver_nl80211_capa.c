@@ -428,6 +428,9 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_HT_IBSS)
 		capa->flags |= WPA_DRIVER_FLAGS_HT_IBSS;
+
+	if (flags & NL80211_FEATURE_FULL_AP_CLIENT_STATE)
+		capa->flags |= WPA_DRIVER_FLAGS_FULL_AP_CLIENT_STATE;
 }
 
 

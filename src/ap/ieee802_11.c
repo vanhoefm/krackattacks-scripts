@@ -1739,6 +1739,62 @@ static void send_deauth(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+static int add_associated_sta(struct hostapd_data *hapd,
+			      struct sta_info *sta)
+{
+	struct ieee80211_ht_capabilities ht_cap;
+	struct ieee80211_vht_capabilities vht_cap;
+
+	/*
+	 * Remove the STA entry to ensure the STA PS state gets cleared and
+	 * configuration gets updated. This is relevant for cases, such as
+	 * FT-over-the-DS, where a station re-associates back to the same AP but
+	 * skips the authentication flow, or if working with a driver that
+	 * does not support full AP client state.
+	 */
+	if (!sta->added_unassoc)
+		hostapd_drv_sta_remove(hapd, sta->addr);
+
+#ifdef CONFIG_IEEE80211N
+	if (sta->flags & WLAN_STA_HT)
+		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
+#endif /* CONFIG_IEEE80211N */
+#ifdef CONFIG_IEEE80211AC
+	if (sta->flags & WLAN_STA_VHT)
+		hostapd_get_vht_capab(hapd, sta->vht_capabilities, &vht_cap);
+#endif /* CONFIG_IEEE80211AC */
+
+	/*
+	 * Add the station with forced WLAN_STA_ASSOC flag. The sta->flags
+	 * will be set when the ACK frame for the (Re)Association Response frame
+	 * is processed (TX status driver event).
+	 */
+	if (hostapd_sta_add(hapd, sta->addr, sta->aid, sta->capability,
+			    sta->supported_rates, sta->supported_rates_len,
+			    sta->listen_interval,
+			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
+			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
+			    sta->flags | WLAN_STA_ASSOC, sta->qosinfo,
+			    sta->vht_opmode, sta->added_unassoc)) {
+		hostapd_logger(hapd, sta->addr,
+			       HOSTAPD_MODULE_IEEE80211, HOSTAPD_LEVEL_NOTICE,
+			       "Could not %s STA to kernel driver",
+			       sta->added_unassoc ? "set" : "add");
+
+		if (sta->added_unassoc) {
+			hostapd_drv_sta_remove(hapd, sta->addr);
+			sta->added_unassoc = 0;
+		}
+
+		return -1;
+	}
+
+	sta->added_unassoc = 0;
+
+	return 0;
+}
+
+
 static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 status_code, int reassoc, const u8 *ies,
 			   size_t ies_len)
@@ -2076,9 +2132,36 @@ static void handle_assoc(struct hostapd_data *hapd,
 	sta->timeout_next = STA_NULLFUNC;
 
  fail:
+	/*
+	 * In case of a successful response, add the station to the driver.
+	 * Otherwise, the kernel may ignore Data frames before we process the
+	 * ACK frame (TX status). In case of a failure, this station will be
+	 * removed.
+	 *
+	 * Note that this is not compliant with the IEEE 802.11 standard that
+	 * states that a non-AP station should transition into the
+	 * authenticated/associated state only after the station acknowledges
+	 * the (Re)Association Response frame. However, still do this as:
+	 *
+	 * 1. In case the station does not acknowledge the (Re)Association
+	 *    Response frame, it will be removed.
+	 * 2. Data frames will be dropped in the kernel until the station is
+	 *    set into authorized state, and there are no significant known
+	 *    issues with processing other non-Data Class 3 frames during this
+	 *    window.
+	 */
+	if (resp == WLAN_STATUS_SUCCESS && add_associated_sta(hapd, sta))
+		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+
 	reply_res = send_assoc_resp(hapd, sta, resp, reassoc, pos, left);
-	if (sta->added_unassoc && (resp != WLAN_STATUS_SUCCESS ||
-				   reply_res != WLAN_STATUS_SUCCESS)) {
+
+	/*
+	 * Remove the station in case tranmission of a success response fails
+	 * (the STA was added associated to the driver) or if the station was
+	 * previously added unassociated.
+	 */
+	if ((reply_res != WLAN_STATUS_SUCCESS &&
+	     resp == WLAN_STATUS_SUCCESS) || sta->added_unassoc) {
 		hostapd_drv_sta_remove(hapd, sta->addr);
 		sta->added_unassoc = 0;
 	}
@@ -2574,8 +2657,6 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	u16 status;
 	struct sta_info *sta;
 	int new_assoc = 1;
-	struct ieee80211_ht_capabilities ht_cap;
-	struct ieee80211_vht_capabilities vht_cap;
 
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
@@ -2589,21 +2670,26 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		wpa_printf(MSG_INFO,
 			   "handle_assoc_cb(reassoc=%d) - too short payload (len=%lu)",
 			   reassoc, (unsigned long) len);
-		goto remove_sta;
-	}
-
-	if (!ok) {
-		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_DEBUG,
-			       "did not acknowledge association response");
-		sta->flags &= ~WLAN_STA_ASSOC_REQ_OK;
-		goto remove_sta;
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		return;
 	}
 
 	if (reassoc)
 		status = le_to_host16(mgmt->u.reassoc_resp.status_code);
 	else
 		status = le_to_host16(mgmt->u.assoc_resp.status_code);
+
+	if (!ok) {
+		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "did not acknowledge association response");
+		sta->flags &= ~WLAN_STA_ASSOC_REQ_OK;
+		/* The STA is added only in case of SUCCESS */
+		if (status == WLAN_STATUS_SUCCESS)
+			hostapd_drv_sta_remove(hapd, sta->addr);
+
+		return;
+	}
 
 	if (status != WLAN_STATUS_SUCCESS)
 		return;
@@ -2639,54 +2725,6 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	sta->sa_query_timed_out = 0;
 #endif /* CONFIG_IEEE80211W */
 
-	/*
-	 * Remove the STA entry in order to make sure the STA PS state gets
-	 * cleared and configuration gets updated in case of reassociation back
-	 * to the same AP.
-	 *
-	 * This is relevant for cases, such as FT over the DS, where a station
-	 * reassociates back to the same AP but skips the authentication flow
-	 * and if working with a driver that doesn't support full AP client
-	 * state.
-	 */
-	if (!sta->added_unassoc)
-		hostapd_drv_sta_remove(hapd, sta->addr);
-
-#ifdef CONFIG_IEEE80211N
-	if (sta->flags & WLAN_STA_HT)
-		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
-#endif /* CONFIG_IEEE80211N */
-#ifdef CONFIG_IEEE80211AC
-	if (sta->flags & WLAN_STA_VHT)
-		hostapd_get_vht_capab(hapd, sta->vht_capabilities, &vht_cap);
-#endif /* CONFIG_IEEE80211AC */
-
-	if (hostapd_sta_add(hapd, sta->addr, sta->aid, sta->capability,
-			    sta->supported_rates, sta->supported_rates_len,
-			    sta->listen_interval,
-			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
-			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
-			    sta->flags, sta->qosinfo, sta->vht_opmode,
-			    sta->added_unassoc)) {
-		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_NOTICE,
-			       "Could not %s STA to kernel driver",
-			       sta->added_unassoc ? "set" : "add");
-		ap_sta_disconnect(hapd, sta, sta->addr,
-				  WLAN_REASON_DISASSOC_AP_BUSY);
-		if (sta->added_unassoc)
-			goto remove_sta;
-		return;
-	}
-
-	/*
-	 * added_unassoc flag is set for a station that was added to the driver
-	 * in unassociated state. Clear this flag once the station has completed
-	 * association, to make sure the STA entry will be cleared from the
-	 * driver in case of reassociation back to the same AP.
-	 */
-	sta->added_unassoc = 0;
-
 	if (sta->flags & WLAN_STA_WDS) {
 		int ret;
 		char ifname_wds[IFNAMSIZ + 1];
@@ -2718,14 +2756,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	else
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
 	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
-
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
-
-remove_sta:
-	if (sta->added_unassoc) {
-		hostapd_drv_sta_remove(hapd, sta->addr);
-		sta->added_unassoc = 0;
-	}
 }
 
 

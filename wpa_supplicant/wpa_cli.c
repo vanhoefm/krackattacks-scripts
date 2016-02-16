@@ -4152,7 +4152,7 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 	if (ctrl_ifname == NULL)
 		ctrl_ifname = wpa_cli_get_default_ifname();
 
-	if (!wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
+	if (wpa_cli_open_connection(ctrl_ifname, 1)) {
 		if (!warning_displayed) {
 			printf("Could not connect to wpa_supplicant: "
 			       "%s - re-trying\n",

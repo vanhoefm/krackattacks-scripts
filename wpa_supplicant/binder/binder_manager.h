@@ -34,6 +34,11 @@ public:
 	static BinderManager * getInstance();
 	static void destroyInstance();
 	int registerBinderService(struct wpa_global *global);
+	int registerInterface(struct wpa_supplicant *wpa_s);
+	int unregisterInterface(struct wpa_supplicant *wpa_s);
+	int getIfaceBinderObjectByKey(
+		const void *iface_object_key,
+		android::sp<fi::w1::wpa_supplicant::IIface> *iface_object);
 
 private:
 	BinderManager() = default;

@@ -78,3 +78,31 @@ void wpas_binder_deinit(struct wpas_binder_priv *priv)
 	eloop_unregister_read_sock(priv->binder_fd);
 	android::IPCThreadState::shutdown();
 }
+
+
+int wpas_binder_register_interface(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->global->binder)
+		return 1;
+
+	wpa_supplicant_binder::BinderManager *binder_manager =
+		wpa_supplicant_binder::BinderManager::getInstance();
+	if (!binder_manager)
+		return 1;
+
+	return binder_manager->registerInterface(wpa_s);
+}
+
+
+int wpas_binder_unregister_interface(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->global->binder)
+		return 1;
+
+	wpa_supplicant_binder::BinderManager *binder_manager =
+		wpa_supplicant_binder::BinderManager::getInstance();
+	if (!binder_manager)
+		return 1;
+
+	return binder_manager->unregisterInterface(wpa_s);
+}

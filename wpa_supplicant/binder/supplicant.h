@@ -11,6 +11,7 @@
 #define SUPPLICANT_H
 
 #include "fi/w1/wpa_supplicant/BnSupplicant.h"
+#include "fi/w1/wpa_supplicant/IIface.h"
 #include "fi/w1/wpa_supplicant/ISupplicantCallbacks.h"
 
 extern "C" {
@@ -31,6 +32,17 @@ class Supplicant : public fi::w1::wpa_supplicant::BnSupplicant
 public:
 	Supplicant(struct wpa_global *global);
 	virtual ~Supplicant() = default;
+
+	android::binder::Status CreateInterface(
+		const android::os::PersistableBundle &params,
+		android::sp<fi::w1::wpa_supplicant::IIface> *aidl_return)
+		override;
+	android::binder::Status RemoveInterface(
+		const std::string &ifname) override;
+	android::binder::Status GetInterface(
+		const std::string &ifname,
+		android::sp<fi::w1::wpa_supplicant::IIface> *aidl_return)
+		override;
 
 private:
 	/* Raw pointer to the global structure maintained by the core. */

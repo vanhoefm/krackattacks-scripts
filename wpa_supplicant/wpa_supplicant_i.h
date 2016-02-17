@@ -484,6 +484,9 @@ struct wpa_supplicant {
 	char *preq_notify_peer;
 #endif /* CONFIG_AP */
 #endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
+#ifdef CONFIG_CTRL_IFACE_BINDER
+	const void *binder_object_key;
+#endif /* CONFIG_CTRL_IFACE_BINDER */
 	char bridge_ifname[16];
 
 	char *confname;

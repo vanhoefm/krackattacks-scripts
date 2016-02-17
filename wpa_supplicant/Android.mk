@@ -1346,6 +1346,16 @@ endif
 OBJS += $(DBUS_OBJS)
 L_CFLAGS += $(DBUS_CFLAGS)
 
+ifdef CONFIG_CTRL_IFACE_BINDER
+BINDER=y
+L_CFLAGS += -DCONFIG_BINDER -DCONFIG_CTRL_IFACE_BINDER
+OBJS += binder/binder.cpp binder/binder_manager.cpp
+OBJS += binder/supplicant.cpp binder/iface.cpp
+OBJS += binder/fi/w1/wpa_supplicant/ISupplicant.aidl
+OBJS += binder/fi/w1/wpa_supplicant/ISupplicantCallbacks.aidl
+OBJS += binder/fi/w1/wpa_supplicant/IIface.aidl
+endif
+
 ifdef CONFIG_READLINE
 OBJS_c += src/utils/edit_readline.c
 LIBS_c += -lncurses -lreadline
@@ -1582,6 +1592,10 @@ LOCAL_SRC_FILES := $(OBJS)
 LOCAL_C_INCLUDES := $(INCLUDES)
 ifeq ($(DBUS), y)
 LOCAL_SHARED_LIBRARIES += libdbus
+endif
+ifeq ($(BINDER), y)
+LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/binder frameworks/native/aidl/binder
+LOCAL_SHARED_LIBRARIES += libutils libbinder
 endif
 include $(BUILD_EXECUTABLE)
 

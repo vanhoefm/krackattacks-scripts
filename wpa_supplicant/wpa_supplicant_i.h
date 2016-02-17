@@ -44,6 +44,7 @@ struct wpa_driver_associate_params;
 struct ctrl_iface_priv;
 struct ctrl_iface_global_priv;
 struct wpas_dbus_priv;
+struct wpas_binder_priv;
 
 /**
  * struct wpa_interface - Parameters for wpa_supplicant_add_iface()
@@ -264,6 +265,7 @@ struct wpa_global {
 	struct wpa_params params;
 	struct ctrl_iface_global_priv *ctrl_iface;
 	struct wpas_dbus_priv *dbus;
+	struct wpas_binder_priv *binder;
 	void **drv_priv;
 	size_t drv_count;
 	struct os_time suspend_time;

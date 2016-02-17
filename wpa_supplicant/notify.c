@@ -13,6 +13,7 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
+#include "binder/binder.h"
 #include "dbus/dbus_common.h"
 #include "dbus/dbus_old.h"
 #include "dbus/dbus_new.h"
@@ -34,6 +35,12 @@ int wpas_notify_supplicant_initialized(struct wpa_global *global)
 	}
 #endif /* CONFIG_DBUS */
 
+#ifdef CONFIG_BINDER
+	global->binder = wpas_binder_init(global);
+	if (!global->binder)
+		return -1;
+#endif /* CONFIG_BINDER */
+
 	return 0;
 }
 
@@ -44,6 +51,11 @@ void wpas_notify_supplicant_deinitialized(struct wpa_global *global)
 	if (global->dbus)
 		wpas_dbus_deinit(global->dbus);
 #endif /* CONFIG_DBUS */
+
+#ifdef CONFIG_BINDER
+	if (global->binder)
+		wpas_binder_deinit(global->binder);
+#endif /* CONFIG_BINDER */
 }
 
 

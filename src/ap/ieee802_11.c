@@ -1069,13 +1069,22 @@ static void handle_auth(struct hostapd_data *hapd,
 				       seq_ctrl);
 			return;
 		}
+#ifdef CONFIG_MESH
+		if ((hapd->conf->mesh & MESH_ENABLED) &&
+		    sta->plink_state == PLINK_BLOCKED) {
+			wpa_printf(MSG_DEBUG, "Mesh peer " MACSTR
+				   " is blocked - drop Authentication frame",
+				   MAC2STR(mgmt->sa));
+			return;
+		}
+#endif /* CONFIG_MESH */
 	} else {
 #ifdef CONFIG_MESH
 		if (hapd->conf->mesh & MESH_ENABLED) {
 			/* if the mesh peer is not available, we don't do auth.
 			 */
 			wpa_printf(MSG_DEBUG, "Mesh peer " MACSTR
-				   " not yet known - drop Authentiation frame",
+				   " not yet known - drop Authentication frame",
 				   MAC2STR(mgmt->sa));
 			/*
 			 * Save a copy of the frame so that it can be processed

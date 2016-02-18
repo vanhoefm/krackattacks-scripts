@@ -5919,8 +5919,15 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 	}
 
 	if (os_strcmp(cmd, "listen_channel") == 0) {
-		return p2p_set_listen_channel(wpa_s->global->p2p, 81,
-					      atoi(param), 1);
+		char *pos;
+		u8 channel, op_class;
+
+		channel = atoi(param);
+		pos = os_strchr(param, ' ');
+		op_class = pos ? atoi(pos) : 81;
+
+		return p2p_set_listen_channel(wpa_s->global->p2p, op_class,
+					      channel, 1);
 	}
 
 	if (os_strcmp(cmd, "ssid_postfix") == 0) {

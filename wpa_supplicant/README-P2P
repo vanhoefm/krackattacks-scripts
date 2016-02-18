@@ -640,11 +640,16 @@ p2p_set managed <0/1>
 Disable/enable managed P2P Device operations. This is disabled by
 default.
 
-p2p_set listen_channel <1/6/11>
+p2p_set listen_channel <channel> [<op_class>]
 
 Set P2P Listen channel. This is mainly meant for testing purposes and
 changing the Listen channel during normal operations can result in
 protocol failures.
+
+When specifying a social channel on the 2.4 GHz band (1/6/11) there is
+no need to specify the operating class since it defaults to 81.  When
+specifying a social channel on the 60 GHz band (2), specify the 60 GHz
+operating class (180).
 
 p2p_set ssid_postfix <postfix>
 

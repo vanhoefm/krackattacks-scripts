@@ -6691,9 +6691,9 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 
 static int nl80211_set_param(void *priv, const char *param)
 {
-	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
 	if (param == NULL)
 		return 0;
+	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
 
 #ifdef CONFIG_P2P
 	if (os_strstr(param, "use_p2p_group_interface=1")) {

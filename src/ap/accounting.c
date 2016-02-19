@@ -167,19 +167,25 @@ static int accounting_sta_update_stats(struct hostapd_data *hapd,
 	if (hostapd_drv_read_sta_data(hapd, data, sta->addr))
 		return -1;
 
-	if (sta->last_rx_bytes > data->rx_bytes)
-		sta->acct_input_gigawords++;
-	if (sta->last_tx_bytes > data->tx_bytes)
-		sta->acct_output_gigawords++;
-	sta->last_rx_bytes = data->rx_bytes;
-	sta->last_tx_bytes = data->tx_bytes;
+	if (!data->bytes_64bit) {
+		/* Extend 32-bit counters from the driver to 64-bit counters */
+		if (sta->last_rx_bytes_lo > data->rx_bytes)
+			sta->last_rx_bytes_hi++;
+		sta->last_rx_bytes_lo = data->rx_bytes;
+
+		if (sta->last_tx_bytes_lo > data->tx_bytes)
+			sta->last_tx_bytes_hi++;
+		sta->last_tx_bytes_lo = data->tx_bytes;
+	}
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
-		       HOSTAPD_LEVEL_DEBUG, "updated TX/RX stats: "
-		       "Acct-Input-Octets=%lu Acct-Input-Gigawords=%u "
-		       "Acct-Output-Octets=%lu Acct-Output-Gigawords=%u",
-		       sta->last_rx_bytes, sta->acct_input_gigawords,
-		       sta->last_tx_bytes, sta->acct_output_gigawords);
+		       HOSTAPD_LEVEL_DEBUG,
+		       "updated TX/RX stats: rx_bytes=%llu [%u:%u] tx_bytes=%llu [%u:%u] bytes_64bit=%d",
+		       data->rx_bytes, sta->last_rx_bytes_hi,
+		       sta->last_rx_bytes_lo,
+		       data->tx_bytes, sta->last_tx_bytes_hi,
+		       sta->last_tx_bytes_lo,
+		       data->bytes_64bit);
 
 	return 0;
 }
@@ -224,8 +230,10 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 		       (unsigned long long) sta->acct_session_id);
 
 	os_get_reltime(&sta->acct_session_start);
-	sta->last_rx_bytes = sta->last_tx_bytes = 0;
-	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
+	sta->last_rx_bytes_hi = 0;
+	sta->last_rx_bytes_lo = 0;
+	sta->last_tx_bytes_hi = 0;
+	sta->last_tx_bytes_lo = 0;
 	hostapd_drv_sta_clear_stats(hapd, sta->addr);
 
 	if (!hapd->conf->radius->acct_server)
@@ -254,7 +262,7 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	int cause = sta->acct_terminate_cause;
 	struct hostap_sta_driver_data data;
 	struct os_reltime now_r, diff;
-	u32 gigawords;
+	u64 bytes;
 
 	if (!hapd->conf->radius->acct_server)
 		return;
@@ -288,37 +296,37 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 			wpa_printf(MSG_INFO, "Could not add Acct-Output-Packets");
 			goto fail;
 		}
+		if (data.bytes_64bit)
+			bytes = data.rx_bytes;
+		else
+			bytes = ((u64) sta->last_rx_bytes_hi << 32) |
+				sta->last_rx_bytes_lo;
 		if (!radius_msg_add_attr_int32(msg,
 					       RADIUS_ATTR_ACCT_INPUT_OCTETS,
-					       data.rx_bytes)) {
+					       (u32) bytes)) {
 			wpa_printf(MSG_INFO, "Could not add Acct-Input-Octets");
 			goto fail;
 		}
-		gigawords = sta->acct_input_gigawords;
-#if __WORDSIZE == 64
-		gigawords += data.rx_bytes >> 32;
-#endif
-		if (gigawords &&
-		    !radius_msg_add_attr_int32(
-			    msg, RADIUS_ATTR_ACCT_INPUT_GIGAWORDS,
-			    gigawords)) {
+		if (!radius_msg_add_attr_int32(msg,
+					       RADIUS_ATTR_ACCT_INPUT_GIGAWORDS,
+					       (u32) (bytes >> 32))) {
 			wpa_printf(MSG_INFO, "Could not add Acct-Input-Gigawords");
 			goto fail;
 		}
+		if (data.bytes_64bit)
+			bytes = data.tx_bytes;
+		else
+			bytes = ((u64) sta->last_tx_bytes_hi << 32) |
+				sta->last_tx_bytes_lo;
 		if (!radius_msg_add_attr_int32(msg,
 					       RADIUS_ATTR_ACCT_OUTPUT_OCTETS,
-					       data.tx_bytes)) {
+					       (u32) bytes)) {
 			wpa_printf(MSG_INFO, "Could not add Acct-Output-Octets");
 			goto fail;
 		}
-		gigawords = sta->acct_output_gigawords;
-#if __WORDSIZE == 64
-		gigawords += data.tx_bytes >> 32;
-#endif
-		if (gigawords &&
-		    !radius_msg_add_attr_int32(
-			    msg, RADIUS_ATTR_ACCT_OUTPUT_GIGAWORDS,
-			    gigawords)) {
+		if (!radius_msg_add_attr_int32(msg,
+					       RADIUS_ATTR_ACCT_OUTPUT_GIGAWORDS,
+					       (u32) (bytes >> 32))) {
 			wpa_printf(MSG_INFO, "Could not add Acct-Output-Gigawords");
 			goto fail;
 		}

@@ -1373,7 +1373,9 @@ struct wpa_driver_capa {
 struct hostapd_data;
 
 struct hostap_sta_driver_data {
-	unsigned long rx_packets, tx_packets, rx_bytes, tx_bytes;
+	unsigned long rx_packets, tx_packets;
+	unsigned long long rx_bytes, tx_bytes;
+	int bytes_64bit; /* whether 64-bit byte counters are supported */
 	unsigned long current_tx_rate;
 	unsigned long inactive_msec;
 	unsigned long flags;

@@ -35,7 +35,7 @@ static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
 		return 0;
 
 	ret = os_snprintf(buf, buflen, "rx_packets=%lu\ntx_packets=%lu\n"
-			  "rx_bytes=%lu\ntx_bytes=%lu\n",
+			  "rx_bytes=%llu\ntx_bytes=%llu\n",
 			  data.rx_packets, data.tx_packets,
 			  data.rx_bytes, data.tx_bytes);
 	if (os_snprintf_error(buflen, ret))

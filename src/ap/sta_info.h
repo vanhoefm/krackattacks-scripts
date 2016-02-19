@@ -109,10 +109,11 @@ struct sta_info {
 	int acct_terminate_cause; /* Acct-Terminate-Cause */
 	int acct_interim_interval; /* Acct-Interim-Interval */
 
-	unsigned long last_rx_bytes;
-	unsigned long last_tx_bytes;
-	u32 acct_input_gigawords; /* Acct-Input-Gigawords */
-	u32 acct_output_gigawords; /* Acct-Output-Gigawords */
+	/* For extending 32-bit driver counters to 64-bit counters */
+	u32 last_rx_bytes_hi;
+	u32 last_rx_bytes_lo;
+	u32 last_tx_bytes_hi;
+	u32 last_tx_bytes_lo;
 
 	u8 *challenge; /* IEEE 802.11 Shared Key Authentication Challenge */
 

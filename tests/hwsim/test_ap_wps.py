@@ -675,8 +675,7 @@ def test_ap_wps_random_ap_pin(dev, apdev):
     check_wps_reg_failure(dev[1], apdev[0], appin)
 
     with fail_test(hapd, 1, "os_get_random;wps_generate_pin"):
-        if "FAIL" in hapd.request("WPS_AP_PIN random 1"):
-            raise Exception("Failed to generate PIN during OOM")
+        hapd.request("WPS_AP_PIN random 1")
         hapd.request("WPS_AP_PIN disable")
 
     with alloc_fail(hapd, 1, "upnp_wps_set_ap_pin"):

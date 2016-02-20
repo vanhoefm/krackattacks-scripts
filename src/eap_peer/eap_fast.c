@@ -113,8 +113,8 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 }
 
 
-static int eap_fast_parse_phase1(struct eap_fast_data *data,
-				 const char *phase1)
+static void eap_fast_parse_phase1(struct eap_fast_data *data,
+				  const char *phase1)
 {
 	const char *pos;
 
@@ -140,8 +140,6 @@ static int eap_fast_parse_phase1(struct eap_fast_data *data,
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Using binary format for PAC "
 			   "list");
 	}
-
-	return 0;
 }
 
 
@@ -159,10 +157,8 @@ static void * eap_fast_init(struct eap_sm *sm)
 	data->fast_version = EAP_FAST_VERSION;
 	data->max_pac_list_len = 10;
 
-	if (config->phase1 && eap_fast_parse_phase1(data, config->phase1) < 0) {
-		eap_fast_deinit(sm, data);
-		return NULL;
-	}
+	if (config->phase1)
+		eap_fast_parse_phase1(data, config->phase1);
 
 	if (eap_peer_select_phase2_methods(config, "auth=",
 					   &data->phase2_types,

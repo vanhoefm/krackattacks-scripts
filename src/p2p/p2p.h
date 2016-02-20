@@ -1902,8 +1902,10 @@ int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
  * @p2p: P2P module context from p2p_init()
  * @ies: Buffer for writing P2P IE
  * @dev_id: Device ID to search for or %NULL for any
+ * @bands: Frequency bands used in the scan (enum wpa_radio_work_band bitmap)
  */
-void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id);
+void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id,
+		 unsigned int bands);
 
 /**
  * p2p_scan_ie_buf_len - Get maximum buffer length needed for p2p_scan_ie

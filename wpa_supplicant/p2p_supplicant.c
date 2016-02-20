@@ -351,6 +351,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	int social_channels_freq[] = { 2412, 2437, 2462, 60480 };
 	size_t ielen;
 	u8 *n, i;
+	unsigned int bands;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -429,7 +430,8 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	wpabuf_put_buf(ies, wps_ie);
 	wpabuf_free(wps_ie);
 
-	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id);
+	bands = wpas_get_bands(wpa_s, params->freqs);
+	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id, bands);
 
 	params->p2p_probe = 1;
 	n = os_malloc(wpabuf_len(ies));
@@ -4930,6 +4932,7 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 	struct wpabuf *wps_ie, *ies;
 	size_t ielen;
 	int freqs[2] = { 0, 0 };
+	unsigned int bands;
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -4981,7 +4984,8 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 	wpabuf_put_buf(ies, wps_ie);
 	wpabuf_free(wps_ie);
 
-	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
+	bands = wpas_get_bands(wpa_s, freqs);
+	p2p_scan_ie(wpa_s->global->p2p, ies, NULL, bands);
 
 	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
@@ -6713,12 +6717,15 @@ void wpas_p2p_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 
 void wpas_p2p_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ies)
 {
+	unsigned int bands;
+
 	if (wpa_s->global->p2p_disabled)
 		return;
 	if (wpa_s->global->p2p == NULL)
 		return;
 
-	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
+	bands = wpas_get_bands(wpa_s, NULL);
+	p2p_scan_ie(wpa_s->global->p2p, ies, NULL, bands);
 }
 
 

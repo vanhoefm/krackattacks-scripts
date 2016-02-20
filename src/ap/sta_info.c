@@ -900,8 +900,9 @@ int ap_sta_set_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,
 				       "could not add dynamic VLAN interface for vlan=%d%s",
-				       vlan_desc->untagged,
-				       vlan_desc->tagged[0] ? "+" : "");
+				       vlan_desc ? vlan_desc->untagged : -1,
+				       (vlan_desc && vlan_desc->tagged[0]) ?
+				       "+" : "");
 			vlan_id = 0;
 			ret = -1;
 			goto done;

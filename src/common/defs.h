@@ -335,4 +335,10 @@ enum set_band {
 	WPA_SETBAND_2G
 };
 
+enum wpa_radio_work_band {
+	BAND_2_4_GHZ = BIT(0),
+	BAND_5_GHZ = BIT(1),
+	BAND_60_GHZ = BIT(2),
+};
+
 #endif /* DEFS_H */

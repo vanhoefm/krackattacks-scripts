@@ -2961,6 +2961,15 @@ def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
     if res['tls_session_reused'] != '1':
         raise Exception("EAP-FAST could not use PAC session ticket")
 
+    # Verify fast_max_pac_list_len=0 special case
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                phase1="fast_provisioning=1 fast_max_pac_list_len=0 fast_pac_format=binary",
+                pac_file="blob://fast_pac_bin")
+
 def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and missing PAC config"""
     check_eap_capa(dev[0], "FAST")

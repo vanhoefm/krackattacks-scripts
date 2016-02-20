@@ -380,28 +380,6 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	if (wps_ie == NULL)
 		goto fail;
 
-	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
-	if (ies == NULL) {
-		wpabuf_free(wps_ie);
-		goto fail;
-	}
-	wpabuf_put_buf(ies, wps_ie);
-	wpabuf_free(wps_ie);
-
-	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id);
-
-	params->p2p_probe = 1;
-	n = os_malloc(wpabuf_len(ies));
-	if (n == NULL) {
-		wpabuf_free(ies);
-		goto fail;
-	}
-	os_memcpy(n, wpabuf_head(ies), wpabuf_len(ies));
-	params->extra_ies = n;
-	params->extra_ies_len = wpabuf_len(ies);
-	wpabuf_free(ies);
-
 	switch (type) {
 	case P2P_SCAN_SOCIAL:
 		params->freqs = os_calloc(ARRAY_SIZE(social_channels_freq) + 1,
@@ -441,6 +419,28 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		params->freqs[num_channels++] = 0;
 		break;
 	}
+
+	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
+	if (ies == NULL) {
+		wpabuf_free(wps_ie);
+		goto fail;
+	}
+	wpabuf_put_buf(ies, wps_ie);
+	wpabuf_free(wps_ie);
+
+	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id);
+
+	params->p2p_probe = 1;
+	n = os_malloc(wpabuf_len(ies));
+	if (n == NULL) {
+		wpabuf_free(ies);
+		goto fail;
+	}
+	os_memcpy(n, wpabuf_head(ies), wpabuf_len(ies));
+	params->extra_ies = n;
+	params->extra_ies_len = wpabuf_len(ies);
+	wpabuf_free(ies);
 
 	radio_remove_works(wpa_s, "p2p-scan", 0);
 	if (radio_add_work(wpa_s, 0, "p2p-scan", 0, wpas_p2p_trigger_scan_cb,
@@ -4955,22 +4955,6 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 		return;
 	}
 
-	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
-	if (ies == NULL) {
-		wpabuf_free(wps_ie);
-		wpas_p2p_scan_res_join(wpa_s, NULL);
-		return;
-	}
-	wpabuf_put_buf(ies, wps_ie);
-	wpabuf_free(wps_ie);
-
-	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
-
-	params.p2p_probe = 1;
-	params.extra_ies = wpabuf_head(ies);
-	params.extra_ies_len = wpabuf_len(ies);
-
 	if (!freq) {
 		int oper_freq;
 		/*
@@ -4986,6 +4970,22 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 		freqs[0] = freq;
 		params.freqs = freqs;
 	}
+
+	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
+	if (ies == NULL) {
+		wpabuf_free(wps_ie);
+		wpas_p2p_scan_res_join(wpa_s, NULL);
+		return;
+	}
+	wpabuf_put_buf(ies, wps_ie);
+	wpabuf_free(wps_ie);
+
+	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
+
+	params.p2p_probe = 1;
+	params.extra_ies = wpabuf_head(ies);
+	params.extra_ies_len = wpabuf_len(ies);
 
 	/*
 	 * Run a scan to update BSS table and start Provision Discovery once

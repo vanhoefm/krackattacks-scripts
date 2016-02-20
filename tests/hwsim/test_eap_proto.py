@@ -20,6 +20,12 @@ from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_eap import check_eap_capa, check_hlr_auc_gw_support, int_eap_server_params
 from test_erp import check_erp_capa
 
+try:
+    import OpenSSL
+    openssl_imported = True
+except ImportError:
+    openssl_imported = False
+
 EAP_CODE_REQUEST = 1
 EAP_CODE_RESPONSE = 2
 EAP_CODE_SUCCESS = 3
@@ -7911,3 +7917,367 @@ def test_eap_nak_expanded(dev, apdev):
 
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+EAP_TLV_RESULT_TLV = 3
+EAP_TLV_NAK_TLV = 4
+EAP_TLV_ERROR_CODE_TLV = 5
+EAP_TLV_CONNECTION_BINDING_TLV = 6
+EAP_TLV_VENDOR_SPECIFIC_TLV = 7
+EAP_TLV_URI_TLV = 8
+EAP_TLV_EAP_PAYLOAD_TLV = 9
+EAP_TLV_INTERMEDIATE_RESULT_TLV = 10
+EAP_TLV_PAC_TLV = 11
+EAP_TLV_CRYPTO_BINDING_TLV = 12
+EAP_TLV_CALLING_STATION_ID_TLV = 13
+EAP_TLV_CALLED_STATION_ID_TLV = 14
+EAP_TLV_NAS_PORT_TYPE_TLV = 15
+EAP_TLV_SERVER_IDENTIFIER_TLV = 16
+EAP_TLV_IDENTITY_TYPE_TLV = 17
+EAP_TLV_SERVER_TRUSTED_ROOT_TLV = 18
+EAP_TLV_REQUEST_ACTION_TLV = 19
+EAP_TLV_PKCS7_TLV = 20
+
+EAP_TLV_RESULT_SUCCESS = 1
+EAP_TLV_RESULT_FAILURE = 2
+
+EAP_TLV_TYPE_MANDATORY = 0x8000
+EAP_TLV_TYPE_MASK = 0x3fff
+
+PAC_TYPE_PAC_KEY = 1
+PAC_TYPE_PAC_OPAQUE = 2
+PAC_TYPE_CRED_LIFETIME = 3
+PAC_TYPE_A_ID = 4
+PAC_TYPE_I_ID = 5
+PAC_TYPE_A_ID_INFO = 7
+PAC_TYPE_PAC_ACKNOWLEDGEMENT = 8
+PAC_TYPE_PAC_INFO = 9
+PAC_TYPE_PAC_TYPE = 10
+
+def eap_fast_start(ctx):
+    logger.info("Send EAP-FAST/Start")
+    return struct.pack(">BBHBBHH", EAP_CODE_REQUEST, ctx['id'],
+                       4 + 1 + 1 + 4 + 16,
+                       EAP_TYPE_FAST, 0x21, 4, 16) + 16*'A'
+
+def test_eap_fast_proto(dev, apdev):
+    """EAP-FAST Phase protocol testing"""
+    check_eap_capa(dev[0], "FAST")
+    global eap_fast_proto_ctx
+    eap_fast_proto_ctx = None
+
+    def eap_handler(ctx, req):
+        logger.info("eap_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        global eap_fast_proto_ctx
+        eap_fast_proto_ctx = ctx
+        ctx['test_done'] = False
+
+        idx += 1
+        if ctx['num'] == idx:
+            return eap_fast_start(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("EAP-FAST: TLS processing failed")
+            data = 'ABCDEFGHIK'
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + len(data),
+                               EAP_TYPE_FAST, 0x01) + data
+        idx += 1
+        if ctx['num'] == idx:
+            ctx['test_done'] = True
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        logger.info("Past last test case")
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(eap_handler)
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="FAST", anonymous_identity="FAST",
+                       identity="user", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1",
+                       pac_file="blob://fast_pac_proto",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+        if ev is None:
+            raise Exception("Could not start EAP-FAST")
+        ok = False
+        for i in range(100):
+            if eap_fast_proto_ctx:
+                if eap_fast_proto_ctx['test_done']:
+                    ok = True
+                    break
+            time.sleep(0.05)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    finally:
+        stop_radius_server(srv)
+
+def run_eap_fast_phase2(dev, test_payload, test_failure=True):
+    global eap_fast_proto_ctx
+    eap_fast_proto_ctx = None
+
+    def ssl_info_callback(conn, where, ret):
+        logger.debug("SSL: info where=%d ret=%d" % (where, ret))
+
+    def process_clienthello(ctx, payload):
+        logger.info("Process ClientHello")
+        ctx['sslctx'] = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
+        ctx['sslctx'].set_info_callback(ssl_info_callback)
+        ctx['sslctx'].load_tmp_dh("auth_serv/dh.conf")
+        ctx['sslctx'].set_cipher_list("ADH-AES128-SHA")
+        ctx['conn'] = OpenSSL.SSL.Connection(ctx['sslctx'], None)
+        ctx['conn'].set_accept_state()
+        logger.info("State: " + ctx['conn'].state_string())
+        ctx['conn'].bio_write(payload)
+        try:
+            ctx['conn'].do_handshake()
+        except OpenSSL.SSL.WantReadError:
+            pass
+        logger.info("State: " + ctx['conn'].state_string())
+        data = ctx['conn'].bio_read(4096)
+        logger.info("State: " + ctx['conn'].state_string())
+        return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                           4 + 1 + 1 + len(data),
+                           EAP_TYPE_FAST, 0x01) + data
+
+    def process_clientkeyexchange(ctx, payload, appl_data):
+        logger.info("Process ClientKeyExchange")
+        logger.info("State: " + ctx['conn'].state_string())
+        ctx['conn'].bio_write(payload)
+        try:
+            ctx['conn'].do_handshake()
+        except OpenSSL.SSL.WantReadError:
+            pass
+        ctx['conn'].send(appl_data)
+        logger.info("State: " + ctx['conn'].state_string())
+        data = ctx['conn'].bio_read(4096)
+        logger.info("State: " + ctx['conn'].state_string())
+        return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                           4 + 1 + 1 + len(data),
+                           EAP_TYPE_FAST, 0x01) + data
+
+    def eap_handler(ctx, req):
+        logger.info("eap_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        global eap_fast_proto_ctx
+        eap_fast_proto_ctx = ctx
+        ctx['test_done'] = False
+        logger.debug("ctx['num']=%d" % ctx['num'])
+
+        idx += 1
+        if ctx['num'] == idx:
+            return eap_fast_start(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            return process_clienthello(ctx, req[6:])
+        idx += 1
+        if ctx['num'] == idx:
+            if not test_failure:
+                ctx['test_done'] = True
+            return process_clientkeyexchange(ctx, req[6:], test_payload)
+        idx += 1
+        if ctx['num'] == idx:
+            ctx['test_done'] = True
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        logger.info("Past last test case")
+        return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(eap_handler)
+    try:
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="FAST", anonymous_identity="FAST",
+                       identity="user", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                       phase1="fast_provisioning=1",
+                       pac_file="blob://fast_pac_proto",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=5)
+        if ev is None:
+            raise Exception("Could not start EAP-FAST")
+        dev[0].dump_monitor()
+        ok = False
+        for i in range(100):
+            if eap_fast_proto_ctx:
+                if eap_fast_proto_ctx['test_done']:
+                    ok = True
+                    break
+            time.sleep(0.05)
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        if not ok:
+            raise Exception("EAP-FAST TLS exchange did not complete")
+        for i in range(3):
+            dev[i].dump_monitor()
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_fast_proto_phase2(dev, apdev):
+    """EAP-FAST Phase 2 protocol testing"""
+    if not openssl_imported:
+        raise HwsimSkip("OpenSSL python method not available")
+    check_eap_capa(dev[0], "FAST")
+    hapd = start_ap(apdev[0]['ifname'])
+
+    tests = [ ("Too short Phase 2 TLV frame (len=3)",
+               "ABC",
+               False),
+              ("EAP-FAST: TLV overflow",
+               struct.pack(">HHB", 0, 2, 0xff),
+               False),
+              ("EAP-FAST: Unknown TLV (optional and mandatory)",
+               struct.pack(">HHB", 0, 1, 0xff) +
+               struct.pack(">HHB", EAP_TLV_TYPE_MANDATORY, 1, 0xff),
+               True),
+              ("EAP-FAST: More than one EAP-Payload TLV in the message",
+               struct.pack(">HHBHHB",
+                           EAP_TLV_EAP_PAYLOAD_TLV, 1, 0xff,
+                           EAP_TLV_EAP_PAYLOAD_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: Unknown Result 255 and More than one Result TLV in the message",
+               struct.pack(">HHHHHH",
+                           EAP_TLV_RESULT_TLV, 2, 0xff,
+                           EAP_TLV_RESULT_TLV, 2, 0xff),
+               True),
+              ("EAP-FAST: Too short Result TLV",
+               struct.pack(">HHB", EAP_TLV_RESULT_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: Unknown Intermediate Result 255 and More than one Intermediate-Result TLV in the message",
+               struct.pack(">HHHHHH",
+                           EAP_TLV_INTERMEDIATE_RESULT_TLV, 2, 0xff,
+                           EAP_TLV_INTERMEDIATE_RESULT_TLV, 2, 0xff),
+               True),
+              ("EAP-FAST: Too short Intermediate-Result TLV",
+               struct.pack(">HHB", EAP_TLV_INTERMEDIATE_RESULT_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: More than one Crypto-Binding TLV in the message",
+               struct.pack(">HH", EAP_TLV_CRYPTO_BINDING_TLV, 60) + 60*'A' +
+               struct.pack(">HH", EAP_TLV_CRYPTO_BINDING_TLV, 60) + 60*'A',
+               True),
+              ("EAP-FAST: Too short Crypto-Binding TLV",
+               struct.pack(">HHB", EAP_TLV_CRYPTO_BINDING_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: More than one Request-Action TLV in the message",
+               struct.pack(">HHBBHHBB",
+                           EAP_TLV_REQUEST_ACTION_TLV, 2, 0xff, 0xff,
+                           EAP_TLV_REQUEST_ACTION_TLV, 2, 0xff, 0xff),
+               True),
+              ("EAP-FAST: Too short Request-Action TLV",
+               struct.pack(">HHB", EAP_TLV_REQUEST_ACTION_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: More than one PAC TLV in the message",
+               struct.pack(">HHBHHB",
+                           EAP_TLV_PAC_TLV, 1, 0xff,
+                           EAP_TLV_PAC_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: Too short EAP Payload TLV (Len=3)",
+               struct.pack(">HH3B",
+                           EAP_TLV_EAP_PAYLOAD_TLV, 3, 0, 0, 0),
+               False),
+              ("EAP-FAST: Too short Phase 2 request (Len=0)",
+               struct.pack(">HHBBH",
+                           EAP_TLV_EAP_PAYLOAD_TLV, 4,
+                           EAP_CODE_REQUEST, 0, 0),
+               False),
+              ("EAP-FAST: EAP packet overflow in EAP Payload TLV",
+               struct.pack(">HHBBH",
+                           EAP_TLV_EAP_PAYLOAD_TLV, 4,
+                           EAP_CODE_REQUEST, 0, 4 + 1),
+               False),
+              ("EAP-FAST: Unexpected code=0 in Phase 2 EAP header",
+               struct.pack(">HHBBH",
+                           EAP_TLV_EAP_PAYLOAD_TLV, 4,
+                           0, 0, 0),
+               False),
+              ("EAP-FAST: PAC TLV without Result TLV acknowledging success",
+               struct.pack(">HHB", EAP_TLV_PAC_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: PAC TLV does not include all the required fields",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHB", EAP_TLV_PAC_TLV, 1, 0xff),
+               True),
+              ("EAP-FAST: Invalid PAC-Key length 0, Ignored unknown PAC type 0, and PAC TLV overrun (type=0 len=2 left=1)",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHHB", EAP_TLV_PAC_TLV, 4 + 4 + 5,
+                           PAC_TYPE_PAC_KEY, 0, 0, 0, 0, 2, 0),
+               True),
+              ("EAP-FAST: PAC-Info does not include all the required fields",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHH", EAP_TLV_PAC_TLV, 4 + 4 + 4 + 32,
+                           PAC_TYPE_PAC_OPAQUE, 0,
+                           PAC_TYPE_PAC_INFO, 0,
+                           PAC_TYPE_PAC_KEY, 32) + 32*'A',
+               True),
+              ("EAP-FAST: Invalid CRED_LIFETIME length, Ignored unknown PAC-Info type 0, and Invalid PAC-Type length 1",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHHHHHHBHH", EAP_TLV_PAC_TLV, 4 + 4 + 13 + 4 + 32,
+                           PAC_TYPE_PAC_OPAQUE, 0,
+                           PAC_TYPE_PAC_INFO, 13, PAC_TYPE_CRED_LIFETIME, 0,
+                           0, 0, PAC_TYPE_PAC_TYPE, 1, 0,
+                           PAC_TYPE_PAC_KEY, 32) + 32*'A',
+               True),
+              ("EAP-FAST: Unsupported PAC-Type 0",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHHHHH", EAP_TLV_PAC_TLV, 4 + 4 + 6 + 4 + 32,
+                           PAC_TYPE_PAC_OPAQUE, 0,
+                           PAC_TYPE_PAC_INFO, 6, PAC_TYPE_PAC_TYPE, 2, 0,
+                           PAC_TYPE_PAC_KEY, 32) + 32*'A',
+               True),
+              ("EAP-FAST: PAC-Info overrun (type=0 len=2 left=1)",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHHBHH", EAP_TLV_PAC_TLV, 4 + 4 + 5 + 4 + 32,
+                           PAC_TYPE_PAC_OPAQUE, 0,
+                           PAC_TYPE_PAC_INFO, 5, 0, 2, 1,
+                           PAC_TYPE_PAC_KEY, 32) + 32*'A',
+               True),
+              ("EAP-FAST: Valid PAC",
+               struct.pack(">HHH", EAP_TLV_RESULT_TLV, 2,
+                           EAP_TLV_RESULT_SUCCESS) +
+               struct.pack(">HHHHHHHHBHHBHH", EAP_TLV_PAC_TLV,
+                           4 + 4 + 10 + 4 + 32,
+                           PAC_TYPE_PAC_OPAQUE, 0,
+                           PAC_TYPE_PAC_INFO, 10, PAC_TYPE_A_ID, 1, 0x41,
+                           PAC_TYPE_A_ID_INFO, 1, 0x42,
+                           PAC_TYPE_PAC_KEY, 32) + 32*'A',
+               True),
+              ("EAP-FAST: Invalid version/subtype in Crypto-Binding TLV",
+               struct.pack(">HH", EAP_TLV_CRYPTO_BINDING_TLV, 60) + 60*'A',
+               True) ]
+    for title, payload, failure in tests:
+        logger.info("Phase 2 test: " + title)
+        run_eap_fast_phase2(dev, payload, failure)
+
+def test_eap_fast_tlv_nak_oom(dev, apdev):
+    """EAP-FAST Phase 2 TLV NAK OOM"""
+    if not openssl_imported:
+        raise HwsimSkip("OpenSSL python method not available")
+    check_eap_capa(dev[0], "FAST")
+    hapd = start_ap(apdev[0]['ifname'])
+
+    with alloc_fail(dev[0], 1, "eap_fast_tlv_nak"):
+        run_eap_fast_phase2(dev, struct.pack(">HHB", EAP_TLV_TYPE_MANDATORY,
+                                             1, 0xff), False)

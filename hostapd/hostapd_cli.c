@@ -215,6 +215,52 @@ static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 }
 
 
+static int write_cmd(char *buf, size_t buflen, const char *cmd, int argc,
+		     char *argv[])
+{
+	int i, res;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	res = os_snprintf(pos, end - pos, "%s", cmd);
+	if (os_snprintf_error(end - pos, res))
+		goto fail;
+	pos += res;
+
+	for (i = 0; i < argc; i++) {
+		res = os_snprintf(pos, end - pos, " %s", argv[i]);
+		if (os_snprintf_error(end - pos, res))
+			goto fail;
+		pos += res;
+	}
+
+	buf[buflen - 1] = '\0';
+	return 0;
+
+fail:
+	printf("Too long command\n");
+	return -1;
+}
+
+
+static int hostapd_cli_cmd(struct wpa_ctrl *ctrl, const char *cmd,
+			   int min_args, int argc, char *argv[])
+{
+	char buf[4096];
+
+	if (argc < min_args) {
+		printf("Invalid %s command - at least %d argument%s required.\n",
+		       cmd, min_args, min_args > 1 ? "s are" : " is");
+		return -1;
+	}
+	if (write_cmd(buf, sizeof(buf), cmd, argc, argv) < 0)
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_ping(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "PING");
@@ -1068,6 +1114,14 @@ static int hostapd_cli_cmd_log_level(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_raw(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc == 0)
+		return -1;
+	return hostapd_cli_cmd(ctrl, argv[0], 0, argc - 1, &argv[1]);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1110,6 +1164,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #ifdef CONFIG_FST
 	{ "fst", hostapd_cli_cmd_fst },
 #endif /* CONFIG_FST */
+	{ "raw", hostapd_cli_cmd_raw },
 	{ "level", hostapd_cli_cmd_level },
 	{ "license", hostapd_cli_cmd_license },
 	{ "quit", hostapd_cli_cmd_quit },

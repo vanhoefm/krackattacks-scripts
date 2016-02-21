@@ -6373,25 +6373,30 @@ void wpa_bss_tmp_disallow(struct wpa_supplicant *wpa_s, const u8 *bssid,
 
 int wpa_is_bss_tmp_disallowed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
-	struct wpa_bss_tmp_disallowed *bss;
+	struct wpa_bss_tmp_disallowed *bss = NULL, *tmp, *prev;
 	struct os_reltime now, age;
 
 	os_get_reltime(&now);
 
-	bss = wpas_get_disallowed_bss(wpa_s, bssid);
+	dl_list_for_each_safe(tmp, prev, &wpa_s->bss_tmp_disallowed,
+			 struct wpa_bss_tmp_disallowed, list) {
+		if (!os_reltime_before(&now, &tmp->disallowed_until)) {
+			/* This BSS is not disallowed anymore */
+			dl_list_del(&tmp->list);
+			os_free(tmp);
+			continue;
+		}
+		if (os_memcmp(bssid, tmp->bssid, ETH_ALEN) == 0) {
+			bss = tmp;
+			break;
+		}
+	}
 	if (!bss)
 		return 0;
 
-	if (os_reltime_before(&now, &bss->disallowed_until)) {
-		os_reltime_sub(&bss->disallowed_until, &now, &age);
-		wpa_printf(MSG_DEBUG,
-			   "BSS " MACSTR " disabled for %ld.%0ld seconds",
-			   MAC2STR(bss->bssid), age.sec, age.usec);
-		return 1;
-	}
-
-	/* This BSS is not disallowed anymore */
-	dl_list_del(&bss->list);
-	os_free(bss);
-	return 0;
+	os_reltime_sub(&bss->disallowed_until, &now, &age);
+	wpa_printf(MSG_DEBUG,
+		   "BSS " MACSTR " disabled for %ld.%0ld seconds",
+		   MAC2STR(bss->bssid), age.sec, age.usec);
+	return 1;
 }

@@ -58,6 +58,7 @@ struct ieee802_11_elems {
 	const u8 *bss_max_idle_period;
 	const u8 *ssid_list;
 	const u8 *osen;
+	const u8 *mbo;
 	const u8 *ampe;
 	const u8 *mic;
 	const u8 *pref_freq_list;
@@ -87,6 +88,7 @@ struct ieee802_11_elems {
 	u8 ext_capab_len;
 	u8 ssid_list_len;
 	u8 osen_len;
+	u8 mbo_len;
 	u8 ampe_len;
 	u8 mic_len;
 	u8 pref_freq_list_len;

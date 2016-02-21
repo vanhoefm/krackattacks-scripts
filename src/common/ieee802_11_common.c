@@ -115,6 +115,11 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->osen = pos;
 			elems->osen_len = elen;
 			break;
+		case MBO_OUI_TYPE:
+			/* MBO-OCE */
+			elems->mbo = pos;
+			elems->mbo_len = elen;
+			break;
 		default:
 			wpa_printf(MSG_MSGDUMP, "Unknown WFA "
 				   "information element ignored "

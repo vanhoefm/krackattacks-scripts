@@ -12,6 +12,7 @@ logger = logging.getLogger()
 import subprocess
 
 import hostapd
+from utils import alloc_fail, wait_fail_trigger
 from wlantest import Wlantest
 
 def test_wnm_bss_transition_mgmt(dev, apdev):
@@ -168,6 +169,23 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
     if ev is None:
         raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
+
+def test_wnm_sleep_mode_ap_oom(dev, apdev):
+    """WNM Sleep Mode - AP side OOM"""
+    params = { "ssid": "test-wnm",
+               "wnm_sleep_mode": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
+    with alloc_fail(hapd, 1, "ieee802_11_send_wnmsleep_resp"):
+        dev[0].request("WNM_SLEEP enter")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+    with alloc_fail(hapd, 2, "ieee802_11_send_wnmsleep_resp"):
+        dev[0].request("WNM_SLEEP exit")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
 
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     """WNM Sleep Mode - RSN with PMF"""

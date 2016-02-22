@@ -32,6 +32,7 @@
 #include "ap_drv_ops.h"
 #include "gas_serv.h"
 #include "wnm_ap.h"
+#include "mbo_ap.h"
 #include "ndisc_snoop.h"
 #include "sta_info.h"
 #include "vlan.h"
@@ -325,6 +326,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	sae_clear_data(sta->sae);
 	os_free(sta->sae);
 #endif /* CONFIG_SAE */
+
+	mbo_ap_sta_free(sta);
 
 	os_free(sta);
 }

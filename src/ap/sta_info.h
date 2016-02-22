@@ -46,6 +46,16 @@
 #define WLAN_SUPP_RATES_MAX 32
 
 
+struct mbo_non_pref_chan_info {
+	struct mbo_non_pref_chan_info *next;
+	u8 op_class;
+	u8 pref;
+	u8 reason_code;
+	u8 reason_detail;
+	u8 num_channels;
+	u8 channels[];
+};
+
 struct sta_info {
 	struct sta_info *next; /* next entry in sta list */
 	struct sta_info *hnext; /* next entry in hash table list */
@@ -178,6 +188,7 @@ struct sta_info {
 #ifdef CONFIG_MBO
 	u8 cell_capa; /* 0 = unknown (not an MBO STA); otherwise,
 		       * enum mbo_cellular_capa values */
+	struct mbo_non_pref_chan_info *non_pref_chan;
 #endif /* CONFIG_MBO */
 };
 

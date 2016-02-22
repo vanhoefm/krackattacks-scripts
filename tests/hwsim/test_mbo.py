@@ -84,3 +84,34 @@ def test_mbo_cell_capa_update(dev, apdev):
         raise Exception("mbo_cell_capa missing after update")
     if sta['mbo_cell_capa'] != '3':
         raise Exception("mbo_cell_capa not updated properly")
+
+def test_mbo_cell_capa_update_pmf(dev, apdev):
+    """MBO cellular data capability update with PMF required"""
+    ssid = "test-wnm-mbo"
+    passphrase = "12345678"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
+    params["ieee80211w"] = "2";
+    params['mbo'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
+	raise Exception("Failed to set STA as cellular data capable")
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK-SHA256",
+                   proto="WPA2", ieee80211w="2", scan_freq="2412")
+
+    addr = dev[0].own_addr()
+    sta = hapd.get_sta(addr)
+    if 'mbo_cell_capa' not in sta or sta['mbo_cell_capa'] != '1':
+        raise Exception("mbo_cell_capa missing after association")
+
+    if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
+	raise Exception("Failed to set STA as cellular data not-capable")
+
+    time.sleep(0.2)
+    sta = hapd.get_sta(addr)
+    if 'mbo_cell_capa' not in sta:
+        raise Exception("mbo_cell_capa missing after update")
+    if sta['mbo_cell_capa'] != '3':
+        raise Exception("mbo_cell_capa not updated properly")

@@ -18,6 +18,8 @@ struct ieee802_11_elems;
 void mbo_ap_check_sta_assoc(struct hostapd_data *hapd, struct sta_info *sta,
 			    struct ieee802_11_elems *elems);
 int mbo_ap_get_info(struct sta_info *sta, char *buf, size_t buflen);
+void mbo_ap_wnm_notification_req(struct hostapd_data *hapd, const u8 *addr,
+				 const u8 *buf, size_t len);
 
 #else /* CONFIG_MBO */
 
@@ -31,6 +33,12 @@ static inline int mbo_ap_get_info(struct sta_info *sta, char *buf,
 				  size_t buflen)
 {
 	return 0;
+}
+
+static inline void mbo_ap_wnm_notification_req(struct hostapd_data *hapd,
+					       const u8 *addr,
+					       const u8 *buf, size_t len)
+{
 }
 
 #endif /* CONFIG_MBO */

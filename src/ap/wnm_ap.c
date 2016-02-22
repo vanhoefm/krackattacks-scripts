@@ -17,6 +17,7 @@
 #include "ap/ap_config.h"
 #include "ap/ap_drv_ops.h"
 #include "ap/wpa_auth.h"
+#include "mbo_ap.h"
 #include "wnm_ap.h"
 
 #define MAX_TFS_IE_LEN  1024
@@ -394,6 +395,8 @@ static void ieee802_11_rx_wnm_notification_req(struct hostapd_data *hapd,
 		   MAC2STR(addr), dialog_token, type);
 	wpa_hexdump(MSG_MSGDUMP, "WNM: Notification Request subelements",
 		    buf, len);
+	if (type == WLAN_EID_VENDOR_SPECIFIC)
+		mbo_ap_wnm_notification_req(hapd, addr, buf, len);
 }
 
 

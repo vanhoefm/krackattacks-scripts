@@ -1113,6 +1113,12 @@ enum mbo_transition_reject_reason {
 	MBO_TRANSITION_REJECT_REASON_SERVICES = 6,
 };
 
+/* MBO v0.0_r19, 4.4: WNM-Notification vendor subelements */
+enum wfa_wnm_notif_subelem_id {
+	WFA_WNM_NOTIF_SUBELEM_NON_PREF_CHAN_REPORT = 2,
+	WFA_WNM_NOTIF_SUBELEM_CELL_DATA_CAPA = 3,
+};
+
 /* Wi-Fi Direct (P2P) */
 
 #define P2P_OUI_TYPE 9

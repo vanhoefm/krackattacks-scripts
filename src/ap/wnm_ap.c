@@ -95,6 +95,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	if (mgmt == NULL) {
 		wpa_printf(MSG_DEBUG, "MLME: Failed to allocate buffer for "
 			   "WNM-Sleep Response action frame");
+		os_free(wnmtfs_ie);
 		return -1;
 	}
 	os_memcpy(mgmt->da, addr, ETH_ALEN);

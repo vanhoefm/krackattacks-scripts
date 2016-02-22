@@ -42,6 +42,7 @@
 #include "hw_features.h"
 #include "ieee802_11.h"
 #include "dfs.h"
+#include "mbo_ap.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
@@ -1712,6 +1713,8 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	else
 		sta->mb_ies = NULL;
 #endif /* CONFIG_FST */
+
+	mbo_ap_check_sta_assoc(hapd, sta, &elems);
 
 	return WLAN_STATUS_SUCCESS;
 }

@@ -284,6 +284,7 @@ endif
 
 ifdef CONFIG_MBO
 CFLAGS += -DCONFIG_MBO
+OBJS += ../src/ap/mbo_ap.o
 endif
 
 include ../src/drivers/drivers.mak

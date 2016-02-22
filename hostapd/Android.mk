@@ -265,6 +265,7 @@ endif
 
 ifdef CONFIG_MBO
 L_CFLAGS += -DCONFIG_MBO
+OBJS += src/ap/mbo_ap.c
 endif
 
 ifdef CONFIG_FST

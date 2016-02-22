@@ -34,6 +34,7 @@
 #include "hw_features.h"
 #include "dfs.h"
 #include "beacon.h"
+#include "mbo_ap.h"
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
@@ -172,6 +173,8 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	else
 		sta->mb_ies = NULL;
 #endif /* CONFIG_FST */
+
+	mbo_ap_check_sta_assoc(hapd, sta, &elems);
 
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {

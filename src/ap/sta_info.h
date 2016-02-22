@@ -174,6 +174,11 @@ struct sta_info {
 	u16 last_seq_ctrl;
 	/* Last Authentication/(Re)Association Request/Action frame subtype */
 	u8 last_subtype;
+
+#ifdef CONFIG_MBO
+	u8 cell_capa; /* 0 = unknown (not an MBO STA); otherwise,
+		       * enum mbo_cellular_capa values */
+#endif /* CONFIG_MBO */
 };
 
 

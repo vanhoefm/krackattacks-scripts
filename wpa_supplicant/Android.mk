@@ -806,6 +806,9 @@ endif
 ifdef CONFIG_WNM
 OBJS += src/ap/wnm_ap.c
 endif
+ifdef CONFIG_MBO
+OBJS += src/ap/mbo_ap.c
+endif
 ifdef CONFIG_CTRL_IFACE
 OBJS += src/ap/ctrl_iface_ap.c
 endif

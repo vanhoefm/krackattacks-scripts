@@ -22,6 +22,7 @@
 #include "p2p_hostapd.h"
 #include "ctrl_iface_ap.h"
 #include "ap_drv_ops.h"
+#include "mbo_ap.h"
 
 
 static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
@@ -160,6 +161,10 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 		if (!os_snprintf_error(buflen - len, res))
 			len += res;
 	}
+
+	res = mbo_ap_get_info(sta, buf + len, buflen - len);
+	if (res >= 0)
+		len += res;
 
 	return len;
 }

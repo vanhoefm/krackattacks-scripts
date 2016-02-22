@@ -376,6 +376,27 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 }
 
 
+static void ieee802_11_rx_wnm_notification_req(struct hostapd_data *hapd,
+					       const u8 *addr, const u8 *buf,
+					       size_t len)
+{
+	u8 dialog_token, type;
+
+	if (len < 2)
+		return;
+	dialog_token = *buf++;
+	type = *buf++;
+	len -= 2;
+
+	wpa_printf(MSG_DEBUG,
+		   "WNM: Received WNM Notification Request frame from "
+		   MACSTR " (dialog_token=%u type=%u)",
+		   MAC2STR(addr), dialog_token, type);
+	wpa_hexdump(MSG_MSGDUMP, "WNM: Notification Request subelements",
+		    buf, len);
+}
+
+
 int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 				const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -401,6 +422,10 @@ int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 		return 0;
 	case WNM_SLEEP_MODE_REQ:
 		ieee802_11_rx_wnmsleep_req(hapd, mgmt->sa, payload, plen);
+		return 0;
+	case WNM_NOTIFICATION_REQ:
+		ieee802_11_rx_wnm_notification_req(hapd, mgmt->sa, payload,
+						   plen);
 		return 0;
 	}
 

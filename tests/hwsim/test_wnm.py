@@ -1085,3 +1085,26 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
 	raise Exception("Failed to set STA as cellular data not-capable")
+
+def test_wnm_bss_transition_mgmt_query(dev, apdev):
+    """WNM BSS Transition Management query"""
+    params = { "ssid": "test-wnm",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = { "ssid": "another" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], 2412)
+    dev[0].scan_for_bss(apdev[0]['bssid'], 2412)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("WNM_BSS_QUERY 0 list")
+
+    ev = dev[0].wait_event(["WNM: BSS Transition Management Request"],
+                           timeout=5)
+    if ev is None:
+        raise Exception("No BSS Transition Management Request frame seen")
+
+    ev = hapd.wait_event(["BSS-TM-RESP"], timeout=5)
+    if ev is None:
+        raise Exception("No BSS Transition Management Response frame seen")

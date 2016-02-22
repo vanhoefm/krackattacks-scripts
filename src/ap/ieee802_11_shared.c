@@ -209,6 +209,10 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 		if (hapd->conf->hs20)
 			*pos |= 0x40; /* Bit 46 - WNM-Notification */
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+		if (hapd->conf->mbo_enabled)
+			*pos |= 0x40; /* Bit 46 - WNM-Notification */
+#endif /* CONFIG_MBO */
 		break;
 	case 6: /* Bits 48-55 */
 		if (hapd->conf->ssid.utf8_ssid)
@@ -241,6 +245,10 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	if (hapd->conf->hs20 && len < 6)
 		len = 6;
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+	if (hapd->conf->mbo_enabled && len < 6)
+		len = 6;
+#endif /* CONFIG_MBO */
 	if (len < hapd->iface->extended_capa_len)
 		len = hapd->iface->extended_capa_len;
 	if (len == 0)

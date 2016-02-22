@@ -881,6 +881,15 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 #endif /* CONFIG_HS20 */
 
+#ifdef CONFIG_MBO
+	if (full_config && bss->mbo_enabled && (bss->wpa & 2) &&
+	    bss->ieee80211w == NO_MGMT_FRAME_PROTECTION) {
+		wpa_printf(MSG_ERROR,
+			   "MBO: PMF needs to be enabled whenever using WPA2 with MBO");
+		return -1;
+	}
+#endif /* CONFIG_MBO */
+
 	return 0;
 }
 

@@ -1714,7 +1714,17 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		sta->mb_ies = NULL;
 #endif /* CONFIG_FST */
 
+#ifdef CONFIG_MBO
 	mbo_ap_check_sta_assoc(hapd, sta, &elems);
+
+	if (hapd->conf->mbo_enabled && (hapd->conf->wpa & 2) &&
+	    elems.mbo && sta->cell_capa && !(sta->flags & WLAN_STA_MFP) &&
+	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		wpa_printf(MSG_INFO,
+			   "MBO: Reject WPA2 association without PMF");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+#endif /* CONFIG_MBO */
 
 	return WLAN_STATUS_SUCCESS;
 }

@@ -128,6 +128,7 @@ struct hostapd_vlan {
 };
 
 #define PMK_LEN 32
+#define MIN_PASSPHRASE_LEN 8
 #define MAX_PASSPHRASE_LEN 63
 struct hostapd_sta_wpa_psk_short {
 	struct hostapd_sta_wpa_psk_short *next;

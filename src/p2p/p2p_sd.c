@@ -425,9 +425,16 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 		     u8 dialog_token, const struct wpabuf *resp_tlvs)
 {
 	struct wpabuf *resp;
+	size_t max_len;
+
+	/*
+	 * In the 60 GHz, we have a smaller maximum frame length for management
+	 * frames.
+	 */
+	max_len = (freq > 56160) ? 928 : 1400;
 
 	/* TODO: fix the length limit to match with the maximum frame length */
-	if (wpabuf_len(resp_tlvs) > 1400) {
+	if (wpabuf_len(resp_tlvs) > max_len) {
 		p2p_dbg(p2p, "SD response long enough to require fragmentation");
 		if (p2p->sd_resp) {
 			/*
@@ -614,7 +621,7 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 {
 	struct wpabuf *resp;
 	u8 dialog_token;
-	size_t frag_len;
+	size_t frag_len, max_len;
 	int more = 0;
 
 	wpa_hexdump(MSG_DEBUG, "P2P: RX GAS Comeback Request", data, len);
@@ -638,9 +645,14 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
+	/*
+	 * In the 60 GHz, we have a smaller maximum frame length for management
+	 * frames.
+	 */
+	max_len = (rx_freq > 56160) ? 928 : 1400;
 	frag_len = wpabuf_len(p2p->sd_resp) - p2p->sd_resp_pos;
-	if (frag_len > 1400) {
-		frag_len = 1400;
+	if (frag_len > max_len) {
+		frag_len = max_len;
 		more = 1;
 	}
 	resp = p2p_build_gas_comeback_resp(dialog_token, WLAN_STATUS_SUCCESS,

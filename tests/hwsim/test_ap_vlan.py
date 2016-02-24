@@ -104,6 +104,30 @@ def test_ap_vlan_wpa2_radius_2(dev, apdev):
 
 def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID"""
+    generic_ap_vlan_wpa2_radius_id_change(dev, apdev, False)
+
+def test_ap_vlan_tagged_wpa2_radius_id_change(dev, apdev):
+    """AP tagged VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID"""
+    ifname1 = 'wlan0.1'
+    ifname2 = 'wlan0.2'
+    try:
+        # Create tagged interface for wpa_supplicant
+        subprocess.call(['ip', 'link', 'add', 'link', dev[0].ifname,
+                         'name', ifname1, 'type', 'vlan', 'id', '1'])
+        subprocess.call(['ifconfig', ifname1, 'up'])
+
+        subprocess.call(['ip', 'link', 'add', 'link', dev[0].ifname,
+                         'name', ifname2, 'type', 'vlan', 'id', '2'])
+        subprocess.call(['ifconfig', ifname2, 'up'])
+
+        generic_ap_vlan_wpa2_radius_id_change(dev, apdev, True)
+    finally:
+        subprocess.call(['ifconfig', ifname1, 'down'])
+        subprocess.call(['ifconfig', ifname2, 'down'])
+        subprocess.call(['ip', 'link', 'del', ifname1])
+        subprocess.call(['ip', 'link', 'del', ifname2])
+
+def generic_ap_vlan_wpa2_radius_id_change(dev, apdev, tagged):
     as_params = { "ssid": "as",
                   "beacon_int": "2000",
                   "radius_server_clients": "auth_serv/radius_clients.conf",
@@ -120,11 +144,17 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     params['auth_server_port'] = "18128"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
+    identity = "vlan1tagged" if tagged else "vlan1"
+
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
-                   identity="vlan1",
+                   identity=identity,
                    password_hex="0123456789abcdef0123456789abcdef",
                    scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    if tagged:
+        hwsim_utils.run_connectivity_test(dev[0], hapd, 0, ifname1="wlan0.1",
+                                          ifname2="brvlan1")
+    else:
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
 
     logger.info("VLAN-ID -> 2")
 
@@ -146,9 +176,13 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     sta = hapd.get_sta(dev[0].own_addr())
     if 'vlan_id' not in sta:
         raise Exception("No VLAN ID in STA info")
-    if sta['vlan_id'] != '2':
+    if (not tagged) and (sta['vlan_id'] != '2'):
         raise Exception("Unexpected VLAN ID: " + sta['vlan_id'])
-    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
+    if tagged:
+        hwsim_utils.run_connectivity_test(dev[0], hapd, 0, ifname1="wlan0.2",
+                                          ifname2="brvlan2")
+    else:
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
 
     logger.info("VLAN-ID -> 1")
     time.sleep(1)
@@ -171,16 +205,26 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     sta = hapd.get_sta(dev[0].own_addr())
     if 'vlan_id' not in sta:
         raise Exception("No VLAN ID in STA info")
-    if sta['vlan_id'] != '1':
+    if (not tagged) and (sta['vlan_id'] != '1'):
         raise Exception("Unexpected VLAN ID: " + sta['vlan_id'])
     time.sleep(0.2)
     try:
-        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+        if tagged:
+            hwsim_utils.run_connectivity_test(dev[0], hapd, 0,
+                                              ifname1="wlan0.1",
+                                              ifname2="brvlan1")
+        else:
+            hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
     except Exception, e:
         # It is possible for new bridge setup to not be ready immediately, so
         # try again to avoid reporting issues related to that.
         logger.info("First VLAN-ID 1 data test failed - try again")
-        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+        if tagged:
+            hwsim_utils.run_connectivity_test(dev[0], hapd, 0,
+                                              ifname1="wlan0.1",
+                                              ifname2="brvlan1")
+        else:
+            hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""

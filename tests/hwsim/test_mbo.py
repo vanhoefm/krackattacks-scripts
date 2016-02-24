@@ -198,3 +198,22 @@ def test_mbo_non_pref_chan(dev, apdev):
     logger.debug("STA: " + str(sta))
     if 'non_pref_chan[0]' in sta:
         raise Exception("Unexpected non_pref_chan[0] value (update 4)")
+
+def test_mbo_sta_supp_op_classes(dev, apdev):
+    """MBO STA supported operating classes"""
+    ssid = "test-wnm-mbo"
+    params = { 'ssid': ssid, 'mbo': '1' }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+    addr = dev[0].own_addr()
+    sta = hapd.get_sta(addr)
+    logger.debug("STA: " + str(sta))
+    if 'supp_op_classes' not in sta:
+        raise Exception("No supp_op_classes")
+    supp = bytearray(sta['supp_op_classes'].decode("hex"))
+    if supp[0] != 81:
+        raise Exception("Unexpected current operating class %d" % supp[0])
+    if 115 not in supp:
+        raise Exception("Operating class 115 missing")

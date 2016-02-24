@@ -76,23 +76,13 @@ static void hostapd_acl_cache_free(struct hostapd_cached_radius_acl *acl_cache)
 static void copy_psk_list(struct hostapd_sta_wpa_psk_short **psk,
 			  struct hostapd_sta_wpa_psk_short *src)
 {
-	struct hostapd_sta_wpa_psk_short **copy_to;
-	struct hostapd_sta_wpa_psk_short *copy_from;
+	if (!psk)
+		return;
 
-	/* Copy PSK linked list */
-	copy_to = psk;
-	copy_from = src;
-	while (copy_from && copy_to) {
-		*copy_to = os_zalloc(sizeof(struct hostapd_sta_wpa_psk_short));
-		if (*copy_to == NULL)
-			break;
-		os_memcpy(*copy_to, copy_from,
-			  sizeof(struct hostapd_sta_wpa_psk_short));
-		copy_from = copy_from->next;
-		copy_to = &((*copy_to)->next);
-	}
-	if (copy_to)
-		*copy_to = NULL;
+	if (src)
+		src->ref++;
+
+	*psk = src;
 }
 
 
@@ -667,6 +657,12 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 
 void hostapd_free_psk_list(struct hostapd_sta_wpa_psk_short *psk)
 {
+	if (psk && psk->ref) {
+		/* This will be freed when the last reference is dropped. */
+		psk->ref--;
+		return;
+	}
+
 	while (psk) {
 		struct hostapd_sta_wpa_psk_short *prev = psk;
 		psk = psk->next;

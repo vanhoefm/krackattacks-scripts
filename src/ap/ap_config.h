@@ -134,6 +134,7 @@ struct hostapd_sta_wpa_psk_short {
 	unsigned int is_passphrase:1;
 	u8 psk[PMK_LEN];
 	char passphrase[MAX_PASSPHRASE_LEN + 1];
+	int ref; /* (number of references held) - 1 */
 };
 
 struct hostapd_wpa_psk {

@@ -382,142 +382,31 @@ def test_pmksa_cache_and_cui(dev, apdev):
     if state != "COMPLETED":
         raise Exception("Reauthentication did not complete")
 
-def test_pmksa_cache_preauth(dev, apdev):
-    """RSN pre-authentication to generate PMKSA cache entry"""
+def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
+                                force_disconnect=False):
+    if not extraparams:
+        extraparams = [{}, {}]
     try:
         params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
         params['bridge'] = 'ap-br0'
-        hostapd.add_ap(apdev[0]['ifname'], params)
-        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
-        eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
-                    password_hex="0123456789abcdef0123456789abcdef")
+        for key, value in extraparams[0].iteritems():
+            params[key] = value
 
-        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-        params['bridge'] = 'ap-br0'
-        params['rsn_preauth'] = '1'
-        params['rsn_preauth_interfaces'] = 'ap-br0'
-        hostapd.add_ap(apdev[1]['ifname'], params)
-        bssid1 = apdev[1]['bssid']
-        dev[0].scan(freq="2412")
-        success = False
-        status_seen = False
-        for i in range(0, 50):
-            if not status_seen:
-                status = dev[0].request("STATUS")
-                if "Pre-authentication EAPOL state machines:" in status:
-                    status_seen = True
-            time.sleep(0.1)
-            pmksa = dev[0].get_pmksa(bssid1)
-            if pmksa:
-                success = True
-                break
-        if not success:
-            raise Exception("No PMKSA cache entry created from pre-authentication")
-        if not status_seen:
-            raise Exception("Pre-authentication EAPOL status was not available")
-
-        dev[0].scan(freq="2412")
-        if "[WPA2-EAP-CCMP-preauth]" not in dev[0].request("SCAN_RESULTS"):
-            raise Exception("Scan results missing RSN element info")
-        dev[0].request("ROAM " + bssid1)
-        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
-                                "CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
-        if "CTRL-EVENT-EAP-STARTED" in ev:
-            raise Exception("Unexpected EAP exchange")
-        pmksa2 = dev[0].get_pmksa(bssid1)
-        if pmksa2 is None:
-            raise Exception("No PMKSA cache entry")
-        if pmksa['pmkid'] != pmksa2['pmkid']:
-            raise Exception("Unexpected PMKID change")
-
-    finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['brctl', 'delbr', 'ap-br0'])
-
-def test_pmksa_cache_preauth_vlan_enabled(dev, apdev):
-    """RSN pre-authentication to generate PMKSA cache entry (dynamic_vlan optional but station without VLAN set)"""
-    try:
-        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-        params['bridge'] = 'ap-br0'
-        params['dynamic_vlan'] = '1'
-        hostapd.add_ap(apdev[0]['ifname'], params)
-        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
-        eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
-                    password_hex="0123456789abcdef0123456789abcdef")
-
-        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-        params['bridge'] = 'ap-br0'
-        params['rsn_preauth'] = '1'
-        params['rsn_preauth_interfaces'] = 'ap-br0'
-        params['dynamic_vlan'] = '1'
-        hostapd.add_ap(apdev[1]['ifname'], params)
-        bssid1 = apdev[1]['bssid']
-        dev[0].scan(freq="2412")
-        success = False
-        status_seen = False
-        for i in range(0, 50):
-            if not status_seen:
-                status = dev[0].request("STATUS")
-                if "Pre-authentication EAPOL state machines:" in status:
-                    status_seen = True
-            time.sleep(0.1)
-            pmksa = dev[0].get_pmksa(bssid1)
-            if pmksa:
-                success = True
-                break
-        if not success:
-            raise Exception("No PMKSA cache entry created from pre-authentication")
-        if not status_seen:
-            raise Exception("Pre-authentication EAPOL status was not available")
-
-        dev[0].scan(freq="2412")
-        if "[WPA2-EAP-CCMP-preauth]" not in dev[0].request("SCAN_RESULTS"):
-            raise Exception("Scan results missing RSN element info")
-        dev[0].request("ROAM " + bssid1)
-        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
-                                "CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
-        if "CTRL-EVENT-EAP-STARTED" in ev:
-            raise Exception("Unexpected EAP exchange")
-        pmksa2 = dev[0].get_pmksa(bssid1)
-        if pmksa2 is None:
-            raise Exception("No PMKSA cache entry")
-        if pmksa['pmkid'] != pmksa2['pmkid']:
-            raise Exception("Unexpected PMKID change")
-
-    finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['brctl', 'delbr', 'ap-br0'])
-
-def test_pmksa_cache_preauth_vlan_used(dev, apdev):
-    """RSN pre-authentication to generate PMKSA cache entry (station with VLAN set)"""
-    try:
-        subprocess.call(['brctl', 'addbr', 'brvlan1'])
-        subprocess.call(['brctl', 'setfd', 'brvlan1', '0'])
-        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-        params['bridge'] = 'ap-br0'
-        params['dynamic_vlan'] = '1'
-        params['vlan_file'] = 'hostapd.wlan3.vlan'
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
         subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
-        eap_connect(dev[0], apdev[0], "PAX", "vlan1",
+        eap_connect(dev[0], apdev[0], "PAX", identity,
                     password_hex="0123456789abcdef0123456789abcdef")
 
         # Verify connectivity in the correct VLAN
-        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, databridge)
 
         params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
         params['bridge'] = 'ap-br0'
         params['rsn_preauth'] = '1'
-        params['rsn_preauth_interfaces'] = 'brvlan1'
-        params['dynamic_vlan'] = '1'
-        params['vlan_file'] = 'hostapd.wlan4.vlan'
+        params['rsn_preauth_interfaces'] = databridge
+        for key, value in extraparams[1].iteritems():
+            params[key] = value
         hostapd.add_ap(apdev[1]['ifname'], params)
         bssid1 = apdev[1]['bssid']
         dev[0].scan(freq="2412")
@@ -555,7 +444,10 @@ def test_pmksa_cache_preauth_vlan_used(dev, apdev):
             raise Exception("Unexpected PMKID change")
 
         # Verify connectivity in the correct VLAN
-        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, databridge)
+
+        if not force_disconnect:
+            return
 
         # Disconnect the STA from both APs to avoid forceful ifdown by the
         # test script on a VLAN that this has an associated STA. That used to
@@ -566,6 +458,59 @@ def test_pmksa_cache_preauth_vlan_used(dev, apdev):
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def test_pmksa_cache_preauth(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry"""
+    generic_pmksa_cache_preauth(dev, apdev, None,
+                                "pax.user@example.com", "ap-br0")
+
+def test_pmksa_cache_preauth_per_sta_vif(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry with per_sta_vif"""
+    extraparams = [{}, {}]
+    extraparams[0]['per_sta_vif'] = "1"
+    extraparams[1]['per_sta_vif'] = "1"
+    generic_pmksa_cache_preauth(dev, apdev, extraparams,
+                                "pax.user@example.com", "ap-br0")
+
+def test_pmksa_cache_preauth_vlan_enabled(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry (dynamic_vlan optional but station without VLAN set)"""
+    extraparams = [{}, {}]
+    extraparams[0]['dynamic_vlan'] = '1'
+    extraparams[1]['dynamic_vlan'] = '1'
+    generic_pmksa_cache_preauth(dev, apdev, extraparams,
+                                "pax.user@example.com", "ap-br0")
+
+def test_pmksa_cache_preauth_vlan_enabled_per_sta_vif(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry (dynamic_vlan optional but station without VLAN set, with per_sta_vif enabled)"""
+    extraparams = [{}, {}]
+    extraparams[0]['per_sta_vif'] = "1"
+    extraparams[1]['per_sta_vif'] = "1"
+    extraparams[0]['dynamic_vlan'] = '1'
+    extraparams[1]['dynamic_vlan'] = '1'
+    generic_pmksa_cache_preauth(dev, apdev, extraparams,
+                                "pax.user@example.com", "ap-br0")
+
+def test_pmksa_cache_preauth_vlan_used(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry (station with VLAN set)"""
+    run_pmksa_cache_preauth_vlan_used(dev, apdev, None, force_disconnect=True)
+
+def run_pmksa_cache_preauth_vlan_used(dev, apdev, extraparams=None,
+                                      force_disconnect=False):
+    try:
+        subprocess.call(['brctl', 'addbr', 'brvlan1'])
+        subprocess.call(['brctl', 'setfd', 'brvlan1', '0'])
+        if not extraparams:
+            extraparams = [{}, {}]
+        extraparams[0]['dynamic_vlan'] = '1'
+        extraparams[0]['vlan_file'] = 'hostapd.wlan3.vlan'
+        extraparams[1]['dynamic_vlan'] = '1'
+        extraparams[1]['vlan_file'] = 'hostapd.wlan4.vlan'
+        generic_pmksa_cache_preauth(dev, apdev, extraparams,
+                                    "vlan1", "brvlan1",
+                                    force_disconnect=force_disconnect)
+    finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'brvlan1', 'down'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'wlan3.1', 'down'],
                         stderr=open('/dev/null', 'w'))
@@ -575,9 +520,14 @@ def test_pmksa_cache_preauth_vlan_used(dev, apdev):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delif', 'brvlan1', 'wlan4.1'],
                         stderr=open('/dev/null', 'w'))
-        subprocess.call(['brctl', 'delbr', 'ap-br0'],
-                        stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'brvlan1'])
+
+def test_pmksa_cache_preauth_vlan_used_per_sta_vif(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry (station with VLAN set, per_sta_vif=1)"""
+    extraparams = [{}, {}]
+    extraparams[0]['per_sta_vif'] = "1"
+    extraparams[1]['per_sta_vif'] = "1"
+    run_pmksa_cache_preauth_vlan_used(dev, apdev, extraparams)
 
 def test_pmksa_cache_disabled(dev, apdev):
     """PMKSA cache disabling on AP"""

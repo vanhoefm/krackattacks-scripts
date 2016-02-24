@@ -573,6 +573,9 @@ static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 	ethhdr = (struct l2_ethhdr *) buf;
 	wpa_printf(MSG_DEBUG, "FT: RRB received packet " MACSTR " -> "
 		   MACSTR, MAC2STR(ethhdr->h_source), MAC2STR(ethhdr->h_dest));
+	if (!is_multicast_ether_addr(ethhdr->h_dest) &&
+	    os_memcmp(hapd->own_addr, ethhdr->h_dest, ETH_ALEN) != 0)
+		return;
 	wpa_ft_rrb_rx(hapd->wpa_auth, ethhdr->h_source, buf + sizeof(*ethhdr),
 		      len - sizeof(*ethhdr));
 }

@@ -413,6 +413,8 @@ static int hostapd_wpa_auth_ft_iter(struct hostapd_iface *iface, void *ctx)
 		hapd = iface->bss[j];
 		if (hapd == idata->src_hapd)
 			continue;
+		if (!hapd->wpa_auth)
+			continue;
 		if (os_memcmp(hapd->own_addr, idata->dst, ETH_ALEN) == 0) {
 			wpa_printf(MSG_DEBUG, "FT: Send RRB data directly to "
 				   "locally managed BSS " MACSTR "@%s -> "

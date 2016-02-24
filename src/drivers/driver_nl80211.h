@@ -172,7 +172,10 @@ struct wpa_driver_nl80211_data {
 	struct nl_handle *rtnl_sk; /* nl_sock for NETLINK_ROUTE */
 
 	int default_if_indices[16];
+	/* the AP/AP_VLAN iface that is in this bridge */
+	int default_if_indices_reason[16];
 	int *if_indices;
+	int *if_indices_reason;
 	int num_if_indices;
 
 	/* From failed authentication command */

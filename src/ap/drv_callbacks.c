@@ -176,6 +176,9 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 
 	mbo_ap_check_sta_assoc(hapd, sta, &elems);
 
+	ap_copy_sta_supp_op_classes(sta, elems.supp_op_classes,
+				    elems.supp_op_classes_len);
+
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {
 #ifdef CONFIG_WPS

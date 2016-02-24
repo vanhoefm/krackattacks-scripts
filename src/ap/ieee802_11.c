@@ -1726,6 +1726,9 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 #endif /* CONFIG_MBO */
 
+	ap_copy_sta_supp_op_classes(sta, elems.supp_op_classes,
+				    elems.supp_op_classes_len);
+
 	return WLAN_STATUS_SUCCESS;
 }
 

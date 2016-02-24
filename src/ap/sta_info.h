@@ -190,6 +190,9 @@ struct sta_info {
 		       * enum mbo_cellular_capa values */
 	struct mbo_non_pref_chan_info *non_pref_chan;
 #endif /* CONFIG_MBO */
+
+	u8 *supp_op_classes; /* Supported Operating Classes element, if
+			      * received, starting from the Length field */
 };
 
 

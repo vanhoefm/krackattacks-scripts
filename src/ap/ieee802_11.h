@@ -130,4 +130,8 @@ static inline u8 hostapd_mbo_ie_len(struct hostapd_data *hapd)
 
 #endif /* CONFIG_MBO */
 
+void ap_copy_sta_supp_op_classes(struct sta_info *sta,
+				 const u8 *supp_op_classes,
+				 size_t supp_op_classes_len);
+
 #endif /* IEEE802_11_H */

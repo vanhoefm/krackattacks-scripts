@@ -371,6 +371,10 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->mb_ies.ies[elems->mb_ies.nof_ies].ie_len = elen;
 			elems->mb_ies.nof_ies++;
 			break;
+		case WLAN_EID_SUPPORTED_OPERATING_CLASSES:
+			elems->supp_op_classes = pos;
+			elems->supp_op_classes_len = elen;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)

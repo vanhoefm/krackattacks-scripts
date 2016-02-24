@@ -558,3 +558,20 @@ u8 hostapd_mbo_ie_len(struct hostapd_data *hapd)
 }
 
 #endif /* CONFIG_MBO */
+
+
+void ap_copy_sta_supp_op_classes(struct sta_info *sta,
+				 const u8 *supp_op_classes,
+				 size_t supp_op_classes_len)
+{
+	if (!supp_op_classes)
+		return;
+	os_free(sta->supp_op_classes);
+	sta->supp_op_classes = os_malloc(1 + supp_op_classes_len);
+	if (!sta->supp_op_classes)
+		return;
+
+	sta->supp_op_classes[0] = supp_op_classes_len;
+	os_memcpy(sta->supp_op_classes + 1, supp_op_classes,
+		  supp_op_classes_len);
+}

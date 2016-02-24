@@ -166,6 +166,15 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	if (res >= 0)
 		len += res;
 
+	if (sta->supp_op_classes &&
+	    buflen - len > (unsigned) (17 + 2 * sta->supp_op_classes[0])) {
+		len += os_snprintf(buf + len, buflen - len, "supp_op_classes=");
+		len += wpa_snprintf_hex(buf + len, buflen - len,
+					sta->supp_op_classes + 1,
+					sta->supp_op_classes[0]);
+		len += os_snprintf(buf + len, buflen - len, "\n");
+	}
+
 	return len;
 }
 

@@ -328,6 +328,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 #endif /* CONFIG_SAE */
 
 	mbo_ap_sta_free(sta);
+	os_free(sta->supp_op_classes);
 
 	os_free(sta);
 }

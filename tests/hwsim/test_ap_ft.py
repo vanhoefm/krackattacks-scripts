@@ -1055,3 +1055,30 @@ def test_ap_ft_ptk_rekey_ap(dev, apdev):
     else:
         hapd = hapd1
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_ft_internal_rrb_check(dev, apdev):
+    """RRB internal delivery only to WPA enabled BSS"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "FT-EAP":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
+
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], { "ssid" : ssid })
+
+    # Connect to WPA enabled AP
+    dev[0].connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    # Try over_ds roaming to non-WPA-enabled AP.
+    # If hostapd does not check hapd->wpa_auth internally, it will crash now.
+    dev[0].roam_over_ds(apdev[1]['bssid'], fail_test=True)

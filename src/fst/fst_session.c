@@ -181,7 +181,8 @@ static void fst_session_timeout_handler(void *eloop_data, void *user_ctx)
 
 static void fst_session_stt_arm(struct fst_session *s)
 {
-	eloop_register_timeout(0, TU_TO_US(FST_DEFAULT_SESSION_TIMEOUT_TU),
+	/* Action frames sometimes get delayed. Use relaxed timeout (2*) */
+	eloop_register_timeout(0, 2 * TU_TO_US(FST_DEFAULT_SESSION_TIMEOUT_TU),
 			       fst_session_timeout_handler, NULL, s);
 	s->stt_armed = TRUE;
 }

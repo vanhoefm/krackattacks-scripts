@@ -391,3 +391,36 @@ def test_p2p_device_autogo_no_group_iface(dev, apdev):
         dev[0].scan_for_bss(bssid, res['freq'])
         connect_cli(wpas, dev[0], freq=res['freq'])
         terminate_group(wpas, dev[0])
+
+def test_p2p_device_join(dev, apdev):
+    """P2P join-group using cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        res = dev[0].p2p_start_go()
+        bssid = dev[0].get_group_status_field('bssid')
+
+        wpas.scan_for_bss(bssid, res['freq'])
+        res2 = connect_cli(dev[0], wpas, freq=res['freq'])
+        if not res2['ifname'].startswith('p2p-' + iface):
+            raise Exception("Unexpected group ifname: " + res2['ifname'])
+
+        terminate_group(dev[0], wpas)
+
+def test_p2p_device_join_no_group_iface(dev, apdev):
+    """P2P join-group using cfg80211 P2P Device (no separate group interface)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+
+        res = dev[0].p2p_start_go()
+        bssid = dev[0].get_group_status_field('bssid')
+
+        wpas.scan_for_bss(bssid, res['freq'])
+        res2 = connect_cli(dev[0], wpas, freq=res['freq'])
+        if res2['ifname'] != iface:
+            raise Exception("Unexpected group ifname: " + res2['ifname'])
+
+        terminate_group(dev[0], wpas)

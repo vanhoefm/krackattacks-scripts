@@ -424,3 +424,47 @@ def test_p2p_device_join_no_group_iface(dev, apdev):
             raise Exception("Unexpected group ifname: " + res2['ifname'])
 
         terminate_group(dev[0], wpas)
+
+def test_p2p_device_persistent_group(dev):
+    """P2P persistent group formation and re-invocation with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 0")
+
+        form(dev[0], wpas)
+        invite_from_cli(dev[0], wpas)
+        invite_from_go(dev[0], wpas)
+
+def test_p2p_device_persistent_group_no_group_iface(dev):
+    """P2P persistent group formation and re-invocation with cfg80211 P2P Device (no separate group interface)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+
+        form(dev[0], wpas)
+        invite_from_cli(dev[0], wpas)
+        invite_from_go(dev[0], wpas)
+
+def test_p2p_device_persistent_group2(dev):
+    """P2P persistent group formation and re-invocation (reverse) with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 0")
+
+        form(wpas, dev[0])
+        invite_from_cli(wpas, dev[0])
+        invite_from_go(wpas, dev[0])
+
+def test_p2p_device_persistent_group2_no_group_iface(dev):
+    """P2P persistent group formation and re-invocation (reverse) with cfg80211 P2P Device (no separate group interface)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+
+        form(wpas, dev[0])
+        invite_from_cli(wpas, dev[0])
+        invite_from_go(wpas, dev[0])

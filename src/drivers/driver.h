@@ -439,6 +439,15 @@ struct wpa_driver_scan_params {
 	 */
 	 unsigned int sched_scan_plans_num;
 
+	/**
+	 * bssid - Specific BSSID to scan for
+	 *
+	 * This optional parameter can be used to replace the default wildcard
+	 * BSSID with a specific BSSID to scan for if results are needed from
+	 * only a single BSS.
+	 */
+	const u8 *bssid;
+
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure
 	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with

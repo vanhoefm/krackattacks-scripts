@@ -257,6 +257,13 @@ int wpa_driver_nl80211_scan(struct i802_bss *bss,
 			goto fail;
 	}
 
+	if (params->bssid) {
+		wpa_printf(MSG_DEBUG, "nl80211: Scan for a specific BSSID: "
+			   MACSTR, MAC2STR(params->bssid));
+		if (nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid))
+			goto fail;
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {

@@ -1006,6 +1006,27 @@ ssid_list_set:
 		}
 	}
 
+	if (!is_zero_ether_addr(wpa_s->next_scan_bssid)) {
+		struct wpa_bss *bss;
+
+		params.bssid = wpa_s->next_scan_bssid;
+		bss = wpa_bss_get_bssid_latest(wpa_s, params.bssid);
+		if (bss && bss->ssid_len && params.num_ssids == 1 &&
+		    params.ssids[0].ssid_len == 0) {
+			params.ssids[0].ssid = bss->ssid;
+			params.ssids[0].ssid_len = bss->ssid_len;
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Scan a previously specified BSSID " MACSTR
+				" and SSID %s",
+				MAC2STR(params.bssid),
+				wpa_ssid_txt(bss->ssid, bss->ssid_len));
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Scan a previously specified BSSID " MACSTR,
+				MAC2STR(params.bssid));
+		}
+	}
+
 	scan_params = &params;
 
 scan:
@@ -1066,6 +1087,8 @@ scan:
 #ifdef CONFIG_INTERWORKING
 		wpa_s->interworking_fast_assoc_tried = 0;
 #endif /* CONFIG_INTERWORKING */
+		if (params.bssid)
+			os_memset(wpa_s->next_scan_bssid, 0, ETH_ALEN);
 	}
 }
 

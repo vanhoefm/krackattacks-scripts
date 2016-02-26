@@ -640,6 +640,7 @@ struct wpa_supplicant {
 #define MAX_SCAN_ID 16
 	int scan_id[MAX_SCAN_ID];
 	unsigned int scan_id_count;
+	u8 next_scan_bssid[ETH_ALEN];
 
 	struct wpa_ssid_value *ssids_from_scan_req;
 	unsigned int num_ssids_from_scan_req;

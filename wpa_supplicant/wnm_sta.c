@@ -1148,6 +1148,14 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		}
 
 		wnm_set_scan_freqs(wpa_s);
+		if (wpa_s->wnm_num_neighbor_report == 1) {
+			os_memcpy(wpa_s->next_scan_bssid,
+				  wpa_s->wnm_neighbor_report_elements[0].bssid,
+				  ETH_ALEN);
+			wpa_printf(MSG_DEBUG,
+				   "WNM: Scan only for a specific BSSID since there is only a single candidate "
+				   MACSTR, MAC2STR(wpa_s->next_scan_bssid));
+		}
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	} else if (reply) {
 		enum bss_trans_mgmt_status_code status;

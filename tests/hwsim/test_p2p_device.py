@@ -27,6 +27,8 @@ def test_p2p_device_grpform(dev, apdev):
         wpas.dump_monitor()
         remove_group(dev[0], wpas)
         wpas.dump_monitor()
+        if not r_res['ifname'].startswith('p2p-' + iface):
+            raise Exception("Unexpected group ifname: " + r_res['ifname'])
 
         res = wpas.global_request("IFNAME=p2p-dev-" + iface + " STATUS-DRIVER")
         lines = res.splitlines()
@@ -53,6 +55,38 @@ def test_p2p_device_grpform2(dev, apdev):
         wpas.dump_monitor()
         remove_group(wpas, dev[0])
         wpas.dump_monitor()
+        if not i_res['ifname'].startswith('p2p-' + iface):
+            raise Exception("Unexpected group ifname: " + i_res['ifname'])
+
+def test_p2p_device_grpform_no_group_iface(dev, apdev):
+    """P2P group formation with driver using cfg80211 P2P Device but no separate group interface"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=wpas, r_intent=0)
+        check_grpform_results(i_res, r_res)
+        wpas.dump_monitor()
+        remove_group(dev[0], wpas)
+        wpas.dump_monitor()
+        if r_res['ifname'] != iface:
+            raise Exception("Unexpected group ifname: " + r_res['ifname'])
+
+def test_p2p_device_grpform_no_group_iface2(dev, apdev):
+    """P2P group formation with driver using cfg80211 P2P Device but no separate group interface (reverse)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=wpas, i_intent=15,
+                                               r_dev=dev[0], r_intent=0)
+        check_grpform_results(i_res, r_res)
+        wpas.dump_monitor()
+        remove_group(dev[0], wpas)
+        wpas.dump_monitor()
+        if i_res['ifname'] != iface:
+            raise Exception("Unexpected group ifname: " + i_res['ifname'])
 
 def test_p2p_device_group_remove(dev, apdev):
     """P2P group removal via the P2P ctrl interface with driver using cfg80211 P2P Device"""

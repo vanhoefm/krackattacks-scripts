@@ -1473,3 +1473,61 @@ def test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
         dev[0].request("DISCONNECT")
         hapd.disable()
         dev[0].global_request("P2P_SERVICE_DEL asp all")
+
+def test_p2ps_connect_p2p_device(dev):
+    """P2PS connection using cfg80211 P2P Device"""
+    run_p2ps_connect_p2p_device(dev, 0)
+
+def test_p2ps_connect_p2p_device_no_group_iface(dev):
+    """P2PS connection using cfg80211 P2P Device (no separate group interface)"""
+    run_p2ps_connect_p2p_device(dev, 1)
+
+def run_p2ps_connect_p2p_device(dev, no_group_iface):
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface %d" % no_group_iface)
+
+        p2ps_advertise(r_dev=dev[0], r_role='1',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=wpas, r_dev=dev[0],
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(wpas, dev[0], adv_id)
+        p2ps_connect_pd(dev[0], wpas, ev0, ev1)
+
+        ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+        if ev0 is None:
+            raise Exception("Unable to remove the advertisement instance")
+        remove_group(dev[0], wpas)
+
+def test_p2ps_connect_p2p_device2(dev):
+    """P2PS connection using cfg80211 P2P Device (reverse)"""
+    run_p2ps_connect_p2p_device2(dev, 0)
+
+def test_p2ps_connect_p2p_device2_no_group_iface(dev):
+    """P2PS connection using cfg80211 P2P Device (reverse) (no separate group interface)"""
+    run_p2ps_connect_p2p_device2(dev, 1)
+
+def run_p2ps_connect_p2p_device2(dev, no_group_iface):
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface %d" % no_group_iface)
+
+        p2ps_advertise(r_dev=wpas, r_role='1',
+                       svc_name='org.wi-fi.wfds.send.rx',
+                       srv_info='I can receive files upto size 2 GB')
+        [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[0], r_dev=wpas,
+                                                  svc_name='org.wi-fi.wfds.send.rx',
+                                                  srv_info='2 GB')
+
+        ev1, ev0 = p2ps_provision(dev[0], wpas, adv_id)
+        p2ps_connect_pd(wpas, dev[0], ev0, ev1)
+
+        ev0 = wpas.global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+        if ev0 is None:
+            raise Exception("Unable to remove the advertisement instance")
+        remove_group(wpas, dev[0])

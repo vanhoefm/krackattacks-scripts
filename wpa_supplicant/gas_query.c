@@ -501,7 +501,7 @@ int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 		return -1;
 
 	prot = categ == WLAN_ACTION_PROTECTED_DUAL;
-	pmf = pmf_in_use(gas->wpa_s, bssid);
+	pmf = pmf_in_use(gas->wpa_s, sa);
 	if (prot && !pmf) {
 		wpa_printf(MSG_DEBUG, "GAS: Drop unexpected protected GAS frame when PMF is disabled");
 		return 0;

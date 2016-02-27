@@ -120,10 +120,18 @@ def test_p2p_device_concurrent_scan(dev, apdev):
             raise Exception("Station mode scan did not start")
 
 def test_p2p_device_nfc_invite(dev, apdev):
-    """P2P NFC invitiation with driver using cfg80211 P2P Device"""
+    """P2P NFC invitation with driver using cfg80211 P2P Device"""
+    run_p2p_device_nfc_invite(dev, apdev, 0)
+
+def test_p2p_device_nfc_invite_no_group_iface(dev, apdev):
+    """P2P NFC invitation with driver using cfg80211 P2P Device (no separate group interface)"""
+    run_p2p_device_nfc_invite(dev, apdev, 1)
+
+def run_p2p_device_nfc_invite(dev, apdev, no_group_iface):
     with HWSimRadio(use_p2p_device=True) as (radio, iface):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface %d" % no_group_iface)
 
         set_ip_addr_info(dev[0])
         logger.info("Start autonomous GO")

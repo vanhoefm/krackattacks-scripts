@@ -8,11 +8,14 @@
 
 import logging
 logger = logging.getLogger()
+import os
 import subprocess
+import time
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail
+from tshark import run_tshark
 
 def check_mesh_support(dev, secure=False):
     if "MESH" not in dev.get_capability("modes"):
@@ -699,3 +702,51 @@ def _test_wpas_mesh_reconnect(dev):
         check_mesh_peer_connected(dev[1])
         dev[0].dump_monitor()
         dev[1].dump_monitor()
+
+def test_wpas_mesh_gate_forwarding(dev, apdev, p):
+    """Mesh forwards traffic to unknown sta to mesh gates"""
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    addr2 = dev[2].own_addr()
+    external_sta = '02:11:22:33:44:55'
+
+    # start 3 node connected mesh
+    check_mesh_support(dev[0])
+    for i in range(3):
+        add_open_mesh_network(dev[i])
+        check_mesh_group_added(dev[i])
+    for i in range(3):
+        check_mesh_peer_connected(dev[i])
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[1], dev[2])
+    hwsim_utils.test_connectivity(dev[0], dev[2])
+
+    # dev0 and dev1 are mesh gates
+    subprocess.call(['iw', 'dev', dev[0].ifname, 'set', 'mesh_param',
+                     'mesh_gate_announcements=1'])
+    subprocess.call(['iw', 'dev', dev[1].ifname, 'set', 'mesh_param',
+                     'mesh_gate_announcements=1'])
+
+    # wait for gate announcement frames
+    time.sleep(1)
+
+    # data frame from dev2 -> external sta should be sent to both gates
+    dev[2].request("DATA_TEST_CONFIG 1")
+    dev[2].request("DATA_TEST_TX {} {} 0".format(external_sta, addr2))
+    dev[2].request("DATA_TEST_CONFIG 0")
+
+    capfile = os.path.join(p['logdir'], "hwsim0.pcapng")
+    filt = "wlan.sa==%s && wlan_mgt.fixed.mesh_addr5==%s" % (addr2,
+                                                             external_sta)
+    for i in range(15):
+        da = run_tshark(capfile, filt, [ "wlan.da" ])
+        if addr0 in da and addr1 in da:
+            logger.debug("Frames seen in tshark iteration %d" % i)
+            break
+        time.sleep(0.3)
+
+    if addr0 not in da:
+        raise Exception("Frame to gate %s not observed" % addr0)
+    if addr1 not in da:
+        raise Exception("Frame to gate %s not observed" % addr1)

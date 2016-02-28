@@ -202,13 +202,6 @@ int hostapd_mac_comp(const void *a, const void *b)
 }
 
 
-int hostapd_mac_comp_empty(const void *a)
-{
-	macaddr empty = { 0 };
-	return os_memcmp(a, empty, sizeof(macaddr));
-}
-
-
 static int hostapd_config_read_wpa_psk(const char *fname,
 				       struct hostapd_ssid *ssid)
 {
@@ -790,7 +783,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		return -1;
 	}
 
-	if (full_config && hostapd_mac_comp_empty(bss->bssid) != 0) {
+	if (full_config && !is_zero_ether_addr(bss->bssid)) {
 		size_t i;
 
 		for (i = 0; i < conf->num_bss; i++) {

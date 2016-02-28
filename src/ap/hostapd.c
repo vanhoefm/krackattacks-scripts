@@ -521,7 +521,7 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	/* Determine the bits necessary to any configured BSSIDs,
 	   if they are higher than the number of BSSIDs. */
 	for (j = 0; j < iface->conf->num_bss; j++) {
-		if (hostapd_mac_comp_empty(iface->conf->bss[j]->bssid) == 0) {
+		if (is_zero_ether_addr(iface->conf->bss[j]->bssid)) {
 			if (j)
 				auto_addr++;
 			continue;
@@ -905,7 +905,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	hapd->started = 1;
 
 	if (!first || first == -1) {
-		if (hostapd_mac_comp_empty(conf->bssid) == 0) {
+		if (is_zero_ether_addr(conf->bssid)) {
 			/* Allocate the next available BSSID. */
 			do {
 				inc_byte_array(hapd->own_addr, ETH_ALEN);
@@ -1631,7 +1631,7 @@ static int hostapd_setup_interface_complete_sync(struct hostapd_iface *iface,
 			} while (j-- > 0);
 			goto fail;
 		}
-		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0)
+		if (is_zero_ether_addr(hapd->conf->bssid))
 			prev_addr = hapd->own_addr;
 	}
 	hapd = iface->bss[0];

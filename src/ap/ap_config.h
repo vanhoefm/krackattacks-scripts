@@ -694,7 +694,6 @@ struct hostapd_config {
 
 
 int hostapd_mac_comp(const void *a, const void *b);
-int hostapd_mac_comp_empty(const void *a);
 struct hostapd_config * hostapd_config_defaults(void);
 void hostapd_config_defaults_bss(struct hostapd_bss_config *bss);
 void hostapd_config_free_eap_user(struct hostapd_eap_user *user);

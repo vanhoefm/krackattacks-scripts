@@ -5912,6 +5912,14 @@ static void *i802_init(struct hostapd_data *hapd,
 			params->ifname, master_ifname);
 		/* start listening for EAPOL on the master interface */
 		add_ifidx(drv, if_nametoindex(master_ifname), drv->ifindex);
+
+		/* check if master itself is under bridge */
+		if (linux_br_get(master_ifname, master_ifname) == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: which is in bridge %s",
+				   master_ifname);
+			br_ifindex = if_nametoindex(master_ifname);
+			os_strlcpy(bss->brname, master_ifname, IFNAMSIZ);
+		}
 	} else {
 		master_ifname[0] = '\0';
 	}

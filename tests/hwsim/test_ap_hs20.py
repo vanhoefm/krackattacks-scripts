@@ -914,6 +914,44 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+def test_ap_hs20_gas_with_another_ap_while_associated(dev, apdev):
+    """GAS query with another AP while associated"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid2
+    params['nai_realm'] = [ "0,no-match.example.org,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+    dev[0].dump_monitor()
+
+    logger.info("Verifying GAS query with same AP while associated")
+    dev[0].request("ANQP_GET " + bssid + " 263")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+    dev[0].dump_monitor()
+
+    logger.info("Verifying GAS query with another AP while associated")
+    dev[0].scan_for_bss(bssid2, 2412)
+    dev[0].request("ANQP_GET " + bssid2 + " 263")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+
 def test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
     """Hotspot 2.0 connection with GAS query while associated and using PMF"""
     check_eap_capa(dev[0], "MSCHAPV2")

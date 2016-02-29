@@ -1120,6 +1120,17 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 			pos += len;
 		}
+
+		if (!wpa_s->wnm_num_neighbor_report) {
+			wpa_printf(MSG_DEBUG,
+				   "WNM: Candidate list included bit is set, but no candidates found");
+			wnm_send_bss_transition_mgmt_resp(
+				wpa_s, wpa_s->wnm_dialog_token,
+				WNM_BSS_TM_REJECT_NO_SUITABLE_CANDIDATES,
+				0, NULL);
+			return;
+		}
+
 		wnm_sort_cand_list(wpa_s);
 		wnm_dump_cand_list(wpa_s);
 		valid_ms = valid_int * beacon_int * 128 / 125;

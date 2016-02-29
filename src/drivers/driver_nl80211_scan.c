@@ -96,12 +96,20 @@ static int nl80211_get_noise_for_scan_results(
 void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Scan timeout - try to abort it");
+	if (!wpa_driver_nl80211_abort_scan(drv->first_bss))
+		return;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to abort scan");
+
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED) {
 		wpa_driver_nl80211_set_mode(drv->first_bss,
 					    drv->ap_scan_as_station);
 		drv->ap_scan_as_station = NL80211_IFTYPE_UNSPECIFIED;
 	}
-	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
+
+	wpa_printf(MSG_DEBUG, "nl80211: Try to get scan results");
 	wpa_supplicant_event(timeout_ctx, EVENT_SCAN_RESULTS, NULL);
 }
 

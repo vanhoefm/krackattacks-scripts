@@ -3659,6 +3659,10 @@ static int wpa_cli_exec(const char *program, const char *arg1,
 	size_t len;
 	int res;
 
+	/* If no interface is specified, set the global */
+	if (!arg1)
+		arg1 = "global";
+
 	len = os_strlen(arg1) + os_strlen(arg2) + 2;
 	arg = os_malloc(len);
 	if (arg == NULL)

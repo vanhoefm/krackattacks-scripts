@@ -2035,8 +2035,23 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 
 	dev = p2p_get_device(p2p, addr);
 	if (dev) {
-		if (dev->country[0] == 0 && msg.listen_channel)
-			os_memcpy(dev->country, msg.listen_channel, 3);
+		if (msg.listen_channel) {
+			int freq;
+
+			if (dev->country[0] == 0)
+				os_memcpy(dev->country, msg.listen_channel, 3);
+
+			freq = p2p_channel_to_freq(msg.listen_channel[3],
+						   msg.listen_channel[4]);
+
+			if (freq > 0 && dev->listen_freq != freq) {
+				p2p_dbg(p2p,
+					"Updated peer " MACSTR " Listen channel (Probe Request): %d -> %d MHz",
+					MAC2STR(addr), dev->listen_freq, freq);
+				dev->listen_freq = freq;
+			}
+		}
+
 		os_get_reltime(&dev->last_seen);
 		p2p_parse_free(&msg);
 		return; /* already known */

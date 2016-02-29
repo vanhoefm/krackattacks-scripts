@@ -418,7 +418,6 @@ eap_pwd_perform_commit_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 		wpa_printf(MSG_INFO, "EAP-PWD (peer): element inversion fail");
 		goto fin;
 	}
-	BN_clear_free(mask);
 
 	if (((x = BN_new()) == NULL) ||
 	    ((y = BN_new()) == NULL)) {
@@ -555,6 +554,7 @@ fin:
 	os_free(element);
 	BN_clear_free(x);
 	BN_clear_free(y);
+	BN_clear_free(mask);
 	BN_clear_free(cofactor);
 	EC_POINT_clear_free(K);
 	EC_POINT_clear_free(point);

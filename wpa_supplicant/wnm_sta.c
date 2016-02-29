@@ -1115,10 +1115,10 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 				rep = &wpa_s->wnm_neighbor_report_elements[
 					wpa_s->wnm_num_neighbor_report];
 				wnm_parse_neighbor_report(wpa_s, pos, len, rep);
+				wpa_s->wnm_num_neighbor_report++;
 			}
 
 			pos += len;
-			wpa_s->wnm_num_neighbor_report++;
 		}
 		wnm_sort_cand_list(wpa_s);
 		wnm_dump_cand_list(wpa_s);

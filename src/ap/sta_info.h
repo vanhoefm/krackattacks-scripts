@@ -118,6 +118,7 @@ struct sta_info {
 	int acct_session_started;
 	int acct_terminate_cause; /* Acct-Terminate-Cause */
 	int acct_interim_interval; /* Acct-Interim-Interval */
+	unsigned int acct_interim_errors;
 
 	/* For extending 32-bit driver counters to 64-bit counters */
 	u32 last_rx_bytes_hi;

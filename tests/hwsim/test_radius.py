@@ -302,6 +302,26 @@ def test_radius_acct_interim_unreachable(dev, apdev):
     if req_e < req_s + 2:
         raise Exception("Unexpected RADIUS server acct MIB value")
 
+def test_radius_acct_interim_unreachable2(dev, apdev):
+    """RADIUS Accounting interim update with unreachable server (retry)"""
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "18139"
+    params['acct_server_shared_secret'] = "radius"
+    # Use long enough interim update interval to allow RADIUS retransmission
+    # case (3 seconds) to trigger first.
+    params['radius_acct_interim_interval'] = "4"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    start = hapd.get_mib()
+    connect(dev[0], "radius-acct")
+    logger.info("Waiting for interium accounting updates")
+    time.sleep(7.5)
+    end = hapd.get_mib()
+    req_s = int(start['radiusAccClientTimeouts'])
+    req_e = int(end['radiusAccClientTimeouts'])
+    if req_e < req_s + 2:
+        raise Exception("Unexpected RADIUS server acct MIB value")
+
 def test_radius_acct_ipaddr(dev, apdev):
     """RADIUS Accounting and Framed-IP-Address"""
     try:

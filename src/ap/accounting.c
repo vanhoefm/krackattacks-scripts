@@ -152,6 +152,15 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 		goto fail;
 	}
 
+	/*
+	 * Add Acct-Delay-Time with zero value for the first transmission. This
+	 * will be updated within radius_client.c when retransmitting the frame.
+	 */
+	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_DELAY_TIME, 0)) {
+		wpa_printf(MSG_INFO, "Could not add Acct-Delay-Time");
+		goto fail;
+	}
+
 	return msg;
 
  fail:

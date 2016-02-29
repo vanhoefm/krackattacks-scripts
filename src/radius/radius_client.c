@@ -365,6 +365,8 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 	int s;
 	struct wpabuf *buf;
 	size_t prev_num_msgs;
+	u8 *acct_delay_time;
+	size_t acct_delay_time_len;
 
 	if (entry->msg_type == RADIUS_ACCT ||
 	    entry->msg_type == RADIUS_ACCT_INTERIM) {
@@ -416,6 +418,34 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 		wpa_printf(MSG_INFO,
 			   "RADIUS: No valid socket for retransmission");
 		return 1;
+	}
+
+	if (entry->msg_type == RADIUS_ACCT &&
+	    radius_msg_get_attr_ptr(entry->msg, RADIUS_ATTR_ACCT_DELAY_TIME,
+				    &acct_delay_time, &acct_delay_time_len,
+				    NULL) == 0 &&
+	    acct_delay_time_len == 4) {
+		struct radius_hdr *hdr;
+		u32 delay_time;
+
+		/*
+		 * Need to assign a new identifier since attribute contents
+		 * changes.
+		 */
+		hdr = radius_msg_get_hdr(entry->msg);
+		hdr->identifier = radius_client_get_id(radius);
+
+		/* Update Acct-Delay-Time to show wait time in queue */
+		delay_time = now - entry->first_try;
+		WPA_PUT_BE32(acct_delay_time, delay_time);
+
+		wpa_printf(MSG_DEBUG,
+			   "RADIUS: Updated Acct-Delay-Time to %u for retransmission",
+			   delay_time);
+		radius_msg_finish_acct(entry->msg, entry->shared_secret,
+				       entry->shared_secret_len);
+		if (radius->conf->msg_dumps)
+			radius_msg_dump(entry->msg);
 	}
 
 	/* retransmit; remove entry if too many attempts */

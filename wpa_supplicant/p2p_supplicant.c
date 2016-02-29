@@ -2389,6 +2389,10 @@ static void wpas_dev_lost(void *ctx, const u8 *dev_addr)
 static void wpas_find_stopped(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+
+	if (wpa_s->p2p_scan_work && wpas_abort_ongoing_scan(wpa_s) < 0)
+		wpa_printf(MSG_DEBUG, "P2P: Abort ongoing scan failed");
+
 	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_FIND_STOPPED);
 	wpas_notify_p2p_find_stopped(wpa_s);
 }

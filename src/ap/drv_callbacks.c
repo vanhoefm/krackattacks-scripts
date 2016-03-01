@@ -570,6 +570,7 @@ void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 				  struct acs_selected_channels *acs_res)
 {
 	int ret, i;
+	int err = 0;
 
 	if (hapd->iconf->channel) {
 		wpa_printf(MSG_INFO, "ACS: Channel was already set to %d",
@@ -591,7 +592,8 @@ void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 			hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_WARNING,
 				       "driver selected to bad hw_mode");
-			return;
+			err = 1;
+			goto out;
 		}
 	}
 
@@ -601,7 +603,8 @@ void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_WARNING,
 			       "driver switched to bad channel");
-		return;
+		err = 1;
+		goto out;
 	}
 
 	hapd->iconf->channel = acs_res->pri_channel;
@@ -615,7 +618,8 @@ void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 		hapd->iconf->secondary_channel = 1;
 	else {
 		wpa_printf(MSG_ERROR, "Invalid secondary channel!");
-		return;
+		err = 1;
+		goto out;
 	}
 
 	if (hapd->iface->conf->ieee80211ac) {
@@ -644,7 +648,8 @@ void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 		}
 	}
 
-	ret = hostapd_acs_completed(hapd->iface, 0);
+out:
+	ret = hostapd_acs_completed(hapd->iface, err);
 	if (ret) {
 		wpa_printf(MSG_ERROR,
 			   "ACS: Possibly channel configuration is invalid");

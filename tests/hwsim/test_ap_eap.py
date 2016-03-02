@@ -5859,3 +5859,15 @@ def test_ap_wpa2_eap_status(dev, apdev):
     dev[0].wait_connected()
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_ap_wpa2_eap_gpsk_ptk_rekey_ap(dev, apdev):
+    """WPA2-Enterprise with EAP-GPSK and PTK rekey enforced by AP"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['wpa_ptk_rekey'] = '2'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = eap_connect(dev[0], apdev[0], "GPSK", "gpsk user",
+                     password="abcdefghijklmnop0123456789abcdef")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"])
+    if ev is None:
+        raise Exception("PTK rekey timed out")
+    hwsim_utils.test_connectivity(dev[0], hapd)

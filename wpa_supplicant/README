@@ -163,16 +163,10 @@ systems. In case of Windows builds, WinPcap is used by default
 
 
 Optional libraries for EAP-TLS, EAP-PEAP, and EAP-TTLS:
-- OpenSSL (tested with 0.9.7c and 0.9.7d, and 0.9.8 versions; assumed to
+- OpenSSL (tested with 1.0.1 and 1.0.2 versions; assumed to
   work with most relatively recent versions; this is likely to be
   available with most distributions, http://www.openssl.org/)
 - GnuTLS
-- internal TLSv1 implementation
-
-TLS options for EAP-FAST:
-- OpenSSL 0.9.8d _with_ openssl-0.9.8d-tls-extensions.patch applied
-  (i.e., the default OpenSSL package does not include support for
-  extensions needed for EAP-FAST)
 - internal TLSv1 implementation
 
 One of these libraries is needed when EAP-TLS, EAP-PEAP, EAP-TTLS, or

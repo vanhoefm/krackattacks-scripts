@@ -419,6 +419,17 @@ def test_wnm_bss_tm_req(dev, apdev):
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
 
+    # Preferred Candidate List followed by vendor element
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=8)
+    subelems = ""
+    req['payload'] += struct.pack("<BB6BLBBB", 52, 13 + len(subelems),
+                                  1, 2, 3, 4, 5, 6,
+                                  0, 81, 1, 7) + subelems
+    req['payload'] += binascii.unhexlify("DD0411223344")
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
+
 def test_wnm_bss_keep_alive(dev, apdev):
     """WNM keep-alive"""
     params = { "ssid": "test-wnm",

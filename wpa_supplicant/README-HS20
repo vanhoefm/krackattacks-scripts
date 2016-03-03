@@ -229,7 +229,7 @@ Credentials can be pre-configured for automatic network selection:
 #
 # sp_priority: Credential priority within a provisioning SP
 #	This is the priority of the credential among all credentials
-#	provisionined by the same SP (i.e., for entries that have identical
+#	provisioned by the same SP (i.e., for entries that have identical
 #	provisioning_sp value). The range of this priority is 0-255 with 0
 #	being the highest and 255 the lower priority.
 #

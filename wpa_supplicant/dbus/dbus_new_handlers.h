@@ -138,6 +138,7 @@ DECLARE_ACCESSOR(wpas_dbus_getter_fast_reauth);
 DECLARE_ACCESSOR(wpas_dbus_setter_fast_reauth);
 DECLARE_ACCESSOR(wpas_dbus_getter_disconnect_reason);
 DECLARE_ACCESSOR(wpas_dbus_getter_disassociate_reason);
+DECLARE_ACCESSOR(wpas_dbus_getter_assoc_status_code);
 DECLARE_ACCESSOR(wpas_dbus_getter_bss_expire_age);
 DECLARE_ACCESSOR(wpas_dbus_setter_bss_expire_age);
 DECLARE_ACCESSOR(wpas_dbus_getter_bss_expire_count);

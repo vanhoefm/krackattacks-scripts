@@ -950,6 +950,9 @@ struct wpa_supplicant {
 	/* WLAN_REASON_* reason codes. Negative if locally generated. */
 	int disconnect_reason;
 
+	/* WLAN_STATUS_* status codes from (Re)Association Response frame. */
+	u16 assoc_status_code;
+
 	struct ext_password_data *ext_pw;
 
 	struct wpabuf *last_gas_resp, *prev_gas_resp;

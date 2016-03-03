@@ -3501,6 +3501,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
 				"status_code=%u",
 				data->assoc_reject.status_code);
+		wpa_s->assoc_status_code = data->assoc_reject.status_code;
+		wpas_notify_assoc_status_code(wpa_s);
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_assoc_reject(wpa_s, data);
 		else {

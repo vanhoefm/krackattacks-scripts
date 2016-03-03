@@ -2001,6 +2001,10 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 		prop = "DisconnectReason";
 		flush = TRUE;
 		break;
+	case WPAS_DBUS_PROP_ASSOC_STATUS_CODE:
+		prop = "AssocStatusCode";
+		flush = TRUE;
+		break;
 	default:
 		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
 			   __func__, property);
@@ -3252,6 +3256,11 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 #endif /* CONFIG_P2P */
 	{ "DisconnectReason", WPAS_DBUS_NEW_IFACE_INTERFACE, "i",
 	  wpas_dbus_getter_disconnect_reason,
+	  NULL,
+	  NULL
+	},
+	{ "AssocStatusCode", WPAS_DBUS_NEW_IFACE_INTERFACE, "i",
+	  wpas_dbus_getter_assoc_status_code,
 	  NULL,
 	  NULL
 	},

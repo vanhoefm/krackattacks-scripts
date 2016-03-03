@@ -736,6 +736,11 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>AssocStatusCode - i - (read)</h3>
+	<p>The most recent IEEE 802.11 status code for association rejection.</p>
+      </li>
+
+      <li>
 	<h3>EapolVersion - s - (read/write)</h3>
 	<p>IEEE 802.1X/EAPOL version number</p>
       </li>

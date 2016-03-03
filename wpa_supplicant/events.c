@@ -3927,7 +3927,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_SCHED_SCAN_STOPPED:
 		wpa_s->pno = 0;
 		wpa_s->sched_scanning = 0;
-		resched = wpa_s->scanning;
+		resched = wpa_s->scanning && wpas_scan_scheduled(wpa_s);
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)

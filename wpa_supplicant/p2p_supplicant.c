@@ -5771,6 +5771,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 	unsigned int cand;
 	unsigned int num, i;
 	int ignore_no_freqs = 0;
+	int unused_channels = wpas_p2p_num_unused_channels(wpa_s) > 0;
 
 	os_memset(params, 0, sizeof(*params));
 	params->role_go = 1;
@@ -5827,8 +5828,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 			}
 		}
 
-		if (!ignore_no_freqs &&
-		    wpas_p2p_num_unused_channels(wpa_s) <= 0) {
+		if (!ignore_no_freqs && !unused_channels) {
 			wpa_printf(MSG_DEBUG,
 				   "P2P: Cannot force GO on freq (%d MHz) as all the channels are in use",
 				   freq);
@@ -5843,7 +5843,8 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 	}
 
 	/* consider using one of the shared frequencies */
-	if (num) {
+	if (num &&
+	    (!wpa_s->conf->p2p_ignore_shared_freq || !unused_channels)) {
 		cand = wpas_p2p_pick_best_used_freq(wpa_s, freqs, num);
 		if (wpas_p2p_supported_freq_go(wpa_s, channels, cand)) {
 			wpa_printf(MSG_DEBUG,
@@ -5866,8 +5867,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (!ignore_no_freqs &&
-	    wpas_p2p_num_unused_channels(wpa_s) <= 0) {
+	if (!ignore_no_freqs && !unused_channels) {
 		wpa_printf(MSG_DEBUG,
 			   "P2P: Cannot force GO on any of the channels we are already using");
 		goto fail;

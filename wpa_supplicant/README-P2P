@@ -205,8 +205,8 @@ recently.
 P2PS attribute changes to p2p_connect command:
 
 P2PS supports two WPS provisioning methods namely PIN method and P2PS default.
-The remaining paramters hold same role as in legacy P2P. In case of P2PS default
-config method "p2ps" keyword is added in p2p_connect command.
+The remaining parameters hold same role as in legacy P2P. In case of P2PS
+default config method "p2ps" keyword is added in p2p_connect command.
 
 For example:
 p2p_connect 02:0a:f5:85:11:00 12345670 p2ps persistent join

@@ -5848,7 +5848,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		if (wpas_p2p_supported_freq_go(wpa_s, channels, cand)) {
 			wpa_printf(MSG_DEBUG,
 				   "P2P: Use shared freq (%d MHz) for GO",
-				   freq);
+				   cand);
 			params->freq = cand;
 			goto success;
 		}
@@ -5859,7 +5859,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 						       freqs[i].freq)) {
 				wpa_printf(MSG_DEBUG,
 					   "P2P: Use shared freq (%d MHz) for GO",
-					   freq);
+					   freqs[i].freq);
 				params->freq = freqs[i].freq;
 				goto success;
 			}

@@ -72,11 +72,13 @@ Supported WPA/IEEE 802.11i features:
   * EAP-TTLS/CHAP
   * EAP-SIM
   * EAP-AKA
+  * EAP-AKA'
   * EAP-PSK
   * EAP-PAX
   * EAP-SAKE
   * EAP-IKEv2
   * EAP-GPSK
+  * EAP-pwd
   * LEAP (note: requires special support from the driver for IEEE 802.11
 	  authentication)
   (following methods are supported, but since they do not generate keying
@@ -314,15 +316,17 @@ CONFIG_EAP_GTC=y
 CONFIG_EAP_OTP=y
 CONFIG_EAP_SIM=y
 CONFIG_EAP_AKA=y
+CONFIG_EAP_AKA_PRIME=y
 CONFIG_EAP_PSK=y
 CONFIG_EAP_SAKE=y
 CONFIG_EAP_GPSK=y
 CONFIG_EAP_PAX=y
 CONFIG_EAP_LEAP=y
 CONFIG_EAP_IKEV2=y
+CONFIG_EAP_PWD=y
 
 Following option can be used to include GSM SIM/USIM interface for GSM/UMTS
-authentication algorithm (for EAP-SIM/EAP-AKA). This requires pcsc-lite
+authentication algorithm (for EAP-SIM/EAP-AKA/EAP-AKA'). This requires pcsc-lite
 (http://www.linuxnet.com/) for smart card access.
 
 CONFIG_PCSC=y

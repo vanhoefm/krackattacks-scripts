@@ -709,6 +709,17 @@ int has_ctrl_char(const u8 *data, size_t len)
 }
 
 
+int has_newline(const char *str)
+{
+	while (*str) {
+		if (*str == '\n' || *str == '\r')
+			return 1;
+		str++;
+	}
+	return 0;
+}
+
+
 size_t merge_byte_arrays(u8 *res, size_t res_len,
 			 const u8 *src1, size_t src1_len,
 			 const u8 *src2, size_t src2_len)

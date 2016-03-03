@@ -2699,8 +2699,19 @@ char * wpa_config_get(struct wpa_ssid *ssid, const char *var)
 
 	for (i = 0; i < NUM_SSID_FIELDS; i++) {
 		const struct parse_data *field = &ssid_fields[i];
-		if (os_strcmp(var, field->name) == 0)
-			return field->writer(field, ssid);
+		if (os_strcmp(var, field->name) == 0) {
+			char *ret = field->writer(field, ssid);
+
+			if (ret && has_newline(ret)) {
+				wpa_printf(MSG_ERROR,
+					   "Found newline in value for %s; not returning it",
+					   var);
+				os_free(ret);
+				ret = NULL;
+			}
+
+			return ret;
+		}
 	}
 
 	return NULL;

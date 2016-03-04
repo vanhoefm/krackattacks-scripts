@@ -3164,6 +3164,8 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "INTERFACES", 10) == 0) {
 		reply_len = hostapd_global_ctrl_iface_interfaces(
 			interfaces, buf + 10, reply, sizeof(buffer));
+	} else if (os_strcmp(buf, "TERMINATE") == 0) {
+		eloop_terminate();
 	} else {
 		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
 			   "ignored");

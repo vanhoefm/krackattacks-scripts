@@ -478,6 +478,12 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 		}
 		wpa_hexdump_ascii_key(MSG_MSGDUMP, "PSK (ASCII passphrase)",
 				      (u8 *) value, len);
+		if (has_ctrl_char((u8 *) value, len)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid passphrase character",
+				   line);
+			return -1;
+		}
 		if (ssid->passphrase && os_strlen(ssid->passphrase) == len &&
 		    os_memcmp(ssid->passphrase, value, len) == 0) {
 			/* No change to the previously configured value */

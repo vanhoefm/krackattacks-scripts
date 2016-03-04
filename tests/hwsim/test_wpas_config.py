@@ -9,6 +9,7 @@ logger = logging.getLogger()
 import os
 
 from wpasupplicant import WpaSupplicant
+import hostapd
 
 def check_config(config):
     with open(config, "r") as f:
@@ -144,6 +145,101 @@ def test_wpas_config_file(dev):
             raise Exception("SAVE_CONFIG succeeded unexpectedly")
         if "OK" in wpas.global_request("SAVE_CONFIG"):
             raise Exception("SAVE_CONFIG (global) succeeded unexpectedly")
+
+    finally:
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass
+
+def test_wpas_config_file_wps(dev, apdev):
+    """wpa_supplicant config file parsing/writing with WPS"""
+    config = "/tmp/test_wpas_config_file.conf"
+    if os.path.exists(config):
+        os.remove(config)
+
+    params = { "ssid": "test-wps", "eap_server": "1", "wps_state": "2",
+               "skip_cred_build": "1", "extra_cred": "wps-ctrl-cred" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    try:
+        with open(config, "w") as f:
+            f.write("update_config=1\n")
+
+        wpas.interface_add("wlan5", config=config)
+
+        hapd.request("WPS_PIN any 12345670")
+        wpas.scan_for_bss(apdev[0]['bssid'], freq="2412")
+        wpas.request("WPS_PIN " + apdev[0]['bssid'] + " 12345670")
+        ev = wpas.wait_event(["WPS-FAIL"], timeout=10)
+        if ev is None:
+            raise Exception("WPS-FAIL event timed out")
+
+        with open(config, "r") as f:
+            data = f.read()
+            logger.info("Configuration file contents: " + data)
+            if "network=" in data:
+                raise Exception("Unexpected network block in configuration data")
+
+    finally:
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass
+
+def test_wpas_config_file_wps2(dev, apdev):
+    """wpa_supplicant config file parsing/writing with WPS (2)"""
+    config = "/tmp/test_wpas_config_file.conf"
+    if os.path.exists(config):
+        os.remove(config)
+
+    params = { "ssid": "test-wps", "eap_server": "1", "wps_state": "2",
+               "skip_cred_build": "1", "extra_cred": "wps-ctrl-cred2" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    try:
+        with open(config, "w") as f:
+            f.write("update_config=1\n")
+
+        wpas.interface_add("wlan5", config=config)
+
+        hapd.request("WPS_PIN any 12345670")
+        wpas.scan_for_bss(apdev[0]['bssid'], freq="2412")
+        wpas.request("WPS_PIN " + apdev[0]['bssid'] + " 12345670")
+        ev = wpas.wait_event(["WPS-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("WPS-SUCCESS event timed out")
+
+        with open(config, "r") as f:
+            data = f.read()
+            logger.info("Configuration file contents: " + data)
+
+            with open(config, "r") as f:
+                data = f.read()
+                if "network=" not in data:
+                    raise Exception("Missing network block in configuration data")
+                if "ssid=410a420d430044" not in data:
+                    raise Exception("Unexpected ssid parameter value")
 
     finally:
         try:

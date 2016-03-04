@@ -19,9 +19,15 @@ def mac2tuple(mac):
     return struct.unpack('6B', binascii.unhexlify(mac.replace(':','')))
 
 class HostapdGlobal:
-    def __init__(self):
-        self.ctrl = wpaspy.Ctrl(hapd_global)
-        self.mon = wpaspy.Ctrl(hapd_global)
+    def __init__(self, hostname=None, port=8878):
+        self.hostname = hostname
+        self.port = port
+        if hostname is None:
+            self.ctrl = wpaspy.Ctrl(hapd_global)
+            self.mon = wpaspy.Ctrl(hapd_global)
+        else:
+            self.ctrl = wpaspy.Ctrl(hostname, port)
+            self.mon = wpaspy.Ctrl(hostname, port)
         self.mon.attach()
 
     def request(self, cmd):
@@ -77,10 +83,14 @@ class HostapdGlobal:
 
 
 class Hostapd:
-    def __init__(self, ifname, bssidx=0):
+    def __init__(self, ifname, bssidx=0, hostname=None, port=8877):
         self.ifname = ifname
-        self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
-        self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+        if hostname is None:
+            self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+            self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+        else:
+            self.ctrl = wpaspy.Ctrl(hostname, port)
+            self.mon = wpaspy.Ctrl(hostname, port)
         self.mon.attach()
         self.bssid = None
         self.bssidx = bssidx
@@ -275,12 +285,13 @@ class Hostapd:
                 vals[name_val[0]] = name_val[1]
         return vals
 
-def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30):
+def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30,
+           hostname=None, port=8878):
         logger.info("Starting AP " + ifname)
-        hapd_global = HostapdGlobal()
+        hapd_global = HostapdGlobal(hostname=hostname, port=port)
         hapd_global.remove(ifname)
         hapd_global.add(ifname)
-        hapd = Hostapd(ifname)
+        hapd = Hostapd(ifname, hostname=hostname)
         if not hapd.ping():
             raise Exception("Could not ping hostapd")
         hapd.set_defaults()
@@ -310,25 +321,26 @@ def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30):
                 raise Exception("AP startup failed")
         return hapd
 
-def add_bss(phy, ifname, confname, ignore_error=False):
+def add_bss(phy, ifname, confname, ignore_error=False, hostname=None,
+            port=8878):
     logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
-    hapd_global = HostapdGlobal()
+    hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_bss(phy, confname, ignore_error)
-    hapd = Hostapd(ifname)
+    hapd = Hostapd(ifname, hostname=hostname)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 
-def add_iface(ifname, confname):
+def add_iface(ifname, confname, hostname=None, port=8878):
     logger.info("Starting interface " + ifname)
-    hapd_global = HostapdGlobal()
+    hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_iface(ifname, confname)
-    hapd = Hostapd(ifname)
+    hapd = Hostapd(ifname, hostname=hostname)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 
-def remove_bss(ifname):
+def remove_bss(ifname, hostname=None, port=8878):
     logger.info("Removing BSS " + ifname)
-    hapd_global = HostapdGlobal()
+    hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.remove(ifname)
 
 def wpa2_params(ssid=None, passphrase=None):

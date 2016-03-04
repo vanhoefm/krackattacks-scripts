@@ -2921,6 +2921,51 @@ error_return:
 
 
 static int
+hostapd_global_ctrl_iface_interfaces(struct hapd_interfaces *interfaces,
+				     const char *input,
+				     char *reply, int reply_size)
+{
+	size_t i, j;
+	int res;
+	char *pos, *end;
+	struct hostapd_iface *iface;
+	int show_ctrl = 0;
+
+	if (input)
+		show_ctrl = !!os_strstr(input, "ctrl");
+
+	pos = reply;
+	end = reply + reply_size;
+
+	for (i = 0; i < interfaces->count; i++) {
+		iface = interfaces->iface[i];
+
+		for (j = 0; j < iface->num_bss; j++) {
+			struct hostapd_bss_config *conf;
+
+			conf = iface->conf->bss[j];
+			if (show_ctrl)
+				res = os_snprintf(pos, end - pos,
+						  "%s ctrl_iface=%s\n",
+						  conf->iface,
+						  conf->ctrl_interface ?
+						  conf->ctrl_interface : "N/A");
+			else
+				res = os_snprintf(pos, end - pos, "%s\n",
+						  conf->iface);
+			if (os_snprintf_error(end - pos, res)) {
+				*pos = '\0';
+				return pos - reply;
+			}
+			pos += res;
+		}
+	}
+
+	return pos - reply;
+}
+
+
+static int
 hostapd_global_ctrl_iface_dup_network(struct hapd_interfaces *interfaces,
 				      char *cmd)
 {
@@ -3116,6 +3161,9 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = os_snprintf(reply, reply_size, "OK\n");
 		else
 			reply_len = -1;
+	} else if (os_strncmp(buf, "INTERFACES", 10) == 0) {
+		reply_len = hostapd_global_ctrl_iface_interfaces(
+			interfaces, buf + 10, reply, sizeof(buffer));
 	} else {
 		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
 			   "ignored");

@@ -59,7 +59,7 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 
 
 static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
-				     struct sockaddr_un *from,
+				     struct sockaddr_storage *from,
 				     socklen_t fromlen)
 {
 	return ctrl_iface_attach(&hapd->ctrl_dst, from, fromlen);
@@ -67,7 +67,7 @@ static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
 
 
 static int hostapd_ctrl_iface_detach(struct hostapd_data *hapd,
-				     struct sockaddr_un *from,
+				     struct sockaddr_storage *from,
 				     socklen_t fromlen)
 {
 	return ctrl_iface_detach(&hapd->ctrl_dst, from, fromlen);
@@ -75,7 +75,7 @@ static int hostapd_ctrl_iface_detach(struct hostapd_data *hapd,
 
 
 static int hostapd_ctrl_iface_level(struct hostapd_data *hapd,
-				    struct sockaddr_un *from,
+				    struct sockaddr_storage *from,
 				    socklen_t fromlen,
 				    char *level)
 {
@@ -2061,7 +2061,7 @@ static int hostapd_ctrl_iface_track_sta_list(struct hostapd_data *hapd,
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
-					      struct sockaddr_un *from,
+					      struct sockaddr_storage *from,
 					      socklen_t fromlen)
 {
 	int reply_len, res;
@@ -2314,7 +2314,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	struct hostapd_data *hapd = eloop_ctx;
 	char buf[4096];
 	int res;
-	struct sockaddr_un from;
+	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
 	char *reply;
 	const int reply_size = 4096;
@@ -2606,7 +2606,7 @@ static int hostapd_ctrl_iface_remove(struct hapd_interfaces *interfaces,
 
 
 static int hostapd_global_ctrl_iface_attach(struct hapd_interfaces *interfaces,
-					    struct sockaddr_un *from,
+					    struct sockaddr_storage *from,
 					    socklen_t fromlen)
 {
 	return ctrl_iface_attach(&interfaces->global_ctrl_dst, from, fromlen);
@@ -2614,7 +2614,7 @@ static int hostapd_global_ctrl_iface_attach(struct hapd_interfaces *interfaces,
 
 
 static int hostapd_global_ctrl_iface_detach(struct hapd_interfaces *interfaces,
-					    struct sockaddr_un *from,
+					    struct sockaddr_storage *from,
 					    socklen_t fromlen)
 {
 	return ctrl_iface_detach(&interfaces->global_ctrl_dst, from, fromlen);
@@ -2819,7 +2819,7 @@ static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
 					    const char *ifname,
 					    char *buf, char *reply,
 					    int reply_size,
-					    struct sockaddr_un *from,
+					    struct sockaddr_storage *from,
 					    socklen_t fromlen)
 {
 	struct hostapd_data *hapd;
@@ -2845,7 +2845,7 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	void *interfaces = eloop_ctx;
 	char buf[256];
 	int res;
-	struct sockaddr_un from;
+	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
 	char *reply;
 	int reply_len;
@@ -3160,9 +3160,8 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 	idx = 0;
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
 		if (level >= dst->debug_level) {
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor send",
-				    (u8 *) dst->addr.sun_path, dst->addrlen -
-				    offsetof(struct sockaddr_un, sun_path));
+			sockaddr_print(MSG_DEBUG, "CTRL_IFACE monitor send",
+				       &dst->addr, dst->addrlen);
 			msg.msg_name = &dst->addr;
 			msg.msg_namelen = dst->addrlen;
 			if (sendmsg(s, &msg, 0) < 0) {

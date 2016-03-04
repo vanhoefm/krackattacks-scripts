@@ -92,7 +92,7 @@ void sockaddr_print(int level, const char *msg, struct sockaddr_storage *sock,
 }
 
 
-int ctrl_iface_attach(struct dl_list *ctrl_dst, struct sockaddr_un *from,
+int ctrl_iface_attach(struct dl_list *ctrl_dst, struct sockaddr_storage *from,
 		      socklen_t fromlen)
 {
 	struct wpa_ctrl_dst *dst;
@@ -105,25 +105,21 @@ int ctrl_iface_attach(struct dl_list *ctrl_dst, struct sockaddr_un *from,
 	dst->debug_level = MSG_INFO;
 	dl_list_add(ctrl_dst, &dst->list);
 
-	sockaddr_print(MSG_DEBUG, "CTRL_IFACE monitor attached",
-		       (struct sockaddr_storage *) from, fromlen);
+	sockaddr_print(MSG_DEBUG, "CTRL_IFACE monitor attached", from, fromlen);
 	return 0;
 }
 
 
-int ctrl_iface_detach(struct dl_list *ctrl_dst, struct sockaddr_un *from,
+int ctrl_iface_detach(struct dl_list *ctrl_dst, struct sockaddr_storage *from,
 		      socklen_t fromlen)
 {
 	struct wpa_ctrl_dst *dst;
 
 	dl_list_for_each(dst, ctrl_dst, struct wpa_ctrl_dst, list) {
-		if (!sockaddr_compare((struct sockaddr_storage *) from,
-				      fromlen,
-				      (struct sockaddr_storage *) &dst->addr,
-				      dst->addrlen)) {
+		if (!sockaddr_compare(from, fromlen,
+				      &dst->addr, dst->addrlen)) {
 			sockaddr_print(MSG_DEBUG, "CTRL_IFACE monitor detached",
-				       (struct sockaddr_storage *) from,
-				       fromlen);
+				       from, fromlen);
 			dl_list_del(&dst->list);
 			os_free(dst);
 			return 0;
@@ -134,7 +130,7 @@ int ctrl_iface_detach(struct dl_list *ctrl_dst, struct sockaddr_un *from,
 }
 
 
-int ctrl_iface_level(struct dl_list *ctrl_dst, struct sockaddr_un *from,
+int ctrl_iface_level(struct dl_list *ctrl_dst, struct sockaddr_storage *from,
 		     socklen_t fromlen, const char *level)
 {
 	struct wpa_ctrl_dst *dst;
@@ -142,14 +138,11 @@ int ctrl_iface_level(struct dl_list *ctrl_dst, struct sockaddr_un *from,
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE LEVEL %s", level);
 
 	dl_list_for_each(dst, ctrl_dst, struct wpa_ctrl_dst, list) {
-		if (!sockaddr_compare((struct sockaddr_storage *) from,
-				      fromlen,
-				      (struct sockaddr_storage *) &dst->addr,
-				      dst->addrlen)) {
+		if (!sockaddr_compare(from, fromlen,
+				      &dst->addr, dst->addrlen)) {
 			sockaddr_print(MSG_DEBUG,
 				       "CTRL_IFACE changed monitor level",
-				       (struct sockaddr_storage *) from,
-				       fromlen);
+				       from, fromlen);
 			dst->debug_level = atoi(level);
 			return 0;
 		}

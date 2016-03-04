@@ -338,6 +338,7 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_priv *priv;
 	int port = WPA_CTRL_IFACE_PORT;
+	char *pos;
 #ifdef CONFIG_CTRL_IFACE_UDP_IPV6
 	struct sockaddr_in6 addr;
 	int domain = PF_INET6;
@@ -355,6 +356,17 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->conf->ctrl_interface == NULL)
 		return priv;
+
+	pos = os_strstr(wpa_s->conf->ctrl_interface, "udp:");
+	if (pos) {
+		pos += 4;
+		port = atoi(pos);
+		if (port <= 0) {
+			wpa_printf(MSG_ERROR, "Invalid ctrl_iface UDP port: %s",
+				   wpa_s->conf->ctrl_interface);
+			goto fail;
+		}
+	}
 
 	priv->sock = socket(domain, SOCK_DGRAM, 0);
 	if (priv->sock < 0) {
@@ -386,7 +398,8 @@ try_again:
 #endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		port--;
-		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT)
+		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT &&
+		    !pos)
 			goto try_again;
 		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;
@@ -623,6 +636,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 {
 	struct ctrl_iface_global_priv *priv;
 	struct sockaddr_in addr;
+	char *pos;
 	int port = WPA_GLOBAL_CTRL_IFACE_PORT;
 
 	priv = os_zalloc(sizeof(*priv));
@@ -636,6 +650,17 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 
 	wpa_printf(MSG_DEBUG, "Global control interface '%s'",
 		   global->params.ctrl_interface);
+
+	pos = os_strstr(global->params.ctrl_interface, "udp:");
+	if (pos) {
+		pos += 4;
+		port = atoi(pos);
+		if (port <= 0) {
+			wpa_printf(MSG_ERROR, "Invalid global ctrl UDP port %s",
+				   global->params.ctrl_interface);
+			goto fail;
+		}
+	}
 
 	priv->sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (priv->sock < 0) {
@@ -655,7 +680,7 @@ try_again:
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		port++;
 		if ((port - WPA_GLOBAL_CTRL_IFACE_PORT) <
-		    WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT)
+		    WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT && !pos)
 			goto try_again;
 		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;

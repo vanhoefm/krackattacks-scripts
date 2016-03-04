@@ -2444,6 +2444,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 #ifdef CONFIG_CTRL_IFACE_UDP
 	int port = HOSTAPD_CTRL_IFACE_PORT;
 	char p[32] = { 0 };
+	char port_str[40], *tmp;
 	char *pos;
 	struct addrinfo hints = { 0 }, *res, *saveres;
 	int n;
@@ -2508,6 +2509,12 @@ try_again:
 
 	freeaddrinfo(saveres);
 
+	os_snprintf(port_str, sizeof(port_str), "udp:%d", port);
+	tmp = os_strdup(port_str);
+	if (tmp) {
+		os_free(hapd->conf->ctrl_interface);
+		hapd->conf->ctrl_interface = tmp;
+	}
 	wpa_printf(MSG_DEBUG, "ctrl_iface_init UDP port: %d", port);
 
 	if (eloop_register_read_sock(hapd->ctrl_sock,

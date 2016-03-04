@@ -442,3 +442,52 @@ def wpa2_eap_params(ssid=None):
     if ssid:
         params["ssid"] = ssid
     return params
+
+def b_only_params(channel="1", ssid=None, country=None):
+    params = { "hw_mode" : "b",
+               "channel" : channel }
+    if ssid:
+        params["ssid"] = ssid
+    if country:
+        params["country_code"] = country
+    return params
+
+def g_only_params(channel="1", ssid=None, country=None):
+    params = { "hw_mode" : "g",
+               "channel" : channel }
+    if ssid:
+        params["ssid"] = ssid
+    if country:
+        params["country_code"] = country
+    return params
+
+def a_only_params(channel="36", ssid=None, country=None):
+    params = { "hw_mode" : "a",
+               "channel" : channel }
+    if ssid:
+        params["ssid"] = ssid
+    if country:
+        params["country_code"] = country
+    return params
+
+def ht20_params(channel="1", ssid=None, country=None):
+    params = { "ieee80211n" : "1",
+               "channel" : channel,
+               "hw_mode" : "g" }
+    if int(channel) > 14:
+        params["hw_mode"] = "a"
+    if ssid:
+        params["ssid"] = ssid
+    if country:
+        params["country_code"] = country
+    return params
+
+def ht40_plus_params(channel="1", ssid=None, country=None):
+    params = ht20_params(channel, ssid, country)
+    params['ht_capab'] = "[HT40+]"
+    return params
+
+def ht40_minus_params(channel="1", ssid=None, country=None):
+    params = ht20_params(channel, ssid, country)
+    params['ht_capab'] = "[HT40-]"
+    return params

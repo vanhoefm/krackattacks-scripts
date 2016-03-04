@@ -593,7 +593,7 @@ int main(int argc, char *argv[])
 	interfaces.global_iface_path = NULL;
 	interfaces.global_iface_name = NULL;
 	interfaces.global_ctrl_sock = -1;
-	interfaces.global_ctrl_dst = NULL;
+	dl_list_init(&interfaces.global_ctrl_dst);
 
 	for (;;) {
 		c = getopt(argc, argv, "b:Bde:f:hKP:STtu:vg:G:");

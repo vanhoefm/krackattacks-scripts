@@ -41,7 +41,7 @@ struct hapd_interfaces {
 
 	size_t count;
 	int global_ctrl_sock;
-	struct wpa_ctrl_dst *global_ctrl_dst;
+	struct dl_list global_ctrl_dst;
 	char *global_iface_path;
 	char *global_iface_name;
 #ifndef CONFIG_NATIVE_WINDOWS
@@ -155,7 +155,7 @@ struct hostapd_data {
 	int tkip_countermeasures;
 
 	int ctrl_sock;
-	struct wpa_ctrl_dst *ctrl_dst;
+	struct dl_list ctrl_dst;
 
 	void *ssl_ctx;
 	void *eap_sim_db_priv;

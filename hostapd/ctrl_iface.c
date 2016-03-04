@@ -23,6 +23,7 @@
 #include "utils/eloop.h"
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ctrl_iface_common.h"
 #include "crypto/tls.h"
 #include "drivers/driver.h"
 #include "eapol_auth/eapol_auth_sm.h"
@@ -51,14 +52,6 @@
 
 #define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
 
-struct wpa_ctrl_dst {
-	struct wpa_ctrl_dst *next;
-	struct sockaddr_un addr;
-	socklen_t addrlen;
-	int debug_level;
-	int errors;
-};
-
 
 static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				    enum wpa_msg_type type,
@@ -69,20 +62,7 @@ static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
 				     struct sockaddr_un *from,
 				     socklen_t fromlen)
 {
-	struct wpa_ctrl_dst *dst;
-
-	dst = os_zalloc(sizeof(*dst));
-	if (dst == NULL)
-		return -1;
-	os_memcpy(&dst->addr, from, sizeof(struct sockaddr_un));
-	dst->addrlen = fromlen;
-	dst->debug_level = MSG_INFO;
-	dst->next = hapd->ctrl_dst;
-	hapd->ctrl_dst = dst;
-	wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor attached",
-		    (u8 *) from->sun_path,
-		    fromlen - offsetof(struct sockaddr_un, sun_path));
-	return 0;
+	return ctrl_iface_attach(&hapd->ctrl_dst, from, fromlen);
 }
 
 
@@ -90,29 +70,7 @@ static int hostapd_ctrl_iface_detach(struct hostapd_data *hapd,
 				     struct sockaddr_un *from,
 				     socklen_t fromlen)
 {
-	struct wpa_ctrl_dst *dst, *prev = NULL;
-
-	dst = hapd->ctrl_dst;
-	while (dst) {
-		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path,
-			      fromlen - offsetof(struct sockaddr_un, sun_path))
-		    == 0) {
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
-				    (u8 *) from->sun_path,
-				    fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
-			if (prev == NULL)
-				hapd->ctrl_dst = dst->next;
-			else
-				prev->next = dst->next;
-			os_free(dst);
-			return 0;
-		}
-		prev = dst;
-		dst = dst->next;
-	}
-	return -1;
+	return ctrl_iface_detach(&hapd->ctrl_dst, from, fromlen);
 }
 
 
@@ -121,26 +79,7 @@ static int hostapd_ctrl_iface_level(struct hostapd_data *hapd,
 				    socklen_t fromlen,
 				    char *level)
 {
-	struct wpa_ctrl_dst *dst;
-
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE LEVEL %s", level);
-
-	dst = hapd->ctrl_dst;
-	while (dst) {
-		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path,
-			      fromlen - offsetof(struct sockaddr_un, sun_path))
-		    == 0) {
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE changed monitor "
-				    "level", (u8 *) from->sun_path, fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
-			dst->debug_level = atoi(level);
-			return 0;
-		}
-		dst = dst->next;
-	}
-
-	return -1;
+	return ctrl_iface_level(&hapd->ctrl_dst, from, fromlen, level);
 }
 
 
@@ -2460,6 +2399,8 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 		return 0;
 	}
 
+	dl_list_init(&hapd->ctrl_dst);
+
 	if (hapd->conf->ctrl_interface == NULL)
 		return 0;
 
@@ -2631,13 +2572,9 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 		}
 	}
 
-	dst = hapd->ctrl_dst;
-	hapd->ctrl_dst = NULL;
-	while (dst) {
-		prev = dst;
-		dst = dst->next;
-		os_free(prev);
-	}
+	dl_list_for_each_safe(dst, prev, &hapd->ctrl_dst, struct wpa_ctrl_dst,
+			      list)
+		os_free(dst);
 
 #ifdef CONFIG_TESTING_OPTIONS
 	l2_packet_deinit(hapd->l2_test);
@@ -2672,20 +2609,7 @@ static int hostapd_global_ctrl_iface_attach(struct hapd_interfaces *interfaces,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
-	struct wpa_ctrl_dst *dst;
-
-	dst = os_zalloc(sizeof(*dst));
-	if (dst == NULL)
-		return -1;
-	os_memcpy(&dst->addr, from, sizeof(struct sockaddr_un));
-	dst->addrlen = fromlen;
-	dst->debug_level = MSG_INFO;
-	dst->next = interfaces->global_ctrl_dst;
-	interfaces->global_ctrl_dst = dst;
-	wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor attached (global)",
-		    from->sun_path,
-		    fromlen - offsetof(struct sockaddr_un, sun_path));
-	return 0;
+	return ctrl_iface_attach(&interfaces->global_ctrl_dst, from, fromlen);
 }
 
 
@@ -2693,30 +2617,7 @@ static int hostapd_global_ctrl_iface_detach(struct hapd_interfaces *interfaces,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
-	struct wpa_ctrl_dst *dst, *prev = NULL;
-
-	dst = interfaces->global_ctrl_dst;
-	while (dst) {
-		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path,
-			      fromlen - offsetof(struct sockaddr_un, sun_path))
-		    == 0) {
-			wpa_hexdump(MSG_DEBUG,
-				    "CTRL_IFACE monitor detached (global)",
-				    from->sun_path,
-				    fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
-			if (prev == NULL)
-				interfaces->global_ctrl_dst = dst->next;
-			else
-				prev->next = dst->next;
-			os_free(dst);
-			return 0;
-		}
-		prev = dst;
-		dst = dst->next;
-	}
-	return -1;
+	return ctrl_iface_detach(&interfaces->global_ctrl_dst, from, fromlen);
 }
 
 
@@ -3218,13 +3119,9 @@ void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
 	os_free(interfaces->global_iface_path);
 	interfaces->global_iface_path = NULL;
 
-	dst = interfaces->global_ctrl_dst;
-	interfaces->global_ctrl_dst = NULL;
-	while (dst) {
-		prev = dst;
-		dst = dst->next;
-		os_free(prev);
-	}
+	dl_list_for_each_safe(dst, prev, &interfaces->global_ctrl_dst,
+			      struct wpa_ctrl_dst, list)
+		os_free(dst);
 }
 
 
@@ -3233,6 +3130,7 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				    const char *buf, size_t len)
 {
 	struct wpa_ctrl_dst *dst, *next;
+	struct dl_list *ctrl_dst;
 	struct msghdr msg;
 	int idx;
 	struct iovec io[2];
@@ -3241,13 +3139,13 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 
 	if (type != WPA_MSG_ONLY_GLOBAL) {
 		s = hapd->ctrl_sock;
-		dst = hapd->ctrl_dst;
+		ctrl_dst = &hapd->ctrl_dst;
 	} else {
 		s = hapd->iface->interfaces->global_ctrl_sock;
-		dst = hapd->iface->interfaces->global_ctrl_dst;
+		ctrl_dst = &hapd->iface->interfaces->global_ctrl_dst;
 	}
 
-	if (s < 0 || dst == NULL)
+	if (s < 0 || dl_list_empty(ctrl_dst))
 		return;
 
 	os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
@@ -3260,8 +3158,7 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 	msg.msg_iovlen = 2;
 
 	idx = 0;
-	while (dst) {
-		next = dst->next;
+	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
 		if (level >= dst->debug_level) {
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor send",
 				    (u8 *) dst->addr.sun_path, dst->addrlen -
@@ -3289,7 +3186,6 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				dst->errors = 0;
 		}
 		idx++;
-		dst = next;
 	}
 }
 

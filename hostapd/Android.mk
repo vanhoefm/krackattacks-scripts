@@ -187,6 +187,7 @@ endif
 ifdef CONFIG_NO_CTRL_IFACE
 L_CFLAGS += -DCONFIG_NO_CTRL_IFACE
 else
+OBJS += src/common/ctrl_iface_common.c
 OBJS += ctrl_iface.c
 OBJS += src/ap/ctrl_iface_ap.c
 endif

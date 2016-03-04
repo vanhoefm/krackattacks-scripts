@@ -2444,6 +2444,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 #ifdef CONFIG_CTRL_IFACE_UDP
 	int port = HOSTAPD_CTRL_IFACE_PORT;
 	char p[32] = { 0 };
+	char *pos;
 	struct addrinfo hints = { 0 }, *res, *saveres;
 	int n;
 
@@ -2454,6 +2455,16 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 
 	if (hapd->conf->ctrl_interface == NULL)
 		return 0;
+
+	pos = os_strstr(hapd->conf->ctrl_interface, "udp:");
+	if (pos) {
+		pos += 4;
+		port = atoi(pos);
+		if (port <= 0) {
+			wpa_printf(MSG_ERROR, "Invalid ctrl_iface UDP port");
+			goto fail;
+		}
+	}
 
 	dl_list_init(&hapd->ctrl_dst);
 	hapd->ctrl_sock = -1;
@@ -2489,7 +2500,7 @@ try_again:
 	if (bind(hapd->ctrl_sock, res->ai_addr, res->ai_addrlen) < 0) {
 		port--;
 		if ((HOSTAPD_CTRL_IFACE_PORT - port) <
-		    HOSTAPD_CTRL_IFACE_PORT_LIMIT)
+		    HOSTAPD_CTRL_IFACE_PORT_LIMIT && !pos)
 			goto try_again;
 		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;
@@ -3147,6 +3158,7 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 #ifdef CONFIG_CTRL_IFACE_UDP
 	int port = HOSTAPD_GLOBAL_CTRL_IFACE_PORT;
 	char p[32] = { 0 };
+	char *pos;
 	struct addrinfo hints = { 0 }, *res, *saveres;
 	int n;
 
@@ -3157,6 +3169,16 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 
 	if (interface->global_iface_path == NULL)
 		return 0;
+
+	pos = os_strstr(interface->global_iface_path, "udp:");
+	if (pos) {
+		pos += 4;
+		port = atoi(pos);
+		if (port <= 0) {
+			wpa_printf(MSG_ERROR, "Invalid global ctrl UDP port");
+			goto fail;
+		}
+	}
 
 	dl_list_init(&interface->global_ctrl_dst);
 	interface->global_ctrl_sock = -1;
@@ -3193,7 +3215,7 @@ try_again:
 	    0) {
 		port++;
 		if ((port - HOSTAPD_GLOBAL_CTRL_IFACE_PORT) <
-		    HOSTAPD_GLOBAL_CTRL_IFACE_PORT_LIMIT)
+		    HOSTAPD_GLOBAL_CTRL_IFACE_PORT_LIMIT && !pos)
 			goto try_again;
 		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;

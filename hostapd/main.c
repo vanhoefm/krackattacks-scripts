@@ -484,11 +484,16 @@ static const char * hostapd_msg_ifname_cb(void *ctx)
 static int hostapd_get_global_ctrl_iface(struct hapd_interfaces *interfaces,
 					 const char *path)
 {
+#ifndef CONFIG_CTRL_IFACE_UDP
 	char *pos;
+#endif /* !CONFIG_CTRL_IFACE_UDP */
+
 	os_free(interfaces->global_iface_path);
 	interfaces->global_iface_path = os_strdup(path);
 	if (interfaces->global_iface_path == NULL)
 		return -1;
+
+#ifndef CONFIG_CTRL_IFACE_UDP
 	pos = os_strrchr(interfaces->global_iface_path, '/');
 	if (pos == NULL) {
 		wpa_printf(MSG_ERROR, "No '/' in the global control interface "
@@ -500,6 +505,7 @@ static int hostapd_get_global_ctrl_iface(struct hapd_interfaces *interfaces,
 
 	*pos = '\0';
 	interfaces->global_iface_name = pos + 1;
+#endif /* !CONFIG_CTRL_IFACE_UDP */
 
 	return 0;
 }

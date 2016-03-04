@@ -1335,6 +1335,7 @@ endif
 CFLAGS += -DCONFIG_CTRL_IFACE
 ifeq ($(CONFIG_CTRL_IFACE), unix)
 CFLAGS += -DCONFIG_CTRL_IFACE_UNIX
+OBJS += ../src/common/ctrl_iface_common.o
 endif
 ifeq ($(CONFIG_CTRL_IFACE), udp)
 CFLAGS += -DCONFIG_CTRL_IFACE_UDP

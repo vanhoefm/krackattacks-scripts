@@ -1291,6 +1291,7 @@ endif
 L_CFLAGS += -DCONFIG_CTRL_IFACE
 ifeq ($(CONFIG_CTRL_IFACE), unix)
 L_CFLAGS += -DCONFIG_CTRL_IFACE_UNIX
+OBJS += src/common/ctrl_iface_common.c
 endif
 ifeq ($(CONFIG_CTRL_IFACE), udp)
 L_CFLAGS += -DCONFIG_CTRL_IFACE_UDP

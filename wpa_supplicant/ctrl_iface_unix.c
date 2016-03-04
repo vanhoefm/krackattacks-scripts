@@ -24,28 +24,13 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "utils/list.h"
+#include "common/ctrl_iface_common.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "ctrl_iface.h"
 
 /* Per-interface ctrl_iface */
-
-/**
- * struct wpa_ctrl_dst - Internal data structure of control interface monitors
- *
- * This structure is used to store information about registered control
- * interface monitors into struct wpa_supplicant. This data is private to
- * ctrl_iface_unix.c and should not be touched directly from other files.
- */
-struct wpa_ctrl_dst {
-	struct dl_list list;
-	struct sockaddr_un addr;
-	socklen_t addrlen;
-	int debug_level;
-	int errors;
-};
-
 
 struct ctrl_iface_priv {
 	struct wpa_supplicant *wpa_s;
@@ -119,22 +104,7 @@ static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen, int global)
 {
-	struct wpa_ctrl_dst *dst;
-	char addr_txt[200];
-
-	dst = os_zalloc(sizeof(*dst));
-	if (dst == NULL)
-		return -1;
-	os_memcpy(&dst->addr, from, sizeof(struct sockaddr_un));
-	dst->addrlen = fromlen;
-	dst->debug_level = MSG_INFO;
-	dl_list_add(ctrl_dst, &dst->list);
-	printf_encode(addr_txt, sizeof(addr_txt),
-		      (u8 *) from->sun_path,
-		      fromlen - offsetof(struct sockaddr_un, sun_path));
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE %smonitor attached %s",
-		   global ? "global " : "", addr_txt);
-	return 0;
+	return ctrl_iface_attach(ctrl_dst, from, fromlen);
 }
 
 
@@ -142,26 +112,7 @@ static int wpa_supplicant_ctrl_iface_detach(struct dl_list *ctrl_dst,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
-	struct wpa_ctrl_dst *dst;
-
-	dl_list_for_each(dst, ctrl_dst, struct wpa_ctrl_dst, list) {
-		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path,
-			      fromlen - offsetof(struct sockaddr_un, sun_path))
-		    == 0) {
-			char addr_txt[200];
-			printf_encode(addr_txt, sizeof(addr_txt),
-				      (u8 *) from->sun_path,
-				      fromlen -
-				      offsetof(struct sockaddr_un, sun_path));
-			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor detached %s",
-				   addr_txt);
-			dl_list_del(&dst->list);
-			os_free(dst);
-			return 0;
-		}
-	}
-	return -1;
+	return ctrl_iface_detach(ctrl_dst, from, fromlen);
 }
 
 
@@ -170,27 +121,9 @@ static int wpa_supplicant_ctrl_iface_level(struct ctrl_iface_priv *priv,
 					   socklen_t fromlen,
 					   char *level)
 {
-	struct wpa_ctrl_dst *dst;
-
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE LEVEL %s", level);
 
-	dl_list_for_each(dst, &priv->ctrl_dst, struct wpa_ctrl_dst, list) {
-		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path,
-			      fromlen - offsetof(struct sockaddr_un, sun_path))
-		    == 0) {
-			char addr_txt[200];
-			dst->debug_level = atoi(level);
-			printf_encode(addr_txt, sizeof(addr_txt),
-				      (u8 *) from->sun_path, fromlen -
-				      offsetof(struct sockaddr_un, sun_path));
-			wpa_printf(MSG_DEBUG, "CTRL_IFACE changed monitor level to %d for %s",
-				   dst->debug_level, addr_txt);
-			return 0;
-		}
-	}
-
-	return -1;
+	return ctrl_iface_level(&priv->ctrl_dst, from, fromlen, level);
 }
 
 

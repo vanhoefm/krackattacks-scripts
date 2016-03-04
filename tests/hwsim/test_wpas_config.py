@@ -254,3 +254,48 @@ def test_wpas_config_file_wps2(dev, apdev):
             os.rmdir(config)
         except:
             pass
+
+def test_wpas_config_file_set_psk(dev):
+    """wpa_supplicant config file parsing/writing with arbitrary PSK value"""
+    config = "/tmp/test_wpas_config_file.conf"
+    if os.path.exists(config):
+        os.remove(config)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    try:
+        with open(config, "w") as f:
+            f.write("update_config=1\n")
+
+        wpas.interface_add("wlan5", config=config)
+
+        id = wpas.add_network()
+        wpas.set_network_quoted(id, "ssid", "foo")
+        if "OK" in wpas.request('SET_NETWORK %d psk "12345678"\n}\nmodel_name=foobar\nnetwork={\n#\"' % id):
+            raise Exception("Invalid psk value accepted")
+
+        if "OK" not in wpas.request("SAVE_CONFIG"):
+            raise Exception("Failed to save configuration file")
+
+        with open(config, "r") as f:
+            data = f.read()
+            logger.info("Configuration file contents: " + data)
+            if "model_name" in data:
+                raise Exception("Unexpected parameter added to configuration")
+
+        wpas.interface_remove("wlan5")
+        wpas.interface_add("wlan5", config=config)
+
+    finally:
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass

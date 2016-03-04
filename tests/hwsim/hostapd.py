@@ -81,6 +81,25 @@ class HostapdGlobal:
     def flush(self):
         self.ctrl.request("FLUSH")
 
+    def get_ctrl_iface_port(self, ifname):
+        if self.hostname is None:
+            return None
+
+        res = self.ctrl.request("INTERFACES ctrl")
+        lines = res.splitlines()
+        found = False
+        for line in lines:
+            words = line.split()
+            if words[0] == ifname:
+                found = True
+                break
+        if not found:
+            raise Exception("Could not find UDP port for " + ifname)
+        res = line.find("ctrl_iface=udp:")
+        if res == -1:
+            raise Exception("Wrong ctrl_interface format")
+        words = line.split(":")
+        return int(words[1])
 
 class Hostapd:
     def __init__(self, ifname, bssidx=0, hostname=None, port=8877):
@@ -291,7 +310,8 @@ def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30,
         hapd_global = HostapdGlobal(hostname=hostname, port=port)
         hapd_global.remove(ifname)
         hapd_global.add(ifname)
-        hapd = Hostapd(ifname, hostname=hostname)
+        port = hapd_global.get_ctrl_iface_port(ifname)
+        hapd = Hostapd(ifname, hostname=hostname, port=port)
         if not hapd.ping():
             raise Exception("Could not ping hostapd")
         hapd.set_defaults()
@@ -326,7 +346,8 @@ def add_bss(phy, ifname, confname, ignore_error=False, hostname=None,
     logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_bss(phy, confname, ignore_error)
-    hapd = Hostapd(ifname, hostname=hostname)
+    port = hapd_global.get_ctrl_iface_port(ifname)
+    hapd = Hostapd(ifname, hostname=hostname, port=port)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 
@@ -334,7 +355,8 @@ def add_iface(ifname, confname, hostname=None, port=8878):
     logger.info("Starting interface " + ifname)
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_iface(ifname, confname)
-    hapd = Hostapd(ifname, hostname=hostname)
+    port = hapd_global.get_ctrl_iface_port(ifname)
+    hapd = Hostapd(ifname, hostname=hostname, port=port)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 

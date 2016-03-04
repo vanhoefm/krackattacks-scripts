@@ -7,13 +7,23 @@
 # See README for more details.
 
 import os
+import sys
 import time
 import wpaspy
 
 wpas_ctrl = '/var/run/wpa_supplicant'
 
-def wpas_connect():
+def wpas_connect(host=None, port=9877):
     ifaces = []
+
+    if host != None:
+        try:
+            wpas = wpaspy.Ctrl(host, port)
+            return wpas
+        except:
+            print "Could not connect to host: ", host
+            return None
+
     if os.path.isdir(wpas_ctrl):
         try:
             ifaces = [os.path.join(wpas_ctrl, i) for i in os.listdir(wpas_ctrl)]
@@ -34,15 +44,15 @@ def wpas_connect():
     return None
 
 
-def main():
+def main(host=None, port=9877):
     print "Testing wpa_supplicant control interface connection"
-    wpas = wpas_connect()
+    wpas = wpas_connect(host, port)
     if wpas is None:
         return
     print "Connected to wpa_supplicant"
     print wpas.request('PING')
 
-    mon = wpas_connect()
+    mon = wpas_connect(host, port)
     if mon is None:
         print "Could not open event monitor connection"
         return
@@ -66,4 +76,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 2:
+        main(host=sys.argv[1], port=int(sys.argv[2]))
+    else:
+        main()

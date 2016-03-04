@@ -55,6 +55,7 @@
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
+						  const char *input,
 						  char *buf, int len);
 static int * freq_range_to_channel_list(struct wpa_supplicant *wpa_s,
 					char *val);
@@ -8842,9 +8843,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "INTERFACE_LIST") == 0) {
 		reply_len = wpa_supplicant_global_iface_list(
 			wpa_s->global, reply, reply_size);
-	} else if (os_strcmp(buf, "INTERFACES") == 0) {
+	} else if (os_strncmp(buf, "INTERFACES", 10) == 0) {
 		reply_len = wpa_supplicant_global_iface_interfaces(
-			wpa_s->global, reply, reply_size);
+			wpa_s->global, buf + 10, reply, reply_size);
 	} else if (os_strncmp(buf, "BSS ", 4) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_bss(
 			wpa_s, buf + 4, reply, reply_size);
@@ -9250,18 +9251,31 @@ static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 
 
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
+						  const char *input,
 						  char *buf, int len)
 {
 	int res;
 	char *pos, *end;
 	struct wpa_supplicant *wpa_s;
+	int show_ctrl = 0;
+
+	if (input)
+		show_ctrl = !!os_strstr(input, "ctrl");
 
 	wpa_s = global->ifaces;
 	pos = buf;
 	end = buf + len;
 
 	while (wpa_s) {
-		res = os_snprintf(pos, end - pos, "%s\n", wpa_s->ifname);
+		if (show_ctrl)
+			res = os_snprintf(pos, end - pos, "%s ctrl_iface=%s\n",
+					  wpa_s->ifname,
+					  wpa_s->conf->ctrl_interface ?
+					  wpa_s->conf->ctrl_interface : "N/A");
+		else
+			res = os_snprintf(pos, end - pos, "%s\n",
+					  wpa_s->ifname);
+
 		if (os_snprintf_error(end - pos, res)) {
 			*pos = '\0';
 			break;
@@ -9650,9 +9664,9 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	} else if (os_strcmp(buf, "INTERFACE_LIST") == 0) {
 		reply_len = wpa_supplicant_global_iface_list(
 			global, reply, reply_size);
-	} else if (os_strcmp(buf, "INTERFACES") == 0) {
+	} else if (os_strncmp(buf, "INTERFACES", 10) == 0) {
 		reply_len = wpa_supplicant_global_iface_interfaces(
-			global, reply, reply_size);
+			global, buf + 10, reply, reply_size);
 #ifdef CONFIG_FST
 	} else if (os_strncmp(buf, "FST-ATTACH ", 11) == 0) {
 		reply_len = wpas_global_ctrl_iface_fst_attach(global, buf + 11,

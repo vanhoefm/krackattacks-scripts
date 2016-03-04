@@ -19,6 +19,10 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
+#ifdef CONFIG_CTRL_IFACE_UDP
+#include <netdb.h>
+#endif /* CONFIG_CTRL_IFACE_UDP */
+
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/version.h"
@@ -52,6 +56,15 @@
 
 #define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
 
+#ifdef CONFIG_CTRL_IFACE_UDP
+#define COOKIE_LEN 8
+static unsigned char cookie[COOKIE_LEN];
+static unsigned char gcookie[COOKIE_LEN];
+#define HOSTAPD_CTRL_IFACE_PORT		8877
+#define HOSTAPD_CTRL_IFACE_PORT_LIMIT	50
+#define HOSTAPD_GLOBAL_CTRL_IFACE_PORT		8878
+#define HOSTAPD_GLOBAL_CTRL_IFACE_PORT_LIMIT	50
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
 static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				    enum wpa_msg_type type,
@@ -2316,10 +2329,13 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int res;
 	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
-	char *reply;
+	char *reply, *pos = buf;
 	const int reply_size = 4096;
 	int reply_len;
 	int level = MSG_DEBUG;
+#ifdef CONFIG_CTRL_IFACE_UDP
+	unsigned char lcookie[COOKIE_LEN];
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
@@ -2329,9 +2345,6 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		return;
 	}
 	buf[res] = '\0';
-	if (os_strcmp(buf, "PING") == 0)
-		level = MSG_EXCESSIVE;
-	wpa_hexdump_ascii(level, "RX ctrl_iface", (u8 *) buf, res);
 
 	reply = os_malloc(reply_size);
 	if (reply == NULL) {
@@ -2343,10 +2356,46 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		return;
 	}
 
-	reply_len = hostapd_ctrl_iface_receive_process(hapd, buf,
+#ifdef CONFIG_CTRL_IFACE_UDP
+	if (os_strcmp(buf, "GET_COOKIE") == 0) {
+		os_memcpy(reply, "COOKIE=", 7);
+		wpa_snprintf_hex(reply + 7, 2 * COOKIE_LEN + 1,
+				 cookie, COOKIE_LEN);
+		reply_len = 7 + 2 * COOKIE_LEN;
+		goto done;
+	}
+
+	if (os_strncmp(buf, "COOKIE=", 7) != 0 ||
+	    hexstr2bin(buf + 7, lcookie, COOKIE_LEN) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: No cookie in the request - drop request");
+		os_free(reply);
+		return;
+	}
+
+	if (os_memcmp(cookie, lcookie, COOKIE_LEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: Invalid cookie in the request - drop request");
+		os_free(reply);
+		return;
+	}
+
+	pos = buf + 7 + 2 * COOKIE_LEN;
+	while (*pos == ' ')
+		pos++;
+#endif /* CONFIG_CTRL_IFACE_UDP */
+
+	if (os_strcmp(pos, "PING") == 0)
+		level = MSG_EXCESSIVE;
+	wpa_hexdump_ascii(level, "RX ctrl_iface", pos, res);
+
+	reply_len = hostapd_ctrl_iface_receive_process(hapd, pos,
 						       reply, reply_size,
 						       &from, fromlen);
 
+#ifdef CONFIG_CTRL_IFACE_UDP
+done:
+#endif /* CONFIG_CTRL_IFACE_UDP */
 	if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 		   fromlen) < 0) {
 		wpa_printf(MSG_DEBUG, "CTRL: sendto failed: %s",
@@ -2356,6 +2405,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 }
 
 
+#ifndef CONFIG_CTRL_IFACE_UDP
 static char * hostapd_ctrl_iface_path(struct hostapd_data *hapd)
 {
 	char *buf;
@@ -2375,6 +2425,7 @@ static char * hostapd_ctrl_iface_path(struct hostapd_data *hapd)
 	buf[len - 1] = '\0';
 	return buf;
 }
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
 
 static void hostapd_ctrl_iface_msg_cb(void *ctx, int level,
@@ -2390,6 +2441,81 @@ static void hostapd_ctrl_iface_msg_cb(void *ctx, int level,
 
 int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 {
+#ifdef CONFIG_CTRL_IFACE_UDP
+	int port = HOSTAPD_CTRL_IFACE_PORT;
+	char p[32] = { 0 };
+	struct addrinfo hints = { 0 }, *res, *saveres;
+	int n;
+
+	if (hapd->ctrl_sock > -1) {
+		wpa_printf(MSG_DEBUG, "ctrl_iface already exists!");
+		return 0;
+	}
+
+	if (hapd->conf->ctrl_interface == NULL)
+		return 0;
+
+	dl_list_init(&hapd->ctrl_dst);
+	hapd->ctrl_sock = -1;
+	os_get_random(cookie, COOKIE_LEN);
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	hints.ai_flags = AI_PASSIVE;
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	hints.ai_family = AF_INET6;
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+	hints.ai_family = AF_INET;
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+	hints.ai_socktype = SOCK_DGRAM;
+
+try_again:
+	os_snprintf(p, sizeof(p), "%d", port);
+	n = getaddrinfo(NULL, p, &hints, &res);
+	if (n) {
+		wpa_printf(MSG_ERROR, "getaddrinfo(): %s", gai_strerror(n));
+		goto fail;
+	}
+
+	saveres = res;
+	hapd->ctrl_sock = socket(res->ai_family, res->ai_socktype,
+				 res->ai_protocol);
+	if (hapd->ctrl_sock < 0) {
+		wpa_printf(MSG_ERROR, "socket(PF_INET): %s", strerror(errno));
+		goto fail;
+	}
+
+	if (bind(hapd->ctrl_sock, res->ai_addr, res->ai_addrlen) < 0) {
+		port--;
+		if ((HOSTAPD_CTRL_IFACE_PORT - port) <
+		    HOSTAPD_CTRL_IFACE_PORT_LIMIT)
+			goto try_again;
+		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
+		goto fail;
+	}
+
+	freeaddrinfo(saveres);
+
+	wpa_printf(MSG_DEBUG, "ctrl_iface_init UDP port: %d", port);
+
+	if (eloop_register_read_sock(hapd->ctrl_sock,
+				     hostapd_ctrl_iface_receive, hapd, NULL) <
+	    0) {
+		hostapd_ctrl_iface_deinit(hapd);
+		return -1;
+	}
+
+	hapd->msg_ctx = hapd;
+	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
+
+	return 0;
+
+fail:
+	if (hapd->ctrl_sock >= 0)
+		close(hapd->ctrl_sock);
+	return -1;
+#else /* CONFIG_CTRL_IFACE_UDP */
 	struct sockaddr_un addr;
 	int s = -1;
 	char *fname = NULL;
@@ -2540,6 +2666,7 @@ fail:
 		os_free(fname);
 	}
 	return -1;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 }
 
 
@@ -2548,10 +2675,14 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 	struct wpa_ctrl_dst *dst, *prev;
 
 	if (hapd->ctrl_sock > -1) {
+#ifndef CONFIG_CTRL_IFACE_UDP
 		char *fname;
+#endif /* !CONFIG_CTRL_IFACE_UDP */
+
 		eloop_unregister_read_sock(hapd->ctrl_sock);
 		close(hapd->ctrl_sock);
 		hapd->ctrl_sock = -1;
+#ifndef CONFIG_CTRL_IFACE_UDP
 		fname = hostapd_ctrl_iface_path(hapd);
 		if (fname)
 			unlink(fname);
@@ -2570,6 +2701,7 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 					   strerror(errno));
 			}
 		}
+#endif /* !CONFIG_CTRL_IFACE_UDP */
 	}
 
 	dl_list_for_each_safe(dst, prev, &hapd->ctrl_dst, struct wpa_ctrl_dst,
@@ -2843,15 +2975,18 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
 {
 	void *interfaces = eloop_ctx;
-	char buf[256];
+	char buffer[256], *buf = buffer;
 	int res;
 	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
 	char *reply;
 	int reply_len;
 	const int reply_size = 4096;
+#ifdef CONFIG_CTRL_IFACE_UDP
+	unsigned char lcookie[COOKIE_LEN];
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
-	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
+	res = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
 	if (res < 0) {
 		wpa_printf(MSG_ERROR, "recvfrom(ctrl_iface): %s",
@@ -2873,6 +3008,35 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 
 	os_memcpy(reply, "OK\n", 3);
 	reply_len = 3;
+
+#ifdef CONFIG_CTRL_IFACE_UDP
+	if (os_strcmp(buf, "GET_COOKIE") == 0) {
+		os_memcpy(reply, "COOKIE=", 7);
+		wpa_snprintf_hex(reply + 7, 2 * COOKIE_LEN + 1,
+				 gcookie, COOKIE_LEN);
+		reply_len = 7 + 2 * COOKIE_LEN;
+		goto send_reply;
+	}
+
+	if (os_strncmp(buf, "COOKIE=", 7) != 0 ||
+	    hexstr2bin(buf + 7, lcookie, COOKIE_LEN) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: No cookie in the request - drop request");
+		os_free(reply);
+		return;
+	}
+
+	if (os_memcmp(gcookie, lcookie, COOKIE_LEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: Invalid cookie in the request - drop request");
+		os_free(reply);
+		return;
+	}
+
+	buf += 7 + 2 * COOKIE_LEN;
+	while (*buf == ' ')
+		buf++;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
 	if (os_strncmp(buf, "IFNAME=", 7) == 0) {
 		char *pos = os_strchr(buf + 7, ' ');
@@ -2955,6 +3119,7 @@ send_reply:
 }
 
 
+#ifndef CONFIG_CTRL_IFACE_UDP
 static char * hostapd_global_ctrl_iface_path(struct hapd_interfaces *interface)
 {
 	char *buf;
@@ -2974,10 +3139,84 @@ static char * hostapd_global_ctrl_iface_path(struct hapd_interfaces *interface)
 	buf[len - 1] = '\0';
 	return buf;
 }
+#endif /* CONFIG_CTRL_IFACE_UDP */
 
 
 int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 {
+#ifdef CONFIG_CTRL_IFACE_UDP
+	int port = HOSTAPD_GLOBAL_CTRL_IFACE_PORT;
+	char p[32] = { 0 };
+	struct addrinfo hints = { 0 }, *res, *saveres;
+	int n;
+
+	if (interface->global_ctrl_sock > -1) {
+		wpa_printf(MSG_DEBUG, "ctrl_iface already exists!");
+		return 0;
+	}
+
+	if (interface->global_iface_path == NULL)
+		return 0;
+
+	dl_list_init(&interface->global_ctrl_dst);
+	interface->global_ctrl_sock = -1;
+	os_get_random(gcookie, COOKIE_LEN);
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	hints.ai_flags = AI_PASSIVE;
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	hints.ai_family = AF_INET6;
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+	hints.ai_family = AF_INET;
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+	hints.ai_socktype = SOCK_DGRAM;
+
+try_again:
+	os_snprintf(p, sizeof(p), "%d", port);
+	n = getaddrinfo(NULL, p, &hints, &res);
+	if (n) {
+		wpa_printf(MSG_ERROR, "getaddrinfo(): %s", gai_strerror(n));
+		goto fail;
+	}
+
+	saveres = res;
+	interface->global_ctrl_sock = socket(res->ai_family, res->ai_socktype,
+					     res->ai_protocol);
+	if (interface->global_ctrl_sock < 0) {
+		wpa_printf(MSG_ERROR, "socket(PF_INET): %s", strerror(errno));
+		goto fail;
+	}
+
+	if (bind(interface->global_ctrl_sock, res->ai_addr, res->ai_addrlen) <
+	    0) {
+		port++;
+		if ((port - HOSTAPD_GLOBAL_CTRL_IFACE_PORT) <
+		    HOSTAPD_GLOBAL_CTRL_IFACE_PORT_LIMIT)
+			goto try_again;
+		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
+		goto fail;
+	}
+
+	freeaddrinfo(saveres);
+
+	wpa_printf(MSG_DEBUG, "global ctrl_iface_init UDP port: %d", port);
+
+	if (eloop_register_read_sock(interface->global_ctrl_sock,
+				     hostapd_global_ctrl_iface_receive,
+				     interface, NULL) < 0) {
+		hostapd_global_ctrl_iface_deinit(interface);
+		return -1;
+	}
+
+	return 0;
+
+fail:
+	if (interface->global_ctrl_sock >= 0)
+		close(interface->global_ctrl_sock);
+	return -1;
+#else /* CONFIG_CTRL_IFACE_UDP */
 	struct sockaddr_un addr;
 	int s = -1;
 	char *fname = NULL;
@@ -3083,18 +3322,22 @@ fail:
 		os_free(fname);
 	}
 	return -1;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 }
 
 
 void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
 {
+#ifndef CONFIG_CTRL_IFACE_UDP
 	char *fname = NULL;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 	struct wpa_ctrl_dst *dst, *prev;
 
 	if (interfaces->global_ctrl_sock > -1) {
 		eloop_unregister_read_sock(interfaces->global_ctrl_sock);
 		close(interfaces->global_ctrl_sock);
 		interfaces->global_ctrl_sock = -1;
+#ifndef CONFIG_CTRL_IFACE_UDP
 		fname = hostapd_global_ctrl_iface_path(interfaces);
 		if (fname) {
 			unlink(fname);
@@ -3114,6 +3357,7 @@ void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
 					   strerror(errno));
 			}
 		}
+#endif /* CONFIG_CTRL_IFACE_UDP */
 	}
 
 	os_free(interfaces->global_iface_path);

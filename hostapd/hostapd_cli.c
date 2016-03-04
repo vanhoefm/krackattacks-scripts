@@ -16,6 +16,7 @@
 #include "utils/edit.h"
 #include "common/version.h"
 
+#ifndef CONFIG_NO_CTRL_IFACE
 
 static const char *const hostapd_cli_version =
 "hostapd_cli v" VERSION_STR "\n"
@@ -136,12 +137,18 @@ static void usage(void)
 
 static struct wpa_ctrl * hostapd_cli_open_connection(const char *ifname)
 {
+#ifndef CONFIG_CTRL_IFACE_UDP
 	char *cfile;
 	int flen;
+#endif /* !CONFIG_CTRL_IFACE_UDP */
 
 	if (ifname == NULL)
 		return NULL;
 
+#ifdef CONFIG_CTRL_IFACE_UDP
+	ctrl_conn = wpa_ctrl_open(ifname);
+	return ctrl_conn;
+#else /* CONFIG_CTRL_IFACE_UDP */
 	flen = strlen(ctrl_iface_dir) + strlen(ifname) + 2;
 	cfile = malloc(flen);
 	if (cfile == NULL)
@@ -158,6 +165,7 @@ static struct wpa_ctrl * hostapd_cli_open_connection(const char *ifname)
 	ctrl_conn = wpa_ctrl_open2(cfile, client_socket_dir);
 	free(cfile);
 	return ctrl_conn;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 }
 
 
@@ -1514,3 +1522,12 @@ int main(int argc, char *argv[])
 	hostapd_cli_cleanup();
 	return 0;
 }
+
+#else /* CONFIG_NO_CTRL_IFACE */
+
+int main(int argc, char *argv[])
+{
+	return -1;
+}
+
+#endif /* CONFIG_NO_CTRL_IFACE */

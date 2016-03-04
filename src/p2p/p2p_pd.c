@@ -1349,6 +1349,9 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 			" with no pending request", MAC2STR(sa));
 		p2p_parse_free(&msg);
 		return;
+	} else if (msg.wfd_subelems) {
+		wpabuf_free(dev->info.wfd_subelems);
+		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
 	}
 
 	if (dev->dialog_token != msg.dialog_token) {

@@ -1268,6 +1268,11 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 		dev->client_timeout = msg.config_timeout[1];
 	}
 
+	if (msg.wfd_subelems) {
+		wpabuf_free(dev->info.wfd_subelems);
+		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
+	}
+
 	if (!msg.operating_channel && !go) {
 		/*
 		 * Note: P2P Client may omit Operating Channel attribute to

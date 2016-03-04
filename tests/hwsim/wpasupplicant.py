@@ -17,18 +17,24 @@ logger = logging.getLogger()
 wpas_ctrl = '/var/run/wpa_supplicant'
 
 class WpaSupplicant:
-    def __init__(self, ifname=None, global_iface=None):
+    def __init__(self, ifname=None, global_iface=None, hostname=None,
+                 port=9877, global_port=9878):
+        self.hostname = hostname
         self.group_ifname = None
         self.gctrl_mon = None
         if ifname:
-            self.set_ifname(ifname)
+            self.set_ifname(ifname, hostname, port)
         else:
             self.ifname = None
 
         self.global_iface = global_iface
         if global_iface:
-            self.global_ctrl = wpaspy.Ctrl(global_iface)
-            self.global_mon = wpaspy.Ctrl(global_iface)
+            if hostname != None:
+                self.global_ctrl = wpaspy.Ctrl(hostname, global_port)
+                self.global_mon = wpaspy.Ctrl(hostname, global_port)
+            else:
+                self.global_ctrl = wpaspy.Ctrl(global_iface)
+                self.global_mon = wpaspy.Ctrl(global_iface)
             self.global_mon.attach()
         else:
             self.global_mon = None
@@ -40,10 +46,14 @@ class WpaSupplicant:
             self.global_ctrl = None
         self.remove_ifname()
 
-    def set_ifname(self, ifname):
+    def set_ifname(self, ifname, hostname=None, port=9877):
         self.ifname = ifname
-        self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
-        self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+        if hostname != None:
+            self.ctrl = wpaspy.Ctrl(hostname, port)
+            self.mon = wpaspy.Ctrl(hostname, port)
+        else:
+            self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+            self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
         self.mon.attach()
 
     def remove_ifname(self):
@@ -52,6 +62,26 @@ class WpaSupplicant:
             self.mon = None
             self.ctrl = None
             self.ifname = None
+
+    def get_ctrl_iface_port(self, ifname):
+        if self.hostname is None:
+            return None
+
+        res = self.global_request("INTERFACES ctrl")
+        lines = res.splitlines()
+        found = False
+        for line in lines:
+            words = line.split()
+            if words[0] == ifname:
+                found = True
+                break
+        if not found:
+            raise Exception("Could not find UDP port for " + ifname)
+        res = line.find("ctrl_iface=udp:")
+        if res == -1:
+            raise Exception("Wrong ctrl_interface format")
+        words = line.split(":")
+        return int(words[1])
 
     def interface_add(self, ifname, config="", driver="nl80211",
                       drv_params=None, br_ifname=None, create=False,
@@ -85,7 +115,8 @@ class WpaSupplicant:
         if "FAIL" in self.global_request(cmd):
             raise Exception("Failed to add a dynamic wpa_supplicant interface")
         if not create and set_ifname:
-            self.set_ifname(ifname)
+            port = self.get_ctrl_iface_port(ifname)
+            self.set_ifname(ifname, self.hostname, port)
 
     def interface_remove(self, ifname):
         self.remove_ifname()

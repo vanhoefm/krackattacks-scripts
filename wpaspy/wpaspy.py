@@ -109,6 +109,16 @@ class Ctrl:
             return None
         raise Exception("DETACH failed")
 
+    def terminate(self):
+        if self.attached:
+            try:
+                self.detach()
+            except Exception, e:
+                # Need to ignore this to allow the socket to be closed
+                self.attached = False
+        self.request("TERMINATE")
+        self.close()
+
     def pending(self, timeout=0):
         [r, w, e] = select.select([self.s], [], [], timeout)
         if r:

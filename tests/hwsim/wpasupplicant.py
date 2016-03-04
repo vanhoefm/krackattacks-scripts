@@ -39,6 +39,13 @@ class WpaSupplicant:
         else:
             self.global_mon = None
 
+    def terminate(self):
+        if self.global_mon:
+            self.global_mon.detach()
+            self.global_mon = None
+            self.global_ctrl.terminate()
+            self.global_ctrl = None
+
     def close_ctrl(self):
         if self.global_mon:
             self.global_mon.detach()

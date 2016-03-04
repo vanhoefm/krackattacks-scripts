@@ -101,6 +101,13 @@ class HostapdGlobal:
         words = line.split(":")
         return int(words[1])
 
+    def terminate(self):
+        self.mon.detach()
+        self.mon.close()
+        self.mon = None
+        self.ctrl.terminate()
+        self.ctrl = None
+
 class Hostapd:
     def __init__(self, ifname, bssidx=0, hostname=None, port=8877):
         self.ifname = ifname
@@ -113,6 +120,14 @@ class Hostapd:
         self.mon.attach()
         self.bssid = None
         self.bssidx = bssidx
+
+    def close_ctrl(self):
+        if self.mon is not None:
+            self.mon.detach()
+            self.mon.close()
+            self.mon = None
+            self.ctrl.close()
+            self.ctrl = None
 
     def own_addr(self):
         if self.bssid is None:
@@ -364,6 +379,11 @@ def remove_bss(ifname, hostname=None, port=8878):
     logger.info("Removing BSS " + ifname)
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.remove(ifname)
+
+def terminate(hostname=None, port=8878):
+    logger.info("Terminating hostapd")
+    hapd_global = HostapdGlobal(hostname=hostname, port=port)
+    hapd_global.terminate()
 
 def wpa2_params(ssid=None, passphrase=None):
     params = { "wpa": "2",

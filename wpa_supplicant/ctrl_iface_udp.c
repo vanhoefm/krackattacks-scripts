@@ -48,12 +48,30 @@ struct ctrl_iface_priv {
 	u8 cookie[COOKIE_LEN];
 };
 
+struct ctrl_iface_global_priv {
+	int sock;
+	struct wpa_ctrl_dst *ctrl_dst;
+	u8 cookie[COOKIE_LEN];
+};
+
 
 static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 					   const char *ifname, int sock,
 					   struct wpa_ctrl_dst **head,
 					   int level, const char *buf,
 					   size_t len);
+
+
+static void wpas_ctrl_iface_free_dst(struct wpa_ctrl_dst *dst)
+{
+	struct wpa_ctrl_dst *prev;
+
+	while (dst) {
+		prev = dst;
+		dst = dst->next;
+		os_free(prev);
+	}
+}
 
 
 static int wpa_supplicant_ctrl_iface_attach(struct wpa_ctrl_dst **head,
@@ -331,8 +349,25 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
 					     const char *txt, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s == NULL || wpa_s->ctrl_iface == NULL)
+
+	if (!wpa_s)
 		return;
+
+	if (type != WPA_MSG_NO_GLOBAL && wpa_s->global->ctrl_iface) {
+		struct ctrl_iface_global_priv *priv = wpa_s->global->ctrl_iface;
+
+		if (priv->ctrl_dst) {
+			wpa_supplicant_ctrl_iface_send(
+				wpa_s,
+				type != WPA_MSG_PER_INTERFACE ?
+				NULL : wpa_s->ifname,
+				priv->sock, &priv->ctrl_dst, level, txt, len);
+		}
+	}
+
+	if (type == WPA_MSG_ONLY_GLOBAL || !wpa_s->ctrl_iface)
+		return;
+
 	wpa_supplicant_ctrl_iface_send(wpa_s, NULL, wpa_s->ctrl_iface->sock,
 				       &wpa_s->ctrl_iface->ctrl_dst,
 				       level, txt, len);
@@ -431,8 +466,6 @@ fail:
 
 void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 {
-	struct wpa_ctrl_dst *dst, *prev;
-
 	if (priv->sock > -1) {
 		eloop_unregister_read_sock(priv->sock);
 		if (priv->ctrl_dst) {
@@ -449,12 +482,7 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 		priv->sock = -1;
 	}
 
-	dst = priv->ctrl_dst;
-	while (dst) {
-		prev = dst;
-		dst = dst->next;
-		os_free(prev);
-	}
+	wpas_ctrl_iface_free_dst(priv->ctrl_dst);
 	os_free(priv);
 }
 
@@ -538,12 +566,6 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 
 /* Global ctrl_iface */
 
-struct ctrl_iface_global_priv {
-	int sock;
-	u8 cookie[COOKIE_LEN];
-};
-
-
 static char *
 wpa_supplicant_global_get_cookie(struct ctrl_iface_global_priv *priv,
 				 size_t *reply_len)
@@ -573,7 +595,7 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int res;
 	struct sockaddr_in from;
 	socklen_t fromlen = sizeof(from);
-	char *reply;
+	char *reply = NULL;
 	size_t reply_len;
 	u8 cookie[COOKIE_LEN];
 
@@ -628,16 +650,33 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	while (*pos == ' ')
 		pos++;
 
-	reply = wpa_supplicant_global_ctrl_iface_process(global, pos,
-							 &reply_len);
+	if (os_strcmp(pos, "ATTACH") == 0) {
+		if (wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst,
+						     &from, fromlen))
+			reply_len = 1;
+		else
+			reply_len = 2;
+	} else if (os_strcmp(pos, "DETACH") == 0) {
+		if (wpa_supplicant_ctrl_iface_detach(&priv->ctrl_dst,
+						     &from, fromlen))
+			reply_len = 1;
+		else
+			reply_len = 2;
+	} else {
+		reply = wpa_supplicant_global_ctrl_iface_process(global, pos,
+								 &reply_len);
+	}
 
  done:
 	if (reply) {
 		sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 		       fromlen);
 		os_free(reply);
-	} else if (reply_len) {
+	} else if (reply_len == 1) {
 		sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
+		       fromlen);
+	} else if (reply_len == 2) {
+		sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
 		       fromlen);
 	}
 }
@@ -705,6 +744,7 @@ try_again:
 	eloop_register_read_sock(priv->sock,
 				 wpa_supplicant_global_ctrl_iface_receive,
 				 global, priv);
+	wpa_msg_register_cb(wpa_supplicant_ctrl_iface_msg_cb);
 
 	return priv;
 
@@ -723,5 +763,7 @@ wpa_supplicant_global_ctrl_iface_deinit(struct ctrl_iface_global_priv *priv)
 		eloop_unregister_read_sock(priv->sock);
 		close(priv->sock);
 	}
+
+	wpas_ctrl_iface_free_dst(priv->ctrl_dst);
 	os_free(priv);
 }

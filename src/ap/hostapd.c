@@ -512,6 +512,9 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	if (hostapd_drv_none(hapd))
 		return 0;
 
+	if (iface->conf->use_driver_iface_addr)
+		return 0;
+
 	/* Generate BSSID mask that is large enough to cover the BSSIDs. */
 
 	/* Determine the bits necessary to cover the number of BSSIDs. */
@@ -905,12 +908,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	hapd->started = 1;
 
 	if (!first || first == -1) {
-		if (is_zero_ether_addr(conf->bssid)) {
-			/* Allocate the next available BSSID. */
-			do {
-				inc_byte_array(hapd->own_addr, ETH_ALEN);
-			} while (mac_in_conf(hapd->iconf, hapd->own_addr));
-		} else {
+		u8 *addr = hapd->own_addr;
+
+		if (!is_zero_ether_addr(conf->bssid)) {
 			/* Allocate the configured BSSID. */
 			os_memcpy(hapd->own_addr, conf->bssid, ETH_ALEN);
 
@@ -922,11 +922,18 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 					   "the radio", conf->iface);
 				return -1;
 			}
+		} else if (hapd->iconf->use_driver_iface_addr) {
+			addr = NULL;
+		} else {
+			/* Allocate the next available BSSID. */
+			do {
+				inc_byte_array(hapd->own_addr, ETH_ALEN);
+			} while (mac_in_conf(hapd->iconf, hapd->own_addr));
 		}
 
 		hapd->interface_added = 1;
 		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
-				   conf->iface, hapd->own_addr, hapd,
+				   conf->iface, addr, hapd,
 				   &hapd->drv_priv, force_ifname, if_addr,
 				   conf->bridge[0] ? conf->bridge : NULL,
 				   first == -1)) {
@@ -935,6 +942,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 			hapd->interface_added = 0;
 			return -1;
 		}
+
+		if (!addr)
+			os_memcpy(hapd->own_addr, if_addr, ETH_ALEN);
 	}
 
 	if (conf->wmm_enabled < 0)

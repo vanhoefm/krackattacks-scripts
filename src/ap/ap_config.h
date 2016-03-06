@@ -665,6 +665,9 @@ struct hostapd_config {
 	u8 vht_oper_centr_freq_seg0_idx;
 	u8 vht_oper_centr_freq_seg1_idx;
 
+	/* Use driver-generated interface addresses when adding multiple BSSs */
+	u8 use_driver_iface_addr;
+
 #ifdef CONFIG_FST
 	struct fst_iface_cfg fst_cfg;
 #endif /* CONFIG_FST */

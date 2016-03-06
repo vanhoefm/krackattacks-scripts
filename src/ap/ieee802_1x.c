@@ -861,6 +861,29 @@ ieee802_1x_alloc_eapol_sm(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
+static void ieee802_1x_save_eapol(struct sta_info *sta, const u8 *buf,
+				  size_t len)
+{
+	if (sta->pending_eapol_rx) {
+		wpabuf_free(sta->pending_eapol_rx->buf);
+	} else {
+		sta->pending_eapol_rx =
+			os_malloc(sizeof(*sta->pending_eapol_rx));
+		if (!sta->pending_eapol_rx)
+			return;
+	}
+
+	sta->pending_eapol_rx->buf = wpabuf_alloc_copy(buf, len);
+	if (!sta->pending_eapol_rx->buf) {
+		os_free(sta->pending_eapol_rx);
+		sta->pending_eapol_rx = NULL;
+		return;
+	}
+
+	os_get_reltime(&sta->pending_eapol_rx->rx_time);
+}
+
+
 /**
  * ieee802_1x_receive - Process the EAPOL frames from the Supplicant
  * @hapd: hostapd BSS data
@@ -891,6 +914,13 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		     !(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_WIRED))) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X data frame from not "
 			   "associated/Pre-authenticating STA");
+
+		if (sta && (sta->flags & WLAN_STA_AUTH)) {
+			wpa_printf(MSG_DEBUG, "Saving EAPOL frame from " MACSTR
+				   " for later use", MAC2STR(sta->addr));
+			ieee802_1x_save_eapol(sta, buf, len);
+		}
+
 		return;
 	}
 
@@ -1182,6 +1212,12 @@ void ieee802_1x_free_station(struct hostapd_data *hapd, struct sta_info *sta)
 #ifdef CONFIG_HS20
 	eloop_cancel_timeout(ieee802_1x_wnm_notif_send, hapd, sta);
 #endif /* CONFIG_HS20 */
+
+	if (sta->pending_eapol_rx) {
+		wpabuf_free(sta->pending_eapol_rx->buf);
+		os_free(sta->pending_eapol_rx);
+		sta->pending_eapol_rx = NULL;
+	}
 
 	if (sm == NULL)
 		return;

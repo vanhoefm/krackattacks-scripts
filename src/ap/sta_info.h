@@ -56,6 +56,11 @@ struct mbo_non_pref_chan_info {
 	u8 channels[];
 };
 
+struct pending_eapol_rx {
+	struct wpabuf *buf;
+	struct os_reltime rx_time;
+};
+
 struct sta_info {
 	struct sta_info *next; /* next entry in sta list */
 	struct sta_info *hnext; /* next entry in hash table list */
@@ -112,6 +117,8 @@ struct sta_info {
 
 	/* IEEE 802.1X related data */
 	struct eapol_state_machine *eapol_sm;
+
+	struct pending_eapol_rx *pending_eapol_rx;
 
 	u64 acct_session_id;
 	struct os_reltime acct_session_start;

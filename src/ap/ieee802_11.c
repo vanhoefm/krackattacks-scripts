@@ -2782,6 +2782,25 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
 	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
+
+	if (sta->pending_eapol_rx) {
+		struct os_reltime now, age;
+
+		os_get_reltime(&now);
+		os_reltime_sub(&now, &sta->pending_eapol_rx->rx_time, &age);
+		if (age.sec == 0 && age.usec < 200000) {
+			wpa_printf(MSG_DEBUG,
+				   "Process pending EAPOL frame that was received from " MACSTR " just before association notification",
+				   MAC2STR(sta->addr));
+			ieee802_1x_receive(
+				hapd, mgmt->da,
+				wpabuf_head(sta->pending_eapol_rx->buf),
+				wpabuf_len(sta->pending_eapol_rx->buf));
+		}
+		wpabuf_free(sta->pending_eapol_rx->buf);
+		os_free(sta->pending_eapol_rx);
+		sta->pending_eapol_rx = NULL;
+	}
 }
 
 

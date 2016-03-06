@@ -5163,3 +5163,54 @@ def _test_dbus_vendor_elem(dev, apdev):
     except dbus.exceptions.DBusException, e:
         if "InvalidArgs" not in str(e) or "ID value does not exist" not in str(e):
             raise Exception("Unexpected error message for invalid VendorElemGet after removal: " + str(e))
+
+def test_dbus_assoc_reject(dev, apdev):
+    """D-Bus AssocStatusCode"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    ssid = "test-open"
+    params = { "ssid": ssid,
+               "max_listen_interval": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    class TestDbusConnect(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.assoc_status_seen = False
+            self.state = 0
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_connect)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
+                            "PropertiesChanged")
+            self.loop.run()
+            return self
+
+        def propertiesChanged(self, properties):
+            logger.debug("propertiesChanged: %s" % str(properties))
+            if 'AssocStatusCode' in properties:
+                status = properties['AssocStatusCode']
+                if status != 51:
+                    logger.info("Unexpected status code: " + str(status))
+                else:
+                    self.assoc_status_seen = True
+                iface.Disconnect()
+                self.loop.quit()
+
+        def run_connect(self, *args):
+            args = dbus.Dictionary({ 'ssid': ssid,
+                                     'key_mgmt': 'NONE',
+                                     'scan_freq': 2412 },
+                                   signature='sv')
+            self.netw = iface.AddNetwork(args)
+            iface.SelectNetwork(self.netw)
+            return False
+
+        def success(self):
+            return self.assoc_status_seen
+
+    with TestDbusConnect(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")

@@ -474,9 +474,8 @@ static void usage(void)
 static const char * hostapd_msg_ifname_cb(void *ctx)
 {
 	struct hostapd_data *hapd = ctx;
-	if (hapd && hapd->iconf && hapd->iconf->bss &&
-	    hapd->iconf->num_bss > 0 && hapd->iconf->bss[0])
-		return hapd->iconf->bss[0]->iface;
+	if (hapd && hapd->conf)
+		return hapd->conf->iface;
 	return NULL;
 }
 

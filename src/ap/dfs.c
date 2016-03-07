@@ -704,7 +704,8 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 							skip_radar);
 			if (!channel) {
 				wpa_printf(MSG_ERROR, "could not get valid channel");
-				return -1;
+				hostapd_set_state(iface, HAPD_IFACE_DFS);
+				return 0;
 			}
 
 			iface->freq = channel->freq;
@@ -793,7 +794,6 @@ static int hostapd_dfs_start_channel_switch_cac(struct hostapd_iface *iface)
 
 	if (!channel) {
 		wpa_printf(MSG_ERROR, "No valid channel available");
-		hostapd_setup_interface_complete(iface, err);
 		return err;
 	}
 
@@ -858,8 +858,9 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
 						&vht_oper_centr_freq_seg1_idx,
 						skip_radar);
 		if (!channel) {
-			/* FIXME: Wait for channel(s) to become available */
-			hostapd_disable_iface(iface);
+			wpa_printf(MSG_INFO,
+				   "%s: no DFS channels left, waiting for NOP to finish",
+				   __func__);
 			return err;
 		}
 
@@ -982,6 +983,11 @@ int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
 	/* TODO add correct implementation here */
 	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
 		      cf1, cf2, HOSTAPD_CHAN_DFS_USABLE);
+
+	/* Handle cases where all channels were initially unavailable */
+	if (iface->state == HAPD_IFACE_DFS && !iface->cac_started)
+		hostapd_handle_dfs(iface);
+
 	return 0;
 }
 

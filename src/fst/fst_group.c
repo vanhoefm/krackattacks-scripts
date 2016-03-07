@@ -220,7 +220,7 @@ fst_group_get_new_iface_by_mbie_and_band_id(struct fst_group *g,
 
 				if (peer_addr &&
 				    fst_iface_is_connected(iface, peer_addr,
-							   TRUE) &&
+							   FALSE) &&
 				    band_id == fst_iface_get_band_id(iface)) {
 					os_memcpy(iface_peer_addr, peer_addr,
 						  ETH_ALEN);

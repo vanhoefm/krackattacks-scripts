@@ -14,7 +14,16 @@
 #undef if_type
 #include <sys/ioctl.h>
 #include <linux/if_vlan.h>
-#include <linux/if_bridge.h>
+/* From linux/if_bridge.h that can conflict with C library headers for IPv6 */
+#define BRCTL_GET_VERSION 0
+#define BRCTL_GET_BRIDGES 1
+#define BRCTL_ADD_BRIDGE 2
+#define BRCTL_DEL_BRIDGE 3
+#define BRCTL_ADD_IF 4
+#define BRCTL_DEL_IF 5
+#define BRCTL_GET_BRIDGE_INFO 6
+#define BRCTL_GET_PORT_LIST 7
+#define BRCTL_SET_BRIDGE_FORWARD_DELAY 8
 
 #include "utils/common.h"
 #include "drivers/priv_netlink.h"

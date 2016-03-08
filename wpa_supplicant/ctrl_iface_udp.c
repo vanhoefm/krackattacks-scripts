@@ -378,6 +378,7 @@ struct ctrl_iface_priv *
 wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_priv *priv;
+	char port_str[40];
 	int port = WPA_CTRL_IFACE_PORT;
 	char *pos;
 #ifdef CONFIG_CTRL_IFACE_UDP_IPV6
@@ -439,10 +440,18 @@ try_again:
 #endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		port--;
-		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT &&
-		    !pos)
+		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT)
 			goto try_again;
 		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
+		goto fail;
+	}
+
+	/* Update the ctrl_interface value to match the selected port */
+	os_snprintf(port_str, sizeof(port_str), "udp:%d", port);
+	os_free(wpa_s->conf->ctrl_interface);
+	wpa_s->conf->ctrl_interface = os_strdup(port_str);
+	if (!wpa_s->conf->ctrl_interface) {
+		wpa_msg(wpa_s, MSG_ERROR, "Failed to malloc ctrl_interface");
 		goto fail;
 	}
 

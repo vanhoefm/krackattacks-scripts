@@ -280,7 +280,7 @@ static int br_delif(const char *br_name, const char *if_name)
 	args[1] = if_index;
 
 	os_strlcpy(ifr.ifr_name, br_name, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (__caddr_t) args;
+	ifr.ifr_data = (void *) args;
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0 && errno != EINVAL) {
 		/* No error if interface already removed. */
@@ -331,7 +331,7 @@ static int br_addif(const char *br_name, const char *if_name)
 	args[1] = if_index;
 
 	os_strlcpy(ifr.ifr_name, br_name, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (__caddr_t) args;
+	ifr.ifr_data = (void *) args;
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0) {
 		if (errno == EBUSY) {
@@ -459,7 +459,7 @@ static int br_getnumports(const char *br_name)
 
 	os_memset(ifindices, 0, sizeof(ifindices));
 	os_strlcpy(ifr.ifr_name, br_name, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (__caddr_t) arg;
+	ifr.ifr_data = (void *) arg;
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0) {
 		wpa_printf(MSG_ERROR, "VLAN: %s: BRCTL_GET_PORT_LIST "

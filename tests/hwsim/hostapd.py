@@ -10,6 +10,7 @@ import logging
 import binascii
 import struct
 import wpaspy
+import remotehost
 
 logger = logging.getLogger()
 hapd_ctrl = '/var/run/hostapd'
@@ -20,6 +21,7 @@ def mac2tuple(mac):
 
 class HostapdGlobal:
     def __init__(self, hostname=None, port=8878):
+        self.host = remotehost.Host(hostname)
         self.hostname = hostname
         self.port = port
         if hostname is None:
@@ -110,6 +112,7 @@ class HostapdGlobal:
 
 class Hostapd:
     def __init__(self, ifname, bssidx=0, hostname=None, port=8877):
+        self.host = remotehost.Host(hostname, ifname)
         self.ifname = ifname
         if hostname is None:
             self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))

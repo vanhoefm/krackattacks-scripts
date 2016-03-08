@@ -10,8 +10,8 @@ import logging
 import binascii
 import re
 import struct
-import subprocess
 import wpaspy
+import remotehost
 
 logger = logging.getLogger()
 wpas_ctrl = '/var/run/wpa_supplicant'
@@ -22,6 +22,7 @@ class WpaSupplicant:
         self.hostname = hostname
         self.group_ifname = None
         self.gctrl_mon = None
+        self.host = remotehost.Host(hostname, ifname)
         if ifname:
             self.set_ifname(ifname, hostname, port)
         else:
@@ -58,6 +59,7 @@ class WpaSupplicant:
         if hostname != None:
             self.ctrl = wpaspy.Ctrl(hostname, port)
             self.mon = wpaspy.Ctrl(hostname, port)
+            self.host = remotehost.Host(hostname, ifname)
         else:
             self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
             self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
@@ -93,11 +95,10 @@ class WpaSupplicant:
     def interface_add(self, ifname, config="", driver="nl80211",
                       drv_params=None, br_ifname=None, create=False,
                       set_ifname=True, all_params=False, if_type=None):
-        try:
-            groups = subprocess.check_output(["id"])
-            group = "admin" if "(admin)" in groups else "adm"
-        except Exception, e:
+        status, groups = self.host.execute("id")
+        if status != 0:
             group = "admin"
+        group = "admin" if "(admin)" in groups else "adm"
         cmd = "INTERFACE_ADD " + ifname + "\t" + config + "\t" + driver + "\tDIR=/var/run/wpa_supplicant GROUP=" + group
         if drv_params:
             cmd = cmd + '\t' + drv_params
@@ -186,18 +187,14 @@ class WpaSupplicant:
         if iter == 60:
             logger.error(self.ifname + ": Driver scan state did not clear")
             print "Trying to clear cfg80211/mac80211 scan state"
-            try:
-                cmd = ["ifconfig", self.ifname, "down"]
-                subprocess.call(cmd)
-            except subprocess.CalledProcessError, e:
-                logger.info("ifconfig failed: " + str(e.returncode))
-                logger.info(e.output)
-            try:
-                cmd = ["ifconfig", self.ifname, "up"]
-                subprocess.call(cmd)
-            except subprocess.CalledProcessError, e:
-                logger.info("ifconfig failed: " + str(e.returncode))
-                logger.info(e.output)
+            status, buf = self.host.execute("ifconfig " + self.ifname + " down")
+            if status != 0:
+                logger.info("ifconfig failed: " + buf)
+                logger.info(status)
+            status, buf = self.host.execute("ifconfig " + self.ifname + " up")
+            if status != 0:
+                logger.info("ifconfig failed: " + buf)
+                logger.info(status)
         if iter > 0:
             # The ongoing scan could have discovered BSSes or P2P peers
             logger.info("Run FLUSH again since scan was in progress")

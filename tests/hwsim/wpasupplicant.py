@@ -33,9 +33,11 @@ class WpaSupplicant:
             if hostname != None:
                 self.global_ctrl = wpaspy.Ctrl(hostname, global_port)
                 self.global_mon = wpaspy.Ctrl(hostname, global_port)
+                self.global_dbg = hostname + "/" + str(global_port) + "/"
             else:
                 self.global_ctrl = wpaspy.Ctrl(global_iface)
                 self.global_mon = wpaspy.Ctrl(global_iface)
+                self.global_dbg = ""
             self.global_mon.attach()
         else:
             self.global_mon = None
@@ -60,9 +62,11 @@ class WpaSupplicant:
             self.ctrl = wpaspy.Ctrl(hostname, port)
             self.mon = wpaspy.Ctrl(hostname, port)
             self.host = remotehost.Host(hostname, ifname)
+            self.dbg = hostname + "/" + ifname
         else:
             self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
             self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+            self.dbg = ifname
         self.mon.attach()
 
     def remove_ifname(self):
@@ -131,7 +135,7 @@ class WpaSupplicant:
         self.global_request("INTERFACE_REMOVE " + ifname)
 
     def request(self, cmd, timeout=10):
-        logger.debug(self.ifname + ": CTRL: " + cmd)
+        logger.debug(self.dbg + ": CTRL: " + cmd)
         return self.ctrl.request(cmd, timeout=timeout)
 
     def global_request(self, cmd):
@@ -139,7 +143,7 @@ class WpaSupplicant:
             return self.request(cmd)
         else:
             ifname = self.ifname or self.global_iface
-            logger.debug(ifname + ": CTRL(global): " + cmd)
+            logger.debug(self.global_dbg + ifname + ": CTRL(global): " + cmd)
             return self.global_ctrl.request(cmd)
 
     def group_request(self, cmd):
@@ -680,7 +684,7 @@ class WpaSupplicant:
         while True:
             while self.mon.pending():
                 ev = self.mon.recv()
-                logger.debug(self.ifname + ": " + ev)
+                logger.debug(self.dbg + ": " + ev)
                 for event in events:
                     if event in ev:
                         return ev
@@ -700,7 +704,7 @@ class WpaSupplicant:
             while True:
                 while self.global_mon.pending():
                     ev = self.global_mon.recv()
-                    logger.debug(self.ifname + "(global): " + ev)
+                    logger.debug(self.global_dbg + self.ifname + "(global): " + ev)
                     for event in events:
                         if event in ev:
                             return ev
@@ -752,11 +756,11 @@ class WpaSupplicant:
         count_global = 0
         while self.mon.pending():
             ev = self.mon.recv()
-            logger.debug(self.ifname + ": " + ev)
+            logger.debug(self.dbg + ": " + ev)
             count_iface += 1
         while self.global_mon and self.global_mon.pending():
             ev = self.global_mon.recv()
-            logger.debug(self.ifname + "(global): " + ev)
+            logger.debug(self.global_dbg + self.ifname + "(global): " + ev)
             count_global += 1
         return (count_iface, count_global)
 

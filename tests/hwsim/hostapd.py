@@ -27,20 +27,23 @@ class HostapdGlobal:
         if hostname is None:
             self.ctrl = wpaspy.Ctrl(hapd_global)
             self.mon = wpaspy.Ctrl(hapd_global)
+            self.dbg = ""
         else:
             self.ctrl = wpaspy.Ctrl(hostname, port)
             self.mon = wpaspy.Ctrl(hostname, port)
+            self.dbg = hostname + "/" + str(port)
         self.mon.attach()
 
-    def request(self, cmd):
-        return self.ctrl.request(cmd)
+    def request(self, cmd, timeout=10):
+        logger.debug(self.dbg + ": CTRL(global): " + cmd)
+        return self.ctrl.request(cmd, timeout)
 
     def wait_event(self, events, timeout):
         start = os.times()[4]
         while True:
             while self.mon.pending():
                 ev = self.mon.recv()
-                logger.debug("(global): " + ev)
+                logger.debug(self.dbg + "(global): " + ev)
                 for event in events:
                     if event in ev:
                         return ev
@@ -52,42 +55,39 @@ class HostapdGlobal:
                 break
         return None
 
-    def request(self, cmd):
-        return self.ctrl.request(cmd)
-
     def add(self, ifname, driver=None):
         cmd = "ADD " + ifname + " " + hapd_ctrl
         if driver:
             cmd += " " + driver
-        res = self.ctrl.request(cmd)
+        res = self.request(cmd)
         if not "OK" in res:
             raise Exception("Could not add hostapd interface " + ifname)
 
     def add_iface(self, ifname, confname):
-        res = self.ctrl.request("ADD " + ifname + " config=" + confname)
+        res = self.request("ADD " + ifname + " config=" + confname)
         if not "OK" in res:
             raise Exception("Could not add hostapd interface")
 
     def add_bss(self, phy, confname, ignore_error=False):
-        res = self.ctrl.request("ADD bss_config=" + phy + ":" + confname)
+        res = self.request("ADD bss_config=" + phy + ":" + confname)
         if not "OK" in res:
             if not ignore_error:
                 raise Exception("Could not add hostapd BSS")
 
     def remove(self, ifname):
-        self.ctrl.request("REMOVE " + ifname, timeout=30)
+        self.request("REMOVE " + ifname, timeout=30)
 
     def relog(self):
-        self.ctrl.request("RELOG")
+        self.request("RELOG")
 
     def flush(self):
-        self.ctrl.request("FLUSH")
+        self.request("FLUSH")
 
     def get_ctrl_iface_port(self, ifname):
         if self.hostname is None:
             return None
 
-        res = self.ctrl.request("INTERFACES ctrl")
+        res = self.request("INTERFACES ctrl")
         lines = res.splitlines()
         found = False
         for line in lines:
@@ -117,9 +117,11 @@ class Hostapd:
         if hostname is None:
             self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
             self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+            self.dbg = ifname
         else:
             self.ctrl = wpaspy.Ctrl(hostname, port)
             self.mon = wpaspy.Ctrl(hostname, port)
+            self.dbg = hostname + "/" + ifname
         self.mon.attach()
         self.bssid = None
         self.bssidx = bssidx
@@ -138,7 +140,7 @@ class Hostapd:
         return self.bssid
 
     def request(self, cmd):
-        logger.debug(self.ifname + ": CTRL: " + cmd)
+        logger.debug(self.dbg + ": CTRL: " + cmd)
         return self.ctrl.request(cmd)
 
     def ping(self):
@@ -201,14 +203,14 @@ class Hostapd:
     def dump_monitor(self):
         while self.mon.pending():
             ev = self.mon.recv()
-            logger.debug(self.ifname + ": " + ev)
+            logger.debug(self.dbg + ": " + ev)
 
     def wait_event(self, events, timeout):
         start = os.times()[4]
         while True:
             while self.mon.pending():
                 ev = self.mon.recv()
-                logger.debug(self.ifname + ": " + ev)
+                logger.debug(self.dbg + ": " + ev)
                 for event in events:
                     if event in ev:
                         return ev

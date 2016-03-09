@@ -300,6 +300,7 @@ void wpa_auth_pmksa_remove(struct wpa_authenticator *wpa_auth,
 			   const u8 *sta_addr);
 int wpa_auth_pmksa_list(struct wpa_authenticator *wpa_auth, char *buf,
 			size_t len);
+void wpa_auth_pmksa_flush(struct wpa_authenticator *wpa_auth);
 int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id);
 void wpa_auth_eapol_key_tx_status(struct wpa_authenticator *wpa_auth,
 				  struct wpa_state_machine *sm, int ack);

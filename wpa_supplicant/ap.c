@@ -1404,6 +1404,20 @@ int wpas_ap_pmksa_cache_list(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 
+void wpas_ap_pmksa_cache_flush(struct wpa_supplicant *wpa_s)
+{
+	size_t i;
+
+	if (wpa_s->ap_iface) {
+		for (i = 0; i < wpa_s->ap_iface->num_bss; i++)
+			hostapd_ctrl_iface_pmksa_flush(wpa_s->ap_iface->bss[i]);
+	}
+
+	if (wpa_s->ifmsh)
+		hostapd_ctrl_iface_pmksa_flush(wpa_s->ifmsh->bss[0]);
+}
+
+
 #ifdef NEED_AP_MLME
 void wpas_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
 				   struct dfs_event *radar)

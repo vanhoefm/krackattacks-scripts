@@ -1136,6 +1136,13 @@ static int hostapd_cli_cmd_pmksa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int hostapd_cli_cmd_pmksa_flush(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "PMKSA_FLUSH");
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1196,6 +1203,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "erp_flush", hostapd_cli_cmd_erp_flush },
 	{ "log_level", hostapd_cli_cmd_log_level },
 	{ "pmksa", hostapd_cli_cmd_pmksa },
+	{ "pmksa_flush", hostapd_cli_cmd_pmksa_flush },
 	{ NULL, NULL }
 };
 

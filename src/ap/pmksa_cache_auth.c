@@ -92,6 +92,20 @@ void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 }
 
 
+/**
+ * pmksa_cache_auth_flush - Flush all PMKSA cache entries
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
+ */
+void pmksa_cache_auth_flush(struct rsn_pmksa_cache *pmksa)
+{
+	while (pmksa->pmksa) {
+		wpa_printf(MSG_DEBUG, "RSN: Flush PMKSA cache entry for "
+			   MACSTR, MAC2STR(pmksa->pmksa->spa));
+		pmksa_cache_free_entry(pmksa, pmksa->pmksa);
+	}
+}
+
+
 static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 {
 	struct rsn_pmksa_cache *pmksa = eloop_ctx;

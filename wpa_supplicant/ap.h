@@ -84,6 +84,7 @@ int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s);
 
 int wpas_ap_pmksa_cache_list(struct wpa_supplicant *wpa_s, char *buf,
 			     size_t len);
+void wpas_ap_pmksa_cache_flush(struct wpa_supplicant *wpa_s);
 
 void wpas_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
 				   struct dfs_event *radar);

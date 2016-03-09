@@ -8368,6 +8368,15 @@ static int wpas_ctrl_iface_pmksa(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_ctrl_iface_pmksa_flush(struct wpa_supplicant *wpa_s)
+{
+	wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
+#ifdef CONFIG_AP
+	wpas_ap_pmksa_cache_flush(wpa_s);
+#endif /* CONFIG_AP */
+}
+
+
 static int wpas_ctrl_cmd_debug_level(const char *cmd)
 {
 	if (os_strcmp(cmd, "PING") == 0 ||
@@ -8441,7 +8450,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "PMKSA") == 0) {
 		reply_len = wpas_ctrl_iface_pmksa(wpa_s, reply, reply_size);
 	} else if (os_strcmp(buf, "PMKSA_FLUSH") == 0) {
-		wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
+		wpas_ctrl_iface_pmksa_flush(wpa_s);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))
 			reply_len = -1;

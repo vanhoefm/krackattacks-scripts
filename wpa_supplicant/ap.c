@@ -1366,6 +1366,44 @@ int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_CTRL_IFACE */
 
 
+int wpas_ap_pmksa_cache_list(struct wpa_supplicant *wpa_s, char *buf,
+			     size_t len)
+{
+	size_t reply_len = 0, i;
+	char ap_delimiter[] = "---- AP ----\n";
+	char mesh_delimiter[] = "---- mesh ----\n";
+	size_t dlen;
+
+	if (wpa_s->ap_iface) {
+		dlen = os_strlen(ap_delimiter);
+		if (dlen > len - reply_len)
+			return reply_len;
+		os_memcpy(&buf[reply_len], ap_delimiter, dlen);
+		reply_len += dlen;
+
+		for (i = 0; i < wpa_s->ap_iface->num_bss; i++) {
+			reply_len += hostapd_ctrl_iface_pmksa_list(
+				wpa_s->ap_iface->bss[i],
+				&buf[reply_len], len - reply_len);
+		}
+	}
+
+	if (wpa_s->ifmsh) {
+		dlen = os_strlen(mesh_delimiter);
+		if (dlen > len - reply_len)
+			return reply_len;
+		os_memcpy(&buf[reply_len], mesh_delimiter, dlen);
+		reply_len += dlen;
+
+		reply_len += hostapd_ctrl_iface_pmksa_list(
+			wpa_s->ifmsh->bss[0], &buf[reply_len],
+			len - reply_len);
+	}
+
+	return reply_len;
+}
+
+
 #ifdef NEED_AP_MLME
 void wpas_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
 				   struct dfs_event *radar)

@@ -2307,6 +2307,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_iface_track_sta_list(
 			hapd, reply, reply_size);
 #endif /* NEED_AP_MLME */
+	} else if (os_strcmp(buf, "PMKSA") == 0) {
+		reply_len = hostapd_ctrl_iface_pmksa_list(hapd, reply,
+							  reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

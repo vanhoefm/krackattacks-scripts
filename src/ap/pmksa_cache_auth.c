@@ -547,3 +547,48 @@ int pmksa_cache_auth_radius_das_disconnect(struct rsn_pmksa_cache *pmksa,
 
 	return found ? 0 : -1;
 }
+
+
+/**
+ * pmksa_cache_auth_list - Dump text list of entries in PMKSA cache
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
+ * @buf: Buffer for the list
+ * @len: Length of the buffer
+ * Returns: Number of bytes written to buffer
+ *
+ * This function is used to generate a text format representation of the
+ * current PMKSA cache contents for the ctrl_iface PMKSA command.
+ */
+int pmksa_cache_auth_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
+{
+	int i, ret;
+	char *pos = buf;
+	struct rsn_pmksa_cache_entry *entry;
+	struct os_reltime now;
+
+	os_get_reltime(&now);
+	ret = os_snprintf(pos, buf + len - pos,
+			  "Index / SPA / PMKID / expiration (in seconds) / opportunistic\n");
+	if (os_snprintf_error(buf + len - pos, ret))
+		return pos - buf;
+	pos += ret;
+	i = 0;
+	entry = pmksa->pmksa;
+	while (entry) {
+		ret = os_snprintf(pos, buf + len - pos, "%d " MACSTR " ",
+				  i, MAC2STR(entry->spa));
+		if (os_snprintf_error(buf + len - pos, ret))
+			return pos - buf;
+		pos += ret;
+		pos += wpa_snprintf_hex(pos, buf + len - pos, entry->pmkid,
+					PMKID_LEN);
+		ret = os_snprintf(pos, buf + len - pos, " %d %d\n",
+				  (int) (entry->expiration - now.sec),
+				  entry->opportunistic);
+		if (os_snprintf_error(buf + len - pos, ret))
+			return pos - buf;
+		pos += ret;
+		entry = entry->next;
+	}
+	return pos - buf;
+}

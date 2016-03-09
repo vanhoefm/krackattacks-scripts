@@ -8354,6 +8354,20 @@ static int wpas_ctrl_iface_mac_rand_scan(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_iface_pmksa(struct wpa_supplicant *wpa_s,
+				 char *buf, size_t buflen)
+{
+	size_t reply_len;
+
+	reply_len = wpa_sm_pmksa_cache_list(wpa_s->wpa, buf, buflen);
+#ifdef CONFIG_AP
+	reply_len += wpas_ap_pmksa_cache_list(wpa_s, &buf[reply_len],
+					      buflen - reply_len);
+#endif /* CONFIG_AP */
+	return reply_len;
+}
+
+
 static int wpas_ctrl_cmd_debug_level(const char *cmd)
 {
 	if (os_strcmp(cmd, "PING") == 0 ||
@@ -8425,8 +8439,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_status(
 			wpa_s, buf + 6, reply, reply_size);
 	} else if (os_strcmp(buf, "PMKSA") == 0) {
-		reply_len = wpa_sm_pmksa_cache_list(wpa_s->wpa, reply,
-						    reply_size);
+		reply_len = wpas_ctrl_iface_pmksa(wpa_s, reply, reply_size);
 	} else if (os_strcmp(buf, "PMKSA_FLUSH") == 0) {
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {

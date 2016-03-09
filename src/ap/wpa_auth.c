@@ -3359,6 +3359,15 @@ void wpa_auth_pmksa_remove(struct wpa_authenticator *wpa_auth,
 }
 
 
+int wpa_auth_pmksa_list(struct wpa_authenticator *wpa_auth, char *buf,
+			size_t len)
+{
+	if (!wpa_auth || !wpa_auth->pmksa)
+		return 0;
+	return pmksa_cache_auth_list(wpa_auth->pmksa, buf, len);
+}
+
+
 /*
  * Remove and free the group from wpa_authenticator. This is triggered by a
  * callback to make sure nobody is currently iterating the group list while it

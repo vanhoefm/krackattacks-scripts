@@ -24,5 +24,7 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 int hostapd_parse_csa_settings(const char *pos,
 			       struct csa_settings *settings);
 int hostapd_ctrl_iface_stop_ap(struct hostapd_data *hapd);
+int hostapd_ctrl_iface_pmksa_list(struct hostapd_data *hapd, char *buf,
+				  size_t len);
 
 #endif /* CTRL_IFACE_AP_H */

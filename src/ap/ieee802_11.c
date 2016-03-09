@@ -554,6 +554,18 @@ static void sae_set_retransmit_timer(struct hostapd_data *hapd,
 }
 
 
+void sae_accept_sta(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	sta->flags |= WLAN_STA_AUTH;
+	sta->auth_alg = WLAN_AUTH_SAE;
+	mlme_authenticate_indication(hapd, sta);
+	wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
+	sta->sae->state = SAE_ACCEPTED;
+	wpa_auth_pmksa_add_sae(hapd->wpa_auth, sta->addr,
+			       sta->sae->pmk, sta->sae->pmkid);
+}
+
+
 static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *bssid, u8 auth_transaction)
 {
@@ -676,13 +688,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 
 			sae_set_retransmit_timer(hapd, sta);
 		} else {
-			sta->flags |= WLAN_STA_AUTH;
-			sta->auth_alg = WLAN_AUTH_SAE;
-			mlme_authenticate_indication(hapd, sta);
-			wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
-			sta->sae->state = SAE_ACCEPTED;
-			wpa_auth_pmksa_add_sae(hapd->wpa_auth, sta->addr,
-					       sta->sae->pmk, sta->sae->pmkid);
+			sae_accept_sta(hapd, sta);
 		}
 		break;
 	case SAE_ACCEPTED:
@@ -691,6 +697,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				   ") doing reauthentication",
 				   MAC2STR(sta->addr));
 			ap_free_sta(hapd, sta);
+			wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
 		} else {
 			if (sae_check_big_sync(sta))
 				return WLAN_STATUS_SUCCESS;
@@ -731,6 +738,13 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 		sta->sae->state = SAE_NOTHING;
 		sta->sae->sync = 0;
+	}
+
+	if (sta->mesh_sae_pmksa_caching) {
+		wpa_printf(MSG_DEBUG,
+			   "SAE: Cancel use of mesh PMKSA caching because peer starts SAE authentication");
+		wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+		sta->mesh_sae_pmksa_caching = 0;
 	}
 
 	if (auth_transaction == 1) {

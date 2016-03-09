@@ -3375,6 +3375,34 @@ void wpa_auth_pmksa_flush(struct wpa_authenticator *wpa_auth)
 }
 
 
+struct rsn_pmksa_cache_entry *
+wpa_auth_pmksa_get(struct wpa_authenticator *wpa_auth, const u8 *sta_addr)
+{
+	if (!wpa_auth || !wpa_auth->pmksa)
+		return NULL;
+	return pmksa_cache_auth_get(wpa_auth->pmksa, sta_addr, NULL);
+}
+
+
+void wpa_auth_pmksa_set_to_sm(struct rsn_pmksa_cache_entry *pmksa,
+			      struct wpa_state_machine *sm,
+			      struct wpa_authenticator *wpa_auth,
+			      u8 *pmkid, u8 *pmk)
+{
+	if (!sm)
+		return;
+
+	sm->pmksa = pmksa;
+	if (sm->pmksa->pmk)
+		os_memcpy(pmk, sm->pmksa->pmk, PMK_LEN);
+	if (sm->pmksa->pmkid) {
+		os_memcpy(pmkid, sm->pmksa->pmkid, PMKID_LEN);
+		os_memcpy(wpa_auth->dot11RSNAPMKIDUsed,
+			  sm->pmksa->pmkid, PMKID_LEN);
+	}
+}
+
+
 /*
  * Remove and free the group from wpa_authenticator. This is triggered by a
  * callback to make sure nobody is currently iterating the group list while it

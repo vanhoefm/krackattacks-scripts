@@ -14,6 +14,7 @@
 #include "ap/hostapd.h"
 #include "ap/sta_info.h"
 #include "ap/ieee802_11.h"
+#include "ap/wpa_auth.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "mesh_mpm.h"
@@ -419,6 +420,7 @@ static void plink_timer(void *eloop_ctx, void *user_data)
 	struct sta_info *sta = user_data;
 	u16 reason = 0;
 	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
+	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 
 	switch (sta->plink_state) {
 	case PLINK_OPEN_RCVD:
@@ -448,6 +450,13 @@ static void plink_timer(void *eloop_ctx, void *user_data)
 		break;
 	case PLINK_HOLDING:
 		/* holding timer */
+
+		if (sta->mesh_sae_pmksa_caching) {
+			wpa_printf(MSG_DEBUG, "MPM: Peer " MACSTR
+				   " looks like it does not support mesh SAE PMKSA caching, so remove the cached entry for it",
+				   MAC2STR(sta->addr));
+			wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+		}
 		mesh_mpm_fsm_restart(wpa_s, sta);
 		break;
 	default:
@@ -512,7 +521,17 @@ int mesh_mpm_close_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
 }
 
 
-int mesh_mpm_connect_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
+static void peer_add_timer(void *eloop_ctx, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
+
+	os_memset(hapd->mesh_required_peer, 0, ETH_ALEN);
+}
+
+
+int mesh_mpm_connect_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
+			  int duration)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	struct hostapd_data *hapd;
@@ -547,10 +566,14 @@ int mesh_mpm_connect_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
 		return -1;
 	}
 
-	if (conf->security == MESH_CONF_SEC_NONE)
+	if (conf->security == MESH_CONF_SEC_NONE) {
 		mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
-	else
+	} else {
 		mesh_rsn_auth_sae_sta(wpa_s, sta);
+		os_memcpy(hapd->mesh_required_peer, addr, ETH_ALEN);
+		eloop_register_timeout(duration == -1 ? 10 : duration, 0,
+				       peer_add_timer, wpa_s, NULL);
+	}
 
 	return 0;
 }
@@ -565,6 +588,7 @@ void mesh_mpm_deinit(struct wpa_supplicant *wpa_s, struct hostapd_iface *ifmsh)
 
 	hapd->num_plinks = 0;
 	hostapd_free_stas(hapd);
+	eloop_cancel_timeout(peer_add_timer, wpa_s, NULL);
 }
 
 
@@ -705,7 +729,9 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 	if (!sta)
 		return;
 
-	if (ssid && ssid->no_auto_peer) {
+	if (ssid && ssid->no_auto_peer &&
+	    (is_zero_ether_addr(data->mesh_required_peer) ||
+	     os_memcmp(data->mesh_required_peer, addr, ETH_ALEN) != 0)) {
 		wpa_msg(wpa_s, MSG_INFO, "will not initiate new peer link with "
 			MACSTR " because of no_auto_peer", MAC2STR(addr));
 		if (data->mesh_pending_auth) {
@@ -785,7 +811,10 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 	hapd->num_plinks++;
 
 	sta->flags |= WLAN_STA_ASSOC;
+	sta->mesh_sae_pmksa_caching = 0;
 
+	eloop_cancel_timeout(peer_add_timer, wpa_s, NULL);
+	peer_add_timer(wpa_s, NULL);
 	eloop_cancel_timeout(plink_timer, wpa_s, sta);
 
 	/* Send ctrl event */
@@ -1065,7 +1094,8 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	 * open mesh, then go ahead and add the peer before proceeding.
 	 */
 	if (!sta && action_field == PLINK_OPEN &&
-	    !(mconf->security & MESH_CONF_SEC_AMPE))
+	    (!(mconf->security & MESH_CONF_SEC_AMPE) ||
+	     wpa_auth_pmksa_get(hapd->wpa_auth, mgmt->sa)))
 		sta = mesh_mpm_add_peer(wpa_s, mgmt->sa, &elems);
 
 	if (!sta) {

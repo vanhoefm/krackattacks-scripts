@@ -183,6 +183,7 @@ struct sta_info {
 
 #ifdef CONFIG_SAE
 	struct sae_data *sae;
+	unsigned int mesh_sae_pmksa_caching:1;
 #endif /* CONFIG_SAE */
 
 	u32 session_timeout; /* valid only if session_timeout_set == 1 */

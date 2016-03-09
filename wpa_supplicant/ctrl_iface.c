@@ -2744,11 +2744,21 @@ static int wpa_supplicant_ctrl_iface_mesh_peer_add(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
 	u8 addr[ETH_ALEN];
+	int duration;
+	char *pos;
+
+	pos = os_strstr(cmd, " duration=");
+	if (pos) {
+		*pos = '\0';
+		duration = atoi(pos + 10);
+	} else {
+		duration = -1;
+	}
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
 
-	return wpas_mesh_peer_add(wpa_s, addr);
+	return wpas_mesh_peer_add(wpa_s, addr, duration);
 }
 
 #endif /* CONFIG_MESH */

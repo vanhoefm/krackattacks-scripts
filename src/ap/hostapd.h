@@ -262,6 +262,7 @@ struct hostapd_data {
 				 struct sta_info *sta);
 	struct wpabuf *mesh_pending_auth;
 	struct os_reltime mesh_pending_auth_time;
+	u8 mesh_required_peer[ETH_ALEN];
 #endif /* CONFIG_MESH */
 
 #ifdef CONFIG_SQLITE

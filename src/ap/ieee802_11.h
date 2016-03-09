@@ -102,6 +102,7 @@ int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta);
 #ifdef CONFIG_SAE
 void sae_clear_retransmit_timer(struct hostapd_data *hapd,
 				struct sta_info *sta);
+void sae_accept_sta(struct hostapd_data *hapd, struct sta_info *sta);
 #else /* CONFIG_SAE */
 static inline void sae_clear_retransmit_timer(struct hostapd_data *hapd,
 					      struct sta_info *sta)

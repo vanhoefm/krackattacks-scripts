@@ -3229,7 +3229,7 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<addr> = Remove a mesh peer" },
 	{ "mesh_peer_add", wpa_cli_cmd_mesh_peer_add, NULL,
 	  cli_cmd_flag_none,
-	  "<addr> = Add a mesh peer" },
+	  "<addr> [duration=<seconds>] = Add a mesh peer" },
 #endif /* CONFIG_MESH */
 #ifdef CONFIG_P2P
 	{ "p2p_find", wpa_cli_cmd_p2p_find, wpa_cli_complete_p2p_find,

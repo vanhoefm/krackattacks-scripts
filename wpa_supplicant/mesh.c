@@ -603,3 +603,9 @@ int wpas_mesh_peer_remove(struct wpa_supplicant *wpa_s, const u8 *addr)
 {
 	return mesh_mpm_close_peer(wpa_s, addr);
 }
+
+
+int wpas_mesh_peer_add(struct wpa_supplicant *wpa_s, const u8 *addr)
+{
+	return mesh_mpm_connect_peer(wpa_s, addr);
+}

@@ -18,6 +18,7 @@ int wpas_mesh_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 			       char *end);
 int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
 			    size_t len);
+int wpas_mesh_peer_remove(struct wpa_supplicant *wpa_s, const u8 *addr);
 
 #ifdef CONFIG_MESH
 

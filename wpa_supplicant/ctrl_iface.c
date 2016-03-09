@@ -2727,6 +2727,18 @@ static int wpa_supplicant_ctrl_iface_mesh_group_remove(
 	return 0;
 }
 
+
+static int wpa_supplicant_ctrl_iface_mesh_peer_remove(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+
+	if (hwaddr_aton(cmd, addr) < 0)
+		return -1;
+
+	return wpas_mesh_peer_remove(wpa_s, addr);
+}
+
 #endif /* CONFIG_MESH */
 
 
@@ -8571,6 +8583,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "MESH_GROUP_REMOVE ", 18) == 0) {
 		if (wpa_supplicant_ctrl_iface_mesh_group_remove(wpa_s,
 								buf + 18))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "MESH_PEER_REMOVE ", 17) == 0) {
+		if (wpa_supplicant_ctrl_iface_mesh_peer_remove(wpa_s, buf + 17))
 			reply_len = -1;
 #endif /* CONFIG_MESH */
 #ifdef CONFIG_P2P

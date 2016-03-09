@@ -472,8 +472,8 @@ mesh_mpm_plink_open(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 }
 
 
-int mesh_mpm_plink_close(struct hostapd_data *hapd,
-			 struct sta_info *sta, void *ctx)
+static int mesh_mpm_plink_close(struct hostapd_data *hapd, struct sta_info *sta,
+				void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	int reason = WLAN_REASON_MESH_PEERING_CANCELLED;
@@ -488,6 +488,27 @@ int mesh_mpm_plink_close(struct hostapd_data *hapd,
 	}
 
 	return 1;
+}
+
+
+int mesh_mpm_close_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
+{
+	struct hostapd_data *hapd;
+	struct sta_info *sta;
+
+	if (!wpa_s->ifmsh) {
+		wpa_msg(wpa_s, MSG_INFO, "Mesh is not prepared yet");
+		return -1;
+	}
+
+	hapd = wpa_s->ifmsh->bss[0];
+	sta = ap_get_sta(hapd, addr);
+	if (!sta) {
+		wpa_msg(wpa_s, MSG_INFO, "No such mesh peer");
+		return -1;
+	}
+
+	return mesh_mpm_plink_close(hapd, sta, wpa_s) == 0 ? 0 : -1;
 }
 
 

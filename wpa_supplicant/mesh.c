@@ -597,3 +597,9 @@ int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
 	mesh_wpa_s->mesh_if_created = 1;
 	return 0;
 }
+
+
+int wpas_mesh_peer_remove(struct wpa_supplicant *wpa_s, const u8 *addr)
+{
+	return mesh_mpm_close_peer(wpa_s, addr);
+}

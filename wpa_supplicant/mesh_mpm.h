@@ -18,6 +18,7 @@ void mesh_mpm_free_sta(struct hostapd_data *hapd, struct sta_info *sta);
 void wpa_mesh_set_plink_state(struct wpa_supplicant *wpa_s,
 			      struct sta_info *sta,
 			      enum mesh_plink_state state);
+int mesh_mpm_close_peer(struct wpa_supplicant *wpa_s, const u8 *addr);
 
 #ifdef CONFIG_MESH
 

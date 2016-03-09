@@ -3739,8 +3739,8 @@ def root_ocsp(cert):
 
     fd, fn = tempfile.mkstemp()
     os.close(fd)
-    arg = [ "openssl", "ocsp", "-index", "rootCA/index.txt",
-            "-rsigner", ca, "-rkey", "auth_serv/caa-key.pem",
+    arg = [ "openssl", "ocsp", "-index", "auth_serv/rootCA/index.txt",
+            "-rsigner", ca, "-rkey", "auth_serv/ca-key.pem",
             "-CA", ca, "-issuer", ca, "-verify_other", ca, "-trust_other",
             "-ndays", "7", "-reqin", fn2, "-resp_no_certs", "-respout", fn,
             "-text" ]
@@ -3923,26 +3923,7 @@ def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_multi(dev, apdev, params):
                        ca_cert="auth_serv/iCA-user/ca-and-root.pem",
                        client_cert="auth_serv/iCA-user/user.pem",
                        private_key="auth_serv/iCA-user/user.key",
-                       scan_freq="2412", ocsp=3, wait_connect=False)
-        count = 0
-        while True:
-            ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS",
-                                    "CTRL-EVENT-EAP-SUCCESS"])
-            if ev is None:
-                raise Exception("Timeout on EAP status")
-            if "CTRL-EVENT-EAP-SUCCESS" in ev:
-                raise Exception("Unexpected EAP-Success")
-            if 'bad certificate status response' in ev:
-                break
-            if 'certificate revoked' in ev:
-                break
-            count = count + 1
-            if count > 10:
-                raise Exception("Unexpected number of EAP status messages")
-
-        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
-        if ev is None:
-            raise Exception("Timeout on EAP failure report")
+                       scan_freq="2412", ocsp=3)
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
     finally:

@@ -27,12 +27,12 @@
 
 #define MESH_AUTH_TIMEOUT 10
 #define MESH_AUTH_RETRY 3
-#define MESH_AUTH_BLOCK_DURATION 3600
 
 void mesh_auth_timer(void *eloop_ctx, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct sta_info *sta = user_data;
+	struct hostapd_data *hapd;
 
 	if (sta->sae->state != SAE_ACCEPTED) {
 		wpa_printf(MSG_DEBUG, "AUTH: Re-authenticate with " MACSTR
@@ -43,23 +43,20 @@ void mesh_auth_timer(void *eloop_ctx, void *user_data)
 		if (sta->sae_auth_retry < MESH_AUTH_RETRY) {
 			mesh_rsn_auth_sae_sta(wpa_s, sta);
 		} else {
+			hapd = wpa_s->ifmsh->bss[0];
+
 			if (sta->sae_auth_retry > MESH_AUTH_RETRY) {
-				ap_free_sta(wpa_s->ifmsh->bss[0], sta);
+				ap_free_sta(hapd, sta);
 				return;
 			}
 
 			/* block the STA if exceeded the number of attempts */
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_BLOCKED);
 			sta->sae->state = SAE_NOTHING;
-			if (wpa_s->mesh_auth_block_duration <
-			    MESH_AUTH_BLOCK_DURATION)
-				wpa_s->mesh_auth_block_duration += 60;
-			eloop_register_timeout(wpa_s->mesh_auth_block_duration,
-					       0, mesh_auth_timer, wpa_s, sta);
 			wpa_msg(wpa_s, MSG_INFO, MESH_SAE_AUTH_BLOCKED "addr="
 				MACSTR " duration=%d",
 				MAC2STR(sta->addr),
-				wpa_s->mesh_auth_block_duration);
+				hapd->conf->ap_max_inactivity);
 		}
 		sta->sae_auth_retry++;
 	}

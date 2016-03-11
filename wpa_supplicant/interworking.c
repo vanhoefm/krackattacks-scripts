@@ -1451,7 +1451,24 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 		os_free(anon);
 	}
 
-	if (cred->username && cred->username[0] &&
+	if (!ttls && cred->username && cred->username[0] && cred->realm &&
+	    !os_strchr(cred->username, '@')) {
+		char *id;
+		size_t buflen;
+		int res;
+
+		buflen = os_strlen(cred->username) + 1 +
+			os_strlen(cred->realm) + 1;
+
+		id = os_malloc(buflen);
+		if (!id)
+			return -1;
+		os_snprintf(id, buflen, "%s@%s", cred->username, cred->realm);
+		res = wpa_config_set_quoted(ssid, "identity", id);
+		os_free(id);
+		if (res < 0)
+			return -1;
+	} else if (cred->username && cred->username[0] &&
 	    wpa_config_set_quoted(ssid, "identity", cred->username) < 0)
 		return -1;
 

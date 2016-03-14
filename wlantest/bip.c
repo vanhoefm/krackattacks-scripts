@@ -23,7 +23,7 @@ u8 * bip_protect(const u8 *igtk, size_t igtk_len, u8 *frame, size_t len,
 	struct ieee80211_hdr *hdr;
 	size_t plen;
 
-	plen = len + igtk_len == 32 ? 26 : 18;
+	plen = len + (igtk_len == 32 ? 26 : 18);
 	prot = os_malloc(plen);
 	if (prot == NULL)
 		return NULL;

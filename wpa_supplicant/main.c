@@ -81,6 +81,9 @@ static void usage(void)
 #ifdef CONFIG_P2P
 	       "  -m = Configuration file for the P2P Device interface\n"
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_MATCH_IFACE
+	       "  -M = start describing new matching interface\n"
+#endif /* CONFIG_MATCH_IFACE */
 	       "  -N = start describing new interface\n"
 	       "  -o = override driver parameter for new interfaces\n"
 	       "  -O = override ctrl_interface parameter for new interfaces\n"
@@ -153,6 +156,28 @@ static void wpa_supplicant_fd_workaround(int start)
 }
 
 
+#ifdef CONFIG_MATCH_IFACE
+static int wpa_supplicant_init_match(struct wpa_global *global)
+{
+	/*
+	 * The assumption is that the first driver is the primary driver and
+	 * will handle the arrival / departure of interfaces.
+	 */
+	if (wpa_drivers[0]->global_init && !global->drv_priv[0]) {
+		global->drv_priv[0] = wpa_drivers[0]->global_init(global);
+		if (!global->drv_priv[0]) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to initialize driver '%s'",
+				   wpa_drivers[0]->name);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+#endif /* CONFIG_MATCH_IFACE */
+
+
 int main(int argc, char *argv[])
 {
 	int c, i;
@@ -176,7 +201,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:G:hi:I:KLm:No:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -282,6 +307,20 @@ int main(int argc, char *argv[])
 		case 'W':
 			params.wait_for_monitor++;
 			break;
+#ifdef CONFIG_MATCH_IFACE
+		case 'M':
+			params.match_iface_count++;
+			iface = os_realloc_array(params.match_ifaces,
+						 params.match_iface_count,
+						 sizeof(struct wpa_interface));
+			if (!iface)
+				goto out;
+			params.match_ifaces = iface;
+			iface = &params.match_ifaces[params.match_iface_count -
+						     1];
+			os_memset(iface, 0, sizeof(*iface));
+			break;
+#endif /* CONFIG_MATCH_IFACE */
 		case 'N':
 			iface_count++;
 			iface = os_realloc_array(ifaces, iface_count,
@@ -328,6 +367,9 @@ int main(int argc, char *argv[])
 		     ifaces[i].ctrl_interface == NULL) ||
 		    ifaces[i].ifname == NULL) {
 			if (iface_count == 1 && (params.ctrl_interface ||
+#ifdef CONFIG_MATCH_IFACE
+						 params.match_iface_count ||
+#endif /* CONFIG_MATCH_IFACE */
 						 params.dbus_ctrl_interface))
 				break;
 			usage();
@@ -341,6 +383,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#ifdef CONFIG_MATCH_IFACE
+	if (exitcode == 0)
+		exitcode = wpa_supplicant_init_match(global);
+#endif /* CONFIG_MATCH_IFACE */
+
 	if (exitcode == 0)
 		exitcode = wpa_supplicant_run(global);
 
@@ -351,6 +398,9 @@ int main(int argc, char *argv[])
 out:
 	wpa_supplicant_fd_workaround(0);
 	os_free(ifaces);
+#ifdef CONFIG_MATCH_IFACE
+	os_free(params.match_ifaces);
+#endif /* CONFIG_MATCH_IFACE */
 	os_free(params.pid_file);
 
 	os_program_deinit();

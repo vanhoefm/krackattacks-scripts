@@ -2758,6 +2758,13 @@ wpa_supplicant_event_interface_status(struct wpa_supplicant *wpa_s,
 		}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_MATCH_IFACE
+		if (wpa_s->matched) {
+			wpa_supplicant_remove_iface(wpa_s->global, wpa_s, 0);
+			break;
+		}
+#endif /* CONFIG_MATCH_IFACE */
+
 #ifdef CONFIG_TERMINATE_ONLASTIF
 		/* check if last interface */
 		if (!any_interfaces(wpa_s->global->ifaces))
@@ -4030,6 +4037,20 @@ void wpa_supplicant_event_global(void *ctx, enum wpa_event_type event,
 			return;
 		}
 	}
+#ifdef CONFIG_MATCH_IFACE
+	else if (data->interface_status.ievent == EVENT_INTERFACE_ADDED) {
+		struct wpa_interface *wpa_i;
+
+		wpa_i = wpa_supplicant_match_iface(
+			ctx, data->interface_status.ifname);
+		if (!wpa_i)
+			return;
+		wpa_s = wpa_supplicant_add_iface(ctx, wpa_i, NULL);
+		os_free(wpa_i);
+		if (wpa_s)
+			wpa_s->matched = 1;
+	}
+#endif /* CONFIG_MATCH_IFACE */
 
 	if (wpa_s)
 		wpa_supplicant_event(wpa_s, event, data);

@@ -467,6 +467,9 @@ CONFIG_PEERKEY=y
 # Hotspot 2.0
 #CONFIG_HS20=y
 
+# Enable interface matching in wpa_supplicant
+#CONFIG_MATCH_IFACE=y
+
 # Disable roaming in wpa_supplicant
 #CONFIG_NO_ROAMING=y
 

@@ -410,7 +410,7 @@ usage:
   wpa_supplicant [-BddfhKLqqtuvW] [-P<pid file>] [-g<global ctrl>] \
         [-G<group>] \
         -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] [-p<driver_param>] \
-        [-b<br_ifname> [-N -i<ifname> -c<conf> [-C<ctrl>] [-D<driver>] \
+        [-b<br_ifname> [-MN -i<ifname> -c<conf> [-C<ctrl>] [-D<driver>] \
         [-p<driver_param>] [-b<br_ifname>] [-m<P2P Device config file>] ...
 
 options:
@@ -434,6 +434,7 @@ options:
   -u = enable DBus control interface
   -v = show version
   -W = wait for a control interface monitor before starting
+  -M = start describing matching interface
   -N = start describing new interface
   -m = Configuration file for the P2P Device
 
@@ -474,6 +475,22 @@ start wpa_supplicant for two interfaces:
 wpa_supplicant \
 	-c wpa1.conf -i wlan0 -D nl80211 -N \
 	-c wpa2.conf -i wlan1 -D wext
+
+
+If the interfaces on which wpa_supplicant is to run are not known or do
+not exist, wpa_supplicant can match an interface when it arrives. Each
+matched interface is separated with -M argument and the -i argument now
+allows for pattern matching.
+
+As an example, the following command would start wpa_supplicant for a
+specific wired interface called lan0, any interface starting with wlan
+and lastly any other interface. Each match has its own configuration
+file, and for the wired interface a specific driver has also been given.
+
+wpa_supplicant \
+	-M -c wpa_wired.conf -ilan0 -D wired \
+	-M -c wpa1.conf -iwlan* \
+	-M -c wpa2.conf
 
 
 If the interface is added in a Linux bridge (e.g., br0), the bridge

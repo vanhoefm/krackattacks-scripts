@@ -171,7 +171,8 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 
 		if (global.drv_priv[i] == NULL &&
 		    wpa_drivers[i]->global_init) {
-			global.drv_priv[i] = wpa_drivers[i]->global_init();
+			global.drv_priv[i] =
+				wpa_drivers[i]->global_init(iface->interfaces);
 			if (global.drv_priv[i] == NULL) {
 				wpa_printf(MSG_ERROR, "Failed to initialize "
 					   "driver '%s'",

@@ -3143,7 +3143,7 @@ static int select_driver(struct wpa_supplicant *wpa_s, int i)
 	struct wpa_global *global = wpa_s->global;
 
 	if (wpa_drivers[i]->global_init && global->drv_priv[i] == NULL) {
-		global->drv_priv[i] = wpa_drivers[i]->global_init();
+		global->drv_priv[i] = wpa_drivers[i]->global_init(global);
 		if (global->drv_priv[i] == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to initialize driver "
 				   "'%s'", wpa_drivers[i]->name);

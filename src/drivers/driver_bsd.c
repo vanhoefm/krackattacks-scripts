@@ -48,6 +48,7 @@
 #include "l2_packet/l2_packet.h"
 
 struct bsd_driver_global {
+	void		*ctx;
 	int		sock;			/* socket for 802.11 ioctls */
 	int		route;			/* routing socket for events */
 	char		*event_buf;
@@ -64,6 +65,7 @@ struct bsd_driver_data {
 	char	ifname[IFNAMSIZ+1];	/* interface name */
 	int	flags;
 	unsigned int ifindex;		/* interface index */
+	int	if_removed;		/* has the interface been removed? */
 	void	*ctx;
 	struct wpa_driver_capa capa;	/* driver capability */
 	int	is_ap;			/* Access point mode */
@@ -88,13 +90,28 @@ bsd_get_drvindex(void *priv, unsigned int ifindex)
 	return NULL;
 }
 
+#ifndef HOSTAPD
+static struct bsd_driver_data *
+bsd_get_drvname(void *priv, const char *ifname)
+{
+	struct bsd_driver_global *global = priv;
+	struct bsd_driver_data *drv;
+
+	dl_list_for_each(drv, &global->ifaces, struct bsd_driver_data, list) {
+		if (os_strcmp(drv->ifname, ifname) == 0)
+			return drv;
+	}
+	return NULL;
+}
+#endif /* HOSTAPD */
+
 static int
 bsd_set80211(void *priv, int op, int val, const void *arg, int arg_len)
 {
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req ireq;
 
-	if (drv->ifindex == 0)
+	if (drv->ifindex == 0 || drv->if_removed)
 		return -1;
 
 	os_memset(&ireq, 0, sizeof(ireq));
@@ -1222,24 +1239,45 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	switch (rtm->rtm_type) {
 	case RTM_IFANNOUNCE:
 		ifan = (struct if_announcemsghdr *) rtm;
-		drv = bsd_get_drvindex(global, ifan->ifan_index);
-		if (drv == NULL)
-			return;
-		os_strlcpy(event.interface_status.ifname, drv->ifname,
-			   sizeof(event.interface_status.ifname));
 		switch (ifan->ifan_what) {
 		case IFAN_DEPARTURE:
+			drv = bsd_get_drvindex(global, ifan->ifan_index);
+			if (drv)
+				drv->if_removed = 1;
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
-			drv->ifindex = 0;
+			break;
+		case IFAN_ARRIVAL:
+			drv = bsd_get_drvname(global, ifan->ifan_name);
+			if (drv) {
+				drv->ifindex = ifan->ifan_index;
+				drv->if_removed = 0;
+			}
+			event.interface_status.ievent = EVENT_INTERFACE_ADDED;
 			break;
 		default:
+			wpa_printf(MSG_DEBUG, "RTM_IFANNOUNCE: unknown action");
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "RTM_IFANNOUNCE: Interface '%s' %s",
-			   event.interface_status.ifname,
+			   ifan->ifan_name,
 			   ifan->ifan_what == IFAN_DEPARTURE ?
 				"removed" : "added");
-		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+		os_strlcpy(event.interface_status.ifname, ifan->ifan_name,
+			   sizeof(event.interface_status.ifname));
+		if (drv) {
+			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS,
+					     &event);
+			/*
+			 * Set ifindex to zero after sending the event as the
+			 * event might query the driver to ensure a match.
+			 */
+			if (ifan->ifan_what == IFAN_DEPARTURE)
+				drv->ifindex = 0;
+		} else {
+			wpa_supplicant_event_global(global->ctx,
+						    EVENT_INTERFACE_STATUS,
+						    &event);
+		}
 		break;
 	case RTM_IEEE80211:
 		ifan = (struct if_announcemsghdr *) rtm;
@@ -1582,7 +1620,7 @@ wpa_driver_bsd_deinit(void *priv)
 {
 	struct bsd_driver_data *drv = priv;
 
-	if (drv->ifindex != 0) {
+	if (drv->ifindex != 0 && !drv->if_removed) {
 		wpa_driver_bsd_set_wpa(drv, 0);
 
 		/* NB: mark interface down */
@@ -1615,7 +1653,7 @@ wpa_driver_bsd_get_capa(void *priv, struct wpa_driver_capa *capa)
 #endif /* HOSTAPD */
 
 static void *
-bsd_global_init(void)
+bsd_global_init(void *ctx)
 {
 	struct bsd_driver_global *global;
 
@@ -1623,6 +1661,7 @@ bsd_global_init(void)
 	if (global == NULL)
 		return NULL;
 
+	global->ctx = ctx;
 	dl_list_init(&global->ifaces);
 
 	global->sock = socket(PF_INET, SOCK_DGRAM, 0);

@@ -3090,6 +3090,8 @@ hostapd_switch_channel_fallback(struct hostapd_iface *iface,
 	hostapd_enable_iface(iface);
 }
 
+#endif /* NEED_AP_MLME */
+
 
 struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 					const char *ifname)
@@ -3109,8 +3111,6 @@ struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 
 	return NULL;
 }
-
-#endif /* NEED_AP_MLME */
 
 
 void hostapd_periodic_iface(struct hostapd_iface *iface)

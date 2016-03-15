@@ -1958,6 +1958,14 @@ struct wpa_driver_ops {
 	void (*poll)(void *priv);
 
 	/**
+	 * get_ifindex - Get interface index
+	 * @priv: private driver interface data
+	 *
+	 * Returns: Interface index
+	 */
+	unsigned int (*get_ifindex)(void *priv);
+
+	/**
 	 * get_ifname - Get interface name
 	 * @priv: private driver interface data
 	 *
@@ -2091,6 +2099,7 @@ struct wpa_driver_ops {
 
 	/**
 	 * global_init - Global driver initialization
+	 * @ctx: wpa_global pointer
 	 * Returns: Pointer to private data (global), %NULL on failure
 	 *
 	 * This optional function is called to initialize the driver wrapper
@@ -2100,7 +2109,7 @@ struct wpa_driver_ops {
 	 * use init2() function instead of init() to get the pointer to global
 	 * data available to per-interface initializer.
 	 */
-	void * (*global_init)(void);
+	void * (*global_init)(void *ctx);
 
 	/**
 	 * global_deinit - Global driver deinitialization
@@ -4269,6 +4278,7 @@ union wpa_event_data {
 	 * struct interface_status - Data for EVENT_INTERFACE_STATUS
 	 */
 	struct interface_status {
+		unsigned int ifindex;
 		char ifname[100];
 		enum {
 			EVENT_INTERFACE_ADDED, EVENT_INTERFACE_REMOVED
@@ -4745,6 +4755,18 @@ union wpa_event_data {
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data);
 
+/**
+ * wpa_supplicant_event_global - Report a driver event for wpa_supplicant
+ * @ctx: Context pointer (wpa_s); this is the ctx variable registered
+ *	with struct wpa_driver_ops::init()
+ * @event: event type (defined above)
+ * @data: possible extra data for the event
+ *
+ * Same as wpa_supplicant_event(), but we search for the interface in
+ * wpa_global.
+ */
+void wpa_supplicant_event_global(void *ctx, enum wpa_event_type event,
+				 union wpa_event_data *data);
 
 /*
  * The following inline functions are provided for convenience to simplify

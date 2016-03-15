@@ -763,6 +763,15 @@ static void nl80211_put_wiphy_data_ap(struct i802_bss *bss)
 }
 
 
+static unsigned int nl80211_get_ifindex(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	return drv->ifindex;
+}
+
+
 static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
 {
 	struct i802_bss *bss = priv;
@@ -786,11 +795,12 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 
 
 static void wpa_driver_nl80211_event_newlink(
-	struct wpa_driver_nl80211_data *drv, const char *ifname)
+	struct nl80211_global *global, struct wpa_driver_nl80211_data *drv,
+	int ifindex, const char *ifname)
 {
 	union wpa_event_data event;
 
-	if (os_strcmp(drv->first_bss->ifname, ifname) == 0) {
+	if (drv && os_strcmp(drv->first_bss->ifname, ifname) == 0) {
 		if (if_nametoindex(drv->first_bss->ifname) == 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Interface %s does not exist - ignore RTM_NEWLINK",
 				   drv->first_bss->ifname);
@@ -804,19 +814,25 @@ static void wpa_driver_nl80211_event_newlink(
 	}
 
 	os_memset(&event, 0, sizeof(event));
+	event.interface_status.ifindex = ifindex;
 	os_strlcpy(event.interface_status.ifname, ifname,
 		   sizeof(event.interface_status.ifname));
 	event.interface_status.ievent = EVENT_INTERFACE_ADDED;
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+	if (drv)
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+	else
+		wpa_supplicant_event_global(global->ctx, EVENT_INTERFACE_STATUS,
+					    &event);
 }
 
 
 static void wpa_driver_nl80211_event_dellink(
-	struct wpa_driver_nl80211_data *drv, const char *ifname)
+	struct nl80211_global *global, struct wpa_driver_nl80211_data *drv,
+	int ifindex, const char *ifname)
 {
 	union wpa_event_data event;
 
-	if (os_strcmp(drv->first_bss->ifname, ifname) == 0) {
+	if (drv && os_strcmp(drv->first_bss->ifname, ifname) == 0) {
 		if (drv->if_removed) {
 			wpa_printf(MSG_DEBUG, "nl80211: if_removed already set - ignore RTM_DELLINK event for %s",
 				   ifname);
@@ -831,10 +847,15 @@ static void wpa_driver_nl80211_event_dellink(
 	}
 
 	os_memset(&event, 0, sizeof(event));
+	event.interface_status.ifindex = ifindex;
 	os_strlcpy(event.interface_status.ifname, ifname,
 		   sizeof(event.interface_status.ifname));
 	event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+	if (drv)
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+	else
+		wpa_supplicant_event_global(global->ctx, EVENT_INTERFACE_STATUS,
+					    &event);
 }
 
 
@@ -908,13 +929,6 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	char ifname[IFNAMSIZ + 1];
 	char extra[100], *pos, *end;
 
-	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
-	if (!drv) {
-		wpa_printf(MSG_DEBUG, "nl80211: Ignore RTM_NEWLINK event for foreign ifindex %d",
-			   ifi->ifi_index);
-		return;
-	}
-
 	extra[0] = '\0';
 	pos = extra;
 	end = pos + sizeof(extra);
@@ -957,6 +971,10 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
+
+	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
+	if (!drv)
+		goto event_newlink;
 
 	if (!drv->if_disabled && !(ifi->ifi_flags & IFF_UP)) {
 		namebuf[0] = '\0';
@@ -1052,10 +1070,12 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				       -1, IF_OPER_UP);
 	}
 
+event_newlink:
 	if (ifname[0])
-		wpa_driver_nl80211_event_newlink(drv, ifname);
+		wpa_driver_nl80211_event_newlink(global, drv, ifi->ifi_index,
+						 ifname);
 
-	if (ifi->ifi_family == AF_BRIDGE && brid) {
+	if (ifi->ifi_family == AF_BRIDGE && brid && drv) {
 		struct i802_bss *bss;
 
 		/* device has been added to bridge */
@@ -1090,13 +1110,6 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 	u32 brid = 0;
 	char ifname[IFNAMSIZ + 1];
 	char extra[100], *pos, *end;
-
-	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
-	if (!drv) {
-		wpa_printf(MSG_DEBUG, "nl80211: Ignore RTM_DELLINK event for foreign ifindex %d",
-			   ifi->ifi_index);
-		return;
-	}
 
 	extra[0] = '\0';
 	pos = extra;
@@ -1138,10 +1151,9 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 
-	if (ifname[0] && (ifi->ifi_family != AF_BRIDGE || !brid))
-		wpa_driver_nl80211_event_dellink(drv, ifname);
+	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
 
-	if (ifi->ifi_family == AF_BRIDGE && brid) {
+	if (ifi->ifi_family == AF_BRIDGE && brid && drv) {
 		/* device has been removed from bridge */
 		char namebuf[IFNAMSIZ];
 
@@ -1156,6 +1168,10 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		}
 		del_ifidx(drv, brid, ifi->ifi_index);
 	}
+
+	if (ifi->ifi_family != AF_BRIDGE || !brid)
+		wpa_driver_nl80211_event_dellink(global, drv, ifi->ifi_index,
+						 ifname);
 }
 
 
@@ -6858,7 +6874,7 @@ static int nl80211_set_param(void *priv, const char *param)
 }
 
 
-static void * nl80211_global_init(void)
+static void * nl80211_global_init(void *ctx)
 {
 	struct nl80211_global *global;
 	struct netlink_config *cfg;
@@ -6866,6 +6882,7 @@ static void * nl80211_global_init(void)
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
+	global->ctx = ctx;
 	global->ioctl_sock = -1;
 	dl_list_init(&global->interfaces);
 	global->if_add_ifindex = -1;
@@ -9143,6 +9160,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.br_set_net_param = wpa_driver_br_set_net_param,
 	.add_tx_ts = nl80211_add_ts,
 	.del_tx_ts = nl80211_del_ts,
+	.get_ifindex = nl80211_get_ifindex,
 #ifdef CONFIG_DRIVER_NL80211_QCA
 	.do_acs = wpa_driver_do_acs,
 	.set_band = nl80211_set_band,

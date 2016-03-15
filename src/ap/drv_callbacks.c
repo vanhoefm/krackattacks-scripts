@@ -1353,4 +1353,31 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	}
 }
 
+
+void wpa_supplicant_event_global(void *ctx, enum wpa_event_type event,
+				 union wpa_event_data *data)
+{
+	struct hapd_interfaces *interfaces = ctx;
+	struct hostapd_data *hapd;
+
+	if (event != EVENT_INTERFACE_STATUS)
+		return;
+
+	hapd = hostapd_get_iface(interfaces, data->interface_status.ifname);
+	if (hapd && hapd->driver && hapd->driver->get_ifindex &&
+	    hapd->drv_priv) {
+		unsigned int ifindex;
+
+		ifindex = hapd->driver->get_ifindex(hapd->drv_priv);
+		if (ifindex != data->interface_status.ifindex) {
+			wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+				"interface status ifindex %d mismatch (%d)",
+				ifindex, data->interface_status.ifindex);
+			return;
+		}
+	}
+	if (hapd)
+		wpa_supplicant_event(hapd, event, data);
+}
+
 #endif /* HOSTAPD */

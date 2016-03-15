@@ -4008,3 +4008,29 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 	}
 }
+
+
+void wpa_supplicant_event_global(void *ctx, enum wpa_event_type event,
+				 union wpa_event_data *data)
+{
+	struct wpa_supplicant *wpa_s;
+
+	if (event != EVENT_INTERFACE_STATUS)
+		return;
+
+	wpa_s = wpa_supplicant_get_iface(ctx, data->interface_status.ifname);
+	if (wpa_s && wpa_s->driver->get_ifindex) {
+		unsigned int ifindex;
+
+		ifindex = wpa_s->driver->get_ifindex(wpa_s->drv_priv);
+		if (ifindex != data->interface_status.ifindex) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"interface status ifindex %d mismatch (%d)",
+				ifindex, data->interface_status.ifindex);
+			return;
+		}
+	}
+
+	if (wpa_s)
+		wpa_supplicant_event(wpa_s, event, data);
+}

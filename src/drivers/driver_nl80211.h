@@ -25,6 +25,7 @@
 #endif /* CONFIG_LIBNL20 */
 
 struct nl80211_global {
+	void *ctx;
 	struct dl_list interfaces;
 	int if_add_ifindex;
 	u64 if_add_wdevid;

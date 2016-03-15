@@ -1542,11 +1542,7 @@ wpa_driver_bsd_init(void *ctx, const char *ifname, void *priv)
 
 	drv->ctx = ctx;
 	drv->global = priv;
-
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
-	/* Down interface during setup. */
-	if (bsd_ctrl_iface(drv, 0) < 0)
-		goto fail;
 
 	if (!GETPARAM(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming)) {
 		wpa_printf(MSG_DEBUG, "%s: failed to get roaming state: %s",
@@ -1565,6 +1561,10 @@ wpa_driver_bsd_init(void *ctx, const char *ifname, void *priv)
 	}
 
 	if (wpa_driver_bsd_capa(drv))
+		goto fail;
+
+	/* Down interface during setup. */
+	if (bsd_ctrl_iface(drv, 0) < 0)
 		goto fail;
 
 	drv->opmode = get80211opmode(drv);

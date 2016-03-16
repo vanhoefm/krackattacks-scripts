@@ -3133,14 +3133,9 @@ int main(int argc, char *argv[])
 			usage();
 			exit(0);
 		}
-		if (argc - optind < 2)
-			wpa_printf(MSG_ERROR, "Server URL missing from command line");
-		else
-			ret = cmd_sub_rem(&ctx, argv[optind + 1],
-					  argc > optind + 2 ?
-					  argv[optind + 2] : NULL,
-					  argc > optind + 3 ?
-					  argv[optind + 3] : NULL);
+		ret = cmd_sub_rem(&ctx, argv[optind + 1],
+				  argc > optind + 2 ? argv[optind + 2] : NULL,
+				  argc > optind + 3 ? argv[optind + 3] : NULL);
 	} else if (strcmp(argv[optind], "pol_upd") == 0) {
 		if (argc - optind < 2) {
 			usage();

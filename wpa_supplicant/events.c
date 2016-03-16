@@ -1984,6 +1984,8 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		}
 		if ((p[0] == WLAN_EID_VENDOR_SPECIFIC && p[1] >= 6 &&
 		     (os_memcmp(&p[2], "\x00\x50\xF2\x01\x01\x00", 6) == 0)) ||
+		    (p[0] == WLAN_EID_VENDOR_SPECIFIC && p[1] >= 4 &&
+		     (os_memcmp(&p[2], "\x50\x6F\x9A\x12", 4) == 0)) ||
 		    (p[0] == WLAN_EID_RSN && p[1] >= 2)) {
 			if (wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, p, len))
 				break;

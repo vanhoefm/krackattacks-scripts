@@ -2976,15 +2976,17 @@ static int wpa_supplicant_ctrl_iface_update_network(
 	}
 
 	if (os_strcmp(name, "bssid") != 0 &&
-	    os_strcmp(name, "priority") != 0)
+	    os_strcmp(name, "priority") != 0) {
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
 
-	if (wpa_s->current_ssid == ssid || wpa_s->current_ssid == NULL) {
-		/*
-		 * Invalidate the EAP session cache if anything in the current
-		 * or previously used configuration changes.
-		 */
-		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+		if (wpa_s->current_ssid == ssid ||
+		    wpa_s->current_ssid == NULL) {
+			/*
+			 * Invalidate the EAP session cache if anything in the
+			 * current or previously used configuration changes.
+			 */
+			eapol_sm_invalidate_cached_session(wpa_s->eapol);
+		}
 	}
 
 	if ((os_strcmp(name, "psk") == 0 &&

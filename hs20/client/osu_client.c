@@ -2570,7 +2570,7 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 	if (!pps_fname) {
 		char buf[256];
 		wpa_printf(MSG_INFO, "Determining PPS file based on Home SP information");
-		if (os_strncmp(address, "fqdn=", 5) == 0) {
+		if (address && os_strncmp(address, "fqdn=", 5) == 0) {
 			wpa_printf(MSG_INFO, "Use requested FQDN from command line");
 			os_snprintf(buf, sizeof(buf), "%s", address + 5);
 			address = NULL;
@@ -3137,11 +3137,8 @@ int main(int argc, char *argv[])
 				  argc > optind + 2 ? argv[optind + 2] : NULL,
 				  argc > optind + 3 ? argv[optind + 3] : NULL);
 	} else if (strcmp(argv[optind], "pol_upd") == 0) {
-		if (argc - optind < 2) {
-			usage();
-			exit(0);
-		}
-		ret = cmd_pol_upd(&ctx, argc > 2 ? argv[optind + 1] : NULL,
+		ret = cmd_pol_upd(&ctx,
+				  argc > optind + 1 ? argv[optind + 1] : NULL,
 				  argc > optind + 2 ? argv[optind + 2] : NULL,
 				  argc > optind + 3 ? argv[optind + 3] : NULL);
 	} else if (strcmp(argv[optind], "prov") == 0) {

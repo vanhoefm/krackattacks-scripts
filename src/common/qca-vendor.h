@@ -163,6 +163,8 @@ enum qca_nl80211_vendor_subcmds {
 	/* 110..114 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_DECR_DB = 115,
 	/* 116..118 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_TSF = 119,
+	QCA_NL80211_VENDOR_SUBCMD_WISA = 120,
 };
 
 
@@ -333,6 +335,48 @@ enum qca_set_band {
 	QCA_SETBAND_AUTO,
 	QCA_SETBAND_5G,
 	QCA_SETBAND_2G,
+};
+
+/**
+ * enum qca_vendor_attr_get_tsf: Vendor attributes for TSF capture
+ * @QCA_WLAN_VENDOR_ATTR_TSF_CMD: enum qca_tsf_operation (u32)
+ * @QCA_WLAN_VENDOR_ATTR_TSF_TIMER_VALUE: Unsigned 64 bit TSF timer value
+ * @QCA_WLAN_VENDOR_ATTR_TSF_SOC_TIMER_VALUE: Unsigned 64 bit Synchronized
+ *	SOC timer value at TSF capture
+ */
+enum qca_vendor_attr_tsf_cmd {
+	QCA_WLAN_VENDOR_ATTR_TSF_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_TSF_CMD,
+	QCA_WLAN_VENDOR_ATTR_TSF_TIMER_VALUE,
+	QCA_WLAN_VENDOR_ATTR_TSF_SOC_TIMER_VALUE,
+	QCA_WLAN_VENDOR_ATTR_TSF_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TSF_MAX =
+	QCA_WLAN_VENDOR_ATTR_TSF_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_tsf_operation: TSF driver commands
+ * @QCA_TSF_CAPTURE: Initiate TSF Capture
+ * @QCA_TSF_GET: Get TSF capture value
+ * @QCA_TSF_SYNC_GET: Initiate TSF capture and return with captured value
+ */
+enum qca_tsf_cmd {
+	QCA_TSF_CAPTURE,
+	QCA_TSF_GET,
+	QCA_TSF_SYNC_GET,
+};
+
+/**
+ * enum qca_vendor_attr_wisa_cmd
+ * @QCA_WLAN_VENDOR_ATTR_WISA_MODE: WISA mode value (u32)
+ * WISA setup vendor commands
+ */
+enum qca_vendor_attr_wisa_cmd {
+	QCA_WLAN_VENDOR_ATTR_WISA_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_WISA_MODE,
+	QCA_WLAN_VENDOR_ATTR_WISA_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_WISA_MAX =
+	QCA_WLAN_VENDOR_ATTR_WISA_AFTER_LAST - 1
 };
 
 /* IEEE 802.11 Vendor Specific elements */

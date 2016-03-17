@@ -163,6 +163,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* 110..114 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_DECR_DB = 115,
 	/* 116..118 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_SET_TXRX_AGGREGATION = 119,
 };
 
 
@@ -461,6 +462,24 @@ enum qca_vendor_attr_txpower_decr_db {
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_MAX =
 	QCA_WLAN_VENDOR_ATTR_TXPOWER_DECR_DB_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_vendor_attr_tx_rx_aggr - Attributes for TX/RX aggregation
+ *
+ * These attributes are used with
+ * QCA_NL80211_VENDOR_SUBCMD_SET_TXRX_AGGREGATION.
+ */
+enum qca_vendor_attr_tx_rx_aggr {
+	QCA_WLAN_VENDOR_ATTR_TXRX_AGGREGATION_INVALID,
+	/* 8-bit unsigned value to configure the max TX / RX MPDU for
+	 * aggregation */
+	QCA_WLAN_VENDOR_ATTR_TX_MPDU_AGGREGATION,
+	QCA_WLAN_VENDOR_ATTR_RX_MPDU_AGGREGATION,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_TXRX_AGGREGATION_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TXRX_AGGREGATION_MAX =
+	QCA_WLAN_VENDOR_ATTR_TXRX_AGGREGATION_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

@@ -3526,24 +3526,26 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	    nla_put_u32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, suite))
 		goto fail;
 
-	switch (params->smps_mode) {
-	case HT_CAP_INFO_SMPS_DYNAMIC:
-		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - dynamic");
-		smps_mode = NL80211_SMPS_DYNAMIC;
-		break;
-	case HT_CAP_INFO_SMPS_STATIC:
-		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - static");
-		smps_mode = NL80211_SMPS_STATIC;
-		break;
-	default:
-		/* invalid - fallback to smps off */
-	case HT_CAP_INFO_SMPS_DISABLED:
-		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - off");
-		smps_mode = NL80211_SMPS_OFF;
-		break;
+	if (params->ht_opmode != -1) {
+		switch (params->smps_mode) {
+		case HT_CAP_INFO_SMPS_DYNAMIC:
+			wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - dynamic");
+			smps_mode = NL80211_SMPS_DYNAMIC;
+			break;
+		case HT_CAP_INFO_SMPS_STATIC:
+			wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - static");
+			smps_mode = NL80211_SMPS_STATIC;
+			break;
+		default:
+			/* invalid - fallback to smps off */
+		case HT_CAP_INFO_SMPS_DISABLED:
+			wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - off");
+			smps_mode = NL80211_SMPS_OFF;
+			break;
+		}
+		if (nla_put_u32(msg, NL80211_ATTR_SMPS_MODE, smps_mode))
+			goto fail;
 	}
-	if (nla_put_u32(msg, NL80211_ATTR_SMPS_MODE, smps_mode))
-		goto fail;
 
 	if (params->beacon_ies) {
 		wpa_hexdump_buf(MSG_DEBUG, "nl80211: beacon_ies",

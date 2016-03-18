@@ -5712,7 +5712,7 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx,
 		if (!old_reason)
 			drv->if_indices_reason = drv->default_if_indices_reason;
 		else
-			drv->if_indices = old_reason;
+			drv->if_indices_reason = old_reason;
 	}
 	if (!drv->if_indices || !drv->if_indices_reason) {
 		wpa_printf(MSG_ERROR, "Failed to reallocate memory for "

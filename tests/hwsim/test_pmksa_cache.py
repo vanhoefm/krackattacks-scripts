@@ -833,3 +833,46 @@ def test_pmksa_cache_preauth_wpas_oom(dev, apdev):
                 if state.startswith('0:'):
                     break
                 time.sleep(0.05)
+
+def test_pmksa_cache_ctrl(dev, apdev):
+    """PMKSA cache control interface operations"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    addr = dev[0].own_addr()
+
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    pmksa_sta = dev[0].get_pmksa(bssid)
+    if pmksa_sta is None:
+        raise Exception("No PMKSA cache entry created on STA")
+    pmksa_ap = hapd.get_pmksa(addr)
+    if pmksa_ap is None:
+        raise Exception("No PMKSA cache entry created on AP")
+    if pmksa_sta['pmkid'] != pmksa_ap['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+
+    if "OK" not in hapd.request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+    pmksa_ap = hapd.get_pmksa(addr)
+    if pmksa_ap is not None:
+        raise Exception("PMKSA cache entry was not removed on AP")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].request("RECONNECT")
+    dev[0].wait_connected()
+
+    pmksa_sta2 = dev[0].get_pmksa(bssid)
+    if pmksa_sta2 is None:
+        raise Exception("No PMKSA cache entry created on STA after reconnect")
+    pmksa_ap2 = hapd.get_pmksa(addr)
+    if pmksa_ap2 is None:
+        raise Exception("No PMKSA cache entry created on AP after reconnect")
+    if pmksa_sta2['pmkid'] != pmksa_ap2['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries after reconnect")
+    if pmksa_sta2['pmkid'] == pmksa_sta['pmkid']:
+        raise Exception("PMKID did not change after reconnect")

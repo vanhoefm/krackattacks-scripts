@@ -319,6 +319,21 @@ class Hostapd:
                 vals[name_val[0]] = name_val[1]
         return vals
 
+    def get_pmksa(self, addr):
+        res = self.request("PMKSA")
+        lines = res.splitlines()
+        for l in lines:
+            if addr not in l:
+                continue
+            vals = dict()
+            [index,aa,pmkid,expiration,opportunistic] = l.split(' ')
+            vals['index'] = index
+            vals['pmkid'] = pmkid
+            vals['expiration'] = expiration
+            vals['opportunistic'] = opportunistic
+            return vals
+        return None
+
 def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30,
            hostname=None, port=8878):
         logger.info("Starting AP " + ifname)

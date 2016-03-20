@@ -1637,6 +1637,7 @@ endif
 OBJS += $(FST_OBJS)
 OBJS_t += $(FST_OBJS)
 OBJS_t2 += $(FST_OBJS)
+OBJS_nfc += $(FST_OBJS)
 endif
 
 ifndef LDO

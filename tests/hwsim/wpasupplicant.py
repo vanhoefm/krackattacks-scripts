@@ -135,7 +135,7 @@ class WpaSupplicant:
 
     def global_request(self, cmd):
         if self.global_iface is None:
-            self.request(cmd)
+            return self.request(cmd)
         else:
             ifname = self.ifname or self.global_iface
             logger.debug(ifname + ": CTRL(global): " + cmd)

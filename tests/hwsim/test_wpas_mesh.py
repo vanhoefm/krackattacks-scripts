@@ -750,3 +750,161 @@ def test_wpas_mesh_gate_forwarding(dev, apdev, p):
         raise Exception("Frame to gate %s not observed" % addr0)
     if addr1 not in da:
         raise Exception("Frame to gate %s not observed" % addr1)
+
+def test_wpas_mesh_pmksa_caching(dev, apdev):
+    """Secure mesh network and PMKSA caching"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    pmksa0 = dev[0].get_pmksa(addr1)
+    pmksa1 = dev[1].get_pmksa(addr0)
+    if pmksa0 is None or pmksa1 is None:
+        raise Exception("No PMKSA cache entry created")
+    if pmksa0['pmkid'] != pmksa1['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+    pmksa0b = dev[0].get_pmksa(addr1)
+    if pmksa0b is None:
+        raise Exception("PMKSA cache entry not maintained")
+    time.sleep(0.1)
+
+    if "FAIL" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD unexpectedly succeeded in no_auto_peer=0 case")
+
+def test_wpas_mesh_pmksa_caching2(dev, apdev):
+    """Secure mesh network and PMKSA caching with no_auto_peer=1"""
+    check_mesh_support(dev[0], secure=True)
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].set_network(id, "no_auto_peer", "1")
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].set_network(id, "no_auto_peer", "1")
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    pmksa0 = dev[0].get_pmksa(addr1)
+    pmksa1 = dev[1].get_pmksa(addr0)
+    if pmksa0 is None or pmksa1 is None:
+        raise Exception("No PMKSA cache entry created")
+    if pmksa0['pmkid'] != pmksa1['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+    pmksa0b = dev[0].get_pmksa(addr1)
+    if pmksa0b is None:
+        raise Exception("PMKSA cache entry not maintained")
+
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message (2)")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed (2)")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    pmksa0c = dev[0].get_pmksa(addr1)
+    pmksa1c = dev[1].get_pmksa(addr0)
+    if pmksa0c is None or pmksa1c is None:
+        raise Exception("No PMKSA cache entry created (2)")
+    if pmksa0c['pmkid'] != pmksa1c['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+    if pmksa0['pmkid'] != pmksa0c['pmkid']:
+        raise Exception("PMKID changed")
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_wpas_mesh_pmksa_caching_no_match(dev, apdev):
+    """Secure mesh network and PMKSA caching with no PMKID match"""
+    check_mesh_support(dev[0], secure=True)
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].set_network(id, "no_auto_peer", "1")
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].set_network(id, "no_auto_peer", "1")
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    pmksa0 = dev[0].get_pmksa(addr1)
+    pmksa1 = dev[1].get_pmksa(addr0)
+    if pmksa0 is None or pmksa1 is None:
+        raise Exception("No PMKSA cache entry created")
+    if pmksa0['pmkid'] != pmksa1['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+
+    if "OK" not in dev[1].request("PMKSA_FLUSH"):
+        raise Exception("Failed to flush PMKSA cache")
+
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message (2)")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed (2)")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    pmksa0c = dev[0].get_pmksa(addr1)
+    pmksa1c = dev[1].get_pmksa(addr0)
+    if pmksa0c is None or pmksa1c is None:
+        raise Exception("No PMKSA cache entry created (2)")
+    if pmksa0c['pmkid'] != pmksa1c['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+    if pmksa0['pmkid'] == pmksa0c['pmkid']:
+        raise Exception("PMKID did not change")
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])

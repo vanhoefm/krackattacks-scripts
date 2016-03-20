@@ -3468,7 +3468,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return -1;
 		}
 		val = strtol(pos, &endp, 0);
-		if (*endp || val < 1 || val > FST_MAX_LLT_MS) {
+		if (*endp || val < 1 ||
+		    (unsigned long int) val > FST_MAX_LLT_MS) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: Invalid fst_llt %ld (%s) (expected 1..%u)",
 				   line, val, pos, FST_MAX_LLT_MS);

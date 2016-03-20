@@ -155,7 +155,8 @@ static void p2p_group_add_common_ies(struct p2p_group *group,
 		group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
 	if (group->num_members >= group->cfg->max_clients)
 		group_capab |= P2P_GROUP_CAPAB_GROUP_LIMIT;
-	group_capab |= P2P_GROUP_CAPAB_IP_ADDR_ALLOCATION;
+	if (group->cfg->ip_addr_alloc)
+		group_capab |= P2P_GROUP_CAPAB_IP_ADDR_ALLOCATION;
 	p2p_buf_add_capability(ie, dev_capab, group_capab);
 }
 

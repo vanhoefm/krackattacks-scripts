@@ -1716,6 +1716,12 @@ struct p2p_group_config {
 	int freq;
 
 	/**
+	 * ip_addr_alloc - Whether IP address allocation within 4-way handshake
+	 *	is supported
+	 */
+	int ip_addr_alloc;
+
+	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;

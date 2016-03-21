@@ -3437,11 +3437,23 @@ def test_ap_wpa2_eap_fast_cipher_suites(dev, apdev):
               "AES256-SHA",
               "DHE-RSA-AES256-SHA" ]
     for cipher in tests:
-        eap_connect(dev[0], apdev[0], "FAST", "user",
-                    openssl_ciphers=cipher,
-                    anonymous_identity="FAST", password="password",
-                    ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
-                    pac_file="blob://fast_pac_ciphers")
+        dev[0].dump_monitor()
+        logger.info("Testing " + cipher)
+        try:
+            eap_connect(dev[0], apdev[0], "FAST", "user",
+                        openssl_ciphers=cipher,
+                        anonymous_identity="FAST", password="password",
+                        ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                        pac_file="blob://fast_pac_ciphers")
+        except Exception, e:
+            if "Could not select EAP method" in str(e) and cipher == "RC4-SHA":
+                tls = dev[0].request("GET tls_library")
+                if "run=OpenSSL 1.1" in tls:
+                    logger.info("Allow failure due to missing TLS library support")
+                    dev[0].request("REMOVE_NETWORK all")
+                    dev[0].wait_disconnected()
+                    continue
+            raise
         res = dev[0].get_status_field('EAP TLS cipher')
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()

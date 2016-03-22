@@ -3393,13 +3393,9 @@ void wpa_auth_pmksa_set_to_sm(struct rsn_pmksa_cache_entry *pmksa,
 		return;
 
 	sm->pmksa = pmksa;
-	if (sm->pmksa->pmk)
-		os_memcpy(pmk, sm->pmksa->pmk, PMK_LEN);
-	if (sm->pmksa->pmkid) {
-		os_memcpy(pmkid, sm->pmksa->pmkid, PMKID_LEN);
-		os_memcpy(wpa_auth->dot11RSNAPMKIDUsed,
-			  sm->pmksa->pmkid, PMKID_LEN);
-	}
+	os_memcpy(pmk, pmksa->pmk, PMK_LEN);
+	os_memcpy(pmkid, pmksa->pmkid, PMKID_LEN);
+	os_memcpy(wpa_auth->dot11RSNAPMKIDUsed, pmksa->pmkid, PMKID_LEN);
 }
 
 

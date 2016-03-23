@@ -1134,7 +1134,8 @@ static int wpas_p2p_store_persistent_group(struct wpa_supplicant *wpa_s,
 	s->auth_alg = WPA_AUTH_ALG_OPEN;
 	s->key_mgmt = WPA_KEY_MGMT_PSK;
 	s->proto = WPA_PROTO_RSN;
-	s->pairwise_cipher = WPA_CIPHER_CCMP;
+	s->pbss = ssid->pbss;
+	s->pairwise_cipher = ssid->pbss ? WPA_CIPHER_GCMP : WPA_CIPHER_CCMP;
 	s->export_keys = 1;
 	if (ssid->passphrase) {
 		os_free(s->passphrase);
@@ -6107,8 +6108,10 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->proto = WPA_PROTO_RSN;
-	ssid->pairwise_cipher = WPA_CIPHER_CCMP;
-	ssid->group_cipher = WPA_CIPHER_CCMP;
+	ssid->pbss = params->pbss;
+	ssid->pairwise_cipher = params->pbss ? WPA_CIPHER_GCMP :
+		WPA_CIPHER_CCMP;
+	ssid->group_cipher = params->pbss ? WPA_CIPHER_GCMP : WPA_CIPHER_CCMP;
 	ssid->key_mgmt = WPA_KEY_MGMT_PSK;
 	ssid->ssid = os_malloc(params->ssid_len);
 	if (ssid->ssid == NULL) {

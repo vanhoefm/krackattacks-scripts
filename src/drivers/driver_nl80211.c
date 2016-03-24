@@ -4841,12 +4841,14 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			return -1;
 	}
 
+	drv->connect_reassoc = 0;
 	if (params->prev_bssid) {
 		wpa_printf(MSG_DEBUG, "  * prev_bssid=" MACSTR,
 			   MAC2STR(params->prev_bssid));
 		if (nla_put(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
 			    params->prev_bssid))
 			return -1;
+		drv->connect_reassoc = 1;
 	}
 
 	return 0;

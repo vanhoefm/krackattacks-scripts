@@ -285,6 +285,8 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
+	drv->connect_reassoc = 0;
+
 	status_code = status ? nla_get_u16(status) : WLAN_STATUS_SUCCESS;
 
 	if (cmd == NL80211_CMD_CONNECT) {
@@ -667,6 +669,24 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 					   MAC2STR(bssid),
 					   MAC2STR(drv->auth_attempt_bssid));
 			}
+			return;
+		}
+
+		if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME) &&
+		    drv->connect_reassoc && drv->associated &&
+		    os_memcmp(bssid, drv->prev_bssid, ETH_ALEN) == 0 &&
+		    os_memcmp(bssid, drv->auth_attempt_bssid, ETH_ALEN) != 0) {
+			/*
+			 * Avoid issues with some roaming cases where
+			 * disconnection event for the old AP may show up after
+			 * we have started connection with the new AP.
+			 */
+			 wpa_printf(MSG_DEBUG,
+				    "nl80211: Ignore deauth/disassoc event from old AP "
+				    MACSTR
+				    " when already connecting with " MACSTR,
+				    MAC2STR(bssid),
+				    MAC2STR(drv->auth_attempt_bssid));
 			return;
 		}
 

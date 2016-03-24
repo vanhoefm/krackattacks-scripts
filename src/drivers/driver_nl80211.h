@@ -151,6 +151,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int get_pref_freq_list:1;
 	unsigned int set_prob_oper_freq:1;
 	unsigned int scan_vendor_cmd_avail:1;
+	unsigned int connect_reassoc:1;
 
 	u64 vendor_scan_cookie;
 	u64 remain_on_chan_cookie;

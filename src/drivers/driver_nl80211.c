@@ -4841,6 +4841,14 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			return -1;
 	}
 
+	if (params->prev_bssid) {
+		wpa_printf(MSG_DEBUG, "  * prev_bssid=" MACSTR,
+			   MAC2STR(params->prev_bssid));
+		if (nla_put(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
+			    params->prev_bssid))
+			return -1;
+	}
+
 	return 0;
 }
 
@@ -4992,14 +5000,6 @@ static int wpa_driver_nl80211_associate(
 	ret = nl80211_connect_common(drv, params, msg);
 	if (ret)
 		goto fail;
-
-	if (params->prev_bssid) {
-		wpa_printf(MSG_DEBUG, "  * prev_bssid=" MACSTR,
-			   MAC2STR(params->prev_bssid));
-		if (nla_put(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
-			    params->prev_bssid))
-			goto fail;
-	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;

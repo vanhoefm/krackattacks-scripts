@@ -1646,9 +1646,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 	wmm_ac_clear_saved_tspecs(wpa_s);
 	wpa_s->reassoc_same_bss = 0;
+	wpa_s->reassoc_same_ess = 0;
 
 	if (wpa_s->last_ssid == ssid) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Re-association to the same ESS");
+		wpa_s->reassoc_same_ess = 1;
 		if (wpa_s->current_bss && wpa_s->current_bss == bss) {
 			wmm_ac_save_tspecs(wpa_s);
 			wpa_s->reassoc_same_bss = 1;
@@ -2063,6 +2065,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	int wep_keys_set = 0;
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
+	u8 prev_bssid[ETH_ALEN];
 #ifdef CONFIG_HT_OVERRIDES
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
@@ -2096,6 +2099,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		return;
 	}
 
+	os_memcpy(prev_bssid, wpa_s->bssid, ETH_ALEN);
 	os_memset(&params, 0, sizeof(params));
 	wpa_s->reassociate = 0;
 	wpa_s->eap_expected_failure = 0;
@@ -2535,6 +2539,10 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		}
 	}
 #endif /* CONFIG_P2P */
+
+	if (wpa_s->reassoc_same_ess && !is_zero_ether_addr(prev_bssid) &&
+	    wpa_s->current_ssid)
+		params.prev_bssid = prev_bssid;
 
 	ret = wpa_drv_associate(wpa_s, &params);
 	if (ret < 0) {

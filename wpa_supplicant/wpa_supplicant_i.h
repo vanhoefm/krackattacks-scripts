@@ -494,7 +494,8 @@ struct wpa_supplicant {
 	u8 pending_bssid[ETH_ALEN]; /* If wpa_state == WPA_ASSOCIATING, this
 				     * field contains the target BSSID. */
 	int reassociate; /* reassociation requested */
-	int reassoc_same_bss; /* reassociating to the same bss */
+	unsigned int reassoc_same_bss:1; /* reassociating to the same BSS */
+	unsigned int reassoc_same_ess:1; /* reassociating to the same ESS */
 	int disconnected; /* all connections disabled; i.e., do no reassociate
 			   * before this has been cleared */
 	struct wpa_ssid *current_ssid;

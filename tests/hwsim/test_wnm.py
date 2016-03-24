@@ -12,6 +12,7 @@ logger = logging.getLogger()
 import subprocess
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 from utils import alloc_fail, wait_fail_trigger
 from wlantest import Wlantest
 
@@ -1290,3 +1291,55 @@ def test_wnm_bss_tm_security_mismatch(dev, apdev):
         raise Exception("No BSS Transition Management Response")
     if "status_code=7" not in ev:
         raise Exception("Unexpected BSS transition request response: " + ev)
+
+def test_wnm_bss_tm_connect_cmd(dev, apdev):
+    """WNM BSS Transition Management and cfg80211 connect command"""
+    params = { "ssid": "test-wnm",
+               "hw_mode": "g",
+               "channel": "1",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = { "ssid": "test-wnm",
+               "hw_mode": "g",
+               "channel": "11",
+               "bss_transition": "1" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+
+    wpas.scan_for_bss(apdev[1]['bssid'], 2462)
+
+    id = wpas.connect("test-wnm", key_mgmt="NONE",
+                      bssid=apdev[0]['bssid'], scan_freq="2412")
+    wpas.set_network(id, "scan_freq", "")
+    wpas.set_network(id, "bssid", "")
+
+    addr = wpas.own_addr()
+    wpas.dump_monitor()
+
+    logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
+    if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+        raise Exception("BSS_TM_REQ command failed")
+    ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+    if ev is None:
+        raise Exception("No BSS Transition Management Response")
+    if "status_code=0" not in ev:
+        raise Exception("BSS transition request was not accepted: " + ev)
+    if "target_bssid=" + apdev[1]['bssid'] not in ev:
+        raise Exception("Unexpected target BSS: " + ev)
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED",
+                          "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("No reassociation seen")
+    if "CTRL-EVENT-DISCONNECTED" in ev:
+        #TODO: Uncomment this once kernel side changes for Connect command
+        #reassociation are in upstream.
+        #raise Exception("Unexpected disconnection reported")
+        logger.info("Unexpected disconnection reported")
+        ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("No reassociation seen")
+    if apdev[1]['bssid'] not in ev:
+        raise Exception("Unexpected reassociation target: " + ev)

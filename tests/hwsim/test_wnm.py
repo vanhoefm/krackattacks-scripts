@@ -1253,3 +1253,40 @@ def test_wnm_bss_transition_mgmt_query(dev, apdev):
     ev = hapd.wait_event(["BSS-TM-RESP"], timeout=5)
     if ev is None:
         raise Exception("No BSS Transition Management Response frame seen")
+
+def test_wnm_bss_tm_security_mismatch(dev, apdev):
+    """WNM BSS Transition Management and security mismatch"""
+    params = { "ssid": "test-wnm",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": "CCMP",
+               "wpa_passphrase": "12345678",
+               "hw_mode": "g",
+               "channel": "1",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = { "ssid": "test-wnm",
+               "hw_mode": "g",
+               "channel": "11",
+               "bss_transition": "1" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], 2462)
+
+    id = dev[0].connect("test-wnm", psk="12345678",
+                        bssid=apdev[0]['bssid'], scan_freq="2412")
+    dev[0].set_network(id, "scan_freq", "")
+    dev[0].set_network(id, "bssid", "")
+
+    addr = dev[0].own_addr()
+    dev[0].dump_monitor()
+
+    logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
+    if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+        raise Exception("BSS_TM_REQ command failed")
+    ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+    if ev is None:
+        raise Exception("No BSS Transition Management Response")
+    if "status_code=7" not in ev:
+        raise Exception("Unexpected BSS transition request response: " + ev)

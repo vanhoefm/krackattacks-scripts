@@ -1346,6 +1346,7 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 	struct wpa_bss *current_bss = NULL;
 #ifndef CONFIG_NO_ROAMING
 	int min_diff;
+	int to_5ghz;
 #endif /* CONFIG_NO_ROAMING */
 
 	if (wpa_s->reassociate)
@@ -1401,7 +1402,10 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 		return 1;
 	}
 
-	if (current_bss->level < 0 && current_bss->level > selected->level) {
+	to_5ghz = selected->freq > 4000 && current_bss->freq < 4000;
+
+	if (current_bss->level < 0 &&
+	    current_bss->level > selected->level + to_5ghz * 2) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip roam - Current BSS has better "
 			"signal level");
 		return 0;
@@ -1419,6 +1423,13 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 			min_diff = 4;
 		else
 			min_diff = 5;
+	}
+	if (to_5ghz) {
+		/* Make it easier to move to 5 GHz band */
+		if (min_diff > 2)
+			min_diff -= 2;
+		else
+			min_diff = 0;
 	}
 	if (abs(current_bss->level - selected->level) < min_diff) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip roam - too small difference "

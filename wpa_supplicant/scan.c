@@ -1895,7 +1895,7 @@ static void filter_scan_res(struct wpa_supplicant *wpa_s,
 
 /*
  * Noise floor values to use when we have signal strength
- * measurements, but no noise floor measurments. These values were
+ * measurements, but no noise floor measurements. These values were
  * measured in an office environment with many APs.
  */
 #define DEFAULT_NOISE_FLOOR_2GHZ (-89)

@@ -9,9 +9,6 @@
  */
 
 #include "utils/includes.h"
-#include <net/if.h>
-/* Avoid conflicts due to NetBSD net/if.h if_type define with driver.h */
-#undef if_type
 
 #include "utils/common.h"
 #include "hostapd.h"
@@ -36,7 +33,7 @@ static int vlan_if_add(struct hostapd_data *hapd, struct hostapd_vlan *vlan,
 		return -1;
 	}
 
-	if (!if_nametoindex(vlan->ifname))
+	if (!iface_exists(vlan->ifname))
 		ret = hostapd_vlan_if_add(hapd, vlan->ifname);
 	else if (!existsok)
 		return -1;

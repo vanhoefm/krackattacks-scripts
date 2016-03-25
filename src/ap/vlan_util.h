@@ -19,6 +19,7 @@ int vlan_set_name_type(unsigned int name_type);
 
 int ifconfig_helper(const char *if_name, int up);
 int ifconfig_up(const char *if_name);
+int iface_exists(const char *ifname);
 int vlan_if_remove(struct hostapd_data *hapd, struct hostapd_vlan *vlan);
 
 struct full_dynamic_vlan *

@@ -61,3 +61,9 @@ int ifconfig_up(const char *if_name)
 	wpa_printf(MSG_DEBUG, "VLAN: Set interface %s up", if_name);
 	return ifconfig_helper(if_name, 1);
 }
+
+
+int iface_exists(const char *ifname)
+{
+	return if_nametoindex(ifname);
+}

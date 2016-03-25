@@ -180,6 +180,7 @@ ifdef CONFIG_FULL_DYNAMIC_VLAN
 # Define CONFIG_FULL_DYNAMIC_VLAN to have hostapd manipulate bridges
 # and VLAN interfaces for the VLAN feature.
 L_CFLAGS += -DCONFIG_FULL_DYNAMIC_VLAN
+OBJS += src/ap/vlan_full.c
 ifdef CONFIG_VLAN_NETLINK
 OBJS += src/ap/vlan_util.c
 else

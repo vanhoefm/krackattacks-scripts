@@ -7,18 +7,10 @@
  */
 
 #include "utils/includes.h"
-#include <sys/ioctl.h>
-#include <linux/sockios.h>
-#include <linux/if_vlan.h>
-#include <netlink/genl/genl.h>
-#include <netlink/genl/family.h>
-#include <netlink/genl/ctrl.h>
 #include <netlink/route/link.h>
 #include <netlink/route/link/vlan.h>
 
 #include "utils/common.h"
-#include "utils/eloop.h"
-#include "hostapd.h"
 #include "vlan_util.h"
 
 /*

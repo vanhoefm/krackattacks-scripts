@@ -1,5 +1,5 @@
 /*
- * hostapd / VLAN netlink api
+ * hostapd / VLAN netlink/ioctl api
  * Copyright (c) 2012, Michael Braun <michael-dev@fami-braun.de>
  *
  * This software may be distributed under the terms of the BSD license.
@@ -11,5 +11,8 @@
 
 int vlan_add(const char *if_name, int vid, const char *vlan_if_name);
 int vlan_rem(const char *if_name);
+int vlan_set_name_type(unsigned int name_type);
+
+int ifconfig_up(const char *if_name);
 
 #endif /* VLAN_UTIL_H */

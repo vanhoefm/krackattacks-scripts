@@ -21,7 +21,6 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
-#include <linux/sockios.h>
 #include <linux/if_vlan.h>
 #include <linux/if_bridge.h>
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
@@ -164,7 +163,7 @@ static int ifconfig_helper(const char *if_name, int up)
 }
 
 
-static int ifconfig_up(const char *if_name)
+int ifconfig_up(const char *if_name)
 {
 	wpa_printf(MSG_DEBUG, "VLAN: Set interface %s up", if_name);
 	return ifconfig_helper(if_name, 1);
@@ -238,13 +237,6 @@ static int ifconfig_down(const char *if_name)
 	return ifconfig_helper(if_name, 0);
 }
 
-
-/*
- * These are only available in recent linux headers (without the leading
- * underscore).
- */
-#define _GET_VLAN_REALDEV_NAME_CMD	8
-#define _GET_VLAN_VID_CMD		9
 
 /* This value should be 256 ONLY. If it is something else, then hostapd
  * might crash!, as this value has been hard-coded in 2.4.x kernel
@@ -478,150 +470,6 @@ static int br_getnumports(const char *br_name)
 	close(fd);
 	return port_cnt;
 }
-
-
-#ifndef CONFIG_VLAN_NETLINK
-
-int vlan_rem(const char *if_name)
-{
-	int fd;
-	struct vlan_ioctl_args if_request;
-
-	wpa_printf(MSG_DEBUG, "VLAN: vlan_rem(%s)", if_name);
-	if ((os_strlen(if_name) + 1) > sizeof(if_request.device1)) {
-		wpa_printf(MSG_ERROR, "VLAN: Interface name too long: '%s'",
-			   if_name);
-		return -1;
-	}
-
-	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
-			   "failed: %s", __func__, strerror(errno));
-		return -1;
-	}
-
-	os_memset(&if_request, 0, sizeof(if_request));
-
-	os_strlcpy(if_request.device1, if_name, sizeof(if_request.device1));
-	if_request.cmd = DEL_VLAN_CMD;
-
-	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: DEL_VLAN_CMD failed for %s: "
-			   "%s", __func__, if_name, strerror(errno));
-		close(fd);
-		return -1;
-	}
-
-	close(fd);
-	return 0;
-}
-
-
-/*
-	Add a vlan interface with VLAN ID 'vid' and tagged interface
-	'if_name'.
-
-	returns -1 on error
-	returns 1 if the interface already exists
-	returns 0 otherwise
-*/
-int vlan_add(const char *if_name, int vid, const char *vlan_if_name)
-{
-	int fd;
-	struct vlan_ioctl_args if_request;
-
-	wpa_printf(MSG_DEBUG, "VLAN: vlan_add(if_name=%s, vid=%d)",
-		   if_name, vid);
-	ifconfig_up(if_name);
-
-	if ((os_strlen(if_name) + 1) > sizeof(if_request.device1)) {
-		wpa_printf(MSG_ERROR, "VLAN: Interface name too long: '%s'",
-			   if_name);
-		return -1;
-	}
-
-	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
-			   "failed: %s", __func__, strerror(errno));
-		return -1;
-	}
-
-	os_memset(&if_request, 0, sizeof(if_request));
-
-	/* Determine if a suitable vlan device already exists. */
-
-	os_snprintf(if_request.device1, sizeof(if_request.device1), "vlan%d",
-		    vid);
-
-	if_request.cmd = _GET_VLAN_VID_CMD;
-
-	if (ioctl(fd, SIOCSIFVLAN, &if_request) == 0) {
-
-		if (if_request.u.VID == vid) {
-			if_request.cmd = _GET_VLAN_REALDEV_NAME_CMD;
-
-			if (ioctl(fd, SIOCSIFVLAN, &if_request) == 0 &&
-			    os_strncmp(if_request.u.device2, if_name,
-				       sizeof(if_request.u.device2)) == 0) {
-				close(fd);
-				wpa_printf(MSG_DEBUG, "VLAN: vlan_add: "
-					   "if_name %s exists already",
-					   if_request.device1);
-				return 1;
-			}
-		}
-	}
-
-	/* A suitable vlan device does not already exist, add one. */
-
-	os_memset(&if_request, 0, sizeof(if_request));
-	os_strlcpy(if_request.device1, if_name, sizeof(if_request.device1));
-	if_request.u.VID = vid;
-	if_request.cmd = ADD_VLAN_CMD;
-
-	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: ADD_VLAN_CMD failed for %s: "
-			   "%s",
-			   __func__, if_request.device1, strerror(errno));
-		close(fd);
-		return -1;
-	}
-
-	close(fd);
-	return 0;
-}
-
-
-static int vlan_set_name_type(unsigned int name_type)
-{
-	int fd;
-	struct vlan_ioctl_args if_request;
-
-	wpa_printf(MSG_DEBUG, "VLAN: vlan_set_name_type(name_type=%u)",
-		   name_type);
-	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
-			   "failed: %s", __func__, strerror(errno));
-		return -1;
-	}
-
-	os_memset(&if_request, 0, sizeof(if_request));
-
-	if_request.u.name_type = name_type;
-	if_request.cmd = SET_VLAN_NAME_TYPE_CMD;
-	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		wpa_printf(MSG_ERROR, "VLAN: %s: SET_VLAN_NAME_TYPE_CMD "
-			   "name_type=%u failed: %s",
-			   __func__, name_type, strerror(errno));
-		close(fd);
-		return -1;
-	}
-
-	close(fd);
-	return 0;
-}
-
-#endif /* CONFIG_VLAN_NETLINK */
 
 
 static void vlan_newlink_tagged(int vlan_naming, const char *tagged_interface,
@@ -973,12 +821,10 @@ full_dynamic_vlan_init(struct hostapd_data *hapd)
 	if (priv == NULL)
 		return NULL;
 
-#ifndef CONFIG_VLAN_NETLINK
 	vlan_set_name_type(hapd->conf->ssid.vlan_naming ==
 			   DYNAMIC_VLAN_NAMING_WITH_DEVICE ?
 			   VLAN_NAME_TYPE_RAW_PLUS_VID_NO_PAD :
 			   VLAN_NAME_TYPE_PLUS_VID_NO_PAD);
-#endif /* CONFIG_VLAN_NETLINK */
 
 	priv->s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (priv->s < 0) {

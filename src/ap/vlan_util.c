@@ -174,3 +174,9 @@ vlan_rem_error:
 		nl_socket_free(handle);
 	return ret;
 }
+
+
+int vlan_set_name_type(unsigned int name_type)
+{
+	return 0;
+}

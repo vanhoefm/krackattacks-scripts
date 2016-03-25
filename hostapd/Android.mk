@@ -176,11 +176,15 @@ L_CFLAGS += -DCONFIG_NO_VLAN
 else
 OBJS += src/ap/vlan_init.c
 OBJS += src/ap/vlan.c
-ifdef CONFIG_VLAN_NETLINK
 ifdef CONFIG_FULL_DYNAMIC_VLAN
+# Define CONFIG_FULL_DYNAMIC_VLAN to have hostapd manipulate bridges
+# and VLAN interfaces for the VLAN feature.
+L_CFLAGS += -DCONFIG_FULL_DYNAMIC_VLAN
+ifdef CONFIG_VLAN_NETLINK
 OBJS += src/ap/vlan_util.c
+else
+OBJS += src/ap/vlan_ioctl.c
 endif
-L_CFLAGS += -DCONFIG_VLAN_NETLINK
 endif
 endif
 
@@ -867,12 +871,6 @@ endif
 
 ifdef CONFIG_DRIVER_RADIUS_ACL
 L_CFLAGS += -DCONFIG_DRIVER_RADIUS_ACL
-endif
-
-ifdef CONFIG_FULL_DYNAMIC_VLAN
-# define CONFIG_FULL_DYNAMIC_VLAN to have hostapd manipulate bridges
-# and vlan interfaces for the vlan feature.
-L_CFLAGS += -DCONFIG_FULL_DYNAMIC_VLAN
 endif
 
 ifdef NEED_BASE64

@@ -194,6 +194,7 @@ ifdef CONFIG_NO_VLAN
 CFLAGS += -DCONFIG_NO_VLAN
 else
 OBJS += ../src/ap/vlan_init.o
+OBJS += ../src/ap/vlan_ifconfig.o
 OBJS += ../src/ap/vlan.o
 ifdef CONFIG_FULL_DYNAMIC_VLAN
 # Define CONFIG_FULL_DYNAMIC_VLAN to have hostapd manipulate bridges

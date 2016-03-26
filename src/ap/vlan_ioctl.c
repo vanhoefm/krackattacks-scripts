@@ -10,18 +10,10 @@
 
 #include "utils/includes.h"
 #include <sys/ioctl.h>
-#include <linux/sockios.h>
-#include <linux/if_vlan.h>
 
 #include "utils/common.h"
+#include "common/linux_vlan.h"
 #include "vlan_util.h"
-
-/*
- * These are only available in recent linux headers (without the leading
- * underscore).
- */
-#define _GET_VLAN_REALDEV_NAME_CMD	8
-#define _GET_VLAN_VID_CMD		9
 
 
 int vlan_rem(const char *if_name)
@@ -95,11 +87,11 @@ int vlan_add(const char *if_name, int vid, const char *vlan_if_name)
 	os_snprintf(if_request.device1, sizeof(if_request.device1), "vlan%d",
 		    vid);
 
-	if_request.cmd = _GET_VLAN_VID_CMD;
+	if_request.cmd = GET_VLAN_VID_CMD;
 
 	if (ioctl(fd, SIOCSIFVLAN, &if_request) == 0 &&
 	    if_request.u.VID == vid) {
-		if_request.cmd = _GET_VLAN_REALDEV_NAME_CMD;
+		if_request.cmd = GET_VLAN_REALDEV_NAME_CMD;
 
 		if (ioctl(fd, SIOCSIFVLAN, &if_request) == 0 &&
 		    os_strncmp(if_request.u.device2, if_name,

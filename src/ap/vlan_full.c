@@ -13,7 +13,6 @@
 /* Avoid conflicts due to NetBSD net/if.h if_type define with driver.h */
 #undef if_type
 #include <sys/ioctl.h>
-#include <linux/if_vlan.h>
 /* From linux/if_bridge.h that can conflict with C library headers for IPv6 */
 #define BRCTL_GET_VERSION 0
 #define BRCTL_GET_BRIDGES 1
@@ -27,6 +26,7 @@
 
 #include "utils/common.h"
 #include "drivers/priv_netlink.h"
+#include "common/linux_vlan.h"
 #include "utils/eloop.h"
 #include "hostapd.h"
 #include "ap_config.h"

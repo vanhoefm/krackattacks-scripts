@@ -63,7 +63,9 @@ else
   endif
 
   ifdef CONFIG_LIBNL20
-    DRV_LIBS += -lnl-genl
+    ifndef CONFIG_LIBNL_TINY
+      DRV_LIBS += -lnl-genl
+    endif
     DRV_CFLAGS += -DCONFIG_LIBNL20
   endif
 endif

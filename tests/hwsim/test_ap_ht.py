@@ -1132,3 +1132,23 @@ def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
                 raise Exception("Invalid 40 MHz channel accepted")
     finally:
         subprocess.call(['iw', 'reg', 'set', '00'])
+
+def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
+    """HT40 on 5 GHz with disabled secondary channel"""
+    clear_scan_cache(apdev[0]['ifname'])
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "48",
+                   "country_code": "US",
+                   "ht_capab": "[HT40+]"}
+        hapd = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-DISABLED", "AP-ENABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup failure timed out")
+        if "AP-ENABLED" in ev:
+            sec = hapd.get_status_field("secondary_channel")
+            if sec != "0":
+                raise Exception("Invalid 40 MHz channel accepted")
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])

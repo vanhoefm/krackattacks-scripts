@@ -27,10 +27,6 @@ CFLAGS += -I$(abspath ../src/utils)
 
 export BINDIR ?= /usr/local/bin/
 
-# Uncomment following line and set the path to your kernel tree include
-# directory if your C library does not include all header files.
-# CFLAGS += -DUSE_KERNEL_HEADERS -I/usr/src/linux/include
-
 -include .config
 
 ifndef CONFIG_NO_GITVER

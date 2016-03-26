@@ -34,11 +34,7 @@
 #include "utils/includes.h"
 #include <net/if.h>
 #include <sys/ioctl.h>
-#ifdef USE_KERNEL_HEADERS
-#include <linux/if_packet.h>
-#else /* USE_KERNEL_HEADERS */
 #include <netpacket/packet.h>
-#endif /* USE_KERNEL_HEADERS */
 
 #include "utils/common.h"
 #include "utils/eloop.h"

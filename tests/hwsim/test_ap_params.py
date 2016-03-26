@@ -57,7 +57,7 @@ def test_ap_vendor_elements(dev, apdev):
     if "dd0411223301" not in bss['ie']:
         raise Exception("Vendor element not shown in scan results")
 
-    hapd.set('vendor_elements', 'dd051122330203')
+    hapd.set('vendor_elements', 'dd051122330203dd0400137400dd04001374ff')
     if "OK" not in hapd.request("UPDATE_BEACON"):
         raise Exception("UPDATE_BEACON failed")
     dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")

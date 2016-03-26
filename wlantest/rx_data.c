@@ -7,7 +7,6 @@
  */
 
 #include "utils/includes.h"
-#include <linux/if_ether.h>
 
 #include "utils/common.h"
 #include "common/defs.h"

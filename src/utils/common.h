@@ -313,6 +313,9 @@ static inline void WPA_PUT_LE64(u8 *a, u64 val)
 #ifndef ETH_P_ALL
 #define ETH_P_ALL 0x0003
 #endif
+#ifndef ETH_P_IP
+#define ETH_P_IP 0x0800
+#endif
 #ifndef ETH_P_80211_ENCAP
 #define ETH_P_80211_ENCAP 0x890d /* TDLS comes under this category */
 #endif

@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #ifdef __linux__
 #include <sys/ioctl.h>
-#include <linux/sockios.h>
 #endif /* __linux__ */
 #ifdef ANDROID
 #include <cutils/sockets.h>
@@ -90,7 +89,7 @@ static void wpas_ctrl_sock_debug(const char *title, int sock, const char *buf,
 	if (getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen) < 0)
 		sndbuf = -1;
 
-	if (ioctl(sock, SIOCOUTQ, &outq) < 0)
+	if (ioctl(sock, TIOCOUTQ, &outq) < 0)
 		outq = -1;
 
 	wpa_printf(level,
@@ -289,7 +288,7 @@ static int wpas_ctrl_iface_throttle(int sock)
 	optlen = sizeof(sndbuf);
 	sndbuf = 0;
 	if (getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen) < 0 ||
-	    ioctl(sock, SIOCOUTQ, &outq) < 0 ||
+	    ioctl(sock, TIOCOUTQ, &outq) < 0 ||
 	    sndbuf <= 0 || outq < 0)
 		return 0;
 	return outq > sndbuf / 2;

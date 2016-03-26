@@ -145,6 +145,67 @@ def test_ap_vht80_params(dev, apdev):
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 
+def test_ap_vht80_invalid(dev, apdev):
+    """VHT with invalid 80 MHz channel configuration (seg1)"""
+    try:
+        hapd = None
+        params = { "ssid": "vht",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "1",
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "vht_oper_centr_freq_seg1_idx": "155",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        # This fails due to unexpected seg1 configuration
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("AP-DISABLED not reported")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def test_ap_vht80_invalid2(dev, apdev):
+    """VHT with invalid 80 MHz channel configuration (seg0)"""
+    try:
+        hapd = None
+        params = { "ssid": "vht",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "1",
+                   "vht_oper_centr_freq_seg0_idx": "46",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        # This fails due to invalid seg0 configuration
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("AP-DISABLED not reported")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
 def test_ap_vht_20(devs, apdevs):
     """VHT and 20 MHz channel"""
     dev = devs[0]
@@ -456,6 +517,37 @@ def test_ap_vht80plus80(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
+
+def test_ap_vht80plus80_invalid(dev, apdev):
+    """VHT with invalid 80+80 MHz channel"""
+    try:
+        hapd = None
+        params = { "ssid": "vht",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "3",
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "vht_oper_centr_freq_seg1_idx": "0",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        # This fails due to missing(invalid) seg1 configuration
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("AP-DISABLED not reported")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_ap_vht80_csa(dev, apdev):
     """VHT with 80 MHz channel width and CSA"""

@@ -67,6 +67,18 @@ def test_ap_vendor_elements(dev, apdev):
     if "dd051122330203" not in bss['ie']:
         raise Exception("New vendor element not shown in scan results")
 
+def test_ap_element_parse(dev, apdev):
+    """Information element parsing - extra coverage"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    params = { 'ssid': ssid,
+               'vendor_elements': "380501020304059e009e009e009e009e009e00" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    bss = dev[0].get_bss(bssid)
+    if "38050102030405" not in bss['ie']:
+        raise Exception("Timeout element not shown in scan results")
+
 def test_ap_country(dev, apdev):
     """WPA2-PSK AP setting country code and using 5 GHz band"""
     try:

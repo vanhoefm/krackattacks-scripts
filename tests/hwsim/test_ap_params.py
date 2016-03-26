@@ -12,6 +12,7 @@ import subprocess
 import hwsim_utils
 import hostapd
 from tshark import run_tshark
+from utils import alloc_fail
 
 def test_ap_fragmentation_rts_set_high(dev, apdev):
     """WPA2-PSK AP with fragmentation and RTS thresholds larger than frame length"""
@@ -78,6 +79,18 @@ def test_ap_element_parse(dev, apdev):
     bss = dev[0].get_bss(bssid)
     if "38050102030405" not in bss['ie']:
         raise Exception("Timeout element not shown in scan results")
+
+def test_ap_element_parse_oom(dev, apdev):
+    """Information element parsing OOM"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    params = { 'ssid': ssid,
+               'vendor_elements': "dd0d506f9a0a00000600411c440028" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;ieee802_11_vendor_ie_concat"):
+        bss = dev[0].get_bss(bssid)
+        logger.info(str(bss))
 
 def test_ap_country(dev, apdev):
     """WPA2-PSK AP setting country code and using 5 GHz band"""

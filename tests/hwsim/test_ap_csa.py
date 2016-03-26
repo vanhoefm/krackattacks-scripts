@@ -17,7 +17,7 @@ def connect(dev, apdev, **kwargs):
                "channel": "1" }
     params.update(kwargs)
     ap = hostapd.add_ap(apdev[0]['ifname'], params)
-    dev.connect("ap-csa", key_mgmt="NONE")
+    dev.connect("ap-csa", key_mgmt="NONE", scan_freq="2412")
     return ap
 
 def switch_channel(ap, count, freq):
@@ -119,3 +119,13 @@ def test_ap_csa_ecsa_only(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
+
+def test_ap_csa_invalid(dev, apdev):
+    """AP Channel Switch - invalid channel"""
+    csa_supported(dev[0])
+    ap = connect(dev[0], apdev)
+
+    vals = [ 2461, 4900, 4901, 5181, 5746, 5699, 5895, 5899 ]
+    for val in vals:
+        if "FAIL" not in ap.request("CHAN_SWITCH 1 %d" % val):
+            raise Exception("Invalid channel accepted: %d" % val)

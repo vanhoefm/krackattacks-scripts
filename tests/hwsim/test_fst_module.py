@@ -1527,6 +1527,12 @@ def test_fst_ap_start_session_oom(dev, apdev, test_params):
                                fst_test_common.fst_test_def_prio_low,
                                fst_test_common.fst_test_def_llt)
     ap1.start()
+    try:
+        run_fst_ap_start_session_oom(apdev, ap1)
+    finally:
+        ap1.stop()
+
+def run_fst_ap_start_session_oom(apdev, ap1):
     with alloc_fail(ap1, 1, "fst_iface_create"):
         ap2_started = False
         try:
@@ -1541,7 +1547,6 @@ def test_fst_ap_start_session_oom(dev, apdev, test_params):
             except:
                 pass
         finally:
-            ap1.stop()
             try:
                 ap2.stop()
             except:
@@ -2534,9 +2539,13 @@ def _test_fst_setup_mbie_diff(dev, apdev, test_params):
     req = "1200011a060000"
     stie = "a40b0100000000020001040001"
     mbie = "9e16040200010200000004000000000000000000000000ff"
-    with alloc_fail(hapd, 1, "mb_ies_by_info"):
-        fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie, mbie,
-                      no_wait=True)
+    try:
+        with alloc_fail(hapd, 1, "mb_ies_by_info"):
+            fst_setup_req(wpas, hglobal, 5180, apdev[0]['bssid'], req, stie,
+                          mbie, no_wait=True)
+    except HwsimSkip, e:
+        # Skip exception to allow proper cleanup
+        pass
 
     # Remove sessions to avoid causing issues to following test ases
     s = hglobal.request("FST-MANAGER LIST_SESSIONS " + group)

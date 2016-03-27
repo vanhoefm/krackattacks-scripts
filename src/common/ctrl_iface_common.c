@@ -17,15 +17,15 @@
 static int sockaddr_compare(struct sockaddr_storage *a, socklen_t a_len,
 			    struct sockaddr_storage *b, socklen_t b_len)
 {
-	struct sockaddr_in *in_a, *in_b;
-	struct sockaddr_in6 *in6_a, *in6_b;
-	struct sockaddr_un *u_a, *u_b;
-
 	if (a->ss_family != b->ss_family)
 		return 1;
 
 	switch (a->ss_family) {
+#ifdef CONFIG_CTRL_IFACE_UDP
 	case AF_INET:
+	{
+		struct sockaddr_in *in_a, *in_b;
+
 		in_a = (struct sockaddr_in *) a;
 		in_b = (struct sockaddr_in *) b;
 
@@ -34,7 +34,11 @@ static int sockaddr_compare(struct sockaddr_storage *a, socklen_t a_len,
 		if (in_a->sin_addr.s_addr != in_b->sin_addr.s_addr)
 			return 1;
 		break;
+	}
 	case AF_INET6:
+	{
+		struct sockaddr_in6 *in6_a, *in6_b;
+
 		in6_a = (struct sockaddr_in6 *) a;
 		in6_b = (struct sockaddr_in6 *) b;
 
@@ -44,7 +48,13 @@ static int sockaddr_compare(struct sockaddr_storage *a, socklen_t a_len,
 			      sizeof(in6_a->sin6_addr)) != 0)
 			return 1;
 		break;
+	}
+#endif /* CONFIG_CTRL_IFACE_UDP */
+#ifdef CONFIG_CTRL_IFACE_UNIX
 	case AF_UNIX:
+	{
+		struct sockaddr_un *u_a, *u_b;
+
 		u_a = (struct sockaddr_un *) a;
 		u_b = (struct sockaddr_un *) b;
 
@@ -54,6 +64,8 @@ static int sockaddr_compare(struct sockaddr_storage *a, socklen_t a_len,
 		    != 0)
 			return 1;
 		break;
+	}
+#endif /* CONFIG_CTRL_IFACE_UNIX */
 	default:
 		return 1;
 	}
@@ -65,13 +77,14 @@ static int sockaddr_compare(struct sockaddr_storage *a, socklen_t a_len,
 void sockaddr_print(int level, const char *msg, struct sockaddr_storage *sock,
 		    socklen_t socklen)
 {
-	char host[NI_MAXHOST] = { 0 };
-	char service[NI_MAXSERV] = { 0 };
-	char addr_txt[200];
-
 	switch (sock->ss_family) {
+#ifdef CONFIG_CTRL_IFACE_UDP
 	case AF_INET:
 	case AF_INET6:
+	{
+		char host[NI_MAXHOST] = { 0 };
+		char service[NI_MAXSERV] = { 0 };
+
 		getnameinfo((struct sockaddr *) sock, socklen,
 			    host, sizeof(host),
 			    service, sizeof(service),
@@ -79,12 +92,20 @@ void sockaddr_print(int level, const char *msg, struct sockaddr_storage *sock,
 
 		wpa_printf(level, "%s %s:%s", msg, host, service);
 		break;
+	}
+#endif /* CONFIG_CTRL_IFACE_UDP */
+#ifdef CONFIG_CTRL_IFACE_UNIX
 	case AF_UNIX:
+	{
+		char addr_txt[200];
+
 		printf_encode(addr_txt, sizeof(addr_txt),
 			      (u8 *) ((struct sockaddr_un *) sock)->sun_path,
 			      socklen - offsetof(struct sockaddr_un, sun_path));
 		wpa_printf(level, "%s %s", msg, addr_txt);
 		break;
+	}
+#endif /* CONFIG_CTRL_IFACE_UNIX */
 	default:
 		wpa_printf(level, "%s", msg);
 		break;

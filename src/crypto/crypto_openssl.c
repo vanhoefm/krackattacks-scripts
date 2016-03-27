@@ -998,13 +998,20 @@ int omac1_aes_256(const u8 *key, const u8 *data, size_t data_len, u8 *mac)
 
 struct crypto_bignum * crypto_bignum_init(void)
 {
+	if (TEST_FAIL())
+		return NULL;
 	return (struct crypto_bignum *) BN_new();
 }
 
 
 struct crypto_bignum * crypto_bignum_init_set(const u8 *buf, size_t len)
 {
-	BIGNUM *bn = BN_bin2bn(buf, len, NULL);
+	BIGNUM *bn;
+
+	if (TEST_FAIL())
+		return NULL;
+
+	bn = BN_bin2bn(buf, len, NULL);
 	return (struct crypto_bignum *) bn;
 }
 
@@ -1022,6 +1029,9 @@ int crypto_bignum_to_bin(const struct crypto_bignum *a,
 			 u8 *buf, size_t buflen, size_t padlen)
 {
 	int num_bytes, offset;
+
+	if (TEST_FAIL())
+		return -1;
 
 	if (padlen > buflen)
 		return -1;
@@ -1076,6 +1086,9 @@ int crypto_bignum_exptmod(const struct crypto_bignum *a,
 	int res;
 	BN_CTX *bnctx;
 
+	if (TEST_FAIL())
+		return -1;
+
 	bnctx = BN_CTX_new();
 	if (bnctx == NULL)
 		return -1;
@@ -1094,6 +1107,8 @@ int crypto_bignum_inverse(const struct crypto_bignum *a,
 	BIGNUM *res;
 	BN_CTX *bnctx;
 
+	if (TEST_FAIL())
+		return -1;
 	bnctx = BN_CTX_new();
 	if (bnctx == NULL)
 		return -1;
@@ -1109,6 +1124,8 @@ int crypto_bignum_sub(const struct crypto_bignum *a,
 		      const struct crypto_bignum *b,
 		      struct crypto_bignum *c)
 {
+	if (TEST_FAIL())
+		return -1;
 	return BN_sub((BIGNUM *) c, (const BIGNUM *) a, (const BIGNUM *) b) ?
 		0 : -1;
 }
@@ -1121,6 +1138,9 @@ int crypto_bignum_div(const struct crypto_bignum *a,
 	int res;
 
 	BN_CTX *bnctx;
+
+	if (TEST_FAIL())
+		return -1;
 
 	bnctx = BN_CTX_new();
 	if (bnctx == NULL)
@@ -1141,6 +1161,9 @@ int crypto_bignum_mulmod(const struct crypto_bignum *a,
 	int res;
 
 	BN_CTX *bnctx;
+
+	if (TEST_FAIL())
+		return -1;
 
 	bnctx = BN_CTX_new();
 	if (bnctx == NULL)
@@ -1184,6 +1207,9 @@ int crypto_bignum_legendre(const struct crypto_bignum *a,
 	BN_CTX *bnctx;
 	BIGNUM *exp = NULL, *tmp = NULL;
 	int res = -2;
+
+	if (TEST_FAIL())
+		return -2;
 
 	bnctx = BN_CTX_new();
 	if (bnctx == NULL)
@@ -1309,6 +1335,8 @@ void crypto_ec_deinit(struct crypto_ec *e)
 
 struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 {
+	if (TEST_FAIL())
+		return NULL;
 	if (e == NULL)
 		return NULL;
 	return (struct crypto_ec_point *) EC_POINT_new(e->group);
@@ -1355,6 +1383,9 @@ int crypto_ec_point_to_bin(struct crypto_ec *e,
 	int ret = -1;
 	int len = BN_num_bytes(e->prime);
 
+	if (TEST_FAIL())
+		return -1;
+
 	x_bn = BN_new();
 	y_bn = BN_new();
 
@@ -1385,6 +1416,9 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 	EC_POINT *elem;
 	int len = BN_num_bytes(e->prime);
 
+	if (TEST_FAIL())
+		return NULL;
+
 	x = BN_bin2bn(val, len, NULL);
 	y = BN_bin2bn(val + len, len, NULL);
 	elem = EC_POINT_new(e->group);
@@ -1412,6 +1446,8 @@ int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a,
 			const struct crypto_ec_point *b,
 			struct crypto_ec_point *c)
 {
+	if (TEST_FAIL())
+		return -1;
 	return EC_POINT_add(e->group, (EC_POINT *) c, (const EC_POINT *) a,
 			    (const EC_POINT *) b, e->bnctx) ? 0 : -1;
 }
@@ -1421,6 +1457,8 @@ int crypto_ec_point_mul(struct crypto_ec *e, const struct crypto_ec_point *p,
 			const struct crypto_bignum *b,
 			struct crypto_ec_point *res)
 {
+	if (TEST_FAIL())
+		return -1;
 	return EC_POINT_mul(e->group, (EC_POINT *) res, NULL,
 			    (const EC_POINT *) p, (const BIGNUM *) b, e->bnctx)
 		? 0 : -1;
@@ -1429,6 +1467,8 @@ int crypto_ec_point_mul(struct crypto_ec *e, const struct crypto_ec_point *p,
 
 int crypto_ec_point_invert(struct crypto_ec *e, struct crypto_ec_point *p)
 {
+	if (TEST_FAIL())
+		return -1;
 	return EC_POINT_invert(e->group, (EC_POINT *) p, e->bnctx) ? 0 : -1;
 }
 
@@ -1437,6 +1477,8 @@ int crypto_ec_point_solve_y_coord(struct crypto_ec *e,
 				  struct crypto_ec_point *p,
 				  const struct crypto_bignum *x, int y_bit)
 {
+	if (TEST_FAIL())
+		return -1;
 	if (!EC_POINT_set_compressed_coordinates_GFp(e->group, (EC_POINT *) p,
 						     (const BIGNUM *) x, y_bit,
 						     e->bnctx) ||
@@ -1451,6 +1493,9 @@ crypto_ec_point_compute_y_sqr(struct crypto_ec *e,
 			      const struct crypto_bignum *x)
 {
 	BIGNUM *tmp, *tmp2, *y_sqr = NULL;
+
+	if (TEST_FAIL())
+		return NULL;
 
 	tmp = BN_new();
 	tmp2 = BN_new();

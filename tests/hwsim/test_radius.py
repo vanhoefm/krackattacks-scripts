@@ -17,8 +17,9 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip, require_under_vm
+from utils import HwsimSkip, require_under_vm, skip_with_fips
 from test_ap_hs20 import build_dhcp_ack
+from test_ap_ft import ft_params1
 
 def connect(dev, ssid, wait_connect=True):
     dev.connect(ssid, key_mgmt="WPA-EAP", scan_freq="2412",
@@ -376,6 +377,57 @@ def send_and_check_reply(srv, req, code, error_cause=0):
             raise Exception("Missing Error-Cause")
             if reply['Error-Cause'][0] != error_cause:
                 raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+def test_radius_acct_psk(dev, apdev):
+    """RADIUS Accounting - PSK"""
+    as_hapd = hostapd.Hostapd("as")
+    params = hostapd.wpa2_params(ssid="radius-acct", passphrase="12345678")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius-acct", psk="12345678", scan_freq="2412")
+
+def test_radius_acct_psk_sha256(dev, apdev):
+    """RADIUS Accounting - PSK SHA256"""
+    as_hapd = hostapd.Hostapd("as")
+    params = hostapd.wpa2_params(ssid="radius-acct", passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius-acct", key_mgmt="WPA-PSK-SHA256",
+                   psk="12345678", scan_freq="2412")
+
+def test_radius_acct_ft_psk(dev, apdev):
+    """RADIUS Accounting - FT-PSK"""
+    as_hapd = hostapd.Hostapd("as")
+    params = ft_params1(ssid="radius-acct", passphrase="12345678")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius-acct", key_mgmt="FT-PSK",
+                   psk="12345678", scan_freq="2412")
+
+def test_radius_acct_ieee8021x(dev, apdev):
+    """RADIUS Accounting - IEEE 802.1X"""
+    skip_with_fips(dev[0])
+    as_hapd = hostapd.Hostapd("as")
+    params = hostapd.radius_params()
+    params["ssid"] = "radius-acct-1x"
+    params["ieee8021x"] = "1"
+    params["wep_key_len_broadcast"] = "13"
+    params["wep_key_len_unicast"] = "13"
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius-acct-1x", key_mgmt="IEEE8021X", eap="PSK",
+                   identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
 
 def test_radius_das_disconnect(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - Disconnect"""

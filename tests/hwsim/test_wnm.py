@@ -570,6 +570,29 @@ def test_wnm_bss_tm(dev, apdev):
 
 def test_wnm_bss_tm_scan_not_needed(dev, apdev):
     """WNM BSS Transition Management and scan not needed"""
+    run_wnm_bss_tm_scan_not_needed(dev, apdev)
+
+def test_wnm_bss_tm_nei_vht(dev, apdev):
+    """WNM BSS Transition Management and VHT neighbor"""
+    run_wnm_bss_tm_scan_not_needed(dev, apdev, vht=True, nei_info="115,36,9")
+
+def test_wnm_bss_tm_nei_11a(dev, apdev):
+    """WNM BSS Transition Management and 11a neighbor"""
+    run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=False, nei_info="115,36,4")
+
+def test_wnm_bss_tm_nei_11g(dev, apdev):
+    """WNM BSS Transition Management and 11g neighbor"""
+    run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=False, hwmode='g',
+                                   channel='2', freq=2417, nei_info="81,2,6")
+
+def test_wnm_bss_tm_nei_11b(dev, apdev):
+    """WNM BSS Transition Management and 11g neighbor"""
+    run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=False, hwmode='b',
+                                   channel='3', freq=2422, nei_info="81,2,5")
+
+def run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=True, vht=False, hwmode='a',
+                                   channel='36', freq=5180,
+                                   nei_info="115,36,7,0301ff"):
     try:
         hapd = None
         hapd2 = None
@@ -584,12 +607,19 @@ def test_wnm_bss_tm_scan_not_needed(dev, apdev):
         params = { "ssid": "test-wnm",
                    "country_code": "FI",
                    "ieee80211d": "1",
-                   "hw_mode": "a",
-                   "channel": "36",
+                   "hw_mode": hwmode,
+                   "channel": channel,
                    "bss_transition": "1" }
+        if not ht:
+            params['ieee80211n'] = '0'
+        if vht:
+            params['ieee80211ac'] = "1"
+            params["vht_oper_chwidth"] = "0"
+            params["vht_oper_centr_freq_seg0_idx"] = "0"
+
         hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 
-        dev[0].scan_for_bss(apdev[1]['bssid'], 5180)
+        dev[0].scan_for_bss(apdev[1]['bssid'], freq)
 
         id = dev[0].connect("test-wnm", key_mgmt="NONE",
                             bssid=apdev[0]['bssid'], scan_freq="2412")
@@ -600,7 +630,7 @@ def test_wnm_bss_tm_scan_not_needed(dev, apdev):
         dev[0].dump_monitor()
 
         logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
-        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000," + nei_info):
             raise Exception("BSS_TM_REQ command failed")
         ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
         if ev is None:

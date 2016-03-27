@@ -1,5 +1,5 @@
 # Test cases for SAE
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -712,3 +712,38 @@ def test_sae_no_random(dev, apdev):
                            scan_freq="2412")
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
+
+def test_sae_pwe_failure(dev, apdev):
+    """SAE and pwe failure"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_groups'] = '19 5'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups 19")
+    with fail_test(dev[0], 1, "hmac_sha256_vector;sae_derive_pwe_ecc"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].request("SET sae_groups 5")
+    with fail_test(dev[0], 1, "hmac_sha256_vector;sae_derive_pwe_ffc"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+    dev[0].request("SET sae_groups 5")
+    with fail_test(dev[0], 1, "sae_test_pwd_seed_ffc"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+    with fail_test(dev[0], 2, "sae_test_pwd_seed_ffc"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()

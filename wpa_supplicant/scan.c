@@ -2334,8 +2334,16 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid;
 	struct wpa_driver_scan_params params;
 	struct sched_scan_plan scan_plan;
+	unsigned int max_sched_scan_ssids;
 
 	if (!wpa_s->sched_scan_supported)
+		return -1;
+
+	if (wpa_s->max_sched_scan_ssids > WPAS_MAX_SCAN_SSIDS)
+		max_sched_scan_ssids = WPAS_MAX_SCAN_SSIDS;
+	else
+		max_sched_scan_ssids = wpa_s->max_sched_scan_ssids;
+	if (max_sched_scan_ssids < 1)
 		return -1;
 
 	if (wpa_s->pno || wpa_s->pno_sched_pending)
@@ -2381,10 +2389,10 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 		num_ssid++;
 	}
 
-	if (num_ssid > WPAS_MAX_SCAN_SSIDS) {
+	if (num_ssid > max_sched_scan_ssids) {
 		wpa_printf(MSG_DEBUG, "PNO: Use only the first %u SSIDs from "
-			   "%u", WPAS_MAX_SCAN_SSIDS, (unsigned int) num_ssid);
-		num_ssid = WPAS_MAX_SCAN_SSIDS;
+			   "%u", max_sched_scan_ssids, (unsigned int) num_ssid);
+		num_ssid = max_sched_scan_ssids;
 	}
 
 	if (num_match_ssid > wpa_s->max_match_sets) {

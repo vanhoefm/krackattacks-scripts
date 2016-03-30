@@ -3003,11 +3003,16 @@ static int wpa_supplicant_ctrl_iface_update_network(
 	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 	char *name, char *value)
 {
-	if (wpa_config_set(ssid, name, value, 0) < 0) {
+	int ret;
+
+	ret = wpa_config_set(ssid, name, value, 0);
+	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to set network "
 			   "variable '%s'", name);
 		return -1;
 	}
+	if (ret == 1)
+		return 0; /* No change to the previously configured value */
 
 	if (os_strcmp(name, "bssid") != 0 &&
 	    os_strcmp(name, "priority") != 0) {

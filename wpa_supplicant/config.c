@@ -32,7 +32,11 @@ struct parse_data {
 	/* Configuration variable name */
 	char *name;
 
-	/* Parser function for this variable */
+	/* Parser function for this variable. The parser functions return 0 or 1
+	 * to indicate success. Value 0 indicates that the parameter value may
+	 * have changed while value 1 means that the value did not change.
+	 * Error cases (failure to parse the string) are indicated by returning
+	 * -1. */
 	int (*parser)(const struct parse_data *data, struct wpa_ssid *ssid,
 		      int line, const char *value);
 
@@ -59,7 +63,7 @@ static int wpa_config_parse_str(const struct parse_data *data,
 				struct wpa_ssid *ssid,
 				int line, const char *value)
 {
-	size_t res_len, *dst_len;
+	size_t res_len, *dst_len, prev_len;
 	char **dst, *tmp;
 
 	if (os_strcmp(value, "NULL") == 0) {
@@ -105,6 +109,21 @@ static int wpa_config_parse_str(const struct parse_data *data,
 set:
 	dst = (char **) (((u8 *) ssid) + (long) data->param1);
 	dst_len = (size_t *) (((u8 *) ssid) + (long) data->param2);
+
+	if (data->param2)
+		prev_len = *dst_len;
+	else if (*dst)
+		prev_len = os_strlen(*dst);
+	else
+		prev_len = 0;
+	if ((*dst == NULL && tmp == NULL) ||
+	    (*dst && tmp && prev_len == res_len &&
+	     os_memcmp(*dst, tmp, res_len) == 0)) {
+		/* No change to the previously configured value */
+		os_free(tmp);
+		return 1;
+	}
+
 	os_free(*dst);
 	*dst = tmp;
 	if (data->param2)
@@ -190,6 +209,9 @@ static int wpa_config_parse_int(const struct parse_data *data,
 			   line, value);
 		return -1;
 	}
+
+	if (*dst == val)
+		return 1;
 	*dst = val;
 	wpa_printf(MSG_MSGDUMP, "%s=%d (0x%x)", data->name, *dst, *dst);
 
@@ -457,8 +479,10 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 		wpa_hexdump_ascii_key(MSG_MSGDUMP, "PSK (ASCII passphrase)",
 				      (u8 *) value, len);
 		if (ssid->passphrase && os_strlen(ssid->passphrase) == len &&
-		    os_memcmp(ssid->passphrase, value, len) == 0)
-			return 0;
+		    os_memcmp(ssid->passphrase, value, len) == 0) {
+			/* No change to the previously configured value */
+			return 1;
+		}
 		ssid->psk_set = 0;
 		str_clear_free(ssid->passphrase);
 		ssid->passphrase = dup_binstr(value, len);
@@ -569,6 +593,8 @@ static int wpa_config_parse_proto(const struct parse_data *data,
 		errors++;
 	}
 
+	if (!errors && ssid->proto == val)
+		return 1;
 	wpa_printf(MSG_MSGDUMP, "proto: 0x%x", val);
 	ssid->proto = val;
 	return errors ? -1 : 0;
@@ -705,6 +731,8 @@ static int wpa_config_parse_key_mgmt(const struct parse_data *data,
 		errors++;
 	}
 
+	if (!errors && ssid->key_mgmt == val)
+		return 1;
 	wpa_printf(MSG_MSGDUMP, "key_mgmt: 0x%x", val);
 	ssid->key_mgmt = val;
 	return errors ? -1 : 0;
@@ -953,6 +981,8 @@ static int wpa_config_parse_pairwise(const struct parse_data *data,
 		return -1;
 	}
 
+	if (ssid->pairwise_cipher == val)
+		return 1;
 	wpa_printf(MSG_MSGDUMP, "pairwise: 0x%x", val);
 	ssid->pairwise_cipher = val;
 	return 0;
@@ -989,6 +1019,8 @@ static int wpa_config_parse_group(const struct parse_data *data,
 		return -1;
 	}
 
+	if (ssid->group_cipher == val)
+		return 1;
 	wpa_printf(MSG_MSGDUMP, "group: 0x%x", val);
 	ssid->group_cipher = val;
 	return 0;
@@ -1050,6 +1082,8 @@ static int wpa_config_parse_auth_alg(const struct parse_data *data,
 		errors++;
 	}
 
+	if (!errors && ssid->auth_alg == val)
+		return 1;
 	wpa_printf(MSG_MSGDUMP, "auth_alg: 0x%x", val);
 	ssid->auth_alg = val;
 	return errors ? -1 : 0;
@@ -1304,6 +1338,32 @@ static int wpa_config_parse_eap(const struct parse_data *data,
 	methods[num_methods].method = EAP_TYPE_NONE;
 	num_methods++;
 
+	if (!errors && ssid->eap.eap_methods) {
+		struct eap_method_type *prev_m;
+		size_t i, j, prev_methods, match = 0;
+
+		prev_m = ssid->eap.eap_methods;
+		for (i = 0; prev_m[i].vendor != EAP_VENDOR_IETF ||
+			     prev_m[i].method != EAP_TYPE_NONE; i++) {
+			/* Count the methods */
+		}
+		prev_methods = i + 1;
+
+		for (i = 0; prev_methods == num_methods && i < prev_methods;
+		     i++) {
+			for (j = 0; j < num_methods; j++) {
+				if (prev_m[i].vendor == methods[j].vendor &&
+				    prev_m[i].method == methods[j].method) {
+					match++;
+					break;
+				}
+			}
+		}
+		if (match == num_methods) {
+			os_free(methods);
+			return 1;
+		}
+	}
 	wpa_hexdump(MSG_MSGDUMP, "eap methods",
 		    (u8 *) methods, num_methods * sizeof(*methods));
 	os_free(ssid->eap.eap_methods);
@@ -1356,6 +1416,8 @@ static int wpa_config_parse_password(const struct parse_data *data,
 	u8 *hash;
 
 	if (os_strcmp(value, "NULL") == 0) {
+		if (!ssid->eap.password)
+			return 1; /* Already unset */
 		wpa_printf(MSG_DEBUG, "Unset configuration string 'password'");
 		bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 		ssid->eap.password = NULL;
@@ -1419,6 +1481,12 @@ static int wpa_config_parse_password(const struct parse_data *data,
 
 	wpa_hexdump_key(MSG_MSGDUMP, data->name, hash, 16);
 
+	if (ssid->eap.password && ssid->eap.password_len == 16 &&
+	    os_memcmp(ssid->eap.password, hash, 16) == 0 &&
+	    (ssid->eap.flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH)) {
+		bin_clear_free(hash, 16);
+		return 1;
+	}
 	bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 	ssid->eap.password = hash;
 	ssid->eap.password_len = 16;
@@ -2472,7 +2540,8 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
  * @var: Variable name, e.g., "ssid"
  * @value: Variable value
  * @line: Line number in configuration file or 0 if not used
- * Returns: 0 on success, -1 on failure
+ * Returns: 0 on success with possible change in the value, 1 on success with
+ * no change to previously configured value, or -1 on failure
  *
  * This function can be used to set network configuration variables based on
  * both the configuration file and management interface input. The value
@@ -2493,7 +2562,8 @@ int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 		if (os_strcmp(var, field->name) != 0)
 			continue;
 
-		if (field->parser(field, ssid, line, value)) {
+		ret = field->parser(field, ssid, line, value);
+		if (ret < 0) {
 			if (line) {
 				wpa_printf(MSG_ERROR, "Line %d: failed to "
 					   "parse %s '%s'.", line, var, value);

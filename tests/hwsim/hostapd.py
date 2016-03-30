@@ -339,9 +339,22 @@ class Hostapd:
             return vals
         return None
 
-def add_ap(ifname, params, wait_enabled=True, no_enable=False, timeout=30,
-           hostname=None, port=8878):
-        logger.info("Starting AP " + ifname)
+def add_ap(apdev, params, wait_enabled=True, no_enable=False, timeout=30):
+        if isinstance(apdev, dict):
+            ifname = apdev['ifname']
+            try:
+                hostname = apdev['hostname']
+                port = apdev['port']
+                logger.info("Starting AP " + hostname + "/" + port + " " + ifname)
+            except:
+                logger.info("Starting AP " + ifname)
+                hostname = None
+                port = 8878
+        else:
+            ifname = apdev
+            logger.info("Starting AP " + ifname + " (old add_ap argument type)")
+            hostname = None
+            port = 8878
         hapd_global = HostapdGlobal(hostname=hostname, port=port)
         hapd_global.remove(ifname)
         hapd_global.add(ifname)

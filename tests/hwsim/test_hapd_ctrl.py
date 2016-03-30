@@ -442,7 +442,7 @@ def test_hapd_ctrl_global(dev, apdev):
     ssid = "hapd-ctrl"
     params = { "ssid": ssid }
     ifname = apdev[0]['ifname']
-    hapd = hostapd.add_ap(ifname, params)
+    hapd = hostapd.add_ap(apdev[0], params)
     hapd_global = hostapd.HostapdGlobal()
     res = hapd_global.request("IFNAME=" + ifname + " PING")
     if "PONG" not in res:
@@ -465,11 +465,11 @@ def test_hapd_dup_network_global_wpa2(dev, apdev):
 
     src_params = hostapd.wpa2_params(ssid=src_ssid, passphrase=passphrase)
     src_ifname = apdev[0]['ifname']
-    src_hapd = hostapd.add_ap(src_ifname, src_params)
+    src_hapd = hostapd.add_ap(apdev[0], src_params)
 
     dst_params = { "ssid": dst_ssid }
     dst_ifname = apdev[1]['ifname']
-    dst_hapd = hostapd.add_ap(dst_ifname, dst_params, no_enable=True)
+    dst_hapd = hostapd.add_ap(apdev[1], dst_params, no_enable=True)
 
     hapd_global = hostapd.HostapdGlobal()
 
@@ -494,11 +494,11 @@ def test_hapd_dup_network_global_wpa(dev, apdev):
     src_params = hostapd.wpa_params(ssid=src_ssid)
     src_params['wpa_psk'] = psk
     src_ifname = apdev[0]['ifname']
-    src_hapd = hostapd.add_ap(src_ifname, src_params)
+    src_hapd = hostapd.add_ap(apdev[0], src_params)
 
     dst_params = { "ssid": dst_ssid }
     dst_ifname = apdev[1]['ifname']
-    dst_hapd = hostapd.add_ap(dst_ifname, dst_params, no_enable=True)
+    dst_hapd = hostapd.add_ap(apdev[1], dst_params, no_enable=True)
 
     hapd_global = hostapd.HostapdGlobal()
 

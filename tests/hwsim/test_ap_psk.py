@@ -387,7 +387,7 @@ def test_ap_wpa2_already_in_bridge(dev, apdev):
         subprocess.call(['iw', ifname, 'set', 'type', '__ap'])
         subprocess.call(['brctl', 'addif', br_ifname, ifname])
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-        hapd = hostapd.add_ap(ifname, params)
+        hapd = hostapd.add_ap(apdev[0], params)
         if hapd.get_driver_status_field('brname') != br_ifname:
             raise Exception("Bridge name not identified correctly")
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
@@ -412,7 +412,7 @@ def test_ap_wpa2_in_different_bridge(dev, apdev):
         time.sleep(0.5)
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
-        hapd = hostapd.add_ap(ifname, params)
+        hapd = hostapd.add_ap(apdev[0], params)
         subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         brname = hapd.get_driver_status_field('brname')
@@ -440,7 +440,7 @@ def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
         ssid = "test-wpa2-psk"
         passphrase = "12345678"
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-        hapd = hostapd.add_ap(ifname, params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         subprocess.call(['brctl', 'addbr', br_ifname])
         subprocess.call(['brctl', 'setfd', br_ifname, '0'])

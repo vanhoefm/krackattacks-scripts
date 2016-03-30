@@ -244,7 +244,7 @@ def test_ap_remove_during_acs(dev, apdev):
     params['channel'] = '0'
     ifname = apdev[0]['ifname']
     hapd = hostapd.HostapdGlobal()
-    hostapd.add_ap(ifname, params)
+    hostapd.add_ap(apdev[0], params)
     hapd.remove(ifname)
 
 def test_ap_remove_during_acs2(dev, apdev):
@@ -286,7 +286,7 @@ def test_ap_remove_during_ht_coex_scan(dev, apdev):
     params['ht_capab'] = "[HT40+]"
     ifname = apdev[0]['ifname']
     hapd = hostapd.HostapdGlobal()
-    hostapd.add_ap(ifname, params)
+    hostapd.add_ap(apdev[0], params)
     hapd.remove(ifname)
 
 def test_ap_remove_during_ht_coex_scan2(dev, apdev):

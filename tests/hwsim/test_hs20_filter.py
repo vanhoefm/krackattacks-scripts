@@ -44,7 +44,7 @@ def _test_ip4_gtk_drop(devs, apdevs, params, dst):
         raise HwsimSkip("kernel doesn't have capability")
 
     ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0]['ifname'], ap_params)
+    hapd = hostapd.add_ap(apdevs[0], ap_params)
     dev.connect('open', key_mgmt="NONE", scan_freq="2432")
 
     with IPAssign(dev.ifname, '10.0.0.1/24'):
@@ -93,7 +93,7 @@ def _test_ip6_gtk_drop(devs, apdevs, params, dst):
         raise HwsimSkip("kernel doesn't have capability")
 
     ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0]['ifname'], ap_params)
+    hapd = hostapd.add_ap(apdevs[0], ap_params)
     dev.connect('open', key_mgmt="NONE", scan_freq="2432")
 
     with IPAssign(dev.ifname, 'fdaa::1/48', ipv6=True):
@@ -142,7 +142,7 @@ def test_ip4_drop_gratuitous_arp(devs, apdevs, params):
         raise HwsimSkip("kernel doesn't have capability")
 
     ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0]['ifname'], ap_params)
+    hapd = hostapd.add_ap(apdevs[0], ap_params)
     dev.connect('open', key_mgmt="NONE", scan_freq="2432")
 
     with IPAssign(dev.ifname, '10.0.0.2/24'):
@@ -185,7 +185,7 @@ def test_ip6_drop_unsolicited_na(devs, apdevs, params):
         raise HwsimSkip("kernel doesn't have capability")
 
     ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0]['ifname'], ap_params)
+    hapd = hostapd.add_ap(apdevs[0], ap_params)
     dev.connect('open', key_mgmt="NONE", scan_freq="2432")
 
     with IPAssign(dev.ifname, 'fdaa::1/48', ipv6=True):

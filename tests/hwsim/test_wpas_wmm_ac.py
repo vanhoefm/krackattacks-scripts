@@ -215,7 +215,7 @@ def test_tspec_not_enabled(dev, apdev):
                "hw_mode": "g",
                "channel": "11",
                "wmm_enabled" : "0" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("wmm_no_ac", key_mgmt="NONE", scan_freq="2462")
     status = dev[0].request("WMM_AC_STATUS")
     if "Not associated to a WMM AP, WMM AC is Disabled" not in status:

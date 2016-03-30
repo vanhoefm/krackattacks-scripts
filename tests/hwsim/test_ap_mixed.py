@@ -24,7 +24,7 @@ def test_ap_mixed_security(dev, apdev):
     params["eap_server"] = "1"
     params["eap_user_file"] = "auth_serv/eap_user.conf"
     params['nas_identifier'] = "nas1.w1.fi"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect(ssid, key_mgmt="WPA-PSK", proto="WPA", pairwise="TKIP",
                    psk=passphrase, scan_freq="2412")

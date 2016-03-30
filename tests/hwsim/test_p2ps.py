@@ -1089,7 +1089,7 @@ def test_p2ps_channel_one_connected(dev, apdev):
     set_no_group_iface(dev[1], 0)
 
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-2.4ghz', "channel": '7' })
         dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2442")
 
@@ -1118,7 +1118,7 @@ def test_p2ps_channel_both_connected_same(dev, apdev):
     dev[2].flush_scan_cache()
 
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-2.4ghz', "channel": '6' })
 
         dev[2].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2437")
@@ -1149,10 +1149,10 @@ def test_p2ps_channel_both_connected_different(dev, apdev):
     set_no_group_iface(dev[1], 0)
 
     try:
-        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+        hapd1 = hostapd.add_ap(apdev[0],
                                { "ssid": 'bss-channel-3', "channel": '3' })
 
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+        hapd2 = hostapd.add_ap(apdev[1],
                                { "ssid": 'bss-channel-10', "channel": '10' })
 
         dev[0].connect("bss-channel-3", key_mgmt="NONE", scan_freq="2422")
@@ -1184,10 +1184,10 @@ def test_p2ps_channel_both_connected_different_mcc(dev, apdev):
     set_no_group_iface(dev[1], 0)
 
     try:
-        hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+        hapd1 = hostapd.add_ap(apdev[0],
                                { "ssid": 'bss-channel-3', "channel": '3' })
 
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+        hapd2 = hostapd.add_ap(apdev[1],
                                { "ssid": 'bss-channel-10', "channel": '10' })
 
         dev[0].connect("bss-channel-3", key_mgmt="NONE", scan_freq="2422")
@@ -1245,7 +1245,7 @@ def test_p2ps_channel_sta_connected_disallow_freq(dev, apdev):
 
     try:
         dev[0].global_request("P2P_SET disallow_freq 2437")
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-channel-6', "channel": '6' })
 
         dev[1].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
@@ -1283,7 +1283,7 @@ def test_p2ps_channel_sta_connected_disallow_freq_mcc(dev, apdev):
 
         try:
             dev[0].global_request("P2P_SET disallow_freq 2437")
-            hapd1 = hostapd.add_ap(apdev[0]['ifname'],
+            hapd1 = hostapd.add_ap(apdev[0],
                                    { "ssid": 'bss-channel-6', "channel": '6' })
 
             wpas.connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")
@@ -1366,7 +1366,7 @@ def test_p2ps_channel_active_go_and_station_same(dev, apdev):
     dev[2].global_request("P2P_SET listen_channel 11")
     dev[1].global_request("P2P_SET listen_channel 11")
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-channel-11', "channel": '11' })
 
         dev[2].connect("bss-channel-11", key_mgmt="NONE", scan_freq="2462")
@@ -1403,7 +1403,7 @@ def test_p2ps_channel_active_go_and_station_different(dev, apdev):
     set_no_group_iface(dev[1], 0)
 
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-channel-2', "channel": '2' })
 
         dev[0].connect("bss-channel-2", key_mgmt="NONE", scan_freq="2417")
@@ -1446,7 +1446,7 @@ def test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
     set_no_group_iface(dev[1], 0)
 
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
+        hapd = hostapd.add_ap(apdev[0],
                               { "ssid": 'bss-channel-6', "channel": '6' })
 
         dev[0].connect("bss-channel-6", key_mgmt="NONE", scan_freq="2437")

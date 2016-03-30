@@ -18,7 +18,7 @@ from test_ap_eap import eap_connect
 def test_pmksa_cache_on_roam_back(dev, apdev):
     """PMKSA cache to skip EAP on reassociation back to same AP"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
@@ -30,7 +30,7 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
     if pmksa['opportunistic'] != '0':
         raise Exception("Unexpected opportunistic PMKSA cache entry")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].dump_monitor()
@@ -82,14 +82,14 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
 def test_pmksa_cache_and_reauth(dev, apdev):
     """PMKSA caching and EAPOL reauthentication"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
                    password="abcdefghijklmnop0123456789abcdef",
                    scan_freq="2412")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].dump_monitor()
@@ -132,7 +132,7 @@ def test_pmksa_cache_and_reauth(dev, apdev):
 def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     """Opportunistic PMKSA caching enabled only on station"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
@@ -144,7 +144,7 @@ def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     if pmksa['opportunistic'] != '0':
         raise Exception("Unexpected opportunistic PMKSA cache entry")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].dump_monitor()
@@ -181,7 +181,7 @@ def test_pmksa_cache_opportunistic(dev, apdev):
     """Opportunistic PMKSA caching"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     params['okc'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
@@ -193,7 +193,7 @@ def test_pmksa_cache_opportunistic(dev, apdev):
     if pmksa['opportunistic'] != '0':
         raise Exception("Unexpected opportunistic PMKSA cache entry")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].dump_monitor()
@@ -231,7 +231,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
     """Opportunistic PMKSA caching with connect API"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     params['okc'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
@@ -245,7 +245,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
     if pmksa['opportunistic'] != '0':
         raise Exception("Unexpected opportunistic PMKSA cache entry")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     wpas.dump_monitor()
@@ -282,7 +282,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
 def test_pmksa_cache_expiration(dev, apdev):
     """PMKSA cache entry expiration"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].request("SET dot11RSNAConfigPMKLifetime 10")
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
@@ -306,7 +306,7 @@ def test_pmksa_cache_expiration(dev, apdev):
 def test_pmksa_cache_expiration_disconnect(dev, apdev):
     """PMKSA cache entry expiration (disconnect)"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].request("SET dot11RSNAConfigPMKLifetime 2")
     dev[0].request("SET dot11RSNAConfigPMKReauthThreshold 100")
@@ -340,7 +340,7 @@ def test_pmksa_cache_and_cui(dev, apdev):
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("cui", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-cui",
@@ -392,7 +392,7 @@ def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
         for key, value in extraparams[0].iteritems():
             params[key] = value
 
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         eap_connect(dev[0], apdev[0], "PAX", identity,
@@ -407,7 +407,7 @@ def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
         params['rsn_preauth_interfaces'] = databridge
         for key, value in extraparams[1].iteritems():
             params[key] = value
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hostapd.add_ap(apdev[1], params)
         bssid1 = apdev[1]['bssid']
         dev[0].scan(freq="2412")
         success = False
@@ -533,14 +533,14 @@ def test_pmksa_cache_disabled(dev, apdev):
     """PMKSA cache disabling on AP"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     params['disable_pmksa_caching'] = '1'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
                    password="abcdefghijklmnop0123456789abcdef",
                    scan_freq="2412")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].dump_monitor()
@@ -569,7 +569,7 @@ def test_pmksa_cache_disabled(dev, apdev):
 def test_pmksa_cache_ap_expiration(dev, apdev):
     """PMKSA cache entry expiring on AP"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-user-session-timeout",
@@ -596,7 +596,7 @@ def test_pmksa_cache_ap_expiration(dev, apdev):
 def test_pmksa_cache_multiple_sta(dev, apdev):
     """PMKSA cache with multiple stations"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-user-session-timeout",
@@ -618,7 +618,7 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
                  password="abcdefghijklmnop0123456789abcdef",
                  scan_freq="2412")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     logger.info("Roam to AP2")
@@ -655,7 +655,7 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
     """Opportunistic PMKSA caching with multiple stations"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     params['okc'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
@@ -665,7 +665,7 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
                     password="abcdefghijklmnop0123456789abcdef", okc=True,
                     scan_freq="2412")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     logger.info("Roam to AP2")
@@ -707,7 +707,7 @@ def test_pmksa_cache_preauth_oom(dev, apdev):
 def _test_pmksa_cache_preauth_oom(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['bridge'] = 'ap-br0'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
     eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
@@ -718,7 +718,7 @@ def _test_pmksa_cache_preauth_oom(dev, apdev):
     params['bridge'] = 'ap-br0'
     params['rsn_preauth'] = '1'
     params['rsn_preauth_interfaces'] = 'ap-br0'
-    hapd = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[1], params)
     bssid1 = apdev[1]['bssid']
 
     tests = [ (1, "rsn_preauth_receive"),
@@ -764,7 +764,7 @@ def test_pmksa_cache_size_limit(dev, apdev):
         params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
         bssid = apdev[0]['bssid']
         params['bssid'] = bssid
-        hostapd.add_ap(apdev[0]['ifname'], params)
+        hostapd.add_ap(apdev[0], params)
 
 def _test_pmksa_cache_size_limit(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
@@ -776,7 +776,7 @@ def _test_pmksa_cache_size_limit(dev, apdev):
         bssid = apdev[0]['bssid'][0:15] + "%02x" % i
         logger.info("Iteration with BSSID " + bssid)
         params['bssid'] = bssid
-        hostapd.add_ap(apdev[0]['ifname'], params)
+        hostapd.add_ap(apdev[0], params)
         dev[0].request("BSS_FLUSH 0")
         dev[0].scan_for_bss(bssid, freq=2412, only_new=True)
         dev[0].select_network(id)
@@ -805,7 +805,7 @@ def test_pmksa_cache_preauth_timeout(dev, apdev):
 def _test_pmksa_cache_preauth_timeout(dev, apdev):
     dev[0].request("SET dot11RSNAConfigSATimeout 1")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])
@@ -820,7 +820,7 @@ def _test_pmksa_cache_preauth_timeout(dev, apdev):
 def test_pmksa_cache_preauth_wpas_oom(dev, apdev):
     """RSN pre-authentication OOM in wpa_supplicant"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])
@@ -837,7 +837,7 @@ def test_pmksa_cache_preauth_wpas_oom(dev, apdev):
 def test_pmksa_cache_ctrl(dev, apdev):
     """PMKSA cache control interface operations"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     addr = dev[0].own_addr()
 

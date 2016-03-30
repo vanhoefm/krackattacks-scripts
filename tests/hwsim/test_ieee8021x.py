@@ -23,7 +23,7 @@ def test_ieee8021x_wep104(dev, apdev):
     params["ieee8021x"] = "1"
     params["wep_key_len_broadcast"] = "13"
     params["wep_key_len_unicast"] = "13"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="PSK",
                    identity="psk.user@example.com",
@@ -39,7 +39,7 @@ def test_ieee8021x_wep40(dev, apdev):
     params["ieee8021x"] = "1"
     params["wep_key_len_broadcast"] = "5"
     params["wep_key_len_unicast"] = "5"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="PSK",
                    identity="psk.user@example.com",
@@ -52,7 +52,7 @@ def test_ieee8021x_open(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     id = dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
                         eap="PSK", identity="psk.user@example.com",
@@ -78,7 +78,7 @@ def test_ieee8021x_static_wep40(dev, apdev):
     params["ssid"] = "ieee8021x-wep"
     params["ieee8021x"] = "1"
     params["wep_key0"] = '"hello"'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="PSK",
                    identity="psk.user@example.com",
@@ -92,7 +92,7 @@ def test_ieee8021x_proto(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[1].request("SET ext_eapol_frame_io 1")
@@ -138,7 +138,7 @@ def test_ieee8021x_eapol_start(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     addr0 = dev[0].own_addr()
 
@@ -172,7 +172,7 @@ def test_ieee8021x_held(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     hapd.set("ext_eapol_frame_io", "1")
@@ -231,7 +231,7 @@ def test_ieee8021x_eapol_key(dev, apdev):
     params["ieee8021x"] = "1"
     params["wep_key_len_broadcast"] = "5"
     params["wep_key_len_unicast"] = "5"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="VENDOR-TEST",
@@ -271,7 +271,7 @@ def test_ieee8021x_reauth(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
                    eap="PSK", identity="psk.user@example.com",
@@ -293,7 +293,7 @@ def test_ieee8021x_set_conf(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
                    eap="PSK", identity="psk.user@example.com",
@@ -346,7 +346,7 @@ def test_ieee8021x_auth_awhile(dev, apdev):
     params["ssid"] = "ieee8021x-open"
     params["ieee8021x"] = "1"
     params['auth_server_port'] = "18129"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     addr0 = dev[0].own_addr()
 
@@ -360,7 +360,7 @@ def test_ieee8021x_auth_awhile(dev, apdev):
     params['ca_cert'] = 'auth_serv/ca.pem'
     params['server_cert'] = 'auth_serv/server.pem'
     params['private_key'] = 'auth_serv/server.key'
-    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd1 = hostapd.add_ap(apdev[1], params)
 
     dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
                    eap="PSK", identity="psk.user@example.com",

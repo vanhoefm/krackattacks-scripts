@@ -16,7 +16,7 @@ def connect(dev, apdev, **kwargs):
     params = { "ssid": "ap-csa",
                "channel": "1" }
     params.update(kwargs)
-    ap = hostapd.add_ap(apdev[0]['ifname'], params)
+    ap = hostapd.add_ap(apdev[0], params)
     dev.connect("ap-csa", key_mgmt="NONE", scan_freq="2412")
     return ap
 

@@ -19,7 +19,7 @@ def test_peerkey(dev, apdev):
     passphrase = "12345678"
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['peerkey'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
     dev[1].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
@@ -38,7 +38,7 @@ def test_peerkey_unknown_peer(dev, apdev):
     passphrase = "12345678"
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['peerkey'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
     dev[1].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
@@ -58,7 +58,7 @@ def test_peerkey_pairwise_mismatch(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['peerkey'] = "1"
     params['rsn_pairwise'] = "TKIP CCMP"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True,
                    pairwise="CCMP")

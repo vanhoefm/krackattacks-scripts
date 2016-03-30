@@ -613,7 +613,7 @@ def clear_pbc_overlap(dev, ifname):
 def test_grpform_pbc_overlap(dev, apdev):
     """P2P group formation during PBC overlap"""
     params = { "ssid": "wps", "eap_server": "1", "wps_state": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     hapd.request("WPS_PBC")
     time.sleep(0.1)
 
@@ -653,7 +653,7 @@ def test_grpform_pbc_overlap_group_iface(dev, apdev):
     # update use this information.
     params = { "ssid": "wps", "eap_server": "1", "wps_state": "1",
                "beacon_int": "15", 'manage_p2p': '1' }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     hapd.request("WPS_PBC")
 
     dev[0].request("SET p2p_no_group_iface 0")

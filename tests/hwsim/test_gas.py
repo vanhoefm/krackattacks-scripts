@@ -106,7 +106,7 @@ def test_gas_generic(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     cmds = [ "foo",
              "00:11:22:33:44:55",
@@ -141,7 +141,7 @@ def test_gas_concurrent_scan(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     # get BSS entry available to allow GAS query
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
@@ -180,7 +180,7 @@ def test_gas_concurrent_connect(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
 
@@ -773,7 +773,7 @@ def test_gas_unknown_adv_proto(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     req = dev[0].request("GAS_REQUEST " + bssid + " 42 000102000101")
@@ -864,7 +864,7 @@ def test_gas_missing_payload(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
 
@@ -989,7 +989,7 @@ def test_gas_anqp_extra_elements(dev, apdev):
                               "275:01020304",
                               "60000:01",
                               "299:0102" ] }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)

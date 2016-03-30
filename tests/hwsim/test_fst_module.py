@@ -2344,7 +2344,7 @@ def fst_start_and_connect(apdev, group, sgroup):
 
     params = { "ssid": "fst_11a", "hw_mode": "a", "channel": "36",
                "country_code": "US" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     fst_attach_ap(hglobal, apdev[0]['ifname'], group)
 
@@ -2354,7 +2354,7 @@ def fst_start_and_connect(apdev, group, sgroup):
 
     params = { "ssid": "fst_11g", "hw_mode": "g", "channel": "1",
                "country_code": "US" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     fst_attach_ap(hglobal, apdev[1]['ifname'], group)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')

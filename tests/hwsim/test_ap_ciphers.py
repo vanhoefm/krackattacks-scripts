@@ -78,7 +78,7 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
                "wpa": "1",
                "wpa_key_mgmt": "WPA-PSK",
                "wpa_pairwise": "TKIP" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("tkip-countermeasures", psk="12345678",
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
@@ -108,7 +108,7 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
                "wpa": "1",
                "wpa_key_mgmt": "WPA-PSK",
                "wpa_pairwise": "TKIP" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
     if not os.path.exists(testfile):
@@ -161,7 +161,7 @@ def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
                "wpa_key_mgmt": "WPA-PSK",
                "rsn_pairwise": "CCMP",
                "wpa_pairwise": "TKIP" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, proto="WPA2",
                    pairwise="CCMP", group="TKIP", scan_freq="2412")
     status = dev[0].get_status()

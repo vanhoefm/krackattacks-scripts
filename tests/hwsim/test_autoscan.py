@@ -13,7 +13,7 @@ import hostapd
 
 def test_autoscan_periodic(dev, apdev):
     """autoscan_periodic"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "autoscan" })
+    hostapd.add_ap(apdev[0], { "ssid": "autoscan" })
 
     try:
         if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
@@ -53,7 +53,7 @@ def test_autoscan_periodic(dev, apdev):
 
 def test_autoscan_exponential(dev, apdev):
     """autoscan_exponential"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "autoscan" })
+    hostapd.add_ap(apdev[0], { "ssid": "autoscan" })
 
     try:
         if "OK" not in dev[0].request("AUTOSCAN exponential:2:10"):

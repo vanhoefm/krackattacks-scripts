@@ -127,7 +127,7 @@ def test_dbus_getall(dev, apdev):
     if len(res) != 0:
         raise Exception("Unexpected Networks entry: " + str(res))
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     bssid = apdev[0]['bssid']
     dev[0].scan_for_bss(bssid, freq=2412)
     id = dev[0].add_network()
@@ -476,7 +476,7 @@ def test_dbus_wps_oom(dev, apdev):
         if_obj.Get(WPAS_DBUS_IFACE, "State",
                    dbus_interface=dbus.PROPERTIES_IFACE)
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     bssid = apdev[0]['bssid']
     dev[0].scan_for_bss(bssid, freq=2412)
 
@@ -991,7 +991,7 @@ def test_dbus_scan(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
 
     class TestDbusScan(TestDbus):
         def __init__(self, bus):
@@ -1097,7 +1097,7 @@ def test_dbus_connect(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):
@@ -1200,7 +1200,7 @@ def test_dbus_connect_psk_mem(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):
@@ -1257,7 +1257,7 @@ def test_dbus_connect_oom(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):
@@ -1417,7 +1417,7 @@ def test_dbus_connect_eap(dev, apdev):
     params = hostapd.radius_params()
     params["ssid"] = ssid
     params["ieee8021x"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):
@@ -1935,7 +1935,7 @@ def test_dbus_tdls_invalid(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
     connect_2sta_open(dev, hapd)
     addr1 = dev[1].p2p_interface_addr()
 
@@ -1992,7 +1992,7 @@ def test_dbus_tdls(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
     connect_2sta_open(dev, hapd)
 
     addr1 = dev[1].p2p_interface_addr()
@@ -4929,7 +4929,7 @@ def test_dbus_connect_wpa_eap(dev, apdev):
     params = hostapd.wpa_eap_params(ssid=ssid)
     params["wpa"] = "3"
     params["rsn_pairwise"] = "CCMP"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):
@@ -5033,7 +5033,7 @@ def test_dbus_expectdisconnect(dev, apdev):
     wpas = dbus.Interface(wpas_obj, WPAS_DBUS_SERVICE)
 
     params = { "ssid": "test-open" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
 
     # This does not really verify the behavior other than by going through the
@@ -5172,7 +5172,7 @@ def test_dbus_assoc_reject(dev, apdev):
     ssid = "test-open"
     params = { "ssid": ssid,
                "max_listen_interval": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):

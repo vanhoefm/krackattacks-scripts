@@ -31,7 +31,7 @@ def test_wext_open(dev, apdev):
     wpas = get_wext_interface()
 
     params = { "ssid": "wext-open" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas.connect("wext-open", key_mgmt="NONE")
     hwsim_utils.test_connectivity(wpas, hapd)
@@ -41,7 +41,7 @@ def test_wext_wpa2_psk(dev, apdev):
     wpas = get_wext_interface()
 
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas.connect("wext-wpa2-psk", psk="12345678")
     hwsim_utils.test_connectivity(wpas, hapd)
@@ -58,7 +58,7 @@ def test_wext_wpa_psk(dev, apdev):
     wpas = get_wext_interface()
 
     params = hostapd.wpa_params(ssid="wext-wpa-psk", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
     if not os.path.exists(testfile):
         wpas.close_ctrl()
@@ -85,7 +85,7 @@ def test_wext_pmksa_cache(dev, apdev):
     wpas = get_wext_interface()
 
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     wpas.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk user",
@@ -97,7 +97,7 @@ def test_wext_pmksa_cache(dev, apdev):
     if pmksa['opportunistic'] != '0':
         raise Exception("Unexpected opportunistic PMKSA cache entry")
 
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     wpas.dump_monitor()
@@ -150,7 +150,7 @@ def test_wext_wep_open_auth(dev, apdev):
     """WEP Open System authentication"""
     wpas = get_wext_interface()
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep-open",
                             "wep_key0": '"hello"' })
     wpas.connect("wep-open", key_mgmt="NONE", wep_key0='"hello"',
@@ -163,7 +163,7 @@ def test_wext_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""
     wpas = get_wext_interface()
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep-shared-key",
                             "wep_key0": '"hello12345678"',
                             "auth_algs": "2" })
@@ -182,7 +182,7 @@ def test_wext_pmf(dev, apdev):
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas.connect("wext-wpa2-psk", psk="12345678", ieee80211w="1",
                  key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
@@ -197,10 +197,10 @@ def test_wext_scan_hidden(dev, apdev):
     """WEXT with hidden SSID"""
     wpas = get_wext_interface()
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
-                                                "ignore_broadcast_ssid": "1" })
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2",
-                                                 "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "ignore_broadcast_ssid": "1" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "test-scan2",
+                                       "ignore_broadcast_ssid": "1" })
 
     id1 = wpas.connect("test-scan", key_mgmt="NONE", scan_ssid="1",
                        only_add_network=True)
@@ -234,7 +234,7 @@ def test_wext_rfkill(dev, apdev):
 
     wpas = get_wext_interface()
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
     try:
         logger.info("rfkill block")

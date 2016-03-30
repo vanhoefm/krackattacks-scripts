@@ -82,7 +82,7 @@ def test_ext_radio_work(dev, apdev):
 def test_radio_work_cancel(dev, apdev):
     """Radio work items cancelled on interface removal"""
     params = hostapd.wpa2_params(ssid="radio", passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     wpas.scan(freq="2412")

@@ -311,7 +311,7 @@ def test_wpas_ctrl_dup_network(dev, apdev):
     ssid = "target"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     src = dev[0].connect("another", psk=passphrase, scan_freq="2412",
                          only_add_network=True)
@@ -344,7 +344,7 @@ def test_wpas_ctrl_dup_network_global(dev, apdev):
     ssid = "target"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     src = dev[0].connect("another", psk=passphrase, scan_freq="2412",
                          only_add_network=True)
@@ -783,8 +783,8 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
         if "OK" not in dev[2].request("SET bssid_filter " + apdev[0]['bssid']):
             raise Exception("Failed to set bssid_filter")
         params = { "ssid": "test" }
-        hostapd.add_ap(apdev[0]['ifname'], params)
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hostapd.add_ap(apdev[0], params)
+        hostapd.add_ap(apdev[1], params)
         dev[2].scan_for_bss(apdev[0]['bssid'], freq="2412")
         dev[2].scan(freq="2412")
         bss = dev[2].get_bss(apdev[0]['bssid'])
@@ -817,7 +817,7 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
 def test_wpas_ctrl_disallow_aps(dev, apdev):
     """wpa_supplicant ctrl_iface disallow_aps"""
     params = { "ssid": "test" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     if "FAIL" not in dev[0].request("SET disallow_aps bssid "):
         raise Exception("Unexpected success on invalid disallow_aps")
@@ -835,7 +835,7 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
         raise Exception("Unexpected success on invalid disallow_aps")
 
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
     dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     dev[0].dump_monitor()
     if "OK" not in dev[0].request("SET disallow_aps bssid 00:11:22:33:44:55 bssid 00:22:33:44:55:66"):
@@ -1110,7 +1110,7 @@ def test_wpas_ctrl_log_level(dev):
 def test_wpas_ctrl_enable_disable_network(dev, apdev):
     """wpa_supplicant ctrl_iface ENABLE/DISABLE_NETWORK"""
     params = { "ssid": "test" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     id = dev[0].connect("test", key_mgmt="NONE", scan_freq="2412",
                         only_add_network=True)
@@ -1251,7 +1251,7 @@ def test_wpas_ctrl_roam(dev, apdev):
     if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44:55"):
         raise Exception("Unexpected success")
     params = { "ssid": "test" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     id = dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44:55"):
         raise Exception("Unexpected success")
@@ -1271,9 +1271,9 @@ def test_wpas_ctrl_ipaddr(dev, apdev):
 def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
     params = { "ssid": "test" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     params = { "ssid": "test2", "radio_measurements": "1" }
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
 
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
@@ -1485,7 +1485,7 @@ def test_wpas_ctrl_dump(dev, apdev):
 
 def test_wpas_ctrl_interface_add(dev, apdev):
     """wpa_supplicant INTERFACE_ADD/REMOVE with vif creation/removal"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
@@ -1500,7 +1500,7 @@ def test_wpas_ctrl_interface_add(dev, apdev):
 
 def test_wpas_ctrl_interface_add_sta(dev, apdev):
     """wpa_supplicant INTERFACE_ADD/REMOVE with STA vif creation/removal"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     ifname = "test-" + dev[0].ifname
     dev[0].interface_add(ifname, create=True, if_type='sta')
     wpas = WpaSupplicant(ifname=ifname)
@@ -1550,7 +1550,7 @@ def test_wpas_ctrl_interface_add_many(dev, apdev):
             dev[0].global_request("INTERFACE_REMOVE " + ifname)
 
 def _test_wpas_ctrl_interface_add_many(dev, apdev):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].dump_monitor()
@@ -1579,7 +1579,7 @@ def test_wpas_ctrl_interface_add2(dev, apdev):
         subprocess.call(['iw', 'dev', ifname, 'del'])
 
 def _test_wpas_ctrl_interface_add2(dev, apdev, ifname):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
@@ -1918,7 +1918,7 @@ def test_wpas_ctrl_sched_scan_plans(dev, apdev):
 
 def test_wpas_ctrl_signal_monitor(dev, apdev):
     """wpa_supplicant SIGNAL_MONITOR command"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bgscan="simple:1:-45:2")

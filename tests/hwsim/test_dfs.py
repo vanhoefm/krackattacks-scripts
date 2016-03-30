@@ -222,7 +222,7 @@ def test_dfs_radar(dev, apdev):
 def test_dfs_radar_on_non_dfs_channel(dev, apdev):
     """DFS radar detection test code on non-DFS channel"""
     params = { "ssid": "radar" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     hapd.request("RADAR DETECTED freq=5260 ht_enabled=1 chan_width=1")
     hapd.request("RADAR DETECTED freq=2412 ht_enabled=1 chan_width=1")

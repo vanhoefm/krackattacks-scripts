@@ -21,7 +21,7 @@ def test_ap_fragmentation_rts_set_high(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['rts_threshold'] = "1000"
     params['fragm_threshold'] = "2000"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
@@ -31,7 +31,7 @@ def test_ap_fragmentation_open(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['fragm_threshold'] = "1000"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
@@ -41,7 +41,7 @@ def test_ap_fragmentation_wpa2(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['fragm_threshold'] = "1000"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
@@ -52,7 +52,7 @@ def test_ap_vendor_elements(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['vendor_elements'] = "dd0411223301"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     bss = dev[0].get_bss(bssid)
     if "dd0411223301" not in bss['ie']:
@@ -74,7 +74,7 @@ def test_ap_element_parse(dev, apdev):
     ssid = "test-wpa2-psk"
     params = { 'ssid': ssid,
                'vendor_elements': "380501020304059e009e009e009e009e009e00" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     bss = dev[0].get_bss(bssid)
     if "38050102030405" not in bss['ie']:
@@ -86,7 +86,7 @@ def test_ap_element_parse_oom(dev, apdev):
     ssid = "test-wpa2-psk"
     params = { 'ssid': ssid,
                'vendor_elements': "dd0d506f9a0a00000600411c440028" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     with alloc_fail(dev[0], 1, "wpabuf_alloc;ieee802_11_vendor_ie_concat"):
         bss = dev[0].get_bss(bssid)
@@ -104,7 +104,7 @@ def test_ap_country(dev, apdev):
         params['ieee80211d'] = '1'
         params['hw_mode'] = 'a'
         params['channel'] = '36'
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         dev[0].connect(ssid, psk=passphrase, scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
@@ -120,7 +120,7 @@ def test_ap_acl_accept(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['accept_mac_file'] = "hostapd.macaddr"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
@@ -141,7 +141,7 @@ def test_ap_acl_deny(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['deny_mac_file'] = "hostapd.macaddr"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
     dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
@@ -157,7 +157,7 @@ def test_ap_wds_sta(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wds_sta'] = "1"
     params['wds_bridge'] = "wds-br0"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     try:
         subprocess.call(['brctl', 'addbr', 'wds-br0'])
@@ -178,7 +178,7 @@ def test_ap_inactivity_poll(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['ap_max_inactivity'] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].request("DISCONNECT")
@@ -197,7 +197,7 @@ def test_ap_inactivity_disconnect(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['ap_max_inactivity'] = "1"
     params['skip_inactivity_poll'] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].request("DISCONNECT")
@@ -215,7 +215,7 @@ def test_ap_basic_rates(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['basic_rates'] = "10 20 55 110 60 90 120 180 240 360 480 540"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 
 def test_ap_short_preamble(dev, apdev):
@@ -224,7 +224,7 @@ def test_ap_short_preamble(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['preamble'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 
 def test_ap_spectrum_management_required(dev, apdev):
@@ -240,7 +240,7 @@ def test_ap_spectrum_management_required(dev, apdev):
     params['spectrum_mgmt_required'] = "1"
     try:
         hapd = None
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         dev[0].connect(ssid, key_mgmt="NONE", scan_freq="5180")
     finally:
         dev[0].request("DISCONNECT")
@@ -255,7 +255,7 @@ def test_ap_max_listen_interval(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['max_listen_interval'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
     ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
     if ev is None:
@@ -269,7 +269,7 @@ def test_ap_max_num_sta(dev, apdev):
     params = {}
     params['ssid'] = ssid
     params['max_num_sta'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
@@ -286,7 +286,7 @@ def test_ap_max_num_sta_no_probe_resp(dev, apdev, params):
     params['beacon_int'] = "2000"
     params['max_num_sta'] = "1"
     params['no_probe_resp_if_max_sta'] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     dev[0].scan(freq=2412, type="ONLY")
     dev[0].scan(freq=2412, type="ONLY")
@@ -318,6 +318,6 @@ def test_ap_tx_queue_params(dev, apdev):
     params['tx_queue_data1_cwmin'] = "7"
     params['tx_queue_data1_cwmax'] = "1023"
     params['tx_queue_data1_burst'] = "2"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)

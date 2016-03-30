@@ -37,7 +37,7 @@ def test_ap_vht80(dev, apdev):
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "1",
                    "vht_oper_centr_freq_seg0_idx": "42" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         bssid = apdev[0]['bssid']
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
@@ -119,7 +119,7 @@ def test_ap_vht80_params(dev, apdev):
                    "vht_capab": "[MAX-MPDU-11454][RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP0]",
                    "vht_oper_centr_freq_seg0_idx": "42",
                    "require_vht": "1" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         dev[1].connect("vht", key_mgmt="NONE", scan_freq="5180",
                        disable_vht="1", wait_connect=False)
@@ -161,7 +161,7 @@ def test_ap_vht80_invalid(dev, apdev):
                    "vht_oper_centr_freq_seg1_idx": "155",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         # This fails due to unexpected seg1 configuration
         ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
         if ev is None:
@@ -191,7 +191,7 @@ def test_ap_vht80_invalid2(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "46",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         # This fails due to invalid seg0 configuration
         ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
         if ev is None:
@@ -276,7 +276,7 @@ def test_ap_vht_capab_not_supported(dev, apdev):
                    "vht_capab": "[MAX-MPDU-7991][MAX-MPDU-11454][VHT160][VHT160-80PLUS80][RXLDPC][SHORT-GI-80][SHORT-GI-160][TX-STBC-2BY1][RX-STBC-1][RX-STBC-12][RX-STBC-123][RX-STBC-1234][SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][BF-ANTENNA-3][BF-ANTENNA-4][SOUNDING-DIMENSION-2][SOUNDING-DIMENSION-3][SOUNDING-DIMENSION-4][MU-BEAMFORMER][VHT-TXOP-PS][HTC-VHT][MAX-A-MPDU-LEN-EXP0][MAX-A-MPDU-LEN-EXP7][VHT-LINK-ADAPT2][VHT-LINK-ADAPT3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]",
                    "vht_oper_centr_freq_seg0_idx": "42",
                    "require_vht": "1" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
         if ev is None:
             raise Exception("Startup failure not reported")
@@ -302,7 +302,7 @@ def test_ap_vht160(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "50",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
 
         ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
         if "DFS-CAC-START" not in ev:
@@ -328,7 +328,7 @@ def test_ap_vht160(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "114",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
+        hapd2 = hostapd.add_ap(apdev[1], params, wait_enabled=False)
 
         ev = wait_dfs_event(hapd2, "DFS-CAC-START", 5)
         if "DFS-CAC-START" not in ev:
@@ -417,7 +417,7 @@ def test_ap_vht160_no_dfs(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "114",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         ev = hapd.wait_event(["AP-ENABLED"], timeout=2)
         if not ev:
             cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
@@ -463,7 +463,7 @@ def test_ap_vht80plus80(dev, apdev):
                    "vht_oper_centr_freq_seg1_idx": "155",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         # This will actually fail since DFS on 80+80 is not yet supported
         ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
         # ignore result to avoid breaking the test once 80+80 DFS gets enabled
@@ -478,7 +478,7 @@ def test_ap_vht80plus80(dev, apdev):
                    "vht_oper_chwidth": "3",
                    "vht_oper_centr_freq_seg0_idx": "42",
                    "vht_oper_centr_freq_seg1_idx": "155" }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
+        hapd2 = hostapd.add_ap(apdev[1], params, wait_enabled=False)
 
         ev = hapd2.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=5)
         if not ev:
@@ -534,7 +534,7 @@ def test_ap_vht80plus80_invalid(dev, apdev):
                    "vht_oper_centr_freq_seg1_idx": "0",
                    'ieee80211d': '1',
                    'ieee80211h': '1' }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         # This fails due to missing(invalid) seg1 configuration
         ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
         if ev is None:
@@ -563,7 +563,7 @@ def test_ap_vht80_csa(dev, apdev):
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "1",
                    "vht_oper_centr_freq_seg0_idx": "155" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5745")
         hwsim_utils.test_connectivity(dev[0], hapd)
@@ -614,7 +614,7 @@ def test_ap_vht_on_24ghz(dev, apdev):
                "vht_oper_chwidth": "0",
                "vht_oper_centr_freq_seg0_idx": "1"
     }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     try:
         if "OK" not in dev[0].request("VENDOR_ELEM_ADD 13 dd1300904c0400bf0c3240820feaff0000eaff0000"):
             raise Exception("Failed to add vendor element")
@@ -642,7 +642,7 @@ def test_prefer_vht40(dev, apdev):
                    "channel": "36",
                    "ieee80211n": "1",
                    "ht_capab": "[HT40+]" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         bssid = apdev[0]['bssid']
 
         params = { "ssid": "test",
@@ -656,7 +656,7 @@ def test_prefer_vht40(dev, apdev):
                    "vht_oper_chwidth": "0",
                    "vht_oper_centr_freq_seg0_idx": "0",
                  }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1], params)
         bssid2 = apdev[1]['bssid']
 
         dev[0].scan_for_bss(bssid, freq=5180)
@@ -694,7 +694,7 @@ def test_ap_vht80_pwr_constraint(dev, apdev):
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "1",
                    "vht_oper_centr_freq_seg0_idx": "42" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
     except Exception, e:

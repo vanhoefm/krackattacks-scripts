@@ -54,7 +54,7 @@ def test_suite_b(dev, apdev):
     check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B", ieee80211w="2",
                    openssl_ciphers="SUITEB128",
@@ -103,7 +103,7 @@ def test_suite_b_radius(dev, apdev):
     check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_as_params()
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
 
     params = { "ssid": "test-suite-b",
                "wpa": "2",
@@ -116,7 +116,7 @@ def test_suite_b_radius(dev, apdev):
                'auth_server_port': "18129",
                'auth_server_shared_secret': "radius",
                'nas_identifier': "nas.w1.fi" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B", ieee80211w="2",
                    openssl_ciphers="SUITEB128",
@@ -156,7 +156,7 @@ def test_suite_b_192(dev, apdev):
     check_suite_b_192_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_192_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
                    ieee80211w="2",
@@ -196,7 +196,7 @@ def test_suite_b_192_radius(dev, apdev):
     params['server_cert'] = 'auth_serv/ec2-server.pem'
     params['private_key'] = 'auth_serv/ec2-server.key'
     params['openssl_ciphers'] = 'SUITEB192'
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hostapd.add_ap(apdev[1], params)
 
     params = { "ssid": "test-suite-b",
                "wpa": "2",
@@ -209,7 +209,7 @@ def test_suite_b_192_radius(dev, apdev):
                'auth_server_port': "18129",
                'auth_server_shared_secret': "radius",
                'nas_identifier': "nas.w1.fi" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
                    ieee80211w="2",
@@ -225,7 +225,7 @@ def test_suite_b_pmkid_failure(dev, apdev):
     check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     with fail_test(dev[0], 1, "rsn_pmkid_suite_b"):
         dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B",
@@ -242,7 +242,7 @@ def test_suite_b_192_pmkid_failure(dev, apdev):
     check_suite_b_192_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_192_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     with fail_test(dev[0], 1, "rsn_pmkid_suite_b"):
         dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
@@ -259,7 +259,7 @@ def test_suite_b_mic_failure(dev, apdev):
     check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     with fail_test(dev[0], 1, "wpa_eapol_key_mic"):
         dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B",
@@ -278,7 +278,7 @@ def test_suite_b_192_mic_failure(dev, apdev):
     check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_192_ap_params()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     with fail_test(dev[0], 1, "wpa_eapol_key_mic"):
         dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",

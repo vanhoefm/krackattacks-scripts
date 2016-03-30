@@ -64,7 +64,7 @@ def check_scan_retry(dev, params, bssid):
 
 def test_scan(dev, apdev):
     """Control interface behavior on scan parameters"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
     logger.info("Full scan")
@@ -88,8 +88,8 @@ def test_scan(dev, apdev):
 
 def test_scan_tsf(dev, apdev):
     """Scan and TSF updates from Beacon/Probe Response frames"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
-                                         'beacon_int': "100" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                               'beacon_int': "100" })
     bssid = apdev[0]['bssid']
 
     tsf = []
@@ -112,7 +112,7 @@ def test_scan_tsf(dev, apdev):
 
 def test_scan_only(dev, apdev):
     """Control interface behavior on scan parameters with type=only"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
     logger.info("Full scan")
@@ -136,7 +136,7 @@ def test_scan_only(dev, apdev):
 
 def test_scan_external_trigger(dev, apdev):
     """Avoid operations during externally triggered scan"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
     subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger'])
     check_scan(dev[0], "use_id=1", other_started=True)
@@ -147,7 +147,7 @@ def test_scan_bss_expiration_count(dev, apdev):
         raise Exception("Invalid BSS_EXPIRE_COUNT accepted")
     if "OK" not in dev[0].request("BSS_EXPIRE_COUNT 2"):
         raise Exception("BSS_EXPIRE_COUNT failed")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
     dev[0].scan(freq="2412", only_new=True)
     if bssid not in dev[0].request("SCAN_RESULTS"):
@@ -167,7 +167,7 @@ def test_scan_bss_expiration_age(dev, apdev):
             raise Exception("Invalid BSS_EXPIRE_AGE accepted")
         if "OK" not in dev[0].request("BSS_EXPIRE_AGE 10"):
             raise Exception("BSS_EXPIRE_AGE failed")
-        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+        hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
         bssid = apdev[0]['bssid']
         # Allow couple more retries to avoid reporting errors during heavy load
         for i in range(5):
@@ -195,9 +195,9 @@ def test_scan_filter(dev, apdev):
         if "OK" not in dev[0].request("SET filter_ssids 1"):
             raise Exception("SET failed")
         id = dev[0].connect("test-scan", key_mgmt="NONE", only_add_network=True)
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+        hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
         bssid = apdev[0]['bssid']
-        hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2" })
+        hostapd.add_ap(apdev[1], { "ssid": "test-scan2" })
         bssid2 = apdev[1]['bssid']
         dev[0].scan(freq="2412", only_new=True)
         if bssid not in dev[0].request("SCAN_RESULTS"):
@@ -241,9 +241,9 @@ def test_scan_int(dev, apdev):
 
 def test_scan_bss_operations(dev, apdev):
     """Control interface behavior on BSS parameters"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test2-scan" })
+    hostapd.add_ap(apdev[1], { "ssid": "test2-scan" })
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan(freq="2412")
@@ -348,7 +348,7 @@ def test_scan_and_interface_disabled(dev, apdev):
 
 def test_scan_for_auth(dev, apdev):
     """cfg80211 workaround with scan-for-auth"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     # Block sme-connect radio work with an external radio work item, so that
     # SELECT_NETWORK can decide to use fast associate without a new scan while
@@ -378,7 +378,7 @@ def test_scan_for_auth(dev, apdev):
 
 def test_scan_for_auth_fail(dev, apdev):
     """cfg80211 workaround with scan-for-auth failing"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     # Block sme-connect radio work with an external radio work item, so that
     # SELECT_NETWORK can decide to use fast associate without a new scan while
@@ -416,7 +416,7 @@ def test_scan_for_auth_fail(dev, apdev):
 def test_scan_for_auth_wep(dev, apdev):
     """cfg80211 scan-for-auth workaround with WEP keys"""
     dev[0].flush_scan_cache()
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep", "wep_key0": '"abcde"',
                             "auth_algs": "2" })
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
@@ -448,8 +448,8 @@ def test_scan_for_auth_wep(dev, apdev):
 
 def test_scan_hidden(dev, apdev):
     """Control interface behavior on scan parameters"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
-                                                "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "ignore_broadcast_ssid": "1" })
     bssid = apdev[0]['bssid']
 
     check_scan(dev[0], "freq=2412 use_id=1")
@@ -488,9 +488,9 @@ def test_scan_hidden(dev, apdev):
 
 def test_scan_and_bss_entry_removed(dev, apdev):
     """Last scan result and connect work processing on BSS entry update"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
-                                                "eap_server": "1",
-                                                "wps_state": "2" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "eap_server": "1",
+                                      "wps_state": "2" })
     bssid = apdev[0]['bssid']
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
@@ -619,13 +619,13 @@ def test_scan_setband(dev, apdev):
                    "hw_mode": "a",
                    "channel": "36",
                    "country_code": "US" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         bssid = apdev[0]['bssid']
 
         params = { "ssid": "test-setband",
                    "hw_mode": "g",
                    "channel": "1" }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1], params)
         bssid2 = apdev[1]['bssid']
 
         if "FAIL" not in dev[0].request("SET setband FOO"):
@@ -688,8 +688,8 @@ def test_scan_hidden_many(dev, apdev):
         dev[0].request("SCAN_INTERVAL 5")
 
 def _test_scan_hidden_many(dev, apdev):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan-ssid",
-                                                "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan-ssid",
+                                      "ignore_broadcast_ssid": "1" })
     bssid = apdev[0]['bssid']
 
     dev[0].request("SCAN_INTERVAL 1")
@@ -729,7 +729,7 @@ def test_scan_random_mac(dev, apdev, params):
         dev[0].request("MAC_RAND_SCAN all enable=0")
 
 def _test_scan_random_mac(dev, apdev, params):
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
     tests = [ "",
@@ -777,7 +777,7 @@ def _test_scan_random_mac(dev, apdev, params):
 
 def test_scan_trigger_failure(dev, apdev):
     """Scan trigger to the driver failing"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
     if "OK" not in dev[0].request("SET test_failure 1"):
@@ -821,8 +821,8 @@ def test_scan_trigger_failure(dev, apdev):
 def test_scan_specify_ssid(dev, apdev):
     """Control interface behavior on scan SSID parameter"""
     dev[0].flush_scan_cache()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-hidden",
-                                                "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-hidden",
+                                      "ignore_broadcast_ssid": "1" })
     bssid = apdev[0]['bssid']
     check_scan(dev[0], "freq=2412 use_id=1 ssid 414243")
     bss = dev[0].get_bss(bssid)
@@ -896,12 +896,12 @@ def _test_scan_ap_scan_2_ap_mode(dev, apdev):
 def test_scan_bss_expiration_on_ssid_change(dev, apdev):
     """BSS entry expiration when AP changes SSID"""
     dev[0].flush_scan_cache()
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
 
     hapd.request("DISABLE")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     if "OK" not in dev[0].request("BSS_EXPIRE_COUNT 3"):
         raise Exception("BSS_EXPIRE_COUNT failed")
     dev[0].scan(freq="2412")
@@ -980,7 +980,7 @@ def test_scan_abort(dev, apdev):
 
 def test_scan_abort_on_connect(dev, apdev):
     """Aborting a full scan on connection request"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")

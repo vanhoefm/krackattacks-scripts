@@ -111,11 +111,11 @@ def test_dbus_old_scan(dev, apdev):
     """The old D-Bus interface - scanning"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
 
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['wpa'] = '3'
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
 
     class TestDbusScan(TestDbus):
         def __init__(self, bus):
@@ -401,7 +401,7 @@ def test_dbus_old_connect(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     for p in [ "/no/where/to/be/found",
                path + "/Networks/12345",
@@ -570,7 +570,7 @@ def test_dbus_old_connect_eap(dev, apdev):
 
     ssid = "test-wpa2-eap"
     params = hostapd.wpa2_eap_params(ssid=ssid)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     class TestDbusConnect(TestDbus):
         def __init__(self, bus):

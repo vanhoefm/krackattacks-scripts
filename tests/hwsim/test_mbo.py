@@ -14,8 +14,8 @@ import time
 from tshark import run_tshark
 
 def test_mbo_assoc_disallow(dev, apdev, params):
-    hapd1 = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "MBO", "mbo": "1" })
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "MBO", "mbo": "1" })
+    hapd1 = hostapd.add_ap(apdev[0], { "ssid": "MBO", "mbo": "1" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "MBO", "mbo": "1" })
 
     logger.debug("Set mbo_assoc_disallow with invalid value")
     if "FAIL" not in hapd1.request("SET mbo_assoc_disallow 2"):
@@ -63,7 +63,7 @@ def test_mbo_cell_capa_update(dev, apdev):
     """MBO cellular data capability update"""
     ssid = "test-wnm-mbo"
     params = { 'ssid': ssid, 'mbo': '1' }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
 	raise Exception("Failed to set STA as cellular data capable")
@@ -93,7 +93,7 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
     params['mbo'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
 	raise Exception("Failed to set STA as cellular data capable")
@@ -120,7 +120,7 @@ def test_mbo_non_pref_chan(dev, apdev):
     """MBO non-preferred channel list"""
     ssid = "test-wnm-mbo"
     params = { 'ssid': ssid, 'mbo': '1' }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
 	raise Exception("Failed to set non-preferred channel list")
@@ -203,7 +203,7 @@ def test_mbo_sta_supp_op_classes(dev, apdev):
     """MBO STA supported operating classes"""
     ssid = "test-wnm-mbo"
     params = { 'ssid': ssid, 'mbo': '1' }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 

@@ -30,7 +30,7 @@ def test_rfkill_open(dev, apdev):
     """rfkill block/unblock during open mode connection"""
     rfk = get_rfkill(dev[0])
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     try:
         logger.info("rfkill block")
@@ -62,7 +62,7 @@ def test_rfkill_wpa2_psk(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     try:
         logger.info("rfkill block")
@@ -182,7 +182,7 @@ def test_rfkill_p2p_discovery_p2p_dev(dev, apdev):
 
 def test_rfkill_hostapd(dev, apdev):
     """rfkill block/unblock during and prior to hostapd operations"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
 
     rfk = get_rfkill(hapd)
 
@@ -211,7 +211,7 @@ def test_rfkill_hostapd(dev, apdev):
         hglobal.flush()
         hglobal.remove(apdev[0]['ifname'])
 
-        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open2" },
+        hapd = hostapd.add_ap(apdev[0], { "ssid": "open2" },
                               no_enable=True)
         if "FAIL" not in hapd.request("ENABLE"):
             raise Exception("ENABLE succeeded unexpectedly (rfkill)")

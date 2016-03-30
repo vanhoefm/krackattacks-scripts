@@ -9,7 +9,7 @@ import hwsim_utils
 
 def test_wep_open_auth(dev, apdev):
     """WEP Open System authentication"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep-open",
                             "wep_key0": '"hello"' })
     dev[0].flush_scan_cache()
@@ -27,7 +27,7 @@ def test_wep_open_auth(dev, apdev):
 
 def test_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep-shared-key",
                             "wep_key0": '"hello12345678"',
                             "auth_algs": "2" })
@@ -41,7 +41,7 @@ def test_wep_shared_key_auth(dev, apdev):
 
 def test_wep_shared_key_auth_not_allowed(dev, apdev):
     """WEP Shared Key authentication not allowed"""
-    hostapd.add_ap(apdev[0]['ifname'],
+    hostapd.add_ap(apdev[0],
                    { "ssid": "wep-shared-key",
                      "wep_key0": '"hello12345678"',
                      "auth_algs": "1" })
@@ -54,7 +54,7 @@ def test_wep_shared_key_auth_not_allowed(dev, apdev):
 
 def test_wep_shared_key_auth_multi_key(dev, apdev):
     """WEP Shared Key authentication with multiple keys"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "wep-shared-key",
                             "wep_key0": '"hello12345678"',
                             "wep_key1": '"other12345678"',

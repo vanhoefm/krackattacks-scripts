@@ -16,7 +16,7 @@ from wpasupplicant import WpaSupplicant
 def test_sta_dynamic(dev, apdev):
     """Dynamically added wpa_supplicant interface"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
@@ -26,7 +26,7 @@ def test_sta_dynamic(dev, apdev):
 
 def test_sta_ap_scan_0(dev, apdev):
     """Dynamically added wpa_supplicant interface with AP_SCAN 0 connection"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test" })
+    hostapd.add_ap(apdev[0], { "ssid": "test" })
     bssid = apdev[0]['bssid']
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
@@ -48,7 +48,7 @@ def test_sta_ap_scan_0(dev, apdev):
 
 def test_sta_ap_scan_2(dev, apdev):
     """Dynamically added wpa_supplicant interface with AP_SCAN 2 connection"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test" })
+    hostapd.add_ap(apdev[0], { "ssid": "test" })
     bssid = apdev[0]['bssid']
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
@@ -80,7 +80,7 @@ def test_sta_ap_scan_2(dev, apdev):
 
 def test_sta_ap_scan_2b(dev, apdev):
     """Dynamically added wpa_supplicant interface with AP_SCAN 2 operation"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test" })
     bssid = apdev[0]['bssid']
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
@@ -113,7 +113,7 @@ def test_sta_ap_scan_2b(dev, apdev):
 def test_sta_dynamic_down_up(dev, apdev):
     """Dynamically added wpa_supplicant interface down/up"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
@@ -131,7 +131,7 @@ def test_sta_dynamic_down_up(dev, apdev):
 def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
     """Dynamically added wpa_supplicant interface with external MAC address change"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
@@ -164,7 +164,7 @@ def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
 def test_sta_dynamic_random_mac_addr(dev, apdev):
     """Dynamically added wpa_supplicant interface and random MAC address"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
@@ -202,7 +202,7 @@ def test_sta_dynamic_random_mac_addr(dev, apdev):
 def test_sta_dynamic_random_mac_addr_keep_oui(dev, apdev):
     """Dynamically added wpa_supplicant interface and random MAC address (keep OUI)"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
@@ -244,7 +244,7 @@ def test_sta_dynamic_random_mac_addr_keep_oui(dev, apdev):
 def test_sta_dynamic_random_mac_addr_scan(dev, apdev):
     """Dynamically added wpa_supplicant interface and random MAC address for scan"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
@@ -261,7 +261,7 @@ def test_sta_dynamic_random_mac_addr_scan(dev, apdev):
 def test_sta_dynamic_random_mac_addr_scan_keep_oui(dev, apdev):
     """Dynamically added wpa_supplicant interface and random MAC address for scan (keep OUI)"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")

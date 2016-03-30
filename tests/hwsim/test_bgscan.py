@@ -13,8 +13,8 @@ import hostapd
 
 def test_bgscan_simple(dev, apdev):
     """bgscan_simple"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "bgscan" })
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "bgscan" })
+    hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+    hostapd.add_ap(apdev[1], { "ssid": "bgscan" })
 
     dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
                    bgscan="simple:1:-20:2")
@@ -70,8 +70,8 @@ def test_bgscan_simple(dev, apdev):
 
 def test_bgscan_learn(dev, apdev):
     """bgscan_learn"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "bgscan" })
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "bgscan" })
+    hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+    hostapd.add_ap(apdev[1], { "ssid": "bgscan" })
 
     try:
         os.remove("/tmp/test_bgscan_learn.bgscan")

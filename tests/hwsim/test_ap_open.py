@@ -22,7 +22,7 @@ def test_ap_open(dev, apdev):
     _test_ap_open(dev, apdev)
 
 def _test_ap_open(dev, apdev):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bg_scan_period="0")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -42,7 +42,7 @@ def test_ap_open_packet_loss(dev, apdev):
                "ignore_auth_probability": "0.5",
                "ignore_assoc_probability": "0.5",
                "ignore_reassoc_probability": "0.5" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     for i in range(0, 3):
         dev[i].connect("open", key_mgmt="NONE", scan_freq="2412",
                        wait_connect=False)
@@ -51,7 +51,7 @@ def test_ap_open_packet_loss(dev, apdev):
 
 def test_ap_open_unknown_action(dev, apdev):
     """AP with open mode configuration and unknown Action frame"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     bssid = apdev[0]['bssid']
     cmd = "MGMT_TX {} {} freq=2412 action=765432".format(bssid, bssid)
@@ -65,7 +65,7 @@ def test_ap_open_unknown_action(dev, apdev):
 
 def test_ap_open_invalid_wmm_action(dev, apdev):
     """AP with open mode configuration and invalid WMM Action frame"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     bssid = apdev[0]['bssid']
     cmd = "MGMT_TX {} {} freq=2412 action=1100".format(bssid, bssid)
@@ -77,7 +77,7 @@ def test_ap_open_invalid_wmm_action(dev, apdev):
 
 def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
     """Reconnect to open mode AP after inactivity related disconnection"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hapd.request("DEAUTHENTICATE " + dev[0].p2p_interface_addr() + " reason=4")
     dev[0].wait_disconnected(timeout=5)
@@ -86,7 +86,7 @@ def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
 def test_ap_open_assoc_timeout(dev, apdev):
     """AP timing out association"""
     ssid = "test"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].scan(freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -125,7 +125,7 @@ def test_ap_open_assoc_timeout(dev, apdev):
 
 def test_ap_open_id_str(dev, apdev):
     """AP with open mode and id_str"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412", id_str="foo",
                    wait_connect=False)
     ev = dev[0].wait_connected(timeout=10)
@@ -136,7 +136,7 @@ def test_ap_open_id_str(dev, apdev):
 
 def test_ap_open_select_any(dev, apdev):
     """AP with open mode and select any network"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     id = dev[0].connect("unknown", key_mgmt="NONE", scan_freq="2412",
                         only_add_network=True)
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -154,7 +154,7 @@ def test_ap_open_select_any(dev, apdev):
 
 def test_ap_open_unexpected_assoc_event(dev, apdev):
     """AP with open mode and unexpected association event"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected(timeout=15)
@@ -175,7 +175,7 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
 
 def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "open",
                             "bss_load_update_period": "10" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
@@ -200,7 +200,7 @@ def hapd_out_of_mem(hapd, apdev, count, func):
 
 def test_ap_open_out_of_memory(dev, apdev):
     """hostapd failing to setup interface due to allocation failure"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     hapd_out_of_mem(hapd, apdev[1], 1, "hostapd_alloc_bss_data")
 
     for i in range(1, 3):
@@ -221,12 +221,12 @@ def test_ap_open_out_of_memory(dev, apdev):
 
     # verify that a new interface can still be added when memory allocation does
     # not fail
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+    hostapd.add_ap(apdev[1], { "ssid": "open" })
 
 def test_bssid_black_white_list(dev, apdev):
     """BSSID black/white list"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "open" })
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bssid_whitelist=apdev[1]['bssid'])
@@ -275,7 +275,7 @@ def test_ap_open_wpas_in_bridge(dev, apdev):
         subprocess.call(['iw', ifname, 'set', '4addr', 'off'])
 
 def _test_ap_open_wpas_in_bridge(dev, apdev):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
 
     br_ifname='sta-br0'
     ifname='wlan5'
@@ -302,8 +302,8 @@ def _test_ap_open_wpas_in_bridge(dev, apdev):
 
 def test_ap_open_start_disabled(dev, apdev):
     """AP with open mode and beaconing disabled"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
-                                                "start_disabled": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "start_disabled": "1" })
     bssid = apdev[0]['bssid']
 
     dev[0].flush_scan_cache()
@@ -317,8 +317,8 @@ def test_ap_open_start_disabled(dev, apdev):
 
 def test_ap_open_start_disabled2(dev, apdev):
     """AP with open mode and beaconing disabled (2)"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
-                                                "start_disabled": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "start_disabled": "1" })
     bssid = apdev[0]['bssid']
 
     dev[0].flush_scan_cache()
@@ -340,7 +340,7 @@ def test_ap_open_ifdown(dev, apdev):
     """AP with open mode and external ifconfig down"""
     params = { "ssid": "open",
                "ap_max_inactivity": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
@@ -369,7 +369,7 @@ def test_ap_open_ifdown(dev, apdev):
 
 def test_ap_open_disconnect_in_ps(dev, apdev, params):
     """Disconnect with the client in PS to regression-test a kernel bug"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bg_scan_period="0")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -411,9 +411,9 @@ def test_ap_open_disconnect_in_ps(dev, apdev, params):
 
 def test_ap_open_select_network(dev, apdev):
     """Open mode connection and SELECT_NETWORK to change network"""
-    hapd1 = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd1 = hostapd.add_ap(apdev[0], { "ssid": "open" })
     bssid1 = apdev[0]['bssid']
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open2" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "open2" })
     bssid2 = apdev[1]['bssid']
 
     id1 = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -437,7 +437,7 @@ def test_ap_open_select_network(dev, apdev):
 
 def test_ap_open_disable_enable(dev, apdev):
     """AP with open mode getting disabled and re-enabled"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    bg_scan_period="0")
 
@@ -477,7 +477,7 @@ def sta_enable_disable(dev, bssid):
 
 def test_ap_open_sta_enable_disable(dev, apdev):
     """AP with open mode and wpa_supplicant ENABLE/DISABLE_NETWORK"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     bssid = apdev[0]['bssid']
 
     sta_enable_disable(dev[0], bssid)
@@ -494,7 +494,7 @@ def test_ap_open_select_twice(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=10)
     if ev is None:
         raise Exception("No result reported")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     # Verify that the second SELECT_NETWORK starts a new scan immediately by
     # waiting less than the default scan period.
     dev[0].select_network(id)

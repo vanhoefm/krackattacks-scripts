@@ -28,7 +28,7 @@ def test_ap_vlan_open(dev, apdev):
     params = { "ssid": "test-vlan-open",
                "dynamic_vlan": "1",
                "accept_mac_file": "hostapd.accept" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
@@ -43,7 +43,7 @@ def test_ap_vlan_file_open(dev, apdev):
                "dynamic_vlan": "1",
                "vlan_file": "hostapd.vlan",
                "accept_mac_file": "hostapd.accept" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
@@ -58,7 +58,7 @@ def test_ap_vlan_wpa2(dev, apdev):
                                  passphrase="12345678")
     params['dynamic_vlan'] = "1";
     params['accept_mac_file'] = "hostapd.accept";
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", psk="12345678", scan_freq="2412")
     dev[1].connect("test-vlan", psk="12345678", scan_freq="2412")
@@ -71,7 +71,7 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
     params['dynamic_vlan'] = "1";
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                    identity="vlan1",
@@ -93,7 +93,7 @@ def test_ap_vlan_wpa2_radius_2(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS EGRESS_VLANID attributes"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
     params['dynamic_vlan'] = "1";
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                    identity="vlan1b",
@@ -137,12 +137,12 @@ def generic_ap_vlan_wpa2_radius_id_change(dev, apdev, tagged):
                   "ca_cert": "auth_serv/ca.pem",
                   "server_cert": "auth_serv/server.pem",
                   "private_key": "auth_serv/server.key" }
-    authserv = hostapd.add_ap(apdev[1]['ifname'], as_params)
+    authserv = hostapd.add_ap(apdev[1], as_params)
 
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
     params['dynamic_vlan'] = "1";
     params['auth_server_port'] = "18128"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     identity = "vlan1tagged" if tagged else "vlan1"
 
@@ -230,7 +230,7 @@ def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
     params['dynamic_vlan'] = "2";
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                    identity="vlan1",
@@ -253,7 +253,7 @@ def test_ap_vlan_tagged(dev, apdev):
                "dynamic_vlan": "1",
                "vlan_tagged_interface": "lo",
                "accept_mac_file": "hostapd.accept" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
@@ -325,7 +325,7 @@ def ap_vlan_iface_cleanup_multibss(dev, apdev, cfgfile):
                       "server_cert": "auth_serv/server.pem",
                       "private_key": "auth_serv/server.key",
                       "vlan_naming": "1" }
-        authserv = hostapd.add_ap(apdev[1]['ifname'], as_params)
+        authserv = hostapd.add_ap(apdev[1], as_params)
 
         ifname = apdev[0]['ifname']
 
@@ -466,7 +466,7 @@ def test_ap_vlan_without_station(dev, apdev, p):
         params['dynamic_vlan'] = "1";
         params['vlan_file'] = 'hostapd.wlan3.vlan'
         params['accept_mac_file'] = "hostapd.accept";
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         # inject some traffic
         sa = hapd.own_addr()
@@ -538,7 +538,7 @@ def test_ap_open_per_sta_vif(dev, apdev):
     """AP VLAN with open network"""
     params = { "ssid": "test-vlan-open",
                "per_sta_vif": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity_iface(dev[0], hapd,
@@ -549,7 +549,7 @@ def test_ap_vlan_open_per_sta_vif(dev, apdev):
     params = { "ssid": "test-vlan-open",
                "per_sta_vif": "1",
                "dynamic_vlan": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity_iface(dev[0], hapd,
@@ -562,7 +562,7 @@ def test_ap_vlan_wpa2_radius_tagged(dev, apdev):
         params = hostapd.wpa2_eap_params(ssid="test-vlan")
         params['dynamic_vlan'] = "1"
         params["vlan_naming"] = "1"
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                        identity="vlan1tagged",
@@ -587,7 +587,7 @@ def test_ap_vlan_wpa2_radius_mixed(dev, apdev):
         params = hostapd.wpa2_eap_params(ssid="test-vlan")
         params['dynamic_vlan'] = "1"
         params["vlan_naming"] = "1"
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                        identity="vlan12mixed",
@@ -616,7 +616,7 @@ def test_ap_vlan_reconnect(dev, apdev):
                                  passphrase="12345678")
     params['dynamic_vlan'] = "1";
     params['accept_mac_file'] = "hostapd.accept";
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     logger.info("connect sta")
     dev[0].connect("test-vlan", psk="12345678", scan_freq="2412")

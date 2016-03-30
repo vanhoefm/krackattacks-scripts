@@ -273,7 +273,7 @@ def test_ap_wpa2_tdls_wrong_tpk_m3_mic(dev, apdev):
 def test_ap_wpa_tdls(dev, apdev):
     """WPA-PSK AP and two stations using TDLS"""
     skip_with_fips(dev[0])
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           hostapd.wpa_params(ssid="test-wpa-psk",
                                              passphrase="12345678"))
     wlantest_setup()
@@ -285,7 +285,7 @@ def test_ap_wpa_tdls(dev, apdev):
 def test_ap_wpa_mixed_tdls(dev, apdev):
     """WPA+WPA2-PSK AP and two stations using TDLS"""
     skip_with_fips(dev[0])
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           hostapd.wpa_mixed_params(ssid="test-wpa-mixed-psk",
                                                    passphrase="12345678"))
     wlantest_setup()
@@ -296,7 +296,7 @@ def test_ap_wpa_mixed_tdls(dev, apdev):
 
 def test_ap_wep_tdls(dev, apdev):
     """WEP AP and two stations using TDLS"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
+    hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "test-wep", "wep_key0": '"hello"' })
     wlantest_setup()
     connect_2sta_wep(dev, hapd)
@@ -306,7 +306,7 @@ def test_ap_wep_tdls(dev, apdev):
 
 def test_ap_open_tdls(dev, apdev):
     """Open AP and two stations using TDLS"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
     wlantest_setup()
     connect_2sta_open(dev, hapd)
     setup_tdls(dev[0], dev[1], apdev[0])
@@ -321,8 +321,8 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
         passphrase = "12345678"
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
+        hostapd.add_ap(apdev[1], params)
         wlantest_setup()
         subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
@@ -363,7 +363,7 @@ def test_ap_open_tdls_vht(dev, apdev):
                "vht_oper_chwidth": "0",
                "vht_oper_centr_freq_seg0_idx": "0" }
     try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         wlantest_setup()
         connect_2sta_open(dev, hapd, scan_freq="5180")
         setup_tdls(dev[0], dev[1], apdev[0])
@@ -393,7 +393,7 @@ def test_ap_open_tdls_vht80(dev, apdev):
                "vht_oper_centr_freq_seg0_idx": "42" }
     try:
         hapd = None
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         wlantest_setup()
         connect_2sta_open(dev, hapd, scan_freq="5180")
         sig = dev[0].request("SIGNAL_POLL").splitlines()
@@ -437,7 +437,7 @@ def test_ap_open_tdls_vht80plus80(dev, apdev):
                "vht_oper_centr_freq_seg1_idx": "155" }
     try:
         hapd = None
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
         wlantest_setup()
         connect_2sta_open(dev, hapd, scan_freq="5180")
         sig = dev[0].request("SIGNAL_POLL").splitlines()
@@ -485,7 +485,7 @@ def test_ap_open_tdls_vht160(dev, apdev):
                "vht_oper_centr_freq_seg0_idx": "114" }
     try:
         hapd = None
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         ev = hapd.wait_event(["AP-ENABLED"], timeout=2)
         if not ev:
             cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
@@ -528,7 +528,7 @@ def test_tdls_chan_switch(dev, apdev):
     if flags & 0x800000000 == 0:
         raise HwsimSkip("Driver does not support TDLS channel switching")
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
     connect_2sta_open(dev, hapd)
     setup_tdls(dev[0], dev[1], apdev[0])
     if "OK" not in dev[0].request("TDLS_CHAN_SWITCH " + dev[1].own_addr() + " 81 2462"):

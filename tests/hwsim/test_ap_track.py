@@ -25,7 +25,7 @@ def _test_ap_track_sta(dev, apdev):
                "hw_mode": "g",
                "channel": "6",
                "track_sta_max_num": "2" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -34,7 +34,7 @@ def _test_ap_track_sta(dev, apdev):
                "channel": "40",
                "track_sta_max_num": "100",
                "track_sta_max_age": "1" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     for i in range(2):
@@ -94,7 +94,7 @@ def _test_ap_track_sta_no_probe_resp(dev, apdev):
                "channel": "6",
                "beacon_int": "10000",
                "no_probe_resp_if_seen_on": apdev[1]['ifname'] }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -102,7 +102,7 @@ def _test_ap_track_sta_no_probe_resp(dev, apdev):
                "hw_mode": "a",
                "channel": "40",
                "track_sta_max_num": "100" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)
@@ -127,7 +127,7 @@ def _test_ap_track_sta_no_auth(dev, apdev):
                "channel": "6",
                "track_sta_max_num": "100",
                "no_auth_if_seen_on": apdev[1]['ifname'] }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -135,7 +135,7 @@ def _test_ap_track_sta_no_auth(dev, apdev):
                "hw_mode": "a",
                "channel": "40",
                "track_sta_max_num": "100" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
@@ -174,7 +174,7 @@ def _test_ap_track_sta_no_auth_passive(dev, apdev):
                "hw_mode": "g",
                "channel": "6",
                "no_auth_if_seen_on": apdev[1]['ifname'] }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -184,7 +184,7 @@ def _test_ap_track_sta_no_auth_passive(dev, apdev):
                "interworking": "1",
                "venue_name": "eng:Venue",
                "track_sta_max_num": "100" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
@@ -230,7 +230,7 @@ def _test_ap_track_sta_force_5ghz(dev, apdev):
                "channel": "6",
                "no_probe_resp_if_seen_on": apdev[1]['ifname'],
                "no_auth_if_seen_on": apdev[1]['ifname'] }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -238,7 +238,7 @@ def _test_ap_track_sta_force_5ghz(dev, apdev):
                "hw_mode": "a",
                "channel": "40",
                "track_sta_max_num": "100" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan_for_bss(bssid, freq=2437, force_scan=True)
@@ -263,7 +263,7 @@ def _test_ap_track_sta_force_2ghz(dev, apdev):
                "hw_mode": "g",
                "channel": "6",
                "track_sta_max_num": "100" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     params = { "ssid": "track",
@@ -272,7 +272,7 @@ def _test_ap_track_sta_force_2ghz(dev, apdev):
                "channel": "40",
                "no_probe_resp_if_seen_on": apdev[0]['ifname'],
                "no_auth_if_seen_on": apdev[0]['ifname'] }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
     bssid2 = apdev[1]['bssid']
 
     dev[0].scan_for_bss(bssid2, freq=5200, force_scan=True)

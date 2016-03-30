@@ -23,7 +23,7 @@ def test_wnm_bss_transition_mgmt(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("WNM_BSS_QUERY 0")
@@ -35,7 +35,7 @@ def test_wnm_disassoc_imminent(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
@@ -57,7 +57,7 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
@@ -78,7 +78,7 @@ def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
@@ -137,7 +137,7 @@ def test_wnm_sleep_mode_open(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
@@ -162,7 +162,7 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
     params["time_zone"] = "EST5"
     params["wnm_sleep_mode"] = "1"
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm-rsn", psk="12345678", scan_freq="2412")
@@ -175,7 +175,7 @@ def test_wnm_sleep_mode_ap_oom(dev, apdev):
     """WNM Sleep Mode - AP side OOM"""
     params = { "ssid": "test-wnm",
                "wnm_sleep_mode": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -200,7 +200,7 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     params["time_zone"] = "EST5"
     params["wnm_sleep_mode"] = "1"
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
@@ -287,9 +287,9 @@ def expect_ack(hapd):
 def test_wnm_bss_tm_req(dev, apdev):
     """BSS Transition Management Request"""
     params = { "ssid": "test-wnm", "bss_transition": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
 
     hapd.set("ext_mgmt_frame_handling", "1")
 
@@ -435,7 +435,7 @@ def test_wnm_bss_keep_alive(dev, apdev):
     """WNM keep-alive"""
     params = { "ssid": "test-wnm",
                "ap_max_inactivity": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     addr = dev[0].p2p_interface_addr()
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
@@ -474,7 +474,7 @@ def test_wnm_bss_tm(dev, apdev):
                    "hw_mode": "g",
                    "channel": "1",
                    "bss_transition": "1" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         id = dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
         dev[0].set_network(id, "scan_freq", "")
@@ -485,7 +485,7 @@ def test_wnm_bss_tm(dev, apdev):
                    "hw_mode": "a",
                    "channel": "36",
                    "bss_transition": "1" }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1], params)
 
         addr = dev[0].p2p_interface_addr()
         dev[0].dump_monitor()
@@ -602,7 +602,7 @@ def run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=True, vht=False, hwmode='a',
                    "hw_mode": "g",
                    "channel": "1",
                    "bss_transition": "1" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         params = { "ssid": "test-wnm",
                    "country_code": "FI",
@@ -617,7 +617,7 @@ def run_wnm_bss_tm_scan_not_needed(dev, apdev, ht=True, vht=False, hwmode='a',
             params["vht_oper_chwidth"] = "0"
             params["vht_oper_centr_freq_seg0_idx"] = "0"
 
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1], params)
 
         dev[0].scan_for_bss(apdev[1]['bssid'], freq)
 
@@ -666,7 +666,7 @@ def test_wnm_bss_tm_scan_needed(dev, apdev):
                    "hw_mode": "g",
                    "channel": "1",
                    "bss_transition": "1" }
-        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0], params)
 
         params = { "ssid": "test-wnm",
                    "country_code": "FI",
@@ -674,7 +674,7 @@ def test_wnm_bss_tm_scan_needed(dev, apdev):
                    "hw_mode": "a",
                    "channel": "36",
                    "bss_transition": "1" }
-        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1], params)
 
         dev[0].scan_for_bss(apdev[1]['bssid'], 5180)
 
@@ -863,7 +863,7 @@ def test_wnm_action_proto(dev, apdev):
     """WNM Action protocol testing"""
     params = { "ssid": "test-wnm" }
     params['wnm_sleep_mode'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("WNM_SLEEP enter")
@@ -1065,7 +1065,7 @@ def test_wnm_action_proto_pmf(dev, apdev):
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
     params["ieee80211w"] = "2"
     params['wnm_sleep_mode'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK-SHA256",
                    proto="WPA2", ieee80211w="2", scan_freq="2412")
@@ -1167,7 +1167,7 @@ def test_wnm_action_proto_no_pmf(dev, apdev):
     ssid = "test-wnm-no-pmf"
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     params['wnm_sleep_mode'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK",
                    proto="WPA2", ieee80211w="0", scan_freq="2412")
@@ -1207,7 +1207,7 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     """WNM BSS transition request with MBO IE and reassociation delay attribute"""
     ssid = "test-wnm-mbo"
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
 	raise Exception("Failed to set STA as cellular data capable")
@@ -1266,9 +1266,9 @@ def test_wnm_bss_transition_mgmt_query(dev, apdev):
     """WNM BSS Transition Management query"""
     params = { "ssid": "test-wnm",
                "bss_transition": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     params = { "ssid": "another" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
 
     dev[0].scan_for_bss(apdev[1]['bssid'], 2412)
     dev[0].scan_for_bss(apdev[0]['bssid'], 2412)
@@ -1295,13 +1295,13 @@ def test_wnm_bss_tm_security_mismatch(dev, apdev):
                "hw_mode": "g",
                "channel": "1",
                "bss_transition": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     params = { "ssid": "test-wnm",
                "hw_mode": "g",
                "channel": "11",
                "bss_transition": "1" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
 
     dev[0].scan_for_bss(apdev[1]['bssid'], 2462)
 
@@ -1328,13 +1328,13 @@ def test_wnm_bss_tm_connect_cmd(dev, apdev):
                "hw_mode": "g",
                "channel": "1",
                "bss_transition": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     params = { "ssid": "test-wnm",
                "hw_mode": "g",
                "channel": "11",
                "bss_transition": "1" }
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")

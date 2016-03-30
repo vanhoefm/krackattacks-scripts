@@ -12,13 +12,13 @@ import hostapd
 
 def test_ssid_hex_encoded(dev, apdev):
     """SSID configuration using hex encoded version"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid2": '68656c6c6f' })
+    hostapd.add_ap(apdev[0], { "ssid2": '68656c6c6f' })
     dev[0].connect("hello", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect(ssid2="68656c6c6f", key_mgmt="NONE", scan_freq="2412")
 
 def test_ssid_printf_encoded(dev, apdev):
     """SSID configuration using printf encoded version"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid2": 'P"\\0hello\\nthere"' })
+    hostapd.add_ap(apdev[0], { "ssid2": 'P"\\0hello\\nthere"' })
     dev[0].connect(ssid2="0068656c6c6f0a7468657265", key_mgmt="NONE",
                    scan_freq="2412")
     dev[1].connect(ssid2='P"\\x00hello\\nthere"', key_mgmt="NONE",
@@ -31,20 +31,20 @@ def test_ssid_printf_encoded(dev, apdev):
 
 def test_ssid_1_octet(dev, apdev):
     """SSID with one octet"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": '1' })
+    hostapd.add_ap(apdev[0], { "ssid": '1' })
     dev[0].connect("1", key_mgmt="NONE", scan_freq="2412")
 
 def test_ssid_32_octets(dev, apdev):
     """SSID with 32 octets"""
-    hostapd.add_ap(apdev[0]['ifname'],
+    hostapd.add_ap(apdev[0],
                    { "ssid": '1234567890abcdef1234567890ABCDEF' })
     dev[0].connect("1234567890abcdef1234567890ABCDEF", key_mgmt="NONE",
                    scan_freq="2412")
 
 def test_ssid_utf8(dev, apdev):
     """SSID with UTF8 encoding"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'testi-åäöÅÄÖ-testi',
-                                                "utf8_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": 'testi-åäöÅÄÖ-testi',
+                                      "utf8_ssid": "1" })
     dev[0].connect("testi-åäöÅÄÖ-testi", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect(ssid2="74657374692dc3a5c3a4c3b6c385c384c3962d7465737469",
                    key_mgmt="NONE", scan_freq="2412")
@@ -71,8 +71,8 @@ def clear_scan_cache(hapd, dev):
 
 def test_ssid_hidden(dev, apdev):
     """Hidden SSID"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
-                                                "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": 'secret',
+                                      "ignore_broadcast_ssid": "1" })
     dev[1].connect("secret", key_mgmt="NONE", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret", key_mgmt="NONE", scan_freq="2412", scan_ssid="1")
@@ -83,8 +83,8 @@ def test_ssid_hidden(dev, apdev):
 
 def test_ssid_hidden2(dev, apdev):
     """Hidden SSID using zero octets as payload"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret2',
-                                                "ignore_broadcast_ssid": "2" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": 'secret2',
+                                      "ignore_broadcast_ssid": "2" })
     dev[1].connect("secret2", key_mgmt="NONE", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret2", key_mgmt="NONE", scan_freq="2412", scan_ssid="1")
@@ -97,7 +97,7 @@ def test_ssid_hidden_wpa2(dev, apdev):
     """Hidden SSID with WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="secret", passphrase="12345678")
     params["ignore_broadcast_ssid"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[1].connect("secret", psk="12345678", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret", psk="12345678", scan_freq="2412", scan_ssid="1")

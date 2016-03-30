@@ -12,7 +12,7 @@ import hostapd
 from utils import HwsimSkip
 
 def hostapd_oom_loop(apdev, params, start_func="main"):
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "ctrl" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "ctrl" })
     hapd_global = hostapd.HostapdGlobal()
 
     count = 0
@@ -20,7 +20,7 @@ def hostapd_oom_loop(apdev, params, start_func="main"):
         if "OK" not in hapd.request("TEST_ALLOC_FAIL %d:%s" % (i, start_func)):
             raise HwsimSkip("TEST_ALLOC_FAIL not supported")
         try:
-            hostapd.add_ap(apdev[1]['ifname'], params, timeout=2.5)
+            hostapd.add_ap(apdev[1], params, timeout=2.5)
             logger.info("Iteration %d - success" % i)
             hapd_global.remove(apdev[1]['ifname'])
 
@@ -68,7 +68,7 @@ def test_hostapd_oom_wpa2_eap_radius(dev, apdev):
 def test_hostapd_oom_wpa2_psk_connect(dev, apdev):
     """hostapd failing during WPA2-PSK mode connection due to OOM"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SCAN_INTERVAL 1")
     count = 0
@@ -114,7 +114,7 @@ def test_hostapd_oom_wpa2_eap_connect(dev, apdev, params):
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SCAN_INTERVAL 1")
     count = 0

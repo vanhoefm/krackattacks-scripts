@@ -19,7 +19,7 @@ def test_ap_change_ssid(dev, apdev):
     """Dynamic SSID change with hostapd and WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk-start",
                                  passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     id = dev[0].connect("test-wpa2-psk-start", psk="12345678",
                         scan_freq="2412")
     dev[0].request("DISCONNECT")
@@ -427,7 +427,7 @@ def hapd_bss_out_of_mem(hapd, phy, confname, count, func):
 
 def test_ap_bss_add_out_of_memory(dev, apdev):
     """Running out of memory while adding a BSS"""
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "open" })
 
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'

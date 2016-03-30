@@ -15,7 +15,7 @@ def test_tnc_peap_soh(dev, apdev):
     """TNC PEAP-SoH"""
     params = int_eap_server_params()
     params["tnc"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
                    eap="PEAP", identity="user", password="password",
@@ -45,7 +45,7 @@ def test_tnc_peap_soh_errors(dev, apdev):
     """TNC PEAP-SoH local error cases"""
     params = int_eap_server_params()
     params["tnc"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     tests = [ (1, "tncc_build_soh"),
               (1, "eap_msg_alloc;=eap_peap_phase2_request") ]
@@ -77,7 +77,7 @@ def test_tnc_ttls(dev, apdev):
     check_eap_capa(dev[0], "MSCHAPV2")
     params = int_eap_server_params()
     params["tnc"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     if not os.path.exists("tnc/libhostap_imc.so"):
         raise HwsimSkip("No IMC installed")
@@ -96,7 +96,7 @@ def test_tnc_ttls_fragmentation(dev, apdev):
     params = int_eap_server_params()
     params["tnc"] = "1"
     params["fragment_size"] = "150"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     if not os.path.exists("tnc/libhostap_imc.so"):
         raise HwsimSkip("No IMC installed")
@@ -119,7 +119,7 @@ def test_tnc_ttls_errors(dev, apdev):
     params = int_eap_server_params()
     params["tnc"] = "1"
     params["fragment_size"] = "150"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     tests = [ (1, "eap_ttls_process_phase2_eap;eap_ttls_process_tnc_start",
                "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
@@ -177,7 +177,7 @@ def test_tnc_fast(dev, apdev):
     params["eap_fast_a_id"] = "101112131415161718191a1b1c1d1e00"
     params["eap_fast_a_id_info"] = "test server2"
 
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     if not os.path.exists("tnc/libhostap_imc.so"):
         raise HwsimSkip("No IMC installed")

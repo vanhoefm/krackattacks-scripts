@@ -169,7 +169,7 @@ def run_p2p_device_nfc_invite(dev, apdev, no_group_iface):
 
 def test_p2p_device_misuses(dev, apdev):
     """cfg80211 P2P Device misuses"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
     with HWSimRadio(use_p2p_device=True) as (radio, iface):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)

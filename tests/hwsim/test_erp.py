@@ -25,7 +25,7 @@ def test_erp_initiate_reauth_start(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -39,7 +39,7 @@ def test_erp_enabled_on_server(dev, apdev):
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -55,7 +55,7 @@ def test_erp(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -81,7 +81,7 @@ def test_erp_server_no_match(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -134,7 +134,7 @@ def test_erp_radius(dev, apdev):
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
@@ -187,7 +187,7 @@ def test_erp_radius_eap_methods(dev, apdev):
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     erp_test(dev[0], hapd, eap="AKA", identity="0232010000000000@example.com",
              password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
@@ -235,7 +235,7 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     p['erp_domain'] = 'example.com'
     p['eap_server_erp'] = '1'
     p['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+    hapd = hostapd.add_ap(apdev[0], p)
     password = "63d2d21ac3c09ed567ee004a34490f1d16e7fa5835edf17ddba70a63f1a90a25"
 
     pid = find_wpas_process(dev[0])
@@ -424,7 +424,7 @@ def test_erp_anonymous_identity(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
@@ -452,7 +452,7 @@ def test_erp_home_realm_oom(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     for count in range(1, 3):
         with alloc_fail(dev[0], count, "eap_home_realm"):
@@ -509,7 +509,7 @@ def test_erp_local_errors(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['eap_server_erp'] = '1'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("ERP_FLUSH")
     with alloc_fail(dev[0], 1, "eap_peer_erp_init"):

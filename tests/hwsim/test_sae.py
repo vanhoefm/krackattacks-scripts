@@ -23,7 +23,7 @@ def test_sae(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     key_mgmt = hapd.get_config()['key_mgmt']
     if key_mgmt.split(' ')[0] != "SAE":
         raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
@@ -46,7 +46,7 @@ def test_sae_password_ecc(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 19")
 
@@ -66,7 +66,7 @@ def test_sae_password_ffc(dev, apdev):
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_groups'] = '22'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 22")
 
@@ -85,7 +85,7 @@ def test_sae_pmksa_caching(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups ")
     dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
@@ -108,7 +108,7 @@ def test_sae_pmksa_caching_disabled(dev, apdev):
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups ")
     dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
@@ -142,7 +142,7 @@ def test_sae_groups(dev, apdev):
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_groups'] = ' '.join(groups)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     for g in groups:
         logger.info("Testing SAE group " + g)
@@ -181,7 +181,7 @@ def test_sae_group_nego(dev, apdev):
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_groups'] = '19'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 25 26 20 19")
     dev[0].connect("test-sae-group-nego", psk="12345678", key_mgmt="SAE",
@@ -196,7 +196,7 @@ def test_sae_anti_clogging(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_anti_clogging_threshold'] = '1'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
@@ -217,7 +217,7 @@ def test_sae_forced_anti_clogging(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE WPA-PSK'
     params['sae_anti_clogging_threshold'] = '0'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
     dev[2].connect("test-sae", psk="12345678", scan_freq="2412")
     for i in range(0, 2):
         dev[i].request("SET sae_groups ")
@@ -231,7 +231,7 @@ def test_sae_mixed(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE WPA-PSK'
     params['sae_anti_clogging_threshold'] = '0'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[0], params)
 
     dev[2].connect("test-sae", psk="12345678", scan_freq="2412")
     for i in range(0, 2):
@@ -246,7 +246,7 @@ def test_sae_missing_password(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups ")
     id = dev[0].connect("test-sae",
@@ -264,7 +264,7 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     password = "5ad144a7c1f5a5503baa6fa01dabc15b1843e8c01662d78d16b70b5cd23cf8b"
     p = hostapd.wpa2_params(ssid="test-sae", passphrase=password)
     p['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+    hapd = hostapd.add_ap(apdev[0], p)
 
     pid = find_wpas_process(dev[0])
 
@@ -388,7 +388,7 @@ def test_sae_oom_wpas(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 25")
     tls = dev[0].request("GET tls_library")
@@ -412,7 +412,7 @@ def test_sae_proto_ecc(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].request("SET sae_groups 19")
@@ -510,7 +510,7 @@ def test_sae_proto_ffc(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].request("SET sae_groups 2")
@@ -589,7 +589,7 @@ def test_sae_no_ffc_by_default(dev, apdev):
         raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 5")
     dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE", scan_freq="2412",
@@ -658,7 +658,7 @@ def test_sae_anti_clogging_proto(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="no-knowledge-of-passphrase")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
     dev[0].scan_for_bss(bssid, freq=2412)
@@ -699,7 +699,7 @@ def test_sae_no_random(dev, apdev):
         raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups ")
     tests = [ (1, "os_get_random;sae_get_rand"),
@@ -720,7 +720,7 @@ def test_sae_pwe_failure(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_groups'] = '19 5'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 19")
     with fail_test(dev[0], 1, "hmac_sha256_vector;sae_derive_pwe_ecc"):
@@ -760,7 +760,7 @@ def test_sae_bignum_failure(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_groups'] = '19 5 22'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].request("SET sae_groups 19")
     tests = [ (1, "crypto_bignum_init_set;get_rand_1_to_p_1"),

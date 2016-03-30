@@ -139,7 +139,7 @@ def start_p2p(dev, apdev):
         params['channel'] = '6'
     elif peer['listen_freq'] == "2462":
         params['channel'] = '11'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     hapd.set("ext_mgmt_frame_handling", "1")
     return addr0, bssid, hapd, int(params['channel'])
 

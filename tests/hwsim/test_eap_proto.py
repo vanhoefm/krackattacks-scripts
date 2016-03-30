@@ -162,10 +162,10 @@ def stop_radius_server(srv):
     srv['stop'].set()
     srv['thread'].join()
 
-def start_ap(ifname):
+def start_ap(ap):
     params = hostapd.wpa2_eap_params(ssid="eap-test")
     params['auth_server_port'] = "18138"
-    hapd = hostapd.add_ap(ifname, params)
+    hapd = hostapd.add_ap(ap, params)
     return hapd
 
 def test_eap_proto(dev, apdev):
@@ -293,7 +293,7 @@ def test_eap_proto(dev, apdev):
     srv = start_radius_server(eap_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                        eap="MD5", identity="user", password="password",
@@ -437,7 +437,7 @@ def test_eap_proto_notification_errors(dev, apdev):
     srv = start_radius_server(eap_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         with alloc_fail(dev[0], 1, "eap_sm_processNotify"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -747,7 +747,7 @@ def test_eap_proto_sake(dev, apdev):
     srv = start_radius_server(sake_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         while not eap_proto_sake_test_done:
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -851,7 +851,7 @@ def test_eap_proto_sake_errors2(dev, apdev):
     srv = start_radius_server(sake_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_sake_build_msg;eap_sake_process_identity"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1018,7 +1018,7 @@ def test_eap_proto_leap(dev, apdev):
     srv = start_radius_server(leap_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 12):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1223,7 +1223,7 @@ def test_eap_proto_leap_errors(dev, apdev):
     srv = start_radius_server(leap_handler2)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         with alloc_fail(dev[0], 1, "eap_leap_init"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1364,7 +1364,7 @@ def test_eap_proto_md5(dev, apdev):
     srv = start_radius_server(md5_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 4):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1441,7 +1441,7 @@ def test_eap_proto_otp(dev, apdev):
     srv = start_radius_server(otp_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 1):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1492,7 +1492,7 @@ def test_eap_proto_otp_errors(dev, apdev):
     srv = start_radius_server(otp_handler2)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         with alloc_fail(dev[0], 1, "eap_msg_alloc;eap_otp_process"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -1931,7 +1931,7 @@ def test_eap_proto_gpsk(dev, apdev):
     srv = start_radius_server(gpsk_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 27):
             if i == 12:
@@ -2237,7 +2237,7 @@ def test_eap_proto_eke(dev, apdev):
     srv = start_radius_server(eke_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 14):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -2641,7 +2641,7 @@ def test_eap_proto_pax(dev, apdev):
     srv = start_radius_server(pax_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 18):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -2828,7 +2828,7 @@ def test_eap_proto_psk(dev, apdev):
     srv = start_radius_server(psk_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 6):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -3660,7 +3660,7 @@ def test_eap_proto_aka(dev, apdev):
     srv = start_radius_server(aka_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 49):
             eap = "AKA AKA'" if i == 11 else "AKA"
@@ -4006,7 +4006,7 @@ def test_eap_proto_aka_prime(dev, apdev):
     srv = start_radius_server(aka_prime_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 16):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -4411,7 +4411,7 @@ def test_eap_proto_sim(dev, apdev):
     srv = start_radius_server(sim_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 25):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
@@ -5196,7 +5196,7 @@ def test_eap_proto_ikev2(dev, apdev):
     srv = start_radius_server(ikev2_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_ikev2_test_done:
@@ -5697,7 +5697,7 @@ def test_eap_proto_mschapv2(dev, apdev):
     srv = start_radius_server(mschapv2_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         for i in range(0, 16):
             logger.info("RUN: %d" % i)
@@ -5931,7 +5931,7 @@ def test_eap_proto_mschapv2_errors(dev, apdev):
     srv = start_radius_server(mschapv2_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         tests = [ "os_get_random;eap_mschapv2_change_password",
                   "generate_nt_response;eap_mschapv2_change_password",
@@ -6211,7 +6211,7 @@ def test_eap_proto_pwd(dev, apdev):
     srv = start_radius_server(pwd_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_pwd_test_done:
@@ -6547,7 +6547,7 @@ def test_eap_proto_erp(dev, apdev):
     srv = start_radius_server(erp_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_erp_test_done:
@@ -7002,7 +7002,7 @@ def test_eap_proto_expanded(dev, apdev):
     srv = start_radius_server(expanded_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_expanded_test_done:
@@ -7195,7 +7195,7 @@ def test_eap_proto_tls(dev, apdev):
     srv = start_radius_server(tls_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_tls_test_done:
@@ -7574,7 +7574,7 @@ def test_eap_proto_tnc(dev, apdev):
     srv = start_radius_server(tnc_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_tnc_test_done:
@@ -7628,7 +7628,7 @@ def test_eap_canned_success_after_identity(dev, apdev):
     srv = start_radius_server(eap_canned_success_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                        phase1="allow_canned_success=1",
@@ -7806,7 +7806,7 @@ def test_eap_proto_wsc(dev, apdev):
     srv = start_radius_server(wsc_handler)
 
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
 
         i = 0
         while not eap_proto_wsc_test_done:
@@ -7999,7 +7999,7 @@ def test_eap_fast_proto(dev, apdev):
 
     srv = start_radius_server(eap_handler)
     try:
-        hapd = start_ap(apdev[0]['ifname'])
+        hapd = start_ap(apdev[0])
         dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                        eap="FAST", anonymous_identity="FAST",
                        identity="user", password="password",
@@ -8135,7 +8135,7 @@ def test_eap_fast_proto_phase2(dev, apdev):
     if not openssl_imported:
         raise HwsimSkip("OpenSSL python method not available")
     check_eap_capa(dev[0], "FAST")
-    hapd = start_ap(apdev[0]['ifname'])
+    hapd = start_ap(apdev[0])
 
     tests = [ ("Too short Phase 2 TLV frame (len=3)",
                "ABC",
@@ -8276,7 +8276,7 @@ def test_eap_fast_tlv_nak_oom(dev, apdev):
     if not openssl_imported:
         raise HwsimSkip("OpenSSL python method not available")
     check_eap_capa(dev[0], "FAST")
-    hapd = start_ap(apdev[0]['ifname'])
+    hapd = start_ap(apdev[0])
 
     with alloc_fail(dev[0], 1, "eap_fast_tlv_nak"):
         run_eap_fast_phase2(dev, struct.pack(">HHB", EAP_TLV_TYPE_MANDATORY,

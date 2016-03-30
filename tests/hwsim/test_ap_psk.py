@@ -694,7 +694,7 @@ def eapol_test(apdev, dev, wpa2=True):
     else:
         params = hostapd.wpa_params(ssid=ssid)
     params['wpa_psk'] = psk
-    hapd = hostapd.add_ap(apdev['ifname'], params)
+    hapd = hostapd.add_ap(apdev, params)
     hapd.request("SET ext_eapol_frame_io 1")
     dev.request("SET ext_eapol_frame_io 1")
     dev.connect(ssid, raw_psk=psk, scan_freq="2412", wait_connect=False)

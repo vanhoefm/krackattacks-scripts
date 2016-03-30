@@ -99,7 +99,7 @@ def start_ap(ap, ssid="test-wps",
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                "ap_pin": "12345670", "uuid": ap_uuid}
-    return hostapd.add_ap(ap['ifname'], params)
+    return hostapd.add_ap(ap, params)
 
 def test_dbus_getall(dev, apdev):
     """D-Bus GetAll"""

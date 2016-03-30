@@ -20,7 +20,7 @@ def add_wmm_ap(apdev, acm_list):
     for ac in acm_list:
         params["wmm_ac_%s_acm" % (ac.lower())] = "1"
 
-    return hostapd.add_ap(apdev['ifname'], params)
+    return hostapd.add_ap(apdev, params)
 
 def test_tspec(dev, apdev):
     """Basic addts/delts tests"""

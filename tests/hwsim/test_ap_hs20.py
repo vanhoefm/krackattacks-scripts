@@ -412,7 +412,7 @@ def hs20_simulated_sim(dev, ap, method):
     params['hessid'] = bssid
     params['anqp_3gpp_cell_net'] = "555,444"
     params['domain_name'] = "wlan.mnc444.mcc555.3gppnetwork.org"
-    hostapd.add_ap(ap['ifname'], params)
+    hostapd.add_ap(ap, params)
 
     dev.hs20_enable()
     dev.add_cred_values({ 'imsi': "555444-333222111", 'eap': method,
@@ -628,7 +628,7 @@ def eap_test(dev, ap, eap_params, method, user):
     bssid = ap['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com," + eap_params ]
-    hostapd.add_ap(ap['ifname'], params)
+    hostapd.add_ap(ap, params)
 
     dev.hs20_enable()
     dev.add_cred_values({ 'realm': "example.com",

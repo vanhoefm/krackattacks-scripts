@@ -16,7 +16,7 @@ from test_ap_ht import clear_scan_cache
 def force_prev_ap_on_24g(ap):
     # For now, make sure the last operating channel was on 2.4 GHz band to get
     # sufficient survey data from mac80211_hwsim.
-    hostapd.add_ap(ap['ifname'], { "ssid": "open" })
+    hostapd.add_ap(ap, { "ssid": "open" })
     time.sleep(0.1)
     hapd_global = hostapd.HostapdGlobal()
     hapd_global.remove(ap['ifname'])
@@ -24,8 +24,8 @@ def force_prev_ap_on_24g(ap):
 def force_prev_ap_on_5g(ap):
     # For now, make sure the last operating channel was on 5 GHz band to get
     # sufficient survey data from mac80211_hwsim.
-    hostapd.add_ap(ap['ifname'], { "ssid": "open", "hw_mode": "a",
-                                   "channel": "36", "country_code": "US" })
+    hostapd.add_ap(ap, { "ssid": "open", "hw_mode": "a",
+                         "channel": "36", "country_code": "US" })
     time.sleep(0.1)
     hapd_global = hostapd.HostapdGlobal()
     hapd_global.remove(ap['ifname'])

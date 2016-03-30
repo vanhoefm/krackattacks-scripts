@@ -36,7 +36,7 @@ def wps_start_ap(apdev, ssid="test-wps-conf"):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" }
-    return hostapd.add_ap(apdev['ifname'], params)
+    return hostapd.add_ap(apdev, params)
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -5253,7 +5253,7 @@ def wps_start_ext(apdev, dev, pbc=False, pin=None):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"}
-    hapd = hostapd.add_ap(apdev['ifname'], params)
+    hapd = hostapd.add_ap(apdev, params)
 
     if pbc:
         hapd.request("WPS_PBC")
@@ -7656,7 +7656,7 @@ def wps_start_ext_reg(apdev, dev):
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                "ap_pin": appin }
-    hapd = hostapd.add_ap(apdev['ifname'], params)
+    hapd = hostapd.add_ap(apdev, params)
 
     dev.scan_for_bss(bssid, freq="2412")
     hapd.request("SET ext_eapol_frame_io 1")

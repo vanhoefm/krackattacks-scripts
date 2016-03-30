@@ -191,7 +191,7 @@ def hapd_out_of_mem(hapd, apdev, count, func):
     with alloc_fail(hapd, count, func):
         started = False
         try:
-            hostapd.add_ap(apdev['ifname'], { "ssid": "open" })
+            hostapd.add_ap(apdev, { "ssid": "open" })
             started = True
         except:
             pass

@@ -608,7 +608,7 @@ def sae_reflection_attack(apdev, dev, group):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="no-knowledge-of-passphrase")
     params['wpa_key_mgmt'] = 'SAE'
-    hapd = hostapd.add_ap(apdev['ifname'], params)
+    hapd = hostapd.add_ap(apdev, params)
     bssid = apdev['bssid']
 
     dev.scan_for_bss(bssid, freq=2412)

@@ -392,7 +392,7 @@ def test_nfc_wps_handover_pk_hash_mismatch_ap(dev, apdev):
 def start_ap_er(er, ap, ssid):
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hostapd.add_ap(ap['ifname'],
+    hostapd.add_ap(ap,
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "wpa_passphrase": "12345678", "wpa": "2",
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",

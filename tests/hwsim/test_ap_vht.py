@@ -75,7 +75,7 @@ def vht80_test(apdev, dev, channel, ht_capab):
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "1",
                    "vht_oper_centr_freq_seg0_idx": "42" }
-        hapd = hostapd.add_ap(apdev['ifname'], params)
+        hapd = hostapd.add_ap(apdev, params)
         bssid = apdev['bssid']
 
         dev.connect("vht", key_mgmt="NONE", scan_freq=str(5000 + 5 * channel))
@@ -225,7 +225,7 @@ def test_ap_vht_20(devs, apdevs):
                    "supported_rates": "60 120 240 360 480 540",
                    "require_vht": "1",
                  }
-        hapd = hostapd.add_ap(ap['ifname'], params)
+        hapd = hostapd.add_ap(ap, params)
         dev.connect("test-vht20", scan_freq="5180", key_mgmt="NONE")
         hwsim_utils.test_connectivity(dev, hapd)
     finally:
@@ -252,7 +252,7 @@ def test_ap_vht_40(devs, apdevs):
                    "vht_oper_chwidth": "0",
                    "vht_oper_centr_freq_seg0_idx": "0",
                  }
-        hapd = hostapd.add_ap(ap['ifname'], params)
+        hapd = hostapd.add_ap(ap, params)
         dev.connect("test-vht40", scan_freq="5180", key_mgmt="NONE")
         hwsim_utils.test_connectivity(dev, hapd)
     finally:

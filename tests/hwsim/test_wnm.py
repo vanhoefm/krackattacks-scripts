@@ -721,7 +721,7 @@ def start_wnm_tm(ap, country, dev):
                "hw_mode": "g",
                "channel": "1",
                "bss_transition": "1" }
-    hapd = hostapd.add_ap(ap['ifname'], params)
+    hapd = hostapd.add_ap(ap, params)
     id = dev.connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev.dump_monitor()
     dev.set_network(id, "scan_freq", "")

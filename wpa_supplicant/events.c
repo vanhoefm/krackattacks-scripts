@@ -3608,17 +3608,20 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 #ifdef CONFIG_OFFCHANNEL
 		wpa_dbg(wpa_s, MSG_DEBUG, "EVENT_TX_STATUS pending_dst="
-			MACSTR, MAC2STR(wpa_s->parent->pending_action_dst));
+			MACSTR, MAC2STR(wpa_s->p2pdev->pending_action_dst));
 		/*
 		 * Catch TX status events for Action frames we sent via group
-		 * interface in GO mode.
+		 * interface in GO mode, or via standalone AP interface.
+		 * Note, wpa_s->p2pdev will be the same as wpa_s->parent,
+		 * except when the primary interface is used as a GO interface
+		 * (for drivers which do not have group interface concurrency)
 		 */
 		if (data->tx_status.type == WLAN_FC_TYPE_MGMT &&
 		    data->tx_status.stype == WLAN_FC_STYPE_ACTION &&
-		    os_memcmp(wpa_s->parent->pending_action_dst,
+		    os_memcmp(wpa_s->p2pdev->pending_action_dst,
 			      data->tx_status.dst, ETH_ALEN) == 0) {
 			offchannel_send_action_tx_status(
-				wpa_s->parent, data->tx_status.dst,
+				wpa_s->p2pdev, data->tx_status.dst,
 				data->tx_status.data,
 				data->tx_status.data_len,
 				data->tx_status.ack ?

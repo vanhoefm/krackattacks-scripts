@@ -23,8 +23,29 @@ wpas_get_tx_interface(struct wpa_supplicant *wpa_s, const u8 *src)
 {
 	struct wpa_supplicant *iface;
 
-	if (os_memcmp(src, wpa_s->own_addr, ETH_ALEN) == 0)
+	if (os_memcmp(src, wpa_s->own_addr, ETH_ALEN) == 0) {
+#ifdef CONFIG_P2P
+		if (wpa_s->p2p_mgmt && wpa_s != wpa_s->parent &&
+		    wpa_s->parent->ap_iface &&
+		    os_memcmp(wpa_s->parent->own_addr,
+			      wpa_s->own_addr, ETH_ALEN) == 0 &&
+		    wpabuf_len(wpa_s->pending_action_tx) >= 2 &&
+		    *wpabuf_head_u8(wpa_s->pending_action_tx) !=
+		    WLAN_ACTION_PUBLIC) {
+			/*
+			 * When P2P Device interface has same MAC address as
+			 * the GO interface, make sure non-Public Action frames
+			 * are sent through the GO interface. The P2P Device
+			 * interface can only send Public Action frames.
+			 */
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Use GO interface %s instead of interface %s for Action TX",
+				   wpa_s->parent->ifname, wpa_s->ifname);
+			return wpa_s->parent;
+		}
+#endif /* CONFIG_P2P */
 		return wpa_s;
+	}
 
 	/*
 	 * Try to find a group interface that matches with the source address.

@@ -2318,7 +2318,7 @@ def test_ap_wps_pbc_timeout(dev, apdev, params):
     if not params['long']:
         raise HwsimSkip("Skip test case with long duration due to --long not specified")
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
@@ -2422,7 +2422,7 @@ VFi5hrLk
     if ev is None:
         raise Exception("WPS-TIMEOUT not reported")
 
-def add_ssdp_ap(ifname, ap_uuid):
+def add_ssdp_ap(ap, ap_uuid):
     ssid = "wps-ssdp"
     ap_pin = "12345670"
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -2439,7 +2439,7 @@ def add_ssdp_ap(ifname, ap_uuid):
                "model_description": "Wireless Access Point",
                "model_url": "http://www.example.com/model/",
                "upc": "123456789012" }
-    return hostapd.add_ap(ifname, params)
+    return hostapd.add_ap(ap, params)
 
 def ssdp_send(msg, no_recv=False):
     socket.setdefaulttimeout(1)
@@ -2465,7 +2465,7 @@ def ssdp_send_msearch(st, no_recv=False):
 def test_ap_wps_ssdp_msearch(dev, apdev):
     """WPS AP and SSDP M-SEARCH messages"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     msg = '\r\n'.join([
             'M-SEARCH * HTTP/1.1',
@@ -2503,7 +2503,7 @@ def test_ap_wps_ssdp_msearch(dev, apdev):
 def test_ap_wps_ssdp_invalid_msearch(dev, apdev):
     """WPS AP and invalid SSDP M-SEARCH messages"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     socket.setdefaulttimeout(1)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -2675,7 +2675,7 @@ def test_ap_wps_ssdp_invalid_msearch(dev, apdev):
 def test_ap_wps_ssdp_burst(dev, apdev):
     """WPS AP and SSDP burst"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     msg = '\r\n'.join([
             'M-SEARCH * HTTP/1.1',
@@ -2776,7 +2776,7 @@ def upnp_soap_action(conn, path, action, include_soap_action=True,
 def test_ap_wps_upnp(dev, apdev):
     """WPS AP and UPnP operations"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
@@ -2858,7 +2858,7 @@ def test_ap_wps_upnp(dev, apdev):
 def test_ap_wps_upnp_subscribe(dev, apdev):
     """WPS AP and UPnP event subscription"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
@@ -3206,7 +3206,7 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
 def test_ap_wps_upnp_subscribe_events(dev, apdev):
     """WPS AP and UPnP event subscription and many events"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
@@ -3273,7 +3273,7 @@ def test_ap_wps_upnp_subscribe_events(dev, apdev):
 def test_ap_wps_upnp_http_proto(dev, apdev):
     """WPS AP and UPnP/HTTP protocol testing"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
 
@@ -3372,7 +3372,7 @@ def test_ap_wps_upnp_http_proto(dev, apdev):
 def test_ap_wps_upnp_http_proto_chunked(dev, apdev):
     """WPS AP and UPnP/HTTP protocol testing for chunked encoding"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
 
@@ -4767,7 +4767,7 @@ def test_ap_wps_http_timeout(dev, apdev):
 
 def _test_ap_wps_http_timeout(dev, apdev):
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     url = urlparse.urlparse(location)
@@ -5853,7 +5853,7 @@ def test_ap_wps_config_methods(dev, apdev):
 def test_ap_wps_set_selected_registrar_proto(dev, apdev):
     """WPS UPnP SetSelectedRegistrar protocol testing"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
@@ -5911,7 +5911,7 @@ def test_ap_wps_set_selected_registrar_proto(dev, apdev):
 def test_ap_wps_adv_oom(dev, apdev):
     """WPS AP and advertisement OOM"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     with alloc_fail(hapd, 1, "=msearchreply_state_machine_start"):
         ssdp_send_msearch("urn:schemas-wifialliance-org:service:WFAWLANConfig:1",
@@ -9161,7 +9161,7 @@ def test_ap_wps_disable_enable(dev, apdev):
 def test_ap_wps_upnp_web_oom(dev, apdev, params):
     """hostapd WPS UPnP web OOM"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hapd = add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+    hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
     location = ssdp_get_location(ap_uuid)
     url = urlparse.urlparse(location)

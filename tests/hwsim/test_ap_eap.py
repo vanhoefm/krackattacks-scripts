@@ -755,6 +755,51 @@ def _test_ap_wpa2_eap_sim_change_bssid(dev, apdev):
     dev[0].set_network(id, "bssid", "any")
     eap_reauth(dev[0], "SIM")
 
+def test_ap_wpa2_eap_sim_no_change_set(dev, apdev):
+    """EAP-SIM and external GSM auth to check fast reauth with no-change SET_NETWORK"""
+    try:
+        _test_ap_wpa2_eap_sim_no_change_set(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_sim_no_change_set(dev, apdev):
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="SIM", key_mgmt="WPA-EAP",
+                        identity="1232010000000000",
+                        wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    rand = p[2].split(' ')[0]
+
+    res = subprocess.check_output(["../../hostapd/hlr_auc_gw",
+                                   "-m",
+                                   "auth_serv/hlr_auc_gw.milenage_db",
+                                   "GSM-AUTH-REQ 232010000000000 " + rand])
+    if "GSM-AUTH-RESP" not in res:
+        raise Exception("Unexpected hlr_auc_gw response")
+    resp = res.split(' ')[2].rstrip()
+
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:" + resp)
+    dev[0].wait_connected(timeout=15)
+
+    # Verify that EAP-SIM Reauthentication can be used after network profile
+    # SET_NETWORK commands that do not actually change previously set
+    # parameter values.
+    dev[0].set_network(id, "key_mgmt", "WPA-EAP")
+    dev[0].set_network(id, "eap", "SIM")
+    dev[0].set_network_quoted(id, "identity", "1232010000000000")
+    dev[0].set_network_quoted(id, "ssid", "test-wpa2-eap")
+    eap_reauth(dev[0], "SIM")
+
 def test_ap_wpa2_eap_sim_oom(dev, apdev):
     """EAP-SIM and OOM"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

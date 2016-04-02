@@ -855,16 +855,15 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 		   (int) len);
 
 	if (stype == WLAN_FC_STYPE_PROBE_REQ) {
-		if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
+		if (len < IEEE80211_HDRLEN)
 			return;
 
 		os_memset(&event, 0, sizeof(event));
 		event.rx_probe_req.sa = mgmt->sa;
 		event.rx_probe_req.da = mgmt->da;
 		event.rx_probe_req.bssid = mgmt->bssid;
-		event.rx_probe_req.ie = mgmt->u.probe_req.variable;
-		event.rx_probe_req.ie_len =
-			len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
+		event.rx_probe_req.ie = buf + IEEE80211_HDRLEN;
+		event.rx_probe_req.ie_len = len - IEEE80211_HDRLEN;
 		wpa_supplicant_event(drv->hapd, EVENT_RX_PROBE_REQ, &event);
 		return;
 	}

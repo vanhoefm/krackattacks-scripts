@@ -685,12 +685,12 @@ void handle_probe_req(struct hostapd_data *hapd,
 	u16 csa_offs[2];
 	size_t csa_offs_len;
 
-	ie = mgmt->u.probe_req.variable;
-	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
+	if (len < IEEE80211_HDRLEN)
 		return;
+	ie = ((const u8 *) mgmt) + IEEE80211_HDRLEN;
 	if (hapd->iconf->track_sta_max_num)
 		sta_track_add(hapd->iface, mgmt->sa);
-	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
+	ie_len = len - IEEE80211_HDRLEN;
 
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,

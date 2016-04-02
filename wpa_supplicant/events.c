@@ -3706,12 +3706,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 #ifdef CONFIG_P2P
 			if (stype == WLAN_FC_STYPE_PROBE_REQ &&
-			    data->rx_mgmt.frame_len > 24) {
+			    data->rx_mgmt.frame_len > IEEE80211_HDRLEN) {
 				const u8 *src = mgmt->sa;
-				const u8 *ie = mgmt->u.probe_req.variable;
-				size_t ie_len = data->rx_mgmt.frame_len -
-					(mgmt->u.probe_req.variable -
-					 data->rx_mgmt.frame);
+				const u8 *ie;
+				size_t ie_len;
+
+				ie = data->rx_mgmt.frame + IEEE80211_HDRLEN;
+				ie_len = data->rx_mgmt.frame_len -
+					IEEE80211_HDRLEN;
 				wpas_p2p_probe_req_rx(
 					wpa_s, src, mgmt->da,
 					mgmt->bssid, ie, ie_len,
@@ -3751,11 +3753,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 
 		if (stype == WLAN_FC_STYPE_PROBE_REQ &&
-		    data->rx_mgmt.frame_len > 24) {
-			const u8 *ie = mgmt->u.probe_req.variable;
-			size_t ie_len = data->rx_mgmt.frame_len -
-				(mgmt->u.probe_req.variable -
-				 data->rx_mgmt.frame);
+		    data->rx_mgmt.frame_len > IEEE80211_HDRLEN) {
+			const u8 *ie;
+			size_t ie_len;
+
+			ie = data->rx_mgmt.frame + IEEE80211_HDRLEN;
+			ie_len = data->rx_mgmt.frame_len - IEEE80211_HDRLEN;
 
 			wpas_notify_preq(wpa_s, mgmt->sa, mgmt->da,
 					 mgmt->bssid, ie, ie_len,

@@ -1142,6 +1142,13 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	/*
+	 * When starting a regular WPS process (not P2P group formation)
+	 * the registrar/final station can be either AP or PCP
+	 * so use a "don't care" value for the pbss flag.
+	 */
+	if (!p2p_group)
+		ssid->pbss = 2;
 #ifdef CONFIG_P2P
 	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
 		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
@@ -1197,6 +1204,13 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 	}
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	/*
+	 * When starting a regular WPS process (not P2P group formation)
+	 * the registrar/final station can be either AP or PCP
+	 * so use a "don't care" value for the pbss flag.
+	 */
+	if (!p2p_group)
+		ssid->pbss = 2;
 	if (ssid_val) {
 		ssid->ssid = os_malloc(ssid_len);
 		if (ssid->ssid) {

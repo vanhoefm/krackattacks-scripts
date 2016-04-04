@@ -2048,7 +2048,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT(update_identifier) },
 #endif /* CONFIG_HS20 */
 	{ INT_RANGE(mac_addr, 0, 2) },
-	{ INT_RANGE(pbss, 0, 1) },
+	{ INT_RANGE(pbss, 0, 2) },
 };
 
 #undef OFFSET

@@ -179,7 +179,7 @@ def test_discovery_ctrl_char_in_devname(dev):
         dev[1].global_request("SET device_name Device B")
 
 def _test_discovery_ctrl_char_in_devname(dev):
-    dev[1].global_request("SET device_name Device\nB")
+    dev[1].global_request("SET device_name Device\tB")
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     res = dev[0].p2p_start_go(freq=2422)

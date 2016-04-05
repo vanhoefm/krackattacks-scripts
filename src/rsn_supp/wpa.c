@@ -131,7 +131,7 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info = WPA_KEY_INFO_REQUEST | ver;
 	if (sm->ptk_set)
-		key_info |= WPA_KEY_INFO_MIC;
+		key_info |= WPA_KEY_INFO_MIC | WPA_KEY_INFO_SECURE;
 	if (error)
 		key_info |= WPA_KEY_INFO_ERROR;
 	if (pairwise)

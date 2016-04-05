@@ -299,3 +299,51 @@ def test_wpas_config_file_set_psk(dev):
             os.rmdir(config)
         except:
             pass
+
+def test_wpas_config_file_set_cred(dev):
+    """wpa_supplicant config file parsing/writing with arbitrary cred values"""
+    config = "/tmp/test_wpas_config_file.conf"
+    if os.path.exists(config):
+        os.remove(config)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    try:
+        with open(config, "w") as f:
+            f.write("update_config=1\n")
+
+        wpas.interface_add("wlan5", config=config)
+
+        id = wpas.add_cred()
+        wpas.set_cred_quoted(id, "username", "hello")
+        fields = [ "username", "milenage", "imsi", "password", "realm",
+                   "phase1", "phase2", "provisioning_sp" ]
+        for field in fields:
+            if "FAIL" not in wpas.request('SET_CRED %d %s "hello"\n}\nmodel_name=foobar\ncred={\n#\"' % (id, field)):
+                raise Exception("Invalid %s value accepted" % field)
+
+        if "OK" not in wpas.request("SAVE_CONFIG"):
+            raise Exception("Failed to save configuration file")
+
+        with open(config, "r") as f:
+            data = f.read()
+            logger.info("Configuration file contents: " + data)
+            if "model_name" in data:
+                raise Exception("Unexpected parameter added to configuration")
+
+        wpas.interface_remove("wlan5")
+        wpas.interface_add("wlan5", config=config)
+
+    finally:
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass

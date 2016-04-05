@@ -347,3 +347,55 @@ def test_wpas_config_file_set_cred(dev):
             os.rmdir(config)
         except:
             pass
+
+def test_wpas_config_file_set_global(dev):
+    """wpa_supplicant config file parsing/writing with arbitrary global values"""
+    config = "/tmp/test_wpas_config_file.conf"
+    if os.path.exists(config):
+        os.remove(config)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    try:
+        with open(config, "w") as f:
+            f.write("update_config=1\n")
+
+        wpas.interface_add("wlan5", config=config)
+
+        fields = [ "model_name", "device_name", "ctrl_interface_group",
+                   "opensc_engine_path", "pkcs11_engine_path",
+                   "pkcs11_module_path", "openssl_ciphers", "pcsc_reader",
+                   "pcsc_pin", "driver_param", "manufacturer", "model_name",
+                   "model_number", "serial_number", "config_methods",
+	           "p2p_ssid_postfix", "autoscan", "ext_password_backend",
+	           "osu_dir", "wowlan_triggers", "fst_group_id",
+	           "sched_scan_plans", "non_pref_chan" ]
+        for field in fields:
+            if "FAIL" not in wpas.request('SET %s hello\nmodel_name=foobar' % field):
+                raise Exception("Invalid %s value accepted" % field)
+
+        if "OK" not in wpas.request("SAVE_CONFIG"):
+            raise Exception("Failed to save configuration file")
+
+        with open(config, "r") as f:
+            data = f.read()
+            logger.info("Configuration file contents: " + data)
+            if "model_name" in data:
+                raise Exception("Unexpected parameter added to configuration")
+
+        wpas.interface_remove("wlan5")
+        wpas.interface_add("wlan5", config=config)
+
+    finally:
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass

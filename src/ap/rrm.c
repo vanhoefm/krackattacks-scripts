@@ -12,7 +12,71 @@
 #include "utils/common.h"
 #include "hostapd.h"
 #include "ap_drv_ops.h"
+#include "sta_info.h"
+#include "eloop.h"
+#include "neighbor_db.h"
 #include "rrm.h"
+
+#define HOSTAPD_RRM_REQUEST_TIMEOUT 5
+
+
+static void hostapd_lci_rep_timeout_handler(void *eloop_data, void *user_ctx)
+{
+	struct hostapd_data *hapd = eloop_data;
+
+	wpa_printf(MSG_DEBUG, "RRM: LCI request (token %u) timed out",
+		   hapd->lci_req_token);
+	hapd->lci_req_active = 0;
+}
+
+
+static void hostapd_handle_lci_report(struct hostapd_data *hapd, u8 token,
+				      const u8 *pos, size_t len)
+{
+	if (!hapd->lci_req_active || hapd->lci_req_token != token) {
+		wpa_printf(MSG_DEBUG, "Unexpected LCI report, token %u", token);
+		return;
+	}
+
+	hapd->lci_req_active = 0;
+	eloop_cancel_timeout(hostapd_lci_rep_timeout_handler, hapd, NULL);
+	wpa_printf(MSG_DEBUG, "LCI report token %u len %zu", token, len);
+}
+
+
+static void hostapd_handle_radio_msmt_report(struct hostapd_data *hapd,
+					     const u8 *buf, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt = (const struct ieee80211_mgmt *) buf;
+	const u8 *pos, *ie, *end;
+	u8 token;
+
+	end = buf + len;
+	token = mgmt->u.action.u.rrm.dialog_token;
+	pos = mgmt->u.action.u.rrm.variable;
+
+	while ((ie = get_ie(pos, end - pos, WLAN_EID_MEASURE_REPORT))) {
+		if (ie[1] < 5) {
+			wpa_printf(MSG_DEBUG, "Bad Measurement Report element");
+			break;
+		}
+
+		wpa_printf(MSG_DEBUG, "Measurement report type %u", ie[4]);
+
+		switch (ie[4]) {
+		case MEASURE_TYPE_LCI:
+			hostapd_handle_lci_report(hapd, token, ie + 2, ie[1]);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG,
+				   "Measurement report type %u is not supported",
+				   ie[4]);
+			break;
+		}
+
+		pos = ie + ie[1] + 2;
+	}
+}
 
 
 static u16 hostapd_parse_location_lci_req_age(const u8 *buf, size_t len)
@@ -229,6 +293,9 @@ void hostapd_handle_radio_measurement(struct hostapd_data *hapd,
 		   mgmt->u.action.u.rrm.action, MAC2STR(mgmt->sa));
 
 	switch (mgmt->u.action.u.rrm.action) {
+	case WLAN_RRM_RADIO_MEASUREMENT_REPORT:
+		hostapd_handle_radio_msmt_report(hapd, buf, len);
+		break;
 	case WLAN_RRM_NEIGHBOR_REPORT_REQUEST:
 		hostapd_handle_nei_report_req(hapd, buf, len);
 		break;
@@ -237,4 +304,91 @@ void hostapd_handle_radio_measurement(struct hostapd_data *hapd,
 			   mgmt->u.action.u.rrm.action);
 		break;
 	}
+}
+
+
+int hostapd_send_lci_req(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct wpabuf *buf;
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	int ret;
+
+	if (!sta) {
+		wpa_printf(MSG_INFO,
+			   "Request LCI: Destination address is not in station list");
+		return -1;
+	}
+
+	if (!(sta->flags & WLAN_STA_AUTHORIZED)) {
+		wpa_printf(MSG_INFO,
+			   "Request LCI: Destination address is not connected");
+		return -1;
+	}
+
+	if (!(sta->rrm_enabled_capa[1] & WLAN_RRM_CAPS_LCI_MEASUREMENT)) {
+		wpa_printf(MSG_INFO,
+			   "Request LCI: Station does not support LCI in RRM");
+		return -1;
+	}
+
+	if (hapd->lci_req_active) {
+		wpa_printf(MSG_DEBUG,
+			   "Request LCI: LCI request is already in process, overriding");
+		hapd->lci_req_active = 0;
+		eloop_cancel_timeout(hostapd_lci_rep_timeout_handler, hapd,
+				     NULL);
+	}
+
+	/* Measurement request (5) + Measurement element with LCI (10) */
+	buf = wpabuf_alloc(5 + 10);
+	if (!buf)
+		return -1;
+
+	hapd->lci_req_token++;
+	/* For wraparounds - the token must be nonzero */
+	if (!hapd->lci_req_token)
+		hapd->lci_req_token++;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REQUEST);
+	wpabuf_put_u8(buf, hapd->lci_req_token);
+	wpabuf_put_le16(buf, 0); /* Number of repetitions */
+
+	wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+	wpabuf_put_u8(buf, 3 + 1 + 4);
+
+	wpabuf_put_u8(buf, 1); /* Measurement Token */
+	/*
+	 * Parallel and Enable bits are 0, Duration, Request, and Report are
+	 * reserved.
+	 */
+	wpabuf_put_u8(buf, 0);
+	wpabuf_put_u8(buf, MEASURE_TYPE_LCI);
+
+	wpabuf_put_u8(buf, LOCATION_SUBJECT_REMOTE);
+
+	wpabuf_put_u8(buf, LCI_REQ_SUBELEM_MAX_AGE);
+	wpabuf_put_u8(buf, 2);
+	wpabuf_put_le16(buf, 0xffff);
+
+	ret = hostapd_drv_send_action(hapd, hapd->iface->freq, 0, addr,
+				      wpabuf_head(buf), wpabuf_len(buf));
+	wpabuf_free(buf);
+	if (ret)
+		return ret;
+
+	hapd->lci_req_active = 1;
+
+	eloop_register_timeout(HOSTAPD_RRM_REQUEST_TIMEOUT, 0,
+			       hostapd_lci_rep_timeout_handler, hapd, NULL);
+
+	return 0;
+}
+
+
+void hostapd_clean_rrm(struct hostapd_data *hapd)
+{
+	hostpad_free_neighbor_db(hapd);
+	eloop_cancel_timeout(hostapd_lci_rep_timeout_handler, hapd, NULL);
+	hapd->lci_req_active = 0;
 }

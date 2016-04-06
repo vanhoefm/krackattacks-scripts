@@ -1186,6 +1186,26 @@ static int hostapd_cli_cmd_remove_neighbor(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_req_lci(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid req_lci command - requires destination address\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "REQ_LCI %s", argv[0]);
+	if (os_snprintf_error(sizeof(cmd), res)) {
+		printf("Too long REQ_LCI command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1249,6 +1269,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "pmksa_flush", hostapd_cli_cmd_pmksa_flush },
 	{ "set_neighbor", hostapd_cli_cmd_set_neighbor },
 	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor },
+	{ "req_lci", hostapd_cli_cmd_req_lci },
 	{ NULL, NULL }
 };
 

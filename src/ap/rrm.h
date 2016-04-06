@@ -12,5 +12,7 @@
 
 void hostapd_handle_radio_measurement(struct hostapd_data *hapd,
 				      const u8 *buf, size_t len);
+int hostapd_send_lci_req(struct hostapd_data *hapd, const u8 *addr);
+void hostapd_clean_rrm(struct hostapd_data *hapd);
 
 #endif /* RRM_H */

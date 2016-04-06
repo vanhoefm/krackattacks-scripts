@@ -366,6 +366,8 @@
 /* byte 1 (out of 5) */
 #define WLAN_RRM_CAPS_LINK_MEASUREMENT BIT(0)
 #define WLAN_RRM_CAPS_NEIGHBOR_REPORT BIT(1)
+/* byte 2 (out of 5) */
+#define WLAN_RRM_CAPS_LCI_MEASUREMENT BIT(4)
 
 /* Timeout Interval Type */
 #define WLAN_TIMEOUT_REASSOC_DEADLINE 1

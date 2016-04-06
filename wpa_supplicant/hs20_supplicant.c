@@ -61,6 +61,46 @@ struct osu_provider {
 };
 
 
+void hs20_configure_frame_filters(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss = wpa_s->current_bss;
+	u8 *bssid = wpa_s->bssid;
+	const u8 *ie;
+	const u8 *ext_capa;
+	u32 filter = 0;
+
+	if (!bss || !is_hs20_network(wpa_s, wpa_s->current_ssid, bss)) {
+		wpa_printf(MSG_DEBUG,
+			   "Not configuring frame filtering - BSS " MACSTR
+			   " is not a Hotspot 2.0 network", MAC2STR(bssid));
+		return;
+	}
+
+	ie = wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE);
+
+	/* Check if DGAF disabled bit is zero (5th byte in the IE) */
+	if (!ie || ie[1] < 5)
+		wpa_printf(MSG_DEBUG,
+			   "Not configuring frame filtering - Can't extract DGAF bit");
+	else if (!(ie[6] & HS20_DGAF_DISABLED))
+		filter |= WPA_DATA_FRAME_FILTER_FLAG_GTK;
+
+	ext_capa = wpa_bss_get_ie(bss, WLAN_EID_EXT_CAPAB);
+	if (!ext_capa || ext_capa[1] < 2) {
+		wpa_printf(MSG_DEBUG,
+			   "Not configuring frame filtering - Can't extract Proxy ARP bit");
+		return;
+	}
+
+	/* Check if Proxy ARP is enabled (2nd byte in the IE) */
+	if (ext_capa[3] & BIT(4))
+		filter |= WPA_DATA_FRAME_FILTER_FLAG_ARP |
+			WPA_DATA_FRAME_FILTER_FLAG_NA;
+
+	wpa_drv_configure_frame_filters(wpa_s, filter);
+}
+
+
 void wpas_hs20_add_indication(struct wpabuf *buf, int pps_mo_id)
 {
 	u8 conf;

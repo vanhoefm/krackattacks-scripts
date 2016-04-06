@@ -552,6 +552,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->last_scan_res = NULL;
 
 #ifdef CONFIG_HS20
+	if (wpa_s->drv_priv)
+		wpa_drv_configure_frame_filters(wpa_s, 0);
 	hs20_deinit(wpa_s);
 #endif /* CONFIG_HS20 */
 
@@ -2319,6 +2321,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 				wpa_ie_len += wpabuf_len(hs20);
 			}
 			wpabuf_free(hs20);
+
+			hs20_configure_frame_filters(wpa_s);
 		}
 	}
 #endif /* CONFIG_HS20 */
@@ -2611,8 +2615,14 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
-	if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set)
+
+	if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set) {
 		wpa_s->current_bss = bss;
+#ifdef CONFIG_HS20
+		hs20_configure_frame_filters(wpa_s);
+#endif /* CONFIG_HS20 */
+	}
+
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
 	if (old_ssid != wpa_s->current_ssid)

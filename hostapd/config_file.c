@@ -1920,29 +1920,6 @@ static int hs20_parse_osu_service_desc(struct hostapd_bss_config *bss,
 #endif /* CONFIG_HS20 */
 
 
-static struct wpabuf * hostapd_parse_bin(const char *buf)
-{
-	size_t len;
-	struct wpabuf *ret;
-
-	len = os_strlen(buf);
-	if (len & 0x01)
-		return NULL;
-	len /= 2;
-
-	ret = wpabuf_alloc(len);
-	if (ret == NULL)
-		return NULL;
-
-	if (hexstr2bin(buf, wpabuf_put(ret, len), len)) {
-		wpabuf_free(ret);
-		return NULL;
-	}
-
-	return ret;
-}
-
-
 #ifdef CONFIG_ACS
 static int hostapd_config_parse_acs_chan_bias(struct hostapd_config *conf,
 					      char *pos)
@@ -3029,15 +3006,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->wps_nfc_pw_from_config = 1;
 	} else if (os_strcmp(buf, "wps_nfc_dh_pubkey") == 0) {
 		wpabuf_free(bss->wps_nfc_dh_pubkey);
-		bss->wps_nfc_dh_pubkey = hostapd_parse_bin(pos);
+		bss->wps_nfc_dh_pubkey = wpabuf_parse_bin(pos);
 		bss->wps_nfc_pw_from_config = 1;
 	} else if (os_strcmp(buf, "wps_nfc_dh_privkey") == 0) {
 		wpabuf_free(bss->wps_nfc_dh_privkey);
-		bss->wps_nfc_dh_privkey = hostapd_parse_bin(pos);
+		bss->wps_nfc_dh_privkey = wpabuf_parse_bin(pos);
 		bss->wps_nfc_pw_from_config = 1;
 	} else if (os_strcmp(buf, "wps_nfc_dev_pw") == 0) {
 		wpabuf_free(bss->wps_nfc_dev_pw);
-		bss->wps_nfc_dev_pw = hostapd_parse_bin(pos);
+		bss->wps_nfc_dev_pw = wpabuf_parse_bin(pos);
 		bss->wps_nfc_pw_from_config = 1;
 #endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
@@ -3487,10 +3464,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->no_auth_if_seen_on = os_strdup(pos);
 	} else if (os_strcmp(buf, "lci") == 0) {
 		wpabuf_free(conf->lci);
-		conf->lci = hostapd_parse_bin(pos);
+		conf->lci = wpabuf_parse_bin(pos);
 	} else if (os_strcmp(buf, "civic") == 0) {
 		wpabuf_free(conf->civic);
-		conf->civic = hostapd_parse_bin(pos);
+		conf->civic = wpabuf_parse_bin(pos);
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

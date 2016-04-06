@@ -3778,21 +3778,11 @@ static int wpa_global_config_parse_bin(const struct global_parse_data *data,
 				       struct wpa_config *config, int line,
 				       const char *pos)
 {
-	size_t len;
 	struct wpabuf **dst, *tmp;
 
-	len = os_strlen(pos);
-	if (len & 0x01)
+	tmp = wpabuf_parse_bin(pos);
+	if (!tmp)
 		return -1;
-
-	tmp = wpabuf_alloc(len / 2);
-	if (tmp == NULL)
-		return -1;
-
-	if (hexstr2bin(pos, wpabuf_put(tmp, len / 2), len / 2)) {
-		wpabuf_free(tmp);
-		return -1;
-	}
 
 	dst = (struct wpabuf **) (((u8 *) config) + (long) data->param1);
 	wpabuf_free(*dst);

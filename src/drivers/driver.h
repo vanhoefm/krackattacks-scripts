@@ -1372,6 +1372,12 @@ struct wpa_driver_capa {
  * offset, namely the 6th byte in the Action frame body.
  */
 #define WPA_DRIVER_FLAGS_TX_POWER_INSERTION		0x00000008
+/**
+ * Driver supports RRM. With this support, the driver will accept to use RRM in
+ * (Re)Association Request frames, without supporting quiet period.
+ */
+#define WPA_DRIVER_FLAGS_SUPPORT_RRM			0x00000010
+
 	u32 rrm_flags;
 
 	/* Driver concurrency capabilities */

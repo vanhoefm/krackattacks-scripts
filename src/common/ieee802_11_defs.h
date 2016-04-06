@@ -453,6 +453,48 @@ enum nai_realm_eap_cred_type {
 	NAI_REALM_CRED_TYPE_VENDOR_SPECIFIC = 10
 };
 
+/*
+ * IEEE P802.11-REVmc/D5.0 Table 9-81 - Measurement type definitions for
+ * measurement requests
+ */
+enum measure_type {
+	MEASURE_TYPE_BASIC = 0,
+	MEASURE_TYPE_CCA = 1,
+	MEASURE_TYPE_RPI_HIST = 2,
+	MEASURE_TYPE_CHANNEL_LOAD = 3,
+	MEASURE_TYPE_NOISE_HIST = 4,
+	MEASURE_TYPE_BEACON = 5,
+	MEASURE_TYPE_FRAME = 6,
+	MEASURE_TYPE_STA_STATISTICS = 7,
+	MEASURE_TYPE_LCI = 8,
+	MEASURE_TYPE_TRANSMIT_STREAM = 9,
+	MEASURE_TYPE_MULTICAST_DIAG = 10,
+	MEASURE_TYPE_LOCATION_CIVIC = 11,
+	MEASURE_TYPE_LOCATION_ID = 12,
+	MEASURE_TYPE_DIRECTIONAL_CHAN_QUALITY = 13,
+	MEASURE_TYPE_DIRECTIONAL_MEASURE = 14,
+	MEASURE_TYPE_DIRECTIONAL_STATS = 15,
+	MEASURE_TYPE_FTM_RANGE = 16,
+	MEASURE_TYPE_MEASURE_PAUSE = 255,
+};
+
+/* IEEE Std 802.11-2012 Table 8-71 - Location subject definition */
+enum location_subject {
+	LOCATION_SUBJECT_LOCAL = 0,
+	LOCATION_SUBJECT_REMOTE = 1,
+	LOCATION_SUBJECT_3RD_PARTY = 2,
+};
+
+/*
+ * IEEE P802.11-REVmc/D5.0 Table 9-94 - Optional subelement IDs for LCI request
+ */
+enum lci_req_subelem {
+	LCI_REQ_SUBELEM_AZIMUTH_REQ = 1,
+	LCI_REQ_SUBELEM_ORIGINATOR_MAC_ADDR = 2,
+	LCI_REQ_SUBELEM_TARGET_MAC_ADDR = 3,
+	LCI_REQ_SUBELEM_MAX_AGE = 4,
+};
+
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif /* _MSC_VER */
@@ -1375,14 +1417,25 @@ enum bss_trans_mgmt_status_code {
 	WNM_BSS_TM_REJECT_LEAVING_ESS = 8
 };
 
+/*
+ * IEEE P802.11-REVmc/D5.0 Table 9-150 - Optional subelement IDs for
+ * neighbor report
+ */
 #define WNM_NEIGHBOR_TSF                         1
 #define WNM_NEIGHBOR_CONDENSED_COUNTRY_STRING    2
 #define WNM_NEIGHBOR_BSS_TRANSITION_CANDIDATE    3
 #define WNM_NEIGHBOR_BSS_TERMINATION_DURATION    4
 #define WNM_NEIGHBOR_BEARING                     5
+#define WNM_NEIGHBOR_WIDE_BW_CHAN                6
+#define WNM_NEIGHBOR_MEASUREMENT_REPORT         39
+#define WNM_NEIGHBOR_HT_CAPAB                   45
+#define WNM_NEIGHBOR_HT_OPER                    61
+#define WNM_NEIGHBOR_SEC_CHAN_OFFSET            62
 #define WNM_NEIGHBOR_MEASUREMENT_PILOT          66
 #define WNM_NEIGHBOR_RRM_ENABLED_CAPABILITIES   70
 #define WNM_NEIGHBOR_MULTIPLE_BSSID             71
+#define WNM_NEIGHBOR_VHT_CAPAB                 191
+#define WNM_NEIGHBOR_VHT_OPER                  192
 
 /* QoS action */
 enum qos_action {
@@ -1542,7 +1595,7 @@ enum phy_type {
 	PHY_TYPE_VHT = 9,
 };
 
-/* IEEE Std 802.11-2012, 8.4.2.39 - Neighbor Report element */
+/* IEEE P802.11-REVmc/D5.0, 9.4.2.37 - Neighbor Report element */
 /* BSSID Information Field */
 #define NEI_REP_BSSID_INFO_AP_NOT_REACH BIT(0)
 #define NEI_REP_BSSID_INFO_AP_UNKNOWN_REACH BIT(1)
@@ -1557,5 +1610,20 @@ enum phy_type {
 #define NEI_REP_BSSID_INFO_IMM_BA BIT(9)
 #define NEI_REP_BSSID_INFO_MOBILITY_DOMAIN BIT(10)
 #define NEI_REP_BSSID_INFO_HT BIT(11)
+#define NEI_REP_BSSID_INFO_VHT BIT(12)
+#define NEI_REP_BSSID_INFO_FTM BIT(13)
+
+/*
+ * IEEE P802.11-REVmc/D5.0 Table 9-152 - HT/VHT Operation Information
+ * subfields.
+ * Note: These definitions are not the same as other VHT_CHANWIDTH_*.
+ */
+enum nr_chan_width {
+	NR_CHAN_WIDTH_20 = 0,
+	NR_CHAN_WIDTH_40 = 1,
+	NR_CHAN_WIDTH_80 = 2,
+	NR_CHAN_WIDTH_160 = 3,
+	NR_CHAN_WIDTH_80P80 = 4,
+};
 
 #endif /* IEEE802_11_DEFS_H */

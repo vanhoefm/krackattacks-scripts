@@ -14,7 +14,7 @@
 #include "neighbor_db.h"
 
 
-static struct hostapd_neighbor_entry *
+struct hostapd_neighbor_entry *
 hostapd_neighbor_get(struct hostapd_data *hapd, const u8 *bssid,
 		     const struct wpa_ssid_value *ssid)
 {
@@ -23,8 +23,10 @@ hostapd_neighbor_get(struct hostapd_data *hapd, const u8 *bssid,
 	dl_list_for_each(nr, &hapd->nr_db, struct hostapd_neighbor_entry,
 			 list) {
 		if (os_memcmp(bssid, nr->bssid, ETH_ALEN) == 0 &&
-		    ssid->ssid_len == nr->ssid.ssid_len &&
-		    os_memcmp(ssid->ssid, nr->ssid.ssid, ssid->ssid_len) == 0)
+		    (!ssid ||
+		     (ssid->ssid_len == nr->ssid.ssid_len &&
+		      os_memcmp(ssid->ssid, nr->ssid.ssid,
+				ssid->ssid_len) == 0)))
 			return nr;
 	}
 	return NULL;

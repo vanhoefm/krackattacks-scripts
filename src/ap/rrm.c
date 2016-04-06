@@ -44,6 +44,31 @@ static void hostapd_handle_lci_report(struct hostapd_data *hapd, u8 token,
 }
 
 
+static void hostapd_range_rep_timeout_handler(void *eloop_data, void *user_ctx)
+{
+	struct hostapd_data *hapd = eloop_data;
+
+	wpa_printf(MSG_DEBUG, "RRM: Range request (token %u) timed out",
+		   hapd->range_req_token);
+	hapd->range_req_active = 0;
+}
+
+
+static void hostapd_handle_range_report(struct hostapd_data *hapd, u8 token,
+					const u8 *pos, size_t len)
+{
+	if (!hapd->range_req_active || hapd->range_req_token != token) {
+		wpa_printf(MSG_DEBUG, "Unexpected range report, token %u",
+			   token);
+		return;
+	}
+
+	hapd->range_req_active = 0;
+	eloop_cancel_timeout(hostapd_range_rep_timeout_handler, hapd, NULL);
+	wpa_printf(MSG_DEBUG, "Range report token %u len %zu", token, len);
+}
+
+
 static void hostapd_handle_radio_msmt_report(struct hostapd_data *hapd,
 					     const u8 *buf, size_t len)
 {
@@ -66,6 +91,9 @@ static void hostapd_handle_radio_msmt_report(struct hostapd_data *hapd,
 		switch (ie[4]) {
 		case MEASURE_TYPE_LCI:
 			hostapd_handle_lci_report(hapd, token, ie + 2, ie[1]);
+			break;
+		case MEASURE_TYPE_FTM_RANGE:
+			hostapd_handle_range_report(hapd, token, ie + 2, ie[1]);
 			break;
 		default:
 			wpa_printf(MSG_DEBUG,
@@ -386,9 +414,131 @@ int hostapd_send_lci_req(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+int hostapd_send_range_req(struct hostapd_data *hapd, const u8 *addr,
+			   u16 random_interval, u8 min_ap,
+			   const u8 *responders, unsigned int n_responders)
+{
+	struct wpabuf *buf;
+	struct sta_info *sta;
+	u8 *len;
+	unsigned int i;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "Request range: dest addr " MACSTR
+		   " rand interval %u min AP %u n_responders %u", MAC2STR(addr),
+		   random_interval, min_ap, n_responders);
+
+	if (min_ap == 0 || min_ap > n_responders) {
+		wpa_printf(MSG_INFO, "Request range: Wrong min AP count");
+		return -1;
+	}
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !(sta->flags & WLAN_STA_AUTHORIZED)) {
+		wpa_printf(MSG_INFO,
+			   "Request range: Destination address is not connected");
+		return -1;
+	}
+
+	if (!(sta->rrm_enabled_capa[4] & WLAN_RRM_CAPS_FTM_RANGE_REPORT)) {
+		wpa_printf(MSG_ERROR,
+			   "Request range: Destination station does not support FTM range report in RRM");
+		return -1;
+	}
+
+	if (hapd->range_req_active) {
+		wpa_printf(MSG_DEBUG,
+			   "Request range: Range request is already in process; overriding");
+		hapd->range_req_active = 0;
+		eloop_register_timeout(HOSTAPD_RRM_REQUEST_TIMEOUT, 0,
+				       hostapd_range_rep_timeout_handler, hapd,
+				       NULL);
+	}
+
+	/* Action + measurement type + token + reps + EID + len = 7 */
+	buf = wpabuf_alloc(7 + 255);
+	if (!buf)
+		return -1;
+
+	hapd->range_req_token++;
+	if (!hapd->range_req_token) /* For wraparounds */
+		hapd->range_req_token++;
+
+	/* IEEE P802.11-REVmc/D5.0, 9.6.7.2 */
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REQUEST);
+	wpabuf_put_u8(buf, hapd->range_req_token); /* Dialog Token */
+	wpabuf_put_le16(buf, 0); /* Number of Repetitions */
+
+	/* IEEE P802.11-REVmc/D5.0, 9.4.2.21 */
+	wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+	len = wpabuf_put(buf, 1); /* Length will be set later */
+
+	wpabuf_put_u8(buf, 1); /* Measurement Token */
+	/*
+	 * Parallel and Enable bits are 0; Duration, Request, and Report are
+	 * reserved.
+	 */
+	wpabuf_put_u8(buf, 0); /* Measurement Request Mode */
+	wpabuf_put_u8(buf, MEASURE_TYPE_FTM_RANGE); /* Measurement Type */
+
+	/* IEEE P802.11-REVmc/D5.0, 9.4.2.21.19 */
+	wpabuf_put_le16(buf, random_interval); /* Randomization Interval */
+	wpabuf_put_u8(buf, min_ap); /* Minimum AP Count */
+
+	/* FTM Range Subelements */
+
+	/*
+	 * Taking the neighbor report part of the range request from neighbor
+	 * database instead of requesting the separate bits of data from the
+	 * user.
+	 */
+	for (i = 0; i < n_responders; i++) {
+		struct hostapd_neighbor_entry *nr;
+
+		nr = hostapd_neighbor_get(hapd, responders + ETH_ALEN * i,
+					  NULL);
+		if (!nr) {
+			wpa_printf(MSG_INFO, "Missing neighbor report for "
+				   MACSTR, MAC2STR(responders + ETH_ALEN * i));
+			wpabuf_free(buf);
+			return -1;
+		}
+
+		if (wpabuf_tailroom(buf) < 2 + wpabuf_len(nr->nr)) {
+			wpa_printf(MSG_ERROR, "Too long range request");
+			wpabuf_free(buf);
+			return -1;
+		}
+
+		wpabuf_put_u8(buf, WLAN_EID_NEIGHBOR_REPORT);
+		wpabuf_put_u8(buf, wpabuf_len(nr->nr));
+		wpabuf_put_buf(buf, nr->nr);
+	}
+
+	/* Action + measurement type + token + reps + EID + len = 7 */
+	*len = wpabuf_len(buf) - 7;
+
+	ret = hostapd_drv_send_action(hapd, hapd->iface->freq, 0, addr,
+				      wpabuf_head(buf), wpabuf_len(buf));
+	wpabuf_free(buf);
+	if (ret)
+		return ret;
+
+	hapd->range_req_active = 1;
+
+	eloop_register_timeout(HOSTAPD_RRM_REQUEST_TIMEOUT, 0,
+			       hostapd_range_rep_timeout_handler, hapd, NULL);
+
+	return 0;
+}
+
+
 void hostapd_clean_rrm(struct hostapd_data *hapd)
 {
 	hostpad_free_neighbor_db(hapd);
 	eloop_cancel_timeout(hostapd_lci_rep_timeout_handler, hapd, NULL);
 	hapd->lci_req_active = 0;
+	eloop_cancel_timeout(hostapd_range_rep_timeout_handler, hapd, NULL);
+	hapd->range_req_active = 0;
 }

@@ -300,7 +300,9 @@ struct hostapd_data {
 	struct dl_list nr_db;
 
 	u8 lci_req_token;
+	u8 range_req_token;
 	unsigned int lci_req_active:1;
+	unsigned int range_req_active:1;
 };
 
 

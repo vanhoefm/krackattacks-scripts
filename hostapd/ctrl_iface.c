@@ -2087,6 +2087,65 @@ static int hostapd_ctrl_iface_req_lci(struct hostapd_data *hapd,
 }
 
 
+int hostapd_ctrl_iface_req_range(struct hostapd_data *hapd, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	char *token, *context = NULL;
+	int random_interval, min_ap;
+	u8 responders[ETH_ALEN * RRM_RANGE_REQ_MAX_RESPONDERS];
+	unsigned int n_responders;
+
+	token = str_token(cmd, " ", &context);
+	if (!token || hwaddr_aton(token, addr)) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: REQ_RANGE - Bad destination address");
+		return -1;
+	}
+
+	token = str_token(cmd, " ", &context);
+	if (!token)
+		return -1;
+
+	random_interval = atoi(token);
+	if (random_interval < 0 || random_interval > 0xffff)
+		return -1;
+
+	token = str_token(cmd, " ", &context);
+	if (!token)
+		return -1;
+
+	min_ap = atoi(token);
+	if (min_ap <= 0 || min_ap > WLAN_RRM_RANGE_REQ_MAX_MIN_AP)
+		return -1;
+
+	n_responders = 0;
+	while ((token = str_token(cmd, " ", &context))) {
+		if (n_responders == RRM_RANGE_REQ_MAX_RESPONDERS) {
+			wpa_printf(MSG_INFO,
+				   "CTRL: REQ_RANGE: Too many responders");
+			return -1;
+		}
+
+		if (hwaddr_aton(token, responders + n_responders * ETH_ALEN)) {
+			wpa_printf(MSG_INFO,
+				   "CTRL: REQ_RANGE: Bad responder address");
+			return -1;
+		}
+
+		n_responders++;
+	}
+
+	if (!n_responders) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: REQ_RANGE - No FTM responder address");
+		return -1;
+	}
+
+	return hostapd_send_range_req(hapd, addr, random_interval, min_ap,
+				      responders, n_responders);
+}
+
+
 static int hostapd_ctrl_iface_set_neighbor(struct hostapd_data *hapd, char *buf)
 {
 	struct wpa_ssid_value ssid;
@@ -2456,6 +2515,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "REQ_LCI ", 8) == 0) {
 		if (hostapd_ctrl_iface_req_lci(hapd, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "REQ_RANGE ", 10) == 0) {
+		if (hostapd_ctrl_iface_req_range(hapd, buf + 10))
 			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

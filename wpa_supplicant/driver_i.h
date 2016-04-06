@@ -917,4 +917,13 @@ static inline int wpa_drv_abort_scan(struct wpa_supplicant *wpa_s)
 	return wpa_s->driver->abort_scan(wpa_s->drv_priv);
 }
 
+static inline int wpa_drv_configure_frame_filters(struct wpa_supplicant *wpa_s,
+						  u32 filters)
+{
+	if (!wpa_s->driver->configure_data_frame_filters)
+		return -1;
+	return wpa_s->driver->configure_data_frame_filters(wpa_s->drv_priv,
+							   filters);
+}
+
 #endif /* DRIVER_I_H */

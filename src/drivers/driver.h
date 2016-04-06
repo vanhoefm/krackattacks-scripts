@@ -54,6 +54,13 @@
 #define HOSTAPD_CHAN_VHT_130_30 0x04000000
 #define HOSTAPD_CHAN_VHT_150_10 0x08000000
 
+/* Filter gratuitous ARP */
+#define WPA_DATA_FRAME_FILTER_FLAG_ARP BIT(0)
+/* Filter unsolicited Neighbor Advertisement */
+#define WPA_DATA_FRAME_FILTER_FLAG_NA BIT(1)
+/* Filter unicast IP packets encrypted using the GTK */
+#define WPA_DATA_FRAME_FILTER_FLAG_GTK BIT(2)
+
 /**
  * enum reg_change_initiator - Regulatory change initiator
  */
@@ -3538,6 +3545,15 @@ struct wpa_driver_ops {
 	 * Returns 0 on success, -1 on failure
 	 */
 	int (*abort_scan)(void *priv);
+
+	/**
+	 * configure_data_frame_filters - Request to configure frame filters
+	 * @priv: Private driver interface data
+	 * @filter_flags: The type of frames to filter (bitfield of
+	 * WPA_DATA_FRAME_FILTER_FLAG_*)
+	 * Returns: 0 on success or -1 on failure
+	 */
+	int (*configure_data_frame_filters)(void *priv, u32 filter_flags);
 };
 
 

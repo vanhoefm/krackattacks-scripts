@@ -3455,8 +3455,7 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	},
 	{ "neighbor_rep_request",
 	  wpa_cli_cmd_neighbor_rep_request, NULL, cli_cmd_flag_none,
-	  "[ssid=<SSID>] = Trigger request to AP for neighboring AP report "
-	  "(with optional given SSID, default: current SSID)"
+	  "[ssid=<SSID>] [lci] [civic] = Trigger request to AP for neighboring AP report (with optional given SSID in hex or enclosed in double quotes, default: current SSID; with optional LCI and location civic request)"
 	},
 	{ "erp_flush", wpa_cli_cmd_erp_flush, NULL, cli_cmd_flag_none,
 	  "= flush ERP keys" },

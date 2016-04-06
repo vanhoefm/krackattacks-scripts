@@ -1163,7 +1163,8 @@ void wpas_rrm_reset(struct wpa_supplicant *wpa_s);
 void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
 				   const u8 *report, size_t report_len);
 int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
-				       const struct wpa_ssid *ssid,
+				       const struct wpa_ssid_value *ssid,
+				       int lci, int civic,
 				       void (*cb)(void *ctx,
 						  struct wpabuf *neighbor_rep),
 				       void *cb_ctx);

@@ -6162,11 +6162,19 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
 #define ECANCELED -1
 #endif
 
+/* Measurement Request element + Location Subject + Maximum Age subelement */
+#define MEASURE_REQUEST_LCI_LEN (3 + 1 + 4)
+/* Measurement Request element + Location Civic Request */
+#define MEASURE_REQUEST_CIVIC_LEN (3 + 5)
+
+
 /**
  * wpas_rrm_send_neighbor_rep_request - Request a neighbor report from our AP
  * @wpa_s: Pointer to wpa_supplicant
  * @ssid: if not null, this is sent in the request. Otherwise, no SSID IE
  *	  is sent in the request.
+ * @lci: if set, neighbor request will include LCI request
+ * @civic: if set, neighbor request will include civic location request
  * @cb: Callback function to be called once the requested report arrives, or
  *	timed out after RRM_NEIGHBOR_REPORT_TIMEOUT seconds.
  *	In the former case, 'neighbor_rep' is a newly allocated wpabuf, and it's
@@ -6180,7 +6188,8 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
  * Request must contain a callback function.
  */
 int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
-				       const struct wpa_ssid *ssid,
+				       const struct wpa_ssid_value *ssid,
+				       int lci, int civic,
 				       void (*cb)(void *ctx,
 						  struct wpabuf *neighbor_rep),
 				       void *cb_ctx)
@@ -6221,7 +6230,9 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 	}
 
 	/* 3 = action category + action code + dialog token */
-	buf = wpabuf_alloc(3 + (ssid ? 2 + ssid->ssid_len : 0));
+	buf = wpabuf_alloc(3 + (ssid ? 2 + ssid->ssid_len : 0) +
+			   (lci ? 2 + MEASURE_REQUEST_LCI_LEN : 0) +
+			   (civic ? 2 + MEASURE_REQUEST_CIVIC_LEN : 0));
 	if (buf == NULL) {
 		wpa_printf(MSG_DEBUG,
 			   "RRM: Failed to allocate Neighbor Report Request");
@@ -6239,6 +6250,72 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 		wpabuf_put_u8(buf, WLAN_EID_SSID);
 		wpabuf_put_u8(buf, ssid->ssid_len);
 		wpabuf_put_data(buf, ssid->ssid, ssid->ssid_len);
+	}
+
+	if (lci) {
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21 */
+		wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+		wpabuf_put_u8(buf, MEASURE_REQUEST_LCI_LEN);
+
+		/*
+		 * Measurement token; nonzero number that is unique among the
+		 * Measurement Request elements in a particular frame.
+		 */
+		wpabuf_put_u8(buf, 1); /* Measurement Token */
+
+		/*
+		 * Parallel, Enable, Request, and Report bits are 0, Duration is
+		 * reserved.
+		 */
+		wpabuf_put_u8(buf, 0); /* Measurement Request Mode */
+		wpabuf_put_u8(buf, MEASURE_TYPE_LCI); /* Measurement Type */
+
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21.10 - LCI request */
+		/* Location Subject */
+		wpabuf_put_u8(buf, LOCATION_SUBJECT_REMOTE);
+
+		/* Optional Subelements */
+		/*
+		 * IEEE P802.11-REVmc/D5.0 Figure 9-170
+		 * The Maximum Age subelement is required, otherwise the AP can
+		 * send only data that was determined after receiving the
+		 * request. Setting it here to unlimited age.
+		 */
+		wpabuf_put_u8(buf, LCI_REQ_SUBELEM_MAX_AGE);
+		wpabuf_put_u8(buf, 2);
+		wpabuf_put_le16(buf, 0xffff);
+	}
+
+	if (civic) {
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21 */
+		wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+		wpabuf_put_u8(buf, MEASURE_REQUEST_CIVIC_LEN);
+
+		/*
+		 * Measurement token; nonzero number that is unique among the
+		 * Measurement Request elements in a particular frame.
+		 */
+		wpabuf_put_u8(buf, 2); /* Measurement Token */
+
+		/*
+		 * Parallel, Enable, Request, and Report bits are 0, Duration is
+		 * reserved.
+		 */
+		wpabuf_put_u8(buf, 0); /* Measurement Request Mode */
+		/* Measurement Type */
+		wpabuf_put_u8(buf, MEASURE_TYPE_LOCATION_CIVIC);
+
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21.14:
+		 * Location Civic request */
+		/* Location Subject */
+		wpabuf_put_u8(buf, LOCATION_SUBJECT_REMOTE);
+		wpabuf_put_u8(buf, 0); /* Civic Location Type: IETF RFC 4776 */
+		/* Location Service Interval Units: Seconds */
+		wpabuf_put_u8(buf, 0);
+		/* Location Service Interval: 0 - Only one report is requested
+		 */
+		wpabuf_put_le16(buf, 0);
+		/* No optional subelements */
 	}
 
 	wpa_s->rrm.next_neighbor_rep_token++;

@@ -8222,19 +8222,37 @@ static void wpas_ctrl_neighbor_rep_cb(void *ctx, struct wpabuf *neighbor_rep)
 static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s,
 					    char *cmd)
 {
-	struct wpa_ssid ssid;
-	struct wpa_ssid *ssid_p = NULL;
-	int ret = 0;
+	struct wpa_ssid_value ssid, *ssid_p = NULL;
+	int ret, lci = 0, civic = 0;
+	char *ssid_s;
 
-	if (os_strncmp(cmd, " ssid=", 6) == 0) {
-		ssid.ssid_len = os_strlen(cmd + 6);
-		if (ssid.ssid_len > SSID_MAX_LEN)
+	ssid_s = os_strstr(cmd, "ssid=");
+	if (ssid_s) {
+		if (ssid_parse(ssid_s + 5, &ssid)) {
+			wpa_printf(MSG_ERROR,
+				   "CTRL: Send Neighbor Report: bad SSID");
 			return -1;
-		ssid.ssid = (u8 *) (cmd + 6);
+		}
+
 		ssid_p = &ssid;
+
+		/*
+		 * Move cmd after the SSID text that may include "lci" or
+		 * "civic".
+		 */
+		cmd = os_strchr(ssid_s + 6, ssid_s[5] == '"' ? '"' : ' ');
+		if (cmd)
+			cmd++;
+
 	}
 
-	ret = wpas_rrm_send_neighbor_rep_request(wpa_s, ssid_p,
+	if (cmd && os_strstr(cmd, "lci"))
+		lci = 1;
+
+	if (cmd && os_strstr(cmd, "civic"))
+		civic = 1;
+
+	ret = wpas_rrm_send_neighbor_rep_request(wpa_s, ssid_p, lci, civic,
 						 wpas_ctrl_neighbor_rep_cb,
 						 wpa_s);
 

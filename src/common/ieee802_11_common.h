@@ -63,6 +63,7 @@ struct ieee802_11_elems {
 	const u8 *mic;
 	const u8 *pref_freq_list;
 	const u8 *supp_op_classes;
+	const u8 *rrm_enabled;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -94,6 +95,7 @@ struct ieee802_11_elems {
 	u8 mic_len;
 	u8 pref_freq_list_len;
 	u8 supp_op_classes_len;
+	u8 rrm_enabled_len;
 
 	struct mb_ies_info mb_ies;
 };

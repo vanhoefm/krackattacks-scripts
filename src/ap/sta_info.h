@@ -202,6 +202,8 @@ struct sta_info {
 
 	u8 *supp_op_classes; /* Supported Operating Classes element, if
 			      * received, starting from the Length field */
+
+	u8 rrm_enabled_capa[5];
 };
 
 

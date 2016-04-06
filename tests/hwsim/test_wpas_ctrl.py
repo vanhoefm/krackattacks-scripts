@@ -1268,46 +1268,6 @@ def test_wpas_ctrl_ipaddr(dev, apdev):
         subprocess.call(['ip', 'addr', 'del', '10.174.65.207/32', 'dev',
                          dev[0].ifname])
 
-def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
-    """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
-    params = { "ssid": "test" }
-    hostapd.add_ap(apdev[0], params)
-    params = { "ssid": "test2", "rrm_neighbor_report": "1" }
-    hostapd.add_ap(apdev[1], params)
-
-    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
-    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
-        raise Exception("Request succeeded unexpectedly")
-    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=\"abcdef\""):
-        raise Exception("Request succeeded unexpectedly")
-    dev[0].request("DISCONNECT")
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5:
-        logger.info("Driver does not support required RRM capabilities - skip rest of the test case")
-        return
-
-    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
-
-    # These requests are expected to get sent properly, but since hostapd does
-    # not yet support processing of the request, these are expected to fail.
-    
-    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
-        raise Exception("Request failed")
-    ev = dev[0].wait_event([ "RRM-NEIGHBOR-REP-RECEIVED",
-                             "RRM-NEIGHBOR-REP-REQUEST-FAILED" ], timeout=10)
-    if ev is None:
-        raise Exception("RRM report result not indicated")
-    logger.info("RRM result: " + ev)
-
-    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=\"abcdef\""):
-        raise Exception("Request failed")
-    ev = dev[0].wait_event([ "RRM-NEIGHBOR-REP-RECEIVED",
-                             "RRM-NEIGHBOR-REP-REQUEST-FAILED" ], timeout=10)
-    if ev is None:
-        raise Exception("RRM report result not indicated")
-    logger.info("RRM result: " + ev)
-
 def test_wpas_ctrl_rsp(dev, apdev):
     """wpa_supplicant ctrl_iface CTRL-RSP-"""
     if "FAIL" not in dev[0].request("CTRL-RSP-"):

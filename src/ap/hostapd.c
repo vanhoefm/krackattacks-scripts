@@ -43,6 +43,7 @@
 #include "x_snoop.h"
 #include "dhcp_snoop.h"
 #include "ndisc_snoop.h"
+#include "neighbor_db.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -335,6 +336,8 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 	wpabuf_free(hapd->mesh_pending_auth);
 	hapd->mesh_pending_auth = NULL;
 #endif /* CONFIG_MESH */
+
+	hostpad_free_neighbor_db(hapd);
 }
 
 
@@ -906,6 +909,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 	hapd->started = 1;
+	dl_list_init(&hapd->nr_db);
 
 	if (!first || first == -1) {
 		u8 *addr = hapd->own_addr;

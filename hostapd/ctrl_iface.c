@@ -47,6 +47,7 @@
 #include "ap/wnm_ap.h"
 #include "ap/wpa_auth.h"
 #include "ap/beacon.h"
+#include "ap/neighbor_db.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
 #include "fst/fst_ctrl_iface.h"
@@ -2071,6 +2072,123 @@ static int hostapd_ctrl_iface_track_sta_list(struct hostapd_data *hapd,
 #endif /* NEED_AP_MLME */
 
 
+static int hostapd_ctrl_iface_set_neighbor(struct hostapd_data *hapd, char *buf)
+{
+	struct wpa_ssid_value ssid;
+	u8 bssid[ETH_ALEN];
+	struct wpabuf *nr, *lci = NULL, *civic = NULL;
+	char *tmp;
+	int ret;
+
+	if (!(hapd->conf->radio_measurements[0] &
+	      WLAN_RRM_CAPS_NEIGHBOR_REPORT)) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: SET_NEIGHBOR: Neighbor report is not enabled");
+		return -1;
+	}
+
+	if (hwaddr_aton(buf, bssid)) {
+		wpa_printf(MSG_ERROR, "CTRL: SET_NEIGHBOR: Bad BSSID");
+		return -1;
+	}
+
+	tmp = os_strstr(buf, "ssid=");
+	if (!tmp || ssid_parse(tmp + 5, &ssid)) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: SET_NEIGHBOR: Bad or missing SSID");
+		return -1;
+	}
+	buf = os_strchr(tmp + 6, tmp[5] == '"' ? '"' : ' ');
+	if (!buf)
+		return -1;
+
+	tmp = os_strstr(buf, "nr=");
+	if (!tmp) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: SET_NEIGHBOR: Missing Neighbor Report element");
+		return -1;
+	}
+
+	buf = os_strchr(tmp, ' ');
+	if (buf)
+		*buf++ = '\0';
+
+	nr = wpabuf_parse_bin(tmp + 3);
+	if (!nr) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: SET_NEIGHBOR: Bad Neighbor Report element");
+		return -1;
+	}
+
+	if (!buf)
+		goto set;
+
+	tmp = os_strstr(buf, "lci=");
+	if (tmp) {
+		buf = os_strchr(tmp, ' ');
+		if (buf)
+			*buf++ = '\0';
+		lci = wpabuf_parse_bin(tmp + 4);
+		if (!lci) {
+			wpa_printf(MSG_ERROR,
+				   "CTRL: SET_NEIGHBOR: Bad LCI subelement");
+			wpabuf_free(nr);
+			return -1;
+		}
+	}
+
+	if (!buf)
+		goto set;
+
+	tmp = os_strstr(buf, "civic=");
+	if (tmp) {
+		buf = os_strchr(tmp, ' ');
+		if (buf)
+			*buf++ = '\0';
+		civic = wpabuf_parse_bin(tmp + 6);
+		if (!civic) {
+			wpa_printf(MSG_ERROR,
+				   "CTRL: SET_NEIGHBOR: Bad civic subelement");
+			wpabuf_free(nr);
+			wpabuf_free(lci);
+			return -1;
+		}
+	}
+
+set:
+	ret = hostapd_neighbor_set(hapd, bssid, &ssid, nr, lci, civic);
+
+	wpabuf_free(nr);
+	wpabuf_free(lci);
+	wpabuf_free(civic);
+
+	return ret;
+}
+
+
+static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
+					      char *buf)
+{
+	struct wpa_ssid_value ssid;
+	u8 bssid[ETH_ALEN];
+	char *tmp;
+
+	if (hwaddr_aton(buf, bssid)) {
+		wpa_printf(MSG_ERROR, "CTRL: REMOVE_NEIGHBOR: Bad BSSID");
+		return -1;
+	}
+
+	tmp = os_strstr(buf, "ssid=");
+	if (!tmp || ssid_parse(tmp + 5, &ssid)) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: REMOVE_NEIGHBORr: Bad or missing SSID");
+		return -1;
+	}
+
+	return hostapd_neighbor_remove(hapd, bssid, &ssid);
+}
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2315,6 +2433,12 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 							  reply_size);
 	} else if (os_strcmp(buf, "PMKSA_FLUSH") == 0) {
 		hostapd_ctrl_iface_pmksa_flush(hapd);
+	} else if (os_strncmp(buf, "SET_NEIGHBOR ", 13) == 0) {
+		if (hostapd_ctrl_iface_set_neighbor(hapd, buf + 13))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "REMOVE_NEIGHBOR ", 16) == 0) {
+		if (hostapd_ctrl_iface_remove_neighbor(hapd, buf + 16))
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

@@ -99,6 +99,16 @@ struct wps_stat {
 	u8 peer_addr[ETH_ALEN];
 };
 
+struct hostapd_neighbor_entry {
+	struct dl_list list;
+	u8 bssid[ETH_ALEN];
+	struct wpa_ssid_value ssid;
+	struct wpabuf *nr;
+	struct wpabuf *lci;
+	struct wpabuf *civic;
+	/* LCI update time */
+	struct os_time lci_date;
+};
 
 /**
  * struct hostapd_data - hostapd per-BSS data structure
@@ -286,6 +296,8 @@ struct hostapd_data {
 #ifdef CONFIG_MBO
 	unsigned int mbo_assoc_disallow;
 #endif /* CONFIG_MBO */
+
+	struct dl_list nr_db;
 };
 
 

@@ -1143,6 +1143,49 @@ static int hostapd_cli_cmd_pmksa_flush(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_set_neighbor(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	char cmd[2048];
+	int res;
+
+	if (argc < 3 || argc > 5) {
+		printf("Invalid set_neighbor command: needs 3-5 arguments\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "SET_NEIGHBOR %s %s %s %s %s",
+			  argv[0], argv[1], argv[2], argc >= 4 ? argv[3] : "",
+			  argc == 5 ? argv[4] : "");
+	if (os_snprintf_error(sizeof(cmd), res)) {
+		printf("Too long SET_NEIGHBOR command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int hostapd_cli_cmd_remove_neighbor(struct wpa_ctrl *ctrl, int argc,
+					   char *argv[])
+{
+	char cmd[400];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid remove_neighbor command: needs 2 arguments\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "REMOVE_NEIGHBOR %s %s",
+			  argv[0], argv[1]);
+	if (os_snprintf_error(sizeof(cmd), res)) {
+		printf("Too long REMOVE_NEIGHBOR command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1204,6 +1247,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "log_level", hostapd_cli_cmd_log_level },
 	{ "pmksa", hostapd_cli_cmd_pmksa },
 	{ "pmksa_flush", hostapd_cli_cmd_pmksa_flush },
+	{ "set_neighbor", hostapd_cli_cmd_set_neighbor },
+	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor },
 	{ NULL, NULL }
 };
 

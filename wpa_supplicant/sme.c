@@ -161,9 +161,10 @@ static void sme_auth_handle_rrm(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (!(wpa_s->drv_rrm_flags &
-	      WPA_DRIVER_FLAGS_DS_PARAM_SET_IE_IN_PROBES) ||
-	    !(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_QUIET)) {
+	if (!((wpa_s->drv_rrm_flags &
+	       WPA_DRIVER_FLAGS_DS_PARAM_SET_IE_IN_PROBES) &&
+	      (wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_QUIET)) &&
+	    !(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_RRM)) {
 		wpa_printf(MSG_DEBUG,
 			   "RRM: Insufficient RRM support in driver - do not use RRM");
 		return;

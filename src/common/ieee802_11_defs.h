@@ -1523,8 +1523,6 @@ struct rrm_link_measurement_report {
 	u8 variable[0];
 } STRUCT_PACKED;
 
-#define SSID_MAX_LEN 32
-
 /* IEEE Std 802.11ad-2012 - Multi-band element */
 struct multi_band_ie {
 	u8 eid; /* WLAN_EID_MULTI_BAND */

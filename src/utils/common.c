@@ -1123,3 +1123,51 @@ int is_ctrl_char(char c)
 {
 	return c > 0 && c < 32;
 }
+
+
+/**
+ * ssid_parse - Parse a string that contains SSID in hex or text format
+ * @buf: Input NULL terminated string that contains the SSID
+ * @ssid: Output SSID
+ * Returns: 0 on success, -1 otherwise
+ *
+ * The SSID has to be enclosed in double quotes for the text format or space
+ * or NULL terminated string of hex digits for the hex format. buf can include
+ * additional arguments after the SSID.
+ */
+int ssid_parse(const char *buf, struct wpa_ssid_value *ssid)
+{
+	char *tmp, *res, *end;
+	size_t len;
+
+	ssid->ssid_len = 0;
+
+	tmp = os_strdup(buf);
+	if (!tmp)
+		return -1;
+
+	if (*tmp != '"') {
+		end = os_strchr(tmp, ' ');
+		if (end)
+			*end = '\0';
+	} else {
+		end = os_strchr(tmp + 1, '"');
+		if (!end) {
+			os_free(tmp);
+			return -1;
+		}
+
+		end[1] = '\0';
+	}
+
+	res = wpa_config_parse_string(tmp, &len);
+	if (res && len <= SSID_MAX_LEN) {
+		ssid->ssid_len = len;
+		os_memcpy(ssid->ssid, res, len);
+	}
+
+	os_free(tmp);
+	os_free(res);
+
+	return ssid->ssid_len ? 0 : -1;
+}

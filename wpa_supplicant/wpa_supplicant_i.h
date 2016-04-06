@@ -393,11 +393,6 @@ struct wps_ap_info {
 	u8 uuid[WPS_UUID_LEN];
 };
 
-struct wpa_ssid_value {
-	u8 ssid[SSID_MAX_LEN];
-	size_t ssid_len;
-};
-
 #define WPA_FREQ_USED_BY_INFRA_STATION BIT(0)
 #define WPA_FREQ_USED_BY_P2P_CLIENT BIT(1)
 

@@ -448,6 +448,13 @@ typedef u64 __bitwise le64;
 #endif /* __GNUC__ */
 #endif /* __must_check */
 
+#define SSID_MAX_LEN 32
+
+struct wpa_ssid_value {
+	u8 ssid[SSID_MAX_LEN];
+	size_t ssid_len;
+};
+
 int hwaddr_aton(const char *txt, u8 *addr);
 int hwaddr_masked_aton(const char *txt, u8 *addr, u8 *mask, u8 maskable);
 int hwaddr_compact_aton(const char *txt, u8 *addr);
@@ -464,6 +471,7 @@ int wpa_snprintf_hex_uppercase(char *buf, size_t buf_size, const u8 *data,
 			       size_t len);
 
 int hwaddr_mask_txt(char *buf, size_t len, const u8 *addr, const u8 *mask);
+int ssid_parse(const char *buf, struct wpa_ssid_value *ssid);
 
 #ifdef CONFIG_NATIVE_WINDOWS
 void wpa_unicode2ascii_inplace(TCHAR *str);

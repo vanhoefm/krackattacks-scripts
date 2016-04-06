@@ -1272,7 +1272,7 @@ def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
     params = { "ssid": "test" }
     hostapd.add_ap(apdev[0], params)
-    params = { "ssid": "test2", "radio_measurements": "1" }
+    params = { "ssid": "test2", "rrm_neighbor_report": "1" }
     hostapd.add_ap(apdev[1], params)
 
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")

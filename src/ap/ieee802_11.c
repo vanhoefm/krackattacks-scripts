@@ -140,6 +140,7 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd)
 	int capab = WLAN_CAPABILITY_ESS;
 	int privacy;
 	int dfs;
+	int i;
 
 	/* Check if any of configured channels require DFS */
 	dfs = hostapd_is_dfs_required(hapd->iface);
@@ -187,8 +188,12 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd)
 	    (hapd->iconf->spectrum_mgmt_required || dfs))
 		capab |= WLAN_CAPABILITY_SPECTRUM_MGMT;
 
-	if (hapd->conf->radio_measurements)
-		capab |= IEEE80211_CAP_RRM;
+	for (i = 0; i < RRM_CAPABILITIES_IE_LEN; i++) {
+		if (hapd->conf->radio_measurements[i]) {
+			capab |= IEEE80211_CAP_RRM;
+			break;
+		}
+	}
 
 	return capab;
 }

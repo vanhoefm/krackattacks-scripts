@@ -572,7 +572,7 @@ struct hostapd_bss_config {
 #define MESH_ENABLED BIT(0)
 	int mesh;
 
-	int radio_measurements;
+	u8 radio_measurements[RRM_CAPABILITIES_IE_LEN];
 
 	int vendor_vht;
 

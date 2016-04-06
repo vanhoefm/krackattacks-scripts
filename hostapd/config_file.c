@@ -3321,7 +3321,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		WPA_PUT_LE16(&bss->bss_load_test[3], atoi(pos));
 		bss->bss_load_test_set = 1;
 	} else if (os_strcmp(buf, "radio_measurements") == 0) {
-		bss->radio_measurements = atoi(pos);
+		/*
+		 * DEPRECATED: This parameter will be removed in the future.
+		 * Use rrm_neighbor_report instead.
+		 */
+		int val = atoi(pos);
+
+		if (val & BIT(0))
+			bss->radio_measurements[0] |=
+				WLAN_RRM_CAPS_NEIGHBOR_REPORT;
 	} else if (os_strcmp(buf, "own_ie_override") == 0) {
 		struct wpabuf *tmp;
 		size_t len = os_strlen(pos) / 2;
@@ -3468,6 +3476,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "civic") == 0) {
 		wpabuf_free(conf->civic);
 		conf->civic = wpabuf_parse_bin(pos);
+	} else if (os_strcmp(buf, "rrm_neighbor_report") == 0) {
+		if (atoi(pos))
+			bss->radio_measurements[0] |=
+				WLAN_RRM_CAPS_NEIGHBOR_REPORT;
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

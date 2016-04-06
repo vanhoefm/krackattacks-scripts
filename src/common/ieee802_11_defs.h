@@ -1504,6 +1504,8 @@ struct tpc_report {
 	u8 link_margin;
 } STRUCT_PACKED;
 
+#define RRM_CAPABILITIES_IE_LEN 5
+
 /* IEEE Std 802.11-2012, 8.5.7.4 - Link Measurement Request frame format */
 struct rrm_link_measurement_request {
 	u8 dialog_token;

@@ -1278,7 +1278,7 @@ def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
         raise Exception("Request succeeded unexpectedly")
-    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=abcdef"):
+    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=\"abcdef\""):
         raise Exception("Request succeeded unexpectedly")
     dev[0].request("DISCONNECT")
 
@@ -1300,7 +1300,7 @@ def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
         raise Exception("RRM report result not indicated")
     logger.info("RRM result: " + ev)
 
-    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=abcdef"):
+    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=\"abcdef\""):
         raise Exception("Request failed")
     ev = dev[0].wait_event([ "RRM-NEIGHBOR-REP-RECEIVED",
                              "RRM-NEIGHBOR-REP-REQUEST-FAILED" ], timeout=10)

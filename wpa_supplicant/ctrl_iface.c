@@ -311,6 +311,33 @@ static int wpas_ctrl_set_band(struct wpa_supplicant *wpa_s, char *band)
 }
 
 
+static int wpas_ctrl_iface_set_lci(struct wpa_supplicant *wpa_s,
+				   const char *cmd)
+{
+	struct wpabuf *lci;
+
+	if (*cmd == '\0' || os_strcmp(cmd, "\"\"") == 0) {
+		wpabuf_free(wpa_s->lci);
+		wpa_s->lci = NULL;
+		return 0;
+	}
+
+	lci = wpabuf_parse_bin(cmd);
+	if (!lci)
+		return -1;
+
+	if (os_get_reltime(&wpa_s->lci_time)) {
+		wpabuf_free(lci);
+		return -1;
+	}
+
+	wpabuf_free(wpa_s->lci);
+	wpa_s->lci = lci;
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -497,6 +524,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "mbo_cell_capa") == 0) {
 		wpas_mbo_update_cell_capa(wpa_s, atoi(value));
 #endif /* CONFIG_MBO */
+	} else if (os_strcasecmp(cmd, "lci") == 0) {
+		ret = wpas_ctrl_iface_set_lci(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

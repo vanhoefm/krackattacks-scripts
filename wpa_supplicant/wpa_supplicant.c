@@ -575,6 +575,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_MBO */
 
 	free_bss_tmp_disallowed(wpa_s);
+
+	wpabuf_free(wpa_s->lci);
+	wpa_s->lci = NULL;
 }
 
 
@@ -6337,6 +6340,147 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 
 	wpabuf_free(buf);
 	return 0;
+}
+
+
+static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
+						 const u8 *request, size_t len,
+						 struct wpabuf *report)
+{
+	u8 token, type, subject;
+	u16 max_age = 0;
+	struct os_reltime t, diff;
+	unsigned long diff_l;
+	u8 *ptoken;
+	const u8 *subelem;
+
+	if (!wpa_s->lci || len < 3 + 4)
+		return report;
+
+	token = *request++;
+	/* Measurement request mode isn't used */
+	request++;
+	type = *request++;
+	subject = *request++;
+
+	wpa_printf(MSG_DEBUG,
+		   "Measurement request token %u type %u location subject %u",
+		   token, type, subject);
+
+	if (type != MEASURE_TYPE_LCI || subject != LOCATION_SUBJECT_REMOTE) {
+		wpa_printf(MSG_INFO,
+			   "Not building LCI report - bad type or location subject");
+		return report;
+	}
+
+	/* Subelements are formatted exactly like elements */
+	subelem = get_ie(request, len, LCI_REQ_SUBELEM_MAX_AGE);
+	if (subelem && subelem[1] == 2)
+		max_age = WPA_GET_LE16(subelem + 2);
+
+	if (os_get_reltime(&t))
+		return report;
+
+	os_reltime_sub(&t, &wpa_s->lci_time, &diff);
+	/* LCI age is calculated in 10th of a second units. */
+	diff_l = diff.sec * 10 + diff.usec / 100000;
+
+	if (max_age != 0xffff && max_age < diff_l)
+		return report;
+
+	if (wpabuf_resize(&report, 2 + wpabuf_len(wpa_s->lci)))
+		return report;
+
+	wpabuf_put_u8(report, WLAN_EID_MEASURE_REPORT);
+	wpabuf_put_u8(report, wpabuf_len(wpa_s->lci));
+	/* We'll override user's measurement token */
+	ptoken = wpabuf_put(report, 0);
+	wpabuf_put_buf(report, wpa_s->lci);
+	*ptoken = token;
+
+	return report;
+}
+
+
+void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
+					       const u8 *src,
+					       const u8 *frame, size_t len)
+{
+	struct wpabuf *buf, *report;
+	u8 token;
+	const u8 *ie, *end;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring radio measurement request: Not associated");
+		return;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring radio measurement request: Not RRM network");
+		return;
+	}
+
+	if (len < 3) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring too short radio measurement request");
+		return;
+	}
+
+	end = frame + len;
+
+	token = *frame++;
+
+	/* Ignore number of repetitions because it's not used in LCI request */
+	frame += 2;
+
+	report = NULL;
+	while ((ie = get_ie(frame, end - frame, WLAN_EID_MEASURE_REQUEST)) &&
+	       ie[1] >= 3) {
+		u8 msmt_type;
+
+		msmt_type = ie[4];
+		wpa_printf(MSG_DEBUG, "RRM request %d", msmt_type);
+
+		switch (msmt_type) {
+		case MEASURE_TYPE_LCI:
+			report = wpas_rrm_build_lci_report(wpa_s, ie + 2, ie[1],
+							   report);
+			break;
+		default:
+			wpa_printf(MSG_INFO,
+				   "RRM: Unsupported radio measurement request %d",
+				   msmt_type);
+			break;
+		}
+
+		frame = ie + ie[1] + 2;
+	}
+
+	if (!report)
+		return;
+
+	buf = wpabuf_alloc(3 + wpabuf_len(report));
+	if (!buf) {
+		wpabuf_free(report);
+		return;
+	}
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
+	wpabuf_put_u8(buf, token);
+
+	wpabuf_put_buf(buf, report);
+	wpabuf_free(report);
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0)) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Radio measurement report failed: Sending Action frame failed");
+	}
+	wpabuf_free(buf);
 }
 
 

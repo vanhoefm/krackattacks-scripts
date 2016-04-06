@@ -43,6 +43,7 @@
 #include "ieee802_11.h"
 #include "dfs.h"
 #include "mbo_ap.h"
+#include "rrm.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
@@ -2473,6 +2474,9 @@ static int handle_action(struct hostapd_data *hapd,
 				return 1;
 		}
 		break;
+	case WLAN_ACTION_RADIO_MEASUREMENT:
+		hostapd_handle_radio_measurement(hapd, (const u8 *) mgmt, len);
+		return 1;
 	}
 
 	hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,

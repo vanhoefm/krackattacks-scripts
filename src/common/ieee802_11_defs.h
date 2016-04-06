@@ -675,11 +675,18 @@ struct ieee80211_mgmt {
 					u8 action;
 					u8 variable[];
 				} STRUCT_PACKED fst_action;
+				struct {
+					u8 action;
+					u8 dialog_token;
+					u8 variable[];
+				} STRUCT_PACKED rrm;
 			} u;
 		} STRUCT_PACKED action;
 	} u;
 } STRUCT_PACKED;
 
+
+#define IEEE80211_MAX_MMPDU_SIZE 2304
 
 /* Rx MCS bitmask is in the first 77 bits of supported_mcs_set */
 #define IEEE80211_HT_MCS_MASK_LEN 10

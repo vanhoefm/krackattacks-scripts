@@ -8236,15 +8236,103 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 static void wpas_ctrl_neighbor_rep_cb(void *ctx, struct wpabuf *neighbor_rep)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	size_t len;
+	const u8 *data;
 
-	if (neighbor_rep) {
-		wpa_msg_ctrl(wpa_s, MSG_INFO, RRM_EVENT_NEIGHBOR_REP_RXED
-			     "length=%u",
-			     (unsigned int) wpabuf_len(neighbor_rep));
-		wpabuf_free(neighbor_rep);
-	} else {
+	/*
+	 * Neighbor Report element (IEEE P802.11-REVmc/D5.0)
+	 * BSSID[6]
+	 * BSSID Information[4]
+	 * Operating Class[1]
+	 * Channel Number[1]
+	 * PHY Type[1]
+	 * Optional Subelements[variable]
+	 */
+#define NR_IE_MIN_LEN (ETH_ALEN + 4 + 1 + 1 + 1)
+
+	if (!neighbor_rep || wpabuf_len(neighbor_rep) == 0) {
 		wpa_msg_ctrl(wpa_s, MSG_INFO, RRM_EVENT_NEIGHBOR_REP_FAILED);
+		goto out;
 	}
+
+	data = wpabuf_head_u8(neighbor_rep);
+	len = wpabuf_len(neighbor_rep);
+
+	while (len >= 2 + NR_IE_MIN_LEN) {
+		const u8 *nr;
+		char lci[256 * 2 + 1];
+		char civic[256 * 2 + 1];
+		u8 nr_len = data[1];
+		const u8 *pos = data, *end;
+
+		if (pos[0] != WLAN_EID_NEIGHBOR_REPORT ||
+		    nr_len < NR_IE_MIN_LEN) {
+			wpa_printf(MSG_DEBUG,
+				   "CTRL: Invalid Neighbor Report element: id=%u len=%u",
+				   data[0], nr_len);
+			goto out;
+		}
+
+		if (2U + nr_len > len) {
+			wpa_printf(MSG_DEBUG,
+				   "CTRL: Invalid Neighbor Report element: id=%u len=%zu nr_len=%u",
+				   data[0], len, nr_len);
+			goto out;
+		}
+		pos += 2;
+		end = pos + nr_len;
+
+		nr = pos;
+		pos += NR_IE_MIN_LEN;
+
+		lci[0] = '\0';
+		civic[0] = '\0';
+		while (end - pos > 2) {
+			u8 s_id, s_len;
+
+			s_id = *pos++;
+			s_len = *pos++;
+			if (s_len > end - pos)
+				goto out;
+			if (s_id == WLAN_EID_MEASURE_REPORT && s_len > 3) {
+				/* Measurement Token[1] */
+				/* Measurement Report Mode[1] */
+				/* Measurement Type[1] */
+				/* Measurement Report[variable] */
+				switch (pos[2]) {
+				case MEASURE_TYPE_LCI:
+					if (lci[0])
+						break;
+					wpa_snprintf_hex(lci, sizeof(lci),
+							 pos, s_len);
+					break;
+				case MEASURE_TYPE_LOCATION_CIVIC:
+					if (civic[0])
+						break;
+					wpa_snprintf_hex(civic, sizeof(civic),
+							 pos, s_len);
+					break;
+				}
+			}
+
+			pos += s_len;
+		}
+
+		wpa_msg(wpa_s, MSG_INFO, RRM_EVENT_NEIGHBOR_REP_RXED
+			"bssid=" MACSTR
+			" info=0x%x op_class=%u chan=%u phy_type=%u%s%s%s%s",
+			MAC2STR(nr), WPA_GET_LE32(nr + ETH_ALEN),
+			nr[ETH_ALEN + 4], nr[ETH_ALEN + 5],
+			nr[ETH_ALEN + 6],
+			lci[0] ? " lci=" : "", lci,
+			civic[0] ? " civic=" : "", civic);
+
+		data = end;
+		len -= 2 + nr_len;
+	}
+
+out:
+	wpabuf_free(neighbor_rep);
 }
 
 

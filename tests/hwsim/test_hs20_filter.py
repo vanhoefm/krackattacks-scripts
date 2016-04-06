@@ -12,8 +12,11 @@ import binascii
 from utils import HwsimSkip, require_under_vm
 import os
 import time
-from test_ap_hs20 import build_arp, build_na
+from test_ap_hs20 import build_arp, build_na, hs20_ap_params
+from test_ap_hs20 import interworking_select, interworking_connect
 import struct
+import logging
+logger = logging.getLogger()
 
 class IPAssign(object):
     def __init__(self, iface, addr, ipv6=False):
@@ -36,17 +39,49 @@ class IPAssign(object):
     def __exit__(self, type, value, traceback):
         subprocess.call(self._cmd + ['del', self._addr, 'dev', self._iface])
 
+def hs20_filters_connect(dev, apdev, disable_dgaf=False, proxy_arp=False):
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+
+    # Do not disable dgaf, to test that the station drops unicast IP packets
+    # encrypted with GTK.
+    params['disable_dgaf'] = '0'
+    params['proxy_arp'] = '1'
+    params['ap_isolate'] = '1'
+    params['bridge'] = 'ap-br0'
+
+    try:
+        hapd = hostapd.add_ap(apdev[0], params)
+    except:
+        # For now, do not report failures due to missing kernel support.
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in the kernel")
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    dev[0].hs20_enable()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    time.sleep(0.1)
+
+    return dev[0], hapd
+
 def _test_ip4_gtk_drop(devs, apdevs, params, dst):
     require_under_vm()
-    dev = devs[0]
-    procfile = '/proc/sys/net/ipv4/conf/%s/drop_unicast_in_l2_multicast' % dev.ifname
+    procfile = '/proc/sys/net/ipv4/conf/%s/drop_unicast_in_l2_multicast' % devs[0].ifname
     if not os.path.exists(procfile):
         raise HwsimSkip("kernel doesn't have capability")
 
-    ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0], ap_params)
-    dev.connect('open', key_mgmt="NONE", scan_freq="2432")
-
+    [dev, hapd] = hs20_filters_connect(devs, apdevs)
     with IPAssign(dev.ifname, '10.0.0.1/24'):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(("10.0.0.1", 12345))
@@ -60,24 +95,13 @@ def _test_ip4_gtk_drop(devs, apdevs, params, dst):
         pkt += '61736466' # "asdf"
         if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
             raise Exception("DATA_TEST_FRAME failed")
-
-        data, addr = s.recvfrom(1024)
-        if data != 'asdf':
-            raise Exception("invalid data received")
-
-        open(procfile, 'w').write('1')
         try:
-            if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
-                raise Exception("DATA_TEST_FRAME failed")
-
-            try:
-                print s.recvfrom(1024)
-                raise Exception("erroneously received frame!")
-            except socket.timeout:
-                # this is the expected behaviour
-                pass
-        finally:
-            open(procfile, 'w').write('0')
+            logger.info(s.recvfrom(1024))
+            logger.info("procfile=" + procfile + " val=" + open(procfile,'r').read().rstrip())
+            raise Exception("erroneously received frame!")
+        except socket.timeout:
+            # this is the expected behaviour
+            pass
 
 def test_ip4_gtk_drop_bcast(devs, apdevs, params):
     _test_ip4_gtk_drop(devs, apdevs, params, dst='ffffffffffff')
@@ -88,13 +112,11 @@ def test_ip4_gtk_drop_mcast(devs, apdevs, params):
 def _test_ip6_gtk_drop(devs, apdevs, params, dst):
     require_under_vm()
     dev = devs[0]
-    procfile = '/proc/sys/net/ipv6/conf/%s/drop_unicast_in_l2_multicast' % dev.ifname
+    procfile = '/proc/sys/net/ipv6/conf/%s/drop_unicast_in_l2_multicast' % devs[0].ifname
     if not os.path.exists(procfile):
         raise HwsimSkip("kernel doesn't have capability")
 
-    ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0], ap_params)
-    dev.connect('open', key_mgmt="NONE", scan_freq="2432")
+    [dev, hapd] = hs20_filters_connect(devs, apdevs)
 
     with IPAssign(dev.ifname, 'fdaa::1/48', ipv6=True):
         s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
@@ -109,24 +131,13 @@ def _test_ip6_gtk_drop(devs, apdevs, params, dst):
         pkt += '61736466' # "asdf"
         if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
             raise Exception("DATA_TEST_FRAME failed")
-
-        data, addr = s.recvfrom(1024)
-        if data != 'asdf':
-            raise Exception("invalid data received")
-
-        open(procfile, 'w').write('1')
         try:
-            if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
-                raise Exception("DATA_TEST_FRAME failed")
-
-            try:
-                print s.recvfrom(1024)
-                raise Exception("erroneously received frame!")
-            except socket.timeout:
-                # this is the expected behaviour
-                pass
-        finally:
-            open(procfile, 'w').write('0')
+            logger.info(s.recvfrom(1024))
+            logger.info("procfile=" + procfile + " val=" + open(procfile,'r').read().rstrip())
+            raise Exception("erroneously received frame!")
+        except socket.timeout:
+            # this is the expected behaviour
+            pass
 
 def test_ip6_gtk_drop_bcast(devs, apdevs, params):
     _test_ip6_gtk_drop(devs, apdevs, params, dst='ffffffffffff')
@@ -136,14 +147,11 @@ def test_ip6_gtk_drop_mcast(devs, apdevs, params):
 
 def test_ip4_drop_gratuitous_arp(devs, apdevs, params):
     require_under_vm()
-    dev = devs[0]
-    procfile = '/proc/sys/net/ipv4/conf/%s/drop_gratuitous_arp' % dev.ifname
+    procfile = '/proc/sys/net/ipv4/conf/%s/drop_gratuitous_arp' % devs[0].ifname
     if not os.path.exists(procfile):
         raise HwsimSkip("kernel doesn't have capability")
 
-    ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0], ap_params)
-    dev.connect('open', key_mgmt="NONE", scan_freq="2432")
+    [dev, hapd] = hs20_filters_connect(devs, apdevs)
 
     with IPAssign(dev.ifname, '10.0.0.2/24'):
         # add an entry that can be updated by gratuitous ARP
@@ -159,34 +167,18 @@ def test_ip4_drop_gratuitous_arp(devs, apdevs, params):
             if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
                 raise Exception("DATA_TEST_FRAME failed")
 
-            if not hapd.own_addr() in subprocess.check_output(['ip', 'neigh', 'show']):
-                raise Exception("gratuitous ARP frame failed to update")
-
-            subprocess.call(['ip', 'neigh', 'replace', '10.0.0.1', 'lladdr', '02:00:00:00:00:ff', 'nud', 'reachable', 'dev', dev.ifname])
-            # wait for lock-time
-            time.sleep(1)
-
-            open(procfile, 'w').write('1')
-
-            if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
-                raise Exception("DATA_TEST_FRAME failed")
-
             if hapd.own_addr() in subprocess.check_output(['ip', 'neigh', 'show']):
                 raise Exception("gratuitous ARP frame updated erroneously")
         finally:
             subprocess.call(['ip', 'neigh', 'del', '10.0.0.1', 'dev', dev.ifname])
-            open(procfile, 'w').write('0')
 
 def test_ip6_drop_unsolicited_na(devs, apdevs, params):
     require_under_vm()
-    dev = devs[0]
-    procfile = '/proc/sys/net/ipv6/conf/%s/drop_unsolicited_na' % dev.ifname
+    procfile = '/proc/sys/net/ipv6/conf/%s/drop_unsolicited_na' % devs[0].ifname
     if not os.path.exists(procfile):
         raise HwsimSkip("kernel doesn't have capability")
 
-    ap_params = { 'ssid': 'open', 'channel': '5' }
-    hapd = hostapd.add_ap(apdevs[0], ap_params)
-    dev.connect('open', key_mgmt="NONE", scan_freq="2432")
+    [dev, hapd] = hs20_filters_connect(devs, apdevs)
 
     with IPAssign(dev.ifname, 'fdaa::1/48', ipv6=True):
         # add an entry that can be updated by unsolicited NA
@@ -201,18 +193,7 @@ def test_ip6_drop_unsolicited_na(devs, apdevs, params):
             if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
                 raise Exception("DATA_TEST_FRAME failed")
 
-            if not hapd.own_addr() in subprocess.check_output(['ip', 'neigh', 'show']):
-                raise Exception("unsolicited NA frame failed to update")
-
-            subprocess.call(['ip', '-6', 'neigh', 'replace', 'fdaa::2', 'lladdr', '02:00:00:00:00:ff', 'nud', 'reachable', 'dev', dev.ifname])
-
-            open(procfile, 'w').write('1')
-
-            if "OK" not in hapd.request('DATA_TEST_FRAME ' + pkt):
-                raise Exception("DATA_TEST_FRAME failed")
-
             if hapd.own_addr() in subprocess.check_output(['ip', 'neigh', 'show']):
                 raise Exception("unsolicited NA frame updated erroneously")
         finally:
             subprocess.call(['ip', '-6', 'neigh', 'del', 'fdaa::2', 'dev', dev.ifname])
-            open(procfile, 'w').write('0')

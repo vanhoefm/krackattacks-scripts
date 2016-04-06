@@ -606,6 +606,8 @@ void hostapd_config_free(struct hostapd_config *conf)
 #ifdef CONFIG_ACS
 	os_free(conf->acs_chan_bias);
 #endif /* CONFIG_ACS */
+	wpabuf_free(conf->lci);
+	wpabuf_free(conf->civic);
 
 	os_free(conf);
 }

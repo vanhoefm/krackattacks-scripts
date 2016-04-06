@@ -9060,6 +9060,95 @@ static int nl80211_set_prob_oper_freq(void *priv, unsigned int freq)
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 
 
+static int nl80211_write_to_file(const char *name, unsigned int val)
+{
+	int fd, len;
+	char tmp[128];
+
+	fd = open(name, O_RDWR);
+	if (fd < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to open %s: %s",
+			   name, strerror(errno));
+		return fd;
+	}
+
+	len = os_snprintf(tmp, sizeof(tmp), "%u\n", val);
+	len = write(fd, tmp, len);
+	if (len < 0)
+		wpa_printf(MSG_ERROR, "nl80211: Failed to write to %s: %s",
+			   name, strerror(errno));
+	close(fd);
+
+	return 0;
+}
+
+
+static int nl80211_configure_data_frame_filters(void *priv, u32 filter_flags)
+{
+	struct i802_bss *bss = priv;
+	char path[128];
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Data frame filter flags=0x%x",
+		   filter_flags);
+
+	/* Configure filtering of unicast frame encrypted using GTK */
+	ret = os_snprintf(path, sizeof(path),
+			  "/proc/sys/net/ipv4/conf/%s/drop_unicast_in_l2_multicast",
+			  bss->ifname);
+
+	ret = nl80211_write_to_file(path,
+				    !!(filter_flags &
+				       WPA_DATA_FRAME_FILTER_FLAG_GTK));
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Failed to set IPv4 unicast in multicast filter");
+		return ret;
+	}
+
+	os_snprintf(path, sizeof(path),
+		    "/proc/sys/net/ipv6/conf/%s/drop_unicast_in_l2_multicast",
+		    bss->ifname);
+	ret = nl80211_write_to_file(path,
+				    !!(filter_flags &
+				       WPA_DATA_FRAME_FILTER_FLAG_GTK));
+
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Failed to set IPv6 unicast in multicast filter");
+		return ret;
+	}
+
+	/* Configure filtering of unicast frame encrypted using GTK */
+	os_snprintf(path, sizeof(path),
+		    "/proc/sys/net/ipv4/conf/%s/drop_gratuitous_arp",
+		    bss->ifname);
+	ret = nl80211_write_to_file(path,
+				    !!(filter_flags &
+				       WPA_DATA_FRAME_FILTER_FLAG_ARP));
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Failed set gratuitous ARP filter");
+		return ret;
+	}
+
+	/* Configure filtering of IPv6 NA frames */
+	os_snprintf(path, sizeof(path),
+		    "/proc/sys/net/ipv6/conf/%s/drop_unsolicited_na",
+		    bss->ifname);
+	ret = nl80211_write_to_file(path,
+				    !!(filter_flags &
+				       WPA_DATA_FRAME_FILTER_FLAG_NA));
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Failed to set unsolicited NA filter");
+		return ret;
+	}
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -9176,4 +9265,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_pref_freq_list = nl80211_get_pref_freq_list,
 	.set_prob_oper_freq = nl80211_set_prob_oper_freq,
 #endif /* CONFIG_DRIVER_NL80211_QCA */
+	.configure_data_frame_filters = nl80211_configure_data_frame_filters,
 };

@@ -459,7 +459,9 @@ def main():
                 traceback.print_exc()
                 result = "FAIL"
             except Exception, e:
+                import traceback
                 logger.info(e)
+                traceback.print_exc()
                 if args.loglevel == logging.WARNING:
                     print "Exception: " + str(e)
                 result = "FAIL"

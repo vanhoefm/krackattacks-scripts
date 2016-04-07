@@ -8,43 +8,41 @@ import hostapd
 
 def test_ap_config_errors(dev, apdev):
     """Various hostapd configuration errors"""
-    hapd_global = hostapd.HostapdGlobal()
-    ifname = apdev[0]['ifname']
 
     # IEEE 802.11d without country code
     params = { "ssid": "foo", "ieee80211d": "1" }
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (ieee80211d without country_code)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # IEEE 802.11h without IEEE 802.11d
     params = { "ssid": "foo", "ieee80211h": "1" }
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (ieee80211h without ieee80211d")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # Power Constraint without IEEE 802.11d
     params = { "ssid": "foo", "local_pwr_constraint": "1" }
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (local_pwr_constraint without ieee80211d)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # Spectrum management without Power Constraint
     params = { "ssid": "foo", "spectrum_mgmt_required": "1" }
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (spectrum_mgmt_required without local_pwr_constraint)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # IEEE 802.1X without authentication server
     params = { "ssid": "foo", "ieee8021x": "1" }
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (ieee8021x)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # RADIUS-PSK without macaddr_acl=2
     params = hostapd.wpa2_params(ssid="foo", passphrase="12345678")
@@ -52,7 +50,7 @@ def test_ap_config_errors(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (wpa_psk_radius)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # FT without NAS-Identifier
     params = { "wpa": "2",
@@ -62,7 +60,7 @@ def test_ap_config_errors(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (FT without nas_identifier)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
     # Hotspot 2.0 without WPA2/CCMP
     params = hostapd.wpa2_params(ssid="foo")
@@ -77,4 +75,4 @@ def test_ap_config_errors(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (HS 2.0 without WPA2/CCMP)")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])

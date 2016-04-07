@@ -605,9 +605,8 @@ def test_go_neg_two_peers(dev):
     if "status=5" not in ev:
         raise Exception("Unexpected status code in rejection: " + ev)
 
-def clear_pbc_overlap(dev, ifname):
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(ifname)
+def clear_pbc_overlap(dev, ap):
+    hostapd.remove_bss(ap)
     dev[0].request("P2P_CANCEL")
     dev[1].request("P2P_CANCEL")
     dev[0].p2p_stop_find()
@@ -654,7 +653,7 @@ def test_grpform_pbc_overlap(dev, apdev):
     if ev is None:
         raise Exception("PBC overlap not reported")
 
-    clear_pbc_overlap(dev, apdev[0]['ifname'])
+    clear_pbc_overlap(dev, apdev[0])
 
 def test_grpform_pbc_overlap_group_iface(dev, apdev):
     """P2P group formation during PBC overlap using group interfaces"""
@@ -692,7 +691,7 @@ def test_grpform_pbc_overlap_group_iface(dev, apdev):
         # the group interface.
         logger.info("PBC overlap not reported")
 
-    clear_pbc_overlap(dev, apdev[0]['ifname'])
+    clear_pbc_overlap(dev, apdev[0])
 
 def test_grpform_goneg_fail_with_group_iface(dev):
     """P2P group formation fails while using group interface"""

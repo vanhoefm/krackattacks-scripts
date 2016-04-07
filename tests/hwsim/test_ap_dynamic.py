@@ -351,7 +351,6 @@ def test_ap_bss_add_many(dev, apdev):
 def _test_ap_bss_add_many(dev, apdev):
     ifname = apdev[0]['ifname']
     hostapd.add_bss(apdev[0], ifname, 'bss-1.conf')
-    hapd = hostapd.HostapdGlobal()
     fname = '/tmp/hwsim-bss.conf'
     for i in range(16):
         ifname2 = ifname + '-' + str(i)
@@ -376,7 +375,7 @@ def _test_ap_bss_add_many(dev, apdev):
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected(timeout=5)
         ifname2 = ifname + '-' + str(i)
-        hapd.remove(ifname2)
+        hostapd.remove_bss(apdev[0], ifname2)
 
 def test_ap_bss_add_reuse_existing(dev, apdev):
     """Dynamic BSS add operation reusing existing interface"""

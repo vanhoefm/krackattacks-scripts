@@ -683,8 +683,7 @@ def test_olbc(dev, apdev):
     if status['olbc'] != '1' or status['olbc_ht'] != '1':
         raise Exception("Missing OLBC information")
 
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(apdev[1]['ifname'])
+    hostapd.remove_bss(apdev[1])
 
     logger.info("Waiting for OLBC state to time out")
     cleared = False

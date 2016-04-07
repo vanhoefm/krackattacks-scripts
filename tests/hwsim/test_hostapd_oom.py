@@ -13,7 +13,6 @@ from utils import HwsimSkip
 
 def hostapd_oom_loop(apdev, params, start_func="main"):
     hapd = hostapd.add_ap(apdev[0], { "ssid": "ctrl" })
-    hapd_global = hostapd.HostapdGlobal()
 
     count = 0
     for i in range(1, 1000):
@@ -22,7 +21,7 @@ def hostapd_oom_loop(apdev, params, start_func="main"):
         try:
             hostapd.add_ap(apdev[1], params, timeout=2.5)
             logger.info("Iteration %d - success" % i)
-            hapd_global.remove(apdev[1]['ifname'])
+            hostapd.remove_bss(apdev[1])
 
             state = hapd.request('GET_ALLOC_FAIL')
             logger.info("GET_ALLOC_FAIL: " + state)

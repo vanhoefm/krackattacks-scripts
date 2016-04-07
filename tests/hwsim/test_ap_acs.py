@@ -18,8 +18,7 @@ def force_prev_ap_on_24g(ap):
     # sufficient survey data from mac80211_hwsim.
     hostapd.add_ap(ap, { "ssid": "open" })
     time.sleep(0.1)
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(ap['ifname'])
+    hostapd.remove_bss(ap)
 
 def force_prev_ap_on_5g(ap):
     # For now, make sure the last operating channel was on 5 GHz band to get
@@ -27,8 +26,7 @@ def force_prev_ap_on_5g(ap):
     hostapd.add_ap(ap, { "ssid": "open", "hw_mode": "a",
                          "channel": "36", "country_code": "US" })
     time.sleep(0.1)
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(ap['ifname'])
+    hostapd.remove_bss(ap)
 
 def wait_acs(hapd):
     ev = hapd.wait_event(["ACS-STARTED", "ACS-COMPLETED", "ACS-FAILED",

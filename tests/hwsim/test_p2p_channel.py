@@ -49,7 +49,7 @@ def test_p2p_channel_5ghz_no_vht(dev):
     """P2P group formation with 5 GHz preference when VHT channels are disallowed"""
     try:
         set_country("US", dev[0])
-        dev[0].request("P2P_SET disallow_freq 5180-5240")
+        dev[0].global_request("P2P_SET disallow_freq 5180-5240")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -60,15 +60,15 @@ def test_p2p_channel_5ghz_no_vht(dev):
         remove_group(dev[0], dev[1])
     finally:
         set_country("00")
-        dev[0].request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SET disallow_freq ")
         dev[1].flush_scan_cache()
 
 def test_p2p_channel_random_social(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels disabled"""
     try:
         set_country("US", dev[0])
-        dev[0].request("SET p2p_oper_channel 11")
-        dev[0].request("P2P_SET disallow_freq 5000-6000,2462")
+        dev[0].global_request("SET p2p_oper_channel 11")
+        dev[0].global_request("P2P_SET disallow_freq 5000-6000,2462")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -79,15 +79,15 @@ def test_p2p_channel_random_social(dev):
         remove_group(dev[0], dev[1])
     finally:
         set_country("00")
-        dev[0].request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SET disallow_freq ")
         dev[1].flush_scan_cache()
 
 def test_p2p_channel_random(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels and all social channels disabled"""
     try:
         set_country("US", dev[0])
-        dev[0].request("SET p2p_oper_channel 11")
-        dev[0].request("P2P_SET disallow_freq 5000-6000,2412,2437,2462")
+        dev[0].global_request("SET p2p_oper_channel 11")
+        dev[0].global_request("P2P_SET disallow_freq 5000-6000,2412,2437,2462")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -98,7 +98,7 @@ def test_p2p_channel_random(dev):
         remove_group(dev[0], dev[1])
     finally:
         set_country("00")
-        dev[0].request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SET disallow_freq ")
         dev[1].flush_scan_cache()
 
 def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
@@ -116,9 +116,9 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
         remove_group(dev[0], dev[1])
 
         logger.info("Disable 5 GHz and try to re-start group based on 5 GHz preference")
-        dev[0].request("SET p2p_oper_reg_class 115")
-        dev[0].request("SET p2p_oper_channel 36")
-        dev[0].request("P2P_SET disallow_freq 5000-6000")
+        dev[0].global_request("SET p2p_oper_reg_class 115")
+        dev[0].global_request("SET p2p_oper_channel 36")
+        dev[0].global_request("P2P_SET disallow_freq 5000-6000")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -142,9 +142,9 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
                 raise Exception("Unexpected operating class: " + last.strip())
     finally:
         set_country("00")
-        dev[0].request("P2P_SET disallow_freq ")
-        dev[0].request("SET p2p_oper_reg_class 0")
-        dev[0].request("SET p2p_oper_channel 0")
+        dev[0].global_request("P2P_SET disallow_freq ")
+        dev[0].global_request("SET p2p_oper_reg_class 0")
+        dev[0].global_request("SET p2p_oper_channel 0")
         dev[1].flush_scan_cache()
 
 def test_p2p_channel_avoid(dev):
@@ -194,7 +194,7 @@ def test_autogo_following_bss(dev, apdev):
     if dev[0].get_mcc() > 1:
         logger.info("test mode: MCC")
 
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     channels = { 3 : "2422", 5 : "2432", 9 : "2452" }
     for key in channels:
@@ -213,7 +213,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
 
     dev[0].flush_scan_cache()
     dev[1].flush_scan_cache()
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     hapd = hostapd.add_ap(apdev[0],
                           { "ssid": 'bss-2.4ghz', "channel": '5' })
@@ -257,7 +257,7 @@ def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
 
-        wpas.request("SET p2p_no_group_iface 0")
+        wpas.global_request("SET p2p_no_group_iface 0")
 
         if wpas.get_mcc() < 2:
            raise Exception("New radio does not support MCC")
@@ -265,14 +265,14 @@ def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
         try:
             hapd = hostapd.add_ap(apdev[0], { "ssid": 'bss-2.4ghz',
                                               "channel": '1' })
-            wpas.request("P2P_SET disallow_freq 2412")
+            wpas.global_request("P2P_SET disallow_freq 2412")
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
             res = autogo(wpas)
             if res['freq'] == "2412":
                raise Exception("GO set on a disallowed channel")
             hwsim_utils.test_connectivity(wpas, hapd)
         finally:
-            wpas.request("P2P_SET disallow_freq ")
+            wpas.global_request("P2P_SET disallow_freq ")
 
 def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: GO negotiation with station interface on a disallowed channel"""
@@ -281,7 +281,7 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
 
-        wpas.request("SET p2p_no_group_iface 0")
+        wpas.global_request("SET p2p_no_group_iface 0")
 
         if wpas.get_mcc() < 2:
            raise Exception("New radio does not support MCC")
@@ -292,7 +292,7 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
             # make sure PBC overlap from old test cases is not maintained
             dev[1].flush_scan_cache()
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
-            wpas.request("P2P_SET disallow_freq 2412")
+            wpas.global_request("P2P_SET disallow_freq 2412")
 
             #wpas as GO
             [i_res, r_res] = go_neg_pbc(i_dev=wpas, i_intent=10, r_dev=dev[1],
@@ -327,7 +327,7 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
             wpas.request("DISCONNECT")
             hapd.disable()
         finally:
-            wpas.request("P2P_SET disallow_freq ")
+            wpas.global_request("P2P_SET disallow_freq ")
 
 def test_autogo_force_diff_channel(dev, apdev):
     """P2P autonomous GO and station interface operate on different channels"""
@@ -338,7 +338,7 @@ def test_autogo_force_diff_channel(dev, apdev):
         if wpas.get_mcc() < 2:
            raise Exception("New radio does not support MCC")
 
-        wpas.request("SET p2p_no_group_iface 0")
+        wpas.global_request("SET p2p_no_group_iface 0")
 
         hapd = hostapd.add_ap(apdev[0],
                               {"ssid" : 'ap-test', "channel" : '1'})
@@ -366,7 +366,7 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
         # Clear possible PBC session overlap from previous test case
         dev[1].flush_scan_cache()
 
-        wpas.request("SET p2p_no_group_iface 0")
+        wpas.global_request("SET p2p_no_group_iface 0")
 
         hapd = hostapd.add_ap(apdev[0],
                               { "country_code": 'US',
@@ -407,19 +407,19 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
 def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     """P2P channel selection: Station on different channel than GO configured pref channel"""
 
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     try:
         hapd = hostapd.add_ap(apdev[0], { "ssid": 'bss-2.4ghz',
                                           "channel": '1' })
-        dev[0].request("SET p2p_pref_chan 81:2")
+        dev[0].global_request("SET p2p_pref_chan 81:2")
         dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
         res = autogo(dev[0])
         if res['freq'] != "2412":
            raise Exception("GO channel did not follow BSS")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
-        dev[0].request("SET p2p_pref_chan ")
+        dev[0].global_request("SET p2p_pref_chan ")
 
 def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: Station interface on different channel than GO configured pref channel, and station channel is disallowed"""
@@ -430,26 +430,26 @@ def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
         if wpas.get_mcc() < 2:
            raise Exception("New radio does not support MCC")
 
-        wpas.request("SET p2p_no_group_iface 0")
+        wpas.global_request("SET p2p_no_group_iface 0")
 
         try:
             hapd = hostapd.add_ap(apdev[0], { "ssid": 'bss-2.4ghz',
                                               "channel": '1' })
-            wpas.request("P2P_SET disallow_freq 2412")
-            wpas.request("SET p2p_pref_chan 81:2")
+            wpas.global_request("P2P_SET disallow_freq 2412")
+            wpas.global_request("SET p2p_pref_chan 81:2")
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
             res2 = autogo(wpas)
             if res2['freq'] != "2417":
                raise Exception("GO channel did not follow pref_chan configuration")
             hwsim_utils.test_connectivity(wpas, hapd)
         finally:
-            wpas.request("P2P_SET disallow_freq ")
-            wpas.request("SET p2p_pref_chan ")
+            wpas.global_request("P2P_SET disallow_freq ")
+            wpas.global_request("SET p2p_pref_chan ")
 
 def test_no_go_freq(dev, apdev):
     """P2P channel selection: no GO freq"""
     try:
-       dev[0].request("SET p2p_no_go_freq 2412")
+       dev[0].global_request("SET p2p_no_go_freq 2412")
        # dev[0] as client, channel 1 is ok
        [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=1,
                                    r_dev=dev[1], r_intent=14, r_freq=2412)
@@ -464,7 +464,7 @@ def test_no_go_freq(dev, apdev):
        fail = False
        # dev[0] as GO, channel 1 is not allowed
        try:
-          dev[0].request("SET p2p_no_go_freq 2412")
+          dev[0].global_request("SET p2p_no_go_freq 2412")
           [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=14,
                                         r_dev=dev[1], r_intent=1, r_freq=2412)
           check_grpform_results(i_res2, r_res2)
@@ -474,7 +474,7 @@ def test_no_go_freq(dev, apdev):
        if fail:
            raise Exception("GO set on a disallowed freq")
     finally:
-       dev[0].request("SET p2p_no_go_freq ")
+       dev[0].global_request("SET p2p_no_go_freq ")
 
 def test_go_neg_peers_force_diff_freq(dev, apdev):
     """P2P channel selection when peers for different frequency"""
@@ -504,22 +504,22 @@ def test_autogo_random_channel(dev, apdev):
 def test_p2p_autogo_pref_chan_disallowed(dev, apdev):
     """P2P channel selection: GO preferred channels are disallowed"""
     try:
-       dev[0].request("SET p2p_pref_chan 81:1,81:3,81:6,81:9,81:11")
-       dev[0].request("P2P_SET disallow_freq 2412,2422,2437,2452,2462")
+       dev[0].global_request("SET p2p_pref_chan 81:1,81:3,81:6,81:9,81:11")
+       dev[0].global_request("P2P_SET disallow_freq 2412,2422,2437,2452,2462")
        for i in range(0, 5):
            res = autogo(dev[0])
            if res['freq'] in [ "2412", "2422", "2437", "2452", "2462" ]:
                raise Exception("GO channel is disallowed")
            dev[0].remove_group(res['ifname'])
     finally:
-       dev[0].request("P2P_SET disallow_freq ")
-       dev[0].request("SET p2p_pref_chan ")
+       dev[0].global_request("P2P_SET disallow_freq ")
+       dev[0].global_request("SET p2p_pref_chan ")
 
 def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
     """P2P channel selection: GO preferred channel not allowed in the regulatory rules"""
     try:
         set_country("US", dev[0])
-        dev[0].request("SET p2p_pref_chan 124:149")
+        dev[0].global_request("SET p2p_pref_chan 124:149")
         res = autogo(dev[0], persistent=True)
         if res['freq'] != "5745":
             raise Exception("Unexpected channel selected: " + res['freq'])
@@ -536,7 +536,7 @@ def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
             raise Exception("Unexpected channel selected(2): " + res['freq'])
         dev[0].remove_group(res['ifname'])
     finally:
-        dev[0].request("SET p2p_pref_chan ")
+        dev[0].global_request("SET p2p_pref_chan ")
         set_country("00")
 
 def run_autogo(dev, param):
@@ -584,7 +584,7 @@ def test_p2p_listen_chan_optimize(dev, apdev):
     wpas.interface_add("wlan5")
     addr5 = wpas.p2p_dev_addr()
     try:
-        if "OK" not in wpas.request("SET p2p_optimize_listen_chan 1"):
+        if "OK" not in wpas.global_request("SET p2p_optimize_listen_chan 1"):
             raise Exception("Failed to set p2p_optimize_listen_chan")
         wpas.p2p_listen()
         if not dev[0].discover_peer(addr5):
@@ -602,7 +602,7 @@ def test_p2p_listen_chan_optimize(dev, apdev):
         id = wpas.connect("test-open", key_mgmt="NONE", scan_freq=freq)
         wpas.p2p_listen()
 
-        if "OK" not in dev[0].request("P2P_FLUSH"):
+        if "OK" not in dev[0].global_request("P2P_FLUSH"):
             raise Exception("P2P_FLUSH failed")
         if not dev[0].discover_peer(addr5):
             raise Exception("Could not discover peer")
@@ -626,14 +626,14 @@ def test_p2p_listen_chan_optimize(dev, apdev):
 
         lchannel = "1" if channel != "1" else "6"
         lfreq3 = "2412" if channel != "1" else "2437"
-        if "OK" not in wpas.request("P2P_SET listen_channel " + lchannel):
+        if "OK" not in wpas.global_request("P2P_SET listen_channel " + lchannel):
             raise Exception("Failed to set listen channel")
 
         wpas.select_network(id)
         wpas.wait_connected()
         wpas.p2p_listen()
 
-        if "OK" not in dev[0].request("P2P_FLUSH"):
+        if "OK" not in dev[0].global_request("P2P_FLUSH"):
             raise Exception("P2P_FLUSH failed")
         if not dev[0].discover_peer(addr5):
             raise Exception("Could not discover peer")
@@ -644,13 +644,13 @@ def test_p2p_listen_chan_optimize(dev, apdev):
         wpas.p2p_stop_find()
         dev[0].p2p_stop_find()
     finally:
-        wpas.request("SET p2p_optimize_listen_chan 0")
+        wpas.global_request("SET p2p_optimize_listen_chan 0")
 
 def test_p2p_channel_5ghz_only(dev):
     """P2P GO start with only 5 GHz band allowed"""
     try:
         set_country("US", dev[0])
-        dev[0].request("P2P_SET disallow_freq 2400-2500")
+        dev[0].global_request("P2P_SET disallow_freq 2400-2500")
         res = autogo(dev[0])
         freq = int(res['freq'])
         if freq < 5000:
@@ -658,7 +658,7 @@ def test_p2p_channel_5ghz_only(dev):
         dev[0].remove_group()
     finally:
         set_country("00")
-        dev[0].request("P2P_SET disallow_freq ")
+        dev[0].global_request("P2P_SET disallow_freq ")
 
 def test_p2p_channel_5ghz_165_169_us(dev):
     """P2P GO and 5 GHz channels 165 (allowed) and 169 (disallowed) in US"""
@@ -735,7 +735,7 @@ def test_p2p_go_move_active(dev, apdev):
         _test_p2p_go_move_active(ndev, apdev)
 
 def _test_p2p_go_move_active(dev, apdev):
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     try:
         dev[0].global_request("P2P_SET disallow_freq 2430-6000")
         hapd = hostapd.add_ap(apdev[0], { "ssid" : 'ap-test',
@@ -782,7 +782,7 @@ def test_p2p_go_move_scm(dev, apdev):
         _test_p2p_go_move_scm(ndev, apdev)
 
 def _test_p2p_go_move_scm(dev, apdev):
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     try:
         dev[0].global_request("P2P_SET disallow_freq 2430-6000")
         hapd = hostapd.add_ap(apdev[0], { "ssid" : 'ap-test',
@@ -840,7 +840,7 @@ def _test_p2p_go_move_scm_peer_supports(dev, apdev):
         dev[0].global_request("SET p2p_go_freq_change_policy 1")
         set_country("US", dev[0])
 
-        dev[0].request("SET p2p_no_group_iface 0")
+        dev[0].global_request("SET p2p_no_group_iface 0")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -888,7 +888,7 @@ def _test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
         dev[0].global_request("SET p2p_go_freq_change_policy 1")
         set_country("US", dev[0])
 
-        dev[0].request("SET p2p_no_group_iface 0")
+        dev[0].global_request("SET p2p_no_group_iface 0")
         if "OK" not in dev[1].request("DRIVER_EVENT AVOID_FREQUENCIES 2400-2500"):
             raise Exception("Could not simulate driver event")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,

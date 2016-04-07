@@ -443,9 +443,14 @@ def test_ap_multi_bss(dev, apdev):
 def test_ap_add_with_driver(dev, apdev):
     """Add hostapd interface with driver specified"""
     ifname = apdev[0]['ifname']
-    hapd_global = hostapd.HostapdGlobal()
+    try:
+       hostname = apdev[0]['hostname']
+    except:
+       hostname = None
+    hapd_global = hostapd.HostapdGlobal(apdev[0])
     hapd_global.add(ifname, driver="nl80211")
-    hapd = hostapd.Hostapd(ifname)
+    port = hapd_global.get_ctrl_iface_port(ifname)
+    hapd = hostapd.Hostapd(ifname, hostname, port)
     hapd.set_defaults()
     hapd.set("ssid", "dynamic")
     hapd.enable()

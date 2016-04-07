@@ -422,8 +422,15 @@ def remove_bss(apdev, ifname=None):
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.remove(ifname)
 
-def terminate(hostname=None, port=8878):
-    logger.info("Terminating hostapd")
+def terminate(apdev):
+    try:
+        hostname = apdev['hostname']
+        port = apdev['port']
+        logger.info("Terminating hostapd " + apdev['hostname'] + "/" + apdev['port'])
+    except:
+        hostname = None
+        port = 8878
+        logger.info("Terminating hostapd")
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.terminate()
 

@@ -1120,6 +1120,7 @@ def test_p2p_channel_vht80p80_autogo(dev):
         if ev is None:
             raise Exception("Peer did not get connected")
 
+        dev[1].group_form_result(ev)
         sig = dev[1].group_request("SIGNAL_POLL").splitlines()
         if "FREQUENCY=5180" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
@@ -1155,6 +1156,7 @@ def test_p2p_channel_vht80_autogo(dev):
         if ev is None:
             raise Exception("Peer did not get connected")
 
+        dev[1].group_form_result(ev)
         sig = dev[1].group_request("SIGNAL_POLL").splitlines()
         if "FREQUENCY=5180" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))

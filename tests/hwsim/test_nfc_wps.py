@@ -38,8 +38,7 @@ def test_nfc_wps_password_token_sta(dev, apdev):
     """NFC tag with password token on the station/Enrollee"""
     ssid = "test-wps-nfc-pw-token-conf"
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("WPS provisioning step using password token from station")
     wps = dev[0].request("WPS_NFC_TOKEN WPS").rstrip()
     if "FAIL" in wps:
@@ -61,8 +60,7 @@ def test_nfc_wps_config_token(dev, apdev):
     """NFC tag with configuration token from AP"""
     ssid = "test-wps-nfc-conf-token"
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("NFC configuration token from AP to station")
     conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
     if "FAIL" in conf:
@@ -82,9 +80,8 @@ def test_nfc_wps_config_token(dev, apdev):
 def test_nfc_wps_config_token_init(dev, apdev):
     """NFC tag with configuration token from AP with auto configuration"""
     ssid = "test-wps-nfc-conf-token-init"
-    hostapd.add_ap(apdev[0],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
     logger.info("NFC configuration token from AP to station")
     conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
     if "FAIL" in conf:
@@ -99,9 +96,8 @@ def test_nfc_wps_config_token_init(dev, apdev):
 def test_nfc_wps_password_token_sta_init(dev, apdev):
     """Initial AP configuration with first WPS NFC Enrollee"""
     ssid = "test-wps-nfc-pw-token-init"
-    hostapd.add_ap(apdev[0],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
     logger.info("WPS provisioning step using password token from station")
     pw = dev[0].request("WPS_NFC_TOKEN NDEF").rstrip()
     if "FAIL" in pw:
@@ -119,9 +115,8 @@ def test_nfc_wps_password_token_sta_init(dev, apdev):
 def test_nfc_wps_password_token_ap(dev, apdev):
     """WPS registrar configuring an AP using AP password token"""
     ssid = "test-wps-nfc-pw-token-init"
-    hostapd.add_ap(apdev[0],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
     logger.info("WPS configuration step")
     pw = hapd.request("WPS_NFC_TOKEN NDEF").rstrip()
     if "FAIL" in pw:
@@ -162,9 +157,8 @@ def test_nfc_wps_handover_init(dev, apdev):
 def _test_nfc_wps_handover_init(dev, apdev):
     dev[0].request("SET ignore_old_scan_res 1")
     ssid = "test-wps-nfc-handover-init"
-    hostapd.add_ap(apdev[0],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
     logger.info("NFC connection handover")
     req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
     if "FAIL" in req:
@@ -189,9 +183,8 @@ def _test_nfc_wps_handover_init(dev, apdev):
 def test_nfc_wps_handover_errors(dev, apdev):
     """WPS AP NFC handover report error cases"""
     ssid = "test-wps-nfc-handover"
-    hostapd.add_ap(apdev[0],
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
     sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
     if "FAIL" in sel:
         raise Exception("Failed to generate NFC connection handover select")
@@ -220,8 +213,7 @@ def test_nfc_wps_handover(dev, apdev):
     """Connect to WPS AP with NFC connection handover"""
     ssid = "test-wps-nfc-handover"
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("NFC connection handover")
     req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
     if "FAIL" in req:
@@ -307,8 +299,7 @@ def test_nfc_wps_handover_with_pw_token_set(dev, apdev):
     """Connect to WPS AP with NFC connection handover (wps_nfc_* set)"""
     ssid = "test-wps-nfc-handover2"
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     # enable a password token (which won't be used in this test case)
     pw = hapd.request("WPS_NFC_TOKEN NDEF").rstrip()
     if "FAIL" in pw:
@@ -339,8 +330,7 @@ def test_nfc_wps_handover_pk_hash_mismatch_sta(dev, apdev):
     if "FAIL" in dev[0].request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("NFC connection handover")
     req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
     if "FAIL" in req:
@@ -365,8 +355,7 @@ def test_nfc_wps_handover_pk_hash_mismatch_ap(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from AP (negative)"""
     ssid = "wps-nfc-handover-pkhash-ap"
     params = ap_wps_params(ssid)
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     if "FAIL" in hapd.request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")
     logger.info("NFC connection handover")

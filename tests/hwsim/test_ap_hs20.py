@@ -1040,8 +1040,7 @@ def test_ap_hs20_gas_frag_while_associated(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     hapd.set("gas_frag_limit", "50")
 
     dev[0].hs20_enable()

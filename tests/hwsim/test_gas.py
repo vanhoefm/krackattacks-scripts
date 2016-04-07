@@ -52,8 +52,7 @@ def hs20_ap_params():
 def start_ap(ap):
     params = hs20_ap_params()
     params['hessid'] = ap['bssid']
-    hostapd.add_ap(ap, params)
-    return hostapd.Hostapd(ap['ifname'])
+    return hostapd.add_ap(ap, params)
 
 def get_gas_response(dev, bssid, info, allow_fetch_failure=False,
                      extra_test=False):

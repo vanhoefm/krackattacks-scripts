@@ -2873,8 +2873,7 @@ def test_ap_wpa2_eap_interactive(dev, apdev):
     """WPA2-Enterprise connection using interactive identity/password entry"""
     check_eap_capa(dev[0], "MSCHAPV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     tests = [ ("Connection with dynamic TTLS/MSCHAPv2 password entry",
                "TTLS", "ttls", "DOMAIN\mschapv2 user", "auth=MSCHAPV2",
@@ -2915,8 +2914,7 @@ def test_ap_wpa2_eap_ext_enable_network_while_connected(dev, apdev):
     """WPA2-Enterprise interactive identity entry and ENABLE_NETWORK"""
     check_eap_capa(dev[0], "MSCHAPV2")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     id_other = dev[0].connect("other", key_mgmt="NONE", scan_freq="2412",
                               only_add_network=True)

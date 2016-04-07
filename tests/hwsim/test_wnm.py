@@ -35,8 +35,7 @@ def test_wnm_disassoc_imminent(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].p2p_interface_addr()
@@ -57,8 +56,7 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].p2p_interface_addr()
@@ -78,8 +76,7 @@ def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")
@@ -137,8 +134,7 @@ def test_wnm_sleep_mode_open(dev, apdev):
                "time_zone": "EST5",
                "wnm_sleep_mode": "1",
                "bss_transition": "1" }
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -162,8 +158,7 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
     params["time_zone"] = "EST5"
     params["wnm_sleep_mode"] = "1"
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm-rsn", psk="12345678", scan_freq="2412")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
@@ -200,8 +195,7 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     params["time_zone"] = "EST5"
     params["wnm_sleep_mode"] = "1"
     params["bss_transition"] = "1"
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")

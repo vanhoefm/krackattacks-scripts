@@ -756,7 +756,7 @@ def test_pmksa_cache_size_limit(dev, apdev):
         _test_pmksa_cache_size_limit(dev, apdev)
     finally:
         try:
-            hapd = hostapd.HostapdGlobal()
+            hapd = hostapd.HostapdGlobal(apdev[0])
             hapd.flush()
             hapd.remove(apdev[0]['ifname'])
         except:
@@ -791,7 +791,7 @@ def _test_pmksa_cache_size_limit(dev, apdev):
         elif i + 1 != entries:
             raise Exception("Unexpected number of PMKSA entries")
 
-        hapd = hostapd.HostapdGlobal()
+        hapd = hostapd.HostapdGlobal(apdev[0])
         hapd.flush()
         hapd.remove(apdev[0]['ifname'])
 

@@ -446,7 +446,7 @@ def test_hapd_ctrl_global(dev, apdev):
     params = { "ssid": ssid }
     ifname = apdev[0]['ifname']
     hapd = hostapd.add_ap(apdev[0], params)
-    hapd_global = hostapd.HostapdGlobal()
+    hapd_global = hostapd.HostapdGlobal(apdev[0])
     res = hapd_global.request("IFNAME=" + ifname + " PING")
     if "PONG" not in res:
             raise Exception("Could not ping hostapd interface " + ifname + " via global control interface")

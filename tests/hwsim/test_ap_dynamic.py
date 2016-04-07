@@ -338,7 +338,7 @@ def test_ap_bss_add_many(dev, apdev):
     finally:
         dev[0].request("SCAN_INTERVAL 5")
         ifname = apdev[0]['ifname']
-        hapd = hostapd.HostapdGlobal()
+        hapd = hostapd.HostapdGlobal(apdev[0])
         hapd.flush()
         for i in range(16):
             ifname2 = ifname + '-' + str(i)

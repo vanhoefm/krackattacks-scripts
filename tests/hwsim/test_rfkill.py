@@ -207,7 +207,7 @@ def test_rfkill_hostapd(dev, apdev):
         dev[0].request("DISCONNECT")
         hapd.disable()
 
-        hglobal = HostapdGlobal()
+        hglobal = HostapdGlobal(apdev[0])
         hglobal.flush()
         hglobal.remove(apdev[0]['ifname'])
 

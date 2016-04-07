@@ -1732,7 +1732,7 @@ def test_ap_hs20_min_bandwidth_home_hidden_ssid_in_scan_res(dev, apdev):
                                       "ignore_broadcast_ssid": "1" })
     dev[0].scan_for_bss(bssid, freq=2412)
     hapd.disable()
-    hapd_global = hostapd.HostapdGlobal()
+    hapd_global = hostapd.HostapdGlobal(apdev[0])
     hapd_global.flush()
     hapd_global.remove(apdev[0]['ifname'])
 
@@ -2898,7 +2898,7 @@ def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
                                       "ignore_broadcast_ssid": "1" })
     dev[0].scan_for_bss(bssid, freq=2412)
     hapd.disable()
-    hapd_global = hostapd.HostapdGlobal()
+    hapd_global = hostapd.HostapdGlobal(apdev[0])
     hapd_global.flush()
     hapd_global.remove(apdev[0]['ifname'])
 

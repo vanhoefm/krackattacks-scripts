@@ -327,11 +327,8 @@ def ap_vlan_iface_cleanup_multibss(dev, apdev, cfgfile):
                       "vlan_naming": "1" }
         authserv = hostapd.add_ap(apdev[1], as_params)
 
-        ifname = apdev[0]['ifname']
-
         # start the actual test
-        hostapd.add_iface(apdev[0], cfgfile)
-        hapd = hostapd.Hostapd(ifname)
+        hapd = hostapd.add_iface(apdev[0], cfgfile)
         hapd1 = hostapd.Hostapd("wlan3-2", 1)
         hapd1.enable()
 

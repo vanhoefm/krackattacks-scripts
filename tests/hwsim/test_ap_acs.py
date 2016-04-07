@@ -89,12 +89,10 @@ def test_ap_acs_chanlist(dev, apdev):
 def test_ap_multi_bss_acs(dev, apdev):
     """hostapd start with a multi-BSS configuration file using ACS"""
     skip_with_fips(dev[0])
-    ifname = apdev[0]['ifname']
     force_prev_ap_on_24g(apdev[0])
 
     # start the actual test
-    hostapd.add_iface(apdev[0], 'multi-bss-acs.conf')
-    hapd = hostapd.Hostapd(ifname)
+    hapd = hostapd.add_iface(apdev[0], 'multi-bss-acs.conf')
     hapd.enable()
     wait_acs(hapd)
 

@@ -25,6 +25,11 @@ class WpaSupplicant:
         self.host = remotehost.Host(hostname, ifname)
         if ifname:
             self.set_ifname(ifname, hostname, port)
+            res = self.get_driver_status()
+            if int(res['capa.flags'], 0) & 0x20000000:
+                self.p2p_dev_ifname = 'p2p-dev-' + self.ifname
+            else:
+                self.p2p_dev_ifname = ifname
         else:
             self.ifname = None
 
@@ -129,6 +134,11 @@ class WpaSupplicant:
         if not create and set_ifname:
             port = self.get_ctrl_iface_port(ifname)
             self.set_ifname(ifname, self.hostname, port)
+            res = self.get_driver_status()
+            if int(res['capa.flags'], 0) & 0x20000000:
+                self.p2p_dev_ifname = 'p2p-dev-' + self.ifname
+            else:
+                self.p2p_dev_ifname = ifname
 
     def interface_remove(self, ifname):
         self.remove_ifname()

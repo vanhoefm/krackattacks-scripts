@@ -392,16 +392,16 @@ def test_nfc_wps_handover_pk_hash_mismatch_ap(dev, apdev):
 def start_ap_er(er, ap, ssid):
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
-    hostapd.add_ap(ap,
-                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
-                     "wpa_passphrase": "12345678", "wpa": "2",
-                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
-                     "device_name": "Wireless AP", "manufacturer": "Company",
-                     "model_name": "WAP", "model_number": "123",
-                     "serial_number": "12345", "device_type": "6-0050F204-1",
-                     "os_version": "01020300",
-                     "config_methods": "label push_button",
-                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"}
+    hapd = hostapd.add_ap(ap, params)
     logger.info("Learn AP configuration")
     er.dump_monitor()
     try:
@@ -422,6 +422,7 @@ def start_ap_er(er, ap, ssid):
 
     logger.info("Use learned network configuration on ER")
     er.request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
+    return hapd
 
 def test_nfc_wps_er_pw_token(dev, apdev):
     """WPS NFC password token from Enrollee to ER"""
@@ -433,8 +434,7 @@ def test_nfc_wps_er_pw_token(dev, apdev):
 
 def _test_nfc_wps_er_pw_token(dev, apdev):
     ssid = "wps-nfc-er-pw-token"
-    start_ap_er(dev[0], apdev[0], ssid)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap_er(dev[0], apdev[0], ssid)
     logger.info("WPS provisioning step using password token from station")
     dev[1].request("SET ignore_old_scan_res 1")
     pw = dev[1].request("WPS_NFC_TOKEN NDEF").rstrip()
@@ -463,8 +463,7 @@ def test_nfc_wps_er_config_token(dev, apdev):
 
 def _test_nfc_wps_er_config_token(dev, apdev):
     ssid = "wps-nfc-er-config-token"
-    start_ap_er(dev[0], apdev[0], ssid)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap_er(dev[0], apdev[0], ssid)
     logger.info("WPS provisioning step using configuration token from ER")
     wps = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN WPS " + apdev[0]['bssid']).rstrip()
     if "FAIL" in wps:
@@ -488,8 +487,7 @@ def test_nfc_wps_er_handover(dev, apdev):
 
 def _test_nfc_wps_er_handover(dev, apdev):
     ssid = "wps-nfc-er-handover"
-    start_ap_er(dev[0], apdev[0], ssid)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap_er(dev[0], apdev[0], ssid)
     logger.info("WPS provisioning step using connection handover")
     req = dev[1].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
     if "FAIL" in req:
@@ -517,8 +515,7 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
 
 def _test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-sta"
-    start_ap_er(dev[0], apdev[0], ssid)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap_er(dev[0], apdev[0], ssid)
     logger.info("WPS provisioning step using connection handover")
     if "FAIL" in dev[1].request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")
@@ -552,8 +549,7 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
 
 def _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-er"
-    start_ap_er(dev[0], apdev[0], ssid)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap_er(dev[0], apdev[0], ssid)
     logger.info("WPS provisioning step using connection handover")
     if "FAIL" in dev[0].request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")

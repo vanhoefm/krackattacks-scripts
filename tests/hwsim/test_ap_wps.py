@@ -2696,7 +2696,7 @@ def ssdp_get_location(uuid):
     return location
 
 def upnp_get_urls(location):
-    conn = urllib.urlopen(location)
+    conn = urllib.urlopen(location, proxies={})
     tree = ET.parse(conn)
     root = tree.getroot()
     urn = '{urn:schemas-upnp-org:device-1-0}'
@@ -2748,10 +2748,11 @@ def test_ap_wps_upnp(dev, apdev):
     location = ssdp_get_location(ap_uuid)
     urls = upnp_get_urls(location)
 
-    conn = urllib.urlopen(urls['scpd_url'])
+    conn = urllib.urlopen(urls['scpd_url'], proxies={})
     scpd = conn.read()
 
-    conn = urllib.urlopen(urlparse.urljoin(location, "unknown.html"))
+    conn = urllib.urlopen(urlparse.urljoin(location, "unknown.html"),
+                          proxies={})
     if conn.getcode() != 404:
         raise Exception("Unexpected HTTP response to GET unknown URL")
 

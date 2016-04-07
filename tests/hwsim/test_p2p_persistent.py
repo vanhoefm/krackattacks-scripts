@@ -601,7 +601,7 @@ def test_persistent_group_peer_dropped(dev):
     invite_from_cli(dev[0], dev[1])
 
     logger.info("Remove group on the GO and try to invite from the client")
-    dev[0].request("REMOVE_NETWORK all")
+    dev[0].global_request("REMOVE_NETWORK all")
     invite(dev[1], dev[0])
     ev = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
     if ev is None:
@@ -621,7 +621,7 @@ def test_persistent_group_peer_dropped2(dev):
     invite_from_go(dev[0], dev[1])
 
     logger.info("Remove group on the client and try to invite from the GO")
-    dev[1].request("REMOVE_NETWORK all")
+    dev[1].global_request("REMOVE_NETWORK all")
     invite(dev[0], dev[1])
     ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
     if ev is None:

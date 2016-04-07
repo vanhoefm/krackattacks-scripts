@@ -24,6 +24,27 @@ def test_ap_roam_open(dev, apdev):
     dev[0].roam(apdev[0]['bssid'])
     hwsim_utils.test_connectivity(dev[0], hapd0)
 
+def test_ap_roam_open_failed(dev, apdev):
+    """Roam failure due to rejected authentication"""
+    hapd0 = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    params = { "ssid": "test-open", "max_num_sta" : "0" }
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid = hapd1.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("ROAM " + bssid):
+        raise Exception("ROAM failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-AUTH-REJECT"], 1)
+    if not ev:
+        raise Exception("CTRL-EVENT-AUTH-REJECT was not seen")
+
+    dev[0].wait_connected(timeout=5)
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+
 def test_ap_roam_wpa2_psk(dev, apdev):
     """Roam between two WPA2-PSK APs"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
@@ -35,6 +56,38 @@ def test_ap_roam_wpa2_psk(dev, apdev):
     dev[0].roam(apdev[1]['bssid'])
     hwsim_utils.test_connectivity(dev[0], hapd1)
     dev[0].roam(apdev[0]['bssid'])
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+
+def test_ap_roam_wpa2_psk_failed(dev, apdev, params):
+    """Roam failure with WPA2-PSK AP due to wrong passphrase"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    id = dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    params['wpa_passphrase'] = "22345678"
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid, freq=2412)
+
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("ROAM " + bssid):
+        raise Exception("ROAM failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED",
+	                    "CTRL-EVENT-CONNECTED"], 5)
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Got unexpected CTRL-EVENT-CONNECTED")
+    if "CTRL-EVENT-SSID-TEMP-DISABLED" not in ev:
+        raise Exception("CTRL-EVENT-SSID-TEMP-DISABLED not seen")
+
+    if "OK" not in dev[0].request("SELECT_NETWORK id=" + str(id)):
+        raise Exception("SELECT_NETWORK failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-REENABLED"], 3)
+    if not ev:
+        raise Exception("CTRL-EVENT-SSID-REENABLED not seen");
+
+    dev[0].wait_connected(timeout=5)
     hwsim_utils.test_connectivity(dev[0], hapd0)
 
 def test_ap_reassociation_to_same_bss(dev, apdev):

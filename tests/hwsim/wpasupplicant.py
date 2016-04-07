@@ -248,6 +248,27 @@ class WpaSupplicant:
             raise Exception("SET_NETWORK failed")
         return None
 
+    def p2pdev_request(self, cmd):
+        return self.global_request("IFNAME=" + self.p2p_dev_ifname + " " + cmd)
+
+    def p2pdev_add_network(self):
+        id = self.p2pdev_request("ADD_NETWORK")
+        if "FAIL" in id:
+            raise Exception("p2pdev ADD_NETWORK failed")
+        return int(id)
+
+    def p2pdev_set_network(self, id, field, value):
+        res = self.p2pdev_request("SET_NETWORK " + str(id) + " " + field + " " + value)
+        if "FAIL" in res:
+            raise Exception("p2pdev SET_NETWORK failed")
+        return None
+
+    def p2pdev_set_network_quoted(self, id, field, value):
+        res = self.p2pdev_request("SET_NETWORK " + str(id) + " " + field + ' "' + value + '"')
+        if "FAIL" in res:
+            raise Exception("p2pdev SET_NETWORK failed")
+        return None
+
     def list_networks(self, p2p=False):
         if p2p:
             res = self.global_request("LIST_NETWORKS")

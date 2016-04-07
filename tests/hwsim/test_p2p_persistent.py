@@ -541,11 +541,11 @@ def test_persistent_group_missed_inv_resp(dev):
 def test_persistent_group_profile_add(dev):
     """Create a P2P persistent group with ADD_NETWORK"""
     passphrase="passphrase here"
-    id = dev[0].add_network()
-    dev[0].set_network_quoted(id, "ssid", "DIRECT-ab")
-    dev[0].set_network_quoted(id, "psk", passphrase)
-    dev[0].set_network(id, "mode", "3")
-    dev[0].set_network(id, "disabled", "2")
+    id = dev[0].p2pdev_add_network()
+    dev[0].p2pdev_set_network_quoted(id, "ssid", "DIRECT-ab")
+    dev[0].p2pdev_set_network_quoted(id, "psk", passphrase)
+    dev[0].p2pdev_set_network(id, "mode", "3")
+    dev[0].p2pdev_set_network(id, "disabled", "2")
     dev[0].p2p_start_go(persistent=id, freq=2412)
 
     pin = dev[1].wps_read_pin()

@@ -3782,6 +3782,8 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		break;
 	case P2P_PENDING_INVITATION_RESPONSE:
 		p2p_invitation_resp_cb(p2p, success);
+		if (p2p->inv_status != P2P_SC_SUCCESS)
+			p2p_check_after_scan_tx_continuation(p2p);
 		break;
 	case P2P_PENDING_DEV_DISC_REQUEST:
 		p2p_dev_disc_req_cb(p2p, success);

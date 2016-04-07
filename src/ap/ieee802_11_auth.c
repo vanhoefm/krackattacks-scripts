@@ -457,7 +457,7 @@ static void decode_tunnel_passwords(struct hostapd_data *hapd,
 
 		if (passphraselen < MIN_PASSPHRASE_LEN ||
 		    passphraselen > MAX_PASSPHRASE_LEN + 1)
-			continue;
+			goto free_pass;
 
 		/*
 		 * passphrase does not contain the NULL termination.
@@ -484,6 +484,7 @@ static void decode_tunnel_passwords(struct hostapd_data *hapd,
 		}
 skip:
 		os_free(psk);
+free_pass:
 		os_free(passphrase);
 	}
 }

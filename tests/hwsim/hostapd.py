@@ -412,6 +412,7 @@ def add_bss(apdev, ifname, confname, ignore_error=False):
     hapd = Hostapd(ifname, hostname=hostname, port=port)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
+    return hapd
 
 def add_iface(apdev, confname):
     ifname = apdev['ifname']
@@ -429,6 +430,7 @@ def add_iface(apdev, confname):
     hapd = Hostapd(ifname, hostname=hostname, port=port)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
+    return hapd
 
 def remove_bss(apdev, ifname=None):
     if ifname == None:

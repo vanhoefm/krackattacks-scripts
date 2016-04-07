@@ -317,9 +317,8 @@ def test_ap_enable_disable_reenable(dev, apdev):
 
 def test_ap_double_disable(dev, apdev):
     """Double DISABLE regression test"""
-    hostapd.add_bss(apdev[0], apdev[0]['ifname'], 'bss-1.conf')
+    hapd = hostapd.add_bss(apdev[0], apdev[0]['ifname'], 'bss-1.conf')
     hostapd.add_bss(apdev[0], apdev[0]['ifname'] + '-2', 'bss-2.conf')
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     hapd.disable()
     if "FAIL" not in hapd.request("DISABLE"):
         raise Exception("Second DISABLE accepted unexpectedly")
@@ -421,13 +420,10 @@ def test_ap_multi_bss(dev, apdev):
     """Multiple BSSes with hostapd"""
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
-    hostapd.add_bss(apdev[0], ifname1, 'bss-1.conf')
-    hostapd.add_bss(apdev[0], ifname2, 'bss-2.conf')
+    hapd1 = hostapd.add_bss(apdev[0], ifname1, 'bss-1.conf')
+    hapd2 = hostapd.add_bss(apdev[0], ifname2, 'bss-2.conf')
     dev[0].connect("bss-1", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
-
-    hapd1 = hostapd.Hostapd(ifname1)
-    hapd2 = hostapd.Hostapd(ifname2)
 
     hwsim_utils.test_connectivity(dev[0], hapd1)
     hwsim_utils.test_connectivity(dev[1], hapd2)

@@ -240,7 +240,7 @@ def test_p2p_msg_long_ssid(dev, apdev):
     msg['payload'] += ie_p2p(attrs)
     msg['payload'] += ie_ssid(255 * 'A')
     hapd.mgmt_tx(msg)
-    ev = dev[0].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is None:
         raise Exception("Timeout on device found event")
 

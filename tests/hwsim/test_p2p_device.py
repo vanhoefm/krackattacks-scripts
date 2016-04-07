@@ -476,3 +476,31 @@ def test_p2p_device_persistent_group2_no_group_iface(dev):
         form(wpas, dev[0])
         invite_from_cli(wpas, dev[0])
         invite_from_go(wpas, dev[0])
+
+def p2p_device_group_conf(dev1, dev2):
+    dev1.global_request("SET p2p_group_idle 12")
+    dev1.global_request("SET p2p_go_freq_change_policy 2")
+    dev1.global_request("SET p2p_go_ctwindow 7")
+
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev1, i_intent=15,
+                                           r_dev=dev2, r_intent=0)
+    check_grpform_results(i_res, r_res)
+
+    if (dev1.group_request("GET p2p_group_idle") != "12" or
+        dev1.group_request("GET p2p_go_freq_change_policy") != "2" or
+        dev1.group_request("GET p2p_go_ctwindow") != "7"):
+        raise Exception("Unexpected configuration value")
+
+    remove_group(dev1, dev2)
+    dev1.global_request("P2P_FLUSH")
+    dev2.global_request("P2P_FLUSH")
+
+def test_p2p_device_conf(dev, apdev):
+    """P2P configuration with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+        p2p_device_group_conf(wpas, dev[0])
+        wpas.global_request("SET p2p_no_group_iface 0")
+        p2p_device_group_conf(wpas, dev[0])

@@ -21,7 +21,13 @@ def mac2tuple(mac):
     return struct.unpack('6B', binascii.unhexlify(mac.replace(':','')))
 
 class HostapdGlobal:
-    def __init__(self, hostname=None, port=8878):
+    def __init__(self, apdev=None):
+        try:
+            hostname = apdev['hostname']
+            port = apdev['port']
+        except:
+            hostname = None
+            port = 8878
         self.host = remotehost.Host(hostname)
         self.hostname = hostname
         self.port = port
@@ -356,7 +362,7 @@ def add_ap(apdev, params, wait_enabled=True, no_enable=False, timeout=30):
             logger.info("Starting AP " + ifname + " (old add_ap argument type)")
             hostname = None
             port = 8878
-        hapd_global = HostapdGlobal(hostname=hostname, port=port)
+        hapd_global = HostapdGlobal(apdev)
         hapd_global.remove(ifname)
         hapd_global.add(ifname)
         port = hapd_global.get_ctrl_iface_port(ifname)
@@ -400,7 +406,7 @@ def add_bss(apdev, ifname, confname, ignore_error=False):
         logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
         hostname = None
         port = 8878
-    hapd_global = HostapdGlobal(hostname=hostname, port=port)
+    hapd_global = HostapdGlobal(apdev)
     hapd_global.add_bss(phy, confname, ignore_error)
     port = hapd_global.get_ctrl_iface_port(ifname)
     hapd = Hostapd(ifname, hostname=hostname, port=port)
@@ -417,7 +423,7 @@ def add_iface(apdev, confname):
         logger.info("Starting interface " + ifname)
         hostname = None
         port = 8878
-    hapd_global = HostapdGlobal(hostname=hostname, port=port)
+    hapd_global = HostapdGlobal(apdev)
     hapd_global.add_iface(ifname, confname)
     port = hapd_global.get_ctrl_iface_port(ifname)
     hapd = Hostapd(ifname, hostname=hostname, port=port)
@@ -433,21 +439,17 @@ def remove_bss(apdev, ifname=None):
         logger.info("Removing BSS " + hostname + "/" + port + " " + ifname)
     except:
         logger.info("Removing BSS " + ifname)
-        hostname = None
-        port = 8878
-    hapd_global = HostapdGlobal(hostname=hostname, port=port)
+    hapd_global = HostapdGlobal(apdev)
     hapd_global.remove(ifname)
 
 def terminate(apdev):
     try:
         hostname = apdev['hostname']
         port = apdev['port']
-        logger.info("Terminating hostapd " + apdev['hostname'] + "/" + apdev['port'])
+        logger.info("Terminating hostapd " + hostname + "/" + port)
     except:
-        hostname = None
-        port = 8878
         logger.info("Terminating hostapd")
-    hapd_global = HostapdGlobal(hostname=hostname, port=port)
+    hapd_global = HostapdGlobal(apdev)
     hapd_global.terminate()
 
 def wpa2_params(ssid=None, passphrase=None):

@@ -399,8 +399,16 @@ def add_bss(phy, ifname, confname, ignore_error=False, hostname=None,
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 
-def add_iface(ifname, confname, hostname=None, port=8878):
-    logger.info("Starting interface " + ifname)
+def add_iface(apdev, confname):
+    ifname = apdev['ifname']
+    try:
+        hostname = apdev['hostname']
+        port = apdev['port']
+        logger.info("Starting interface " + hostname + "/" + port + " " + ifname)
+    except:
+        logger.info("Starting interface " + ifname)
+        hostname = None
+        port = 8878
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_iface(ifname, confname)
     port = hapd_global.get_ctrl_iface_port(ifname)

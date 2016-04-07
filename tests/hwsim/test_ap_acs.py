@@ -95,7 +95,7 @@ def test_ap_multi_bss_acs(dev, apdev):
     force_prev_ap_on_24g(apdev[0])
 
     # start the actual test
-    hostapd.add_iface(ifname, 'multi-bss-acs.conf')
+    hostapd.add_iface(apdev[0], 'multi-bss-acs.conf')
     hapd = hostapd.Hostapd(ifname)
     hapd.enable()
     wait_acs(hapd)

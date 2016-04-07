@@ -182,7 +182,7 @@ def test_ap_multi_bss_config(dev, apdev):
     ifname2 = apdev[0]['ifname'] + '-2'
     ifname3 = apdev[0]['ifname'] + '-3'
     logger.info("Set up three BSSes with one configuration file")
-    hostapd.add_iface(ifname1, 'multi-bss.conf')
+    hostapd.add_iface(apdev[0], 'multi-bss.conf')
     hapd = hostapd.Hostapd(ifname1)
     hapd.enable()
     multi_check(dev, [ True, True, True ])
@@ -193,7 +193,7 @@ def test_ap_multi_bss_config(dev, apdev):
     hostapd.remove_bss(apdev[0], ifname1)
     multi_check(dev, [ False, False, False ])
 
-    hostapd.add_iface(ifname1, 'multi-bss.conf')
+    hostapd.add_iface(apdev[0], 'multi-bss.conf')
     hapd = hostapd.Hostapd(ifname1)
     hapd.enable()
     hostapd.remove_bss(apdev[0], ifname1)

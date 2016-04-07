@@ -48,7 +48,7 @@ def test_nfc_p2p_go_neg(dev):
 
 def _test_nfc_p2p_go_neg(dev):
     set_ip_addr_info(dev[0])
-    ip = dev[0].request("GET ip_addr_go")
+    ip = dev[0].p2pdev_request("GET ip_addr_go")
     if ip != "192.168.42.1":
         raise Exception("Unexpected ip_addr_go returned: " + ip)
     dev[0].global_request("SET p2p_go_intent 10")
@@ -99,7 +99,7 @@ def test_nfc_p2p_go_neg_ip_pool_oom(dev):
 
 def _test_nfc_p2p_go_neg_ip_pool_oom(dev):
     set_ip_addr_info(dev[0])
-    ip = dev[0].request("GET ip_addr_go")
+    ip = dev[0].p2pdev_request("GET ip_addr_go")
     if ip != "192.168.42.1":
         raise Exception("Unexpected ip_addr_go returned: " + ip)
     dev[0].global_request("SET p2p_go_intent 10")

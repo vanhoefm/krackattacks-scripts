@@ -8390,17 +8390,17 @@ static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	if (wpa_s->parent->p2p_oob_dev_pw_id !=
+	if (wpa_s->p2pdev->p2p_oob_dev_pw_id !=
 	    DEV_PW_NFC_CONNECTION_HANDOVER &&
-	    !wpa_s->parent->p2p_oob_dev_pw) {
+	    !wpa_s->p2pdev->p2p_oob_dev_pw) {
 		wpa_printf(MSG_DEBUG, "P2P: No NFC Dev Pw known");
 		return -1;
 	}
 	res = wpas_ap_wps_add_nfc_pw(
-		wpa_s, wpa_s->parent->p2p_oob_dev_pw_id,
-		wpa_s->parent->p2p_oob_dev_pw,
-		wpa_s->parent->p2p_peer_oob_pk_hash_known ?
-		wpa_s->parent->p2p_peer_oob_pubkey_hash : NULL);
+		wpa_s, wpa_s->p2pdev->p2p_oob_dev_pw_id,
+		wpa_s->p2pdev->p2p_oob_dev_pw,
+		wpa_s->p2pdev->p2p_peer_oob_pk_hash_known ?
+		wpa_s->p2pdev->p2p_peer_oob_pubkey_hash : NULL);
 	if (res)
 		return res;
 
@@ -8418,16 +8418,16 @@ static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
 
 	wpa_s->global->p2p_invite_group = wpa_s;
 	persistent = ssid->p2p_persistent_group &&
-		wpas_p2p_get_persistent(wpa_s->parent,
+		wpas_p2p_get_persistent(wpa_s->p2pdev,
 					params->peer->p2p_device_addr,
 					ssid->ssid, ssid->ssid_len);
-	wpa_s->parent->pending_invite_ssid_id = -1;
+	wpa_s->p2pdev->pending_invite_ssid_id = -1;
 
 	return p2p_invite(wpa_s->global->p2p, params->peer->p2p_device_addr,
 			  P2P_INVITE_ROLE_ACTIVE_GO, wpa_s->own_addr,
 			  ssid->ssid, ssid->ssid_len, ssid->frequency,
 			  wpa_s->global->p2p_dev_addr, persistent, 0,
-			  wpa_s->parent->p2p_oob_dev_pw_id);
+			  wpa_s->p2pdev->p2p_oob_dev_pw_id);
 }
 
 

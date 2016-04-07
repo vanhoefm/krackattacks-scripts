@@ -822,9 +822,9 @@ def test_p2ps_connect_p2ps_method_4(dev):
 
     (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev)
     if not grp_ifname0.startswith('p2p-' + dev[0].ifname + '-'):
-        raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
+        raise Exception("unexpected dev0 group ifname: " + grp_ifname0)
     if not grp_ifname1.startswith('p2p-' + dev[1].ifname + '-'):
-        raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
+        raise Exception("unexpected dev1 group ifname: " + grp_ifname1)
 
 def test_p2ps_connect_adv_go_persistent(dev):
     """P2PS auto-accept connection with advertisement as GO and having persistent group"""

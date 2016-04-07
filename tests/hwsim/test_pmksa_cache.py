@@ -395,7 +395,7 @@ def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
         hapd = hostapd.add_ap(apdev[0], params)
         subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
-        eap_connect(dev[0], apdev[0], "PAX", identity,
+        eap_connect(dev[0], hapd, "PAX", identity,
                     password_hex="0123456789abcdef0123456789abcdef")
 
         # Verify connectivity in the correct VLAN
@@ -707,10 +707,10 @@ def test_pmksa_cache_preauth_oom(dev, apdev):
 def _test_pmksa_cache_preauth_oom(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['bridge'] = 'ap-br0'
-    hostapd.add_ap(apdev[0], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
-    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])
 
@@ -805,8 +805,8 @@ def test_pmksa_cache_preauth_timeout(dev, apdev):
 def _test_pmksa_cache_preauth_timeout(dev, apdev):
     dev[0].request("SET dot11RSNAConfigSATimeout 1")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0], params)
-    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+    hapd = hostapd.add_ap(apdev[0], params)
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])
     if "OK" not in dev[0].request("PREAUTH f2:11:22:33:44:55"):
@@ -820,8 +820,8 @@ def _test_pmksa_cache_preauth_timeout(dev, apdev):
 def test_pmksa_cache_preauth_wpas_oom(dev, apdev):
     """RSN pre-authentication OOM in wpa_supplicant"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0], params)
-    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+    hapd = hostapd.add_ap(apdev[0], params)
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])
     for i in range(1, 11):

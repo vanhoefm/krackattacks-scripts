@@ -24,7 +24,7 @@ def test_concurrent_autogo(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Start a P2P group while associated to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     dev[0].p2p_start_go()
     pin = dev[1].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
@@ -61,7 +61,7 @@ def test_concurrent_autogo_5ghz_ht40(dev, apdev):
         dev[0].scan_for_bss(apdev[1]['bssid'], freq=5765)
         dev[0].connect("test-open-5", key_mgmt="NONE", scan_freq="5745")
 
-        dev[0].request("SET p2p_no_group_iface 0")
+        dev[0].global_request("SET p2p_no_group_iface 0")
         if "OK" not in dev[0].global_request("P2P_GROUP_ADD ht40"):
             raise Exception("P2P_GROUP_ADD failed")
         ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
@@ -138,7 +138,7 @@ def test_concurrent_p2pcli(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Join a P2P group while associated to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     dev[1].p2p_start_go(freq=2412)
     pin = dev[0].wps_read_pin()
     dev[1].p2p_go_authorize_client(pin)
@@ -159,7 +159,7 @@ def test_concurrent_grpform_go(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Form a P2P group while associated to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0)
@@ -177,7 +177,7 @@ def test_concurrent_grpform_cli(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Form a P2P group while associated to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
                                            r_dev=dev[1], r_intent=15)
@@ -194,7 +194,7 @@ def test_concurrent_grpform_while_connecting(dev, apdev):
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
 
     logger.info("Form a P2P group while connecting to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_freq=2412,
                                            r_dev=dev[1], r_freq=2412)
@@ -212,7 +212,7 @@ def test_concurrent_grpform_while_connecting2(dev, apdev):
     dev[1].flush_scan_cache()
 
     logger.info("Form a P2P group while connecting to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=15, i_freq=2412,
                                 r_dev=dev[1], r_intent=0, r_freq=2412)
@@ -230,7 +230,7 @@ def test_concurrent_grpform_while_connecting3(dev, apdev):
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
 
     logger.info("Form a P2P group while connecting to an AP")
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
 
     [i_res, r_res] = go_neg_pbc(i_dev=dev[1], i_intent=15, i_freq=2412,
                                 r_dev=dev[0], r_intent=0, r_freq=2412)

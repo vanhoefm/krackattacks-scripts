@@ -83,7 +83,7 @@ def test_autogo(dev):
 
 def test_autogo2(dev):
     """P2P autonomous GO with a separate group interface and client joining group"""
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     res = autogo(dev[0], freq=2437)
     if "p2p-wlan" not in res['ifname']:
         raise Exception("Unexpected group interface name on GO")
@@ -97,7 +97,7 @@ def test_autogo2(dev):
 
 def test_autogo3(dev):
     """P2P autonomous GO and client with a separate group interface joining group"""
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     autogo(dev[0], freq=2462)
     res = connect_cli(dev[0], dev[1], social=True, freq=2462)
     if "p2p-wlan" not in res['ifname']:
@@ -112,8 +112,8 @@ def test_autogo3(dev):
 
 def test_autogo4(dev):
     """P2P autonomous GO and client joining group (both with a separate group interface)"""
-    dev[0].request("SET p2p_no_group_iface 0")
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     res1 = autogo(dev[0], freq=2412)
     res2 = connect_cli(dev[0], dev[1], social=True, freq=2412)
     if "p2p-wlan" not in res1['ifname']:
@@ -182,7 +182,7 @@ def test_autogo_fail(dev):
     go_addr = dev[0].p2p_dev_addr()
     dev[0].p2p_go_authorize_client("00000000")
 
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     if not dev[1].discover_peer(go_addr, social=True):
         raise Exception("GO " + go_addr + " not found")
     dev[1].dump_monitor()
@@ -452,7 +452,7 @@ def test_autogo_bridge(dev):
 
 def test_presence_req_on_group_interface(dev):
     """P2P_PRESENCE_REQ on group interface"""
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     res = autogo(dev[0], freq=2437)
     res = connect_cli(dev[0], dev[1], social=True, freq=2437)
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
@@ -619,7 +619,7 @@ def test_go_search_non_social(dev):
 
 def test_autogo_many(dev):
     """P2P autonomous GO with large number of GO instances"""
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     for i in range(100):
         if "OK" not in dev[0].global_request("P2P_GROUP_ADD freq=2412"):
             logger.info("Was able to add %d groups" % i)
@@ -785,7 +785,7 @@ def test_autogo_scan(dev):
 
 def test_autogo_join_before_found(dev):
     """P2P client joining a group before having found GO Device Address"""
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     res = autogo(dev[0], freq=2412)
     if "p2p-wlan" not in res['ifname']:
         raise Exception("Unexpected group interface name on GO")

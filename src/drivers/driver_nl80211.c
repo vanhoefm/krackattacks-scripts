@@ -3877,6 +3877,13 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 				    params->ext_capab_len, params->ext_capab))
 				goto fail;
 		}
+
+		if (is_ap_interface(drv->nlmode) &&
+		    nla_put_u8(msg, NL80211_ATTR_STA_SUPPORT_P2P_PS,
+			       params->support_p2p_ps ?
+			       NL80211_P2P_PS_SUPPORTED :
+			       NL80211_P2P_PS_UNSUPPORTED))
+			goto fail;
 	}
 	if (!params->set) {
 		if (params->aid) {

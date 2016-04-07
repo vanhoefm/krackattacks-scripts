@@ -1419,6 +1419,7 @@ struct hostapd_sta_add_params {
 	size_t supp_channels_len;
 	const u8 *supp_oper_classes;
 	size_t supp_oper_classes_len;
+	int support_p2p_ps;
 };
 
 struct mac_address {

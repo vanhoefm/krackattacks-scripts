@@ -1221,7 +1221,7 @@ static void handle_auth(struct hostapd_data *hapd,
 				WLAN_STA_AUTHORIZED);
 
 		if (hostapd_sta_add(hapd, sta->addr, 0, 0, 0, 0, 0,
-				    NULL, NULL, sta->flags, 0, 0, 0)) {
+				    NULL, NULL, sta->flags, 0, 0, 0, 0)) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_NOTICE,
@@ -1805,7 +1805,8 @@ static int add_associated_sta(struct hostapd_data *hapd,
 			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
 			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
 			    sta->flags | WLAN_STA_ASSOC, sta->qosinfo,
-			    sta->vht_opmode, sta->added_unassoc)) {
+			    sta->vht_opmode, sta->p2p_ie ? 1 : 0,
+			    sta->added_unassoc)) {
 		hostapd_logger(hapd, sta->addr,
 			       HOSTAPD_MODULE_IEEE80211, HOSTAPD_LEVEL_NOTICE,
 			       "Could not %s STA to kernel driver",

@@ -2125,14 +2125,8 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
 def test_ap_cli_order(dev, apdev):
     ssid = "test-rsn-setup"
     passphrase = 'zzzzzzzz'
-    ifname = apdev[0]['ifname']
 
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(ifname)
-    hapd_global.add(ifname)
-
-    hapd = hostapd.Hostapd(ifname)
-    hapd.set_defaults()
+    hapd = hostapd.add_ap(apdev[0], {}, no_enable=True)
     hapd.set('ssid', ssid)
     hapd.set('wpa_passphrase', passphrase)
     hapd.set('rsn_pairwise', 'CCMP')

@@ -75,14 +75,18 @@ WLAN_EID_SSID = 0
 WLAN_EID_SUPP_RATES = 1
 WLAN_EID_VENDOR_SPECIFIC = 221
 
-def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_method='display', test_data=True):
-    r_dev.p2p_listen()
+def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None,
+                                     i_method='enter', r_method='display',
+                                     test_data=True, r_listen=True):
+    if r_listen:
+        r_dev.p2p_listen()
     i_dev.p2p_listen()
     pin = r_dev.wps_read_pin()
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, r_method,
                           go_intent=r_intent, persistent=True)
-    r_dev.p2p_listen()
+    if r_listen:
+        r_dev.p2p_listen()
     i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method,
                                   timeout=20, go_intent=i_intent,
                                   persistent=True)
@@ -101,13 +105,16 @@ def terminate_group(go, cli):
     go.remove_group()
     cli.wait_go_ending_session()
 
-def invite(inv, resp, extra=None, persistent_reconnect=True):
+def invite(inv, resp, extra=None, persistent_reconnect=True, use_listen=True):
     addr = resp.p2p_dev_addr()
     if persistent_reconnect:
         resp.global_request("SET persistent_reconnect 1")
     else:
         resp.global_request("SET persistent_reconnect 0")
-    resp.p2p_listen()
+    if use_listen:
+        resp.p2p_listen()
+    else:
+        resp.p2p_find(social=True)
     if not inv.discover_peer(addr, social=True):
         raise Exception("Peer " + addr + " not found")
     inv.dump_monitor()
@@ -143,16 +150,18 @@ def check_result(go, cli):
         raise Exception("Persistent group not re-invoked as persistent (cli)")
     return [go_res, cli_res]
 
-def form(go, cli, test_data=True, reverse_init=False):
+def form(go, cli, test_data=True, reverse_init=False, r_listen=True):
     logger.info("Form a persistent group")
     if reverse_init:
         [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=cli, i_intent=0,
                                                           r_dev=go, r_intent=15,
-                                                          test_data=test_data)
+                                                          test_data=test_data,
+                                                          r_listen=r_listen)
     else:
         [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=go, i_intent=15,
                                                           r_dev=cli, r_intent=0,
-                                                          test_data=test_data)
+                                                          test_data=test_data,
+                                                          r_listen=r_listen)
     if not i_res['persistent'] or not r_res['persistent']:
         raise Exception("Formed group was not persistent")
     terminate_group(go, cli)

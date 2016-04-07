@@ -266,8 +266,9 @@ wpa_supplicant_sched_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
-				    struct wpa_driver_scan_params *params)
+static int
+wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
+				struct wpa_driver_scan_params *params)
 {
 	int ret;
 
@@ -282,7 +283,7 @@ int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s)
+static int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s)
 {
 	int ret;
 

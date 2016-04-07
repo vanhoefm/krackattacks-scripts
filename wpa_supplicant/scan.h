@@ -39,9 +39,6 @@ void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec);
 void scan_only_handler(struct wpa_supplicant *wpa_s,
 		       struct wpa_scan_results *scan_res);
 int wpas_scan_scheduled(struct wpa_supplicant *wpa_s);
-int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
-				    struct wpa_driver_scan_params *params);
-int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s);
 struct wpa_driver_scan_params *
 wpa_scan_clone_params(const struct wpa_driver_scan_params *src);
 void wpa_scan_free_params(struct wpa_driver_scan_params *params);

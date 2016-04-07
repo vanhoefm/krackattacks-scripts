@@ -408,8 +408,17 @@ def add_iface(ifname, confname, hostname=None, port=8878):
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
 
-def remove_bss(ifname, hostname=None, port=8878):
-    logger.info("Removing BSS " + ifname)
+def remove_bss(apdev, ifname=None):
+    if ifname == None:
+        ifname = apdev['ifname']
+    try:
+        hostname = apdev['hostname']
+        port = apdev['port']
+        logger.info("Removing BSS " + hostname + "/" + port + " " + ifname)
+    except:
+        logger.info("Removing BSS " + ifname)
+        hostname = None
+        port = 8878
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.remove(ifname)
 

@@ -199,14 +199,9 @@ def test_ap_multi_bss_config(dev, apdev):
     hostapd.remove_bss(apdev[0], ifname1)
     multi_check(dev, [ False, False, False ])
 
-def invalid_ap(hapd_global, ifname):
-    logger.info("Trying to start AP " + ifname + " with invalid configuration")
-    hapd_global.remove(ifname)
-    hapd_global.add(ifname)
-    hapd = hostapd.Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_defaults()
+def invalid_ap(ap):
+    logger.info("Trying to start AP " + ap['ifname'] + " with invalid configuration")
+    hapd = hostapd.add_ap(ap, {}, no_enable=True)
     hapd.set("ssid", "invalid-config")
     hapd.set("channel", "12345")
     try:
@@ -220,9 +215,7 @@ def invalid_ap(hapd_global, ifname):
 
 def test_ap_invalid_config(dev, apdev):
     """Try to start AP with invalid configuration and fix configuration"""
-    hapd_global = hostapd.HostapdGlobal()
-    ifname = apdev[0]['ifname']
-    hapd = invalid_ap(hapd_global, ifname)
+    hapd = invalid_ap(apdev[0])
 
     logger.info("Fix configuration and start AP again")
     hapd.set("channel", "1")
@@ -231,11 +224,9 @@ def test_ap_invalid_config(dev, apdev):
 
 def test_ap_invalid_config2(dev, apdev):
     """Try to start AP with invalid configuration and remove interface"""
-    hapd_global = hostapd.HostapdGlobal()
-    ifname = apdev[0]['ifname']
-    hapd = invalid_ap(hapd_global, ifname)
+    hapd = invalid_ap(apdev[0])
     logger.info("Remove interface with failed configuration")
-    hapd_global.remove(ifname)
+    hostapd.remove_bss(apdev[0])
 
 def test_ap_remove_during_acs(dev, apdev):
     """Remove interface during ACS"""

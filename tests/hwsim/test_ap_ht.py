@@ -702,9 +702,9 @@ def test_olbc_table_limit(dev, apdev):
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
     ifname3 = apdev[0]['ifname'] + '-3'
-    hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
-    hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
-    hostapd.add_bss('phy3', ifname3, 'bss-3.conf')
+    hostapd.add_bss(apdev[0], ifname1, 'bss-1.conf')
+    hostapd.add_bss(apdev[0], ifname2, 'bss-2.conf')
+    hostapd.add_bss(apdev[0], ifname3, 'bss-3.conf')
 
     params = { "ssid": "test-olbc",
                "channel": "1",

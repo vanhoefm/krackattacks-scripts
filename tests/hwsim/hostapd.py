@@ -11,6 +11,7 @@ import binascii
 import struct
 import wpaspy
 import remotehost
+import utils
 
 logger = logging.getLogger()
 hapd_ctrl = '/var/run/hostapd'
@@ -389,9 +390,16 @@ def add_ap(apdev, params, wait_enabled=True, no_enable=False, timeout=30):
                 raise Exception("AP startup failed")
         return hapd
 
-def add_bss(phy, ifname, confname, ignore_error=False, hostname=None,
-            port=8878):
-    logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
+def add_bss(apdev, ifname, confname, ignore_error=False):
+    phy = utils.get_phy(apdev)
+    try:
+        hostname = apdev['hostname']
+        port = apdev['port']
+        logger.info("Starting BSS " + hostname + "/" + port + " phy=" + phy + " ifname=" + ifname)
+    except:
+        logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
+        hostname = None
+        port = 8878
     hapd_global = HostapdGlobal(hostname=hostname, port=port)
     hapd_global.add_bss(phy, confname, ignore_error)
     port = hapd_global.get_ctrl_iface_port(ifname)

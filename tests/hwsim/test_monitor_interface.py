@@ -46,7 +46,7 @@ def test_monitor_iface_multi_bss(dev, apdev):
     """AP mode mmonitor interface with hostapd multi-BSS setup"""
     params = { "ssid": "monitor-iface", "driver_params": "use_monitor=1" }
     hapd = hostapd.add_ap(apdev[0], params)
-    hostapd.add_bss('phy3', apdev[0]['ifname'] + '-2', 'bss-2.conf')
+    hostapd.add_bss(apdev[0], apdev[0]['ifname'] + '-2', 'bss-2.conf')
     dev[0].connect("monitor-iface", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
 

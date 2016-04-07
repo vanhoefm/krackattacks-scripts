@@ -6,6 +6,7 @@
 
 import os
 import time
+import remotehost
 
 def get_ifnames():
     ifnames = []
@@ -80,3 +81,24 @@ def skip_with_fips(dev, reason="Not supported in FIPS mode"):
     res = dev.get_capability("fips")
     if res and 'FIPS' in res:
         raise HwsimSkip(reason)
+
+def get_phy(ap, ifname=None):
+    phy = "phy3"
+    try:
+        hostname = ap['hostname']
+    except:
+        hostname = None
+    host = remotehost.Host(hostname)
+
+    if ifname == None:
+        ifname = ap['ifname']
+    status, buf = host.execute("iw dev " + ifname + " info")
+    if status != 0:
+        raise Exception("iw " + ifname + " info failed")
+    lines = buf.split("\n")
+    for line in lines:
+        if "wiphy" in line:
+            words = line.split()
+            phy = "phy" + words[1]
+            break
+    return phy

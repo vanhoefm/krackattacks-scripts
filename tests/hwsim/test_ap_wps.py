@@ -2287,7 +2287,7 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
             f.write("ssid=wps\n")
             f.write("eap_server=1\n")
             f.write("wps_state=1\n")
-        hostapd.add_bss('phy3', ifname, conffile)
+        hostapd.add_bss(apdev[0], ifname, conffile)
         hapd = hostapd.Hostapd(ifname)
         hapd.request("WPS_PBC")
         dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")

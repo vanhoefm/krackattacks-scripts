@@ -1951,7 +1951,12 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d = dst->conf;
 	s = src->conf;
 
-#define C(n) if (s->n) d->n = os_strdup(s->n)
+#define C(n)                            \
+do {                                    \
+	if (s->n && !d->n)              \
+		d->n = os_strdup(s->n); \
+} while (0)
+
 	C(device_name);
 	C(manufacturer);
 	C(model_name);
@@ -1979,28 +1984,14 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->disable_scan_offload = s->disable_scan_offload;
 	d->passive_scan = s->passive_scan;
 
-	if (s->wps_nfc_dh_privkey && s->wps_nfc_dh_pubkey) {
+	if (s->wps_nfc_dh_privkey && s->wps_nfc_dh_pubkey &&
+	    !d->wps_nfc_pw_from_config) {
+		wpabuf_free(d->wps_nfc_dh_privkey);
+		wpabuf_free(d->wps_nfc_dh_pubkey);
 		d->wps_nfc_dh_privkey = wpabuf_dup(s->wps_nfc_dh_privkey);
 		d->wps_nfc_dh_pubkey = wpabuf_dup(s->wps_nfc_dh_pubkey);
 	}
 	d->p2p_cli_probe = s->p2p_cli_probe;
-}
-
-
-static void wpas_p2p_clone_config_dh(struct wpa_supplicant *dst,
-				     const struct wpa_supplicant *src)
-{
-	struct wpa_config *d;
-	const struct wpa_config *s;
-
-	d = dst->conf;
-	s = src->conf;
-
-	if (s->wps_nfc_dh_privkey && s->wps_nfc_dh_pubkey &&
-	    !d->wps_nfc_dh_privkey && !d->wps_nfc_dh_pubkey) {
-		d->wps_nfc_dh_privkey = wpabuf_dup(s->wps_nfc_dh_privkey);
-		d->wps_nfc_dh_pubkey = wpabuf_dup(s->wps_nfc_dh_pubkey);
-	}
 }
 
 
@@ -2255,7 +2246,7 @@ static void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 		group_wpa_s = wpa_s->parent;
 		wpa_s->global->p2p_group_formation = group_wpa_s;
 		if (group_wpa_s != wpa_s)
-			wpas_p2p_clone_config_dh(group_wpa_s, wpa_s);
+			wpas_p2p_clone_config(group_wpa_s, wpa_s);
 	}
 
 	group_wpa_s->p2p_in_provisioning = 1;
@@ -6013,7 +6004,7 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			"P2P: Use primary interface for group operations");
 		wpa_s->p2p_first_connection_timeout = 0;
 		if (wpa_s != wpa_s->p2pdev)
-			wpas_p2p_clone_config_dh(wpa_s, wpa_s->p2pdev);
+			wpas_p2p_clone_config(wpa_s, wpa_s->p2pdev);
 		return wpa_s;
 	}
 

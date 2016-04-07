@@ -292,8 +292,7 @@ def test_ap_wps_twice(dev, apdev):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" }
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
@@ -303,11 +302,9 @@ def test_ap_wps_twice(dev, apdev):
     dev[0].request("DISCONNECT")
 
     logger.info("Restart AP with different passphrase and re-run WPS")
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(apdev[0]['ifname'])
+    hostapd.remove_bss(apdev[0])
     params['wpa_passphrase'] = 'another passphrase'
-    hostapd.add_ap(apdev[0], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = hostapd.add_ap(apdev[0], params)
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
     dev[0].dump_monitor()

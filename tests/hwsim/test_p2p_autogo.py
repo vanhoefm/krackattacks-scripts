@@ -743,7 +743,7 @@ def test_autogo_scan(dev):
     # frame with P2P IE.
     dev[0].group_request("SET ext_mgmt_frame_handling 1")
 
-    dev[1].request("P2P_CONNECT " + bssid + " " + pin + " freq=2412 join")
+    dev[1].global_request("P2P_CONNECT " + bssid + " " + pin + " freq=2412 join")
 
     # Skip the first Probe Request frame
     ev = dev[0].wait_group_event(["MGMT-RX"], timeout=10)
@@ -752,9 +752,15 @@ def test_autogo_scan(dev):
     if not ev.split(' ')[4].startswith("40"):
         raise Exception("Not a Probe Request frame")
 
-    # Reply to PD Request while still filtering Probe Request frames
-    msg = rx_pd_req(dev[0])
-    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr0, 2412, "0409506f9a0908%02xdd0a0050f204100800020008" % msg['dialog_token']))
+    # If a P2P Device is not used, the PD Request will be received on the group
+    # interface (which is actually wlan0, since a separate interface is not
+    # used), which was set to external management frame handling, so need to
+    # reply to it manually.
+    res = dev[0].get_driver_status()
+    if not (int(res['capa.flags'], 0) & 0x20000000):
+        # Reply to PD Request while still filtering Probe Request frames
+        msg = rx_pd_req(dev[0])
+        mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr0, 2412, "0409506f9a0908%02xdd0a0050f204100800020008" % msg['dialog_token']))
 
     # Skip Probe Request frames until something else is received
     for i in range(10):

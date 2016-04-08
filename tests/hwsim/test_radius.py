@@ -924,7 +924,7 @@ def test_radius_protocol(dev, apdev):
                         try:
                             fdo = self._fdmap[fd]
                             self._ProcessInput(fdo)
-                        except ServerPacketError as err:
+                        except pyrad.server.ServerPacketError as err:
                             logger.info("pyrad server dropping packet: " + str(err))
                         except pyrad.packet.PacketError as err:
                             logger.info("pyrad server received invalid packet: " + str(err))
@@ -1029,7 +1029,7 @@ def test_radius_psk(dev, apdev):
                         try:
                             fdo = self._fdmap[fd]
                             self._ProcessInput(fdo)
-                        except ServerPacketError as err:
+                        except pyrad.server.ServerPacketError as err:
                             logger.info("pyrad server dropping packet: " + str(err))
                         except pyrad.packet.PacketError as err:
                             logger.info("pyrad server received invalid packet: " + str(err))
@@ -1177,7 +1177,7 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
                         try:
                             fdo = self._fdmap[fd]
                             self._ProcessInput(fdo)
-                        except ServerPacketError as err:
+                        except pyrad.server.ServerPacketError as err:
                             logger.info("pyrad server dropping packet: " + str(err))
                         except pyrad.packet.PacketError as err:
                             logger.info("pyrad server received invalid packet: " + str(err))

@@ -990,3 +990,15 @@ def test_scan_abort_on_connect(dev, apdev):
     if ev is None:
         raise Exception("Scan did not start")
     dev[0].connect("test-scan", key_mgmt="NONE")
+
+def test_scan_ext(dev, apdev):
+    """Custom IE in Probe Request frame"""
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+
+    try:
+        if "OK" not in dev[0].request("VENDOR_ELEM_ADD 14 dd050011223300"):
+            raise Exception("VENDOR_ELEM_ADD failed")
+        check_scan(dev[0], "freq=2412 use_id=1")
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 14 *")

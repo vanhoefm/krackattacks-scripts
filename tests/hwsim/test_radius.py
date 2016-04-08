@@ -1066,6 +1066,80 @@ def test_radius_psk(dev, apdev):
         t_events['stop'].set()
         t.join()
 
+def test_radius_psk_invalid(dev, apdev):
+    """WPA2 with invalid PSK from RADIUS"""
+    try:
+        import pyrad.server
+        import pyrad.packet
+        import pyrad.dictionary
+    except ImportError:
+        raise HwsimSkip("No pyrad modules available")
+
+    class TestServer(pyrad.server.Server):
+        def _HandleAuthPacket(self, pkt):
+            pyrad.server.Server._HandleAuthPacket(self, pkt)
+            logger.info("Received authentication request")
+            reply = self.CreateReplyPacket(pkt)
+            reply.code = pyrad.packet.AccessAccept
+            a = "\xab\xcd"
+            secret = reply.secret
+            p = b'\x07' + "1234567" + 8 * b'\x00'
+            b = hashlib.md5(secret + pkt.authenticator + a).digest()
+            pp = bytearray(p)
+            bb = bytearray(b)
+            cc = bytearray(pp[i] ^ bb[i] for i in range(len(bb)))
+            data = '\x00' + a + bytes(cc)
+            reply.AddAttribute("Tunnel-Password", data)
+            self.SendReplyPacket(pkt.fd, reply)
+
+        def RunWithStop(self, t_events):
+            self._poll = select.poll()
+            self._fdmap = {}
+            self._PrepareSockets()
+            self.t_events = t_events
+
+            while not t_events['stop'].is_set():
+                for (fd, event) in self._poll.poll(1000):
+                    if event == select.POLLIN:
+                        try:
+                            fdo = self._fdmap[fd]
+                            self._ProcessInput(fdo)
+                        except pyrad.server.ServerPacketError as err:
+                            logger.info("pyrad server dropping packet: " + str(err))
+                        except pyrad.packet.PacketError as err:
+                            logger.info("pyrad server received invalid packet: " + str(err))
+                    else:
+                        logger.error("Unexpected event in pyrad server main loop")
+
+    srv = TestServer(dict=pyrad.dictionary.Dictionary("dictionary.radius"),
+                     authport=18138, acctport=18139)
+    srv.hosts["127.0.0.1"] = pyrad.server.RemoteHost("127.0.0.1",
+                                                     "radius",
+                                                     "localhost")
+    srv.BindToAddress("")
+    t_events = {}
+    t_events['stop'] = threading.Event()
+    t = threading.Thread(target=run_pyrad_server, args=(srv, t_events))
+    t.start()
+
+    try:
+        ssid = "test-wpa2-psk"
+        params = hostapd.radius_params()
+        params['ssid'] = ssid
+        params["wpa"] = "2"
+        params["wpa_key_mgmt"] = "WPA-PSK"
+        params["rsn_pairwise"] = "CCMP"
+        params['macaddr_acl'] = '2'
+        params['wpa_psk_radius'] = '2'
+        params['auth_server_port'] = "18138"
+        hapd = hostapd.add_ap(apdev[0], params)
+        dev[0].connect(ssid, psk="12345678", scan_freq="2412",
+                       wait_connect=False)
+        time.sleep(1)
+    finally:
+        t_events['stop'].set()
+        t.join()
+
 def test_radius_auth_force_client_addr(dev, apdev):
     """RADIUS client address specified"""
     params = hostapd.wpa2_eap_params(ssid="radius-auth")

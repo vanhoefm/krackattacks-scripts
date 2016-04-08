@@ -1,5 +1,5 @@
 # RADIUS tests
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -17,7 +17,7 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip, require_under_vm, skip_with_fips
+from utils import HwsimSkip, require_under_vm, skip_with_fips, fail_test
 from test_ap_hs20 import build_dhcp_ack
 from test_ap_ft import ft_params1
 
@@ -1322,3 +1322,28 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
     finally:
         t_events['stop'].set()
         t.join()
+
+def test_radius_mppe_failure(dev, apdev):
+    """RADIUS failure when adding MPPE keys"""
+    params = { "ssid": "as", "beacon_int": "2000",
+               "radius_server_clients": "auth_serv/radius_clients.conf",
+               "radius_server_auth_port": '18127',
+               "eap_server": "1",
+               "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/ca.pem",
+               "server_cert": "auth_serv/server.pem",
+               "private_key": "auth_serv/server.key" }
+    authsrv = hostapd.add_ap(apdev[1], params)
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "18127"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    with fail_test(authsrv, 1, "os_get_random;radius_msg_add_mppe_keys"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                       identity="user", anonymous_identity="ttls",
+                       password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                       wait_connect=False, scan_freq="2412")
+        dev[0].wait_disconnected()
+        dev[0].request("REMOVE_NETWORK all")

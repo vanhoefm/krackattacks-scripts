@@ -537,3 +537,17 @@ def test_ap_open_sta_statistics(dev, apdev):
     # Cannot require specific inactive_msec changes without getting rid of all
     # unrelated traffic, so for now, just print out the results in the log for
     # manual checks.
+
+def test_ap_open_poll_sta(dev, apdev):
+    """AP with open mode and STA poll"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    if "OK" not in hapd.request("POLL_STA " + addr):
+        raise Exception("POLL_STA failed")
+    ev = hapd.wait_event(["AP-STA-POLL-OK"], timeout=5)
+    if ev is None:
+        raise Exception("Poll response not seen")
+    if addr not in ev:
+        raise Exception("Unexpected poll response: " + ev)

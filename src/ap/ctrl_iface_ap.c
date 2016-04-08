@@ -352,7 +352,10 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-	hostapd_drv_sta_deauth(hapd, addr, reason);
+	if (os_strstr(txtaddr, " tx=0"))
+		hostapd_drv_sta_remove(hapd, addr);
+	else
+		hostapd_drv_sta_deauth(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);
 	if (sta)
 		ap_sta_deauthenticate(hapd, sta, reason);
@@ -412,7 +415,10 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-	hostapd_drv_sta_disassoc(hapd, addr, reason);
+	if (os_strstr(txtaddr, " tx=0"))
+		hostapd_drv_sta_remove(hapd, addr);
+	else
+		hostapd_drv_sta_disassoc(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);
 	if (sta)
 		ap_sta_disassociate(hapd, sta, reason);

@@ -518,3 +518,22 @@ def test_ap_open_reassoc_not_found(dev, apdev):
     if ev is None:
         raise Exception("No result reported")
     dev[0].request("DISCONNECT")
+
+def test_ap_open_sta_statistics(dev, apdev):
+    """AP with open mode and STA statistics"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    stats1 = hapd.get_sta(addr)
+    logger.info("stats1: " + str(stats1))
+    time.sleep(0.4)
+    stats2 = hapd.get_sta(addr)
+    logger.info("stats2: " + str(stats2))
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    stats3 = hapd.get_sta(addr)
+    logger.info("stats3: " + str(stats3))
+
+    # Cannot require specific inactive_msec changes without getting rid of all
+    # unrelated traffic, so for now, just print out the results in the log for
+    # manual checks.

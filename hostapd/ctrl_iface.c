@@ -2153,6 +2153,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "DISASSOCIATE ", 13) == 0) {
 		if (hostapd_ctrl_iface_disassociate(hapd, buf + 13))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "POLL_STA ", 9) == 0) {
+		if (hostapd_ctrl_iface_poll_sta(hapd, buf + 9))
+			reply_len = -1;
 	} else if (os_strcmp(buf, "STOP_AP") == 0) {
 		if (hostapd_ctrl_iface_stop_ap(hapd))
 			reply_len = -1;

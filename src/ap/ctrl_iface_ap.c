@@ -429,6 +429,27 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 }
 
 
+int hostapd_ctrl_iface_poll_sta(struct hostapd_data *hapd,
+				const char *txtaddr)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "CTRL_IFACE POLL_STA %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta)
+		return -1;
+
+	hostapd_drv_poll_client(hapd, hapd->own_addr, addr,
+				sta->flags & WLAN_STA_WMM);
+	return 0;
+}
+
+
 int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			      size_t buflen)
 {

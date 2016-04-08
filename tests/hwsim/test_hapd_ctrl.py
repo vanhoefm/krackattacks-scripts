@@ -5,6 +5,7 @@
 # See README for more details.
 
 import hostapd
+import hwsim_utils
 from utils import skip_with_fips
 
 def test_hapd_ctrl_status(dev, apdev):
@@ -555,3 +556,41 @@ def test_hapd_ctrl_log_level(dev, apdev):
         raise Exception("Unexpected debug level(3): " + level)
     if "Timestamp: 1" not in level:
         raise Exception("Unexpected timestamp(3): " + level)
+
+def test_hapd_ctrl_disconnect_no_tx(dev, apdev):
+    """hostapd disconnecting STA without transmitting Deauth/Disassoc"""
+    ssid = "hapd-test"
+    passphrase = "12345678"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    addr0 = dev[0].own_addr()
+    dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
+    addr1 = dev[1].own_addr()
+
+    # Disconnect the STA without sending out Deauthentication frame
+    if "OK" not in hapd.request("DEAUTHENTICATE " + addr0 + " tx=0"):
+        raise Exception("DEAUTHENTICATE command failed")
+    # Force disconnection due to AP receiving a frame from not-asssociated STA
+    dev[0].request("DATA_TEST_CONFIG 1")
+    dev[0].request("DATA_TEST_TX " + bssid + " " + addr0)
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    dev[0].request("DATA_TEST_CONFIG 0")
+    if ev is None:
+        raise Exception("Disconnection event not seen after TX attempt")
+    if "reason=7" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+
+    # Disconnect the STA without sending out Disassociation frame
+    if "OK" not in hapd.request("DISASSOCIATE " + addr1 + " tx=0"):
+        raise Exception("DISASSOCIATE command failed")
+    # Force disconnection due to AP receiving a frame from not-asssociated STA
+    dev[1].request("DATA_TEST_CONFIG 1")
+    dev[1].request("DATA_TEST_TX " + bssid + " " + addr1)
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    dev[1].request("DATA_TEST_CONFIG 0")
+    if ev is None:
+        raise Exception("Disconnection event not seen after TX attempt")
+    if "reason=7" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)

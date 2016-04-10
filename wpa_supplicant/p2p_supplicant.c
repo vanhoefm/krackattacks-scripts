@@ -3018,12 +3018,31 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 			   MAC2STR(sa), op_freq, wpa_ssid_txt(ssid, ssid_len));
 		if (s) {
 			int go = s->mode == WPAS_MODE_P2P_GO;
+			if (go) {
+				wpa_msg_global(wpa_s, MSG_INFO,
+					       P2P_EVENT_INVITATION_ACCEPTED
+					       "sa=" MACSTR
+					       " persistent=%d freq=%d",
+					       MAC2STR(sa), s->id, op_freq);
+			} else {
+				wpa_msg_global(wpa_s, MSG_INFO,
+					       P2P_EVENT_INVITATION_ACCEPTED
+					       "sa=" MACSTR
+					       " persistent=%d",
+					       MAC2STR(sa), s->id);
+			}
 			wpas_p2p_group_add_persistent(
 				wpa_s, s, go, 0, op_freq, 0, 0, 0, 0, NULL,
 				go ? P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0,
 				1);
 		} else if (bssid) {
 			wpa_s->user_initiated_pd = 0;
+			wpa_msg_global(wpa_s, MSG_INFO,
+				       P2P_EVENT_INVITATION_ACCEPTED
+				       "sa=" MACSTR " go_dev_addr=" MACSTR
+				       " bssid=" MACSTR " unknown-network",
+				       MAC2STR(sa), MAC2STR(go_dev_addr),
+				       MAC2STR(bssid));
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
 				      wpa_s->p2p_wps_method, 0, op_freq,
 				      ssid, ssid_len);

@@ -1384,6 +1384,7 @@ ifndef DBUS_INCLUDE
 DBUS_INCLUDE := $(shell $(PKG_CONFIG) --cflags dbus-1)
 endif
 DBUS_CFLAGS += $(DBUS_INCLUDE)
+DBUS_INTERFACE=fi.epitest.hostap.WPASupplicant
 endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS_NEW
@@ -1409,6 +1410,7 @@ DBUS_OBJS += dbus/dbus_new_introspect.o
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_INTRO
 endif
 DBUS_CFLAGS += $(DBUS_INCLUDE)
+DBUS_INTERFACE=fi.w1.wpa_supplicant1
 endif
 
 ifdef DBUS
@@ -1771,11 +1773,13 @@ else
 endif
 
 %.service: %.service.in
-	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' \
+		-e 's|\@DBUS_INTERFACE\@|$(DBUS_INTERFACE)|g' $< >$@
 	@$(E) "  sed" $<
 
 %@.service: %.service.arg.in
-	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' \
+		-e 's|\@DBUS_INTERFACE\@|$(DBUS_INTERFACE)|g' $< >$@
 	@$(E) "  sed" $<
 
 wpa_supplicant.exe: wpa_supplicant

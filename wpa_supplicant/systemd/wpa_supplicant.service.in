@@ -5,9 +5,9 @@ Wants=network.target
 
 [Service]
 Type=dbus
-BusName=fi.epitest.hostap.WPASupplicant
+BusName=@DBUS_INTERFACE@
 ExecStart=@BINDIR@/wpa_supplicant -u
 
 [Install]
 WantedBy=multi-user.target
-Alias=dbus-fi.epitest.hostap.WPASupplicant.service
+Alias=dbus-@DBUS_INTERFACE@.service

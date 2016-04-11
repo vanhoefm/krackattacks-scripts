@@ -1376,11 +1376,16 @@ wpa_driver_bsd_add_scan_entry(struct wpa_scan_results *res,
 	result->caps = sr->isr_capinfo;
 	result->qual = sr->isr_rssi;
 	result->noise = sr->isr_noise;
+
+#ifdef __FreeBSD__
 	/*
 	 * the rssi value reported by the kernel is in 0.5dB steps relative to
 	 * the reported noise floor. see ieee80211_node.h for details.
 	 */
 	result->level = sr->isr_rssi / 2 + sr->isr_noise;
+#else
+	result->level = sr->isr_rssi;
+#endif
 
 	pos = (u8 *)(result + 1);
 

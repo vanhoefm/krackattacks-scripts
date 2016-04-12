@@ -420,6 +420,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	     !(bss->wpa & 2)))
 		goto no_wps; /* WPS2 does not allow WPA/TKIP-only
 			      * configuration */
+	if (ssid->wps_disabled)
+		goto no_wps;
 	bss->eap_server = 1;
 
 	if (!ssid->ignore_broadcast_ssid)

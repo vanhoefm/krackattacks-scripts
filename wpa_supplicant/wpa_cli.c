@@ -1612,7 +1612,7 @@ static const char *network_fields[] = {
 #ifdef CONFIG_HS20
 	"update_identifier",
 #endif /* CONFIG_HS20 */
-	"mac_addr", "pbss"
+	"mac_addr", "pbss", "wps_disabled"
 };
 
 

@@ -748,6 +748,14 @@ struct wpa_ssid {
 	 * this MBSS will trigger a peering attempt.
 	 */
 	int no_auto_peer;
+
+	/**
+	 * wps_disabled - WPS disabled in AP mode
+	 *
+	 * 0 = WPS enabled and configured (default)
+	 * 1 = WPS disabled
+	 */
+	int wps_disabled;
 };
 
 #endif /* CONFIG_SSID_H */

@@ -455,6 +455,11 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_MBO */
 
+	if (params.p2p)
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_P2P_CLIENT);
+	else
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_STATION);
+
 	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
 					     sizeof(ext_capab));
 	if (ext_capab_len > 0) {

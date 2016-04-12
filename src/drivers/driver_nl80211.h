@@ -96,6 +96,13 @@ struct wpa_driver_nl80211_data {
 	struct wpa_driver_capa capa;
 	u8 *extended_capa, *extended_capa_mask;
 	unsigned int extended_capa_len;
+	struct drv_nl80211_ext_capa {
+		enum nl80211_iftype iftype;
+		u8 *ext_capa, *ext_capa_mask;
+		unsigned int ext_capa_len;
+	} iface_ext_capa[NL80211_IFTYPE_MAX];
+	unsigned int num_iface_ext_capa;
+
 	int has_capability;
 
 	int operstate;
@@ -250,6 +257,8 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags);
 
 int process_global_event(struct nl_msg *msg, void *arg);
 int process_bss_event(struct nl_msg *msg, void *arg);
+
+const char * nl80211_iftype_str(enum nl80211_iftype mode);
 
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);

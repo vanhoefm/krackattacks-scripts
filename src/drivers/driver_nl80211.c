@@ -2412,6 +2412,7 @@ static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
 static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	unsigned int i;
 
 	wpa_printf(MSG_INFO, "nl80211: deinit ifname=%s disabled_11b_rates=%d",
 		   bss->ifname, drv->disabled_11b_rates);
@@ -2508,6 +2509,10 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	os_free(drv->extended_capa);
 	os_free(drv->extended_capa_mask);
+	for (i = 0; i < drv->num_iface_ext_capa; i++) {
+		os_free(drv->iface_ext_capa[i].ext_capa);
+		os_free(drv->iface_ext_capa[i].ext_capa_mask);
+	}
 	os_free(drv->first_bss);
 	os_free(drv);
 }
@@ -4162,7 +4167,7 @@ void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx)
 }
 
 
-static const char * nl80211_iftype_str(enum nl80211_iftype mode)
+const char * nl80211_iftype_str(enum nl80211_iftype mode)
 {
 	switch (mode) {
 	case NL80211_IFTYPE_ADHOC:
@@ -9202,6 +9207,39 @@ static int nl80211_configure_data_frame_filters(void *priv, u32 filter_flags)
 }
 
 
+static int nl80211_get_ext_capab(void *priv, enum wpa_driver_if_type type,
+				 const u8 **ext_capa, const u8 **ext_capa_mask,
+				 unsigned int *ext_capa_len)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	enum nl80211_iftype nlmode;
+	unsigned int i;
+
+	if (!ext_capa || !ext_capa_mask || !ext_capa_len)
+		return -1;
+
+	nlmode = wpa_driver_nl80211_if_type(type);
+
+	/* By default, use the per-radio values */
+	*ext_capa = drv->extended_capa;
+	*ext_capa_mask = drv->extended_capa_mask;
+	*ext_capa_len = drv->extended_capa_len;
+
+	/* Replace the default value if a per-interface type value exists */
+	for (i = 0; i < drv->num_iface_ext_capa; i++) {
+		if (nlmode == drv->iface_ext_capa[i].iftype) {
+			*ext_capa = drv->iface_ext_capa[i].ext_capa;
+			*ext_capa_mask = drv->iface_ext_capa[i].ext_capa_mask;
+			*ext_capa_len = drv->iface_ext_capa[i].ext_capa_len;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -9319,4 +9357,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_prob_oper_freq = nl80211_set_prob_oper_freq,
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 	.configure_data_frame_filters = nl80211_configure_data_frame_filters,
+	.get_ext_capab = nl80211_get_ext_capab,
 };

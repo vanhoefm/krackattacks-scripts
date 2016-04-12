@@ -750,6 +750,20 @@ static void hostapd_get_hw_mode_any_channels(struct hostapd_data *hapd,
 }
 
 
+void hostapd_get_ext_capa(struct hostapd_iface *iface)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+
+	if (!hapd->driver || !hapd->driver->get_ext_capab)
+		return;
+
+	hapd->driver->get_ext_capab(hapd->drv_priv, WPA_IF_AP_BSS,
+				    &iface->extended_capa,
+				    &iface->extended_capa_mask,
+				    &iface->extended_capa_len);
+}
+
+
 int hostapd_drv_do_acs(struct hostapd_data *hapd)
 {
 	struct drv_acs_params params;

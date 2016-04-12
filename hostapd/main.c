@@ -217,10 +217,19 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		iface->drv_flags = capa.flags;
 		iface->smps_modes = capa.smps_modes;
 		iface->probe_resp_offloads = capa.probe_resp_offloads;
+		/*
+		 * Use default extended capa values from per-radio information
+		 */
 		iface->extended_capa = capa.extended_capa;
 		iface->extended_capa_mask = capa.extended_capa_mask;
 		iface->extended_capa_len = capa.extended_capa_len;
 		iface->drv_max_acl_mac_addrs = capa.max_acl_mac_addrs;
+
+		/*
+		 * Override extended capa with per-interface type (AP), if
+		 * available from the driver.
+		 */
+		hostapd_get_ext_capa(iface);
 
 		triggs = wpa_get_wowlan_triggers(conf->wowlan_triggers, &capa);
 		if (triggs && hapd->driver->set_wowlan) {

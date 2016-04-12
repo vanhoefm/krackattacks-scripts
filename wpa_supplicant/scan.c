@@ -436,6 +436,13 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_P2P
+	if (wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_CLIENT)
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_P2P_CLIENT);
+	else
+#endif /* CONFIG_P2P */
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_STATION);
+
 	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
 					     sizeof(ext_capab));
 	if (ext_capab_len > 0 &&

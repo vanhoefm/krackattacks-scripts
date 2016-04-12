@@ -660,6 +660,11 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	if (ieee80211_is_dfs(params.freq.freq))
 		params.freq.freq = 0; /* set channel after CAC */
 
+	if (params.p2p)
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_P2P_GO);
+	else
+		wpa_drv_get_ext_capa(wpa_s, WPA_IF_AP_BSS);
+
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
 		return -1;

@@ -2133,6 +2133,16 @@ int p2p_client_limit_reached(struct p2p_group *group);
 const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next);
 
 /**
+ * p2p_group_get_client_interface_addr - Get P2P Interface Address of a client in a group
+ * @group: P2P group context from p2p_group_init()
+ * @dev_addr: P2P Device Address of the client
+ * Returns: P2P Interface Address of the client if found or %NULL if no match
+ * found
+ */
+const u8 * p2p_group_get_client_interface_addr(struct p2p_group *group,
+					       const u8 *dev_addr);
+
+/**
  * p2p_group_get_dev_addr - Get a P2P Device Address of a client in a group
  * @group: P2P group context from p2p_group_init()
  * @addr: P2P Interface Address of the client

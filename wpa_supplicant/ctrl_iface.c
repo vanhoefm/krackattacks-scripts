@@ -8219,8 +8219,8 @@ static void wpas_ctrl_neighbor_rep_cb(void *ctx, struct wpabuf *neighbor_rep)
 }
 
 
-static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s,
-					    char *cmd)
+static int wpas_ctrl_iface_send_neighbor_rep(struct wpa_supplicant *wpa_s,
+					     char *cmd)
 {
 	struct wpa_ssid_value ssid, *ssid_p = NULL;
 	int ret, lci = 0, civic = 0;
@@ -9103,7 +9103,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_ctrl_vendor_elem_remove(wpa_s, buf + 19) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "NEIGHBOR_REP_REQUEST", 20) == 0) {
-		if (wpas_ctrl_iface_send_neigbor_rep(wpa_s, buf + 20))
+		if (wpas_ctrl_iface_send_neighbor_rep(wpa_s, buf + 20))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "ERP_FLUSH") == 0) {
 		wpas_ctrl_iface_erp_flush(wpa_s);

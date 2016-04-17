@@ -9101,6 +9101,8 @@ static int nl80211_configure_data_frame_filters(void *priv, u32 filter_flags)
 	ret = os_snprintf(path, sizeof(path),
 			  "/proc/sys/net/ipv4/conf/%s/drop_unicast_in_l2_multicast",
 			  bss->ifname);
+	if (os_snprintf_error(sizeof(path), ret))
+		return -1;
 
 	ret = nl80211_write_to_file(path,
 				    !!(filter_flags &

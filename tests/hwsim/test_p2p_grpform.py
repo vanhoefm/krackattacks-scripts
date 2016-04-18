@@ -55,6 +55,15 @@ def test_grpform_b(dev):
     if "p2p-wlan" not in r_res['ifname']:
         raise Exception("Unexpected group interface name")
     check_grpform_results(i_res, r_res)
+    addr = dev[0].group_request("P2P_GROUP_MEMBER " + dev[1].p2p_dev_addr())
+    if "FAIL" in addr:
+        raise Exception("P2P_GROUP_MEMBER failed")
+    if addr != dev[1].p2p_interface_addr():
+        raise Exception("Unexpected P2P_GROUP_MEMBER result: " + addr)
+    if "FAIL" not in dev[0].group_request("P2P_GROUP_MEMBER a"):
+        raise Exception("Invalid P2P_GROUP_MEMBER command accepted")
+    if "FAIL" not in dev[0].group_request("P2P_GROUP_MEMBER 00:11:22:33:44:55"):
+        raise Exception("P2P_GROUP_MEMBER for non-member accepted")
     remove_group(dev[0], dev[1])
     if r_res['ifname'] in utils.get_ifnames():
         raise Exception("Group interface netdev was not removed")

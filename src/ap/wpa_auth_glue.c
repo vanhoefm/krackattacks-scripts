@@ -650,7 +650,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (!hostapd_drv_none(hapd) && hapd->conf->ft_over_ds &&
+	if (!hostapd_drv_none(hapd) &&
 	    wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt)) {
 		hapd->l2 = l2_packet_init(hapd->conf->bridge[0] ?
 					  hapd->conf->bridge :

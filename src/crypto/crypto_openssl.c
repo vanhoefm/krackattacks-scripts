@@ -602,6 +602,7 @@ void crypto_cipher_deinit(struct crypto_cipher *ctx)
 
 void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	DH *dh;
 	struct wpabuf *pubkey = NULL, *privkey = NULL;
 	size_t publen, privlen;
@@ -645,11 +646,61 @@ err:
 	wpabuf_clear_free(privkey);
 	DH_free(dh);
 	return NULL;
+#else
+	DH *dh;
+	struct wpabuf *pubkey = NULL, *privkey = NULL;
+	size_t publen, privlen;
+	BIGNUM *p = NULL, *g, *priv_key = NULL, *pub_key = NULL;
+
+	*priv = NULL;
+	*publ = NULL;
+
+	dh = DH_new();
+	if (dh == NULL)
+		return NULL;
+
+	g = BN_new();
+	p = get_group5_prime();
+	if (!g || BN_set_word(g, 2) != 1 || !p ||
+	    DH_set0_pqg(dh, p, NULL, g) != 1)
+		goto err;
+	p = NULL;
+	g = NULL;
+
+	if (DH_generate_key(dh) != 1)
+		goto err;
+
+	DH_get0_key(dh, &pub_key, &priv_key);
+	publen = BN_num_bytes(pub_key);
+	pubkey = wpabuf_alloc(publen);
+	if (!pubkey)
+		goto err;
+	privlen = BN_num_bytes(priv_key);
+	privkey = wpabuf_alloc(privlen);
+	if (!privkey)
+		goto err;
+
+	BN_bn2bin(pub_key, wpabuf_put(pubkey, publen));
+	BN_bn2bin(priv_key, wpabuf_put(privkey, privlen));
+
+	*priv = privkey;
+	*publ = pubkey;
+	return dh;
+
+err:
+	BN_free(p);
+	BN_free(g);
+	wpabuf_clear_free(pubkey);
+	wpabuf_clear_free(privkey);
+	DH_free(dh);
+	return NULL;
+#endif
 }
 
 
 void * dh5_init_fixed(const struct wpabuf *priv, const struct wpabuf *publ)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	DH *dh;
 
 	dh = DH_new();
@@ -680,6 +731,42 @@ void * dh5_init_fixed(const struct wpabuf *priv, const struct wpabuf *publ)
 err:
 	DH_free(dh);
 	return NULL;
+#else
+	DH *dh;
+	BIGNUM *p = NULL, *g, *priv_key = NULL, *pub_key = NULL;
+
+	dh = DH_new();
+	if (dh == NULL)
+		return NULL;
+
+	g = BN_new();
+	p = get_group5_prime();
+	if (!g || BN_set_word(g, 2) != 1 || !p ||
+	    DH_set0_pqg(dh, p, NULL, g) != 1)
+		goto err;
+	p = NULL;
+	g = NULL;
+
+	priv_key = BN_bin2bn(wpabuf_head(priv), wpabuf_len(priv), NULL);
+	pub_key = BN_bin2bn(wpabuf_head(publ), wpabuf_len(publ), NULL);
+	if (!priv_key || !pub_key || DH_set0_key(dh, pub_key, priv_key) != 0)
+		goto err;
+	pub_key = NULL;
+	priv_key = NULL;
+
+	if (DH_generate_key(dh) != 1)
+		goto err;
+
+	return dh;
+
+err:
+	BN_free(p);
+	BN_free(g);
+	BN_free(pub_key);
+	BN_clear_free(priv_key);
+	DH_free(dh);
+	return NULL;
+#endif
 }
 
 

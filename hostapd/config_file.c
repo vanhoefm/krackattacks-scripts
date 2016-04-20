@@ -1962,6 +1962,31 @@ fail:
 #endif /* CONFIG_ACS */
 
 
+static int parse_wpabuf_hex(int line, const char *name, struct wpabuf **buf,
+			    const char *val)
+{
+	struct wpabuf *elems;
+
+	if (val[0] == '\0') {
+		wpabuf_free(*buf);
+		*buf = NULL;
+		return 0;
+	}
+
+	elems = wpabuf_parse_bin(val);
+	if (!elems) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid %s '%s'",
+			   line, name, val);
+		return -1;
+	}
+
+	wpabuf_free(*buf);
+	*buf = elems;
+
+	return 0;
+}
+
+
 static int hostapd_config_fill(struct hostapd_config *conf,
 			       struct hostapd_bss_config *bss,
 			       const char *buf, char *pos, int line)
@@ -3350,65 +3375,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->own_ie_override = tmp;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
-		struct wpabuf *elems;
-		size_t len = os_strlen(pos);
-		if (len & 0x01) {
-			wpa_printf(MSG_ERROR,
-				   "Line %d: Invalid vendor_elements '%s'",
-				   line, pos);
+		if (parse_wpabuf_hex(line, buf, &bss->vendor_elements, pos))
 			return 1;
-		}
-		len /= 2;
-		if (len == 0) {
-			wpabuf_free(bss->vendor_elements);
-			bss->vendor_elements = NULL;
-			return 0;
-		}
-
-		elems = wpabuf_alloc(len);
-		if (elems == NULL)
-			return 1;
-
-		if (hexstr2bin(pos, wpabuf_put(elems, len), len)) {
-			wpabuf_free(elems);
-			wpa_printf(MSG_ERROR,
-				   "Line %d: Invalid vendor_elements '%s'",
-				   line, pos);
-			return 1;
-		}
-
-		wpabuf_free(bss->vendor_elements);
-		bss->vendor_elements = elems;
 	} else if (os_strcmp(buf, "assocresp_elements") == 0) {
-		struct wpabuf *elems;
-		size_t len = os_strlen(pos);
-		if (len & 0x01) {
-			wpa_printf(MSG_ERROR,
-				   "Line %d: Invalid assocresp_elements '%s'",
-				   line, pos);
+		if (parse_wpabuf_hex(line, buf, &bss->assocresp_elements, pos))
 			return 1;
-		}
-		len /= 2;
-		if (len == 0) {
-			wpabuf_free(bss->assocresp_elements);
-			bss->assocresp_elements = NULL;
-			return 0;
-		}
-
-		elems = wpabuf_alloc(len);
-		if (elems == NULL)
-			return 1;
-
-		if (hexstr2bin(pos, wpabuf_put(elems, len), len)) {
-			wpabuf_free(elems);
-			wpa_printf(MSG_ERROR,
-				   "Line %d: Invalid assocresp_elements '%s'",
-				   line, pos);
-			return 1;
-		}
-
-		wpabuf_free(bss->assocresp_elements);
-		bss->assocresp_elements = elems;
 	} else if (os_strcmp(buf, "sae_anti_clogging_threshold") == 0) {
 		bss->sae_anti_clogging_threshold = atoi(pos);
 	} else if (os_strcmp(buf, "sae_groups") == 0) {

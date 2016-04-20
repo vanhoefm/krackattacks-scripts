@@ -392,6 +392,8 @@ def test_hapd_ctrl_set_error_cases(dev, apdev):
                "bss_load_test 12:80",
                "vendor_elements 0",
                "vendor_elements 0q",
+               "assocresp_elements 0",
+               "assocresp_elements 0q",
                "local_pwr_constraint -1",
                "local_pwr_constraint 256",
                "wmm_ac_bk_cwmin -1",

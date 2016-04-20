@@ -52,6 +52,7 @@ def test_ap_vendor_elements(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['vendor_elements'] = "dd0411223301"
+    params['assocresp_elements'] = "dd0411223302"
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     bss = dev[0].get_bss(bssid)

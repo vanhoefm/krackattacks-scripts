@@ -1960,6 +1960,14 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	p = hostapd_eid_mbo(hapd, p, buf + sizeof(buf) - p);
 
+	if (hapd->conf->assocresp_elements &&
+	    (size_t) (buf + sizeof(buf) - p) >=
+	    wpabuf_len(hapd->conf->assocresp_elements)) {
+		os_memcpy(p, wpabuf_head(hapd->conf->assocresp_elements),
+			  wpabuf_len(hapd->conf->assocresp_elements));
+		p += wpabuf_len(hapd->conf->assocresp_elements);
+	}
+
 	send_len += p - reply->u.assoc_resp.variable;
 
 	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0) {

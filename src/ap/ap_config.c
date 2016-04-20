@@ -567,6 +567,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #endif /* CONFIG_HS20 */
 
 	wpabuf_free(conf->vendor_elements);
+	wpabuf_free(conf->assocresp_elements);
 
 	os_free(conf->sae_groups);
 

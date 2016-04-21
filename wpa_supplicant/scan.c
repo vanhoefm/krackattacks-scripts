@@ -1875,8 +1875,8 @@ int wpa_supplicant_filter_bssid_match(struct wpa_supplicant *wpa_s,
 }
 
 
-static void filter_scan_res(struct wpa_supplicant *wpa_s,
-			    struct wpa_scan_results *res)
+void filter_scan_res(struct wpa_supplicant *wpa_s,
+		     struct wpa_scan_results *res)
 {
 	size_t i, j;
 
@@ -1909,7 +1909,7 @@ static void filter_scan_res(struct wpa_supplicant *wpa_s,
 #define DEFAULT_NOISE_FLOOR_2GHZ (-89)
 #define DEFAULT_NOISE_FLOOR_5GHZ (-92)
 
-static void scan_snr(struct wpa_scan_res *res)
+void scan_snr(struct wpa_scan_res *res)
 {
 	if (res->flags & WPA_SCAN_NOISE_INVALID) {
 		res->noise = IS_5GHZ(res->freq) ?
@@ -1993,8 +1993,8 @@ static unsigned int max_vht80_rate(int snr)
 }
 
 
-static void scan_est_throughput(struct wpa_supplicant *wpa_s,
-				struct wpa_scan_res *res)
+void scan_est_throughput(struct wpa_supplicant *wpa_s,
+			 struct wpa_scan_res *res)
 {
 	enum local_hw_capab capab = wpa_s->hw_capab;
 	int rate; /* max legacy rate in 500 kb/s units */

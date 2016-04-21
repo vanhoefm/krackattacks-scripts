@@ -24,6 +24,7 @@
 #define MAX_TFS_IE_LEN  1024
 #define WNM_MAX_NEIGHBOR_REPORT 10
 
+#define WNM_SCAN_RESULT_AGE 2 /* 2 seconds */
 
 /* get the TFS IE from driver */
 static int ieee80211_11_get_tfs_ie(struct wpa_supplicant *wpa_s, u8 *buf,
@@ -499,7 +500,7 @@ static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 
 
 static struct wpa_bss *
-compare_scan_neighbor_results(struct wpa_supplicant *wpa_s)
+compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
 {
 
 	u8 i;
@@ -530,6 +531,19 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s)
 				   nei->preference_present ? nei->preference :
 				   -1);
 			continue;
+		}
+
+		if (age_secs) {
+			struct os_reltime now;
+
+			if (os_get_reltime(&now) == 0 &&
+			    os_reltime_expired(&now, &target->last_update,
+					       age_secs)) {
+				wpa_printf(MSG_DEBUG,
+					   "Candidate BSS is more than %ld seconds old",
+					   age_secs);
+				continue;
+			}
 		}
 
 		if (bss->ssid_len != target->ssid_len ||
@@ -832,6 +846,41 @@ static void wnm_send_bss_transition_mgmt_resp(
 }
 
 
+static void wnm_bss_tm_connect(struct wpa_supplicant *wpa_s,
+			       struct wpa_bss *bss, struct wpa_ssid *ssid,
+			       int after_new_scan)
+{
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"WNM: Transition to BSS " MACSTR
+		" based on BSS Transition Management Request (old BSSID "
+		MACSTR " after_new_scan=%d)",
+		MAC2STR(bss->bssid), MAC2STR(wpa_s->bssid), after_new_scan);
+
+	/* Send the BSS Management Response - Accept */
+	if (wpa_s->wnm_reply) {
+		wpa_s->wnm_reply = 0;
+		wpa_printf(MSG_DEBUG,
+			   "WNM: Sending successful BSS Transition Management Response");
+		wnm_send_bss_transition_mgmt_resp(wpa_s,
+						  wpa_s->wnm_dialog_token,
+						  WNM_BSS_TM_ACCEPT,
+						  0, bss->bssid);
+	}
+
+	if (bss == wpa_s->current_bss) {
+		wpa_printf(MSG_DEBUG,
+			   "WNM: Already associated with the preferred candidate");
+		wnm_deallocate_memory(wpa_s);
+		return;
+	}
+
+	wpa_s->reassociate = 1;
+	wpa_printf(MSG_DEBUG, "WNM: Issuing connect");
+	wpa_supplicant_connect(wpa_s, bss, ssid);
+	wnm_deallocate_memory(wpa_s);
+}
+
+
 int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 {
 	struct wpa_bss *bss;
@@ -841,6 +890,8 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	if (!wpa_s->wnm_neighbor_report_elements)
 		return 0;
 
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"WNM: Process scan results for BSS Transition Management");
 	if (os_reltime_before(&wpa_s->wnm_cand_valid_until,
 			      &wpa_s->scan_trigger_time)) {
 		wpa_printf(MSG_DEBUG, "WNM: Previously stored BSS transition candidate list is not valid anymore - drop it");
@@ -856,7 +907,7 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	}
 
 	/* Compare the Neighbor Report and scan results */
-	bss = compare_scan_neighbor_results(wpa_s);
+	bss = compare_scan_neighbor_results(wpa_s, 0);
 	if (!bss) {
 		wpa_printf(MSG_DEBUG, "WNM: No BSS transition candidate match found");
 		status = WNM_BSS_TM_REJECT_NO_SUITABLE_CANDIDATES;
@@ -864,25 +915,7 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	}
 
 	/* Associate to the network */
-	/* Send the BSS Management Response - Accept */
-	if (wpa_s->wnm_reply) {
-		wpa_s->wnm_reply = 0;
-		wnm_send_bss_transition_mgmt_resp(wpa_s,
-						  wpa_s->wnm_dialog_token,
-						  WNM_BSS_TM_ACCEPT,
-						  0, bss->bssid);
-	}
-
-	if (bss == wpa_s->current_bss) {
-		wpa_printf(MSG_DEBUG,
-			   "WNM: Already associated with the preferred candidate");
-		wnm_deallocate_memory(wpa_s);
-		return 1;
-	}
-
-	wpa_s->reassociate = 1;
-	wpa_supplicant_connect(wpa_s, bss, ssid);
-	wnm_deallocate_memory(wpa_s);
+	wnm_bss_tm_connect(wpa_s, bss, ssid, 1);
 	return 1;
 
 send_bss_resp_fail:
@@ -1023,6 +1056,79 @@ static void wnm_set_scan_freqs(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wnm_fetch_scan_results(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_scan_results *scan_res;
+	struct wpa_bss *bss;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	u8 i, found = 0;
+	size_t j;
+
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"WNM: Fetch current scan results from the driver for checking transition candidates");
+	scan_res = wpa_drv_get_scan_results2(wpa_s);
+	if (!scan_res) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "WNM: Failed to get scan results");
+		return 0;
+	}
+
+	if (scan_res->fetch_time.sec == 0)
+		os_get_reltime(&scan_res->fetch_time);
+
+	filter_scan_res(wpa_s, scan_res);
+
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
+		struct neighbor_report *nei;
+
+		nei = &wpa_s->wnm_neighbor_report_elements[i];
+		if (nei->preference_present && nei->preference == 0)
+			continue;
+
+		for (j = 0; j < scan_res->num; j++) {
+			struct wpa_scan_res *res;
+			const u8 *ssid_ie;
+
+			res = scan_res->res[j];
+			if (os_memcmp(nei->bssid, res->bssid, ETH_ALEN) != 0 ||
+			    res->age > WNM_SCAN_RESULT_AGE * 1000)
+				continue;
+			bss = wpa_s->current_bss;
+			ssid_ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
+			if (bss && ssid_ie &&
+			    (bss->ssid_len != ssid_ie[1] ||
+			     os_memcmp(bss->ssid, ssid_ie + 2,
+				       bss->ssid_len) != 0))
+				continue;
+
+			/* Potential candidate found */
+			found = 1;
+			scan_snr(res);
+			scan_est_throughput(wpa_s, res);
+			wpa_bss_update_scan_res(wpa_s, res,
+						&scan_res->fetch_time);
+		}
+	}
+
+	wpa_scan_results_free(scan_res);
+	if (!found) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"WNM: No transition candidate matches existing scan results");
+		return 0;
+	}
+
+	bss = compare_scan_neighbor_results(wpa_s, WNM_SCAN_RESULT_AGE);
+	if (!bss) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"WNM: Comparison of scan results against transition candidates did not find matches");
+		return 0;
+	}
+
+	/* Associate to the network */
+	wnm_bss_tm_connect(wpa_s, bss, ssid, 0);
+	return 1;
+}
+
+
 static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 					     const u8 *pos, const u8 *end,
 					     int reply)
@@ -1155,6 +1261,20 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		wpa_s->wnm_cand_valid_until.usec %= 1000000;
 		os_memcpy(wpa_s->wnm_cand_from_bss, wpa_s->bssid, ETH_ALEN);
 
+		/*
+		 * Fetch the latest scan results from the kernel and check for
+		 * candidates based on those results first. This can help in
+		 * finding more up-to-date information should the driver has
+		 * done some internal scanning operations after the last scan
+		 * result update in wpa_supplicant.
+		 */
+		if (wnm_fetch_scan_results(wpa_s) > 0)
+			return;
+
+		/*
+		 * Try to use previously received scan results, if they are
+		 * recent enough to use for a connection.
+		 */
 		if (wpa_s->last_scan_res_used > 0) {
 			struct os_reltime now;
 

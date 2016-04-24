@@ -74,7 +74,7 @@ def test_ap_roam_wpa2_psk_failed(dev, apdev, params):
         raise Exception("ROAM failed")
 
     ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED",
-	                    "CTRL-EVENT-CONNECTED"], 5)
+                            "CTRL-EVENT-CONNECTED"], 5)
     if "CTRL-EVENT-CONNECTED" in ev:
         raise Exception("Got unexpected CTRL-EVENT-CONNECTED")
     if "CTRL-EVENT-SSID-TEMP-DISABLED" not in ev:

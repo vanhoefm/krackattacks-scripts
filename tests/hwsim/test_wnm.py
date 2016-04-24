@@ -1204,57 +1204,57 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
-	raise Exception("Failed to set STA as cellular data capable")
+        raise Exception("Failed to set STA as cellular data capable")
 
     dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK",
                    proto="WPA2", ieee80211w="0", scan_freq="2412")
 
     logger.debug("BTM request with MBO reassociation delay when disassoc imminent is not set")
     if 'FAIL' not in hapd.request("BSS_TM_REQ " + dev[0].own_addr() + " mbo=3:2:1"):
-	raise Exception("BSS transition management succeeded unexpectedly")
+        raise Exception("BSS transition management succeeded unexpectedly")
 
     logger.debug("BTM request with invalid MBO transition reason code")
     if 'FAIL' not in hapd.request("BSS_TM_REQ " + dev[0].own_addr() + " mbo=10:2:1"):
-	raise Exception("BSS transition management succeeded unexpectedly")
+        raise Exception("BSS transition management succeeded unexpectedly")
 
     logger.debug("BTM request with MBO reassociation retry delay of 5 seconds")
     if 'OK' not in hapd.request("BSS_TM_REQ " + dev[0].own_addr() + " disassoc_imminent=1 disassoc_timer=3 mbo=3:5:1"):
-	raise Exception("BSS transition management command failed")
+        raise Exception("BSS transition management command failed")
 
     ev = dev[0].wait_event(['MBO-CELL-PREFERENCE'], 1)
     if ev is None or "preference=1" not in ev:
-	raise Exception("Timeout waiting for MBO-CELL-PREFERENCE event")
+        raise Exception("Timeout waiting for MBO-CELL-PREFERENCE event")
 
     ev = dev[0].wait_event(['MBO-TRANSITION-REASON'], 1)
     if ev is None or "reason=3" not in ev:
-	raise Exception("Timeout waiting for MBO-TRANSITION-REASON event")
+        raise Exception("Timeout waiting for MBO-TRANSITION-REASON event")
 
     ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
     if ev is None:
-	raise Exception("No BSS Transition Management Response")
+        raise Exception("No BSS Transition Management Response")
     if dev[0].own_addr() not in ev:
-	raise Exception("Unexpected BSS Transition Management Response address")
+        raise Exception("Unexpected BSS Transition Management Response address")
 
     ev = dev[0].wait_event(['CTRL-EVENT-DISCONNECTED'], 5)
     if ev is None:
-	    raise Exception("Station did not disconnect although disassoc imminent was set")
+        raise Exception("Station did not disconnect although disassoc imminent was set")
 
     # Set the scan interval to make dev[0] look for connections
     if 'OK' not in dev[0].request("SCAN_INTERVAL 1"):
-	    raise Exception("Failed to set scan interval")
+        raise Exception("Failed to set scan interval")
 
     # Make sure no connection is made during the retry delay
     ev = dev[0].wait_event(['CTRL-EVENT-CONNECTED'], 5)
     if ev is not None:
-	    raise Exception("Station connected before assoc retry delay was over")
+        raise Exception("Station connected before assoc retry delay was over")
 
     # After the assoc retry delay is over, we can reconnect
     ev = dev[0].wait_event(['CTRL-EVENT-CONNECTED'], 5)
     if ev is None:
-	    raise Exception("Station did not connect after assoc retry delay is over")
+        raise Exception("Station did not connect after assoc retry delay is over")
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
-	raise Exception("Failed to set STA as cellular data not-capable")
+        raise Exception("Failed to set STA as cellular data not-capable")
 
 def test_wnm_bss_transition_mgmt_query(dev, apdev):
     """WNM BSS Transition Management query"""

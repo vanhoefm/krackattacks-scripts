@@ -252,13 +252,13 @@ def main():
 
     # read the modules from the modules file
     if args.mfile:
-	args.testmodules = []
-	with open(args.mfile) as f:
-	    for line in f.readlines():
-		line = line.strip()
-		if not line or line.startswith('#'):
-		    continue
-	        args.testmodules.append(line)
+        args.testmodules = []
+        with open(args.mfile) as f:
+            for line in f.readlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                    args.testmodules.append(line)
 
     tests_to_run = []
     if args.tests:

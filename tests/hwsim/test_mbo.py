@@ -19,21 +19,21 @@ def test_mbo_assoc_disallow(dev, apdev, params):
 
     logger.debug("Set mbo_assoc_disallow with invalid value")
     if "FAIL" not in hapd1.request("SET mbo_assoc_disallow 2"):
-	raise Exception("Set mbo_assoc_disallow for AP1 succeeded unexpectedly with value 2")
+        raise Exception("Set mbo_assoc_disallow for AP1 succeeded unexpectedly with value 2")
 
     logger.debug("Disallow associations to AP1 and allow association to AP2")
     if "OK" not in hapd1.request("SET mbo_assoc_disallow 1"):
-	raise Exception("Failed to set mbo_assoc_disallow for AP1")
+        raise Exception("Failed to set mbo_assoc_disallow for AP1")
     if "OK" not in hapd2.request("SET mbo_assoc_disallow 0"):
-	raise Exception("Failed to set mbo_assoc_disallow for AP2")
+        raise Exception("Failed to set mbo_assoc_disallow for AP2")
 
     dev[0].connect("MBO", key_mgmt="NONE", scan_freq="2412")
 
     out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
-		     "wlan.fc.type == 0 && wlan.fc.type_subtype == 0x00",
+                     "wlan.fc.type == 0 && wlan.fc.type_subtype == 0x00",
                      wait=False)
     if "Destination address: " + hapd1.own_addr() in out:
-	raise Exception("Association request sent to disallowed AP")
+        raise Exception("Association request sent to disallowed AP")
 
     timestamp = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
                            "wlan.fc.type_subtype == 0x00",
@@ -41,9 +41,9 @@ def test_mbo_assoc_disallow(dev, apdev, params):
 
     logger.debug("Allow associations to AP1 and disallow assications to AP2")
     if "OK" not in hapd1.request("SET mbo_assoc_disallow 0"):
-	raise Exception("Failed to set mbo_assoc_disallow for AP1")
+        raise Exception("Failed to set mbo_assoc_disallow for AP1")
     if "OK" not in hapd2.request("SET mbo_assoc_disallow 1"):
-	raise Exception("Failed to set mbo_assoc_disallow for AP2")
+        raise Exception("Failed to set mbo_assoc_disallow for AP2")
 
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
@@ -57,7 +57,7 @@ def test_mbo_assoc_disallow(dev, apdev, params):
     out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
                      filter, wait=False)
     if "Destination address: " + hapd2.own_addr() in out:
-	raise Exception("Association request sent to disallowed AP 2")
+        raise Exception("Association request sent to disallowed AP 2")
 
 def test_mbo_cell_capa_update(dev, apdev):
     """MBO cellular data capability update"""
@@ -66,7 +66,7 @@ def test_mbo_cell_capa_update(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
-	raise Exception("Failed to set STA as cellular data capable")
+        raise Exception("Failed to set STA as cellular data capable")
 
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 
@@ -76,7 +76,7 @@ def test_mbo_cell_capa_update(dev, apdev):
         raise Exception("mbo_cell_capa missing after association")
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
-	raise Exception("Failed to set STA as cellular data not-capable")
+        raise Exception("Failed to set STA as cellular data not-capable")
 
     time.sleep(0.2)
     sta = hapd.get_sta(addr)
@@ -96,7 +96,7 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
-	raise Exception("Failed to set STA as cellular data capable")
+        raise Exception("Failed to set STA as cellular data capable")
 
     dev[0].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK-SHA256",
                    proto="WPA2", ieee80211w="2", scan_freq="2412")
@@ -107,7 +107,7 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
         raise Exception("mbo_cell_capa missing after association")
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
-	raise Exception("Failed to set STA as cellular data not-capable")
+        raise Exception("Failed to set STA as cellular data not-capable")
 
     time.sleep(0.2)
     sta = hapd.get_sta(addr)
@@ -123,9 +123,9 @@ def test_mbo_non_pref_chan(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
-	raise Exception("Failed to set non-preferred channel list")
+        raise Exception("Failed to set non-preferred channel list")
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:1:123 81:9:100:2"):
-	raise Exception("Failed to set non-preferred channel list")
+        raise Exception("Failed to set non-preferred channel list")
 
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 

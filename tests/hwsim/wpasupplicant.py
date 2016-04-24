@@ -449,8 +449,8 @@ class WpaSupplicant:
         return None
 
     def get_mcc(self):
-	mcc = int(self.get_driver_status_field('capa.num_multichan_concurrent'))
-	return 1 if mcc < 2 else mcc
+        mcc = int(self.get_driver_status_field('capa.num_multichan_concurrent'))
+        return 1 if mcc < 2 else mcc
 
     def get_mib(self):
         res = self.request("MIB")
@@ -1102,7 +1102,7 @@ class WpaSupplicant:
         return res.split(' ')
 
     def get_bss(self, bssid, ifname=None):
-	if not ifname or ifname == self.ifname:
+        if not ifname or ifname == self.ifname:
             res = self.request("BSS " + bssid)
         elif ifname == self.group_ifname:
             res = self.group_request("BSS " + bssid)
@@ -1220,8 +1220,8 @@ class WpaSupplicant:
             cmd = "P2P_ASP_PROVISION_RESP"
             params = "status=%d" % status
 
-	if role is not None:
-	    params += " role=" + role
+        if role is not None:
+            params += " role=" + role
         if cpt is not None:
             params += " cpt=" + cpt
 

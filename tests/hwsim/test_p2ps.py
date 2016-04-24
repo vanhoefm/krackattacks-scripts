@@ -393,8 +393,8 @@ def p2ps_connect_pd(dev0, dev1, ev0, ev1, pin=None, join_extra="", go_ev=None):
 def set_no_group_iface(dev, enable):
     if enable:
         res = dev.get_driver_status()
-	if (int(res['capa.flags'], 0) & 0x20000000):
-	    raise HwsimSkip("P2P Device used. Cannot set enable no_group_iface")
+        if (int(res['capa.flags'], 0) & 0x20000000):
+            raise HwsimSkip("P2P Device used. Cannot set enable no_group_iface")
         dev.global_request("SET p2p_no_group_iface 1")
     else:
         dev.global_request("SET p2p_no_group_iface 0")

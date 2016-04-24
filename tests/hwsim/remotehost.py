@@ -38,14 +38,10 @@ class Host():
             self.name = host
 
     def local_execute(self, command):
-        logger.debug("execute: " + command)
-        words = command.split()
-        cmd = []
-        for word in words:
-            cmd.append(word)
+        logger.debug("execute: " + str(command))
         try:
             status = 0;
-            buf = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            buf = subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             status = e.returncode
             buf = e.output
@@ -58,7 +54,7 @@ class Host():
         if self.host is None:
             return self.local_execute(command)
 
-        cmd = ["ssh", self.user + "@" + self.host, command]
+        cmd = ["ssh", self.user + "@" + self.host, ' '.join(command)]
         _cmd = self.name + " execute: "
         for c in cmd:
             _cmd = _cmd + " " + c
@@ -77,9 +73,9 @@ class Host():
     # async execute
     def execute_run(self, command, res):
         if self.host is None:
-            cmd = [command]
+            cmd = command
         else:
-            cmd = ["ssh",  self.user + "@" + self.host, command]
+            cmd = ["ssh",  self.user + "@" + self.host, ' '.join(command)]
         _cmd = self.name + " execute_run: "
         for c in cmd:
             _cmd = _cmd + " " + c

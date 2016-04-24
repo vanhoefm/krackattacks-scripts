@@ -99,7 +99,7 @@ class WpaSupplicant:
     def interface_add(self, ifname, config="", driver="nl80211",
                       drv_params=None, br_ifname=None, create=False,
                       set_ifname=True, all_params=False, if_type=None):
-        status, groups = self.host.execute("id")
+        status, groups = self.host.execute(["id"])
         if status != 0:
             group = "admin"
         group = "admin" if "(admin)" in groups else "adm"
@@ -191,11 +191,11 @@ class WpaSupplicant:
         if iter == 60:
             logger.error(self.ifname + ": Driver scan state did not clear")
             print "Trying to clear cfg80211/mac80211 scan state"
-            status, buf = self.host.execute("ifconfig " + self.ifname + " down")
+            status, buf = self.host.execute(["ifconfig", self.ifname, "down"])
             if status != 0:
                 logger.info("ifconfig failed: " + buf)
                 logger.info(status)
-            status, buf = self.host.execute("ifconfig " + self.ifname + " up")
+            status, buf = self.host.execute(["ifconfig", self.ifname, "up"])
             if status != 0:
                 logger.info("ifconfig failed: " + buf)
                 logger.info(status)

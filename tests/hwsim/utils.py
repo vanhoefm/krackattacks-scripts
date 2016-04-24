@@ -92,7 +92,7 @@ def get_phy(ap, ifname=None):
 
     if ifname == None:
         ifname = ap['ifname']
-    status, buf = host.execute("iw dev " + ifname + " info")
+    status, buf = host.execute(["iw", "dev", ifname, "info"])
     if status != 0:
         raise Exception("iw " + ifname + " info failed")
     lines = buf.split("\n")

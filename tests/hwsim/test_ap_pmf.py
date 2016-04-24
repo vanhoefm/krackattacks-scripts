@@ -13,7 +13,6 @@ import hwsim_utils
 import hostapd
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
-from test_ap_eap import eap_connect
 
 def test_ap_pmf_required(dev, apdev):
     """WPA2-PSK AP with PMF required"""

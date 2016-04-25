@@ -20,7 +20,7 @@
 
 int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 {
-	struct wpabuf *pubkey;
+	struct wpabuf *pubkey = NULL;
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
 	wpabuf_clear_free(wps->dh_privkey);

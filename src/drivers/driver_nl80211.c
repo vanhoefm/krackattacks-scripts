@@ -4302,7 +4302,8 @@ static int nl80211_setup_ap(struct i802_bss *bss)
 
 	if (drv->device_ap_sme && !drv->use_monitor)
 		if (nl80211_mgmt_subscribe_ap_dev_sme(bss))
-			return -1;
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Failed to subscribe for mgmt frames from SME driver - trying to run without it");
 
 	if (!drv->device_ap_sme && drv->use_monitor &&
 	    nl80211_create_monitor_interface(drv) &&

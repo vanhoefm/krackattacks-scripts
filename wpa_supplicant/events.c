@@ -3174,7 +3174,16 @@ static void wpa_supplicant_update_channel_list(
 {
 	struct wpa_supplicant *ifs;
 
-	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_REGDOM_CHANGE "init=%s type=%s%s%s",
+	/*
+	 * To allow backwards compatibility with higher level layers that
+	 * assumed the REGDOM_CHANGE event is sent over the initially added
+	 * interface. Find the highest parent of this interface and use it to
+	 * send the event.
+	 */
+	for (ifs = wpa_s; ifs->parent && ifs != ifs->parent; ifs = ifs->parent)
+		;
+
+	wpa_msg(ifs, MSG_INFO, WPA_EVENT_REGDOM_CHANGE "init=%s type=%s%s%s",
 		reg_init_str(info->initiator), reg_type_str(info->type),
 		info->alpha2[0] ? " alpha2=" : "",
 		info->alpha2[0] ? info->alpha2 : "");

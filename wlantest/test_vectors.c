@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "wlantest.h"
 
 
@@ -133,6 +134,212 @@ static void test_vector_ccmp(void)
 	}
 
 	os_free(plain);
+}
+
+
+static void test_vector_ccmp_pv1(void)
+{
+	u8 tk[] = { 0xc9, 0x7c, 0x1f, 0x67, 0xce, 0x37, 0x11, 0x85,
+		    0x51, 0x4a, 0x8a, 0x19, 0xf2, 0xbd, 0xd5, 0x2f };
+	u8 pn[8];
+	u8 frame1[] = {
+		0x61, 0x00, 0xa2, 0xae, 0xa5, 0xb8, 0xfc, 0xba,
+		0x07, 0x00, 0x80, 0x33,
+		0xf8, 0xba, 0x1a, 0x55, 0xd0, 0x2f, 0x85, 0xae,
+		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
+		0x7e, 0x78, 0xa0, 0x50
+	};
+	u8 frame2[] = {
+		0x61, 0x00, 0xa2, 0xae, 0xa5, 0xb8, 0xfc, 0xba,
+		0x07, 0x20, 0x80, 0x33, 0x02, 0xd2, 0xe1, 0x28,
+		0xa5, 0x7c,
+		0xf8, 0xba, 0x1a, 0x55, 0xd0, 0x2f, 0x85, 0xae,
+		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
+		0x7e, 0x78, 0xa0, 0x50
+	};
+	u8 frame3[] = {
+		0x6d, 0x00, 0xa2, 0xae, 0xa5, 0xb8, 0xfc, 0xba,
+		0x52, 0x30, 0xf1, 0x84, 0x44, 0x08, 0x80, 0x33,
+		0xf8, 0xba, 0x1a, 0x55, 0xd0, 0x2f, 0x85, 0xae,
+		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
+		0x7e, 0x78, 0xa0, 0x50
+	};
+	u8 *enc;
+	size_t enc_len;
+	u8 fcs[4];
+	u8 bssid[ETH_ALEN] = { 0xa2, 0xae, 0xa5, 0xb8, 0xfc, 0xba };
+	u8 da[ETH_ALEN] = { 0x02, 0xd2, 0xe1, 0x28, 0xa5, 0x7c };
+	u8 sa[ETH_ALEN] = { 0x52, 0x30, 0xf1, 0x84, 0x44, 0x08 };
+	u16 aid = 7;
+	u32 bpn = 123;
+	u16 sc = 0x3380;
+	int key_id = 0;
+	u16 fc;
+	int tid = 3;
+	u16 sid;
+
+	wpa_printf(MSG_INFO,
+		   "\nIEEE P802.11ah/D10.0, J.6.4 CCMP PV1 test vectors\n");
+
+	wpa_printf(MSG_INFO, "BSSID: " MACSTR, MAC2STR(bssid));
+	wpa_printf(MSG_INFO, "DA: " MACSTR, MAC2STR(da));
+	wpa_printf(MSG_INFO, "SA: " MACSTR, MAC2STR(sa));
+	wpa_printf(MSG_INFO, "Association ID: %u", aid);
+	wpa_printf(MSG_INFO, "Base PN: %u (0x%08x)", bpn, bpn);
+	wpa_printf(MSG_INFO, "SC = 0x%04x (FragNum=%u SeqNum=%u)",
+		   sc, WLAN_GET_SEQ_FRAG(sc), WLAN_GET_SEQ_SEQ(sc));
+	wpa_printf(MSG_INFO, "TID = %u", tid);
+	wpa_printf(MSG_INFO, "Key ID: %u", key_id);
+	wpa_hexdump(MSG_INFO, "TK", tk, sizeof(tk));
+	wpa_printf(MSG_INFO, "PN = SC||BPN");
+	WPA_PUT_LE16(&pn[0], sc);
+	WPA_PUT_LE32(&pn[2], bpn);
+	wpa_hexdump(MSG_INFO, "PN (PN0..PN5)", pn, sizeof(pn));
+
+	wpa_printf(MSG_INFO,
+		   "\nPV1 test vector #1:\nHeader compression used and A3 was previously stored at the receiver\n");
+	fc = WPA_GET_LE16(frame1);
+	wpa_printf(MSG_INFO,
+		   "FC=0x%04x (PV=%u Type=%u PTID/Subtype=%u From_DS=%u More_Fragments=%u Power_Management=%u More_Data=%u Protected_Frame=%u End_of_SP=%u Relayed_Frame=%u Ack_Policy=%u)",
+		   fc,
+		   fc & WLAN_FC_PVER,
+		   (fc & (BIT(2) | BIT(3) | BIT(4))) >> 2,
+		   (fc & (BIT(5) | BIT(6) | BIT(7))) >> 5,
+		   !!(fc & BIT(8)),
+		   !!(fc & BIT(9)),
+		   !!(fc & BIT(10)),
+		   !!(fc & BIT(11)),
+		   !!(fc & BIT(12)),
+		   !!(fc & BIT(13)),
+		   !!(fc & BIT(14)),
+		   !!(fc & BIT(15)));
+	wpa_printf(MSG_INFO, "A1=" MACSTR, MAC2STR(&frame1[2]));
+	sid = WPA_GET_LE16(&frame1[8]);
+	wpa_printf(MSG_INFO,
+		   "A2=%02x %02x (SID: AID=%u A3_Present=%u A4_Present=%u A-MSDU=%u); corresponds to 52:30:f1:84:44:08 in uncompressed header",
+		   frame1[8], frame1[9],
+		   sid & ~(BIT(13) | BIT(14) | BIT(15)),
+		   !!(sid & BIT(13)),
+		   !!(sid & BIT(14)),
+		   !!(sid & BIT(15)));
+	sc = WPA_GET_LE16(&frame1[10]);
+	wpa_printf(MSG_INFO, "Sequence Control: %02x %02x (FN=%u SN=%u)",
+		   frame1[10], frame1[11],
+		   WLAN_GET_SEQ_FRAG(sc), WLAN_GET_SEQ_SEQ(sc));
+	wpa_printf(MSG_INFO, "A3 not present; corresponds to 02:d2:e1:28:a5:7c in uncompressed header");
+	wpa_printf(MSG_INFO, "A4 not present");
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Header", frame1, 12);
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Body",
+		    frame1 + 12, sizeof(frame1) - 12);
+
+	enc = ccmp_encrypt_pv1(tk, &frame1[2], sa, da, frame1, sizeof(frame1),
+			       12, pn, key_id, &enc_len);
+	if (enc == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Header", enc, 12);
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Frame Body",
+		    enc + 12, enc_len - 12);
+	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
+	wpa_hexdump(MSG_INFO, "Encrypted Frame FCS", fcs, sizeof(fcs));
+
+	wpa_printf(MSG_INFO,
+		   "\nPV1 test vector #2:\nHeader compression used and A3 was not previously stored at the receiver\n");
+	fc = WPA_GET_LE16(frame2);
+	wpa_printf(MSG_INFO,
+		   "FC=0x%04x (PV=%u Type=%u PTID/Subtype=%u From_DS=%u More_Fragments=%u Power_Management=%u More_Data=%u Protected_Frame=%u End_of_SP=%u Relayed_Frame=%u Ack_Policy=%u)",
+		   fc,
+		   fc & WLAN_FC_PVER,
+		   (fc & (BIT(2) | BIT(3) | BIT(4))) >> 2,
+		   (fc & (BIT(5) | BIT(6) | BIT(7))) >> 5,
+		   !!(fc & BIT(8)),
+		   !!(fc & BIT(9)),
+		   !!(fc & BIT(10)),
+		   !!(fc & BIT(11)),
+		   !!(fc & BIT(12)),
+		   !!(fc & BIT(13)),
+		   !!(fc & BIT(14)),
+		   !!(fc & BIT(15)));
+	wpa_printf(MSG_INFO, "A1=" MACSTR, MAC2STR(&frame2[2]));
+	sid = WPA_GET_LE16(&frame2[8]);
+	wpa_printf(MSG_INFO,
+		   "A2=%02x %02x (SID: AID=%u A3_Present=%u A4_Present=%u A-MSDU=%u); corresponds to 52:30:f1:84:44:08 in uncompressed header",
+		   frame2[8], frame2[9],
+		   sid & ~(BIT(13) | BIT(14) | BIT(15)),
+		   !!(sid & BIT(13)),
+		   !!(sid & BIT(14)),
+		   !!(sid & BIT(15)));
+	sc = WPA_GET_LE16(&frame2[10]);
+	wpa_printf(MSG_INFO, "Sequence Control: %02x %02x (FN=%u SN=%u)",
+		   frame2[10], frame2[11],
+		   WLAN_GET_SEQ_FRAG(sc), WLAN_GET_SEQ_SEQ(sc));
+	wpa_printf(MSG_INFO, "A3=" MACSTR, MAC2STR(&frame2[12]));
+	wpa_printf(MSG_INFO, "A4 not present");
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Header", frame2, 18);
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Body",
+		    frame2 + 18, sizeof(frame2) - 18);
+
+	enc = ccmp_encrypt_pv1(tk, &frame2[2], sa, &frame2[12],
+			       frame2, sizeof(frame2), 18, pn, key_id,
+			       &enc_len);
+	if (enc == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Header", enc, 18);
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Frame Body",
+		    enc + 18, enc_len - 18);
+	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
+	wpa_hexdump(MSG_INFO, "Encrypted Frame FCS", fcs, sizeof(fcs));
+
+	wpa_printf(MSG_INFO,
+		   "\nPV1 test vector #3:\nType 3 frame from SA to DA(=BSSID) (i.e., no separate DA in this example)\n");
+	fc = WPA_GET_LE16(frame3);
+	wpa_printf(MSG_INFO,
+		   "FC=0x%04x (PV=%u Type=%u PTID/Subtype=%u From_DS=%u More_Fragments=%u Power_Management=%u More_Data=%u Protected_Frame=%u End_of_SP=%u Relayed_Frame=%u Ack_Policy=%u)",
+		   fc,
+		   fc & WLAN_FC_PVER,
+		   (fc & (BIT(2) | BIT(3) | BIT(4))) >> 2,
+		   (fc & (BIT(5) | BIT(6) | BIT(7))) >> 5,
+		   !!(fc & BIT(8)),
+		   !!(fc & BIT(9)),
+		   !!(fc & BIT(10)),
+		   !!(fc & BIT(11)),
+		   !!(fc & BIT(12)),
+		   !!(fc & BIT(13)),
+		   !!(fc & BIT(14)),
+		   !!(fc & BIT(15)));
+	wpa_printf(MSG_INFO, "A1=" MACSTR, MAC2STR(&frame3[2]));
+	wpa_printf(MSG_INFO, "A2=" MACSTR, MAC2STR(&frame3[8]));
+	sc = WPA_GET_LE16(&frame3[14]);
+	wpa_printf(MSG_INFO, "Sequence Control: %02x %02x (FN=%u SN=%u)",
+		   frame3[14], frame3[15],
+		   WLAN_GET_SEQ_FRAG(sc), WLAN_GET_SEQ_SEQ(sc));
+	wpa_printf(MSG_INFO,
+		   "A3 not present; corresponds to 02:d2:e1:28:a5:7c in uncompressed header");
+	wpa_printf(MSG_INFO, "A4 not present");
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Header", frame3, 16);
+	wpa_hexdump(MSG_INFO, "Plaintext Frame Body",
+		    frame3 + 16, sizeof(frame3) - 16);
+
+	enc = ccmp_encrypt_pv1(tk, &frame3[2], &frame3[8], da,
+			       frame3, sizeof(frame3), 16, pn, key_id,
+			       &enc_len);
+	if (enc == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Header", enc, 16);
+	wpa_hexdump(MSG_INFO, "Encrypted Frame Frame Body",
+		    enc + 16, enc_len - 16);
+	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
+	wpa_hexdump(MSG_INFO, "Encrypted Frame FCS", fcs, sizeof(fcs));
+
+	wpa_debug_level = MSG_INFO;
 }
 
 
@@ -712,6 +919,7 @@ int main(int argc, char *argv[])
 
 	test_vector_tkip();
 	test_vector_ccmp();
+	test_vector_ccmp_pv1();
 	test_vector_bip();
 	test_vector_ccmp_mgmt();
 	errors += test_vector_gcmp();

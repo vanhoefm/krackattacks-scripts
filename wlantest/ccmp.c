@@ -77,6 +77,64 @@ static void ccmp_aad_nonce(const struct ieee80211_hdr *hdr, const u8 *data,
 }
 
 
+static void ccmp_aad_nonce_pv1(const u8 *hdr, const u8 *a1, const u8 *a2,
+			       const u8 *a3, const u8 *pn,
+			       u8 *aad, size_t *aad_len, u8 *nonce)
+{
+	u16 fc, type;
+	u8 *pos;
+
+	nonce[0] = BIT(5); /* PV1 */
+	/* TODO: Priority for QMF; 0 is used for Data frames */
+
+	fc = WPA_GET_LE16(hdr);
+	type = (fc & (BIT(2) | BIT(3) | BIT(4))) >> 2;
+
+	if (type == 1)
+		nonce[0] |= 0x10; /* Management */
+
+	fc &= ~(BIT(10) | BIT(11) | BIT(13) | BIT(14) | BIT(15));
+	fc |= BIT(12);
+	WPA_PUT_LE16(aad, fc);
+	pos = aad + 2;
+	if (type == 0 || type == 3) {
+		const u8 *sc;
+
+		os_memcpy(pos, a1, ETH_ALEN);
+		pos += ETH_ALEN;
+		os_memcpy(pos, a2, ETH_ALEN);
+		pos += ETH_ALEN;
+
+		if (type == 0) {
+			/* Either A1 or A2 contains SID */
+			sc = hdr + 2 + 2 + ETH_ALEN;
+		} else {
+			/* Both A1 and A2 contain full addresses */
+			sc = hdr + 2 + 2 * ETH_ALEN;
+		}
+		/* SC with Sequence Number subfield (bits 4-15 of the Sequence
+		 * Control field) masked to 0. */
+		*pos++ = *sc & 0x0f;
+		*pos++ = 0;
+
+		if (a3) {
+			os_memcpy(pos, a3, ETH_ALEN);
+			pos += ETH_ALEN;
+		}
+	}
+
+	*aad_len = pos - aad;
+
+	os_memcpy(nonce + 1, a2, ETH_ALEN);
+	nonce[7] = pn[5]; /* PN5 */
+	nonce[8] = pn[4]; /* PN4 */
+	nonce[9] = pn[3]; /* PN3 */
+	nonce[10] = pn[2]; /* PN2 */
+	nonce[11] = pn[1]; /* PN1 */
+	nonce[12] = pn[0]; /* PN0 */
+}
+
+
 u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len)
 {
@@ -172,6 +230,48 @@ u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 	wpa_hexdump(MSG_EXCESSIVE, "CCMP encrypted", crypt + hdrlen + 8, plen);
 
 	*encrypted_len = hdrlen + 8 + plen + 8;
+
+	return crypt;
+}
+
+
+u8 * ccmp_encrypt_pv1(const u8 *tk, const u8 *a1, const u8 *a2, const u8 *a3,
+		      const u8 *frame, size_t len,
+		      size_t hdrlen, const u8 *pn, int keyid,
+		      size_t *encrypted_len)
+{
+	u8 aad[24], nonce[13];
+	size_t aad_len, plen;
+	u8 *crypt, *pos;
+	struct ieee80211_hdr *hdr;
+
+	if (len < hdrlen || hdrlen < 12)
+		return NULL;
+	plen = len - hdrlen;
+
+	crypt = os_malloc(hdrlen + plen + 8 + AES_BLOCK_SIZE);
+	if (crypt == NULL)
+		return NULL;
+
+	os_memcpy(crypt, frame, hdrlen);
+	hdr = (struct ieee80211_hdr *) crypt;
+	hdr->frame_control |= host_to_le16(BIT(12)); /* Protected Frame */
+	pos = crypt + hdrlen;
+
+	os_memset(aad, 0, sizeof(aad));
+	ccmp_aad_nonce_pv1(crypt, a1, a2, a3, pn, aad, &aad_len, nonce);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP AAD", aad, aad_len);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP nonce", nonce, sizeof(nonce));
+
+	if (aes_ccm_ae(tk, 16, nonce, 8, frame + hdrlen, plen, aad, aad_len,
+		       pos, pos + plen) < 0) {
+		os_free(crypt);
+		return NULL;
+	}
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP encrypted", crypt + hdrlen, plen);
+
+	*encrypted_len = hdrlen + plen + 8;
 
 	return crypt;
 }

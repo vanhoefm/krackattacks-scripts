@@ -90,7 +90,7 @@ int wps_derive_keys(struct wps_data *wps)
 	}
 
 	/* Own DH private key is not needed anymore */
-	wpabuf_free(wps->dh_privkey);
+	wpabuf_clear_free(wps->dh_privkey);
 	wps->dh_privkey = NULL;
 
 	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: DH shared key", dh_shared);
@@ -100,7 +100,7 @@ int wps_derive_keys(struct wps_data *wps)
 	len[0] = wpabuf_len(dh_shared);
 	sha256_vector(1, addr, len, dhkey);
 	wpa_hexdump_key(MSG_DEBUG, "WPS: DHKey", dhkey, sizeof(dhkey));
-	wpabuf_free(dh_shared);
+	wpabuf_clear_free(dh_shared);
 
 	/* KDK = HMAC-SHA-256_DHKey(N1 || EnrolleeMAC || N2) */
 	addr[0] = wps->nonce_e;
@@ -173,7 +173,7 @@ struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 	wpabuf_put_data(decrypted, encr + block_size, encr_len - block_size);
 	if (aes_128_cbc_decrypt(wps->keywrapkey, encr, wpabuf_mhead(decrypted),
 				wpabuf_len(decrypted))) {
-		wpabuf_free(decrypted);
+		wpabuf_clear_free(decrypted);
 		return NULL;
 	}
 
@@ -184,14 +184,14 @@ struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 	pad = *pos;
 	if (pad > wpabuf_len(decrypted)) {
 		wpa_printf(MSG_DEBUG, "WPS: Invalid PKCS#5 v2.0 pad value");
-		wpabuf_free(decrypted);
+		wpabuf_clear_free(decrypted);
 		return NULL;
 	}
 	for (i = 0; i < pad; i++) {
 		if (*pos-- != pad) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid PKCS#5 v2.0 pad "
 				   "string");
-			wpabuf_free(decrypted);
+			wpabuf_clear_free(decrypted);
 			return NULL;
 		}
 	}
@@ -373,7 +373,7 @@ struct wpabuf * wps_get_oob_cred(struct wps_context *wps, int rf_band,
 	    wps_build_mac_addr(plain, wps->dev.mac_addr) ||
 	    wps_build_wfa_ext(plain, 0, NULL, 0)) {
 		os_free(data.new_psk);
-		wpabuf_free(plain);
+		wpabuf_clear_free(plain);
 		return NULL;
 	}
 
@@ -421,7 +421,7 @@ struct wpabuf * wps_build_nfc_pw_token(u16 dev_pw_id,
 	    wps_build_wfa_ext(data, 0, NULL, 0)) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to build NFC password "
 			   "token");
-		wpabuf_free(data);
+		wpabuf_clear_free(data);
 		return NULL;
 	}
 
@@ -658,7 +658,7 @@ int wps_nfc_gen_dh(struct wpabuf **pubkey, struct wpabuf **privkey)
 
 	wpabuf_free(*pubkey);
 	*pubkey = pub;
-	wpabuf_free(*privkey);
+	wpabuf_clear_free(*privkey);
 	*privkey = priv;
 
 	return 0;
@@ -689,7 +689,7 @@ struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 	}
 
 	*id = 0x10 + val % 0xfff0;
-	wpabuf_free(*dev_pw);
+	wpabuf_clear_free(*dev_pw);
 	*dev_pw = pw;
 
 	return wps_nfc_token_build(ndef, *id, *pubkey, *dev_pw);

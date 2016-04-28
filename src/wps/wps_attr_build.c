@@ -23,7 +23,7 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 	struct wpabuf *pubkey;
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
-	wpabuf_free(wps->dh_privkey);
+	wpabuf_clear_free(wps->dh_privkey);
 	wps->dh_privkey = NULL;
 	if (wps->dev_pw_id != DEV_PW_DEFAULT && wps->wps->dh_privkey &&
 	    wps->wps->dh_ctx) {

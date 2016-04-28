@@ -174,7 +174,7 @@ void wps_deinit(struct wps_data *data)
 	} else if (data->registrar)
 		wps_registrar_unlock_pin(data->wps->registrar, data->uuid_e);
 
-	wpabuf_free(data->dh_privkey);
+	wpabuf_clear_free(data->dh_privkey);
 	wpabuf_free(data->dh_pubkey_e);
 	wpabuf_free(data->dh_pubkey_r);
 	wpabuf_free(data->last_msg);

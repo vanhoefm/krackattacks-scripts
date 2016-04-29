@@ -32,6 +32,7 @@ setup_params = { "setup_hw" : "./tests/setup_hw.sh",
 #devices = [{"hostname": "192.168.254.58", "ifname" : "wlan0", "port": "9877", "name" : "t2-ath9k", "flags" : "AP_HT40 STA_HT40"},
 #           {"hostname": "192.168.254.58", "ifname" : "wlan1", "port": "9877", "name" : "t2-ath10k", "flags" : "AP_VHT80"},
 #           {"hostname": "192.168.254.58", "ifname" : "wlan3", "port": "9877", "name" : "t2-intel7260", "flags" : "STA_VHT80"},
+#           {"hostname": "192.168.254.55", "ifname" : "wlan0, wlan1, wlan2", "port": "", "name" : "t3-monitor"},
 #           {"hostname": "192.168.254.50", "ifname" : "wlan0", "port": "9877", "name" : "t1-ath9k"},
 #           {"hostname": "192.168.254.50", "ifname" : "wlan1", "port": "9877", "name" : "t1-ath10k"}]
 

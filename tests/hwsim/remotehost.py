@@ -31,6 +31,9 @@ class Host():
         self.host = host
         self.name = name
         self.user = user
+        self.monitors = []
+        self.monitor_thread = None
+        self.logs = []
         self.ifname = ifname
         self.port = port
         if self.name == "" and host != None:
@@ -88,3 +91,10 @@ class Host():
         logger.debug(self.name + " wait_execute_complete(" + wait_str + "): ")
         if t.isAlive():
             t.join(wait)
+
+    def get_logs(self, local_log_dir=None):
+        for log in self.logs:
+            if local_log_dir:
+                self.local_execute(["scp", self.user + "@[" + self.host + "]:" + log, local_log_dir])
+            self.execute(["rm", log])
+        del self.logs[:]

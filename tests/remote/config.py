@@ -42,7 +42,8 @@ setup_params = { "setup_hw" : "./tests/setup_hw.sh",
 devices = [{"hostname": "localhost", "ifname": "wlan0", "port": "9868", "name": "hwsim0", "flags": "AP_VHT80 STA_VHT80"},
            {"hostname": "localhost", "ifname": "wlan1", "port": "9878", "name": "hwsim1", "flags": "AP_VHT80 STA_VHT80"},
            {"hostname": "localhost", "ifname": "wlan2", "port": "9888", "name": "hwsim2", "flags": "AP_VHT80 STA_VHT80"},
-           {"hostname": "localhost", "ifname": "wlan3", "port": "9898", "name": "hwsim3", "flags": "AP_VHT80 STA_VHT80"}]
+           {"hostname": "localhost", "ifname": "wlan3", "port": "9898", "name": "hwsim3", "flags": "AP_VHT80 STA_VHT80"},
+           {"hostname": "localhost", "ifname": "wlan4", "port": "9908", "name": "hwsim4", "flags": "AP_VHT80 STA_VHT80"}]
 
 
 def get_setup_params(filename="cfg.py"):

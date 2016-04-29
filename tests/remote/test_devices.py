@@ -17,7 +17,7 @@ import re
 import logging
 logger = logging.getLogger()
 
-import utils
+import rutils
 from remotehost import Host
 from wpasupplicant import WpaSupplicant
 import hostapd
@@ -26,9 +26,7 @@ def show_devices(devices, setup_params):
     """Show/check available devices"""
     print "Devices:"
     for device in devices:
-        dev = config.get_device(devices, device['name'])
-        host = Host(host = dev['hostname'], ifname = dev['ifname'],
-                    port = dev['port'], name = dev['name'])
+        host = rutils.get_host(devices, device['name'])
         # simple check if authorized_keys works correctly
         status, buf = host.execute(["id"])
         if status != 0:
@@ -84,9 +82,7 @@ def show_devices(devices, setup_params):
         print ""
 
 def check_device(devices, setup_params, dev_name, monitor=False):
-    dev = config.get_device(devices, dev_name)
-    host = Host(host = dev['hostname'], ifname = dev['ifname'],
-                port = dev['port'], name = dev['name'])
+    host = rutils.get_host(devices, dev_name)
     # simple check if authorized_keys works correctly
     status, buf = host.execute(["id"])
     if status != 0:

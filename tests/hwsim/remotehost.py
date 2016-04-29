@@ -36,6 +36,7 @@ class Host():
         self.logs = []
         self.ifname = ifname
         self.port = port
+        self.dev = None
         if self.name == "" and host != None:
             self.name = host
 

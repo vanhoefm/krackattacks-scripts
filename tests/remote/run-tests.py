@@ -25,6 +25,7 @@ import wpaspy
 import config
 from test_devices import show_devices
 from test_devices import check_devices
+from rutils import TestSkip
 
 def usage():
     print "USAGE: " + sys.argv[0] + " -t devices"
@@ -263,6 +264,9 @@ def main():
         except KeyboardInterrupt:
             put_devices(devices, duts, refs, monitors)
             raise
+        except TestSkip, e:
+            end = datetime.now()
+            logger.warning("SKIP (" + str(e) + ") - " + str((end - start).total_seconds()) + "s")
         except Exception, e:
             end = datetime.now()
             logger.warning("FAILED (" + str(e) + ") - " + str((end - start).total_seconds()) + "s")

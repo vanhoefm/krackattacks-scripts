@@ -11,6 +11,8 @@ import threading
 logger = logging.getLogger()
 
 def execute_thread(command, reply):
+    cmd = ' '.join(command)
+    logger.debug("thread run: " + cmd)
     try:
         status = 0;
         buf = subprocess.check_output(command, stderr=subprocess.STDOUT)
@@ -18,9 +20,6 @@ def execute_thread(command, reply):
         status = e.returncode
         buf = e.output
 
-    cmd = ""
-    for c in command:
-        cmd = cmd + " " + c
     logger.debug("thread cmd: " + cmd)
     logger.debug("thread exit status: " + str(status))
     logger.debug("thread exit buf: " + str(buf))
@@ -55,9 +54,7 @@ class Host():
             return self.local_execute(command)
 
         cmd = ["ssh", self.user + "@" + self.host, ' '.join(command)]
-        _cmd = self.name + " execute: "
-        for c in cmd:
-            _cmd = _cmd + " " + c
+        _cmd = self.name + " execute: " + ' '.join(cmd)
         logger.debug(_cmd)
         try:
             status = 0
@@ -76,9 +73,7 @@ class Host():
             cmd = command
         else:
             cmd = ["ssh",  self.user + "@" + self.host, ' '.join(command)]
-        _cmd = self.name + " execute_run: "
-        for c in cmd:
-            _cmd = _cmd + " " + c
+        _cmd = self.name + " execute_run: " + ' '.join(cmd)
         logger.debug(_cmd)
         t = threading.Thread(target = execute_thread, args=(cmd, res))
         t.start()

@@ -934,6 +934,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 						   PLINK_CLOSE, reason);
 			break;
 		case OPN_ACPT:
+			if (conf->security & MESH_CONF_SEC_AMPE)
+				mesh_rsn_derive_mtk(wpa_s, sta);
 			mesh_mpm_plink_estab(wpa_s, sta);
 			mesh_mpm_send_plink_action(wpa_s, sta,
 						   PLINK_CONFIRM, 0);

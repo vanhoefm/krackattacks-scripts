@@ -5383,6 +5383,9 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			wpa_s->p2p_pin[sizeof(wpa_s->p2p_pin) - 1] = '\0';
 		wpa_printf(MSG_DEBUG, "P2P: Randomly generated PIN: %s",
 			   wpa_s->p2p_pin);
+	} else if (wps_method == WPS_P2PS) {
+		/* Force the P2Ps default PIN to be used */
+		os_strlcpy(wpa_s->p2p_pin, "12345670", sizeof(wpa_s->p2p_pin));
 	} else
 		wpa_s->p2p_pin[0] = '\0';
 

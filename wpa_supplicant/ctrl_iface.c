@@ -5098,6 +5098,8 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 		wps_method = WPS_PIN_DISPLAY;
 	} else if (os_strncmp(pos, "pbc", 3) == 0) {
 		wps_method = WPS_PBC;
+	} else if (os_strstr(pos, "p2ps") != NULL) {
+		wps_method = WPS_P2PS;
 	} else {
 		pin = pos;
 		pos = os_strchr(pin, ' ');
@@ -5106,8 +5108,6 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 			*pos++ = '\0';
 			if (os_strncmp(pos, "display", 7) == 0)
 				wps_method = WPS_PIN_DISPLAY;
-			else if (os_strncmp(pos, "p2ps", 4) == 0)
-				wps_method = WPS_P2PS;
 		}
 		if (!wps_pin_str_valid(pin)) {
 			os_memcpy(buf, "FAIL-INVALID-PIN\n", 17);

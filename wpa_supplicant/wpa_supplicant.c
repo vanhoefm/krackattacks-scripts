@@ -5825,6 +5825,19 @@ int wpas_get_ssid_pmf(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 			return NO_MGMT_FRAME_PROTECTION;
 		}
 
+		if (ssid &&
+		    (ssid->key_mgmt &
+		     ~(WPA_KEY_MGMT_NONE | WPA_KEY_MGMT_WPS |
+		       WPA_KEY_MGMT_IEEE8021X_NO_WPA)) == 0) {
+			/*
+			 * Do not use the default PMF value for non-RSN networks
+			 * since PMF is available only with RSN and pmf=2
+			 * configuration would otherwise prevent connections to
+			 * all open networks.
+			 */
+			return NO_MGMT_FRAME_PROTECTION;
+		}
+
 		return wpa_s->conf->pmf;
 	}
 

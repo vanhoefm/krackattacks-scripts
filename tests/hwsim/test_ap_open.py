@@ -551,3 +551,26 @@ def test_ap_open_poll_sta(dev, apdev):
         raise Exception("Poll response not seen")
     if addr not in ev:
         raise Exception("Unexpected poll response: " + ev)
+
+def test_ap_open_pmf_default(dev, apdev):
+    """AP with open mode (no security) configuration and pmf=2"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   ieee80211w="2", wait_connect=False)
+    dev[2].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   ieee80211w="1")
+    try:
+        dev[0].request("SET pmf 2")
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+    finally:
+        dev[0].request("SET pmf 0")
+    dev[2].request("DISCONNECT")
+    dev[2].wait_disconnected()
+
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected dev[1] connection")
+    dev[1].request("DISCONNECT")

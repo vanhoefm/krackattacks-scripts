@@ -608,6 +608,7 @@ void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 	size_t publen, privlen;
 
 	*priv = NULL;
+	wpabuf_free(*publ);
 	*publ = NULL;
 
 	dh = DH_new();
@@ -653,6 +654,7 @@ err:
 	BIGNUM *p = NULL, *g, *priv_key = NULL, *pub_key = NULL;
 
 	*priv = NULL;
+	wpabuf_free(*publ);
 	*publ = NULL;
 
 	dh = DH_new();

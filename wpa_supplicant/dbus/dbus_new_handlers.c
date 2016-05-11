@@ -2639,8 +2639,9 @@ dbus_bool_t wpas_dbus_getter_capabilities(
 					      &iter_array) ||
 	    !wpa_dbus_dict_string_array_add_element(
 		    &iter_array, "infrastructure") ||
-	    !wpa_dbus_dict_string_array_add_element(
-		    &iter_array, "ad-hoc") ||
+	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_IBSS) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "ad-hoc")) ||
 	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_AP) &&
 	     !wpa_dbus_dict_string_array_add_element(
 		     &iter_array, "ap")) ||

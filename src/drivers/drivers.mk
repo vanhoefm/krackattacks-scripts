@@ -25,7 +25,6 @@ DRV_OBJS += src/drivers/driver_nl80211_capa.c
 DRV_OBJS += src/drivers/driver_nl80211_event.c
 DRV_OBJS += src/drivers/driver_nl80211_monitor.c
 DRV_OBJS += src/drivers/driver_nl80211_scan.c
-DRV_OBJS += src/utils/radiotap.c
 ifdef CONFIG_DRIVER_NL80211_QCA
 DRV_CFLAGS += -DCONFIG_DRIVER_NL80211_QCA
 endif
@@ -34,6 +33,7 @@ NEED_AP_MLME=y
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
 NEED_RFKILL=y
+NEED_RADIOTAP=y
 
 ifdef CONFIG_LIBNL32
   DRV_LIBS += -lnl-3
@@ -147,6 +147,10 @@ endif
 
 ifdef NEED_RFKILL
 DRV_OBJS += src/drivers/rfkill.c
+endif
+
+ifdef NEED_RADIOTAP
+DRV_OBJS += src/utils/radiotap.c
 endif
 
 ifdef CONFIG_DRIVER_CUSTOM

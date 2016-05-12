@@ -1368,7 +1368,6 @@ int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s)
 	hapd = wpa_s->ap_iface->bss[0];
 	return hostapd_ctrl_iface_stop_ap(hapd);
 }
-#endif /* CONFIG_CTRL_IFACE */
 
 
 int wpas_ap_pmksa_cache_list(struct wpa_supplicant *wpa_s, char *buf,
@@ -1421,6 +1420,7 @@ void wpas_ap_pmksa_cache_flush(struct wpa_supplicant *wpa_s)
 	if (wpa_s->ifmsh)
 		hostapd_ctrl_iface_pmksa_flush(wpa_s->ifmsh->bss[0]);
 }
+#endif /* CONFIG_CTRL_IFACE */
 
 
 #ifdef NEED_AP_MLME

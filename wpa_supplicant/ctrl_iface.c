@@ -7717,6 +7717,76 @@ static void wpas_ctrl_iface_mgmt_tx_done(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_ctrl_iface_mgmt_rx_process(struct wpa_supplicant *wpa_s,
+					   char *cmd)
+{
+	char *pos, *param;
+	size_t len;
+	u8 *buf;
+	int freq = 0, datarate = 0, ssi_signal = 0;
+	union wpa_event_data event;
+
+	if (!wpa_s->ext_mgmt_frame_handling)
+		return -1;
+
+	/* freq=<MHz> datarate=<val> ssi_signal=<val> frame=<frame hexdump> */
+
+	wpa_printf(MSG_DEBUG, "External MGMT RX process: %s", cmd);
+
+	pos = cmd;
+	param = os_strstr(pos, "freq=");
+	if (param) {
+		param += 5;
+		freq = atoi(param);
+	}
+
+	param = os_strstr(pos, " datarate=");
+	if (param) {
+		param += 10;
+		datarate = atoi(param);
+	}
+
+	param = os_strstr(pos, " ssi_signal=");
+	if (param) {
+		param += 12;
+		ssi_signal = atoi(param);
+	}
+
+	param = os_strstr(pos, " frame=");
+	if (param == NULL)
+		return -1;
+	param += 7;
+
+	len = os_strlen(param);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(param, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	os_memset(&event, 0, sizeof(event));
+	event.rx_mgmt.freq = freq;
+	event.rx_mgmt.frame = buf;
+	event.rx_mgmt.frame_len = len;
+	event.rx_mgmt.ssi_signal = ssi_signal;
+	event.rx_mgmt.datarate = datarate;
+	wpa_s->ext_mgmt_frame_handling = 0;
+	wpa_supplicant_event(wpa_s, EVENT_RX_MGMT, &event);
+	wpa_s->ext_mgmt_frame_handling = 1;
+
+	os_free(buf);
+
+	return 0;
+}
+
+
 static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	char *pos, *param;
@@ -9204,6 +9274,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "MGMT_TX_DONE") == 0) {
 		wpas_ctrl_iface_mgmt_tx_done(wpa_s);
+	} else if (os_strncmp(buf, "MGMT_RX_PROCESS ", 16) == 0) {
+		if (wpas_ctrl_iface_mgmt_rx_process(wpa_s, buf + 16) < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "DRIVER_EVENT ", 13) == 0) {
 		if (wpas_ctrl_iface_driver_event(wpa_s, buf + 13) < 0)
 			reply_len = -1;

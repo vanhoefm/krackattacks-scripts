@@ -355,6 +355,48 @@ def test_wpas_mesh_secure_no_auto(dev, apdev):
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
 
+def test_wpas_mesh_secure_dropped_frame(dev, apdev):
+    """Secure mesh network connectivity when the first plink Open is dropped"""
+    check_mesh_support(dev[0], secure=True)
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Drop the first Action frame (plink Open) to test unexpected order of
+    # Confirm/Open messages.
+    count = 0
+    while True:
+        count += 1
+        if count > 10:
+            raise Exception("Did not see Action frames")
+        rx_msg = dev[0].mgmt_rx()
+        if rx_msg is None:
+            raise Exception("MGMT-RX timeout")
+        if rx_msg['subtype'] == 13:
+            logger.info("Drop the first Action frame")
+            break
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq={} datarate={} ssi_signal={} frame={}".format(rx_msg['freq'], rx_msg['datarate'], rx_msg['ssi_signal'], rx_msg['frame'].encode('hex'))):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("SET ext_mgmt_frame_handling 0")
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    # Test connectivity 0->1 and 1->0
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
 def test_wpas_mesh_ctrl(dev):
     """wpa_supplicant ctrl_iface mesh command error cases"""
     check_mesh_support(dev[0])

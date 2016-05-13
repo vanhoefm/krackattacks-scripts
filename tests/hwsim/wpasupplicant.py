@@ -1165,6 +1165,17 @@ class WpaSupplicant:
         if field != "freq":
             raise Exception("Unexpected MGMT-RX event format: " + ev)
         msg['freq'] = val
+
+        field,val = items[2].split('=')
+        if field != "datarate":
+            raise Exception("Unexpected MGMT-RX event format: " + ev)
+        msg['datarate'] = val
+
+        field,val = items[3].split('=')
+        if field != "ssi_signal":
+            raise Exception("Unexpected MGMT-RX event format: " + ev)
+        msg['ssi_signal'] = val
+
         frame = binascii.unhexlify(items[4])
         msg['frame'] = frame
 

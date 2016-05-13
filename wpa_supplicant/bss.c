@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
+#include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
 #include "notify.h"
@@ -303,6 +304,46 @@ static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
 }
 
 
+static int wpa_bss_is_wps_candidate(struct wpa_supplicant *wpa_s,
+				    struct wpa_bss *bss)
+{
+#ifdef CONFIG_WPS
+	struct wpa_ssid *ssid;
+	struct wpabuf *wps_ie;
+	int pbc = 0, ret;
+
+	wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+	if (!wps_ie)
+		return 0;
+
+	if (wps_is_selected_pbc_registrar(wps_ie)) {
+		pbc = 1;
+	} else if (!wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1)) {
+		wpabuf_free(wps_ie);
+		return 0;
+	}
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
+			continue;
+		if (ssid->ssid_len &&
+		    (ssid->ssid_len != bss->ssid_len ||
+		     os_memcmp(ssid->ssid, bss->ssid, ssid->ssid_len) != 0))
+			continue;
+
+		if (pbc)
+			ret = eap_is_wps_pbc_enrollee(&ssid->eap);
+		else
+			ret = eap_is_wps_pin_enrollee(&ssid->eap);
+		wpabuf_free(wps_ie);
+		return ret;
+	}
+#endif /* CONFIG_WPS */
+
+	return 0;
+}
+
+
 static int wpa_bss_known(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	struct wpa_ssid *ssid;
@@ -341,7 +382,8 @@ static int wpa_bss_remove_oldest_unknown(struct wpa_supplicant *wpa_s)
 	struct wpa_bss *bss;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		if (!wpa_bss_known(wpa_s, bss)) {
+		if (!wpa_bss_known(wpa_s, bss) &&
+		    !wpa_bss_is_wps_candidate(wpa_s, bss)) {
 			wpa_bss_remove(wpa_s, bss, __func__);
 			return 0;
 		}

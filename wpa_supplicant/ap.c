@@ -294,7 +294,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt))
 		bss->wpa = ssid->proto;
-	bss->wpa_key_mgmt = ssid->key_mgmt;
+	if (ssid->key_mgmt == DEFAULT_KEY_MGMT)
+		bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
+	else
+		bss->wpa_key_mgmt = ssid->key_mgmt;
 	bss->wpa_pairwise = ssid->pairwise_cipher;
 	if (ssid->psk_set) {
 		bin_clear_free(bss->ssid.wpa_psk, sizeof(*bss->ssid.wpa_psk));

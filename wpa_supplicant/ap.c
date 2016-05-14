@@ -306,6 +306,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 			return -1;
 		os_memcpy(bss->ssid.wpa_psk->psk, ssid->psk, PMK_LEN);
 		bss->ssid.wpa_psk->group = 1;
+		bss->ssid.wpa_psk_set = 1;
 	} else if (ssid->passphrase) {
 		bss->ssid.wpa_passphrase = os_strdup(ssid->passphrase);
 	} else if (ssid->wep_key_len[0] || ssid->wep_key_len[1] ||

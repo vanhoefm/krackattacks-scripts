@@ -26,7 +26,7 @@ class WpaSupplicant:
         if ifname:
             self.set_ifname(ifname, hostname, port)
             res = self.get_driver_status()
-            if int(res['capa.flags'], 0) & 0x20000000:
+            if 'capa.flags' in res and int(res['capa.flags'], 0) & 0x20000000:
                 self.p2p_dev_ifname = 'p2p-dev-' + self.ifname
             else:
                 self.p2p_dev_ifname = ifname
@@ -135,7 +135,7 @@ class WpaSupplicant:
             port = self.get_ctrl_iface_port(ifname)
             self.set_ifname(ifname, self.hostname, port)
             res = self.get_driver_status()
-            if int(res['capa.flags'], 0) & 0x20000000:
+            if 'capa.flags' in res and int(res['capa.flags'], 0) & 0x20000000:
                 self.p2p_dev_ifname = 'p2p-dev-' + self.ifname
             else:
                 self.p2p_dev_ifname = ifname

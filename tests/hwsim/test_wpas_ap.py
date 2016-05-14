@@ -277,6 +277,22 @@ def test_wpas_ap_wps_pbc_overlap(dev):
     dev[1].request("WPS_CANCEL")
     dev[2].request("WPS_CANCEL")
 
+def test_wpas_ap_wps_disabled(dev):
+    """wpa_supplicant AP mode - WPS disabled"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-no-wps")
+    dev[0].set_network_quoted(id, "psk", "12345678")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].set_network(id, "wps_disabled", "1")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+
+    dev[1].connect("wpas-ap-no-wps", psk="12345678", scan_freq="2412")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+
 def test_wpas_ap_dfs(dev):
     """wpa_supplicant AP mode - DFS"""
     try:

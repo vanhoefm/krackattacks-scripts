@@ -862,8 +862,8 @@ int radius_msg_verify(struct radius_msg *msg, const u8 *secret,
 	len[2] = wpabuf_len(msg->buf) - sizeof(struct radius_hdr);
 	addr[3] = secret;
 	len[3] = secret_len;
-	md5_vector(4, addr, len, hash);
-	if (os_memcmp_const(hash, msg->hdr->authenticator, MD5_MAC_LEN) != 0) {
+	if (md5_vector(4, addr, len, hash) < 0 ||
+	    os_memcmp_const(hash, msg->hdr->authenticator, MD5_MAC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "Response Authenticator invalid!");
 		return 1;
 	}

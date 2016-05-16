@@ -1018,7 +1018,10 @@ static u8 * decrypt_ms_key(const u8 *key, size_t len,
 			addr[1] = pos - MD5_MAC_LEN;
 			elen[1] = MD5_MAC_LEN;
 		}
-		md5_vector(first ? 3 : 2, addr, elen, hash);
+		if (md5_vector(first ? 3 : 2, addr, elen, hash) < 0) {
+			os_free(plain);
+			return NULL;
+		}
 		first = 0;
 
 		for (i = 0; i < MD5_MAC_LEN; i++)

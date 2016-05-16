@@ -173,7 +173,8 @@ static struct wpabuf * wps_build_m3(struct wps_data *wps)
 		wpa_printf(MSG_DEBUG, "WPS: No Device Password available");
 		return NULL;
 	}
-	wps_derive_psk(wps, wps->dev_password, wps->dev_password_len);
+	if (wps_derive_psk(wps, wps->dev_password, wps->dev_password_len) < 0)
+		return NULL;
 
 	if (wps->wps->ap && random_pool_ready() != 1) {
 		wpa_printf(MSG_INFO,

@@ -129,23 +129,26 @@ int wps_derive_keys(struct wps_data *wps)
 }
 
 
-void wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
-		    size_t dev_passwd_len)
+int wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
+		   size_t dev_passwd_len)
 {
 	u8 hash[SHA256_MAC_LEN];
 
-	hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN, dev_passwd,
-		    (dev_passwd_len + 1) / 2, hash);
+	if (hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN, dev_passwd,
+			(dev_passwd_len + 1) / 2, hash) < 0)
+		return -1;
 	os_memcpy(wps->psk1, hash, WPS_PSK_LEN);
-	hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN,
-		    dev_passwd + (dev_passwd_len + 1) / 2,
-		    dev_passwd_len / 2, hash);
+	if (hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN,
+			dev_passwd + (dev_passwd_len + 1) / 2,
+			dev_passwd_len / 2, hash) < 0)
+		return -1;
 	os_memcpy(wps->psk2, hash, WPS_PSK_LEN);
 
 	wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: Device Password",
 			      dev_passwd, dev_passwd_len);
 	wpa_hexdump_key(MSG_DEBUG, "WPS: PSK1", wps->psk1, WPS_PSK_LEN);
 	wpa_hexdump_key(MSG_DEBUG, "WPS: PSK2", wps->psk2, WPS_PSK_LEN);
+	return 0;
 }
 
 

@@ -1928,7 +1928,8 @@ static struct wpabuf * wps_build_m4(struct wps_data *wps)
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message M4");
 
-	wps_derive_psk(wps, wps->dev_password, wps->dev_password_len);
+	if (wps_derive_psk(wps, wps->dev_password, wps->dev_password_len) < 0)
+		return NULL;
 
 	plain = wpabuf_alloc(200);
 	if (plain == NULL)

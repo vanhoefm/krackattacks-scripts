@@ -710,9 +710,10 @@ static int eap_fast_get_cmk(struct eap_sm *sm, struct eap_fast_data *data,
 	if (eap_fast_get_phase2_key(sm, data, isk, sizeof(isk)) < 0)
 		return -1;
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: ISK[j]", isk, sizeof(isk));
-	sha1_t_prf(data->simck, EAP_FAST_SIMCK_LEN,
-		   "Inner Methods Compound Keys",
-		   isk, sizeof(isk), imck, sizeof(imck));
+	if (sha1_t_prf(data->simck, EAP_FAST_SIMCK_LEN,
+		       "Inner Methods Compound Keys",
+		       isk, sizeof(isk), imck, sizeof(imck)) < 0)
+		return -1;
 	data->simck_idx++;
 	os_memcpy(data->simck, imck, EAP_FAST_SIMCK_LEN);
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: S-IMCK[j]",

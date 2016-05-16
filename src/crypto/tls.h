@@ -336,29 +336,36 @@ int __must_check tls_connection_get_random(void *tls_ctx,
 					 struct tls_random *data);
 
 /**
- * tls_connection_prf - Use TLS-PRF to derive keying material
+ * tls_connection_export_key - Derive keying material from a TLS connection
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()
  * @label: Label (e.g., description of the key) for PRF
- * @server_random_first: seed is 0 = client_random|server_random,
- * 1 = server_random|client_random
- * @skip_keyblock: Skip TLS key block from the beginning of PRF output
  * @out: Buffer for output data from TLS-PRF
  * @out_len: Length of the output buffer
  * Returns: 0 on success, -1 on failure
  *
- * tls_connection_prf() is required so that further keying material can be
- * derived from the master secret. Example implementation of this function is in
- * tls_prf_sha1_md5() when it is called with seed set to
- * client_random|server_random (or server_random|client_random). For TLSv1.2 and
- * newer, a different PRF is needed, though.
+ * Exports keying material using the mechanism described in RFC 5705.
  */
-int __must_check  tls_connection_prf(void *tls_ctx,
-				     struct tls_connection *conn,
-				     const char *label,
-				     int server_random_first,
-				     int skip_keyblock,
-				     u8 *out, size_t out_len);
+int __must_check tls_connection_export_key(void *tls_ctx,
+					   struct tls_connection *conn,
+					   const char *label,
+					   u8 *out, size_t out_len);
+
+/**
+ * tls_connection_get_eap_fast_key - Derive key material for EAP-FAST
+ * @tls_ctx: TLS context data from tls_init()
+ * @conn: Connection context data from tls_connection_init()
+ * @out: Buffer for output data from TLS-PRF
+ * @out_len: Length of the output buffer
+ * Returns: 0 on success, -1 on failure
+ *
+ * Exports key material after the normal TLS key block for use with
+ * EAP-FAST. Most callers will want tls_connection_export_key(), but EAP-FAST
+ * uses a different legacy mechanism.
+ */
+int __must_check tls_connection_get_eap_fast_key(void *tls_ctx,
+						 struct tls_connection *conn,
+						 u8 *out, size_t out_len);
 
 /**
  * tls_connection_handshake - Process TLS handshake (client side)

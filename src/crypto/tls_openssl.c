@@ -3146,9 +3146,19 @@ static int openssl_get_keyblock_size(SSL *ssl)
 #endif /* CONFIG_FIPS */
 
 
-static int openssl_tls_prf(struct tls_connection *conn,
-			   const char *label, int server_random_first,
-			   int skip_keyblock, u8 *out, size_t out_len)
+int tls_connection_export_key(void *tls_ctx, struct tls_connection *conn,
+			      const char *label, u8 *out, size_t out_len)
+{
+	if (!conn ||
+	    SSL_export_keying_material(conn->ssl, out, out_len, label,
+				       os_strlen(label), NULL, 0, 0) != 1)
+		return -1;
+	return 0;
+}
+
+
+int tls_connection_get_eap_fast_key(void *tls_ctx, struct tls_connection *conn,
+				    u8 *out, size_t out_len)
 {
 #ifdef CONFIG_FIPS
 	wpa_printf(MSG_ERROR, "OpenSSL: TLS keys cannot be exported in FIPS "
@@ -3169,9 +3179,9 @@ static int openssl_tls_prf(struct tls_connection *conn,
 	const char *ver;
 
 	/*
-	 * TLS library did not support key generation, so get the needed TLS
-	 * session parameters and use an internal implementation of TLS PRF to
-	 * derive the key.
+	 * TLS library did not support EAP-FAST key generation, so get the
+	 * needed TLS session parameters and use an internal implementation of
+	 * TLS PRF to derive the key.
 	 */
 
 	if (conn == NULL)
@@ -3184,15 +3194,13 @@ static int openssl_tls_prf(struct tls_connection *conn,
 	if (!ver || !sess)
 		return -1;
 
-	if (skip_keyblock) {
-		skip = openssl_get_keyblock_size(ssl);
-		if (skip < 0)
-			return -1;
-		tmp_out = os_malloc(skip + out_len);
-		if (!tmp_out)
-			return -1;
-		_out = tmp_out;
-	}
+	skip = openssl_get_keyblock_size(ssl);
+	if (skip < 0)
+		return -1;
+	tmp_out = os_malloc(skip + out_len);
+	if (!tmp_out)
+		return -1;
+	_out = tmp_out;
 
 	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
 	if (!rnd) {
@@ -3205,54 +3213,27 @@ static int openssl_tls_prf(struct tls_connection *conn,
 	master_key_len = SSL_SESSION_get_master_key(sess, master_key,
 						    sizeof(master_key));
 
-	if (server_random_first) {
-		os_memcpy(rnd, server_random, SSL3_RANDOM_SIZE);
-		os_memcpy(rnd + SSL3_RANDOM_SIZE, client_random,
-			  SSL3_RANDOM_SIZE);
-	} else {
-		os_memcpy(rnd, client_random, SSL3_RANDOM_SIZE);
-		os_memcpy(rnd + SSL3_RANDOM_SIZE, server_random,
-			  SSL3_RANDOM_SIZE);
-	}
+	os_memcpy(rnd, server_random, SSL3_RANDOM_SIZE);
+	os_memcpy(rnd + SSL3_RANDOM_SIZE, client_random, SSL3_RANDOM_SIZE);
 
 	if (os_strcmp(ver, "TLSv1.2") == 0) {
 		tls_prf_sha256(master_key, master_key_len,
-			       label, rnd, 2 * SSL3_RANDOM_SIZE,
+			       "key expansion", rnd, 2 * SSL3_RANDOM_SIZE,
 			       _out, skip + out_len);
 		ret = 0;
 	} else if (tls_prf_sha1_md5(master_key, master_key_len,
-				    label, rnd, 2 * SSL3_RANDOM_SIZE,
+				    "key expansion", rnd, 2 * SSL3_RANDOM_SIZE,
 				    _out, skip + out_len) == 0) {
 		ret = 0;
 	}
 	os_memset(master_key, 0, sizeof(master_key));
 	os_free(rnd);
-	if (ret == 0 && skip_keyblock)
+	if (ret == 0)
 		os_memcpy(out, _out + skip, out_len);
 	bin_clear_free(tmp_out, skip);
 
 	return ret;
 #endif /* CONFIG_FIPS */
-}
-
-
-int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
-		       const char *label, int server_random_first,
-		       int skip_keyblock, u8 *out, size_t out_len)
-{
-	if (conn == NULL)
-		return -1;
-	if (server_random_first || skip_keyblock)
-		return openssl_tls_prf(conn, label,
-				       server_random_first, skip_keyblock,
-				       out, out_len);
-	if (SSL_export_keying_material(conn->ssl, out, out_len, label,
-				       os_strlen(label), NULL, 0, 0) == 1) {
-		wpa_printf(MSG_DEBUG, "OpenSSL: Using internal PRF");
-		return 0;
-	}
-	return openssl_tls_prf(conn, label, server_random_first,
-			       skip_keyblock, out, out_len);
 }
 
 

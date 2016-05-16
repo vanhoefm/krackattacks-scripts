@@ -394,9 +394,9 @@ static int tls_get_keyblock_size(struct tls_connection *conn)
 }
 
 
-int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
-		       const char *label, int server_random_first,
-		       int skip_keyblock, u8 *out, size_t out_len)
+static int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
+			      const char *label, int server_random_first,
+			      int skip_keyblock, u8 *out, size_t out_len)
 {
 	int ret = -1, skip = 0;
 	u8 *tmp_out = NULL;
@@ -431,6 +431,21 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 	bin_clear_free(tmp_out, skip);
 
 	return ret;
+}
+
+
+int tls_connection_export_key(void *tls_ctx, struct tls_connection *conn,
+			      const char *label, u8 *out, size_t out_len)
+{
+	return tls_connection_prf(tls_ctx, conn, label, 0, 0, out, out_len);
+}
+
+
+int tls_connection_get_eap_fast_key(void *tls_ctx, struct tls_connection *conn,
+				    u8 *out, size_t out_len)
+{
+	return tls_connection_prf(tls_ctx, conn, "key expansion", 1, 1, out,
+				  out_len);
 }
 
 

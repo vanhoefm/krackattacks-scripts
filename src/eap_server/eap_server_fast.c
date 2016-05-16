@@ -278,7 +278,7 @@ static void eap_fast_derive_key_auth(struct eap_sm *sm,
 	 * Extra key material after TLS key_block: session_key_seed[40]
 	 */
 
-	sks = eap_fast_derive_key(sm->ssl_ctx, data->ssl.conn, "key expansion",
+	sks = eap_fast_derive_key(sm->ssl_ctx, data->ssl.conn,
 				  EAP_FAST_SKS_LEN);
 	if (sks == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to derive "
@@ -305,7 +305,6 @@ static void eap_fast_derive_key_provisioning(struct eap_sm *sm,
 	os_free(data->key_block_p);
 	data->key_block_p = (struct eap_fast_key_block_provisioning *)
 		eap_fast_derive_key(sm->ssl_ctx, data->ssl.conn,
-				    "key expansion",
 				    sizeof(*data->key_block_p));
 	if (data->key_block_p == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to derive key block");

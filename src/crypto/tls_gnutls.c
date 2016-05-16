@@ -810,15 +810,22 @@ int tls_connection_get_random(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
-int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
-		       const char *label, int server_random_first,
-		       int skip_keyblock, u8 *out, size_t out_len)
+int tls_connection_export_key(void *tls_ctx, struct tls_connection *conn,
+			      const char *label, u8 *out, size_t out_len)
 {
-	if (conn == NULL || conn->session == NULL || skip_keyblock)
+	if (conn == NULL || conn->session == NULL)
 		return -1;
 
 	return gnutls_prf(conn->session, os_strlen(label), label,
-			  server_random_first, 0, NULL, out_len, (char *) out);
+			  0 /* client_random first */, 0, NULL, out_len,
+			  (char *) out);
+}
+
+
+int tls_connection_get_eap_fast_key(void *tls_ctx, struct tls_connection *conn,
+				    u8 *out, size_t out_len)
+{
+	return -1;
 }
 
 

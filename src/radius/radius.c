@@ -818,8 +818,9 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 		os_memcpy(msg->hdr->authenticator, req_auth,
 			  sizeof(msg->hdr->authenticator));
 	}
-	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
-		 wpabuf_len(msg->buf), auth);
+	if (hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+		     wpabuf_len(msg->buf), auth) < 0)
+		return 1;
 	os_memcpy(attr + 1, orig, MD5_MAC_LEN);
 	if (req_auth) {
 		os_memcpy(msg->hdr->authenticator, orig_authenticator,

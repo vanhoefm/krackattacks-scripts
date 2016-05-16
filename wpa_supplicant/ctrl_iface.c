@@ -7268,6 +7268,13 @@ static void wpas_ctrl_radio_work_cb(struct wpa_radio_work *work, int deinit)
 			eloop_cancel_timeout(wpas_ctrl_radio_work_timeout,
 					     work, NULL);
 
+		/*
+		 * work->type points to a buffer in ework, so need to replace
+		 * that here with a fixed string to avoid use of freed memory
+		 * in debug prints.
+		 */
+		work->type = "freed-ext-work";
+		work->ctx = NULL;
 		os_free(ework);
 		return;
 	}

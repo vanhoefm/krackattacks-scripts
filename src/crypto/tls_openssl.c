@@ -622,7 +622,8 @@ static int tls_cryptoapi_ca_cert(SSL_CTX *ssl_ctx, SSL *ssl, const char *name)
 		wpa_printf(MSG_DEBUG, "OpenSSL: Loaded CA certificate for "
 			   "system certificate store: subject='%s'", buf);
 
-		if (!X509_STORE_add_cert(ssl_ctx->cert_store, cert)) {
+		if (!X509_STORE_add_cert(SSL_CTX_get_cert_store(ssl_ctx),
+					 cert)) {
 			tls_show_errors(MSG_WARNING, __func__,
 					"Failed to add ca_cert to OpenSSL "
 					"certificate store");
@@ -2065,7 +2066,7 @@ static int tls_connection_ca_cert(struct tls_data *data,
 #ifdef ANDROID
 	/* Single alias */
 	if (ca_cert && os_strncmp("keystore://", ca_cert, 11) == 0) {
-		if (tls_add_ca_from_keystore(ssl_ctx->cert_store,
+		if (tls_add_ca_from_keystore(SSL_CTX_get_cert_store(ssl_ctx),
 					     &ca_cert[11]) < 0)
 			return -1;
 		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
@@ -2085,7 +2086,7 @@ static int tls_connection_ca_cert(struct tls_data *data,
 		alias = strtok_r(aliases, delim, &savedptr);
 		for (; alias; alias = strtok_r(NULL, delim, &savedptr)) {
 			if (tls_add_ca_from_keystore_encoded(
-				    ssl_ctx->cert_store, alias)) {
+				    SSL_CTX_get_cert_store(ssl_ctx), alias)) {
 				wpa_printf(MSG_WARNING,
 					   "OpenSSL: %s - Failed to add ca_cert %s from keystore",
 					   __func__, alias);

@@ -413,7 +413,8 @@ int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
 		   dev_pw_id);
 	addr[0] = wpabuf_head(pubkey);
 	hash_len = wpabuf_len(pubkey);
-	sha256_vector(1, addr, &hash_len, pubkey_hash);
+	if (sha256_vector(1, addr, &hash_len, pubkey_hash) < 0)
+		return -1;
 #ifdef CONFIG_WPS_TESTING
 	if (wps_corrupt_pkhash) {
 		wpa_hexdump(MSG_DEBUG, "WPS: Real Public Key Hash",

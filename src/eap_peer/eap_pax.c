@@ -278,8 +278,15 @@ static struct wpabuf * eap_pax_process_std_3(struct eap_pax_data *data,
 		    pos, EAP_PAX_MAC_LEN);
 	if (eap_pax_mac(data->mac_id, data->ck, EAP_PAX_CK_LEN,
 			data->rand.r.y, EAP_PAX_RAND_LEN,
-			(u8 *) data->cid, data->cid_len, NULL, 0, mac) < 0 ||
-	    os_memcmp_const(pos, mac, EAP_PAX_MAC_LEN) != 0) {
+			(u8 *) data->cid, data->cid_len, NULL, 0, mac) < 0) {
+		wpa_printf(MSG_INFO,
+			   "EAP-PAX: Could not derive MAC_CK(B, CID)");
+		ret->methodState = METHOD_DONE;
+		ret->decision = DECISION_FAIL;
+		return NULL;
+	}
+
+	if (os_memcmp_const(pos, mac, EAP_PAX_MAC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-PAX: Invalid MAC_CK(B, CID) "
 			   "received");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: expected MAC_CK(B, CID)",

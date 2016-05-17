@@ -38,6 +38,12 @@
 #include "tls.h"
 #include "tls_openssl.h"
 
+#if !defined(CONFIG_FIPS) &&                             \
+    (defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC) ||   \
+     defined(EAP_SERVER_FAST))
+#define OPENSSL_NEED_EAP_FAST_PRF
+#endif
+
 #if defined(OPENSSL_IS_BORINGSSL)
 /* stack_index_t is the return type of OpenSSL's sk_XXX_num() functions. */
 typedef size_t stack_index_t;
@@ -81,6 +87,7 @@ static size_t SSL_get_server_random(const SSL *ssl, unsigned char *out,
 }
 
 
+#ifdef OPENSSL_NEED_EAP_FAST_PRF
 static size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
 					 unsigned char *out, size_t outlen)
 {
@@ -92,6 +99,7 @@ static size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
 	os_memcpy(out, session->master_key, outlen);
 	return outlen;
 }
+#endif /* OPENSSL_NEED_EAP_FAST_PRF */
 
 #endif
 
@@ -3088,7 +3096,7 @@ int tls_connection_get_random(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
-#ifndef CONFIG_FIPS
+#ifdef OPENSSL_NEED_EAP_FAST_PRF
 static int openssl_get_keyblock_size(SSL *ssl)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
@@ -3143,7 +3151,7 @@ static int openssl_get_keyblock_size(SSL *ssl)
 		    EVP_CIPHER_iv_length(c));
 #endif
 }
-#endif /* CONFIG_FIPS */
+#endif /* OPENSSL_NEED_EAP_FAST_PRF */
 
 
 int tls_connection_export_key(void *tls_ctx, struct tls_connection *conn,
@@ -3160,11 +3168,7 @@ int tls_connection_export_key(void *tls_ctx, struct tls_connection *conn,
 int tls_connection_get_eap_fast_key(void *tls_ctx, struct tls_connection *conn,
 				    u8 *out, size_t out_len)
 {
-#ifdef CONFIG_FIPS
-	wpa_printf(MSG_ERROR, "OpenSSL: TLS keys cannot be exported in FIPS "
-		   "mode");
-	return -1;
-#else /* CONFIG_FIPS */
+#ifdef OPENSSL_NEED_EAP_FAST_PRF
 	SSL *ssl;
 	SSL_SESSION *sess;
 	u8 *rnd;
@@ -3233,7 +3237,11 @@ int tls_connection_get_eap_fast_key(void *tls_ctx, struct tls_connection *conn,
 	bin_clear_free(tmp_out, skip);
 
 	return ret;
-#endif /* CONFIG_FIPS */
+#else /* OPENSSL_NEED_EAP_FAST_PRF */
+	wpa_printf(MSG_ERROR,
+		   "OpenSSL: EAP-FAST keys cannot be exported in FIPS mode");
+	return -1;
+#endif /* OPENSSL_NEED_EAP_FAST_PRF */
 }
 
 

@@ -18,6 +18,7 @@ def check_qos_map(ap, hapd, dev, sta, dscp, tid, ap_tid=None):
     if not ap_tid:
         ap_tid = tid
     bssid = ap['bssid']
+    Wlantest.setup(hapd)
     wt = Wlantest()
     wt.clear_sta_counters(bssid, sta)
     hwsim_utils.test_connectivity(dev, hapd, dscp=dscp, config=False)

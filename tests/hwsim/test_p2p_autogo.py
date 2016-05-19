@@ -231,7 +231,6 @@ def test_autogo_pbc(dev):
 
 def test_autogo_tdls(dev):
     """P2P autonomous GO and two clients using TDLS"""
-    wt = Wlantest()
     go = dev[0]
     logger.info("Start autonomous GO with fixed parameters " + go.ifname)
     id = go.add_network()
@@ -241,6 +240,8 @@ def test_autogo_tdls(dev):
     go.set_network(id, "disabled", "2")
     res = go.p2p_start_go(persistent=id, freq="2462")
     logger.debug("res: " + str(res))
+    Wlantest.setup(go, True)
+    wt = Wlantest()
     wt.flush()
     wt.add_passphrase("12345678")
     connect_cli(go, dev[1], social=True, freq=2462)

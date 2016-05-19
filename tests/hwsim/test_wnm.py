@@ -185,9 +185,6 @@ def test_wnm_sleep_mode_ap_oom(dev, apdev):
 
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     """WNM Sleep Mode - RSN with PMF"""
-    wt = Wlantest()
-    wt.flush()
-    wt.add_passphrase("12345678")
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
@@ -196,6 +193,11 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     params["wnm_sleep_mode"] = "1"
     params["bss_transition"] = "1"
     hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")

@@ -503,6 +503,9 @@ def main():
                 del hapd
                 hapd = None
 
+            # Use None here since this instance of Wlantest() will never be
+            # used for remote host hwsim tests on real hardware.
+            Wlantest.setup(None)
             wt = Wlantest()
             rename_log(args.logdir, 'hwsim0.pcapng', name, wt)
             rename_log(args.logdir, 'hwsim0', name, wt)

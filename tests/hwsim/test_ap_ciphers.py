@@ -28,10 +28,6 @@ def check_cipher(dev, ap, cipher):
     hwsim_utils.test_connectivity(dev, hapd)
 
 def check_group_mgmt_cipher(dev, ap, cipher):
-    wt = Wlantest()
-    wt.flush()
-    wt.add_passphrase("12345678")
-
     if cipher not in dev.get_capability("group_mgmt"):
         raise HwsimSkip("Cipher %s not supported" % cipher)
     params = { "ssid": "test-wpa2-psk-pmf",
@@ -42,6 +38,12 @@ def check_group_mgmt_cipher(dev, ap, cipher):
                "rsn_pairwise": "CCMP",
                "group_mgmt_cipher": cipher }
     hapd = hostapd.add_ap(ap, params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
     dev.connect("test-wpa2-psk-pmf", psk="12345678", ieee80211w="2",
                 key_mgmt="WPA-PSK-SHA256",
                 pairwise="CCMP", group="CCMP", scan_freq="2412")

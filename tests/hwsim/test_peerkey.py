@@ -50,15 +50,17 @@ def test_peerkey_unknown_peer(dev, apdev):
 def test_peerkey_pairwise_mismatch(dev, apdev):
     """RSN TKIP+CCMP AP and PeerKey between two STAs using different ciphers"""
     skip_with_fips(dev[0])
-    wt = Wlantest()
-    wt.flush()
-    wt.add_passphrase("12345678")
     ssid = "test-peerkey"
     passphrase = "12345678"
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['peerkey'] = "1"
     params['rsn_pairwise'] = "TKIP CCMP"
-    hostapd.add_ap(apdev[0], params)
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True,
                    pairwise="CCMP")

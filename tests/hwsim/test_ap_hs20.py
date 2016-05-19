@@ -298,7 +298,7 @@ def _test_ap_interworking_scan_filtering(dev, apdev):
     ssid = "test-hs20-ap1"
     params['ssid'] = ssid
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0], params)
+    hapd0 = hostapd.add_ap(apdev[0], params)
 
     bssid2 = apdev[1]['bssid']
     params = hs20_ap_params()
@@ -312,6 +312,7 @@ def _test_ap_interworking_scan_filtering(dev, apdev):
 
     dev[0].hs20_enable()
 
+    Wlantest.setup(hapd0)
     wt = Wlantest()
     wt.flush()
 

@@ -11,6 +11,7 @@ import config
 import rutils
 import monitor
 import traceback
+import wlantest
 
 import logging
 logger = logging.getLogger()
@@ -44,6 +45,15 @@ def run_hwsim_test(devices, setup_params, refs, duts, monitors, hwsim_test):
         for dut_host in dut_hosts:
             monitor.add(dut_host, monitors)
             monitor.run(dut_host, setup_params)
+
+        monitor_hosts = monitor.create(devices, setup_params, refs, duts,
+                                       monitors)
+        mon = None
+        if len(monitor_hosts) > 0:
+            mon = monitor_hosts[0]
+            wlantest.Wlantest.reset_remote_wlantest()
+            wlantest.Wlantest.register_remote_wlantest(mon, setup_params,
+                                                       monitor)
 
         # run hostapd/wpa_supplicant
         for ref_host in ref_hosts:
@@ -83,6 +93,9 @@ def run_hwsim_test(devices, setup_params, refs, duts, monitors, hwsim_test):
         for dut_host in dut_hosts:
             dut_host.execute(["killall", "hostapd"])
             dut_host.get_logs(local_log_dir)
+        if mon is not None:
+            wlantest.Wlantest.reset_remote_wlantest()
+            mon.get_logs(local_log_dir)
 
         return ""
     except:
@@ -105,4 +118,7 @@ def run_hwsim_test(devices, setup_params, refs, duts, monitors, hwsim_test):
         for dut_host in dut_hosts:
             dut_host.execute(["killall", "hostapd"])
             dut_host.get_logs(local_log_dir)
+        if mon is not None:
+            wlantest.Wlantest.reset_remote_wlantest()
+            mon.get_logs(local_log_dir)
         raise

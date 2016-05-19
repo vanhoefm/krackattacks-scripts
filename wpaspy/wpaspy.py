@@ -44,6 +44,7 @@ class Ctrl:
                 raise
         else:
             try:
+                self.s = None
                 ai_list = socket.getaddrinfo(path, port, socket.AF_INET,
                                              socket.SOCK_DGRAM)
                 for af, socktype, proto, cn, sockaddr in ai_list:

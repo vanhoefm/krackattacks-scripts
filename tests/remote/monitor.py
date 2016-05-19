@@ -37,6 +37,7 @@ def create(devices, setup_params, refs, duts, monitors):
         try:
             host.execute(["iw", "reg", "set", setup_params['country']])
             setup_hw = setup_params['setup_hw']
+            ifaces = re.split('; | |, ', host.ifname)
             for iface in ifaces:
                 host.execute(setup_hw + " -I " + iface + " -R 1")
         except:

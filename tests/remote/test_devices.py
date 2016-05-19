@@ -35,26 +35,21 @@ def show_devices(devices, setup_params):
         else:
             print "[" + host.name + "] - ssh communication: OK"
         # check setup_hw works correctly
-        try:
-            setup_hw = setup_params['setup_hw']
-            try:
-                restart_device = setup_params['restart_device']
-            except:
-                restart_device = "0"
-            host.execute([setup_hw, "-I", host.ifname, "-R", restart_device])
-        except:
-            pass
+        rutils.setup_hw_host(host, setup_params)
+
         # show uname
         status, buf = host.execute(["uname", "-s", "-n", "-r", "-m", "-o"])
         print "\t" + buf
         # show ifconfig
-        status, buf = host.execute(["ifconfig", host.ifname])
-        if status != 0:
-            print "\t" + host.ifname + " failed\n"
-            continue
-        lines = buf.splitlines()
-        for line in lines:
-            print "\t" + line
+        ifaces = re.split('; | |, ', host.ifname)
+        for iface in ifaces:
+            status, buf = host.execute(["ifconfig", iface])
+            if status != 0:
+                print "\t" + iface + " failed\n"
+                continue
+            lines = buf.splitlines()
+            for line in lines:
+                print "\t" + line
         # check hostapd, wpa_supplicant, iperf exist
         status, buf = host.execute([setup_params['wpa_supplicant'], "-v"])
         if status != 0:
@@ -88,19 +83,9 @@ def check_device(devices, setup_params, dev_name, monitor=False):
     if status != 0:
         raise Exception(dev_name + " - ssh communication FAILED: " + buf)
 
-    ifaces = re.split('; | |, ', host.ifname)
-    # try to setup host/ifaces
-    for iface in ifaces:
-        try:
-            setup_hw = setup_params['setup_hw']
-            try:
-                restart_device = setup_params['restart_device']
-            except:
-                restart_device = "0"
-            host.execute(setup_hw + " -I " + iface + " -R " + restart_device)
-        except:
-            pass
+    rutils.setup_hw_host(host, setup_params)
 
+    ifaces = re.split('; | |, ', host.ifname)
     # check interfaces (multi for monitor)
     for iface in ifaces:
         status, buf = host.execute(["ifconfig", iface])

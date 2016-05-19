@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import re
 import time
 from remotehost import Host
 import hostapd
@@ -26,22 +27,31 @@ def get_host(devices, dev_name):
     return host
 
 # run setup_hw - hw specyfic
-def setup_hw(hosts, setup_params):
-    for host in hosts:
-        setup_hw_host(host, setup_params)
-
-def setup_hw_host(host, setup_params):
+def setup_hw_host_iface(host, iface, setup_params, force_restart=False):
     try:
         setup_hw = setup_params['setup_hw']
         restart = ""
         try:
             if setup_params['restart_device'] == True:
-                restart = " -R "
+                restart = "-R"
         except:
             pass
-        host.execute([setup_hw, "-I", host.ifname, restart])
+
+        if force_restart:
+            restart = "-R"
+
+        host.execute([setup_hw, "-I", iface, restart])
     except:
         pass
+
+def setup_hw_host(host, setup_params, force_restart=False):
+    ifaces = re.split('; | |, ', host.ifname)
+    for iface in ifaces:
+        setup_hw_host_iface(host, iface, setup_params, force_restart)
+
+def setup_hw(hosts, setup_params, force_restart=False):
+    for host in hosts:
+        setup_hw_host(host, setup_params, force_restart)
 
 # get traces - hw specific
 def trace_start(hosts, setup_params):

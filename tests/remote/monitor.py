@@ -138,17 +138,21 @@ def remove(host):
         host.monitors.remove(monitor)
 
 
-# get monitor params from hostapd
-def get_monitor_params(hapd):
-    freq = hapd.get_status_field("freq")
+# get monitor params from hostapd/wpa_supplicant
+def get_monitor_params(wpa, is_p2p=False):
+    if is_p2p:
+        get_status_field_f = wpa.get_group_status_field
+    else:
+        get_status_field_f = wpa.get_status_field
+    freq = get_status_field_f("freq")
     bw = "20"
     center_freq1=""
     center_freq2=""
 
-    vht_oper_chwidth = hapd.get_status_field("vht_oper_chwidth")
-    secondary_channel = hapd.get_status_field("secondary_channel")
-    vht_oper_centr_freq_seg0_idx = hapd.get_status_field("vht_oper_centr_freq_seg0_idx")
-    vht_oper_centr_freq_seg1_idx = hapd.get_status_field("vht_oper_centr_freq_seg1_idx")
+    vht_oper_chwidth = get_status_field_f("vht_oper_chwidth")
+    secondary_channel = get_status_field_f("secondary_channel")
+    vht_oper_centr_freq_seg0_idx = get_status_field_f("vht_oper_centr_freq_seg0_idx")
+    vht_oper_centr_freq_seg1_idx = get_status_field_f("vht_oper_centr_freq_seg1_idx")
     if vht_oper_chwidth == "0" or vht_oper_chwidth is None:
         if secondary_channel == "1":
             bw = "40"

@@ -93,6 +93,9 @@ class Host():
         if t.isAlive():
             t.join(wait)
 
+    def add_log(self, log_file):
+        self.logs.append(log_file)
+
     def get_logs(self, local_log_dir=None):
         for log in self.logs:
             if local_log_dir:

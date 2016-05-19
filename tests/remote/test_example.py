@@ -128,14 +128,14 @@ def test_example(devices, setup_params, refs, duts, monitors):
             monitor.remove(sta)
             dmesg = setup_params['log_dir'] + setup_params['tc_name'] + "_" + sta.name + "_" + sta.ifname + ".dmesg"
             sta.execute(["dmesg", "-c", ">", dmesg])
-            sta.logs.append(dmesg)
+            sta.add_log(dmesg)
             sta.get_logs(local_log_dir)
             sta.execute(["ifconfig", sta.ifname, "down"])
         if ap:
             monitor.remove(ap)
             dmesg = setup_params['log_dir'] + setup_params['tc_name'] + "_" + ap.name + "_" + ap.ifname + ".dmesg"
             ap.execute(["dmesg", "-c", ">", dmesg])
-            ap.logs.append(dmesg)
+            ap.add_log(dmesg)
             ap.get_logs(local_log_dir)
             ap.execute(["ifconfig", ap.ifname, " down"])
         raise

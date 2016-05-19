@@ -63,7 +63,7 @@ def trace_start_stop(host, setup_params, start):
         else:
             cmd = stop_trace
         trace_dir = setup_params['log_dir'] + host.ifname + "/remote_traces"
-        host.logs.append(trace_dir + "/*")
+        host.add_log(trace_dir + "/*")
         host.execute([cmd, "-I", host.ifname, "-D", trace_dir])
     except:
         pass
@@ -88,7 +88,7 @@ def perf_start_stop(host, setup_params, start):
         else:
             cmd = perf_stop
         perf_dir = setup_params['log_dir'] + host.ifname + "/remote_perf"
-        host.logs.append(perf_dir + "/*")
+        host.add_log(perf_dir + "/*")
         host.execute([cmd, "-I", host.ifname, "-D", perf_dir])
     except:
         pass
@@ -106,7 +106,7 @@ def run_hostapd(host, setup_params):
         log = ""
 
     if log_file:
-        host.logs.append(log_file)
+        host.add_log(log_file)
     status, buf = host.execute([setup_params['hostapd'], "-B", "-ddt", "-g", "udp:" + host.port, log])
     if status != 0:
         raise Exception("Could not run hostapd: " + buf)
@@ -123,7 +123,7 @@ def run_wpasupplicant(host, setup_params):
         log = ""
 
     if log_file:
-        host.logs.append(log_file)
+        host.add_log(log_file)
     status, buf = host.execute([setup_params['wpa_supplicant'], "-B", "-ddt", "-g", "udp:" + host.port, log])
     if status != 0:
         raise Exception("Could not run wpa_supplicant: " + buf)

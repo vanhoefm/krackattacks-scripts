@@ -95,7 +95,7 @@ def run(host, setup_params):
         log_monitor = log_monitor + "_" + monitor
 
     log = log_dir + tc_name + "_" + host.name + log_monitor + ".pcap"
-    host.logs.append(log)
+    host.add_log(log)
     thread = host.execute_run([tshark, "-w", log], monitor_res)
     host.thread = thread
 

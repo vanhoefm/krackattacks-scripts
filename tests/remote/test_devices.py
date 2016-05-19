@@ -121,11 +121,11 @@ def check_device(devices, setup_params, dev_name, monitor=False):
 
     status, buf = host.execute(["which", setup_params['iperf']])
     if status != 0:
-        raise Exception(dev_name + " - hostapd: " + buf)
+        raise Exception(dev_name + " - iperf: " + buf)
 
     status, buf = host.execute(["which", "tshark"])
     if status != 0:
-        logger.debug(dev_name + " - hostapd: " + buf)
+        logger.debug(dev_name + " - tshark: " + buf)
 
 def check_devices(devices, setup_params, refs, duts, monitors):
     """Check duts/refs/monitors devices"""

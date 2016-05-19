@@ -15,7 +15,7 @@ import hostapd
 
 # standalone monitor with multi iface support
 def create(devices, setup_params, refs, duts, monitors):
-    mons= []
+    mons = []
     mhosts = []
     hosts = duts + refs
 

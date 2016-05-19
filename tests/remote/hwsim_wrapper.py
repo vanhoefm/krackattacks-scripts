@@ -48,7 +48,8 @@ def run_hwsim_test(devices, setup_params, refs, duts, monitors, hwsim_test):
         # run hostapd/wpa_supplicant
         for ref_host in ref_hosts:
             rutils.run_wpasupplicant(ref_host, setup_params)
-            wpas = WpaSupplicant(hostname = ref_host.host, global_iface="udp", global_port = ref_host.port)
+            wpas = WpaSupplicant(hostname=ref_host.host, global_iface="udp",
+                                 global_port=ref_host.port)
             wpas.interface_add(ref_host.ifname)
             dev.append(wpas)
         for dut_host in dut_hosts:

@@ -1531,3 +1531,16 @@ def run_p2ps_connect_p2p_device2(dev, no_group_iface):
         if ev0 is None:
             raise Exception("Unable to remove the advertisement instance")
         remove_group(wpas, dev[0])
+
+def test_p2ps_connect_p2ps_method_no_pin(dev):
+    """P2P group formation using P2PS method without specifying PIN"""
+    dev[0].p2p_listen()
+    dev[1].p2p_go_neg_auth(dev[0].p2p_dev_addr(), None, "p2ps", go_intent=15)
+    dev[1].p2p_listen()
+    i_res = dev[0].p2p_go_neg_init(dev[1].p2p_dev_addr(), None, "p2ps",
+                                   timeout=20, go_intent=0)
+    r_res = dev[1].p2p_go_neg_auth_result()
+    logger.debug("i_res: " + str(i_res))
+    logger.debug("r_res: " + str(r_res))
+    check_grpform_results(i_res, r_res)
+    remove_group(dev[0], dev[1])

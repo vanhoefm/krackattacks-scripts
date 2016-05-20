@@ -669,7 +669,7 @@ class WpaSupplicant:
             cmd = "P2P_CONNECT " + peer + " " + pin + " " + method
         else:
             cmd = "P2P_CONNECT " + peer + " " + method
-        if go_intent:
+        if go_intent is not None:
             cmd = cmd + ' go_intent=' + str(go_intent)
         if freq:
             cmd = cmd + ' freq=' + str(freq)

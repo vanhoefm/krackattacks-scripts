@@ -12,7 +12,7 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, fail_test
+from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger
 from tshark import run_tshark
 
 def check_scan(dev, params, other_started=False, test_busy=False):
@@ -1002,3 +1002,61 @@ def test_scan_ext(dev, apdev):
         check_scan(dev[0], "freq=2412 use_id=1")
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 14 *")
+
+def test_scan_fail(dev, apdev):
+    """Scan failures"""
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_scan"):
+        dev[0].request("DISCONNECT")
+        if "OK" not in dev[0].request("SCAN freq=2412"):
+            raise Exception("SCAN failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Did not see scan failure event")
+    dev[0].dump_monitor()
+
+    with alloc_fail(dev[0], 1, "radio_add_work;wpa_supplicant_trigger_scan"):
+        if "OK" not in dev[0].request("SCAN freq=2412"):
+            raise Exception("SCAN failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Did not see scan failure event")
+    dev[0].dump_monitor()
+
+    try:
+        if "OK" not in dev[0].request("SET filter_ssids 1"):
+            raise Exception("SET failed")
+        id = dev[0].connect("test-scan", key_mgmt="NONE", only_add_network=True)
+        with alloc_fail(dev[0], 1, "wpa_supplicant_build_filter_ssids"):
+            # While the filter list cannot be created due to memory allocation
+            # failure, this scan is expected to be completed without SSID
+            # filtering.
+            if "OK" not in dev[0].request("SCAN freq=2412"):
+                raise Exception("SCAN failed")
+            ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+            if ev is None:
+                raise Exception("Scan did not complete")
+        dev[0].remove_network(id)
+    finally:
+        dev[0].request("SET filter_ssids 0")
+    dev[0].dump_monitor()
+
+    with alloc_fail(dev[0], 1, "nl80211_get_scan_results"):
+        if "OK" not in dev[0].request("SCAN freq=2412"):
+            raise Exception("SCAN failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("Did not see scan started event")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].dump_monitor()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET preassoc_mac_addr 1")
+    with fail_test(wpas, 1, "nl80211_set_mac_addr;wpas_trigger_scan_cb"):
+        if "OK" not in wpas.request("SCAN freq=2412"):
+            raise Exception("SCAN failed")
+        ev = wpas.wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Did not see scan failure event")
+    wpas.request("SET preassoc_mac_addr 0")
+    wpas.dump_monitor()

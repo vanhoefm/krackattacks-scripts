@@ -8304,6 +8304,9 @@ static int nl80211_set_mac_addr(void *priv, const u8 *addr)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int new_addr = addr != NULL;
 
+	if (TEST_FAIL())
+		return -1;
+
 	if (!addr)
 		addr = drv->perm_addr;
 

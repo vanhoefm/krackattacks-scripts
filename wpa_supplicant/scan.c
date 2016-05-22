@@ -59,10 +59,7 @@ static int wpas_wps_in_use(struct wpa_supplicant *wpa_s,
 
 		wps = 1;
 		*req_type = wpas_wps_get_req_type(ssid);
-		if (!ssid->eap.phase1)
-			continue;
-
-		if (os_strstr(ssid->eap.phase1, "pbc=1"))
+		if (ssid->eap.phase1 && os_strstr(ssid->eap.phase1, "pbc=1"))
 			return 2;
 	}
 

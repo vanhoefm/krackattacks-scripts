@@ -162,6 +162,8 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	if (wpas_update_random_addr_disassoc(wpa_s) < 0) {
 		wpa_msg(wpa_s, MSG_INFO,
 			"Failed to assign random MAC address for a scan");
+		wpa_scan_free_params(params);
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=-1");
 		radio_work_done(work);
 		return;
 	}
@@ -231,6 +233,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 	if (radio_add_work(wpa_s, 0, "scan", 0, wpas_trigger_scan_cb, ctx) < 0)
 	{
 		wpa_scan_free_params(ctx);
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=-1");
 		return -1;
 	}
 

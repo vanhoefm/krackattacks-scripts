@@ -36,8 +36,7 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->current_ssid == NULL) {
 		wpa_s->current_ssid = ssid;
-		if (wpa_s->current_ssid != NULL)
-			wpas_notify_network_changed(wpa_s);
+		wpas_notify_network_changed(wpa_s);
 	}
 	wpa_supplicant_initiate_eapol(wpa_s);
 	wpa_dbg(wpa_s, MSG_DEBUG, "Already associated with a configured "

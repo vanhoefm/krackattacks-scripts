@@ -3777,6 +3777,10 @@ static void wpa_cli_action_process(const char *msg)
 			wpa_cli_connected = 0;
 			wpa_cli_exec(action_file, ifname, "DISCONNECTED");
 		}
+	} else if (str_match(pos, AP_EVENT_ENABLED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, AP_EVENT_DISABLED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
 	} else if (str_match(pos, MESH_GROUP_STARTED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
 	} else if (str_match(pos, MESH_GROUP_REMOVED)) {

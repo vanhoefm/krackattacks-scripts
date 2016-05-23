@@ -3399,7 +3399,7 @@ def test_ap_wpa2_eap_fast_prf_oom(dev, apdev):
     check_eap_capa(dev[0], "FAST")
     tls = dev[0].request("GET tls_library")
     if tls.startswith("OpenSSL"):
-        func = "openssl_tls_prf"
+        func = "tls_connection_get_eap_fast_key"
         count = 2
     elif tls.startswith("internal"):
         func = "tls_connection_prf"

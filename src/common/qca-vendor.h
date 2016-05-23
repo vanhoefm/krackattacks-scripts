@@ -166,7 +166,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_SCALE = 109,
 	/* 110..114 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_SET_TXPOWER_DECR_DB = 115,
-	/* 116..118 - reserved for QCA */
+	/* 116..117 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_SET_SAP_CONFIG = 118,
 	QCA_NL80211_VENDOR_SUBCMD_TSF = 119,
 	QCA_NL80211_VENDOR_SUBCMD_WISA = 120,
 };
@@ -563,6 +564,25 @@ enum qca_wlan_vendor_attr_config {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_sap_config - Parameters for AP configuration
+ */
+enum qca_wlan_vendor_attr_sap_config {
+	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_INVALID = 0,
+	/* 1 - reserved for QCA */
+	/* List of frequencies on which AP is expected to operate.
+	 * This is irrespective of ACS configuration. This list is a priority
+	 * based one and is looked for before the AP is created to ensure the
+	 * best concurrency sessions (avoid MCC and use DBS/SCC) co-exist in
+	 * the system.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SAP_MANDATORY_FREQUENCY_LIST = 2,
+
+	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_MAX =
+	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

@@ -25,6 +25,11 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
     dev1.dump_monitor()
     dev2.dump_monitor()
 
+    if dev1.hostname is None and dev2.hostname is None:
+        broadcast_retry_c = 1
+    else:
+        broadcast_retry_c = 10
+
     try:
         if config:
             cmd = "DATA_TEST_CONFIG 1"
@@ -62,18 +67,25 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
             raise Exception("Unexpected dev1->dev2 unicast data result")
 
         cmd = "DATA_TEST_TX ff:ff:ff:ff:ff:ff {} {}".format(addr1, tos)
-        if dev1group:
-            dev1.group_request(cmd)
-        else:
-            dev1.request(cmd)
-        if dev2group:
-            ev = dev2.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
-        else:
-            ev = dev2.wait_event(["DATA-TEST-RX"], timeout=timeout)
-        if ev is None:
-            raise Exception("dev1->dev2 broadcast data delivery failed")
-        if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr1) not in ev:
-            raise Exception("Unexpected dev1->dev2 broadcast data result")
+        for i in xrange(broadcast_retry_c):
+            try:
+                if dev1group:
+                    dev1.group_request(cmd)
+                else:
+                    dev1.request(cmd)
+                if dev2group:
+                    ev = dev2.wait_group_event(["DATA-TEST-RX"],
+                                               timeout=timeout)
+                else:
+                    ev = dev2.wait_event(["DATA-TEST-RX"], timeout=timeout)
+                if ev is None:
+                    raise Exception("dev1->dev2 broadcast data delivery failed")
+                if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr1) not in ev:
+                    raise Exception("Unexpected dev1->dev2 broadcast data result")
+                break
+            except Exception as e:
+                if i == broadcast_retry_c - 1:
+                    raise
 
         cmd = "DATA_TEST_TX {} {} {}".format(addr1, addr2, tos)
         if dev2group:
@@ -90,18 +102,25 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
             raise Exception("Unexpected dev2->dev1 unicast data result")
 
         cmd = "DATA_TEST_TX ff:ff:ff:ff:ff:ff {} {}".format(addr2, tos)
-        if dev2group:
-            dev2.group_request(cmd)
-        else:
-            dev2.request(cmd)
-        if dev1group:
-            ev = dev1.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
-        else:
-            ev = dev1.wait_event(["DATA-TEST-RX"], timeout=timeout)
-        if ev is None:
-            raise Exception("dev2->dev1 broadcast data delivery failed")
-        if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
-            raise Exception("Unexpected dev2->dev1 broadcast data result")
+        for i in xrange(broadcast_retry_c):
+            try:
+                if dev2group:
+                    dev2.group_request(cmd)
+                else:
+                    dev2.request(cmd)
+                if dev1group:
+                    ev = dev1.wait_group_event(["DATA-TEST-RX"],
+                                               timeout=timeout)
+                else:
+                    ev = dev1.wait_event(["DATA-TEST-RX"], timeout=timeout)
+                if ev is None:
+                    raise Exception("dev2->dev1 broadcast data delivery failed")
+                if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
+                    raise Exception("Unexpected dev2->dev1 broadcast data result")
+                break
+            except Exception as e:
+                if i == broadcast_retry_c - 1:
+                    raise
     finally:
         if config:
             if dev1group:

@@ -119,6 +119,7 @@ class HostapdGlobal:
 
 class Hostapd:
     def __init__(self, ifname, bssidx=0, hostname=None, port=8877):
+        self.hostname = hostname
         self.host = remotehost.Host(hostname, ifname)
         self.ifname = ifname
         if hostname is None:

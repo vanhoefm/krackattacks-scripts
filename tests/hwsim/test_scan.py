@@ -1091,3 +1091,23 @@ def test_scan_fail(dev, apdev):
             raise Exception("Did not see scan failure event")
     wpas.request("SET preassoc_mac_addr 0")
     wpas.dump_monitor()
+
+def test_scan_freq_list(dev, apdev):
+    """Scan with SET freq_list and scan_cur_freq"""
+    try:
+        if "OK" not in dev[0].request("SET freq_list 2412 2417"):
+            raise Exception("SET freq_list failed")
+        check_scan(dev[0], "use_id=1")
+    finally:
+        dev[0].request("SET freq_list ")
+
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412")
+    try:
+        if "OK" not in dev[0].request("SET scan_cur_freq 1"):
+            raise Exception("SET scan_cur_freq failed")
+        check_scan(dev[0], "use_id=1")
+    finally:
+        dev[0].request("SET scan_cur_freq 0")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()

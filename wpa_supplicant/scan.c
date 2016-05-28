@@ -2607,13 +2607,6 @@ int wpas_sched_scan_plans_set(struct wpa_supplicant *wpa_s, const char *cmd)
 			goto fail;
 		}
 
-		if (!scan_plan->interval) {
-			wpa_printf(MSG_ERROR,
-				   "scan plan %u: Interval cannot be zero",
-				   num);
-			goto fail;
-		}
-
 		if (scan_plan->interval > wpa_s->max_sched_scan_plan_interval) {
 			wpa_printf(MSG_WARNING,
 				   "scan plan %u: Scan interval too long(%u), use the maximum allowed(%u)",

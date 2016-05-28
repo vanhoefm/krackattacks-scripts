@@ -26,7 +26,7 @@ def get_host(devices, dev_name):
     host.dev = dev
     return host
 
-# run setup_hw - hw specyfic
+# Run setup_hw - hardware specific
 def setup_hw_host_iface(host, iface, setup_params, force_restart=False):
     try:
         setup_hw = setup_params['setup_hw']

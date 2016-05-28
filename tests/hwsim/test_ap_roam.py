@@ -103,6 +103,12 @@ def test_ap_reassociation_to_same_bss(dev, apdev):
     dev[0].wait_connected(timeout=10, error="Reattach timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+    # Wait for previous scan results to expire to trigger new scan
+    time.sleep(5)
+    dev[0].request("REATTACH")
+    dev[0].wait_connected(timeout=10, error="Reattach timed out")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
 def test_ap_roam_set_bssid(dev, apdev):
     """Roam control"""
     hostapd.add_ap(apdev[0], { "ssid": "test-open" })

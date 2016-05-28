@@ -1014,6 +1014,16 @@ def test_scan_fail(dev, apdev):
             raise Exception("Did not see scan failure event")
     dev[0].dump_monitor()
 
+    for i in range(1, 5):
+        with alloc_fail(dev[0], i,
+                        "wpa_scan_clone_params;wpa_supplicant_trigger_scan"):
+            if "OK" not in dev[0].request("SCAN ssid 112233 freq=2412"):
+                raise Exception("SCAN failed")
+            ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+            if ev is None:
+                raise Exception("Did not see scan failure event")
+        dev[0].dump_monitor()
+
     with alloc_fail(dev[0], 1, "radio_add_work;wpa_supplicant_trigger_scan"):
         if "OK" not in dev[0].request("SCAN freq=2412"):
             raise Exception("SCAN failed")
@@ -1047,6 +1057,24 @@ def test_scan_fail(dev, apdev):
         if ev is None:
             raise Exception("Did not see scan started event")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].dump_monitor()
+
+    try:
+        if "OK" not in dev[0].request("SET setband 2G"):
+            raise Exception("SET setband failed")
+        with alloc_fail(dev[0], 1, "=wpa_setband_scan_freqs_list"):
+            # While the frequency list cannot be created due to memory
+            # allocation failure, this scan is expected to be completed without
+            # frequency filtering.
+            if "OK" not in dev[0].request("SCAN"):
+                raise Exception("SCAN failed")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            dev[0].request("ABORT_SCAN")
+            ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+            if ev is None:
+                raise Exception("Scan did not complete")
+    finally:
+        dev[0].request("SET setband AUTO")
     dev[0].dump_monitor()
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')

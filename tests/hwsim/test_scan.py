@@ -481,6 +481,9 @@ def test_scan_hidden(dev, apdev):
     if "FAIL" not in dev[0].request("SCAN scan_id=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"):
         raise Exception("Too many scan_id values accepted")
 
+    # Duplicate SSID removal
+    check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id1, id2))
+
     dev[0].request("REMOVE_NETWORK all")
     hapd.disable()
     dev[0].flush_scan_cache(freq=2432)

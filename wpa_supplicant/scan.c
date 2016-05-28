@@ -227,10 +227,8 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 	}
 
 	ctx = wpa_scan_clone_params(params);
-	if (ctx == NULL)
-		return -1;
-
-	if (radio_add_work(wpa_s, 0, "scan", 0, wpas_trigger_scan_cb, ctx) < 0)
+	if (!ctx ||
+	    radio_add_work(wpa_s, 0, "scan", 0, wpas_trigger_scan_cb, ctx) < 0)
 	{
 		wpa_scan_free_params(ctx);
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=-1");

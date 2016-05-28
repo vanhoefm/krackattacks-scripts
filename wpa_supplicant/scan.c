@@ -835,12 +835,10 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		 * slot for the zero-terminator.
 		 */
 		params.freqs = os_malloc(sizeof(int) * 2);
-		if (params.freqs == NULL) {
-			wpa_dbg(wpa_s, MSG_ERROR, "Memory allocation failed");
-			return;
+		if (params.freqs) {
+			params.freqs[0] = wpa_s->assoc_freq;
+			params.freqs[1] = 0;
 		}
-		params.freqs[0] = wpa_s->assoc_freq;
-		params.freqs[1] = 0;
 
 		/*
 		 * Reset the reattach flag so that we fall back to full scan if

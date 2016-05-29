@@ -591,7 +591,7 @@ int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
 	if (!mesh_wpa_s) {
 		wpa_printf(MSG_ERROR,
 			   "mesh: Failed to create new wpa_supplicant interface");
-		wpa_supplicant_remove_iface(wpa_s->global, wpa_s, 0);
+		wpa_drv_if_remove(wpa_s, WPA_IF_MESH, ifname);
 		return -1;
 	}
 	mesh_wpa_s->mesh_if_created = 1;

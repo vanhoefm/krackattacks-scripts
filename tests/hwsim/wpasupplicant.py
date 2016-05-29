@@ -23,6 +23,7 @@ class WpaSupplicant:
         self.group_ifname = None
         self.gctrl_mon = None
         self.host = remotehost.Host(hostname, ifname)
+        self._group_dbg = None
         if ifname:
             self.set_ifname(ifname, hostname, port)
             res = self.get_driver_status()
@@ -156,10 +157,26 @@ class WpaSupplicant:
             logger.debug(self.global_dbg + ifname + ": CTRL(global): " + cmd)
             return self.global_ctrl.request(cmd)
 
+    @property
+    def group_dbg(self):
+        if self._group_dbg is not None:
+            return self._group_dbg
+        if self.group_ifname is None:
+            raise Exception("Cannot have group_dbg without group_ifname")
+        if self.hostname is None:
+            self._group_dbg = self.group_ifname
+        else:
+            self._group_dbg = self.hostname + "/" + self.group_ifname
+        return self._group_dbg
+
     def group_request(self, cmd):
         if self.group_ifname and self.group_ifname != self.ifname:
-            logger.debug(self.group_ifname + ": CTRL: " + cmd)
-            gctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, self.group_ifname))
+            if self.hostname is None:
+                gctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, self.group_ifname))
+            else:
+                port = self.get_ctrl_iface_port(self.group_ifname)
+                gctrl = wpaspy.Ctrl(self.hostname, port)
+            logger.debug(self.group_dbg + ": CTRL(group): " + cmd)
             return gctrl.request(cmd)
         return self.request(cmd)
 
@@ -574,7 +591,12 @@ class WpaSupplicant:
         res['ifname'] = s[2]
         self.group_ifname = s[2]
         try:
-            self.gctrl_mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, self.group_ifname))
+            if self.hostname is None:
+                self.gctrl_mon = wpaspy.Ctrl(os.path.join(wpas_ctrl,
+                                                          self.group_ifname))
+            else:
+                port = self.get_ctrl_iface_port(self.group_ifname)
+                self.gctrl_mon = wpaspy.Ctrl(self.hostname, port)
             self.gctrl_mon.attach()
         except:
             logger.debug("Could not open monitor socket for group interface")
@@ -755,7 +777,7 @@ class WpaSupplicant:
             while True:
                 while self.gctrl_mon.pending():
                     ev = self.gctrl_mon.recv()
-                    logger.debug(self.group_ifname + ": " + ev)
+                    logger.debug(self.group_dbg + "(group): " + ev)
                     for event in events:
                         if event in ev:
                             return ev

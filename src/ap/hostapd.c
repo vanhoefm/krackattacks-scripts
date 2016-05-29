@@ -206,10 +206,12 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 
 
 static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
-					      char *ifname)
+					      const char *ifname)
 {
 	int i;
 
+	if (!ifname)
+		return;
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
 					0, NULL, 0, NULL, 0)) {
@@ -2005,6 +2007,8 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 
 static void hostapd_bss_deinit(struct hostapd_data *hapd)
 {
+	if (!hapd)
+		return;
 	wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,
 		   hapd->conf->iface);
 	hostapd_bss_deinit_no_free(hapd);
@@ -2039,8 +2043,11 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 	}
 #endif /* CONFIG_FST */
 
-	for (j = iface->num_bss - 1; j >= 0; j--)
+	for (j = iface->num_bss - 1; j >= 0; j--) {
+		if (!iface->bss)
+			break;
 		hostapd_bss_deinit(iface->bss[j]);
+	}
 }
 
 
@@ -2049,6 +2056,8 @@ void hostapd_interface_free(struct hostapd_iface *iface)
 	size_t j;
 	wpa_printf(MSG_DEBUG, "%s(%p)", __func__, iface);
 	for (j = 0; j < iface->num_bss; j++) {
+		if (!iface->bss)
+			break;
 		wpa_printf(MSG_DEBUG, "%s: free hapd %p",
 			   __func__, iface->bss[j]);
 		os_free(iface->bss[j]);
@@ -2849,8 +2858,8 @@ const char * hostapd_state_text(enum hostapd_iface_state s)
 void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s)
 {
 	wpa_printf(MSG_INFO, "%s: interface state %s->%s",
-		   iface->conf->bss[0]->iface, hostapd_state_text(iface->state),
-		   hostapd_state_text(s));
+		   iface->conf ? iface->conf->bss[0]->iface : "N/A",
+		   hostapd_state_text(iface->state), hostapd_state_text(s));
 	iface->state = s;
 }
 

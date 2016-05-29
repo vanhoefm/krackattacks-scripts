@@ -968,3 +968,15 @@ def test_mesh_oom(dev, apdev):
                                     "MESH-GROUP-STARTED"])
             if ev is None:
                 raise Exception("Init failure not reported")
+
+def test_mesh_add_interface_oom(dev):
+    """wpa_supplicant mesh with dynamic interface addition failing"""
+    check_mesh_support(dev[0])
+    for i in range(1, 3):
+        mesh = None
+        try:
+            with alloc_fail(dev[0], i, "wpas_mesh_add_interface"):
+                mesh = dev[0].request("MESH_INTERFACE_ADD").strip()
+        finally:
+            if mesh and mesh != "FAIL":
+                dev[0].request("MESH_GROUP_REMOVE " + mesh)

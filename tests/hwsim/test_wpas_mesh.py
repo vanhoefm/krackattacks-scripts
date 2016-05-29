@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # wpa_supplicant mesh mode tests
 # Copyright (c) 2014, cozybit Inc.
 #
@@ -14,7 +12,7 @@ import time
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail
+from utils import HwsimSkip, alloc_fail, wait_fail_trigger
 from tshark import run_tshark
 
 def check_mesh_support(dev, secure=False):
@@ -950,3 +948,23 @@ def test_wpas_mesh_pmksa_caching_no_match(dev, apdev):
         raise Exception("PMKID did not change")
 
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_mesh_oom(dev, apdev):
+    """Mesh network setup failing due to OOM"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+
+    with alloc_fail(dev[0], 1, "mesh_config_create"):
+        add_open_mesh_network(dev[0])
+        ev = dev[0].wait_event(["Failed to init mesh"])
+        if ev is None:
+            raise Exception("Init failure not reported")
+
+    for i in range(1, 65):
+        with alloc_fail(dev[0], i, "wpa_supplicant_mesh_init"):
+            add_open_mesh_network(dev[0])
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            ev = dev[0].wait_event(["Failed to init mesh",
+                                    "MESH-GROUP-STARTED"])
+            if ev is None:
+                raise Exception("Init failure not reported")

@@ -167,10 +167,8 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr)
 	}
 
 	/* TODO: support rekeying */
-	if (random_get_bytes(rsn->mgtk, 16) < 0) {
-		wpa_deinit(rsn->auth);
+	if (random_get_bytes(rsn->mgtk, 16) < 0)
 		return -1;
-	}
 
 	/* group mgmt */
 	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL, 4, 1,

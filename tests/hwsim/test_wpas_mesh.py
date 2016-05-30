@@ -980,3 +980,28 @@ def test_mesh_add_interface_oom(dev):
         finally:
             if mesh and mesh != "FAIL":
                 dev[0].request("MESH_GROUP_REMOVE " + mesh)
+
+def test_mesh_scan_oom(dev):
+    """wpa_supplicant mesh scan results and OOM"""
+    check_mesh_support(dev[0])
+    add_open_mesh_network(dev[0])
+    check_mesh_group_added(dev[0])
+    for i in range(5):
+        dev[1].scan(freq="2412")
+        res = dev[1].request("SCAN_RESULTS")
+        if "[MESH]" in res:
+            break
+    for r in res.splitlines():
+        if "[MESH]" in r:
+            break
+    bssid = r.split('\t')[0]
+
+    bss = dev[1].get_bss(bssid)
+    if bss is None:
+        raise Exception("Could not get BSS entry for mesh")
+
+    for i in range(1, 3):
+        with alloc_fail(dev[1], i, "mesh_attr_text"):
+            bss = dev[1].get_bss(bssid)
+            if bss is not None:
+                raise Exception("Unexpected BSS result during OOM")

@@ -311,6 +311,30 @@ def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     dev[1].request("SET sae_groups ")
     dev[2].request("SET sae_groups ")
 
+def test_wpas_mesh_secure_sae_group_negotiation(dev, apdev):
+    """wpa_supplicant secure MESH and SAE group negotiation"""
+    check_mesh_support(dev[0], secure=True)
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+
+    #dev[0].request("SET sae_groups 21 20 25 26")
+    dev[0].request("SET sae_groups 25")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups 19 25")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    dev[0].request("SET sae_groups ")
+    dev[1].request("SET sae_groups ")
+
 def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
     """wpa_supplicant secure MESH and missing SAE password"""
     check_mesh_support(dev[0], secure=True)

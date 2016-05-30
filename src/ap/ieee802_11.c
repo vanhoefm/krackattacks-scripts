@@ -518,6 +518,9 @@ static void auth_sae_retransmit_timer(void *eloop_ctx, void *eloop_data)
 	if (sae_check_big_sync(sta))
 		return;
 	sta->sae->sync++;
+	wpa_printf(MSG_DEBUG, "SAE: Auth SAE retransmit timer for " MACSTR
+		   " (sync=%d state=%d)",
+		   MAC2STR(sta->addr), sta->sae->sync, sta->sae->state);
 
 	switch (sta->sae->state) {
 	case SAE_COMMITTED:
@@ -724,6 +727,44 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+static void sae_pick_next_group(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	struct sae_data *sae = sta->sae;
+	int i, *groups = hapd->conf->sae_groups;
+
+	if (sae->state != SAE_COMMITTED)
+		return;
+
+	wpa_printf(MSG_DEBUG, "SAE: Previously selected group: %d", sae->group);
+
+	for (i = 0; groups && groups[i] > 0; i++) {
+		if (sae->group == groups[i])
+			break;
+	}
+
+	if (!groups || groups[i] <= 0) {
+		wpa_printf(MSG_DEBUG,
+			   "SAE: Previously selected group not found from the current configuration");
+		return;
+	}
+
+	for (;;) {
+		i++;
+		if (groups[i] <= 0) {
+			wpa_printf(MSG_DEBUG,
+				   "SAE: No alternative group enabled");
+			return;
+		}
+
+		if (sae_set_group(sae, groups[i]) < 0)
+			continue;
+
+		break;
+	}
+	wpa_printf(MSG_DEBUG, "SAE: Selected new group: %d", groups[i]);
+}
+
+
 static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    const struct ieee80211_mgmt *mgmt, size_t len,
 			    u16 auth_transaction, u16 status_code)
@@ -809,6 +850,16 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			sta->sae->sync = 0;
 			sae_set_retransmit_timer(hapd, sta);
 			return;
+		}
+
+		if ((hapd->conf->mesh & MESH_ENABLED) &&
+		    status_code ==
+		    WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED &&
+		    sta->sae->tmp) {
+			wpa_printf(MSG_DEBUG,
+				   "SAE: Peer did not accept our SAE group");
+			sae_pick_next_group(hapd, sta);
+			goto remove_sta;
 		}
 
 		if (status_code != WLAN_STATUS_SUCCESS)

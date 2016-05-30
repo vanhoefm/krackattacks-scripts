@@ -3544,13 +3544,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_ASSOC_REJECT:
 		if (data->assoc_reject.bssid)
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
-				"bssid=" MACSTR	" status_code=%u",
+				"bssid=" MACSTR	" status_code=%u%s",
 				MAC2STR(data->assoc_reject.bssid),
-				data->assoc_reject.status_code);
+				data->assoc_reject.status_code,
+				data->assoc_reject.timed_out ? " timeout" : "");
 		else
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
-				"status_code=%u",
-				data->assoc_reject.status_code);
+				"status_code=%u%s",
+				data->assoc_reject.status_code,
+				data->assoc_reject.timed_out ? " timeout" : "");
 		wpa_s->assoc_status_code = data->assoc_reject.status_code;
 		wpas_notify_assoc_status_code(wpa_s);
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)

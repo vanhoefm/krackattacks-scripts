@@ -1301,7 +1301,6 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	int client;
 	int persistent;
 	u8 go_dev_addr[ETH_ALEN];
-	int network_id = -1;
 
 	/*
 	 * This callback is likely called for the main interface. Update wpa_s
@@ -1376,16 +1375,15 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	}
 
 	if (persistent)
-		network_id = wpas_p2p_store_persistent_group(wpa_s->p2pdev,
-							     ssid, go_dev_addr);
+		wpas_p2p_store_persistent_group(wpa_s->p2pdev,
+						ssid, go_dev_addr);
 	else {
 		os_free(wpa_s->global->add_psk);
 		wpa_s->global->add_psk = NULL;
 	}
-	if (network_id < 0 && ssid)
-		network_id = ssid->id;
+
 	if (!client) {
-		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
+		wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 0);
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 	}
 }
@@ -1750,7 +1748,6 @@ static void p2p_go_configured(void *ctx, void *data)
 	struct wpa_supplicant *wpa_s = ctx;
 	struct p2p_go_neg_results *params = data;
 	struct wpa_ssid *ssid;
-	int network_id = -1;
 
 	wpa_s->ap_configured_cb = NULL;
 	wpa_s->ap_configured_cb_ctx = NULL;
@@ -1797,14 +1794,14 @@ static void p2p_go_configured(void *ctx, void *data)
 
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 		if (params->persistent_group) {
-			network_id = wpas_p2p_store_persistent_group(
+			wpas_p2p_store_persistent_group(
 				wpa_s->p2pdev, ssid,
 				wpa_s->global->p2p_dev_addr);
 			wpas_p2p_add_psk_list(wpa_s, ssid);
 		}
-		if (network_id < 0)
-			network_id = ssid->id;
-		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
+
+		wpas_notify_p2p_group_started(wpa_s, ssid,
+					      params->persistent_group, 0);
 		wpas_p2p_cross_connect_setup(wpa_s);
 		wpas_p2p_set_group_idle_timeout(wpa_s);
 
@@ -6941,7 +6938,6 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	u8 go_dev_addr[ETH_ALEN];
-	int network_id = -1;
 	int persistent;
 	int freq;
 	u8 ip[3 * 4];
@@ -7000,11 +6996,10 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 			       ip_addr);
 
 	if (persistent)
-		network_id = wpas_p2p_store_persistent_group(wpa_s->p2pdev,
-							     ssid, go_dev_addr);
-	if (network_id < 0)
-		network_id = ssid->id;
-	wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 1);
+		wpas_p2p_store_persistent_group(wpa_s->p2pdev,
+						ssid, go_dev_addr);
+
+	wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 1);
 }
 
 

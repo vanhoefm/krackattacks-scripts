@@ -12,7 +12,7 @@ import time
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from tshark import run_tshark
 
 def check_mesh_support(dev, secure=False):
@@ -706,6 +706,21 @@ def test_mesh_wpa_auth_init_oom(dev, apdev):
         ev = dev[0].wait_event(["MESH-GROUP-STARTED"], timeout=0.2)
         if ev is not None:
             raise Exception("Unexpected mesh group start during OOM")
+
+def test_mesh_wpa_init_fail(dev, apdev):
+    """Secure mesh network setup local failure"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+
+    with fail_test(dev[0], 1, "os_get_random;=__mesh_rsn_auth_init"):
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+        wait_fail_trigger(dev[0], "GET_FAIL")
+
+    with alloc_fail(dev[0], 1, "mesh_rsn_auth_init"):
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
 def test_wpas_mesh_reconnect(dev, apdev):
     """Secure mesh network plink counting during reconnection"""

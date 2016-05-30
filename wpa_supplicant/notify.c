@@ -674,7 +674,7 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 	/* Notify a group has been started */
 	wpas_dbus_register_p2p_group(wpa_s, ssid);
 
-	wpas_dbus_signal_p2p_group_started(wpa_s, ssid, client, persistent);
+	wpas_dbus_signal_p2p_group_started(wpa_s, client, persistent);
 }
 
 

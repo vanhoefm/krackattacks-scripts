@@ -1254,12 +1254,10 @@ static void peer_groups_changed(struct wpa_supplicant *wpa_s)
  * irrespective of the role (client/GO) of the current device
  *
  * @wpa_s: %wpa_supplicant network interface data
- * @ssid: SSID object
  * @client: this device is P2P client
  * @persistent: 0 - non persistent group, 1 - persistent group
  */
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-					const struct wpa_ssid *ssid,
 					int client, int persistent)
 {
 	DBusMessage *msg;

@@ -190,7 +190,6 @@ void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 				     const u8 *src, u16 dev_passwd_id,
 				     u8 go_intent);
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-					const struct wpa_ssid *ssid,
 					int client, int persistent);
 void wpas_dbus_signal_p2p_group_formation_failure(struct wpa_supplicant *wpa_s,
 						  const char *reason);
@@ -401,7 +400,6 @@ static inline void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 
 static inline void
 wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-				   const struct wpa_ssid *ssid,
 				   int client, int persistent)
 {
 }

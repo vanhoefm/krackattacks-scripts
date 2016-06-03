@@ -1077,3 +1077,38 @@ def test_mesh_sae_groups_invalid(dev, apdev):
 
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
+
+def test_mesh_sae_failure(dev, apdev):
+    """Mesh and local SAE failures"""
+    check_mesh_support(dev[0], secure=True)
+
+    dev[0].request("SET sae_groups ")
+    dev[1].request("SET sae_groups ")
+
+    funcs = [ (1, "=mesh_rsn_auth_sae_sta", True),
+              (1, "mesh_rsn_build_sae_commit;mesh_rsn_auth_sae_sta", False),
+              (1, "auth_sae_init_committed;mesh_rsn_auth_sae_sta", True),
+              (1, "=mesh_rsn_protect_frame", True),
+              (2, "=mesh_rsn_protect_frame", True),
+              (1, "aes_siv_encrypt;mesh_rsn_protect_frame", True),
+              (1, "=mesh_rsn_process_ampe", True),
+              (1, "aes_siv_decrypt;mesh_rsn_process_ampe", True) ]
+    for count, func, success in funcs:
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+
+        with alloc_fail(dev[1], count, func):
+            id = add_mesh_secure_net(dev[1])
+            dev[1].mesh_group_add(id)
+            check_mesh_group_added(dev[0])
+            check_mesh_group_added(dev[1])
+            if success:
+                # retry is expected to work
+                check_mesh_peer_connected(dev[0])
+                check_mesh_peer_connected(dev[1])
+            else:
+                wait_fail_trigger(dev[1], "GET_ALLOC_FAIL")
+        dev[0].mesh_group_remove()
+        dev[1].mesh_group_remove()
+        check_mesh_group_removed(dev[0])
+        check_mesh_group_removed(dev[1])

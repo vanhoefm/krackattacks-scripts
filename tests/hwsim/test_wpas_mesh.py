@@ -1044,3 +1044,36 @@ def test_mesh_scan_oom(dev):
             bss = dev[1].get_bss(bssid)
             if bss is not None:
                 raise Exception("Unexpected BSS result during OOM")
+
+def test_mesh_sae_groups_invalid(dev, apdev):
+    """Mesh with invalid SAE group configuration"""
+    check_mesh_support(dev[0], secure=True)
+
+    dev[0].request("SET sae_groups 25")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups 123 122 121")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    ev = dev[0].wait_event(["new peer notification"], timeout=10)
+    if ev is None:
+        raise Exception("dev[0] did not see peer")
+    ev = dev[1].wait_event(["new peer notification"], timeout=10)
+    if ev is None:
+        raise Exception("dev[1] did not see peer")
+
+    ev = dev[0].wait_event(["MESH-PEER-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected connection(0)")
+
+    ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+    if ev is not None:
+        raise Exception("Unexpected connection(1)")
+
+    dev[0].request("SET sae_groups ")
+    dev[1].request("SET sae_groups ")

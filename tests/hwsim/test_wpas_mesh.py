@@ -1112,3 +1112,46 @@ def test_mesh_sae_failure(dev, apdev):
         dev[1].mesh_group_remove()
         check_mesh_group_removed(dev[0])
         check_mesh_group_removed(dev[1])
+
+def test_mesh_failure(dev, apdev):
+    """Mesh and local failures"""
+    check_mesh_support(dev[0])
+
+    funcs = [ (1, "ap_sta_add;mesh_mpm_add_peer", True),
+              (1, "wpabuf_alloc;mesh_mpm_send_plink_action", True) ]
+    for count, func, success in funcs:
+        add_open_mesh_network(dev[0])
+
+        with alloc_fail(dev[1], count, func):
+            add_open_mesh_network(dev[1])
+            check_mesh_group_added(dev[0])
+            check_mesh_group_added(dev[1])
+            if success:
+                # retry is expected to work
+                check_mesh_peer_connected(dev[0])
+                check_mesh_peer_connected(dev[1])
+            else:
+                wait_fail_trigger(dev[1], "GET_ALLOC_FAIL")
+        dev[0].mesh_group_remove()
+        dev[1].mesh_group_remove()
+        check_mesh_group_removed(dev[0])
+        check_mesh_group_removed(dev[1])
+
+    funcs = [ (1, "mesh_mpm_init_link", True) ]
+    for count, func, success in funcs:
+        add_open_mesh_network(dev[0])
+
+        with fail_test(dev[1], count, func):
+            add_open_mesh_network(dev[1])
+            check_mesh_group_added(dev[0])
+            check_mesh_group_added(dev[1])
+            if success:
+                # retry is expected to work
+                check_mesh_peer_connected(dev[0])
+                check_mesh_peer_connected(dev[1])
+            else:
+                wait_fail_trigger(dev[1], "GET_FAIL")
+        dev[0].mesh_group_remove()
+        dev[1].mesh_group_remove()
+        check_mesh_group_removed(dev[0])
+        check_mesh_group_removed(dev[1])

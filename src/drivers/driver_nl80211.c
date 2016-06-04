@@ -8447,7 +8447,7 @@ static int nl80211_join_mesh(struct i802_bss *bss,
 		goto fail;
 	}
 	ret = 0;
-	bss->freq = params->freq.freq;
+	drv->assoc_freq = bss->freq = params->freq.freq;
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join request send successfully");
 
 fail:

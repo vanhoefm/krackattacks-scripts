@@ -1242,3 +1242,13 @@ def test_mesh_invalid_frequency(dev, apdev):
                             "Could not join mesh"])
     if ev is None or "Could not join mesh" not in ev:
         raise Exception("Mesh join failure not reported")
+
+def test_mesh_default_beacon_int(dev, apdev):
+    """Mesh and default beacon interval"""
+    check_mesh_support(dev[0])
+    try:
+        dev[0].request("SET beacon_int 200")
+        add_open_mesh_network(dev[0])
+        check_mesh_group_added(dev[0])
+    finally:
+        dev[0].request("SET beacon_int 0")

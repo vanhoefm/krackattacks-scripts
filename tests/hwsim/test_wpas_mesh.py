@@ -793,10 +793,20 @@ def test_mesh_wpa_init_fail(dev, apdev):
         dev[0].mesh_group_add(id)
         wait_fail_trigger(dev[0], "GET_FAIL")
 
+    dev[0].dump_monitor()
     with alloc_fail(dev[0], 1, "mesh_rsn_auth_init"):
         id = add_mesh_secure_net(dev[0])
         dev[0].mesh_group_add(id)
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    dev[0].dump_monitor()
+    with fail_test(dev[0], 1, "os_get_random;mesh_rsn_init_ampe_sta"):
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+        dev[1].request("SET sae_groups ")
+        id = add_mesh_secure_net(dev[1])
+        dev[1].mesh_group_add(id)
+        wait_fail_trigger(dev[0], "GET_FAIL")
 
 def test_wpas_mesh_reconnect(dev, apdev):
     """Secure mesh network plink counting during reconnection"""

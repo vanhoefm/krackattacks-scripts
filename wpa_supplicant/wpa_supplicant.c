@@ -2039,6 +2039,16 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 			if (chwidth == VHT_CHANWIDTH_80P80MHZ)
 				break;
 		}
+	} else if (ssid->max_oper_chwidth == VHT_CHANWIDTH_160MHZ) {
+		if (freq->freq == 5180) {
+			chwidth = VHT_CHANWIDTH_160MHZ;
+			vht_caps |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
+			seg0 = 50;
+		} else if (freq->freq == 5520) {
+			chwidth = VHT_CHANWIDTH_160MHZ;
+			vht_caps |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
+			seg0 = 114;
+		}
 	}
 
 	if (hostapd_set_freq_params(&vht_freq, mode->mode, freq->freq,

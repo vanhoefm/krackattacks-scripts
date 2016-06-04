@@ -109,7 +109,8 @@ def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0,
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
     dev.set_network(id, "key_mgmt", "NONE")
-    dev.set_network(id, "frequency", freq)
+    if freq:
+        dev.set_network(id, "frequency", freq)
     if chwidth > 0:
         dev.set_network(id, "max_oper_chwidth", str(chwidth))
     if beacon_int:
@@ -1155,3 +1156,19 @@ def test_mesh_failure(dev, apdev):
         dev[1].mesh_group_remove()
         check_mesh_group_removed(dev[0])
         check_mesh_group_removed(dev[1])
+
+def test_mesh_invalid_frequency(dev, apdev):
+    """Mesh and invalid frequency configuration"""
+    check_mesh_support(dev[0])
+    add_open_mesh_network(dev[0], freq=None)
+    ev = dev[0].wait_event(["MESH-GROUP-STARTED",
+                            "Could not join mesh"])
+    if ev is None or "Could not join mesh" not in ev:
+        raise Exception("Mesh join failure not reported")
+    dev[0].request("REMOVE_NETWORK all")
+
+    add_open_mesh_network(dev[0], freq="2413")
+    ev = dev[0].wait_event(["MESH-GROUP-STARTED",
+                            "Could not join mesh"])
+    if ev is None or "Could not join mesh" not in ev:
+        raise Exception("Mesh join failure not reported")

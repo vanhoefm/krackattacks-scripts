@@ -1050,14 +1050,34 @@ def test_mesh_oom(dev, apdev):
         if ev is None:
             raise Exception("Init failure not reported")
 
-    for i in range(1, 65):
-        with alloc_fail(dev[0], i, "wpa_supplicant_mesh_init"):
-            add_open_mesh_network(dev[0])
-            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
-            ev = dev[0].wait_event(["Failed to init mesh",
-                                    "MESH-GROUP-STARTED"])
-            if ev is None:
-                raise Exception("Init failure not reported")
+    with alloc_fail(dev[0], 4, "=wpa_supplicant_mesh_init"):
+        add_open_mesh_network(dev[0], basic_rates="60 120 240")
+        ev = dev[0].wait_event(["Failed to init mesh"])
+        if ev is None:
+            raise Exception("Init failure not reported")
+
+    for i in range(1, 66):
+        dev[0].dump_monitor()
+        logger.info("Test instance %d" % i)
+        try:
+            with alloc_fail(dev[0], i, "wpa_supplicant_mesh_init"):
+                add_open_mesh_network(dev[0])
+                wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+                ev = dev[0].wait_event(["Failed to init mesh",
+                                        "MESH-GROUP-STARTED"])
+                if ev is None:
+                    raise Exception("Init failure not reported")
+        except Exception, e:
+            if i < 15:
+                raise
+            logger.info("Ignore no-oom for i=%d" % i)
+
+    with alloc_fail(dev[0], 5, "=wpa_supplicant_mesh_init"):
+        id = add_mesh_secure_net(dev[0])
+        dev[0].mesh_group_add(id)
+        ev = dev[0].wait_event(["Failed to init mesh"])
+        if ev is None:
+            raise Exception("Init failure not reported")
 
 def test_mesh_add_interface_oom(dev):
     """wpa_supplicant mesh with dynamic interface addition failing"""

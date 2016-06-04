@@ -445,6 +445,8 @@ static int nl_get_multicast_id(struct nl80211_global *global,
 void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 		   struct nl_msg *msg, int flags, uint8_t cmd)
 {
+	if (TEST_FAIL())
+		return NULL;
 	return genlmsg_put(msg, 0, 0, drv->global->nl80211_id,
 			   0, flags, cmd, 0);
 }
@@ -5117,6 +5119,9 @@ static int wpa_driver_nl80211_set_mode_impl(
 	int was_ap = is_ap_interface(drv->nlmode);
 	int res;
 	int mode_switch_res;
+
+	if (TEST_FAIL())
+		return -1;
 
 	mode_switch_res = nl80211_set_mode(drv, drv->ifindex, nlmode);
 	if (mode_switch_res && nlmode == nl80211_get_ifmode(bss))

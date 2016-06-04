@@ -411,7 +411,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 	ret = wpa_drv_join_mesh(wpa_s, &params);
 	if (ret)
-		wpa_msg(wpa_s, MSG_ERROR, "mesh join error=%d\n", ret);
+		wpa_msg(wpa_s, MSG_ERROR, "mesh join error=%d", ret);
 
 	/* hostapd sets the interface down until we associate */
 	wpa_drv_set_operstate(wpa_s, 1);

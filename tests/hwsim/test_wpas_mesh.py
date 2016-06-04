@@ -1116,6 +1116,29 @@ def test_mesh_scan_oom(dev):
             if bss is not None:
                 raise Exception("Unexpected BSS result during OOM")
 
+def test_mesh_drv_fail(dev, apdev):
+    """Mesh network setup failing due to driver command failure"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+
+    with fail_test(dev[0], 1, "nl80211_join_mesh"):
+        add_open_mesh_network(dev[0])
+        ev = dev[0].wait_event(["mesh join error"])
+        if ev is None:
+            raise Exception("Join failure not reported")
+
+    dev[0].dump_monitor()
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_if_add"):
+        if "FAIL" not in dev[0].request("MESH_INTERFACE_ADD").strip():
+            raise Exception("Interface added unexpectedly")
+
+    dev[0].dump_monitor()
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_init_mesh"):
+        add_open_mesh_network(dev[0])
+        ev = dev[0].wait_event(["Could not join mesh"])
+        if ev is None:
+            raise Exception("Join failure not reported")
+
 def test_mesh_sae_groups_invalid(dev, apdev):
     """Mesh with invalid SAE group configuration"""
     check_mesh_support(dev[0], secure=True)

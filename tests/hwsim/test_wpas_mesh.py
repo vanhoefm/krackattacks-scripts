@@ -11,6 +11,7 @@ import subprocess
 import time
 
 import hwsim_utils
+import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from tshark import run_tshark
@@ -1275,3 +1276,19 @@ def test_mesh_default_beacon_int(dev, apdev):
         check_mesh_group_added(dev[0])
     finally:
         dev[0].request("SET beacon_int 0")
+
+def test_mesh_scan_parse_error(dev, apdev):
+    """Mesh scan element parse error"""
+    check_mesh_support(dev[0])
+    params = { "ssid": "open",
+               "beacon_int": "2000" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+    hapd.set('vendor_elements', 'dd0201')
+    for i in range(10):
+        dev[0].scan(freq=2412)
+        if bssid in dev[0].request("SCAN_RESULTS"):
+            break
+    # This will fail in IE parsing due to the truncated IE in the Probe
+    # Response frame.
+    bss = dev[0].request("BSS " + bssid)

@@ -1040,6 +1040,49 @@ def test_wpas_mesh_pmksa_caching_no_match(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+def test_mesh_pmksa_caching_oom(dev, apdev):
+    """Secure mesh network and PMKSA caching failing due to OOM"""
+    check_mesh_support(dev[0], secure=True)
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].set_network(id, "no_auto_peer", "1")
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].set_network(id, "no_auto_peer", "1")
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+    pmksa0b = dev[0].get_pmksa(addr1)
+    if pmksa0b is None:
+        raise Exception("PMKSA cache entry not maintained")
+
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message (2)")
+
+    with alloc_fail(dev[0], 1, "wpa_auth_sta_init;mesh_rsn_auth_sae_sta"):
+        if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+            raise Exception("MESH_PEER_ADD failed (2)")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
 def test_mesh_oom(dev, apdev):
     """Mesh network setup failing due to OOM"""
     check_mesh_support(dev[0], secure=True)

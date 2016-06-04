@@ -181,13 +181,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	ifmsh->mconf = mconf;
 
 	/* need conf->hw_mode for supported rates. */
-	if (ssid->frequency == 0) {
-		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
-		conf->channel = 1;
-	} else {
-		conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
-						       &conf->channel);
-	}
+	conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency, &conf->channel);
 	if (conf->hw_mode == NUM_HOSTAPD_MODES) {
 		wpa_printf(MSG_ERROR, "Unsupported mesh mode frequency: %d MHz",
 			   ssid->frequency);

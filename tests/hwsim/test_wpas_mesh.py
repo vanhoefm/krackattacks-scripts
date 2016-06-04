@@ -7,6 +7,7 @@
 import logging
 logger = logging.getLogger()
 import os
+import struct
 import subprocess
 import time
 
@@ -1345,3 +1346,48 @@ def test_mesh_scan_parse_error(dev, apdev):
     # This will fail in IE parsing due to the truncated IE in the Probe
     # Response frame.
     bss = dev[0].request("BSS " + bssid)
+
+def test_mesh_missing_mic(dev, apdev):
+    """Secure mesh network and missing MIC"""
+    check_mesh_support(dev[0], secure=True)
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    count = 0
+    remove_mic = True
+    while True:
+        count += 1
+        if count > 15:
+            raise Exception("Did not see Action frames")
+        rx_msg = dev[0].mgmt_rx()
+        if rx_msg is None:
+            raise Exception("MGMT-RX timeout")
+        if rx_msg['subtype'] == 13:
+            payload = rx_msg['payload']
+            frame = rx_msg['frame']
+            (categ, action) = struct.unpack('BB', payload[0:2])
+            if categ == 15 and action == 1 and remove_mic:
+                # Mesh Peering Open
+                pos = frame.find('\x8c\x10')
+                if not pos:
+                    raise Exception("Could not find MIC element")
+                logger.info("Found MIC at %d" % pos)
+                # Remove MIC
+                rx_msg['frame'] = frame[0:pos]
+                remove_mic = False
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq={} datarate={} ssi_signal={} frame={}".format(rx_msg['freq'], rx_msg['datarate'], rx_msg['ssi_signal'], rx_msg['frame'].encode('hex'))):
+            raise Exception("MGMT_RX_PROCESS failed")
+        ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+        if ev:
+            break

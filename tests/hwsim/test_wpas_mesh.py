@@ -1463,3 +1463,89 @@ def test_mesh_pmkid_mismatch(dev, apdev):
         ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
         if ev:
             break
+
+def test_mesh_peering_proto(dev, apdev):
+    """Mesh peering management protocol testing"""
+    check_mesh_support(dev[0])
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    add_open_mesh_network(dev[0], beacon_int=160)
+    add_open_mesh_network(dev[1], beacon_int=160)
+
+    count = 0
+    test = 1
+    while True:
+        count += 1
+        if count > 50:
+            raise Exception("Did not see Action frames")
+        rx_msg = dev[0].mgmt_rx()
+        if rx_msg is None:
+            ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+            if ev:
+                break
+            raise Exception("MGMT-RX timeout")
+        if rx_msg['subtype'] == 13:
+            payload = rx_msg['payload']
+            frame = rx_msg['frame']
+            (categ, action) = struct.unpack('BB', payload[0:2])
+            if categ == 15 and action == 1 and test == 1:
+                # Mesh Peering Open
+                pos = frame.find('\x75\x04')
+                if not pos:
+                    raise Exception("Could not find Mesh Peering Management element")
+                logger.info("Found Mesh Peering Management element at %d" % pos)
+                # Remove the element to hit
+                # "MPM: No Mesh Peering Management element"
+                rx_msg['frame'] = frame[0:pos]
+                test += 1
+            elif categ == 15 and action == 1 and test == 2:
+                # Mesh Peering Open
+                pos = frame.find('\x72\x0e')
+                if not pos:
+                    raise Exception("Could not find Mesh ID element")
+                logger.info("Found Mesh ID element at %d" % pos)
+                # Remove the element to hit
+                # "MPM: No Mesh ID or Mesh Configuration element"
+                rx_msg['frame'] = frame[0:pos] + frame[pos + 16:]
+                test += 1
+            elif categ == 15 and action == 1 and test == 3:
+                # Mesh Peering Open
+                pos = frame.find('\x72\x0e')
+                if not pos:
+                    raise Exception("Could not find Mesh ID element")
+                logger.info("Found Mesh ID element at %d" % pos)
+                # Replace Mesh ID to hit "MPM: Mesh ID or Mesh Configuration
+                # element do not match local MBSS"
+                rx_msg['frame'] = frame[0:pos] + '\x72\x0etest-test-test' + frame[pos + 16:]
+                test += 1
+            elif categ == 15 and action == 1 and test == 4:
+                # Mesh Peering Open
+                # Remove IEs to hit
+                # "MPM: Ignore too short action frame 1 ie_len 0"
+                rx_msg['frame'] = frame[0:26]
+                test += 1
+            elif categ == 15 and action == 1 and test == 5:
+                # Mesh Peering Open
+                # Truncate IEs to hit
+                # "MPM: Failed to parse PLINK IEs"
+                rx_msg['frame'] = frame[0:30]
+                test += 1
+            elif categ == 15 and action == 1 and test == 6:
+                # Mesh Peering Open
+                pos = frame.find('\x75\x04')
+                if not pos:
+                    raise Exception("Could not find Mesh Peering Management element")
+                logger.info("Found Mesh Peering Management element at %d" % pos)
+                # Truncate the element to hit
+                # "MPM: Invalid peer mgmt ie" and
+                # "MPM: Mesh parsing rejected frame"
+                rx_msg['frame'] = frame[0:pos] + '\x75\x00\x00\x00' + frame[pos + 6:]
+                test += 1
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq={} datarate={} ssi_signal={} frame={}".format(rx_msg['freq'], rx_msg['datarate'], rx_msg['ssi_signal'], rx_msg['frame'].encode('hex'))):
+            raise Exception("MGMT_RX_PROCESS failed")
+        ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+        if ev:
+            break
+
+    if test != 7:
+        raise Exception("Not all test frames completed")

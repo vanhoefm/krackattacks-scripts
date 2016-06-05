@@ -1391,3 +1391,75 @@ def test_mesh_missing_mic(dev, apdev):
         ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
         if ev:
             break
+
+def test_mesh_pmkid_mismatch(dev, apdev):
+    """Secure mesh network and PMKID mismatch"""
+    check_mesh_support(dev[0], secure=True)
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].set_network(id, "no_auto_peer", "1")
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].set_network(id, "no_auto_peer", "1")
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed")
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message (2)")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed (2)")
+
+    count = 0
+    break_pmkid = True
+    while True:
+        count += 1
+        if count > 50:
+            raise Exception("Did not see Action frames")
+        rx_msg = dev[0].mgmt_rx()
+        if rx_msg is None:
+            ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.1)
+            if ev:
+                break
+            raise Exception("MGMT-RX timeout")
+        if rx_msg['subtype'] == 13:
+            payload = rx_msg['payload']
+            frame = rx_msg['frame']
+            (categ, action) = struct.unpack('BB', payload[0:2])
+            if categ == 15 and action == 1 and break_pmkid:
+                # Mesh Peering Open
+                pos = frame.find('\x75\x14')
+                if not pos:
+                    raise Exception("Could not find Mesh Peering Management element")
+                logger.info("Found Mesh Peering Management element at %d" % pos)
+                # Break PMKID to hit "Mesh RSN: Invalid PMKID (Chosen PMK did
+                # not match calculated PMKID)"
+                rx_msg['frame'] = frame[0:pos + 6] + '\x00\x00\x00\x00' + frame[pos + 10:]
+                break_pmkid = False
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq={} datarate={} ssi_signal={} frame={}".format(rx_msg['freq'], rx_msg['datarate'], rx_msg['ssi_signal'], rx_msg['frame'].encode('hex'))):
+            raise Exception("MGMT_RX_PROCESS failed")
+        ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+        if ev:
+            break

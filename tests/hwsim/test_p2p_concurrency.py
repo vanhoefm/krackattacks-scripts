@@ -39,7 +39,7 @@ def test_concurrent_autogo(dev, apdev):
 
 def test_concurrent_autogo_5ghz_ht40(dev, apdev):
     """Concurrent P2P autonomous GO on 5 GHz and HT40 co-ex"""
-    clear_scan_cache(apdev[1]['ifname'])
+    clear_scan_cache(apdev[1])
     try:
         hapd = None
         hapd2 = None

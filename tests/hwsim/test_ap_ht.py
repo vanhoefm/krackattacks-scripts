@@ -15,7 +15,8 @@ from utils import HwsimSkip, alloc_fail
 import hwsim_utils
 from test_ap_csa import csa_supported
 
-def clear_scan_cache(ifname):
+def clear_scan_cache(apdev):
+    ifname = apdev['ifname']
     subprocess.call(['ifconfig', ifname, 'up'])
     subprocess.call(['iw', ifname, 'scan', 'trigger', 'freq', '2412', 'flush'])
     time.sleep(0.1)
@@ -23,7 +24,7 @@ def clear_scan_cache(ifname):
 
 def test_ap_ht40_scan(dev, apdev):
     """HT40 co-ex scan"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "test-ht40",
                "channel": "5",
                "ht_capab": "[HT40-]"}
@@ -58,7 +59,7 @@ def test_ap_ht40_scan(dev, apdev):
 
 def test_ap_ht40_scan_conflict(dev, apdev):
     """HT40 co-ex scan conflict"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "test-ht40",
                "channel": "6",
                "ht_capab": "[HT40+]"}
@@ -98,7 +99,7 @@ def test_ap_ht40_scan_conflict(dev, apdev):
 
 def test_ap_ht40_scan_conflict2(dev, apdev):
     """HT40 co-ex scan conflict (HT40-)"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "test-ht40",
                "channel": "11",
                "ht_capab": "[HT40-]"}
@@ -138,7 +139,7 @@ def test_ap_ht40_scan_conflict2(dev, apdev):
 
 def test_ap_ht40_scan_not_affected(dev, apdev):
     """HT40 co-ex scan and other BSS not affected"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "test-ht20",
                "channel": "11" }
     hostapd.add_ap(apdev[1], params)
@@ -185,7 +186,7 @@ def test_ap_ht40_scan_not_affected(dev, apdev):
 
 def test_ap_ht40_scan_legacy_conflict(dev, apdev):
     """HT40 co-ex scan conflict with legacy 20 MHz AP"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "legacy-20",
                "channel": "7", "ieee80211n": "0" }
     hostapd.add_ap(apdev[1], params)
@@ -224,7 +225,7 @@ def test_ap_ht40_scan_legacy_conflict(dev, apdev):
 
 def test_ap_ht40_scan_ht20_conflict(dev, apdev):
     """HT40 co-ex scan conflict with HT 20 MHz AP"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "ht-20",
                "channel": "7", "ieee80211n": "1" }
     hostapd.add_ap(apdev[1], params)
@@ -263,7 +264,7 @@ def test_ap_ht40_scan_ht20_conflict(dev, apdev):
 
 def test_ap_ht40_scan_intolerant(dev, apdev):
     """HT40 co-ex scan finding an AP advertising 40 MHz intolerant"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "another-bss",
                "channel": "1",
                "ht_capab": "[40-INTOLERANT]" }
@@ -303,7 +304,7 @@ def test_ap_ht40_scan_intolerant(dev, apdev):
 
 def test_ap_ht40_scan_match(dev, apdev):
     """HT40 co-ex scan matching configuration"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "test-ht40",
                "channel": "5",
                "ht_capab": "[HT40-]"}
@@ -343,7 +344,7 @@ def test_ap_ht40_scan_match(dev, apdev):
 
 def test_ap_ht40_5ghz_match(dev, apdev):
     """HT40 co-ex scan on 5 GHz with matching pri/sec channel"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     try:
         hapd = None
         hapd2 = None
@@ -397,7 +398,7 @@ def test_ap_ht40_5ghz_match(dev, apdev):
 
 def test_ap_ht40_5ghz_switch(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     try:
         hapd = None
         hapd2 = None
@@ -450,7 +451,7 @@ def test_ap_ht40_5ghz_switch(dev, apdev):
 
 def test_ap_ht40_5ghz_switch2(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     try:
         hapd = None
         hapd2 = None
@@ -601,7 +602,7 @@ def test_obss_scan_40_intolerant(dev, apdev):
 
 def test_obss_coex_report_handling(dev, apdev):
     """Overlapping BSS scan report handling with obss_interval=0"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "obss-scan",
                "channel": "6",
                "ht_capab": "[HT40-]" }
@@ -630,7 +631,7 @@ def test_obss_coex_report_handling(dev, apdev):
 
 def test_obss_coex_report_handling1(dev, apdev):
     """Overlapping BSS scan report handling with obss_interval=1"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "obss-scan",
                "channel": "6",
                "ht_capab": "[HT40+]",
@@ -806,7 +807,7 @@ def test_ap_ht_capab_not_supported(dev, apdev):
 
 def test_ap_ht_40mhz_intolerant_sta(dev, apdev):
     """Associated STA indicating 40 MHz intolerant"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "intolerant",
                "channel": "6",
                "ht_capab": "[HT40-]" }
@@ -839,7 +840,7 @@ def test_ap_ht_40mhz_intolerant_sta(dev, apdev):
 
 def test_ap_ht_40mhz_intolerant_ap(dev, apdev):
     """Associated STA reports 40 MHz intolerant AP after association"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     params = { "ssid": "ht",
                "channel": "6",
                "ht_capab": "[HT40-]",
@@ -1114,7 +1115,7 @@ def test_prefer_ht20_during_roam(dev, apdev):
 
 def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
     """HT40 on 5 GHz with invalid channel pair"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     try:
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -1134,7 +1135,7 @@ def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
 
 def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
     """HT40 on 5 GHz with disabled secondary channel"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     try:
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -1154,7 +1155,7 @@ def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
 
 def test_ap_ht40_scan_broken_ap(dev, apdev):
     """HT40 co-ex scan and broken legacy/HT AP"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
 
     # Broken AP: Include HT Capabilities element but not HT Operation element
     params = { "ssid": "legacy-20",

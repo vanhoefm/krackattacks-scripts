@@ -106,7 +106,7 @@ def test_ap_multi_bss_acs(dev, apdev):
 
 def test_ap_acs_40mhz(dev, apdev):
     """Automatic channel selection for 40 MHz channel"""
-    clear_scan_cache(apdev[0]['ifname'])
+    clear_scan_cache(apdev[0])
     force_prev_ap_on_24g(apdev[0])
     params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
     params['channel'] = '0'

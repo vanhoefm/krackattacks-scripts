@@ -63,7 +63,7 @@ def test_ap_vht80(dev, apdev):
         dev[0].flush_scan_cache()
 
 def vht80_test(apdev, dev, channel, ht_capab):
-    clear_scan_cache(apdev['ifname'])
+    clear_scan_cache(apdev)
     try:
         hapd = None
         params = { "ssid": "vht",

@@ -152,13 +152,13 @@ def test_ap_ht40_scan_not_affected(dev, apdev):
                "channel": "11" }
     hostapd.add_ap(apdev[1], params)
 
-    subprocess.call(['ifconfig', apdev[0]['ifname'], 'up'])
-    subprocess.call(['iw', apdev[0]['ifname'], 'scan', 'trigger', 'freq', '2462'])
+    hostapd.cmd_execute(apdev[0], ['ifconfig', apdev[0]['ifname'], 'up'])
+    hostapd.cmd_execute(apdev[0], ['iw', apdev[0]['ifname'], 'scan', 'trigger',
+                                   'freq', '2462'])
     time.sleep(0.5)
-    subprocess.call(['iw', apdev[0]['ifname'], 'scan', 'dump'],
-                    stdout=open('/dev/null', 'w'))
+    hostapd.cmd_execute(apdev[0], ['iw', apdev[0]['ifname'], 'scan', 'dump'])
     time.sleep(0.1)
-    subprocess.call(['ifconfig', apdev[0]['ifname'], 'down'])
+    hostapd.cmd_execute(apdev[0], ['ifconfig', apdev[0]['ifname'], 'down'])
 
     params = { "ssid": "test-ht40",
                "channel": "1",

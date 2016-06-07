@@ -1122,7 +1122,7 @@ def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
                    "channel": "40",
                    "country_code": "US",
                    "ht_capab": "[HT40+]"}
-        hapd = hostapd.add_ap(apdev[1], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         ev = hapd.wait_event(["AP-DISABLED", "AP-ENABLED"], timeout=10)
         if not ev:
             raise Exception("AP setup failure timed out")
@@ -1142,7 +1142,7 @@ def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
                    "channel": "48",
                    "country_code": "US",
                    "ht_capab": "[HT40+]"}
-        hapd = hostapd.add_ap(apdev[1], params, wait_enabled=False)
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
         ev = hapd.wait_event(["AP-DISABLED", "AP-ENABLED"], timeout=10)
         if not ev:
             raise Exception("AP setup failure timed out")

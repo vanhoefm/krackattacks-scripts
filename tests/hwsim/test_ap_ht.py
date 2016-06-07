@@ -1109,7 +1109,7 @@ def test_prefer_ht20_during_roam(dev, apdev):
     dev[0].scan_for_bss(bssid2, freq=2412)
     dev[0].scan(freq=2412)
     dev[0].wait_connected()
-    
+
     if dev[0].get_status_field('bssid') != bssid2:
         raise Exception("Unexpected BSS selected")
 

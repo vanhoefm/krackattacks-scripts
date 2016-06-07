@@ -12,6 +12,7 @@ import struct
 import wpaspy
 import remotehost
 import utils
+import subprocess
 
 logger = logging.getLogger()
 hapd_ctrl = '/var/run/hostapd'
@@ -40,6 +41,17 @@ class HostapdGlobal:
             self.mon = wpaspy.Ctrl(hostname, port)
             self.dbg = hostname + "/" + str(port)
         self.mon.attach()
+
+    def cmd_execute(self, cmd_array):
+        if self.hostname is None:
+            cmd = ' '.join(cmd_array)
+            proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
+                                    stdout=subprocess.PIPE, shell=True)
+            out = proc.communicate()[0]
+            ret = proc.returncode
+            return ret, out
+        else:
+            return self.host.execute(cmd_array)
 
     def request(self, cmd, timeout=10):
         logger.debug(self.dbg + ": CTRL(global): " + cmd)
@@ -133,6 +145,20 @@ class Hostapd:
         self.mon.attach()
         self.bssid = None
         self.bssidx = bssidx
+
+    def cmd_execute(self, cmd_array):
+        if self.hostname is None:
+            cmd = ""
+            for arg in cmd_array:
+                cmd += arg + " "
+            cmd = cmd.strip()
+            proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
+                                    stdout=subprocess.PIPE, shell=True)
+            out = proc.communicate()[0]
+            ret = proc.returncode
+            return ret, out
+        else:
+            return self.host.execute(cmd_array)
 
     def close_ctrl(self):
         if self.mon is not None:
@@ -561,3 +587,7 @@ def ht40_minus_params(channel="1", ssid=None, country=None):
     params = ht20_params(channel, ssid, country)
     params['ht_capab'] = "[HT40-]"
     return params
+
+def cmd_execute(apdev, cmd):
+    hapd_global = HostapdGlobal(apdev)
+    return hapd_global.cmd_execute(cmd)

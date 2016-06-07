@@ -12,6 +12,7 @@ import re
 import struct
 import wpaspy
 import remotehost
+import subprocess
 
 logger = logging.getLogger()
 wpas_ctrl = '/var/run/wpa_supplicant'
@@ -47,6 +48,17 @@ class WpaSupplicant:
             self.global_mon.attach()
         else:
             self.global_mon = None
+
+    def cmd_execute(self, cmd_array):
+        if self.hostname is None:
+            cmd = ' '.join(cmd_array)
+            proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
+                                    stdout=subprocess.PIPE, shell=True)
+            out = proc.communicate()[0]
+            ret = proc.returncode
+            return ret, out
+        else:
+            return self.host.execute(cmd_array)
 
     def terminate(self):
         if self.global_mon:

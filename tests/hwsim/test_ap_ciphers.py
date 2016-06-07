@@ -72,7 +72,7 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by AP)"""
     skip_with_fips(dev[0])
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (dev[0].get_driver_status_field("phyname"), dev[0].ifname)
-    if not os.path.exists(testfile):
+    if dev[0].cmd_execute([ "ls", testfile ])[0] != 0:
         raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     params = { "ssid": "tkip-countermeasures",
@@ -86,14 +86,12 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
 
     dev[0].dump_monitor()
-    with open(testfile, "w") as f:
-        f.write(apdev[0]['bssid'])
+    dev[0].cmd_execute([ "echo", "-n", apdev[0]['bssid'], ">", testfile ])
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
-    with open(testfile, "w") as f:
-        f.write("ff:ff:ff:ff:ff:ff")
+    dev[0].cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ])
     ev = dev[0].wait_disconnected(timeout=10,
                                   error="No disconnection after two Michael MIC failures")
     if "reason=14" not in ev:
@@ -113,21 +111,19 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
 
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
-    if not os.path.exists(testfile):
+    if hapd.cmd_execute([ "ls", testfile ])[0] != 0:
         raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     dev[0].connect("tkip-countermeasures", psk="12345678",
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
 
     dev[0].dump_monitor()
-    with open(testfile, "w") as f:
-        f.write(dev[0].own_addr())
+    hapd.cmd_execute([ "echo", "-n", dev[0].own_addr(), ">", testfile ])
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
-    with open(testfile, "w") as f:
-        f.write("ff:ff:ff:ff:ff:ff")
+    hapd.cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ])
     ev = dev[0].wait_disconnected(timeout=10,
                                   error="No disconnection after two Michael MIC failures")
     if "reason=14 locally_generated=1" not in ev:

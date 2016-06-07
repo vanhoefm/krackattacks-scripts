@@ -8,7 +8,6 @@ import time
 import logging
 logger = logging.getLogger()
 import struct
-import subprocess
 
 import hostapd
 from utils import HwsimSkip, alloc_fail
@@ -17,10 +16,11 @@ from test_ap_csa import csa_supported
 
 def clear_scan_cache(apdev):
     ifname = apdev['ifname']
-    subprocess.call(['ifconfig', ifname, 'up'])
-    subprocess.call(['iw', ifname, 'scan', 'trigger', 'freq', '2412', 'flush'])
+    hostapd.cmd_execute(apdev, ['ifconfig', ifname, 'up'])
+    hostapd.cmd_execute(apdev, ['iw', ifname, 'scan', 'trigger', 'freq', '2412',
+                                'flush'])
     time.sleep(0.1)
-    subprocess.call(['ifconfig', ifname, 'down'])
+    hostapd.cmd_execute(apdev, ['ifconfig', ifname, 'down'])
 
 def set_world_reg(apdev0=None, apdev1=None, dev0=None):
     if apdev0:

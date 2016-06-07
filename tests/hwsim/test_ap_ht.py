@@ -22,6 +22,14 @@ def clear_scan_cache(apdev):
     time.sleep(0.1)
     subprocess.call(['ifconfig', ifname, 'down'])
 
+def set_world_reg(apdev0=None, apdev1=None, dev0=None):
+    if apdev0:
+        hostapd.cmd_execute(apdev0, ['iw', 'reg', 'set', '00'])
+    if apdev1:
+        hostapd.cmd_execute(apdev1, ['iw', 'reg', 'set', '00'])
+    if dev0:
+        dev0.cmd_execute(['iw', 'reg', 'set', '00'])
+
 def test_ap_ht40_scan(dev, apdev):
     """HT40 co-ex scan"""
     clear_scan_cache(apdev[0])
@@ -393,7 +401,7 @@ def test_ap_ht40_5ghz_match(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], apdev[1], dev[0])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_5ghz_switch(dev, apdev):
@@ -447,7 +455,7 @@ def test_ap_ht40_5ghz_switch(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], apdev[1], dev[0])
 
 def test_ap_ht40_5ghz_switch2(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
@@ -509,7 +517,7 @@ def test_ap_ht40_5ghz_switch2(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], apdev[1], dev[0])
         dev[0].flush_scan_cache()
 
 def test_obss_scan(dev, apdev):
@@ -756,7 +764,7 @@ def test_olbc_5ghz(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], apdev[1], None)
 
 def test_ap_require_ht(dev, apdev):
     """Require HT"""
@@ -929,7 +937,7 @@ def test_ap_ht40_csa(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], None, dev[0])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa2(dev, apdev):
@@ -973,7 +981,7 @@ def test_ap_ht40_csa2(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], None, dev[0])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa3(dev, apdev):
@@ -1017,7 +1025,7 @@ def test_ap_ht40_csa3(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], None, dev[0])
         dev[0].flush_scan_cache()
 
 def test_ap_ht_smps(dev, apdev):
@@ -1131,7 +1139,7 @@ def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
             if sec != "0":
                 raise Exception("Invalid 40 MHz channel accepted")
     finally:
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], None, None)
 
 def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
     """HT40 on 5 GHz with disabled secondary channel"""
@@ -1151,7 +1159,7 @@ def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
             if sec != "0":
                 raise Exception("Invalid 40 MHz channel accepted")
     finally:
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        set_world_reg(apdev[0], None, None)
 
 def test_ap_ht40_scan_broken_ap(dev, apdev):
     """HT40 co-ex scan and broken legacy/HT AP"""

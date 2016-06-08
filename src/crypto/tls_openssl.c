@@ -729,10 +729,16 @@ static int tls_engine_load_dynamic_generic(const char *pre[],
 
 	engine = ENGINE_by_id(id);
 	if (engine) {
-		ENGINE_free(engine);
 		wpa_printf(MSG_DEBUG, "ENGINE: engine '%s' is already "
 			   "available", id);
-		return 0;
+		/*
+		 * If it was auto-loaded by ENGINE_by_id() we might still
+		 * need to tell it which PKCS#11 module to use in legacy
+		 * (non-p11-kit) environments. Do so now; even if it was
+		 * properly initialised before, setting it again will be
+		 * harmless.
+		 */
+		goto found;
 	}
 	ERR_clear_error();
 
@@ -769,7 +775,7 @@ static int tls_engine_load_dynamic_generic(const char *pre[],
 			   id, ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
-
+ found:
 	while (post && post[0]) {
 		wpa_printf(MSG_DEBUG, "ENGINE: '%s' '%s'", post[0], post[1]);
 		if (ENGINE_ctrl_cmd_string(engine, post[0], post[1], 0) == 0) {

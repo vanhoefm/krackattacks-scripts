@@ -9,11 +9,13 @@ import time
 import binascii
 import logging
 logger = logging.getLogger()
+import os
 import re
 import struct
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from tshark import run_tshark
 from utils import alloc_fail, skip_with_fips
 from hwsim import HWSimRadio
 
@@ -1048,3 +1050,189 @@ def test_gas_anqp_extra_elements(dev, apdev):
         raise Exception("ANQP-element Info ID 292 not seen")
     if bss['anqp_ip_addr_type_availability'] != "1122334455":
         raise Exception("Unexpected AP ANQP-element Info ID 262 value: " + bss['anqp_ip_addr_type_availability'])
+
+def test_gas_anqp_address3_not_assoc(dev, apdev, params):
+    """GAS/ANQP query using IEEE 802.11 compliant Address 3 value when not associated"""
+    try:
+        _test_gas_anqp_address3_not_assoc(dev, apdev, params)
+    finally:
+        dev[0].request("SET gas_address3 0")
+
+def _test_gas_anqp_address3_not_assoc(dev, apdev, params):
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    if "OK" not in dev[0].request("SET gas_address3 1"):
+        raise Exception("Failed to set gas_address3")
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Venue Name" not in ev:
+        raise Exception("Did not receive Venue Name")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan_mgt.fixed.category_code == 4 && (wlan_mgt.fixed.publicact == 0x0a || wlan_mgt.fixed.publicact == 0x0b)",
+                     display=["wlan.bssid"])
+    res = out.splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected number of GAS frames")
+    if res[0] != 'ff:ff:ff:ff:ff:ff':
+        raise Exception("GAS request used unexpected Address3 field value: " + res[0])
+    if res[1] != 'ff:ff:ff:ff:ff:ff':
+        raise Exception("GAS response used unexpected Address3 field value: " + res[1])
+
+def test_gas_anqp_address3_assoc(dev, apdev, params):
+    """GAS/ANQP query using IEEE 802.11 compliant Address 3 value when associated"""
+    try:
+        _test_gas_anqp_address3_assoc(dev, apdev, params)
+    finally:
+        dev[0].request("SET gas_address3 0")
+
+def _test_gas_anqp_address3_assoc(dev, apdev, params):
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    if "OK" not in dev[0].request("SET gas_address3 1"):
+        raise Exception("Failed to set gas_address3")
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("test-gas", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem", scan_freq="2412")
+
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Venue Name" not in ev:
+        raise Exception("Did not receive Venue Name")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan_mgt.fixed.category_code == 4 && (wlan_mgt.fixed.publicact == 0x0a || wlan_mgt.fixed.publicact == 0x0b)",
+                     display=["wlan.bssid"])
+    res = out.splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected number of GAS frames")
+    if res[0] != bssid:
+        raise Exception("GAS request used unexpected Address3 field value: " + res[0])
+    if res[1] != bssid:
+        raise Exception("GAS response used unexpected Address3 field value: " + res[1])
+
+def test_gas_anqp_address3_ap_forced(dev, apdev, params):
+    """GAS/ANQP query using IEEE 802.11 compliant Address 3 value on AP"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+    hapd.set("gas_address3", "1")
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Venue Name" not in ev:
+        raise Exception("Did not receive Venue Name")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan_mgt.fixed.category_code == 4 && (wlan_mgt.fixed.publicact == 0x0a || wlan_mgt.fixed.publicact == 0x0b)",
+                     display=["wlan.bssid"])
+    res = out.splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected number of GAS frames")
+    if res[0] != bssid:
+        raise Exception("GAS request used unexpected Address3 field value: " + res[0])
+    if res[1] != 'ff:ff:ff:ff:ff:ff':
+        raise Exception("GAS response used unexpected Address3 field value: " + res[1])
+
+def test_gas_anqp_address3_ap_non_compliant(dev, apdev, params):
+    """GAS/ANQP query using IEEE 802.11 non-compliant Address 3 (AP)"""
+    try:
+        _test_gas_anqp_address3_ap_non_compliant(dev, apdev, params)
+    finally:
+        dev[0].request("SET gas_address3 0")
+
+def _test_gas_anqp_address3_ap_non_compliant(dev, apdev, params):
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+    hapd.set("gas_address3", "2")
+
+    if "OK" not in dev[0].request("SET gas_address3 1"):
+        raise Exception("Failed to set gas_address3")
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Venue Name" not in ev:
+        raise Exception("Did not receive Venue Name")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan_mgt.fixed.category_code == 4 && (wlan_mgt.fixed.publicact == 0x0a || wlan_mgt.fixed.publicact == 0x0b)",
+                     display=["wlan.bssid"])
+    res = out.splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected number of GAS frames")
+    if res[0] != 'ff:ff:ff:ff:ff:ff':
+        raise Exception("GAS request used unexpected Address3 field value: " + res[0])
+    if res[1] != bssid:
+        raise Exception("GAS response used unexpected Address3 field value: " + res[1])

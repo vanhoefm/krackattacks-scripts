@@ -1166,7 +1166,8 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 
 static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 					  const u8 *sa, u8 dialog_token,
-					  struct anqp_query_info *qi, int prot)
+					  struct anqp_query_info *qi, int prot,
+					  int std_addr3)
 {
 	struct wpabuf *buf, *tx_buf;
 
@@ -1227,15 +1228,22 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 		return;
 	if (prot)
 		convert_to_protected_dual(tx_buf);
-	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
-				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
+	if (std_addr3)
+		hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
+					wpabuf_head(tx_buf),
+					wpabuf_len(tx_buf));
+	else
+		hostapd_drv_send_action_addr3_ap(hapd, hapd->iface->freq, 0, sa,
+						 wpabuf_head(tx_buf),
+						 wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
 }
 
 
 static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 					const u8 *sa,
-					const u8 *data, size_t len, int prot)
+					const u8 *data, size_t len, int prot,
+					int std_addr3)
 {
 	const u8 *pos = data;
 	const u8 *end = data + len;
@@ -1287,8 +1295,15 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, 0); /* Query Response Length */
 		if (prot)
 			convert_to_protected_dual(buf);
-		hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
-					wpabuf_head(buf), wpabuf_len(buf));
+		if (std_addr3)
+			hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
+						wpabuf_head(buf),
+						wpabuf_len(buf));
+		else
+			hostapd_drv_send_action_addr3_ap(hapd,
+							 hapd->iface->freq, 0,
+							 sa, wpabuf_head(buf),
+							 wpabuf_len(buf));
 		wpabuf_free(buf);
 		return;
 	}
@@ -1338,13 +1353,15 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		pos += elen;
 	}
 
-	gas_serv_req_local_processing(hapd, sa, dialog_token, &qi, prot);
+	gas_serv_req_local_processing(hapd, sa, dialog_token, &qi, prot,
+				      std_addr3);
 }
 
 
 static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 					 const u8 *sa,
-					 const u8 *data, size_t len, int prot)
+					 const u8 *data, size_t len, int prot,
+					 int std_addr3)
 {
 	struct gas_dialog_info *dialog;
 	struct wpabuf *buf, *tx_buf;
@@ -1420,8 +1437,14 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 send_resp:
 	if (prot)
 		convert_to_protected_dual(tx_buf);
-	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
-				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
+	if (std_addr3)
+		hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
+					wpabuf_head(tx_buf),
+					wpabuf_len(tx_buf));
+	else
+		hostapd_drv_send_action_addr3_ap(hapd, hapd->iface->freq, 0, sa,
+						 wpabuf_head(tx_buf),
+						 wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
 }
 
@@ -1432,7 +1455,7 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	struct hostapd_data *hapd = ctx;
 	const struct ieee80211_mgmt *mgmt;
 	const u8 *sa, *data;
-	int prot;
+	int prot, std_addr3;
 
 	mgmt = (const struct ieee80211_mgmt *) buf;
 	if (len < IEEE80211_HDRLEN + 2)
@@ -1447,14 +1470,17 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	 */
 	prot = mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL;
 	sa = mgmt->sa;
+	std_addr3 = is_broadcast_ether_addr(mgmt->bssid);
 	len -= IEEE80211_HDRLEN + 1;
 	data = buf + IEEE80211_HDRLEN + 1;
 	switch (data[0]) {
 	case WLAN_PA_GAS_INITIAL_REQ:
-		gas_serv_rx_gas_initial_req(hapd, sa, data + 1, len - 1, prot);
+		gas_serv_rx_gas_initial_req(hapd, sa, data + 1, len - 1, prot,
+					    std_addr3);
 		break;
 	case WLAN_PA_GAS_COMEBACK_REQ:
-		gas_serv_rx_gas_comeback_req(hapd, sa, data + 1, len - 1, prot);
+		gas_serv_rx_gas_comeback_req(hapd, sa, data + 1, len - 1, prot,
+					     std_addr3);
 		break;
 	}
 }

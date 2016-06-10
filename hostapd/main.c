@@ -251,7 +251,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
  * interfaces. No actiual driver operations are started.
  */
 static struct hostapd_iface *
-hostapd_interface_init(struct hapd_interfaces *interfaces,
+hostapd_interface_init(struct hapd_interfaces *interfaces, const char *if_name,
 		       const char *config_fname, int debug)
 {
 	struct hostapd_iface *iface;
@@ -261,6 +261,12 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 	iface = hostapd_init(interfaces, config_fname);
 	if (!iface)
 		return NULL;
+
+	if (if_name) {
+		os_strlcpy(iface->conf->bss[0]->iface, if_name,
+			   sizeof(iface->conf->bss[0]->iface));
+	}
+
 	iface->interfaces = interfaces;
 
 	for (k = 0; k < debug; k++) {
@@ -270,7 +276,8 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 
 	if (iface->conf->bss[0]->iface[0] == '\0' &&
 	    !hostapd_drv_none(iface->bss[0])) {
-		wpa_printf(MSG_ERROR, "Interface name not specified in %s",
+		wpa_printf(MSG_ERROR,
+			   "Interface name not specified in %s, nor by '-i' parameter",
 			   config_fname);
 		hostapd_interface_deinit_free(iface);
 		return NULL;
@@ -456,7 +463,8 @@ static void usage(void)
 		"\n"
 		"usage: hostapd [-hdBKtv] [-P <PID file>] [-e <entropy file>] "
 		"\\\n"
-		"         [-g <global ctrl_iface>] [-G <group>] \\\n"
+		"         [-g <global ctrl_iface>] [-G <group>]\\\n"
+		"         [-i <comma-separated list of interface names>]\\\n"
 		"         <configuration file(s)>\n"
 		"\n"
 		"options:\n"
@@ -475,6 +483,7 @@ static void usage(void)
 		"   -T = record to Linux tracing in addition to logging\n"
 		"        (records all messages regardless of debug verbosity)\n"
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
+		"   -i   list of interface names to use\n"
 		"   -S   start all the interfaces synchronously\n"
 		"   -t   include timestamps in some debug messages\n"
 		"   -v   show hostapd version\n");
@@ -538,6 +547,43 @@ static int hostapd_get_ctrl_iface_group(struct hapd_interfaces *interfaces,
 }
 
 
+static int hostapd_get_interface_names(char ***if_names,
+				       size_t *if_names_size,
+				       char *optarg)
+{
+	char *if_name, *tmp, **nnames;
+	size_t i;
+
+	if (!optarg)
+		return -1;
+	if_name = strtok_r(optarg, ",", &tmp);
+
+	while (if_name) {
+		nnames = os_realloc_array(*if_names, 1 + *if_names_size,
+					  sizeof(char *));
+		if (!nnames)
+			goto fail;
+		*if_names = nnames;
+
+		(*if_names)[*if_names_size] = os_strdup(if_name);
+		if (!(*if_names)[*if_names_size])
+			goto fail;
+		(*if_names_size)++;
+		if_name = strtok_r(NULL, ",", &tmp);
+	}
+
+	return 0;
+
+fail:
+	for (i = 0; i < *if_names_size; i++)
+		os_free((*if_names)[i]);
+	os_free(*if_names);
+	*if_names = NULL;
+	*if_names_size = 0;
+	return -1;
+}
+
+
 #ifdef CONFIG_WPS
 static int gen_uuid(const char *txt_addr)
 {
@@ -596,6 +642,8 @@ int main(int argc, char *argv[])
 	int enable_trace_dbg = 0;
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
 	int start_ifaces_in_sync = 0;
+	char **if_names = NULL;
+	size_t if_names_size = 0;
 
 	if (os_program_init())
 		return -1;
@@ -613,7 +661,7 @@ int main(int argc, char *argv[])
 	dl_list_init(&interfaces.global_ctrl_dst);
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bde:f:hKP:STtu:vg:G:");
+		c = getopt(argc, argv, "b:Bde:f:hi:KP:STtu:vg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -677,6 +725,11 @@ int main(int argc, char *argv[])
 		case 'u':
 			return gen_uuid(optarg);
 #endif /* CONFIG_WPS */
+		case 'i':
+			if (hostapd_get_interface_names(&if_names,
+							&if_names_size, optarg))
+				goto out;
+			break;
 		default:
 			usage();
 			break;
@@ -734,7 +787,13 @@ int main(int argc, char *argv[])
 
 	/* Allocate and parse configuration for full interface files */
 	for (i = 0; i < interfaces.count; i++) {
+		char *if_name = NULL;
+
+		if (i < if_names_size)
+			if_name = if_names[i];
+
 		interfaces.iface[i] = hostapd_interface_init(&interfaces,
+							     if_name,
 							     argv[optind + i],
 							     debug);
 		if (!interfaces.iface[i]) {
@@ -828,6 +887,10 @@ int main(int argc, char *argv[])
 	wpa_debug_close_linux_tracing();
 
 	os_free(bss_config);
+
+	for (i = 0; i < if_names_size; i++)
+		os_free(if_names[i]);
+	os_free(if_names);
 
 	fst_global_deinit();
 

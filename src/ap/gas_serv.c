@@ -1470,7 +1470,12 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	 */
 	prot = mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL;
 	sa = mgmt->sa;
-	std_addr3 = is_broadcast_ether_addr(mgmt->bssid);
+	if (hapd->conf->gas_address3 == 1)
+		std_addr3 = 1;
+	else if (hapd->conf->gas_address3 == 2)
+		std_addr3 = 0;
+	else
+		std_addr3 = is_broadcast_ether_addr(mgmt->bssid);
 	len -= IEEE80211_HDRLEN + 1;
 	data = buf + IEEE80211_HDRLEN + 1;
 	switch (data[0]) {

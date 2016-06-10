@@ -1336,6 +1336,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "mbo_cell_capa=%u\n", config->mbo_cell_capa);
 #endif /* CONFIG_MBO */
 
+	if (config->gas_address3)
+		fprintf(f, "gas_address3=%d\n", config->gas_address3);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

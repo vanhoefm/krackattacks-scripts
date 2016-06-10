@@ -4368,6 +4368,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(mbo_cell_capa, MBO_CELL_CAPA_AVAILABLE,
 		    MBO_CELL_CAPA_NOT_SUPPORTED), 0 },
 #endif /*CONFIG_MBO */
+	{ INT(gas_address3), 0 },
 };
 
 #undef FUNC

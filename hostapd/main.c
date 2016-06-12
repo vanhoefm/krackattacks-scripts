@@ -339,6 +339,7 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces,
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		return -1;
 	}
+	interfaces->eloop_initialized = 1;
 
 	random_init(entropy_file);
 
@@ -366,7 +367,7 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces,
 }
 
 
-static void hostapd_global_deinit(const char *pid_file)
+static void hostapd_global_deinit(const char *pid_file, int eloop_initialized)
 {
 	int i;
 
@@ -384,7 +385,8 @@ static void hostapd_global_deinit(const char *pid_file)
 
 	random_deinit();
 
-	eloop_destroy();
+	if (eloop_initialized)
+		eloop_destroy();
 
 #ifndef CONFIG_NATIVE_WINDOWS
 	closelog();
@@ -816,8 +818,9 @@ int main(int argc, char *argv[])
 	}
 	os_free(interfaces.iface);
 
-	eloop_cancel_timeout(hostapd_periodic, &interfaces, NULL);
-	hostapd_global_deinit(pid_file);
+	if (interfaces.eloop_initialized)
+		eloop_cancel_timeout(hostapd_periodic, &interfaces, NULL);
+	hostapd_global_deinit(pid_file, interfaces.eloop_initialized);
 	os_free(pid_file);
 
 	if (log_file)

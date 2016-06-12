@@ -53,6 +53,7 @@ struct hapd_interfaces {
 #ifndef CONFIG_NO_VLAN
 	struct dynamic_iface *vlan_priv;
 #endif /* CONFIG_NO_VLAN */
+	int eloop_initialized;
 };
 
 enum hostapd_chan_status {

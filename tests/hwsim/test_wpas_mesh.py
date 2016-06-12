@@ -515,7 +515,7 @@ def test_wpas_mesh_dynamic_interface(dev):
         if mesh1:
             dev[1].request("MESH_GROUP_REMOVE " + mesh1)
 
-def test_wpas_mesh_max_peering(dev, apdev):
+def test_wpas_mesh_max_peering(dev, apdev, params):
     """Mesh max peering limit"""
     check_mesh_support(dev[0])
     try:
@@ -550,6 +550,40 @@ def test_wpas_mesh_max_peering(dev, apdev):
             check_mesh_group_removed(dev[i])
     finally:
         dev[0].request("SET max_peer_links 99")
+
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    addr2 = dev[2].own_addr()
+
+    capfile = os.path.join(params['logdir'], "hwsim0.pcapng")
+    filt = "wlan.fc.type_subtype == 8"
+    out = run_tshark(capfile, filt, [ "wlan.sa", "wlan.mesh.config.cap" ])
+    pkts = out.splitlines()
+    one = [ 0, 0, 0 ]
+    zero = [ 0, 0, 0 ]
+    for pkt in pkts:
+        addr, cap = pkt.split('\t')
+        cap = int(cap, 16)
+        if addr == addr0:
+            idx = 0
+        elif addr == addr1:
+            idx = 1
+        elif addr == addr2:
+            idx = 2
+        else:
+            continue
+        if cap & 0x01:
+            one[idx] += 1
+        else:
+            zero[idx] += 1
+    logger.info("one: " + str(one))
+    logger.info("zero: " + str(zero))
+    if zero[0] == 0:
+        raise Exception("Accepting Additional Mesh Peerings not cleared")
+    if one[0] == 0:
+        raise Exception("Accepting Additional Mesh Peerings was not set in the first Beacon frame")
+    if zero[1] > 0 or zero[2] > 0 or one[1] == 0 or one[2] == 0:
+        raise Exception("Unexpected value in Accepting Additional Mesh Peerings from other STAs")
 
 def test_wpas_mesh_open_5ghz(dev, apdev):
     """wpa_supplicant open MESH network on 5 GHz band"""

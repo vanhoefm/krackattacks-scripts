@@ -1224,6 +1224,22 @@ def test_mesh_sae_groups_invalid(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection(1)")
 
+    # Additional coverage in mesh_rsn_sae_group() with non-zero
+    # wpa_s->mesh_rsn->sae_group_index.
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    id = add_mesh_secure_net(dev[2])
+    dev[2].mesh_group_add(id)
+    check_mesh_group_added(dev[2])
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[2])
+    ev = dev[1].wait_event(["new peer notification"], timeout=10)
+    if ev is None:
+        raise Exception("dev[1] did not see peer(2)")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[2].dump_monitor()
+
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
 

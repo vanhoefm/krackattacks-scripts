@@ -857,10 +857,8 @@ static void parse_cert(struct http_ctx *ctx, struct http_cert *hcert,
 	os_memset(hcert, 0, sizeof(*hcert));
 
 	*names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-	if (*names) {
+	if (*names)
 		add_alt_names(ctx, hcert, *names);
-		sk_GENERAL_NAME_pop_free(*names, GENERAL_NAME_free);
-	}
 
 	add_logotype_ext(ctx, hcert, cert);
 }

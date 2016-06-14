@@ -96,7 +96,8 @@ else
   putenv("HS20USER");
 
 putenv("HS20REALM=$realm");
-putenv("HS20POST=$HTTP_RAW_POST_DATA");
+$postdata = file_get_contents("php://input");
+putenv("HS20POST=$postdata");
 $addr = $_SERVER["REMOTE_ADDR"];
 putenv("HS20ADDR=$addr");
 

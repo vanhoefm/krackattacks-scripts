@@ -290,7 +290,8 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		/* TODO: Add Connected to Mesh Gate/AS subfields */
 		wpabuf_put_u8(buf, info);
 		/* always forwarding & accepting plinks for now */
-		wpabuf_put_u8(buf, 0x1 | 0x8);
+		wpabuf_put_u8(buf, MESH_CAP_ACCEPT_ADDITIONAL_PEER |
+			      MESH_CAP_FORWARDING);
 	} else {	/* Peer closing frame */
 		/* IE: Mesh ID */
 		wpabuf_put_u8(buf, WLAN_EID_MESH_ID);

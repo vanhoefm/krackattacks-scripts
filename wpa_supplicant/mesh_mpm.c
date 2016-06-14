@@ -649,6 +649,14 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 	struct sta_info *sta;
 	int ret;
 
+	if (elems->mesh_config_len >= 7 &&
+	    !(elems->mesh_config[6] & MESH_CAP_ACCEPT_ADDITIONAL_PEER)) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"mesh: Ignore a crowded peer " MACSTR,
+			MAC2STR(addr));
+		return NULL;
+	}
+
 	sta = ap_get_sta(data, addr);
 	if (!sta) {
 		sta = ap_sta_add(data, addr);

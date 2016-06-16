@@ -1422,6 +1422,9 @@ def test_mesh_missing_mic(dev, apdev):
             raise Exception("Did not see Action frames")
         rx_msg = dev[0].mgmt_rx()
         if rx_msg is None:
+            ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.01)
+            if ev:
+                break
             raise Exception("MGMT-RX timeout")
         if rx_msg['subtype'] == 13:
             payload = rx_msg['payload']

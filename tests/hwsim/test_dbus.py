@@ -492,6 +492,13 @@ def test_dbus_wps_oom(dev, apdev):
     with alloc_fail_dbus(dev[0], 1, "=wpas_dbus_getter_bss_rates", "Get"):
         bss_obj.Get(WPAS_DBUS_BSS, "Rates",
                     dbus_interface=dbus.PROPERTIES_IFACE)
+    with alloc_fail(dev[0], 1,
+                    "wpa_bss_get_bit_rates;wpas_dbus_getter_bss_rates"):
+        try:
+            bss_obj.Get(WPAS_DBUS_BSS, "Rates",
+                        dbus_interface=dbus.PROPERTIES_IFACE)
+        except dbus.exceptions.DBusException, e:
+            pass
 
     id = dev[0].add_network()
     dev[0].set_network(id, "disabled", "0")

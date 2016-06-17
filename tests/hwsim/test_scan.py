@@ -1092,6 +1092,10 @@ def test_scan_fail(dev, apdev):
     wpas.request("SET preassoc_mac_addr 0")
     wpas.dump_monitor()
 
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    with alloc_fail(dev[0], 1, "wpa_bss_add"):
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+
 def test_scan_freq_list(dev, apdev):
     """Scan with SET freq_list and scan_cur_freq"""
     try:
@@ -1111,3 +1115,23 @@ def test_scan_freq_list(dev, apdev):
         dev[0].request("SET scan_cur_freq 0")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_scan_bss_limit(dev, apdev):
+    """Scan and wpa_supplicant BSS entry limit"""
+    try:
+        _test_scan_bss_limit(dev, apdev)
+    finally:
+        dev[0].request("SET bss_max_count 200")
+        pass
+
+def _test_scan_bss_limit(dev, apdev):
+    # Trigger 'Increasing the MAX BSS count to 2 because all BSSes are in use.
+    # We should normally not get here!' message by limiting the maximum BSS
+    # count to one so that the second AP would not fit in the BSS list and the
+    # first AP cannot be removed from the list since it is still in use.
+    dev[0].request("SET bss_max_count 1")
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412")
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "test-scan-2",
+                                       "channel": "6" })
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2437, force_scan=True)

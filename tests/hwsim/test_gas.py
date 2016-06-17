@@ -16,7 +16,7 @@ import struct
 import hostapd
 from wpasupplicant import WpaSupplicant
 from tshark import run_tshark
-from utils import alloc_fail, skip_with_fips
+from utils import alloc_fail, wait_fail_trigger, skip_with_fips
 from hwsim import HWSimRadio
 
 def hs20_ap_params():
@@ -917,6 +917,13 @@ def test_gas_anqp_oom_wpas(dev, apdev):
     bssid = apdev[0]['bssid']
 
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+
+    with alloc_fail(dev[0], 1, "wpa_bss_anqp_alloc"):
+        if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+            raise Exception("ANQP_GET command failed")
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+        if ev is None:
+            raise Exception("ANQP query did not complete")
 
     with alloc_fail(dev[0], 1, "gas_build_req"):
         if "FAIL" not in dev[0].request("ANQP_GET " + bssid + " 258"):

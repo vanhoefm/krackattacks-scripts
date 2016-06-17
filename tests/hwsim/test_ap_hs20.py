@@ -17,7 +17,7 @@ import socket
 import subprocess
 
 import hostapd
-from utils import HwsimSkip, skip_with_fips
+from utils import HwsimSkip, skip_with_fips, alloc_fail
 import hwsim_utils
 from tshark import run_tshark
 from wlantest import Wlantest
@@ -211,6 +211,37 @@ def test_ap_anqp_sharing(dev, apdev):
     res2 = dev[0].get_bss(bssid2)
     if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
         raise Exception("ANQP results were not unshared")
+
+def test_ap_anqp_sharing_oom(dev, apdev):
+    """ANQP sharing within ESS and explicit unshare OOM"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].flush_scan_cache()
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    interworking_select(dev[0], None, "home", freq="2412")
+    dev[0].dump_monitor()
+
+    with alloc_fail(dev[0], 1, "wpa_bss_anqp_clone"):
+        dev[0].request("ANQP_GET " + bssid + " 263")
+        ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+        if ev is None:
+            raise Exception("ANQP operation timed out")
 
 def test_ap_nai_home_realm_query(dev, apdev):
     """NAI Home Realm Query"""

@@ -9469,3 +9469,76 @@ def test_ap_wps_eap_wsc(dev, apdev):
         raise Exception("No EAP-Failure seen")
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
+
+def test_ap_wps_and_bss_limit(dev, apdev):
+    """WPS and wpa_supplicant BSS entry limit"""
+    try:
+        _test_ap_wps_and_bss_limit(dev, apdev)
+    finally:
+        dev[0].request("SET bss_max_count 200")
+        pass
+
+def _test_ap_wps_and_bss_limit(dev, apdev):
+    params = { "ssid": "test-wps", "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    params = { "ssid": "test-wps-2", "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "1234567890", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" }
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    id = dev[1].add_network()
+    dev[1].set_network(id, "mode", "2")
+    dev[1].set_network_quoted(id, "ssid", "wpas-ap-no-wps")
+    dev[1].set_network_quoted(id, "psk", "12345678")
+    dev[1].set_network(id, "frequency", "2462")
+    dev[1].set_network(id, "scan_freq", "2462")
+    dev[1].set_network(id, "wps_disabled", "1")
+    dev[1].select_network(id)
+
+    id = dev[2].add_network()
+    dev[2].set_network(id, "mode", "2")
+    dev[2].set_network_quoted(id, "ssid", "wpas-ap")
+    dev[2].set_network_quoted(id, "psk", "12345678")
+    dev[2].set_network(id, "frequency", "2437")
+    dev[2].set_network(id, "scan_freq", "2437")
+    dev[2].select_network(id)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    id = wpas.add_network()
+    wpas.set_network(id, "mode", "2")
+    wpas.set_network_quoted(id, "ssid", "wpas-ap")
+    wpas.set_network_quoted(id, "psk", "12345678")
+    wpas.set_network(id, "frequency", "2437")
+    wpas.set_network(id, "scan_freq", "2437")
+    wpas.select_network(id)
+
+    dev[1].wait_connected()
+    dev[2].wait_connected()
+    wpas.wait_connected()
+    wpas.request("WPS_PIN any 12345670")
+
+    hapd.request("WPS_PBC")
+    hapd2.request("WPS_PBC")
+
+    dev[0].request("SET bss_max_count 1")
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "testing")
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "testing")
+    dev[0].set_network(id, "key_mgmt", "WPS")
+
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    dev[0].request("WPS_CANCEL")
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "testing")
+    dev[0].set_network(id, "key_mgmt", "WPS")
+
+    dev[0].scan(freq="2412")

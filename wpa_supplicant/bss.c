@@ -338,6 +338,7 @@ static int wpa_bss_is_wps_candidate(struct wpa_supplicant *wpa_s,
 		wpabuf_free(wps_ie);
 		return ret;
 	}
+	wpabuf_free(wps_ie);
 #endif /* CONFIG_WPS */
 
 	return 0;

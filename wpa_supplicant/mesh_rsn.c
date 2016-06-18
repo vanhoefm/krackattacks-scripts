@@ -363,18 +363,27 @@ mesh_rsn_derive_aek(struct mesh_rsn *rsn, struct sta_info *sta)
 {
 	u8 *myaddr = rsn->wpa_s->own_addr;
 	u8 *peer = sta->addr;
-	u8 *addr1 = peer, *addr2 = myaddr;
-	u8 context[AES_BLOCK_SIZE];
+	u8 *addr1, *addr2;
+	u8 context[RSN_SELECTOR_LEN + 2 * ETH_ALEN], *ptr = context;
 
+	/*
+	 * AEK = KDF-Hash-256(PMK, "AEK Derivation", Selected AKM Suite ||
+	 *       min(localMAC, peerMAC) || max(localMAC, peerMAC))
+	 */
 	/* Selected AKM Suite: SAE */
-	RSN_SELECTOR_PUT(context, RSN_AUTH_KEY_MGMT_SAE);
+	RSN_SELECTOR_PUT(ptr, RSN_AUTH_KEY_MGMT_SAE);
+	ptr += RSN_SELECTOR_LEN;
 
 	if (os_memcmp(myaddr, peer, ETH_ALEN) < 0) {
 		addr1 = myaddr;
 		addr2 = peer;
+	} else {
+		addr1 = peer;
+		addr2 = myaddr;
 	}
-	os_memcpy(context + 4, addr1, ETH_ALEN);
-	os_memcpy(context + 10, addr2, ETH_ALEN);
+	os_memcpy(ptr, addr1, ETH_ALEN);
+	ptr += ETH_ALEN;
+	os_memcpy(ptr, addr2, ETH_ALEN);
 
 	sha256_prf(sta->sae->pmk, sizeof(sta->sae->pmk), "AEK Derivation",
 		   context, sizeof(context), sta->aek, sizeof(sta->aek));

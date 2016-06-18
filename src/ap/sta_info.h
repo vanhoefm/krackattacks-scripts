@@ -89,6 +89,8 @@ struct sta_info {
 	size_t mtk_len;
 	u8 mgtk[WPA_TK_MAX_LEN];
 	size_t mgtk_len;
+	u8 igtk[WPA_TK_MAX_LEN];
+	size_t igtk_len;
 	u8 sae_auth_retry;
 #endif /* CONFIG_MESH */
 

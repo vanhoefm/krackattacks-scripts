@@ -805,9 +805,15 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 1, 0,
 				seq, sizeof(seq),
 				sta->mgtk, sta->mgtk_len);
-		wpa_drv_set_key(wpa_s, WPA_ALG_IGTK, sta->addr, 4, 0,
-				seq, sizeof(seq),
-				sta->mgtk, sizeof(sta->mgtk));
+
+		if (sta->igtk_len) {
+			wpa_hexdump_key(MSG_DEBUG, "RX IGTK",
+					sta->igtk, sta->igtk_len);
+			/* FIX: key index.. */
+			wpa_drv_set_key(wpa_s, WPA_ALG_IGTK, sta->addr, 4, 0,
+					seq, sizeof(seq),
+					sta->igtk, sta->igtk_len);
+		}
 	}
 
 	wpa_mesh_set_plink_state(wpa_s, sta, PLINK_ESTAB);

@@ -366,8 +366,8 @@ mesh_rsn_derive_aek(struct mesh_rsn *rsn, struct sta_info *sta)
 	u8 *addr1 = peer, *addr2 = myaddr;
 	u8 context[AES_BLOCK_SIZE];
 
-	/* SAE */
-	RSN_SELECTOR_PUT(context, wpa_cipher_to_suite(0, WPA_CIPHER_GCMP));
+	/* Selected AKM Suite: SAE */
+	RSN_SELECTOR_PUT(context, RSN_AUTH_KEY_MGMT_SAE);
 
 	if (os_memcmp(myaddr, peer, ETH_ALEN) < 0) {
 		addr1 = myaddr;

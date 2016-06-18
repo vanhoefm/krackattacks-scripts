@@ -640,6 +640,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	os_memcpy(sta->peer_nonce, ampe->local_nonce,
 		  sizeof(ampe->local_nonce));
 	os_memcpy(sta->mgtk, ampe->mgtk, sizeof(ampe->mgtk));
+	sta->mgtk_len = sizeof(ampe->mgtk);
 
 	/* todo parse mgtk expiration */
 free:

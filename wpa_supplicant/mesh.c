@@ -70,6 +70,7 @@ static struct mesh_conf * mesh_config_create(struct wpa_supplicant *wpa_s,
 					     struct wpa_ssid *ssid)
 {
 	struct mesh_conf *conf;
+	int cipher;
 
 	conf = os_zalloc(sizeof(struct mesh_conf));
 	if (!conf)
@@ -90,8 +91,24 @@ static struct mesh_conf * mesh_config_create(struct wpa_supplicant *wpa_s,
 		else
 			conf->ieee80211w = NO_MGMT_FRAME_PROTECTION;
 	}
-	conf->pairwise_cipher = WPA_CIPHER_CCMP;
-	conf->group_cipher = WPA_CIPHER_CCMP;
+
+	cipher = wpa_pick_pairwise_cipher(ssid->pairwise_cipher, 0);
+	if (cipher < 0 || cipher == WPA_CIPHER_TKIP) {
+		wpa_msg(wpa_s, MSG_INFO, "mesh: Invalid pairwise cipher");
+		os_free(conf);
+		return NULL;
+	}
+	conf->pairwise_cipher = cipher;
+
+	cipher = wpa_pick_group_cipher(ssid->group_cipher);
+	if (cipher < 0 || cipher == WPA_CIPHER_TKIP ||
+	    cipher == WPA_CIPHER_GTK_NOT_USED) {
+		wpa_msg(wpa_s, MSG_INFO, "mesh: Invalid group cipher");
+		os_free(conf);
+		return NULL;
+	}
+
+	conf->group_cipher = cipher;
 	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION)
 		conf->mgmt_group_cipher = WPA_CIPHER_AES_128_CMAC;
 

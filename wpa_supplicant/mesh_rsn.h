@@ -12,7 +12,8 @@
 struct mesh_rsn {
 	struct wpa_supplicant *wpa_s;
 	struct wpa_authenticator *auth;
-	u8 mgtk[16];
+	u8 mgtk[WPA_TK_MAX_LEN];
+	size_t mgtk_len;
 #ifdef CONFIG_SAE
 	struct wpabuf *sae_token;
 	int sae_group_index;

@@ -173,7 +173,8 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	}
 
 	/* TODO: support rekeying */
-	if (random_get_bytes(rsn->mgtk, 16) < 0)
+	rsn->mgtk_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
+	if (random_get_bytes(rsn->mgtk, rsn->mgtk_len) < 0)
 		return -1;
 
 	/* group mgmt */
@@ -181,8 +182,10 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 			seq, sizeof(seq), rsn->mgtk, sizeof(rsn->mgtk));
 
 	/* group privacy / data frames */
+	wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX MGTK",
+			rsn->mgtk, rsn->mgtk_len);
 	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_CCMP, NULL, 1, 1,
-			seq, sizeof(seq), rsn->mgtk, sizeof(rsn->mgtk));
+			seq, sizeof(seq), rsn->mgtk, rsn->mgtk_len);
 
 	return 0;
 }
@@ -191,6 +194,7 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 static void mesh_rsn_deinit(struct mesh_rsn *rsn)
 {
 	os_memset(rsn->mgtk, 0, sizeof(rsn->mgtk));
+	rsn->mgtk_len = 0;
 	if (rsn->auth)
 		wpa_deinit(rsn->auth);
 }

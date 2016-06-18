@@ -90,6 +90,10 @@ static struct mesh_conf * mesh_config_create(struct wpa_supplicant *wpa_s,
 		else
 			conf->ieee80211w = NO_MGMT_FRAME_PROTECTION;
 	}
+	conf->pairwise_cipher = WPA_CIPHER_CCMP;
+	conf->group_cipher = WPA_CIPHER_CCMP;
+	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION)
+		conf->mgmt_group_cipher = WPA_CIPHER_AES_128_CMAC;
 
 	/* defaults */
 	conf->mesh_pp_id = MESH_PATH_PROTOCOL_HWMP;
@@ -343,15 +347,9 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_mesh_deinit(wpa_s);
 
-	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {
-		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
-		wpa_s->group_cipher = WPA_CIPHER_CCMP;
-		wpa_s->mgmt_group_cipher = 0;
-	} else {
-		wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
-		wpa_s->group_cipher = WPA_CIPHER_NONE;
-		wpa_s->mgmt_group_cipher = 0;
-	}
+	wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
+	wpa_s->group_cipher = WPA_CIPHER_NONE;
+	wpa_s->mgmt_group_cipher = 0;
 
 	os_memset(&params, 0, sizeof(params));
 	params.meshid = ssid->ssid;
@@ -407,6 +405,12 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		wpa_drv_leave_mesh(wpa_s);
 		ret = -1;
 		goto out;
+	}
+
+	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {
+		wpa_s->pairwise_cipher = wpa_s->mesh_rsn->pairwise_cipher;
+		wpa_s->group_cipher = wpa_s->mesh_rsn->group_cipher;
+		wpa_s->mgmt_group_cipher = wpa_s->mesh_rsn->mgmt_group_cipher;
 	}
 
 	if (wpa_s->ifmsh) {

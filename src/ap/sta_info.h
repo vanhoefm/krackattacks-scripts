@@ -88,6 +88,7 @@ struct sta_info {
 	u8 mtk[WPA_TK_MAX_LEN];
 	size_t mtk_len;
 	u8 mgtk_rsc[6];
+	u8 mgtk_key_id;
 	u8 mgtk[WPA_TK_MAX_LEN];
 	size_t mgtk_len;
 	u8 igtk_rsc[6];

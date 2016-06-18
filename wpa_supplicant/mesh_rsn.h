@@ -12,9 +12,12 @@
 struct mesh_rsn {
 	struct wpa_supplicant *wpa_s;
 	struct wpa_authenticator *auth;
+	unsigned int pairwise_cipher;
+	unsigned int group_cipher;
 	u8 mgtk[WPA_TK_MAX_LEN];
 	size_t mgtk_len;
 	u8 mgtk_key_id;
+	unsigned int mgmt_group_cipher;
 	u8 igtk_key_id;
 	u8 igtk[WPA_TK_MAX_LEN];
 	size_t igtk_len;

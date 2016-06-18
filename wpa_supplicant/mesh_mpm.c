@@ -794,30 +794,30 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 
 	if (conf->security & MESH_CONF_SEC_AMPE) {
 		wpa_hexdump_key(MSG_DEBUG, "mesh: MTK", sta->mtk, sta->mtk_len);
-		/* TODO: support for other ciphers */
-		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 0, 0,
-				seq, sizeof(seq), sta->mtk, sta->mtk_len);
+		wpa_drv_set_key(wpa_s, wpa_cipher_to_alg(conf->pairwise_cipher),
+				sta->addr, 0, 0, seq, sizeof(seq),
+				sta->mtk, sta->mtk_len);
 
 		wpa_hexdump_key(MSG_DEBUG, "mesh: RX MGTK Key RSC",
 				sta->mgtk_rsc, sizeof(sta->mgtk_rsc));
 		wpa_hexdump_key(MSG_DEBUG, "mesh: RX MGTK",
 				sta->mgtk, sta->mgtk_len);
-		/* TODO: support for other ciphers */
-		/* FIX: key index.. */
-		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 1, 0,
+		wpa_drv_set_key(wpa_s, wpa_cipher_to_alg(conf->group_cipher),
+				sta->addr, sta->mgtk_key_id, 0,
 				sta->mgtk_rsc, sizeof(sta->mgtk_rsc),
 				sta->mgtk, sta->mgtk_len);
 
 		if (sta->igtk_len) {
 			wpa_hexdump_key(MSG_DEBUG, "mesh: RX IGTK Key RSC",
 					sta->igtk_rsc, sizeof(sta->igtk_rsc));
-			wpa_hexdump_key(MSG_DEBUG, "RX IGTK",
+			wpa_hexdump_key(MSG_DEBUG, "mesh: RX IGTK",
 					sta->igtk, sta->igtk_len);
-			/* FIX: key index.. */
-			wpa_drv_set_key(wpa_s, WPA_ALG_IGTK, sta->addr,
-					sta->igtk_key_id, 0,
-					sta->igtk_rsc, sizeof(sta->igtk_rsc),
-					sta->igtk, sta->igtk_len);
+			wpa_drv_set_key(
+				wpa_s,
+				wpa_cipher_to_alg(conf->mgmt_group_cipher),
+				sta->addr, sta->igtk_key_id, 0,
+				sta->igtk_rsc, sizeof(sta->igtk_rsc),
+				sta->igtk, sta->igtk_len);
 		}
 	}
 

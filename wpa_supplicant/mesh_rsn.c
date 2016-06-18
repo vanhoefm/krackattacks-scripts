@@ -146,17 +146,17 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	wpa_printf(MSG_DEBUG, "AUTH: Initializing group state machine");
 
 	os_memset(&conf, 0, sizeof(conf));
-	conf.wpa = 2;
+	conf.wpa = WPA_PROTO_RSN;
 	conf.wpa_key_mgmt = WPA_KEY_MGMT_SAE;
-	conf.wpa_pairwise = WPA_CIPHER_CCMP;
-	conf.rsn_pairwise = WPA_CIPHER_CCMP;
-	conf.wpa_group = WPA_CIPHER_CCMP;
+	conf.wpa_pairwise = rsn->pairwise_cipher;
+	conf.rsn_pairwise = rsn->pairwise_cipher;
+	conf.wpa_group = rsn->group_cipher;
 	conf.eapol_version = 0;
 	conf.wpa_group_rekey = -1;
 #ifdef CONFIG_IEEE80211W
 	conf.ieee80211w = ieee80211w;
 	if (ieee80211w != NO_MGMT_FRAME_PROTECTION)
-		conf.group_mgmt_cipher = WPA_CIPHER_AES_128_CMAC;
+		conf.group_mgmt_cipher = rsn->mgmt_group_cipher;
 #endif /* CONFIG_IEEE80211W */
 
 	os_memset(&cb, 0, sizeof(cb));
@@ -173,14 +173,14 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	}
 
 	/* TODO: support rekeying */
-	rsn->mgtk_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
+	rsn->mgtk_len = wpa_cipher_key_len(conf.wpa_group);
 	if (random_get_bytes(rsn->mgtk, rsn->mgtk_len) < 0)
 		return -1;
 	rsn->mgtk_key_id = 1;
 
 #ifdef CONFIG_IEEE80211W
 	if (ieee80211w != NO_MGMT_FRAME_PROTECTION) {
-		rsn->igtk_len = wpa_cipher_key_len(WPA_CIPHER_AES_128_CMAC);
+		rsn->igtk_len = wpa_cipher_key_len(conf.group_mgmt_cipher);
 		if (random_get_bytes(rsn->igtk, rsn->igtk_len) < 0)
 			return -1;
 		rsn->igtk_key_id = 4;
@@ -188,7 +188,8 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 		/* group mgmt */
 		wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX IGTK",
 				rsn->igtk, rsn->igtk_len);
-		wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL,
+		wpa_drv_set_key(rsn->wpa_s,
+				wpa_cipher_to_alg(rsn->mgmt_group_cipher), NULL,
 				rsn->igtk_key_id, 1,
 				seq, sizeof(seq), rsn->igtk, rsn->igtk_len);
 	}
@@ -197,8 +198,9 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	/* group privacy / data frames */
 	wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX MGTK",
 			rsn->mgtk, rsn->mgtk_len);
-	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_CCMP, NULL, rsn->mgtk_key_id, 1,
-			seq, sizeof(seq), rsn->mgtk, rsn->mgtk_len);
+	wpa_drv_set_key(rsn->wpa_s, wpa_cipher_to_alg(rsn->group_cipher), NULL,
+			rsn->mgtk_key_id, 1, seq, sizeof(seq),
+			rsn->mgtk, rsn->mgtk_len);
 
 	return 0;
 }
@@ -227,6 +229,9 @@ struct mesh_rsn *mesh_rsn_auth_init(struct wpa_supplicant *wpa_s,
 	if (mesh_rsn == NULL)
 		return NULL;
 	mesh_rsn->wpa_s = wpa_s;
+	mesh_rsn->pairwise_cipher = conf->pairwise_cipher;
+	mesh_rsn->group_cipher = conf->group_cipher;
+	mesh_rsn->mgmt_group_cipher = conf->mgmt_group_cipher;
 
 	if (__mesh_rsn_auth_init(mesh_rsn, wpa_s->own_addr,
 				 conf->ieee80211w) < 0) {
@@ -464,7 +469,7 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 	ptr += ETH_ALEN;
 	os_memcpy(ptr, max, ETH_ALEN);
 
-	sta->mtk_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
+	sta->mtk_len = wpa_cipher_key_len(wpa_s->mesh_rsn->pairwise_cipher);
 	sha256_prf(sta->sae->pmk, SAE_PMK_LEN,
 		   "Temporal Key Derivation", context, sizeof(context),
 		   sta->mtk, sta->mtk_len);
@@ -682,7 +687,8 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	 * GTKdata[variable]:
 	 * MGTK[variable] || Key RSC[8] || GTKExpirationTime[4]
 	 */
-	key_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
+	sta->mgtk_key_id = 1; /* FIX: Where to get Key ID? */
+	key_len = wpa_cipher_key_len(wpa_s->mesh_rsn->group_cipher);
 	if ((int) key_len + WPA_KEY_RSC_LEN + 4 > end - pos) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "mesh: Truncated AMPE element");
 		ret = -1;
@@ -707,7 +713,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	 * IGTKdata[variable]:
 	 * Key ID[2], IPN[6], IGTK[variable]
 	 */
-	key_len = wpa_cipher_key_len(WPA_CIPHER_AES_128_CMAC);
+	key_len = wpa_cipher_key_len(wpa_s->mesh_rsn->mgmt_group_cipher);
 	if (end - pos >= (int) (2 + 6 + key_len)) {
 		sta->igtk_key_id = WPA_GET_LE16(pos);
 		wpa_printf(MSG_DEBUG, "mesh: IGTKdata - Key ID %u",

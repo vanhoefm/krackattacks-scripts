@@ -793,8 +793,10 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 		MAC2STR(sta->addr));
 
 	if (conf->security & MESH_CONF_SEC_AMPE) {
+		wpa_hexdump_key(MSG_DEBUG, "mesh: MTK", sta->mtk, sta->mtk_len);
+		/* TODO: support for other ciphers */
 		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 0, 0,
-				seq, sizeof(seq), sta->mtk, sizeof(sta->mtk));
+				seq, sizeof(seq), sta->mtk, sta->mtk_len);
 		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 1, 0,
 				seq, sizeof(seq),
 				sta->mgtk, sizeof(sta->mgtk));
@@ -802,7 +804,6 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 				seq, sizeof(seq),
 				sta->mgtk, sizeof(sta->mgtk));
 
-		wpa_hexdump_key(MSG_DEBUG, "mtk:", sta->mtk, sizeof(sta->mtk));
 		wpa_hexdump_key(MSG_DEBUG, "mgtk:",
 				sta->mgtk, sizeof(sta->mgtk));
 	}

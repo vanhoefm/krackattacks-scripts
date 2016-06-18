@@ -445,9 +445,10 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 	ptr += ETH_ALEN;
 	os_memcpy(ptr, max, ETH_ALEN);
 
+	sta->mtk_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
 	sha256_prf(sta->sae->pmk, SAE_PMK_LEN,
 		   "Temporal Key Derivation", context, sizeof(context),
-		   sta->mtk, sizeof(sta->mtk));
+		   sta->mtk, sta->mtk_len);
 	return 0;
 }
 

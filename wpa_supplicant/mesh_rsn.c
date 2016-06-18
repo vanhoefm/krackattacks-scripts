@@ -177,9 +177,19 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	if (random_get_bytes(rsn->mgtk, rsn->mgtk_len) < 0)
 		return -1;
 
-	/* group mgmt */
-	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL, 4, 1,
-			seq, sizeof(seq), rsn->mgtk, sizeof(rsn->mgtk));
+#ifdef CONFIG_IEEE80211W
+	if (ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		if (random_get_bytes(rsn->igtk, 16) < 0)
+			return -1;
+		rsn->igtk_len = 16;
+
+		/* group mgmt */
+		wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX IGTK",
+				rsn->igtk, rsn->igtk_len);
+		wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL, 4, 1,
+				seq, sizeof(seq), rsn->igtk, rsn->igtk_len);
+	}
+#endif /* CONFIG_IEEE80211W */
 
 	/* group privacy / data frames */
 	wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX MGTK",
@@ -195,6 +205,8 @@ static void mesh_rsn_deinit(struct mesh_rsn *rsn)
 {
 	os_memset(rsn->mgtk, 0, sizeof(rsn->mgtk));
 	rsn->mgtk_len = 0;
+	os_memset(rsn->igtk, 0, sizeof(rsn->igtk));
+	rsn->igtk_len = 0;
 	if (rsn->auth)
 		wpa_deinit(rsn->auth);
 }

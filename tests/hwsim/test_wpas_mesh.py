@@ -231,7 +231,7 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
-def add_mesh_secure_net(dev, psk=True, pmf=False):
+def add_mesh_secure_net(dev, psk=True, pmf=False, pairwise=None, group=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-sec")
@@ -241,6 +241,10 @@ def add_mesh_secure_net(dev, psk=True, pmf=False):
         dev.set_network_quoted(id, "psk", "thisismypassphrase!")
     if pmf:
         dev.set_network(id, "ieee80211w", "2")
+    if pairwise:
+        dev.set_network(id, "pairwise", pairwise)
+    if group:
+        dev.set_network(id, "group", group)
     return id
 
 def test_wpas_mesh_secure(dev, apdev):
@@ -286,6 +290,67 @@ def test_mesh_secure_pmf(dev, apdev):
 
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def run_mesh_secure(dev, cipher):
+    if cipher not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("Cipher %s not supported" % cipher)
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0], pairwise=cipher, group=cipher)
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1], pairwise=cipher, group=cipher)
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    # Test connectivity 0->1 and 1->0
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_mesh_secure_ccmp(dev, apdev):
+    """Secure mesh with CCMP"""
+    run_mesh_secure(dev, "CCMP")
+
+def test_mesh_secure_gcmp(dev, apdev):
+    """Secure mesh with GCMP"""
+    run_mesh_secure(dev, "GCMP")
+
+def test_mesh_secure_gcmp_256(dev, apdev):
+    """Secure mesh with GCMP-256"""
+    run_mesh_secure(dev, "GCMP-256")
+
+def test_mesh_secure_ccmp_256(dev, apdev):
+    """Secure mesh with CCMP-256"""
+    run_mesh_secure(dev, "CCMP-256")
+
+def test_mesh_secure_invalid_pairwise_cipher(dev, apdev):
+    """Secure mesh and invalid group cipher"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0], pairwise="TKIP", group="CCMP")
+    if dev[0].mesh_group_add(id) != None:
+        raise Exception("Unexpected group add success")
+    ev = dev[0].wait_event(["mesh: Invalid pairwise cipher"], timeout=1)
+    if ev is None:
+        raise Exception("Invalid pairwise cipher not reported")
+
+def test_mesh_secure_invalid_group_cipher(dev, apdev):
+    """Secure mesh and invalid group cipher"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0], pairwise="CCMP", group="TKIP")
+    if dev[0].mesh_group_add(id) != None:
+        raise Exception("Unexpected group add success")
+    ev = dev[0].wait_event(["mesh: Invalid group cipher"], timeout=1)
+    if ev is None:
+        raise Exception("Invalid group cipher not reported")
 
 def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     """wpa_supplicant secure MESH and SAE group mismatch"""

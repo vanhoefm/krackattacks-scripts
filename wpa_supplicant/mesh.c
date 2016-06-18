@@ -66,7 +66,8 @@ void wpa_supplicant_mesh_iface_deinit(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct mesh_conf * mesh_config_create(struct wpa_ssid *ssid)
+static struct mesh_conf * mesh_config_create(struct wpa_supplicant *wpa_s,
+					     struct wpa_ssid *ssid)
 {
 	struct mesh_conf *conf;
 
@@ -82,6 +83,13 @@ static struct mesh_conf * mesh_config_create(struct wpa_ssid *ssid)
 			MESH_CONF_SEC_AMPE;
 	else
 		conf->security |= MESH_CONF_SEC_NONE;
+	conf->ieee80211w = ssid->ieee80211w;
+	if (conf->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT) {
+		if (wpa_s->drv_enc & WPA_DRIVER_CAPA_ENC_BIP)
+			conf->ieee80211w = wpa_s->conf->pmf;
+		else
+			conf->ieee80211w = NO_MGMT_FRAME_PROTECTION;
+	}
 
 	/* defaults */
 	conf->mesh_pp_id = MESH_PATH_PROTOCOL_HWMP;
@@ -175,7 +183,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 		wpa_s->conf->dot11RSNASAERetransPeriod;
 	os_strlcpy(bss->conf->iface, wpa_s->ifname, sizeof(bss->conf->iface));
 
-	mconf = mesh_config_create(ssid);
+	mconf = mesh_config_create(wpa_s, ssid);
 	if (!mconf)
 		goto out_free;
 	ifmsh->mconf = mconf;

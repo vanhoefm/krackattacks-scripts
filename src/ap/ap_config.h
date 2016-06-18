@@ -41,6 +41,7 @@ struct mesh_conf {
 #define MESH_CONF_SEC_AUTH BIT(1)
 #define MESH_CONF_SEC_AMPE BIT(2)
 	unsigned int security;
+	enum mfp_options ieee80211w;
 	int dot11MeshMaxRetries;
 	int dot11MeshRetryTimeout; /* msec */
 	int dot11MeshConfirmTimeout; /* msec */

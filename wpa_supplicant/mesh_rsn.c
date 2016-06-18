@@ -136,7 +136,8 @@ static int auth_start_ampe(void *ctx, const u8 *addr)
 }
 
 
-static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr)
+static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
+				enum mfp_options ieee80211w)
 {
 	struct wpa_auth_config conf;
 	struct wpa_auth_callbacks cb;
@@ -152,6 +153,11 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr)
 	conf.wpa_group = WPA_CIPHER_CCMP;
 	conf.eapol_version = 0;
 	conf.wpa_group_rekey = -1;
+#ifdef CONFIG_IEEE80211W
+	conf.ieee80211w = ieee80211w;
+	if (ieee80211w != NO_MGMT_FRAME_PROTECTION)
+		conf.group_mgmt_cipher = WPA_CIPHER_AES_128_CMAC;
+#endif /* CONFIG_IEEE80211W */
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = rsn;
@@ -203,7 +209,8 @@ struct mesh_rsn *mesh_rsn_auth_init(struct wpa_supplicant *wpa_s,
 		return NULL;
 	mesh_rsn->wpa_s = wpa_s;
 
-	if (__mesh_rsn_auth_init(mesh_rsn, wpa_s->own_addr) < 0) {
+	if (__mesh_rsn_auth_init(mesh_rsn, wpa_s->own_addr,
+				 conf->ieee80211w) < 0) {
 		mesh_rsn_deinit(mesh_rsn);
 		os_free(mesh_rsn);
 		return NULL;

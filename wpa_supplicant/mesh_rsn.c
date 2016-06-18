@@ -395,13 +395,16 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 {
 	u8 *ptr;
 	u8 *min, *max;
-	u16 min_lid, max_lid;
-	size_t lid_len = sizeof(sta->my_lid);
 	u8 *myaddr = wpa_s->own_addr;
 	u8 *peer = sta->addr;
-	/* 2 nonces, 2 linkids, akm suite, 2 mac addrs */
-	u8 context[64 + 4 + 4 + 12];
+	u8 context[2 * WPA_NONCE_LEN + 2 * 2 + RSN_SELECTOR_LEN + 2 * ETH_ALEN];
 
+	/*
+	 * MTK = KDF-Hash-Length(PMK, "Temporal Key Derivation", min(localNonce,
+	 *  peerNonce) || max(localNonce, peerNonce) || min(localLinkID,
+	 *  peerLinkID) || max(localLinkID, peerLinkID) || Selected AKM Suite ||
+	 *  min(localMAC, peerMAC) || max(localMAC, peerMAC))
+	 */
 	ptr = context;
 	if (os_memcmp(sta->my_nonce, sta->peer_nonce, WPA_NONCE_LEN) < 0) {
 		min = sta->my_nonce;
@@ -411,23 +414,25 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 		max = sta->my_nonce;
 	}
 	os_memcpy(ptr, min, WPA_NONCE_LEN);
-	os_memcpy(ptr + WPA_NONCE_LEN, max, WPA_NONCE_LEN);
-	ptr += 2 * WPA_NONCE_LEN;
+	ptr += WPA_NONCE_LEN;
+	os_memcpy(ptr, max, WPA_NONCE_LEN);
+	ptr += WPA_NONCE_LEN;
 
 	if (sta->my_lid < sta->peer_lid) {
-		min_lid = host_to_le16(sta->my_lid);
-		max_lid = host_to_le16(sta->peer_lid);
+		WPA_PUT_LE16(ptr, sta->my_lid);
+		ptr += 2;
+		WPA_PUT_LE16(ptr, sta->peer_lid);
+		ptr += 2;
 	} else {
-		min_lid = host_to_le16(sta->peer_lid);
-		max_lid = host_to_le16(sta->my_lid);
+		WPA_PUT_LE16(ptr, sta->peer_lid);
+		ptr += 2;
+		WPA_PUT_LE16(ptr, sta->my_lid);
+		ptr += 2;
 	}
-	os_memcpy(ptr, &min_lid, lid_len);
-	os_memcpy(ptr + lid_len, &max_lid, lid_len);
-	ptr += 2 * lid_len;
 
 	/* Selected AKM Suite: SAE */
 	RSN_SELECTOR_PUT(ptr, RSN_AUTH_KEY_MGMT_SAE);
-	ptr += 4;
+	ptr += RSN_SELECTOR_LEN;
 
 	if (os_memcmp(myaddr, peer, ETH_ALEN) < 0) {
 		min = myaddr;
@@ -437,9 +442,10 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 		max = myaddr;
 	}
 	os_memcpy(ptr, min, ETH_ALEN);
-	os_memcpy(ptr + ETH_ALEN, max, ETH_ALEN);
+	ptr += ETH_ALEN;
+	os_memcpy(ptr, max, ETH_ALEN);
 
-	sha256_prf(sta->sae->pmk, sizeof(sta->sae->pmk),
+	sha256_prf(sta->sae->pmk, SAE_PMK_LEN,
 		   "Temporal Key Derivation", context, sizeof(context),
 		   sta->mtk, sizeof(sta->mtk));
 	return 0;

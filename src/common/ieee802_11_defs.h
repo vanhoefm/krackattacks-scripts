@@ -757,9 +757,14 @@ struct ieee80211_ampe_ie {
 	u8 selected_pairwise_suite[4];
 	u8 local_nonce[32];
 	u8 peer_nonce[32];
-	u8 mgtk[16];
-	u8 key_rsc[8];
-	u8 key_expiration[4];
+	/* Followed by
+	 * Key Replay Counter[8] (optional)
+	 *	(only in Mesh Group Key Inform/Acknowledge frames)
+	 * GTKdata[variable] (optional)
+	 *	(MGTK[variable] || Key RSC[8] || GTKExpirationTime[4])
+	 * IGTKdata[variable] (optional)
+	 *	(Key ID[2], IPN[6], IGTK[variable] in IGTK KDE format)
+	 */
 } STRUCT_PACKED;
 
 #ifdef _MSC_VER

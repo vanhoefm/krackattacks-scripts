@@ -158,6 +158,15 @@ static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_get_seqnum(struct wpa_supplicant *wpa_s,
+				     const u8 *addr, int idx, u8 *seq)
+{
+	if (wpa_s->driver->get_seqnum)
+		return wpa_s->driver->get_seqnum(wpa_s->ifname, wpa_s->drv_priv,
+						 addr, idx, seq);
+	return -1;
+}
+
 static inline int wpa_drv_sta_deauth(struct wpa_supplicant *wpa_s,
 				     const u8 *addr, int reason_code)
 {

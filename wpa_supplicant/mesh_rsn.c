@@ -176,17 +176,20 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	rsn->mgtk_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
 	if (random_get_bytes(rsn->mgtk, rsn->mgtk_len) < 0)
 		return -1;
+	rsn->mgtk_key_id = 1;
 
 #ifdef CONFIG_IEEE80211W
 	if (ieee80211w != NO_MGMT_FRAME_PROTECTION) {
-		if (random_get_bytes(rsn->igtk, 16) < 0)
+		rsn->igtk_len = wpa_cipher_key_len(WPA_CIPHER_AES_128_CMAC);
+		if (random_get_bytes(rsn->igtk, rsn->igtk_len) < 0)
 			return -1;
-		rsn->igtk_len = 16;
+		rsn->igtk_key_id = 4;
 
 		/* group mgmt */
 		wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX IGTK",
 				rsn->igtk, rsn->igtk_len);
-		wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL, 4, 1,
+		wpa_drv_set_key(rsn->wpa_s, WPA_ALG_IGTK, NULL,
+				rsn->igtk_key_id, 1,
 				seq, sizeof(seq), rsn->igtk, rsn->igtk_len);
 	}
 #endif /* CONFIG_IEEE80211W */
@@ -194,7 +197,7 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	/* group privacy / data frames */
 	wpa_hexdump_key(MSG_DEBUG, "mesh: Own TX MGTK",
 			rsn->mgtk, rsn->mgtk_len);
-	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_CCMP, NULL, 1, 1,
+	wpa_drv_set_key(rsn->wpa_s, WPA_ALG_CCMP, NULL, rsn->mgtk_key_id, 1,
 			seq, sizeof(seq), rsn->mgtk, rsn->mgtk_len);
 
 	return 0;
@@ -491,65 +494,89 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 {
 	struct ieee80211_ampe_ie *ampe;
 	u8 const *ie = wpabuf_head_u8(buf) + wpabuf_len(buf);
-	u8 *ampe_ie = NULL, *mic_ie = NULL, *mic_payload;
+	u8 *ampe_ie, *pos, *mic_payload;
 	const u8 *aad[] = { rsn->wpa_s->own_addr, sta->addr, cat };
 	const size_t aad_len[] = { ETH_ALEN, ETH_ALEN, ie - cat };
 	int ret = 0;
+	size_t len;
 
-	if (AES_BLOCK_SIZE + 2 + sizeof(*ampe) + 2 > wpabuf_tailroom(buf)) {
+	len = sizeof(*ampe) + rsn->mgtk_len + WPA_KEY_RSC_LEN + 4;
+#ifdef CONFIG_IEEE80211W
+	if (rsn->igtk_len)
+		len += 2 + 6 + rsn->igtk_len;
+#endif /* CONFIG_IEEE80211W */
+
+	if (2 + AES_BLOCK_SIZE + 2 + len > wpabuf_tailroom(buf)) {
 		wpa_printf(MSG_ERROR, "protect frame: buffer too small");
 		return -EINVAL;
 	}
 
-	ampe_ie = os_zalloc(2 + sizeof(*ampe));
+	ampe_ie = os_zalloc(2 + len);
 	if (!ampe_ie) {
 		wpa_printf(MSG_ERROR, "protect frame: out of memory");
 		return -ENOMEM;
 	}
 
-	mic_ie = os_zalloc(2 + AES_BLOCK_SIZE);
-	if (!mic_ie) {
-		wpa_printf(MSG_ERROR, "protect frame: out of memory");
-		ret = -ENOMEM;
-		goto free;
-	}
-
 	/*  IE: AMPE */
 	ampe_ie[0] = WLAN_EID_AMPE;
-	ampe_ie[1] = sizeof(*ampe);
+	ampe_ie[1] = len;
 	ampe = (struct ieee80211_ampe_ie *) (ampe_ie + 2);
 
 	RSN_SELECTOR_PUT(ampe->selected_pairwise_suite,
-		     wpa_cipher_to_suite(WPA_PROTO_RSN, WPA_CIPHER_CCMP));
+			 RSN_CIPHER_SUITE_CCMP);
 	os_memcpy(ampe->local_nonce, sta->my_nonce, WPA_NONCE_LEN);
 	os_memcpy(ampe->peer_nonce, sta->peer_nonce, WPA_NONCE_LEN);
-	/* incomplete: see 13.5.4 */
+
+	pos = (u8 *) (ampe + 1);
+
+	/* TODO: Key Replay Counter[8] optionally for
+	 * Mesh Group Key Inform/Acknowledge frames */
+
 	/* TODO: static mgtk for now since we don't support rekeying! */
-	os_memcpy(ampe->mgtk, rsn->mgtk, 16);
-	/*  TODO: Populate Key RSC */
-	/*  expire in 13 decades or so */
-	os_memset(ampe->key_expiration, 0xff, 4);
+	/*
+	 * GTKdata[variable]:
+	 * MGTK[variable] || Key RSC[8] || GTKExpirationTime[4]
+	 */
+	os_memcpy(pos, rsn->mgtk, rsn->mgtk_len);
+	pos += rsn->mgtk_len;
+	wpa_drv_get_seqnum(rsn->wpa_s, NULL, rsn->mgtk_key_id, pos);
+	pos += WPA_KEY_RSC_LEN;
+	/* Use fixed GTKExpirationTime for now */
+	WPA_PUT_LE32(pos, 0xffffffff);
+	pos += 4;
+
+#ifdef CONFIG_IEEE80211W
+	/*
+	 * IGTKdata[variable]:
+	 * Key ID[2], IPN[6], IGTK[variable]
+	 */
+	if (rsn->igtk_len) {
+		WPA_PUT_LE16(pos, rsn->igtk_key_id);
+		pos += 2;
+		wpa_drv_get_seqnum(rsn->wpa_s, NULL, rsn->igtk_key_id, pos);
+		pos += 6;
+		os_memcpy(pos, rsn->igtk, rsn->igtk_len);
+	}
+#endif /* CONFIG_IEEE80211W */
+
+	wpa_hexdump_key(MSG_DEBUG, "mesh: Plaintext AMPE element",
+			ampe_ie, 2 + len);
 
 	/* IE: MIC */
-	mic_ie[0] = WLAN_EID_MIC;
-	mic_ie[1] = AES_BLOCK_SIZE;
-	wpabuf_put_data(buf, mic_ie, 2);
+	wpabuf_put_u8(buf, WLAN_EID_MIC);
+	wpabuf_put_u8(buf, AES_BLOCK_SIZE);
 	/* MIC field is output ciphertext */
 
 	/* encrypt after MIC */
-	mic_payload = (u8 *) wpabuf_put(buf, 2 + sizeof(*ampe) +
-					AES_BLOCK_SIZE);
+	mic_payload = wpabuf_put(buf, 2 + len + AES_BLOCK_SIZE);
 
-	if (aes_siv_encrypt(sta->aek, ampe_ie, 2 + sizeof(*ampe), 3,
+	if (aes_siv_encrypt(sta->aek, ampe_ie, 2 + len, 3,
 			    aad, aad_len, mic_payload)) {
 		wpa_printf(MSG_ERROR, "protect frame: failed to encrypt");
 		ret = -ENOMEM;
-		goto free;
 	}
 
-free:
 	os_free(ampe_ie);
-	os_free(mic_ie);
 
 	return ret;
 }
@@ -565,11 +592,12 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	u8 null_nonce[WPA_NONCE_LEN] = {};
 	u8 ampe_eid;
 	u8 ampe_ie_len;
-	u8 *ampe_buf, *crypt = NULL;
+	u8 *ampe_buf, *crypt = NULL, *pos, *end;
 	size_t crypt_len;
 	const u8 *aad[] = { sta->addr, wpa_s->own_addr, cat };
 	const size_t aad_len[] = { ETH_ALEN, ETH_ALEN,
 				   (elems->mic - 2) - cat };
+	size_t key_len;
 
 	if (!sta->sae) {
 		struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
@@ -598,7 +626,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		return -1;
 
 	crypt_len = elems_len - (elems->mic - start);
-	if (crypt_len < 2) {
+	if (crypt_len < 2 + AES_BLOCK_SIZE) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Mesh RSN: missing ampe ie");
 		return -1;
 	}
@@ -620,10 +648,15 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		goto free;
 	}
 
+	crypt_len -= AES_BLOCK_SIZE;
+	wpa_hexdump_key(MSG_DEBUG, "mesh: Decrypted AMPE element",
+			ampe_buf, crypt_len);
+
 	ampe_eid = *ampe_buf++;
 	ampe_ie_len = *ampe_buf++;
 
 	if (ampe_eid != WLAN_EID_AMPE ||
+	    (size_t) 2 + ampe_ie_len > crypt_len ||
 	    ampe_ie_len < sizeof(struct ieee80211_ampe_ie)) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Mesh RSN: invalid ampe ie");
 		ret = -1;
@@ -631,6 +664,8 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	}
 
 	ampe = (struct ieee80211_ampe_ie *) ampe_buf;
+	pos = (u8 *) (ampe + 1);
+	end = ampe_buf + ampe_ie_len;
 	if (os_memcmp(ampe->peer_nonce, null_nonce, WPA_NONCE_LEN) != 0 &&
 	    os_memcmp(ampe->peer_nonce, sta->my_nonce, WPA_NONCE_LEN) != 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Mesh RSN: invalid peer nonce");
@@ -639,10 +674,56 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	}
 	os_memcpy(sta->peer_nonce, ampe->local_nonce,
 		  sizeof(ampe->local_nonce));
-	os_memcpy(sta->mgtk, ampe->mgtk, sizeof(ampe->mgtk));
-	sta->mgtk_len = sizeof(ampe->mgtk);
 
-	/* todo parse mgtk expiration */
+	/* TODO: Key Replay Counter[8] in Mesh Group Key Inform/Acknowledge
+	 * frames */
+
+	/*
+	 * GTKdata[variable]:
+	 * MGTK[variable] || Key RSC[8] || GTKExpirationTime[4]
+	 */
+	key_len = wpa_cipher_key_len(WPA_CIPHER_CCMP);
+	if ((int) key_len + WPA_KEY_RSC_LEN + 4 > end - pos) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "mesh: Truncated AMPE element");
+		ret = -1;
+		goto free;
+	}
+	sta->mgtk_len = key_len;
+	os_memcpy(sta->mgtk, pos, sta->mgtk_len);
+	wpa_hexdump_key(MSG_DEBUG, "mesh: GTKdata - MGTK",
+			sta->mgtk, sta->mgtk_len);
+	pos += sta->mgtk_len;
+	wpa_hexdump(MSG_DEBUG, "mesh: GTKdata - MGTK - Key RSC",
+		    pos, WPA_KEY_RSC_LEN);
+	os_memcpy(sta->mgtk_rsc, pos, sizeof(sta->mgtk_rsc));
+	pos += WPA_KEY_RSC_LEN;
+	wpa_printf(MSG_DEBUG,
+		   "mesh: GTKdata - MGTK - GTKExpirationTime: %u seconds",
+		   WPA_GET_LE32(pos));
+	pos += 4;
+
+#ifdef CONFIG_IEEE80211W
+	/*
+	 * IGTKdata[variable]:
+	 * Key ID[2], IPN[6], IGTK[variable]
+	 */
+	key_len = wpa_cipher_key_len(WPA_CIPHER_AES_128_CMAC);
+	if (end - pos >= (int) (2 + 6 + key_len)) {
+		sta->igtk_key_id = WPA_GET_LE16(pos);
+		wpa_printf(MSG_DEBUG, "mesh: IGTKdata - Key ID %u",
+			   sta->igtk_key_id);
+		pos += 2;
+		os_memcpy(sta->igtk_rsc, pos, sizeof(sta->igtk_rsc));
+		wpa_hexdump(MSG_DEBUG, "mesh: IGTKdata - IPN",
+			    sta->igtk_rsc, sizeof(sta->igtk_rsc));
+		pos += 6;
+		os_memcpy(sta->igtk, pos, key_len);
+		sta->igtk_len = key_len;
+		wpa_hexdump_key(MSG_DEBUG, "mesh: IGTKdata - IGTK",
+				sta->igtk, sta->igtk_len);
+	}
+#endif /* CONFIG_IEEE80211W */
+
 free:
 	os_free(crypt);
 	return ret;

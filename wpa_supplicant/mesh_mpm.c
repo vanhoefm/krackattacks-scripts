@@ -798,20 +798,25 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 0, 0,
 				seq, sizeof(seq), sta->mtk, sta->mtk_len);
 
+		wpa_hexdump_key(MSG_DEBUG, "mesh: RX MGTK Key RSC",
+				sta->mgtk_rsc, sizeof(sta->mgtk_rsc));
 		wpa_hexdump_key(MSG_DEBUG, "mesh: RX MGTK",
 				sta->mgtk, sta->mgtk_len);
 		/* TODO: support for other ciphers */
 		/* FIX: key index.. */
 		wpa_drv_set_key(wpa_s, WPA_ALG_CCMP, sta->addr, 1, 0,
-				seq, sizeof(seq),
+				sta->mgtk_rsc, sizeof(sta->mgtk_rsc),
 				sta->mgtk, sta->mgtk_len);
 
 		if (sta->igtk_len) {
+			wpa_hexdump_key(MSG_DEBUG, "mesh: RX IGTK Key RSC",
+					sta->igtk_rsc, sizeof(sta->igtk_rsc));
 			wpa_hexdump_key(MSG_DEBUG, "RX IGTK",
 					sta->igtk, sta->igtk_len);
 			/* FIX: key index.. */
-			wpa_drv_set_key(wpa_s, WPA_ALG_IGTK, sta->addr, 4, 0,
-					seq, sizeof(seq),
+			wpa_drv_set_key(wpa_s, WPA_ALG_IGTK, sta->addr,
+					sta->igtk_key_id, 0,
+					sta->igtk_rsc, sizeof(sta->igtk_rsc),
 					sta->igtk, sta->igtk_len);
 		}
 	}

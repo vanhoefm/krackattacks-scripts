@@ -87,10 +87,13 @@ struct sta_info {
 	u8 aek[32];	/* SHA256 digest length */
 	u8 mtk[WPA_TK_MAX_LEN];
 	size_t mtk_len;
+	u8 mgtk_rsc[6];
 	u8 mgtk[WPA_TK_MAX_LEN];
 	size_t mgtk_len;
+	u8 igtk_rsc[6];
 	u8 igtk[WPA_TK_MAX_LEN];
 	size_t igtk_len;
+	u16 igtk_key_id;
 	u8 sae_auth_retry;
 #endif /* CONFIG_MESH */
 

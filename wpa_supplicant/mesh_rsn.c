@@ -425,8 +425,8 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 	os_memcpy(ptr + lid_len, &max_lid, lid_len);
 	ptr += 2 * lid_len;
 
-	/* SAE */
-	RSN_SELECTOR_PUT(ptr, wpa_cipher_to_suite(0, WPA_CIPHER_GCMP));
+	/* Selected AKM Suite: SAE */
+	RSN_SELECTOR_PUT(ptr, RSN_AUTH_KEY_MGMT_SAE);
 	ptr += 4;
 
 	if (os_memcmp(myaddr, peer, ETH_ALEN) < 0) {

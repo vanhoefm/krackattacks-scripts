@@ -231,7 +231,7 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
-def add_mesh_secure_net(dev, psk=True):
+def add_mesh_secure_net(dev, psk=True, pmf=False):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-sec")
@@ -239,6 +239,8 @@ def add_mesh_secure_net(dev, psk=True):
     dev.set_network(id, "frequency", "2412")
     if psk:
         dev.set_network_quoted(id, "psk", "thisismypassphrase!")
+    if pmf:
+        dev.set_network(id, "ieee80211w", "2")
     return id
 
 def test_wpas_mesh_secure(dev, apdev):
@@ -250,6 +252,28 @@ def test_wpas_mesh_secure(dev, apdev):
 
     dev[1].request("SET sae_groups ")
     id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    # Test connectivity 0->1 and 1->0
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_mesh_secure_pmf(dev, apdev):
+    """Secure mesh network connectivity with PMF enabled"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0], pmf=True)
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1], pmf=True)
     dev[1].mesh_group_add(id)
 
     # Check for mesh joined

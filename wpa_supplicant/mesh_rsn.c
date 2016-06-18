@@ -380,7 +380,6 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 	u8 *ptr;
 	u8 *min, *max;
 	u16 min_lid, max_lid;
-	size_t nonce_len = sizeof(sta->my_nonce);
 	size_t lid_len = sizeof(sta->my_lid);
 	u8 *myaddr = wpa_s->own_addr;
 	u8 *peer = sta->addr;
@@ -388,16 +387,16 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 	u8 context[64 + 4 + 4 + 12];
 
 	ptr = context;
-	if (os_memcmp(sta->my_nonce, sta->peer_nonce, nonce_len) < 0) {
+	if (os_memcmp(sta->my_nonce, sta->peer_nonce, WPA_NONCE_LEN) < 0) {
 		min = sta->my_nonce;
 		max = sta->peer_nonce;
 	} else {
 		min = sta->peer_nonce;
 		max = sta->my_nonce;
 	}
-	os_memcpy(ptr, min, nonce_len);
-	os_memcpy(ptr + nonce_len, max, nonce_len);
-	ptr += 2 * nonce_len;
+	os_memcpy(ptr, min, WPA_NONCE_LEN);
+	os_memcpy(ptr + WPA_NONCE_LEN, max, WPA_NONCE_LEN);
+	ptr += 2 * WPA_NONCE_LEN;
 
 	if (sta->my_lid < sta->peer_lid) {
 		min_lid = host_to_le16(sta->my_lid);
@@ -433,11 +432,11 @@ int mesh_rsn_derive_mtk(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 
 void mesh_rsn_init_ampe_sta(struct wpa_supplicant *wpa_s, struct sta_info *sta)
 {
-	if (random_get_bytes(sta->my_nonce, 32) < 0) {
+	if (random_get_bytes(sta->my_nonce, WPA_NONCE_LEN) < 0) {
 		wpa_printf(MSG_INFO, "mesh: Failed to derive random nonce");
 		/* TODO: How to handle this more cleanly? */
 	}
-	os_memset(sta->peer_nonce, 0, 32);
+	os_memset(sta->peer_nonce, 0, WPA_NONCE_LEN);
 	mesh_rsn_derive_aek(wpa_s->mesh_rsn, sta);
 }
 
@@ -483,8 +482,8 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 
 	RSN_SELECTOR_PUT(ampe->selected_pairwise_suite,
 		     wpa_cipher_to_suite(WPA_PROTO_RSN, WPA_CIPHER_CCMP));
-	os_memcpy(ampe->local_nonce, sta->my_nonce, 32);
-	os_memcpy(ampe->peer_nonce, sta->peer_nonce, 32);
+	os_memcpy(ampe->local_nonce, sta->my_nonce, WPA_NONCE_LEN);
+	os_memcpy(ampe->peer_nonce, sta->peer_nonce, WPA_NONCE_LEN);
 	/* incomplete: see 13.5.4 */
 	/* TODO: static mgtk for now since we don't support rekeying! */
 	os_memcpy(ampe->mgtk, rsn->mgtk, 16);
@@ -524,7 +523,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 {
 	int ret = 0;
 	struct ieee80211_ampe_ie *ampe;
-	u8 null_nonce[32] = {};
+	u8 null_nonce[WPA_NONCE_LEN] = {};
 	u8 ampe_eid;
 	u8 ampe_ie_len;
 	u8 *ampe_buf, *crypt = NULL;
@@ -593,8 +592,8 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	}
 
 	ampe = (struct ieee80211_ampe_ie *) ampe_buf;
-	if (os_memcmp(ampe->peer_nonce, null_nonce, 32) != 0 &&
-	    os_memcmp(ampe->peer_nonce, sta->my_nonce, 32) != 0) {
+	if (os_memcmp(ampe->peer_nonce, null_nonce, WPA_NONCE_LEN) != 0 &&
+	    os_memcmp(ampe->peer_nonce, sta->my_nonce, WPA_NONCE_LEN) != 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Mesh RSN: invalid peer nonce");
 		ret = -1;
 		goto free;

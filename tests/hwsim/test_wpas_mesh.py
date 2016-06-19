@@ -1291,7 +1291,7 @@ def test_mesh_scan_oom(dev):
     for i in range(1, 3):
         with alloc_fail(dev[1], i, "mesh_attr_text"):
             bss = dev[1].get_bss(bssid)
-            if bss is not None:
+            if bss and "mesh_id" in bss:
                 raise Exception("Unexpected BSS result during OOM")
 
 def test_mesh_drv_fail(dev, apdev):

@@ -5943,3 +5943,12 @@ def test_ap_wpa2_eap_gpsk_ptk_rekey_ap(dev, apdev):
     if ev is None:
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_eap_wildcard_ssid(dev, apdev):
+    """WPA2-Enterprise connection using EAP-GPSK and wildcard SSID"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(bssid=apdev[0]['bssid'], key_mgmt="WPA-EAP", eap="GPSK",
+                   identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")

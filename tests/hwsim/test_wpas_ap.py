@@ -9,7 +9,8 @@ import logging
 logger = logging.getLogger()
 
 import hwsim_utils
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
+from wpasupplicant import WpaSupplicant
 from test_p2p_channel import set_country
 
 def wait_ap_ready(dev):
@@ -415,3 +416,133 @@ def test_wpas_ap_open_ht_disabled(dev):
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_wpas_ap_failures(dev):
+    """wpa_supplicant AP mode - failures"""
+    # No SSID configured for AP mode
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    ev = dev[0].wait_event([ "CTRL-EVENT-CONNECTED" ], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected connection event")
+    dev[0].request("REMOVE_NETWORK all")
+
+    # Invalid pbss value(2) for AP mode
+    dev[0].dump_monitor()
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].set_network(id, "pbss", "2")
+    dev[0].select_network(id)
+    ev = dev[0].wait_event([ "CTRL-EVENT-CONNECTED",
+                             "CTRL-EVENT-DISCONNECTED" ], timeout=0.1)
+    if ev is not None and "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection event(2)")
+    dev[0].request("REMOVE_NETWORK all")
+
+def test_wpas_ap_oom(dev):
+    """wpa_supplicant AP mode - OOM"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap")
+    dev[0].set_network_quoted(id, "psk", "1234567890")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    with alloc_fail(dev[0], 1, "=wpa_supplicant_conf_ap"):
+        dev[0].select_network(id)
+        dev[0].wait_disconnected()
+    dev[0].request("REMOVE_NETWORK all")
+
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap")
+    dev[0].set_network(id, "psk", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    with alloc_fail(dev[0], 1, "=wpa_supplicant_conf_ap"):
+        dev[0].select_network(id)
+        dev[0].wait_disconnected()
+    dev[0].request("REMOVE_NETWORK all")
+
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network_quoted(id, "wep_key0", "hello")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    with alloc_fail(dev[0], 1, "=wpa_supplicant_conf_ap"):
+        dev[0].select_network(id)
+        dev[0].wait_disconnected()
+    dev[0].request("REMOVE_NETWORK all")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET manufacturer test")
+    wpas.request("SET model_name test")
+    wpas.request("SET model_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET ap_vendor_elements dd0411223301")
+    id = wpas.add_network()
+    wpas.set_network(id, "mode", "2")
+    wpas.set_network_quoted(id, "ssid", "wpas-ap")
+    wpas.set_network(id, "key_mgmt", "NONE")
+    wpas.set_network(id, "frequency", "2412")
+    wpas.set_network(id, "scan_freq", "2412")
+
+    for i in range(5):
+        with alloc_fail(wpas, i, "=wpa_supplicant_conf_ap"):
+            wpas.select_network(id)
+            ev = dev[0].wait_event([ "CTRL-EVENT-CONNECTED",
+                                     "CTRL-EVENT-DISCONNECTED" ], timeout=1)
+        wpas.request("DISCONNECT")
+        wpas.wait_disconnected()
+
+def test_wpas_ap_params(dev):
+    """wpa_supplicant AP mode - parameters"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET manufacturer test")
+    wpas.request("SET model_name test")
+    wpas.request("SET model_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET serial_number test")
+    wpas.request("SET ap_vendor_elements dd0411223301")
+    id = wpas.add_network()
+    wpas.set_network(id, "mode", "2")
+    wpas.set_network_quoted(id, "ssid", "wpas-ap")
+    wpas.set_network(id, "key_mgmt", "NONE")
+    wpas.set_network(id, "frequency", "2412")
+    wpas.set_network(id, "scan_freq", "2412")
+    wpas.select_network(id)
+    wpas.wait_connected()
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+
+    wpas.request("SET beacon_int 200 3")
+    wpas.request("SET dtim_period 3")
+    wpas.select_network(id)
+    wpas.wait_connected()
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+
+    wpas.set_network(id, "beacon_int", "300")
+    wpas.set_network(id, "dtim_period", "2")
+    wpas.select_network(id)
+    wpas.wait_connected()
+    if "---- AP ----" not in wpas.request("PMKSA"):
+        raise Exception("AP section missing from PMKSA output")
+    if "OK" not in wpas.request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()

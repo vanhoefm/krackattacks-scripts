@@ -1632,6 +1632,20 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
+    <h3>DeviceFoundProperties ( o : path, a{sv} : properties )</h3>
+    <p>A new peer device has been found.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>o : path</dt>
+      <dd>A D-Bus path to an object representing the found peer device.</dd>
+    </dl>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary containing properties of the found peer device.</dd>
+    </dl>
+  </li>
+
+  <li>
     <h3>DeviceLost ( o : path )</h3>
   </li>
 

@@ -445,6 +445,9 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	/* hostapd sets the interface down until we associate */
 	wpa_drv_set_operstate(wpa_s, 1);
 
+	if (!ret)
+		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
+
 out:
 	return ret;
 }

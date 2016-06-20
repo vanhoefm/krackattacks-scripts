@@ -363,7 +363,6 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 		"AUTH: started authentication with SAE peer: " MACSTR,
 		MAC2STR(sta->addr));
 
-	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
 	ret = auth_sae_init_committed(hapd, sta);
 	if (ret)
 		return ret;

@@ -191,6 +191,10 @@ def main():
         # setup hwsim_test we should run
         if requested_hwsim_tests[0] == "all":
             hwsim_tests_to_run = hwsim_tests
+        elif requested_hwsim_tests[0] == "remote":
+            hwsim_tests_to_run = [t for t in hwsim_tests
+                                  if hasattr(t, "remote_compatible") and
+                                     t.remote_compatible]
         else:
             for test in requested_hwsim_tests:
                 t = None

@@ -10,6 +10,10 @@ import threading
 
 logger = logging.getLogger()
 
+def remote_compatible(func):
+    func.remote_compatible = True
+    return func
+
 def execute_thread(command, reply):
     cmd = ' '.join(command)
     logger.debug("thread run: " + cmd)

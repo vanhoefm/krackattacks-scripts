@@ -994,7 +994,7 @@ int fst_session_respond(struct fst_session *s, u8 status_code)
 	res.stie.length = sizeof(res.stie) - 2;
 
 	if (status_code == WLAN_STATUS_SUCCESS) {
-		res.stie.fsts_id = s->data.fsts_id;
+		res.stie.fsts_id = host_to_le32(s->data.fsts_id);
 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 
 		fst_iface_get_channel_info(s->data.new_iface, &hw_mode,
@@ -1468,7 +1468,7 @@ int fst_test_req_send_fst_response(const char *params)
 	res.stie.length = sizeof(res.stie) - 2;
 
 	if (res.status_code == WLAN_STATUS_SUCCESS) {
-		res.stie.fsts_id = fsts_id;
+		res.stie.fsts_id = host_to_le32(fsts_id);
 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
 
 		fst_iface_get_channel_info(s.data.new_iface, &hw_mode,
@@ -1517,7 +1517,7 @@ int fst_test_req_send_ack_request(const char *params)
 	os_memset(&req, 0, sizeof(req));
 	req.action = FST_ACTION_ACK_REQUEST;
 	req.dialog_token = g->dialog_token;
-	req.fsts_id = fsts_id;
+	req.fsts_id = host_to_le32(fsts_id);
 
 	return fst_session_send_action(&s, FALSE, &req, sizeof(req), NULL);
 }
@@ -1545,7 +1545,7 @@ int fst_test_req_send_ack_response(const char *params)
 	os_memset(&res, 0, sizeof(res));
 	res.action = FST_ACTION_ACK_RESPONSE;
 	res.dialog_token = g->dialog_token;
-	res.fsts_id = fsts_id;
+	res.fsts_id = host_to_le32(fsts_id);
 
 	return fst_session_send_action(&s, FALSE, &res, sizeof(res), NULL);
 }
@@ -1572,7 +1572,7 @@ int fst_test_req_send_tear_down(const char *params)
 
 	os_memset(&td, 0, sizeof(td));
 	td.action = FST_ACTION_TEAR_DOWN;
-	td.fsts_id = fsts_id;
+	td.fsts_id = host_to_le32(fsts_id);
 
 	return fst_session_send_action(&s, TRUE, &td, sizeof(td), NULL);
 }

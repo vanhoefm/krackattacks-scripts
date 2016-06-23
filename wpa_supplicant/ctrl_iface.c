@@ -7893,7 +7893,8 @@ static u16 ipv4_hdr_checksum(const void *buf, size_t len)
 #define HWSIM_PACKETLEN 1500
 #define HWSIM_IP_LEN (HWSIM_PACKETLEN - sizeof(struct ether_header))
 
-void wpas_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
+static void wpas_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
+			      size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	const struct ether_header *eth;

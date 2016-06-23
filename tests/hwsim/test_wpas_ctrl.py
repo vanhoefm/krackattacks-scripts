@@ -1259,14 +1259,14 @@ def test_wpas_ctrl_roam(dev, apdev):
 def test_wpas_ctrl_ipaddr(dev, apdev):
     """wpa_supplicant IP address in STATUS"""
     try:
-        subprocess.call(['ip', 'addr', 'add', '10.174.65.207/32', 'dev',
-                         dev[0].ifname])
+        dev[0].cmd_execute(['ip', 'addr', 'add', '10.174.65.207/32', 'dev',
+                            dev[0].ifname])
         ipaddr = dev[0].get_status_field('ip_address')
         if ipaddr != '10.174.65.207':
             raise Exception("IP address not in STATUS output")
     finally:
-        subprocess.call(['ip', 'addr', 'del', '10.174.65.207/32', 'dev',
-                         dev[0].ifname])
+        dev[0].cmd_execute(['ip', 'addr', 'del', '10.174.65.207/32', 'dev',
+                            dev[0].ifname])
 
 def test_wpas_ctrl_rsp(dev, apdev):
     """wpa_supplicant ctrl_iface CTRL-RSP-"""

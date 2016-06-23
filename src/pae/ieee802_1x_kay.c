@@ -1928,7 +1928,7 @@ static struct mka_param_body_handler mak_body_handler[] = {
 /**
  * ieee802_1x_kay_deinit_data_key -
  */
-void ieee802_1x_kay_deinit_data_key(struct data_key *pkey)
+static void ieee802_1x_kay_deinit_data_key(struct data_key *pkey)
 {
 	if (!pkey)
 		return;

@@ -5,7 +5,6 @@
 # See README for more details.
 
 import time
-import subprocess
 import logging
 logger = logging.getLogger()
 
@@ -413,9 +412,8 @@ def _test_ap_pmf_toggle(dev, apdev):
     sta = hapd.get_sta(addr)
     if '[MFP]' in sta['flags']:
         raise Exception("MFP flag unexpectedly present for STA")
-    cmd = subprocess.Popen(['iw', 'dev', apdev[0]['ifname'], 'station', 'get',
-                            addr], stdout=subprocess.PIPE)
-    (data,err) = cmd.communicate()
+    err, data = hapd.cmd_execute(['iw', 'dev', apdev[0]['ifname'], 'station',
+                                  'get', addr])
     if "yes" in [l for l in data.splitlines() if "MFP" in l][0]:
         raise Exception("Kernel STA entry had MFP enabled")
 
@@ -426,9 +424,8 @@ def _test_ap_pmf_toggle(dev, apdev):
     sta = hapd.get_sta(addr)
     if '[MFP]' not in sta['flags']:
         raise Exception("MFP flag not present for STA")
-    cmd = subprocess.Popen(['iw', 'dev', apdev[0]['ifname'], 'station', 'get',
-                            addr], stdout=subprocess.PIPE)
-    (data,err) = cmd.communicate()
+    err, data = hapd.cmd_execute(['iw', 'dev', apdev[0]['ifname'], 'station',
+                                  'get', addr])
     if "yes" not in [l for l in data.splitlines() if "MFP" in l][0]:
         raise Exception("Kernel STA entry did not have MFP enabled")
 

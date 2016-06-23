@@ -29,6 +29,8 @@
 #include "sha1.h"
 #include "sha256.h"
 #include "sha384.h"
+#include "md5.h"
+#include "aes_wrap.h"
 #include "crypto.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)

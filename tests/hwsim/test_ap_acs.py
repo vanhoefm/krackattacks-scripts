@@ -6,7 +6,6 @@
 
 import logging
 logger = logging.getLogger()
-import subprocess
 import time
 
 import hostapd
@@ -144,7 +143,7 @@ def test_ap_acs_5ghz(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_acs_5ghz_40mhz(dev, apdev):
@@ -173,7 +172,7 @@ def test_ap_acs_5ghz_40mhz(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_acs_vht(dev, apdev):
@@ -204,7 +203,7 @@ def test_ap_acs_vht(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_acs_bias(dev, apdev):

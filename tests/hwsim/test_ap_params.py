@@ -112,7 +112,7 @@ def test_ap_country(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_acl_accept(dev, apdev):
@@ -247,7 +247,7 @@ def test_ap_spectrum_management_required(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['iw', 'reg', 'set', '00'])
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_max_listen_interval(dev, apdev):

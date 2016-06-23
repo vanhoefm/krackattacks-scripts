@@ -148,7 +148,7 @@ ieee802_1x_mka_dump_peer_body(struct ieee802_1x_mka_peer_body *body)
 	size_t body_len;
 	size_t i;
 	u8 *mi;
-	u32 mn;
+	be32 mn;
 
 	if (body == NULL)
 		return;
@@ -918,6 +918,7 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 	size_t left_len;
 	int body_type;
 	u32 peer_mn;
+	be32 _peer_mn;
 	const u8 *peer_mi;
 	const u8 *pos;
 	size_t i;
@@ -953,8 +954,9 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 
 		for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
 			peer_mi = MKA_HDR_LEN + pos + i;
-			os_memcpy(&peer_mn, peer_mi + MI_LEN, sizeof(peer_mn));
-			peer_mn = be_to_host32(peer_mn);
+			os_memcpy(&_peer_mn, peer_mi + MI_LEN,
+				  sizeof(_peer_mn));
+			peer_mn = be_to_host32(_peer_mn);
 			if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0 &&
 			    peer_mn == participant->mn) {
 				included = TRUE;
@@ -985,6 +987,7 @@ static int ieee802_1x_mka_decode_live_peer_body(
 	struct ieee802_1x_kay_peer *peer;
 	size_t body_len;
 	u32 peer_mn;
+	be32 _peer_mn;
 	const u8 *peer_mi;
 	size_t i;
 	Boolean is_included;
@@ -997,8 +1000,8 @@ static int ieee802_1x_mka_decode_live_peer_body(
 
 	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
 		peer_mi = MKA_HDR_LEN + peer_msg + i;
-		os_memcpy(&peer_mn, peer_mi + MI_LEN, sizeof(peer_mn));
-		peer_mn = be_to_host32(peer_mn);
+		os_memcpy(&_peer_mn, peer_mi + MI_LEN, sizeof(_peer_mn));
+		peer_mn = be_to_host32(_peer_mn);
 
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {
@@ -1042,6 +1045,7 @@ ieee802_1x_mka_decode_potential_peer_body(
 	struct ieee802_1x_mka_hdr *hdr;
 	size_t body_len;
 	u32 peer_mn;
+	be32 _peer_mn;
 	const u8 *peer_mi;
 	size_t i;
 
@@ -1050,8 +1054,8 @@ ieee802_1x_mka_decode_potential_peer_body(
 
 	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
 		peer_mi = MKA_HDR_LEN + peer_msg + i;
-		os_memcpy(&peer_mn, peer_mi + MI_LEN, sizeof(peer_mn));
-		peer_mn = be_to_host32(peer_mn);
+		os_memcpy(&_peer_mn, peer_mi + MI_LEN, sizeof(_peer_mn));
+		peer_mn = be_to_host32(_peer_mn);
 
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {
@@ -1290,7 +1294,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	if (body->ltx || body->lrx) {
 		founded = FALSE;
 		os_memcpy(ki.mi, body->lsrv_mi, sizeof(ki.mi));
-		ki.kn = ntohl(body->lkn);
+		ki.kn = be_to_host32(body->lkn);
 		dl_list_for_each(sa_key, &participant->sak_list,
 				 struct data_key, list) {
 			if (is_ki_equal(&sa_key->key_identifier, &ki)) {
@@ -1304,7 +1308,7 @@ ieee802_1x_mka_decode_sak_use_body(
 		}
 		if (os_memcmp(participant->lki.mi, body->lsrv_mi,
 			      sizeof(participant->lki.mi)) == 0 &&
-		    ntohl(body->lkn) == participant->lki.kn &&
+		    be_to_host32(body->lkn) == participant->lki.kn &&
 		    body->lan == participant->lan) {
 			peer->sak_used = TRUE;
 		}
@@ -1319,7 +1323,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	if (body->otx || body->orx) {
 		if (os_memcmp(participant->oki.mi, body->osrv_mi,
 			      sizeof(participant->oki.mi)) != 0 ||
-		    ntohl(body->okn) != participant->oki.kn ||
+		    be_to_host32(body->okn) != participant->oki.kn ||
 		    body->oan != participant->oan) {
 			wpa_printf(MSG_WARNING, "KaY: Old key is invalid");
 			return -1;
@@ -1327,7 +1331,8 @@ ieee802_1x_mka_decode_sak_use_body(
 	}
 
 	/* TODO: how to set the MACsec hardware when delay_protect is true */
-	if (body->delay_protect && (!ntohl(body->llpn) || !ntohl(body->olpn))) {
+	if (body->delay_protect &&
+	    (!be_to_host32(body->llpn) || !be_to_host32(body->olpn))) {
 		wpa_printf(MSG_WARNING,
 			   "KaY: Lowest packet number should greater than 0 when delay_protect is TRUE");
 		return -1;
@@ -1349,7 +1354,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	}
 
 	/* if i'm key server, and detects peer member pn exhaustion, rekey.*/
-	lpn = ntohl(body->llpn);
+	lpn = be_to_host32(body->llpn);
 	if (lpn > participant->kay->pn_exhaustion) {
 		if (participant->is_key_server) {
 			participant->new_sak = TRUE;
@@ -3094,10 +3099,10 @@ static void kay_l2_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 	eth_hdr = (struct ieee8023_hdr *) buf;
 	eapol_hdr = (struct ieee802_1x_hdr *) (eth_hdr + 1);
 	if (len != sizeof(*eth_hdr) + sizeof(*eapol_hdr) +
-	    ntohs(eapol_hdr->length)) {
+	    be_to_host16(eapol_hdr->length)) {
 		wpa_printf(MSG_MSGDUMP, "KAY: EAPOL MPDU is invalid: (%lu-%lu)",
 			   (unsigned long) len,
-			   (unsigned long) ntohs(eapol_hdr->length));
+			   (unsigned long) be_to_host16(eapol_hdr->length));
 		return;
 	}
 
@@ -3106,7 +3111,7 @@ static void kay_l2_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 			   eapol_hdr->version);
 		return;
 	}
-	if (ntohs(eth_hdr->ethertype) != ETH_P_PAE ||
+	if (be_to_host16(eth_hdr->ethertype) != ETH_P_PAE ||
 	    eapol_hdr->type != IEEE802_1X_TYPE_EAPOL_MKA)
 		return;
 

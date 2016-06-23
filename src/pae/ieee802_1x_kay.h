@@ -32,7 +32,7 @@ struct ieee802_1x_mka_ki {
 
 struct ieee802_1x_mka_sci {
 	u8 addr[ETH_ALEN];
-	u16 port;
+	be16 port;
 };
 
 struct mka_key {

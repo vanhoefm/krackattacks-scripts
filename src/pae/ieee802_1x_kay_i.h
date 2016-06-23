@@ -38,7 +38,7 @@ struct ieee802_1x_kay;
 
 struct ieee802_1x_mka_peer_id {
 	u8 mi[MI_LEN];
-	u32 mn;
+	be32 mn;
 };
 
 struct ieee802_1x_kay_peer {
@@ -282,7 +282,7 @@ struct ieee802_1x_mka_basic_body {
 
 	struct ieee802_1x_mka_sci actor_sci;
 	u8 actor_mi[MI_LEN];
-	u32 actor_mn;
+	be32 actor_mn;
 	u8 algo_agility[4];
 
 	/* followed by CAK Name*/
@@ -350,16 +350,16 @@ struct ieee802_1x_mka_sak_use_body {
 	/* octet 5 - 16 */
 	u8 lsrv_mi[MI_LEN];
 	/* octet 17 - 20 */
-	u32 lkn;
+	be32 lkn;
 	/* octet 21 - 24 */
-	u32 llpn;
+	be32 llpn;
 
 	/* octet 25 - 36 */
 	u8 osrv_mi[MI_LEN];
 	/* octet 37 - 40 */
-	u32 okn;
+	be32 okn;
 	/* octet 41 - 44 */
-	u32 olpn;
+	be32 olpn;
 };
 
 
@@ -387,7 +387,7 @@ struct ieee802_1x_mka_dist_sak_body {
 	/* octet 4 */
 	u32 length1:8;
 	/* octet 5 - 8 */
-	u32 kn;
+	be32 kn;
 
 	/* for GCM-AES-128: octet 9-32: SAK
 	 * for other cipher suite: octet 9-16: cipher suite id, octet 17-: SAK

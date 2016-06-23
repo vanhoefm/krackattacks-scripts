@@ -138,7 +138,7 @@ def test_scan_external_trigger(dev, apdev):
     """Avoid operations during externally triggered scan"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
-    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger'])
+    dev[0].cmd_execute(['iw', dev[0].ifname, 'scan', 'trigger'])
     check_scan(dev[0], "use_id=1", other_started=True)
 
 def test_scan_bss_expiration_count(dev, apdev):
@@ -362,10 +362,9 @@ def test_scan_for_auth(dev, apdev):
                    wait_connect=False)
     dev[0].dump_monitor()
     # Clear cfg80211 BSS table.
-    try:
-        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
-                               'freq', '2457', 'flush'])
-    except subprocess.CalledProcessError, e:
+    res, data = dev[0].cmd_execute(['iw', dev[0].ifname, 'scan', 'trigger',
+                                    'freq', '2457', 'flush'])
+    if res != 0:
         raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
@@ -393,10 +392,9 @@ def test_scan_for_auth_fail(dev, apdev):
     dev[0].dump_monitor()
     hapd.disable()
     # Clear cfg80211 BSS table.
-    try:
-        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
-                               'freq', '2457', 'flush'])
-    except subprocess.CalledProcessError, e:
+    res, data = dev[0].cmd_execute(['iw', dev[0].ifname, 'scan', 'trigger',
+                                    'freq', '2457', 'flush'])
+    if res != 0:
         raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
@@ -432,10 +430,9 @@ def test_scan_for_auth_wep(dev, apdev):
                    auth_alg="SHARED", scan_freq="2412", wait_connect=False)
     dev[0].dump_monitor()
     # Clear cfg80211 BSS table.
-    try:
-        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
-                               'freq', '2457', 'flush'])
-    except subprocess.CalledProcessError, e:
+    res, data = dev[0].cmd_execute(['iw', dev[0].ifname, 'scan', 'trigger',
+                                    'freq', '2457', 'flush'])
+    if res != 0:
         raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:

@@ -17,7 +17,7 @@ struct wps_attr_parse_test {
 	int extra;
 };
 
-const struct wps_attr_parse_test wps_attr_parse_test_cases[] = {
+static const struct wps_attr_parse_test wps_attr_parse_test_cases[] = {
 	/* Empty message */
 	{ "", 0, 0 },
 	/* Truncated attribute header */

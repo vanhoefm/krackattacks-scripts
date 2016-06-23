@@ -1266,7 +1266,7 @@ static int test_sha1(void)
 }
 
 
-const struct {
+static const struct {
 	char *data;
 	u8 hash[32];
 } tests[] = {
@@ -1290,7 +1290,7 @@ const struct {
 	}
 };
 
-const struct hmac_test {
+static const struct hmac_test {
 	u8 key[80];
 	size_t key_len;
 	u8 data[128];

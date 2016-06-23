@@ -269,7 +269,7 @@ static int p2p_manager_disconnect(struct hostapd_data *hapd, u16 stype,
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "P2P: Disconnect STA " MACSTR
 		" with minor reason code %u (stype=%u (%s))",
 		MAC2STR(addr), minor_reason_code, stype,
-		fc2str(mgmt->frame_control));
+		fc2str(le_to_host16(mgmt->frame_control)));
 
 	os_memcpy(mgmt->da, addr, ETH_ALEN);
 	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);

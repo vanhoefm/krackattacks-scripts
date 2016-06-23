@@ -1277,7 +1277,7 @@ static void handle_auth(struct hostapd_data *hapd,
 		sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_AUTH |
 				WLAN_STA_AUTHORIZED);
 
-		if (hostapd_sta_add(hapd, sta->addr, 0, 0, 0, 0, 0,
+		if (hostapd_sta_add(hapd, sta->addr, 0, 0, NULL, 0, 0,
 				    NULL, NULL, sta->flags, 0, 0, 0, 0)) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,

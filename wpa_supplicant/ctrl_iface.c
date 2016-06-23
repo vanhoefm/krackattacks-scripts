@@ -420,7 +420,6 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_TDLS
 #ifdef CONFIG_TDLS_TESTING
 	} else if (os_strcasecmp(cmd, "tdls_testing") == 0) {
-		extern unsigned int tdls_testing;
 		tdls_testing = strtol(value, NULL, 0);
 		wpa_printf(MSG_DEBUG, "TDLS: tdls_testing=0x%x", tdls_testing);
 #endif /* CONFIG_TDLS_TESTING */
@@ -7137,7 +7136,6 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_TDLS
 #ifdef CONFIG_TDLS_TESTING
-	extern unsigned int tdls_testing;
 	tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 	wpa_drv_tdls_oper(wpa_s, TDLS_ENABLE, NULL);

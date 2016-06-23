@@ -5,7 +5,6 @@
 # See README for more details.
 
 import os
-import subprocess
 import time
 import logging
 logger = logging.getLogger()

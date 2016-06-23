@@ -7,7 +7,6 @@
 import time
 import logging
 logger = logging.getLogger()
-import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant

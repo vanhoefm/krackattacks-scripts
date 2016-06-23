@@ -5,7 +5,6 @@
 # See README for more details.
 
 import logging
-import subprocess
 import os
 import signal
 import time

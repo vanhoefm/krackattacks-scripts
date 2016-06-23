@@ -8,7 +8,6 @@ import base64
 import binascii
 import struct
 import time
-import subprocess
 import logging
 logger = logging.getLogger()
 import os

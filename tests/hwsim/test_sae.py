@@ -7,7 +7,6 @@
 import binascii
 import os
 import time
-import subprocess
 import logging
 logger = logging.getLogger()
 

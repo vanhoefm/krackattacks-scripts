@@ -8,7 +8,6 @@ import logging
 logger = logging.getLogger()
 import binascii
 import os
-import subprocess
 import time
 
 import hostapd

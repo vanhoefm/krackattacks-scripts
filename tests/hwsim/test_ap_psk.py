@@ -1888,13 +1888,13 @@ def test_ap_wpa2_psk_ifdown(dev, apdev):
     bssid = apdev[0]['bssid']
 
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
     ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=10)
     if ev is None:
         raise Exception("No INTERFACE-DISABLED event")
     # this wait tests beacon loss detection in mac80211
     dev[0].wait_disconnected()
-    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
     ev = hapd.wait_event(["INTERFACE-ENABLED"], timeout=10)
     if ev is None:
         raise Exception("No INTERFACE-ENABLED event")

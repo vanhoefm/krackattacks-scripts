@@ -345,7 +345,7 @@ def test_ap_open_ifdown(dev, apdev):
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
-    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
     ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=10)
     if ev is None:
         raise Exception("Timeout on AP-STA-DISCONNECTED (1)")
@@ -358,7 +358,7 @@ def test_ap_open_ifdown(dev, apdev):
     # The following wait tests beacon loss detection in mac80211 on dev0.
     # dev1 is used to test stopping of AP side functionality on client polling.
     dev[1].request("REMOVE_NETWORK all")
-    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
     dev[0].wait_disconnected()
     dev[1].wait_disconnected()
     ev = hapd.wait_event(["INTERFACE-ENABLED"], timeout=10)

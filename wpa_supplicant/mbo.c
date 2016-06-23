@@ -516,8 +516,8 @@ static enum chan_allowed verify_160mhz(struct hostapd_hw_modes *mode,
 }
 
 
-enum chan_allowed verify_channel(struct hostapd_hw_modes *mode, u8 channel,
-				 u8 bw)
+static enum chan_allowed verify_channel(struct hostapd_hw_modes *mode,
+					u8 channel, u8 bw)
 {
 	unsigned int flag = 0;
 	enum chan_allowed res, res2;

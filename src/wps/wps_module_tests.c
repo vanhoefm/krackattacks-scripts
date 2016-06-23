@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/module_tests.h"
 #include "wps_attr_parse.h"
 
 struct wps_attr_parse_test {

@@ -508,7 +508,7 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
 	struct wpa_bss *target;
 
 	if (!bss)
-		return 0;
+		return NULL;
 
 	wpa_printf(MSG_DEBUG, "WNM: Current BSS " MACSTR " RSSI %d",
 		   MAC2STR(wpa_s->bssid), bss->level);

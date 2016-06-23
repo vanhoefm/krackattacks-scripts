@@ -393,8 +393,8 @@ def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
             params[key] = value
 
         hapd = hostapd.add_ap(apdev[0], params)
-        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        hapd.cmd_execute(['brctl', 'setfd', 'ap-br0', '0'])
+        hapd.cmd_execute(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         eap_connect(dev[0], hapd, "PAX", identity,
                     password_hex="0123456789abcdef0123456789abcdef")
 
@@ -456,10 +456,11 @@ def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
         hapd.request("DISABLE")
 
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
-                        stderr=open('/dev/null', 'w'))
-        subprocess.call(['brctl', 'delbr', 'ap-br0'],
-                        stderr=open('/dev/null', 'w'))
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev',
+                                       'ap-br0', 'down', '2>', '/dev/null'],
+                            shell=True)
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0',
+                                       '2>', '/dev/null'], shell=True)
 
 def test_pmksa_cache_preauth(dev, apdev):
     """RSN pre-authentication to generate PMKSA cache entry"""
@@ -701,15 +702,16 @@ def test_pmksa_cache_preauth_oom(dev, apdev):
     try:
         _test_pmksa_cache_preauth_oom(dev, apdev)
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['brctl', 'delbr', 'ap-br0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', 'ap-br0',
+                                       'down'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0'])
 
 def _test_pmksa_cache_preauth_oom(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['bridge'] = 'ap-br0'
     hapd = hostapd.add_ap(apdev[0], params)
-    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    hostapd.cmd_execute(apdev[0], ['brctl', 'setfd', 'ap-br0', '0'])
+    hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
     eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef",
                 bssid=apdev[0]['bssid'])

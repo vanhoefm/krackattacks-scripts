@@ -340,30 +340,27 @@ def test_ap_wpa2_strict_rekey(dev, apdev):
 
 def test_ap_wpa2_bridge_fdb(dev, apdev):
     """Bridge FDB entry removal"""
+    hapd = None
     try:
         ssid = "test-wpa2-psk"
         passphrase = "12345678"
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
-        hostapd.add_ap(apdev[0], params)
-        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        hapd = hostapd.add_ap(apdev[0], params)
+        hapd.cmd_execute(['brctl', 'setfd', 'ap-br0', '0'])
+        hapd.cmd_execute(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[0]['bssid'])
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[0]['bssid'])
         addr0 = dev[0].p2p_interface_addr()
         hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-        cmd = subprocess.Popen(['brctl', 'showmacs', 'ap-br0'],
-                               stdout=subprocess.PIPE)
-        macs1 = cmd.stdout.read()
-        cmd = subprocess.call(['brctl', 'setageing', 'ap-br0', '1'])
+        err, macs1 = hapd.cmd_execute(['brctl', 'showmacs', 'ap-br0'])
+        hapd.cmd_execute(['brctl', 'setageing', 'ap-br0', '1'])
         dev[0].request("DISCONNECT")
         dev[1].request("DISCONNECT")
         time.sleep(1)
-        cmd = subprocess.Popen(['brctl', 'showmacs', 'ap-br0'],
-                               stdout=subprocess.PIPE)
-        macs2 = cmd.stdout.read()
+        err, macs2 = hapd.cmd_execute(['brctl', 'showmacs', 'ap-br0'])
 
         addr1 = dev[1].p2p_interface_addr()
         if addr0 not in macs1 or addr1 not in macs1:
@@ -371,8 +368,9 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
         if addr0 in macs2 or addr1 in macs2:
             raise Exception("Bridge FDB entry was not removed")
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['brctl', 'delbr', 'ap-br0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', 'ap-br0',
+                                       'down'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0'])
 
 def test_ap_wpa2_already_in_bridge(dev, apdev):
     """hostapd behavior with interface already in bridge"""
@@ -381,21 +379,23 @@ def test_ap_wpa2_already_in_bridge(dev, apdev):
     try:
         ssid = "test-wpa2-psk"
         passphrase = "12345678"
-        subprocess.call(['brctl', 'addbr', br_ifname])
-        subprocess.call(['brctl', 'setfd', br_ifname, '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
-        subprocess.call(['iw', ifname, 'set', 'type', '__ap'])
-        subprocess.call(['brctl', 'addif', br_ifname, ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'setfd', br_ifname, '0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'up'])
+        hostapd.cmd_execute(apdev[0], ['iw', ifname, 'set', 'type', '__ap'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addif', br_ifname, ifname])
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         hapd = hostapd.add_ap(apdev[0], params)
         if hapd.get_driver_status_field('brname') != br_ifname:
             raise Exception("Bridge name not identified correctly")
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
-        subprocess.call(['brctl', 'delif', br_ifname, ifname])
-        subprocess.call(['iw', ifname, 'set', 'type', 'station'])
-        subprocess.call(['brctl', 'delbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'down'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delif', br_ifname, ifname])
+        hostapd.cmd_execute(apdev[0], ['iw', ifname, 'set', 'type', 'station'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', br_ifname])
 
 def test_ap_wpa2_in_different_bridge(dev, apdev):
     """hostapd behavior with interface in different bridge"""
@@ -404,17 +404,19 @@ def test_ap_wpa2_in_different_bridge(dev, apdev):
     try:
         ssid = "test-wpa2-psk"
         passphrase = "12345678"
-        subprocess.call(['brctl', 'addbr', br_ifname])
-        subprocess.call(['brctl', 'setfd', br_ifname, '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
-        subprocess.call(['iw', ifname, 'set', 'type', '__ap'])
-        subprocess.call(['brctl', 'addif', br_ifname, ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'setfd', br_ifname, '0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'up'])
+        hostapd.cmd_execute(apdev[0], ['iw', ifname, 'set', 'type', '__ap'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addif', br_ifname, ifname])
         time.sleep(0.5)
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
         hapd = hostapd.add_ap(apdev[0], params)
-        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'setfd', 'ap-br0', '0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', 'ap-br0',
+                                       'up'])
         brname = hapd.get_driver_status_field('brname')
         if brname != 'ap-br0':
             raise Exception("Incorrect bridge: " + brname)
@@ -427,10 +429,11 @@ def test_ap_wpa2_in_different_bridge(dev, apdev):
         dev[0].request("DISCONNECT")
         hapd.disable()
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
-        subprocess.call(['brctl', 'delif', br_ifname, ifname],
-                        stderr=open('/dev/null', 'w'))
-        subprocess.call(['brctl', 'delbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'down'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delif', br_ifname, ifname,
+                                       "2>", "/dev/null"], shell=True)
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', br_ifname])
 
 def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
     """hostapd behavior with interface added to bridge externally"""
@@ -442,17 +445,19 @@ def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         hapd = hostapd.add_ap(apdev[0], params)
 
-        subprocess.call(['brctl', 'addbr', br_ifname])
-        subprocess.call(['brctl', 'setfd', br_ifname, '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
-        subprocess.call(['brctl', 'addif', br_ifname, ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'setfd', br_ifname, '0'])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'up'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'addif', br_ifname, ifname])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
         if hapd.get_driver_status_field('brname') != br_ifname:
             raise Exception("Bridge name not identified correctly")
     finally:
-        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
-        subprocess.call(['brctl', 'delif', br_ifname, ifname])
-        subprocess.call(['brctl', 'delbr', br_ifname])
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev', br_ifname,
+                                       'down'])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delif', br_ifname, ifname])
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', br_ifname])
 
 def test_ap_wpa2_psk_ext(dev, apdev):
     """WPA2-PSK AP using external EAPOL I/O"""

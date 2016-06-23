@@ -7,7 +7,6 @@
 import logging
 logger = logging.getLogger()
 import os
-import subprocess
 
 import hwsim_utils
 import hostapd
@@ -161,17 +160,17 @@ def test_ap_wds_sta(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
 
     try:
-        subprocess.call(['brctl', 'addbr', 'wds-br0'])
-        subprocess.call(['brctl', 'setfd', 'wds-br0', '0'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
-        subprocess.call(['iw', dev[0].ifname, 'set', '4addr', 'on'])
+        dev[0].cmd_execute(['brctl', 'addbr', 'wds-br0'])
+        dev[0].cmd_execute(['brctl', 'setfd', 'wds-br0', '0'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'on'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
                                             max_tries=15)
     finally:
-        subprocess.call(['iw', dev[0].ifname, 'set', '4addr', 'off'])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
-        subprocess.call(['brctl', 'delbr', 'wds-br0'])
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'off'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
+        dev[0].cmd_execute(['brctl', 'delbr', 'wds-br0'])
 
 def test_ap_inactivity_poll(dev, apdev):
     """AP using inactivity poll"""

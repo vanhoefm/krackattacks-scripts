@@ -426,16 +426,16 @@ def test_autogo_bridge(dev):
             raise Exception("Failed to set autoscan")
         autogo(dev[0])
         ifname = dev[0].get_group_ifname()
-        subprocess.call(['brctl', 'addbr', 'p2p-br0'])
-        subprocess.call(['brctl', 'setfd', 'p2p-br0', '0'])
-        subprocess.call(['brctl', 'addif', 'p2p-br0', ifname])
-        subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
+        dev[0].cmd_execute(['brctl', 'addbr', 'p2p-br0'])
+        dev[0].cmd_execute(['brctl', 'setfd', 'p2p-br0', '0'])
+        dev[0].cmd_execute(['brctl', 'addif', 'p2p-br0', ifname])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
         time.sleep(0.1)
-        subprocess.call(['brctl', 'delif', 'p2p-br0', ifname])
+        dev[0].cmd_execute(['brctl', 'delif', 'p2p-br0', ifname])
         time.sleep(0.1)
-        subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
         time.sleep(0.1)
-        subprocess.call(['brctl', 'delbr', 'p2p-br0'])
+        dev[0].cmd_execute(['brctl', 'delbr', 'p2p-br0'])
         ev = dev[0].wait_global_event(["P2P-GROUP-REMOVED"], timeout=1)
         if ev is not None:
             raise Exception("P2P group removed unexpectedly")
@@ -444,12 +444,12 @@ def test_autogo_bridge(dev):
         dev[0].remove_group()
     finally:
         dev[0].request("AUTOSCAN ")
-        subprocess.Popen(['brctl', 'delif', 'p2p-br0', ifname],
-                         stderr=open('/dev/null', 'w'))
-        subprocess.Popen(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],
-                         stderr=open('/dev/null', 'w'))
-        subprocess.Popen(['brctl', 'delbr', 'p2p-br0'],
-                         stderr=open('/dev/null', 'w'))
+        dev[0].cmd_execute(['brctl', 'delif', 'p2p-br0', ifname,
+                            '2>', '/dev/null'], shell=True)
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down',
+                            '2>', '/dev/null'], shell=True)
+        dev[0].cmd_execute(['brctl', 'delbr', 'p2p-br0', '2>', '/dev/null'],
+                           shell=True)
 
 def test_presence_req_on_group_interface(dev):
     """P2P_PRESENCE_REQ on group interface"""

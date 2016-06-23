@@ -419,6 +419,7 @@ void perror(const char *s);
  */
 #ifdef __CHECKER__
 #define __force __attribute__((force))
+#undef __bitwise
 #define __bitwise __attribute__((bitwise))
 #else
 #define __force

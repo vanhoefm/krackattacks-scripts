@@ -3806,8 +3806,8 @@ void wpa_supplicant_apply_vht_overrides(
 	if (!vhtcaps || !vhtcaps_mask)
 		return;
 
-	vhtcaps->vht_capabilities_info = ssid->vht_capa;
-	vhtcaps_mask->vht_capabilities_info = ssid->vht_capa_mask;
+	vhtcaps->vht_capabilities_info = host_to_le32(ssid->vht_capa);
+	vhtcaps_mask->vht_capabilities_info = host_to_le32(ssid->vht_capa_mask);
 
 #ifdef CONFIG_HT_OVERRIDES
 	/* if max ampdu is <= 3, we have to make the HT cap the same */
@@ -3829,15 +3829,17 @@ void wpa_supplicant_apply_vht_overrides(
 #define OVERRIDE_MCS(i)							\
 	if (ssid->vht_tx_mcs_nss_ ##i >= 0) {				\
 		vhtcaps_mask->vht_supported_mcs_set.tx_map |=		\
-			3 << 2 * (i - 1);				\
+			host_to_le16(3 << 2 * (i - 1));			\
 		vhtcaps->vht_supported_mcs_set.tx_map |=		\
-			ssid->vht_tx_mcs_nss_ ##i << 2 * (i - 1);	\
+			host_to_le16(ssid->vht_tx_mcs_nss_ ##i <<	\
+				     2 * (i - 1));			\
 	}								\
 	if (ssid->vht_rx_mcs_nss_ ##i >= 0) {				\
 		vhtcaps_mask->vht_supported_mcs_set.rx_map |=		\
-			3 << 2 * (i - 1);				\
+			host_to_le16(3 << 2 * (i - 1));			\
 		vhtcaps->vht_supported_mcs_set.rx_map |=		\
-			ssid->vht_rx_mcs_nss_ ##i << 2 * (i - 1);	\
+			host_to_le16(ssid->vht_rx_mcs_nss_ ##i <<	\
+				     2 * (i - 1));			\
 	}
 
 	OVERRIDE_MCS(1);

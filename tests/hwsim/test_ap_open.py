@@ -160,8 +160,8 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
     dev[0].wait_disconnected(timeout=15)
     dev[0].dump_monitor()
     # This will be accepted due to matching network
-    subprocess.call(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
-                     apdev[0]['bssid']])
+    dev[0].cmd_execute(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
+                        apdev[0]['bssid']])
     dev[0].wait_connected(timeout=15)
     dev[0].dump_monitor()
 
@@ -169,8 +169,8 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
     dev[0].wait_disconnected(timeout=5)
     dev[0].dump_monitor()
     # This will result in disconnection due to no matching network
-    subprocess.call(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
-                     apdev[0]['bssid']])
+    dev[0].cmd_execute(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
+                        apdev[0]['bssid']])
     dev[0].wait_disconnected(timeout=15)
 
 def test_ap_bss_load(dev, apdev):

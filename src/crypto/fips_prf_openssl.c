@@ -76,12 +76,11 @@ int fips186_2_prf(const u8 *seed, size_t seed_len, u8 *x, size_t xlen)
 			/* w_i = G(t, XVAL) */
 			os_memcpy(_t, t, 20);
 			sha1_transform(_t, xkey);
-			_t[0] = host_to_be32(_t[0]);
-			_t[1] = host_to_be32(_t[1]);
-			_t[2] = host_to_be32(_t[2]);
-			_t[3] = host_to_be32(_t[3]);
-			_t[4] = host_to_be32(_t[4]);
-			os_memcpy(xpos, _t, 20);
+			WPA_PUT_BE32(xpos, _t[0]);
+			WPA_PUT_BE32(xpos + 4, _t[1]);
+			WPA_PUT_BE32(xpos + 8, _t[2]);
+			WPA_PUT_BE32(xpos + 12, _t[3]);
+			WPA_PUT_BE32(xpos + 16, _t[4]);
 
 			/* XKEY = (1 + XKEY + w_i) mod 2^b */
 			carry = 1;

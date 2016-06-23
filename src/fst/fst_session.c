@@ -44,7 +44,7 @@
 #define FST_LLT_MS_DEFAULT 50
 #define FST_ACTION_MAX_SUPPORTED   FST_ACTION_ON_CHANNEL_TUNNEL
 
-const char * const fst_action_names[] = {
+static const char * const fst_action_names[] = {
 	[FST_ACTION_SETUP_REQUEST]     = "Setup Request",
 	[FST_ACTION_SETUP_RESPONSE]    = "Setup Response",
 	[FST_ACTION_TEAR_DOWN]         = "Tear Down",

@@ -361,6 +361,7 @@ def test_ap_open_tdls_vht(dev, apdev):
                "vht_capab": "",
                "vht_oper_chwidth": "0",
                "vht_oper_centr_freq_seg0_idx": "0" }
+    hapd = None
     try:
         hapd = hostapd.add_ap(apdev[0], params)
         wlantest_setup(hapd)

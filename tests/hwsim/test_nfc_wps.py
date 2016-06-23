@@ -233,6 +233,7 @@ def test_nfc_wps_handover(dev, apdev):
 
 def test_nfc_wps_handover_5ghz(dev, apdev):
     """Connect to WPS AP with NFC connection handover on 5 GHz band"""
+    hapd = None
     try:
         ssid = "test-wps-nfc-handover"
         params = ap_wps_params(ssid)
@@ -265,6 +266,7 @@ def test_nfc_wps_handover_5ghz(dev, apdev):
 
 def test_nfc_wps_handover_chan14(dev, apdev):
     """Connect to WPS AP with NFC connection handover on channel 14"""
+    hapd = None
     try:
         ssid = "test-wps-nfc-handover"
         params = ap_wps_params(ssid)

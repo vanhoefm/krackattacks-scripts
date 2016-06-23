@@ -8071,8 +8071,6 @@ done:
 static int wpas_ctrl_test_alloc_fail(struct wpa_supplicant *wpa_s, char *cmd)
 {
 #ifdef WPA_TRACE_BFD
-	extern char wpa_trace_fail_func[256];
-	extern unsigned int wpa_trace_fail_after;
 	char *pos;
 
 	wpa_trace_fail_after = atoi(cmd);
@@ -8095,9 +8093,6 @@ static int wpas_ctrl_get_alloc_fail(struct wpa_supplicant *wpa_s,
 				    char *buf, size_t buflen)
 {
 #ifdef WPA_TRACE_BFD
-	extern char wpa_trace_fail_func[256];
-	extern unsigned int wpa_trace_fail_after;
-
 	return os_snprintf(buf, buflen, "%u:%s", wpa_trace_fail_after,
 			   wpa_trace_fail_func);
 #else /* WPA_TRACE_BFD */
@@ -8109,8 +8104,6 @@ static int wpas_ctrl_get_alloc_fail(struct wpa_supplicant *wpa_s,
 static int wpas_ctrl_test_fail(struct wpa_supplicant *wpa_s, char *cmd)
 {
 #ifdef WPA_TRACE_BFD
-	extern char wpa_trace_test_fail_func[256];
-	extern unsigned int wpa_trace_test_fail_after;
 	char *pos;
 
 	wpa_trace_test_fail_after = atoi(cmd);
@@ -8133,9 +8126,6 @@ static int wpas_ctrl_get_fail(struct wpa_supplicant *wpa_s,
 				    char *buf, size_t buflen)
 {
 #ifdef WPA_TRACE_BFD
-	extern char wpa_trace_test_fail_func[256];
-	extern unsigned int wpa_trace_test_fail_after;
-
 	return os_snprintf(buf, buflen, "%u:%s", wpa_trace_test_fail_after,
 			   wpa_trace_test_fail_func);
 #else /* WPA_TRACE_BFD */

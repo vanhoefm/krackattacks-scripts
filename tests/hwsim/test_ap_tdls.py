@@ -529,6 +529,7 @@ def test_tdls_chan_switch(dev, apdev):
         raise HwsimSkip("Driver does not support TDLS channel switching")
 
     hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
+    wlantest_setup(hapd)
     connect_2sta_open(dev, hapd)
     setup_tdls(dev[0], dev[1], hapd)
     if "OK" not in dev[0].request("TDLS_CHAN_SWITCH " + dev[1].own_addr() + " 81 2462"):

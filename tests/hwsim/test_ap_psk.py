@@ -1666,8 +1666,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
 
 def find_wpas_process(dev):
     ifname = dev.ifname
-    cmd = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
-    (data,err) = cmd.communicate()
+    err, data = dev.cmd_execute(['ps', 'ax'])
     for l in data.splitlines():
         if "wpa_supplicant" not in l:
             continue

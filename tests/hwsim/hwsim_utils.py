@@ -174,6 +174,8 @@ def test_connectivity_sta(dev1, dev2, dscp=None, tos=None):
 
 def set_powersave(dev, val):
     phy = dev.get_driver_status_field("phyname")
-    psf = open('/sys/kernel/debug/ieee80211/%s/hwsim/ps' % phy, 'w')
-    psf.write('%d\n' % val)
-    psf.close()
+    fname = '/sys/kernel/debug/ieee80211/%s/hwsim/ps' % phy
+    data = '%d' % val
+    (res, data) = dev.cmd_execute(["echo", data, ">", fname], shell=True)
+    if res != 0:
+        raise Exception("Failed to set power save for device")

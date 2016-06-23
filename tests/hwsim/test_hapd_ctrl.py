@@ -4,10 +4,12 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
 from utils import skip_with_fips
 
+@remote_compatible
 def test_hapd_ctrl_status(dev, apdev):
     """hostapd ctrl_iface STATUS commands"""
     ssid = "hapd-ctrl"
@@ -31,6 +33,7 @@ def test_hapd_ctrl_status(dev, apdev):
     if driver['addr'] != bssid:
         raise Exception("Unexpected addr")
 
+@remote_compatible
 def test_hapd_ctrl_p2p_manager(dev, apdev):
     """hostapd as P2P Device manager"""
     ssid = "hapd-p2p-mgr"
@@ -51,6 +54,7 @@ def test_hapd_ctrl_p2p_manager(dev, apdev):
     dev[0].wait_disconnected(timeout=5)
     dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
+@remote_compatible
 def test_hapd_ctrl_sta(dev, apdev):
     """hostapd and STA ctrl_iface commands"""
     ssid = "hapd-ctrl-sta"
@@ -73,6 +77,7 @@ def test_hapd_ctrl_sta(dev, apdev):
     if "FAIL" not in hapd.request("STA-NEXT 00:11:22:33:44"):
         raise Exception("Unexpected STA-NEXT success")
 
+@remote_compatible
 def test_hapd_ctrl_disconnect(dev, apdev):
     """hostapd and disconnection ctrl_iface commands"""
     ssid = "hapd-ctrl"
@@ -98,6 +103,7 @@ def test_hapd_ctrl_disconnect(dev, apdev):
     dev[0].wait_disconnected(timeout=5)
     dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
+@remote_compatible
 def test_hapd_ctrl_chan_switch(dev, apdev):
     """hostapd and CHAN_SWITCH ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -112,6 +118,7 @@ def test_hapd_ctrl_chan_switch(dev, apdev):
     if "FAIL" not in hapd.request("CHAN_SWITCH 0 2432 center_freq1=123 center_freq2=234 bandwidth=1000 sec_channel_offset=20 ht vht"):
         raise Exception("Unexpected CHAN_SWITCH success")
 
+@remote_compatible
 def test_hapd_ctrl_level(dev, apdev):
     """hostapd and LEVEL ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -120,6 +127,7 @@ def test_hapd_ctrl_level(dev, apdev):
     if "FAIL" not in hapd.request("LEVEL 0"):
         raise Exception("Unexpected LEVEL success on non-monitor interface")
 
+@remote_compatible
 def test_hapd_ctrl_new_sta(dev, apdev):
     """hostapd and NEW_STA ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -132,6 +140,7 @@ def test_hapd_ctrl_new_sta(dev, apdev):
     if "AUTHORIZED" not in hapd.request("STA 00:11:22:33:44:55"):
         raise Exception("Unexpected NEW_STA STA status")
 
+@remote_compatible
 def test_hapd_ctrl_get(dev, apdev):
     """hostapd and GET ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -142,6 +151,7 @@ def test_hapd_ctrl_get(dev, apdev):
     if "FAIL" in hapd.request("GET version"):
         raise Exception("Unexpected GET version failure")
 
+@remote_compatible
 def test_hapd_ctrl_unknown(dev, apdev):
     """hostapd and unknown ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -150,6 +160,7 @@ def test_hapd_ctrl_unknown(dev, apdev):
     if "UNKNOWN COMMAND" not in hapd.request("FOO"):
         raise Exception("Unexpected response")
 
+@remote_compatible
 def test_hapd_ctrl_hs20_wnm_notif(dev, apdev):
     """hostapd and HS20_WNM_NOTIF ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -160,6 +171,7 @@ def test_hapd_ctrl_hs20_wnm_notif(dev, apdev):
     if "FAIL" not in hapd.request("HS20_WNM_NOTIF 00:11:22:33:44:55http://example.com/"):
         raise Exception("Unexpected HS20_WNM_NOTIF success")
 
+@remote_compatible
 def test_hapd_ctrl_hs20_deauth_req(dev, apdev):
     """hostapd and HS20_DEAUTH_REQ ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -172,6 +184,7 @@ def test_hapd_ctrl_hs20_deauth_req(dev, apdev):
     if "FAIL" not in hapd.request("HS20_DEAUTH_REQ 00:11:22:33:44:55 1"):
         raise Exception("Unexpected HS20_DEAUTH_REQ success")
 
+@remote_compatible
 def test_hapd_ctrl_disassoc_imminent(dev, apdev):
     """hostapd and DISASSOC_IMMINENT ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -191,6 +204,7 @@ def test_hapd_ctrl_disassoc_imminent(dev, apdev):
     if ev is None:
         raise Exception("Scan timed out")
 
+@remote_compatible
 def test_hapd_ctrl_ess_disassoc(dev, apdev):
     """hostapd and ESS_DISASSOC ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -243,6 +257,7 @@ def test_hapd_ctrl_set_accept_mac_file(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
+@remote_compatible
 def test_hapd_ctrl_set_error_cases(dev, apdev):
     """hostapd and SET error cases"""
     ssid = "hapd-ctrl"
@@ -440,6 +455,7 @@ def test_hapd_ctrl_set_error_cases(dev, apdev):
         if "OK" not in hapd.request("SET " + e):
             raise Exception("Unexpected SET failure: '%s'" % e)
 
+@remote_compatible
 def test_hapd_ctrl_global(dev, apdev):
     """hostapd and GET ctrl_iface command"""
     ssid = "hapd-ctrl"
@@ -516,6 +532,7 @@ def test_hapd_dup_network_global_wpa(dev, apdev):
     if "FAIL" in dst_hapd.request("STA " + addr):
             raise Exception("Could not connect using duplicated wpa params")
 
+@remote_compatible
 def test_hapd_ctrl_log_level(dev, apdev):
     """hostapd ctrl_iface LOG_LEVEL"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -559,6 +576,7 @@ def test_hapd_ctrl_log_level(dev, apdev):
     if "Timestamp: 1" not in level:
         raise Exception("Unexpected timestamp(3): " + level)
 
+@remote_compatible
 def test_hapd_ctrl_disconnect_no_tx(dev, apdev):
     """hostapd disconnecting STA without transmitting Deauth/Disassoc"""
     ssid = "hapd-test"

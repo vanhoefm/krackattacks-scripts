@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger(__name__)
@@ -808,6 +809,7 @@ def _test_nfc_p2p_ip_addr_assignment2(dev):
     if res['ip_addr'] == res0['ip_addr']:
         raise Exception("Same IP address assigned to both clients")
 
+@remote_compatible
 def test_nfc_p2p_tag_enable_disable(dev):
     """NFC tag enable/disable for P2P"""
     if "FAIL" in dev[0].request("WPS_NFC_TOKEN NDEF").rstrip():
@@ -827,6 +829,7 @@ def test_nfc_p2p_tag_enable_disable(dev):
     if "OK" not in dev[0].request("P2P_SET nfc_tag 0"):
         raise Exception("Failed to disable NFC Tag for P2P static handover")
 
+@remote_compatible
 def test_nfc_p2p_static_handover_invalid(dev):
     """NFC static handover with invalid contents"""
     logger.info("Unknown OOB GO Neg channel")

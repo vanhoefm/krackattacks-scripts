@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
@@ -15,6 +16,7 @@ from p2p_utils import *
 from test_gas import start_ap
 from test_cfg80211 import nl80211_remain_on_channel
 
+@remote_compatible
 def test_discovery(dev):
     """P2P device discovery and provision discovery"""
     addr0 = dev[0].p2p_dev_addr()
@@ -97,6 +99,7 @@ def test_discovery(dev):
     if "FAIL" not in dev[0].global_request("P2P_PROV_DISC 00:11:22:33:44:55 foo"):
         raise Exception("Invalid P2P_PROV_DISC accepted")
 
+@remote_compatible
 def test_discovery_pd_retries(dev):
     """P2P device discovery and provision discovery retries"""
     addr0 = dev[0].p2p_dev_addr()
@@ -211,6 +214,7 @@ def _test_discovery_ctrl_char_in_devname(dev):
     if devname != "Device_B":
         raise Exception("Unexpected device_name from peer: " + devname)
 
+@remote_compatible
 def test_discovery_dev_type(dev):
     """P2P device discovery with Device Type filter"""
     dev[1].request("SET sec_device_type 1-0050F204-2")
@@ -492,6 +496,7 @@ def test_p2p_listen_and_offchannel_tx(dev):
     dev[2].p2p_stop_find()
     dev[0].p2p_stop_find()
 
+@remote_compatible
 def test_p2p_listen_and_scan(dev):
     """P2P_LISTEN and scan"""
     dev[0].p2p_listen()
@@ -536,6 +541,7 @@ def test_p2p_config_methods(dev):
 
     wpas.p2p_stop_find()
 
+@remote_compatible
 def test_discovery_after_gas(dev, apdev):
     """P2P device discovery after GAS/ANQP exchange"""
     hapd = start_ap(apdev[0])
@@ -561,6 +567,7 @@ def test_discovery_after_gas(dev, apdev):
     if end - start > 1.3:
         raise Exception("Device discovery took unexpectedly long time")
 
+@remote_compatible
 def test_discovery_listen_find(dev):
     """P2P_LISTEN immediately followed by P2P_FIND"""
     # Request an external remain-on-channel operation to delay start of the ROC

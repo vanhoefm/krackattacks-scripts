@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import struct
 import time
@@ -16,6 +17,7 @@ from wpasupplicant import WpaSupplicant
 from utils import alloc_fail, wait_fail_trigger
 from wlantest import Wlantest
 
+@remote_compatible
 def test_wnm_bss_transition_mgmt(dev, apdev):
     """WNM BSS Transition Management"""
     params = { "ssid": "test-wnm",
@@ -28,6 +30,7 @@ def test_wnm_bss_transition_mgmt(dev, apdev):
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("WNM_BSS_QUERY 0")
 
+@remote_compatible
 def test_wnm_disassoc_imminent(dev, apdev):
     """WNM Disassociation Imminent"""
     params = { "ssid": "test-wnm",
@@ -49,6 +52,7 @@ def test_wnm_disassoc_imminent(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
 
+@remote_compatible
 def test_wnm_ess_disassoc_imminent(dev, apdev):
     """WNM ESS Disassociation Imminent"""
     params = { "ssid": "test-wnm",
@@ -70,6 +74,7 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
 
+@remote_compatible
 def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     """WNM ESS Disassociation Imminent"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
@@ -127,6 +132,7 @@ def check_wnm_sleep_mode_enter_exit(hapd, dev, interval=None, tfs_req=None):
     if not ok:
         raise Exception("Station failed to exit WNM-Sleep Mode")
 
+@remote_compatible
 def test_wnm_sleep_mode_open(dev, apdev):
     """WNM Sleep Mode - open"""
     params = { "ssid": "test-wnm",
@@ -151,6 +157,7 @@ def test_wnm_sleep_mode_open(dev, apdev):
         if "FAIL" not in dev[0].request("WNM_SLEEP " + cmd):
             raise Exception("Invalid WNM_SLEEP accepted")
 
+@remote_compatible
 def test_wnm_sleep_mode_rsn(dev, apdev):
     """WNM Sleep Mode - RSN"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
@@ -166,6 +173,7 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
         raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
 
+@remote_compatible
 def test_wnm_sleep_mode_ap_oom(dev, apdev):
     """WNM Sleep Mode - AP side OOM"""
     params = { "ssid": "test-wnm",
@@ -183,6 +191,7 @@ def test_wnm_sleep_mode_ap_oom(dev, apdev):
         dev[0].request("WNM_SLEEP exit")
         wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
 
+@remote_compatible
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     """WNM Sleep Mode - RSN with PMF"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
@@ -280,6 +289,7 @@ def expect_ack(hapd):
     if "ok=1" not in ev:
         raise Exception("Action frame not acknowledged")
 
+@remote_compatible
 def test_wnm_bss_tm_req(dev, apdev):
     """BSS Transition Management Request"""
     params = { "ssid": "test-wnm", "bss_transition": "1" }
@@ -427,6 +437,7 @@ def test_wnm_bss_tm_req(dev, apdev):
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
 
+@remote_compatible
 def test_wnm_bss_keep_alive(dev, apdev):
     """WNM keep-alive"""
     params = { "ssid": "test-wnm",
@@ -1054,6 +1065,7 @@ def test_wnm_action_proto(dev, apdev):
     hapd.mgmt_tx(msg)
     expect_ack(hapd)
 
+@remote_compatible
 def test_wnm_action_proto_pmf(dev, apdev):
     """WNM Action protocol testing (PMF enabled)"""
     ssid = "test-wnm-pmf"
@@ -1158,6 +1170,7 @@ def test_wnm_action_proto_pmf(dev, apdev):
     hapd.mgmt_tx(msg)
     expect_ack(hapd)
 
+@remote_compatible
 def test_wnm_action_proto_no_pmf(dev, apdev):
     """WNM Action protocol testing (PMF disabled)"""
     ssid = "test-wnm-no-pmf"
@@ -1258,6 +1271,7 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
         raise Exception("Failed to set STA as cellular data not-capable")
 
+@remote_compatible
 def test_wnm_bss_transition_mgmt_query(dev, apdev):
     """WNM BSS Transition Management query"""
     params = { "ssid": "test-wnm",
@@ -1281,6 +1295,7 @@ def test_wnm_bss_transition_mgmt_query(dev, apdev):
     if ev is None:
         raise Exception("No BSS Transition Management Response frame seen")
 
+@remote_compatible
 def test_wnm_bss_tm_security_mismatch(dev, apdev):
     """WNM BSS Transition Management and security mismatch"""
     params = { "ssid": "test-wnm",

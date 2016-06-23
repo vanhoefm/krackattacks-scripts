@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import hmac
 import logging
@@ -133,6 +134,7 @@ def test_ieee8021x_proto(dev, apdev):
         if int(stop[val]) <= int(start[val]):
             raise Exception(val + " did not increase")
 
+@remote_compatible
 def test_ieee8021x_eapol_start(dev, apdev):
     """IEEE 802.1X and EAPOL-Start retransmissions"""
     params = hostapd.radius_params()

@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 
@@ -14,6 +15,7 @@ from test_ap_hs20 import hs20_ap_params
 from test_ap_hs20 import interworking_select
 from test_ap_hs20 import interworking_connect
 
+@remote_compatible
 def test_ext_password_psk(dev, apdev):
     """External password storage for PSK"""
     params = hostapd.wpa2_params(ssid="ext-pw-psk", passphrase="12345678")

@@ -4,11 +4,13 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 
 import hwsim_utils
 
+@remote_compatible
 def test_p2p_go_invite(dev):
     """P2P GO inviting a client to join"""
     addr0 = dev[0].p2p_dev_addr()
@@ -53,6 +55,7 @@ def test_p2p_go_invite(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 
+@remote_compatible
 def test_p2p_go_invite_auth(dev):
     """P2P GO inviting a client to join (authorized invitation)"""
     addr0 = dev[0].p2p_dev_addr()
@@ -104,6 +107,7 @@ def test_p2p_go_invite_auth(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 
+@remote_compatible
 def test_p2p_go_invite_unknown(dev):
     """P2P GO inviting a client that has not discovered the GO"""
     try:
@@ -176,6 +180,7 @@ def test_p2p_cli_invite(dev):
     dev[1].wait_go_ending_session()
     dev[2].wait_go_ending_session()
 
+@remote_compatible
 def test_p2p_invite_invalid(dev):
     """Invalid parameters to P2P_INVITE"""
     id = dev[0].add_network()

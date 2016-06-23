@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import re
@@ -12,6 +13,7 @@ import time
 import hwsim_utils
 from p2p_utils import *
 
+@remote_compatible
 def test_persistent_group(dev):
     """P2P persistent group formation and re-invocation"""
     form(dev[0], dev[1])
@@ -56,12 +58,14 @@ def test_persistent_group(dev):
     if dev[1].p2p_dev_addr() in clients:
         raise Exception("Peer was still in client list")
 
+@remote_compatible
 def test_persistent_group2(dev):
     """P2P persistent group formation with reverse roles"""
     form(dev[0], dev[1], reverse_init=True)
     invite_from_cli(dev[0], dev[1])
     invite_from_go(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group3(dev):
     """P2P persistent group formation and re-invocation with empty BSS table"""
     form(dev[0], dev[1])
@@ -259,6 +263,7 @@ def test_persistent_group_invite_removed_client(dev):
 
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_channel(dev):
     """P2P persistent group re-invocation with channel selection"""
     form(dev[0], dev[1], test_data=False)
@@ -284,6 +289,7 @@ def test_persistent_group_channel(dev):
         raise Exception("Persistent group client channel preference not followed")
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_and_role_change(dev):
     """P2P persistent group, auto GO in another role, and re-invocation"""
     form(dev[0], dev[1])
@@ -352,6 +358,7 @@ def test_persistent_go_client_list(dev):
     if 'persistent' not in peer or peer['persistent'] != id:
         raise Exception("Persistent group client not recognized(2)")
 
+@remote_compatible
 def test_persistent_group_in_grpform(dev):
     """P2P persistent group parameters re-used in group formation"""
     addr0 = dev[0].p2p_dev_addr()
@@ -373,6 +380,7 @@ def test_persistent_group_in_grpform(dev):
     logger.debug("i_res: " + str(i_res))
     logger.debug("r_res: " + str(r_res))
 
+@remote_compatible
 def test_persistent_group_without_persistent_reconnect(dev):
     """P2P persistent group re-invocation without persistent reconnect"""
     form(dev[0], dev[1])
@@ -447,6 +455,7 @@ def test_persistent_group_without_persistent_reconnect(dev):
     [go_res, cli_res] = check_result(dev[0], dev[1])
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_already_running(dev):
     """P2P persistent group formation and invitation while GO already running"""
     form(dev[0], dev[1])
@@ -463,6 +472,7 @@ def test_persistent_group_already_running(dev):
         raise Exception("Could not state GO")
     invite_from_cli(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_add_cli_chan(dev):
     """P2P persistent group formation and re-invocation with p2p_add_cli_chan=1"""
     try:
@@ -480,6 +490,7 @@ def test_persistent_group_add_cli_chan(dev):
         dev[0].request("SET p2p_add_cli_chan 0")
         dev[1].request("SET p2p_add_cli_chan 0")
 
+@remote_compatible
 def test_persistent_invalid_group_add(dev):
     """Invalid P2P_GROUP_ADD command"""
     id = dev[0].add_network()
@@ -538,6 +549,7 @@ def test_persistent_group_missed_inv_resp(dev):
 
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_profile_add(dev):
     """Create a P2P persistent group with ADD_NETWORK"""
     passphrase="passphrase here"
@@ -558,6 +570,7 @@ def test_persistent_group_profile_add(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 
+@remote_compatible
 def test_persistent_group_cancel_on_cli(dev):
     """P2P persistent group formation, re-invocation, and cancel"""
     dev[0].global_request("SET p2p_no_group_iface 0")
@@ -578,6 +591,7 @@ def test_persistent_group_cancel_on_cli(dev):
         raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_cancel_on_cli2(dev):
     """P2P persistent group formation, re-invocation, and cancel (2)"""
     form(dev[0], dev[1])
@@ -595,6 +609,7 @@ def test_persistent_group_cancel_on_cli2(dev):
         raise Exception("P2P_CANCEL succeeded unexpectedly on GO")
     terminate_group(dev[0], dev[1])
 
+@remote_compatible
 def test_persistent_group_peer_dropped(dev):
     """P2P persistent group formation and re-invocation with peer having dropped group"""
     form(dev[0], dev[1], reverse_init=True)
@@ -615,6 +630,7 @@ def test_persistent_group_peer_dropped(dev):
     logger.info("Verify that a new group can be formed")
     form(dev[0], dev[1], reverse_init=True)
 
+@remote_compatible
 def test_persistent_group_peer_dropped2(dev):
     """P2P persistent group formation and re-invocation with peer having dropped group (2)"""
     form(dev[0], dev[1])

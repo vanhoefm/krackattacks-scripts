@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import struct
 import time
@@ -219,12 +220,14 @@ def parse_p2p_public_action(payload):
 
     return p2p
 
+@remote_compatible
 def test_p2p_msg_empty(dev, apdev):
     """P2P protocol test: empty P2P Public Action frame"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
     msg = p2p_hdr(dst, src)
     hapd.mgmt_tx(msg)
 
+@remote_compatible
 def test_p2p_msg_long_ssid(dev, apdev):
     """P2P protocol test: Too long SSID in P2P Public Action frame"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
@@ -244,6 +247,7 @@ def test_p2p_msg_long_ssid(dev, apdev):
     if ev is None:
         raise Exception("Timeout on device found event")
 
+@remote_compatible
 def test_p2p_msg_long_dev_name(dev, apdev):
     """P2P protocol test: Too long Device Name in P2P Public Action frame"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
@@ -835,6 +839,7 @@ def test_p2p_msg_invitation_req_to_go(dev, apdev):
     if p2p['p2p_status'] != 7 and dev[1].get_mcc() <= 1:
         raise Exception("Unexpected status %d" % p2p['p2p_status'])
 
+@remote_compatible
 def test_p2p_msg_invitation_req_unknown(dev, apdev):
     """P2P protocol tests for invitation request from unknown peer"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
@@ -857,6 +862,7 @@ def test_p2p_msg_invitation_req_unknown(dev, apdev):
     if hapd.mgmt_rx(timeout=1) is None:
         raise Exception("No invitation response " + str(dialog_token))
 
+@remote_compatible
 def test_p2p_msg_invitation_no_common_channels(dev, apdev):
     """P2P protocol tests for invitation request without common channels"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
@@ -1119,6 +1125,7 @@ def test_p2p_msg_invitation_resend_duplicate(dev, apdev):
     dev[0].group_form_result(ev)
     dev[0].remove_group()
 
+@remote_compatible
 def test_p2p_msg_pd_req(dev, apdev):
     """P2P protocol tests for provision discovery request processing"""
     dst, src, hapd, channel = start_p2p(dev, apdev)
@@ -1940,6 +1947,7 @@ def gas_hdr(dst, src, type, req=True, dialog_token=0):
                                      dialog_token)
     return msg
 
+@remote_compatible
 def test_p2p_msg_sd(dev, apdev):
     """P2P protocol tests for service discovery messages"""
     dst, src, hapd, channel = start_p2p(dev, apdev)

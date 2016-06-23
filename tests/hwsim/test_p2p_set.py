@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
+
 def test_p2p_set(dev):
     """P2P_SET commands"""
     for cmd in [ "",
@@ -102,6 +104,7 @@ def test_p2p_set_managed(dev):
     dev[2].p2p_stop_find()
     dev[0].p2p_stop_find()
 
+@remote_compatible
 def test_p2p_set_ssid_postfix(dev):
     """P2P_SET ssid_postfix"""
     addr0 = dev[0].p2p_dev_addr()

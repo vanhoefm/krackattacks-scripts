@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import subprocess
 import logging
@@ -15,6 +16,7 @@ import hostapd
 from utils import alloc_fail
 from test_ap_acs import force_prev_ap_on_24g
 
+@remote_compatible
 def test_ap_change_ssid(dev, apdev):
     """Dynamic SSID change with hostapd and WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk-start",
@@ -210,6 +212,7 @@ def invalid_ap(ap):
         raise Exception("ENABLE command succeeded unexpectedly")
     return hapd
 
+@remote_compatible
 def test_ap_invalid_config(dev, apdev):
     """Try to start AP with invalid configuration and fix configuration"""
     hapd = invalid_ap(apdev[0])
@@ -219,6 +222,7 @@ def test_ap_invalid_config(dev, apdev):
     hapd.enable()
     dev[0].connect("invalid-config", key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ap_invalid_config2(dev, apdev):
     """Try to start AP with invalid configuration and remove interface"""
     hapd = invalid_ap(apdev[0])
@@ -259,6 +263,7 @@ def test_ap_remove_during_acs3(dev, apdev):
     hapd.enable()
     hostapd.remove_bss(apdev[0], ifname2)
 
+@remote_compatible
 def test_ap_remove_during_ht_coex_scan(dev, apdev):
     """Remove interface during HT co-ex scan"""
     params = hostapd.wpa2_params(ssid="test-ht-remove", passphrase="12345678")
@@ -294,6 +299,7 @@ def test_ap_remove_during_ht_coex_scan3(dev, apdev):
     hapd.enable()
     hostapd.remove_bss(apdev[0], ifname2)
 
+@remote_compatible
 def test_ap_enable_disable_reenable(dev, apdev):
     """Enable, disable, re-enable AP"""
     hapd = hostapd.add_ap(apdev[0], {}, no_enable=True)
@@ -435,6 +441,7 @@ def test_ap_multi_bss(dev, apdev):
     if 'rx_packets' not in sta1 or int(sta1['rx_packets']) < 1:
         raise Exception("sta1 did not report receiving packets")
 
+@remote_compatible
 def test_ap_add_with_driver(dev, apdev):
     """Add hostapd interface with driver specified"""
     ifname = apdev[0]['ifname']

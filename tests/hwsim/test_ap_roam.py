@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -11,6 +12,7 @@ logger = logging.getLogger()
 import hwsim_utils
 import hostapd
 
+@remote_compatible
 def test_ap_roam_open(dev, apdev):
     """Roam between two open APs"""
     hapd0 = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
@@ -23,6 +25,7 @@ def test_ap_roam_open(dev, apdev):
     dev[0].roam(apdev[0]['bssid'])
     hwsim_utils.test_connectivity(dev[0], hapd0)
 
+@remote_compatible
 def test_ap_roam_open_failed(dev, apdev):
     """Roam failure due to rejected authentication"""
     hapd0 = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
@@ -44,6 +47,7 @@ def test_ap_roam_open_failed(dev, apdev):
     dev[0].wait_connected(timeout=5)
     hwsim_utils.test_connectivity(dev[0], hapd0)
 
+@remote_compatible
 def test_ap_roam_wpa2_psk(dev, apdev):
     """Roam between two WPA2-PSK APs"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
@@ -89,6 +93,7 @@ def test_ap_roam_wpa2_psk_failed(dev, apdev, params):
     dev[0].wait_connected(timeout=5)
     hwsim_utils.test_connectivity(dev[0], hapd0)
 
+@remote_compatible
 def test_ap_reassociation_to_same_bss(dev, apdev):
     """Reassociate to the same BSS"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
@@ -108,6 +113,7 @@ def test_ap_reassociation_to_same_bss(dev, apdev):
     dev[0].wait_connected(timeout=10, error="Reattach timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_roam_set_bssid(dev, apdev):
     """Roam control"""
     hostapd.add_ap(apdev[0], { "ssid": "test-open" })
@@ -124,6 +130,7 @@ def test_ap_roam_set_bssid(dev, apdev):
     dev[0].set_network(id, "bssid", apdev[0]['bssid'])
     dev[0].set_network(id, "bssid", apdev[1]['bssid'])
 
+@remote_compatible
 def test_ap_roam_wpa2_psk_race(dev, apdev):
     """Roam between two WPA2-PSK APs and try to hit a disconnection race"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")

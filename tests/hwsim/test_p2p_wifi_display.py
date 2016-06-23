@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -298,6 +299,7 @@ def test_wifi_display_persistent_group(dev):
         dev[1].request("SET wifi_display 0")
         dev[2].request("SET wifi_display 0")
 
+@remote_compatible
 def test_wifi_display_invalid_subelem(dev):
     """Wi-Fi Display and invalid subelement parsing"""
     addr1 = dev[1].p2p_dev_addr()

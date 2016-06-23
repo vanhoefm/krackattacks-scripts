@@ -4,8 +4,10 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import hostapd
 
+@remote_compatible
 def test_ap_config_errors(dev, apdev):
     """Various hostapd configuration errors"""
 

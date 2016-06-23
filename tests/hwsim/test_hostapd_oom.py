@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -37,6 +38,7 @@ def hostapd_oom_loop(apdev, params, start_func="main"):
         except Exception, e:
             logger.info("Iteration %d - %s" % (i, str(e)))
 
+@remote_compatible
 def test_hostapd_oom_open(dev, apdev):
     """hostapd failing to setup open mode due to OOM"""
     params = { "ssid": "open" }
@@ -48,6 +50,7 @@ def test_hostapd_oom_wpa2_psk(dev, apdev):
     params['wpa_psk_file'] = 'hostapd.wpa_psk'
     hostapd_oom_loop(apdev, params)
 
+@remote_compatible
 def test_hostapd_oom_wpa2_eap(dev, apdev):
     """hostapd failing to setup WPA2-EAP mode due to OOM"""
     params = hostapd.wpa2_eap_params(ssid="test")
@@ -56,6 +59,7 @@ def test_hostapd_oom_wpa2_eap(dev, apdev):
     params['acct_server_shared_secret'] = "radius"
     hostapd_oom_loop(apdev, params)
 
+@remote_compatible
 def test_hostapd_oom_wpa2_eap_radius(dev, apdev):
     """hostapd failing to setup WPA2-EAP mode due to OOM in RADIUS"""
     params = hostapd.wpa2_eap_params(ssid="test")

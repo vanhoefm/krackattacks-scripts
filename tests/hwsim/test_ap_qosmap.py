@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -33,6 +34,7 @@ def check_qos_map(ap, hapd, dev, sta, dscp, tid, ap_tid=None):
         logger.info("Expected RX DSCP " + str(dscp) + " with TID " + str(ap_tid) + " but counters: " + str(rx))
         raise Exception("No AP->STA data frame using the expected TID")
 
+@remote_compatible
 def test_ap_qosmap(dev, apdev):
     """QoS mapping"""
     drv_flags = dev[0].get_driver_status_field("capa.flags")
@@ -72,6 +74,7 @@ def test_ap_qosmap(dev, apdev):
     dev[0].request("DATA_TEST_CONFIG 0")
     hapd.request("DATA_TEST_CONFIG 0")
 
+@remote_compatible
 def test_ap_qosmap_default(dev, apdev):
     """QoS mapping with default values"""
     ssid = "test-qosmap-default"
@@ -86,6 +89,7 @@ def test_ap_qosmap_default(dev, apdev):
     dev[0].request("DATA_TEST_CONFIG 0")
     hapd.request("DATA_TEST_CONFIG 0")
 
+@remote_compatible
 def test_ap_qosmap_default_acm(dev, apdev):
     """QoS mapping with default values and ACM=1 for VO/VI"""
     ssid = "test-qosmap-default"
@@ -125,6 +129,7 @@ def test_ap_qosmap_default_acm(dev, apdev):
     dev[0].request("DATA_TEST_CONFIG 0")
     hapd.request("DATA_TEST_CONFIG 0")
 
+@remote_compatible
 def test_ap_qosmap_invalid(dev, apdev):
     """QoS mapping ctrl_iface error handling"""
     ssid = "test-qosmap"

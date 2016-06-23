@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -77,6 +78,7 @@ def test_wpas_ap_open(dev):
     dev[1].request("DISCONNECT")
     dev[2].request("DISCONNECT")
 
+@remote_compatible
 def test_wpas_ap_wep(dev):
     """wpa_supplicant AP mode - WEP"""
     id = dev[0].add_network()
@@ -94,6 +96,7 @@ def test_wpas_ap_wep(dev):
     hwsim_utils.test_connectivity(dev[0], dev[1])
     dev[1].request("DISCONNECT")
 
+@remote_compatible
 def test_wpas_ap_no_ssid(dev):
     """wpa_supplicant AP mode - invalid network configuration"""
     id = dev[0].add_network()
@@ -106,6 +109,7 @@ def test_wpas_ap_no_ssid(dev):
     if ev is not None:
         raise Exception("Unexpected AP start")
 
+@remote_compatible
 def test_wpas_ap_default_frequency(dev):
     """wpa_supplicant AP mode - default frequency"""
     id = dev[0].add_network()
@@ -118,6 +122,7 @@ def test_wpas_ap_default_frequency(dev):
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2462")
     dev[1].request("DISCONNECT")
 
+@remote_compatible
 def test_wpas_ap_invalid_frequency(dev):
     """wpa_supplicant AP mode - invalid frequency configuration"""
     id = dev[0].add_network()
@@ -297,6 +302,7 @@ def test_wpas_ap_wps_pbc_overlap(dev):
     dev[1].request("WPS_CANCEL")
     dev[2].request("WPS_CANCEL")
 
+@remote_compatible
 def test_wpas_ap_wps_disabled(dev):
     """wpa_supplicant AP mode - WPS disabled"""
     id = dev[0].add_network()
@@ -352,6 +358,7 @@ def _test_wpas_ap_dfs(dev):
 
     dev[1].connect("wpas-ap-dfs", key_mgmt="NONE")
 
+@remote_compatible
 def test_wpas_ap_disable(dev):
     """wpa_supplicant AP mode - DISABLE_NETWORK"""
     id = dev[0].add_network()
@@ -394,6 +401,7 @@ def test_wpas_ap_acs(dev):
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq=freq)
 
+@remote_compatible
 def test_wpas_ap_and_assoc_req_p2p_ie(dev):
     """wpa_supplicant AP mode - unexpected P2P IE in Association Request"""
     try:
@@ -421,6 +429,7 @@ def _test_wpas_ap_and_assoc_req_p2p_ie(dev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
 
+@remote_compatible
 def test_wpas_ap_open_ht_disabled(dev):
     """wpa_supplicant AP mode - open network and HT disabled"""
     id = dev[0].add_network()

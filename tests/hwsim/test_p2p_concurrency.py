@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import subprocess
@@ -15,6 +16,7 @@ from p2p_utils import *
 from test_ap_ht import clear_scan_cache
 from utils import HwsimSkip
 
+@remote_compatible
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
     logger.info("Connect to an infrastructure AP")
@@ -130,6 +132,7 @@ def test_concurrent_autogo_crossconnect(dev, apdev):
         raise Exception("Timeout on cross connection disabled event")
     dev[0].global_request("P2P_SET cross_connect 0")
 
+@remote_compatible
 def test_concurrent_p2pcli(dev, apdev):
     """Concurrent P2P client join"""
     logger.info("Connect to an infrastructure AP")
@@ -151,6 +154,7 @@ def test_concurrent_p2pcli(dev, apdev):
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_grpform_go(dev, apdev):
     """Concurrent P2P group formation to become GO"""
     logger.info("Connect to an infrastructure AP")
@@ -169,6 +173,7 @@ def test_concurrent_grpform_go(dev, apdev):
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_grpform_cli(dev, apdev):
     """Concurrent P2P group formation to become P2P Client"""
     logger.info("Connect to an infrastructure AP")
@@ -187,6 +192,7 @@ def test_concurrent_grpform_cli(dev, apdev):
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_grpform_while_connecting(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP"""
     logger.info("Start connection to an infrastructure AP")
@@ -204,6 +210,7 @@ def test_concurrent_grpform_while_connecting(dev, apdev):
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_grpform_while_connecting2(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP (2)"""
     logger.info("Start connection to an infrastructure AP")
@@ -223,6 +230,7 @@ def test_concurrent_grpform_while_connecting2(dev, apdev):
     dev[0].wait_completed()
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_grpform_while_connecting3(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP (3)"""
     logger.info("Start connection to an infrastructure AP")
@@ -241,6 +249,7 @@ def test_concurrent_grpform_while_connecting3(dev, apdev):
     dev[0].wait_completed()
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_concurrent_persistent_group(dev, apdev):
     """Concurrent P2P persistent group"""
     logger.info("Connect to an infrastructure AP")

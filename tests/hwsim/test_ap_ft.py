@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import os
 import time
@@ -230,6 +231,7 @@ def test_ap_ft_over_ds_many(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               roams=50)
 
+@remote_compatible
 def test_ap_ft_over_ds_unknown_target(dev, apdev):
     """WPA2-PSK-FT AP"""
     ssid = "test-ft"
@@ -242,6 +244,7 @@ def test_ap_ft_over_ds_unknown_target(dev, apdev):
                    scan_freq="2412")
     dev[0].roam_over_ds("02:11:22:33:44:55", fail_test=True)
 
+@remote_compatible
 def test_ap_ft_over_ds_unexpected(dev, apdev):
     """WPA2-PSK-FT AP over DS and unexpected response"""
     ssid = "test-ft"
@@ -473,6 +476,7 @@ def test_ap_ft_eap_pull(dev, apdev):
 
     run_roams(dev[0], apdev, hapd, hapd1, ssid, passphrase, eap=True)
 
+@remote_compatible
 def test_ap_ft_mismatching_rrb_key_push(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching RRB key (push)"""
     ssid = "test-ft"
@@ -488,6 +492,7 @@ def test_ap_ft_mismatching_rrb_key_push(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               fail_test=True)
 
+@remote_compatible
 def test_ap_ft_mismatching_rrb_key_pull(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching RRB key (pull)"""
     ssid = "test-ft"
@@ -503,6 +508,7 @@ def test_ap_ft_mismatching_rrb_key_pull(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               fail_test=True)
 
+@remote_compatible
 def test_ap_ft_mismatching_r0kh_id_pull(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching R0KH-ID (pull)"""
     ssid = "test-ft"
@@ -522,6 +528,7 @@ def test_ap_ft_mismatching_r0kh_id_pull(dev, apdev):
     dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     dev[0].roam_over_ds(apdev[1]['bssid'], fail_test=True)
 
+@remote_compatible
 def test_ap_ft_mismatching_rrb_r0kh_push(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching R0KH key (push)"""
     ssid = "test-ft"
@@ -537,6 +544,7 @@ def test_ap_ft_mismatching_rrb_r0kh_push(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               fail_test=True)
 
+@remote_compatible
 def test_ap_ft_mismatching_rrb_r0kh_pull(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching R0KH key (pull)"""
     ssid = "test-ft"
@@ -693,6 +701,7 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
 
+@remote_compatible
 def test_ap_ft_invalid_resp(dev, apdev):
     """WPA2-PSK-FT AP and invalid response IEs"""
     ssid = "test-ft"
@@ -844,6 +853,7 @@ def test_ap_ft_over_ds_proto(dev, apdev):
     msg['payload'] = binascii.unhexlify("0602020000000000" + "020000000400" + "0000" + "3603a1b201" + "3766000000000000000000000000000000000000c4e67ac1999bebd00ff4ae4d5dcaf87896bb060b469f7c78d49623fb395c3455ffffff6b693fe6f8d8c5dfac0a22344750775bd09437f98b238c9f87b97f790c0106000102030406030a6e6173312e77312e6669")
     hapd0.mgmt_tx(msg)
 
+@remote_compatible
 def test_ap_ft_rrb(dev, apdev):
     """WPA2-PSK-FT RRB protocol testing"""
     ssid = "test-ft"
@@ -935,6 +945,7 @@ def test_ap_ft_rrb(dev, apdev):
     if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
 
+@remote_compatible
 def test_rsn_ie_proto_ft_psk_sta(dev, apdev):
     """RSN element protocol testing for FT-PSK + PMF cases on STA side"""
     bssid = apdev[0]['bssid']

@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
@@ -189,6 +190,7 @@ def test_p2p_channel_avoid(dev):
         dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES")
         dev[1].flush_scan_cache()
 
+@remote_compatible
 def test_autogo_following_bss(dev, apdev):
     """P2P autonomous GO operate on the same channel as station interface"""
     if dev[0].get_mcc() > 1:
@@ -208,6 +210,7 @@ def test_autogo_following_bss(dev, apdev):
         hwsim_utils.test_connectivity(dev[0], hapd)
         dev[0].remove_group(res_go['ifname'])
 
+@remote_compatible
 def test_go_neg_with_bss_connected(dev, apdev):
     """P2P channel selection: GO negotiation when station interface is connected"""
 
@@ -404,6 +407,7 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         wpas.flush_scan_cache()
 
+@remote_compatible
 def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     """P2P channel selection: Station on different channel than GO configured pref channel"""
 
@@ -446,6 +450,7 @@ def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
             wpas.global_request("P2P_SET disallow_freq ")
             wpas.global_request("SET p2p_pref_chan ")
 
+@remote_compatible
 def test_no_go_freq(dev, apdev):
     """P2P channel selection: no GO freq"""
     try:
@@ -476,6 +481,7 @@ def test_no_go_freq(dev, apdev):
     finally:
        dev[0].global_request("SET p2p_no_go_freq ")
 
+@remote_compatible
 def test_go_neg_peers_force_diff_freq(dev, apdev):
     """P2P channel selection when peers for different frequency"""
     try:
@@ -485,6 +491,7 @@ def test_go_neg_peers_force_diff_freq(dev, apdev):
         return
     raise Exception("Unexpected group formation success")
 
+@remote_compatible
 def test_autogo_random_channel(dev, apdev):
     """P2P channel selection: GO instantiated on random channel 1, 6, 11"""
     freqs = []
@@ -501,6 +508,7 @@ def test_autogo_random_channel(dev, apdev):
     if i == 20:
        raise Exception("GO created 20 times and not all social channels were selected. freqs not selected: " + str(list(set(go_freqs) - set(freqs))))
 
+@remote_compatible
 def test_p2p_autogo_pref_chan_disallowed(dev, apdev):
     """P2P channel selection: GO preferred channels are disallowed"""
     try:

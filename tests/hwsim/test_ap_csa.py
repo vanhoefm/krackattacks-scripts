@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -42,6 +43,7 @@ def csa_supported(dev):
     if (int(res['capa.flags'], 0) & 0x80000000) == 0:
         raise HwsimSkip("CSA not supported")
 
+@remote_compatible
 def test_ap_csa_1_switch(dev, apdev):
     """AP Channel Switch, one switch"""
     csa_supported(dev[0])
@@ -52,6 +54,7 @@ def test_ap_csa_1_switch(dev, apdev):
     wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
+@remote_compatible
 def test_ap_csa_2_switches(dev, apdev):
     """AP Channel Switch, two switches"""
     csa_supported(dev[0])
@@ -65,6 +68,7 @@ def test_ap_csa_2_switches(dev, apdev):
     wait_channel_switch(dev[0], 2412)
     hwsim_utils.test_connectivity(dev[0], ap)
 
+@remote_compatible
 def test_ap_csa_1_switch_count_0(dev, apdev):
     """AP Channel Switch, one switch with count 0"""
     csa_supported(dev[0])
@@ -75,6 +79,7 @@ def test_ap_csa_1_switch_count_0(dev, apdev):
     # this does not result in CSA currently, so do not bother checking
     # connectivity
 
+@remote_compatible
 def test_ap_csa_2_switches_count_0(dev, apdev):
     """AP Channel Switch, two switches with count 0"""
     csa_supported(dev[0])
@@ -88,6 +93,7 @@ def test_ap_csa_2_switches_count_0(dev, apdev):
     # this does not result in CSA currently, so do not bother checking
     # connectivity
 
+@remote_compatible
 def test_ap_csa_1_switch_count_1(dev, apdev):
     """AP Channel Switch, one switch with count 1"""
     csa_supported(dev[0])
@@ -98,6 +104,7 @@ def test_ap_csa_1_switch_count_1(dev, apdev):
     # this does not result in CSA currently, so do not bother checking
     # connectivity
 
+@remote_compatible
 def test_ap_csa_2_switches_count_1(dev, apdev):
     """AP Channel Switch, two switches with count 1"""
     csa_supported(dev[0])
@@ -111,6 +118,7 @@ def test_ap_csa_2_switches_count_1(dev, apdev):
     # this does not result in CSA currently, so do not bother checking
     # connectivity
 
+@remote_compatible
 def test_ap_csa_1_switch_count_2(dev, apdev):
     """AP Channel Switch, one switch with count 2"""
     csa_supported(dev[0])
@@ -121,6 +129,7 @@ def test_ap_csa_1_switch_count_2(dev, apdev):
     wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
+@remote_compatible
 def test_ap_csa_ecsa_only(dev, apdev):
     """AP Channel Switch, one switch with only ECSA IE"""
     csa_supported(dev[0])
@@ -131,6 +140,7 @@ def test_ap_csa_ecsa_only(dev, apdev):
     wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
+@remote_compatible
 def test_ap_csa_invalid(dev, apdev):
     """AP Channel Switch - invalid channel"""
     csa_supported(dev[0])

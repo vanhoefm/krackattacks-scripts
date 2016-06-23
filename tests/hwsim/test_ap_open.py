@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import struct
@@ -17,6 +18,7 @@ from tshark import run_tshark
 from utils import alloc_fail
 from wpasupplicant import WpaSupplicant
 
+@remote_compatible
 def test_ap_open(dev, apdev):
     """AP with open mode (no security) configuration"""
     _test_ap_open(dev, apdev)
@@ -49,6 +51,7 @@ def test_ap_open_packet_loss(dev, apdev):
     for i in range(0, 3):
         dev[i].wait_connected(timeout=20)
 
+@remote_compatible
 def test_ap_open_unknown_action(dev, apdev):
     """AP with open mode configuration and unknown Action frame"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -75,6 +78,7 @@ def test_ap_open_invalid_wmm_action(dev, apdev):
     if ev is None or "result=SUCCESS" not in ev:
         raise Exception("AP did not ack Action frame")
 
+@remote_compatible
 def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
     """Reconnect to open mode AP after inactivity related disconnection"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -83,6 +87,7 @@ def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
     dev[0].wait_disconnected(timeout=5)
     dev[0].wait_connected(timeout=2, error="Timeout on reconnection")
 
+@remote_compatible
 def test_ap_open_assoc_timeout(dev, apdev):
     """AP timing out association"""
     ssid = "test"
@@ -123,6 +128,7 @@ def test_ap_open_assoc_timeout(dev, apdev):
     hapd.set("ext_mgmt_frame_handling", "0")
     dev[0].wait_connected(timeout=15)
 
+@remote_compatible
 def test_ap_open_id_str(dev, apdev):
     """AP with open mode and id_str"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -134,6 +140,7 @@ def test_ap_open_id_str(dev, apdev):
     if dev[0].get_status_field("id_str") != "foo":
         raise Exception("id_str mismatch")
 
+@remote_compatible
 def test_ap_open_select_any(dev, apdev):
     """AP with open mode and select any network"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -152,6 +159,7 @@ def test_ap_open_select_any(dev, apdev):
     dev[0].select_network("any")
     dev[0].wait_connected(timeout=10)
 
+@remote_compatible
 def test_ap_open_unexpected_assoc_event(dev, apdev):
     """AP with open mode and unexpected association event"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -173,6 +181,7 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
                         apdev[0]['bssid']])
     dev[0].wait_disconnected(timeout=15)
 
+@remote_compatible
 def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""
     hapd = hostapd.add_ap(apdev[0],
@@ -300,6 +309,7 @@ def _test_ap_open_wpas_in_bridge(dev, apdev):
 
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ap_open_start_disabled(dev, apdev):
     """AP with open mode and beaconing disabled"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
@@ -315,6 +325,7 @@ def test_ap_open_start_disabled(dev, apdev):
     dev[0].scan_for_bss(bssid, freq=2412)
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ap_open_start_disabled2(dev, apdev):
     """AP with open mode and beaconing disabled (2)"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
@@ -336,6 +347,7 @@ def test_ap_open_start_disabled2(dev, apdev):
     dev[0].request("RECONNECT")
     dev[0].wait_connected()
 
+@remote_compatible
 def test_ap_open_ifdown(dev, apdev):
     """AP with open mode and external ifconfig down"""
     params = { "ssid": "open",
@@ -409,6 +421,7 @@ def test_ap_open_disconnect_in_ps(dev, apdev, params):
         if state != 2:
             raise Exception("Didn't observe TIM bit getting set and unset (state=%d)" % state)
 
+@remote_compatible
 def test_ap_open_select_network(dev, apdev):
     """Open mode connection and SELECT_NETWORK to change network"""
     hapd1 = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -435,6 +448,7 @@ def test_ap_open_select_network(dev, apdev):
     if bssid1 in res or bssid2 in res:
         raise Exception("Unexpected blacklist entry(2)")
 
+@remote_compatible
 def test_ap_open_disable_enable(dev, apdev):
     """AP with open mode getting disabled and re-enabled"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -486,6 +500,7 @@ def test_ap_open_sta_enable_disable(dev, apdev):
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     sta_enable_disable(wpas, bssid)
 
+@remote_compatible
 def test_ap_open_select_twice(dev, apdev):
     """AP with open mode and select network twice"""
     id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -500,6 +515,7 @@ def test_ap_open_select_twice(dev, apdev):
     dev[0].select_network(id)
     dev[0].wait_connected(timeout=3)
 
+@remote_compatible
 def test_ap_open_reassoc_not_found(dev, apdev):
     """AP with open mode and REASSOCIATE not finding a match"""
     id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -519,6 +535,7 @@ def test_ap_open_reassoc_not_found(dev, apdev):
         raise Exception("No result reported")
     dev[0].request("DISCONNECT")
 
+@remote_compatible
 def test_ap_open_sta_statistics(dev, apdev):
     """AP with open mode and STA statistics"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -538,6 +555,7 @@ def test_ap_open_sta_statistics(dev, apdev):
     # unrelated traffic, so for now, just print out the results in the log for
     # manual checks.
 
+@remote_compatible
 def test_ap_open_poll_sta(dev, apdev):
     """AP with open mode and STA poll"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })

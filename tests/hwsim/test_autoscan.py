@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -51,6 +52,7 @@ def test_autoscan_periodic(dev, apdev):
     finally:
         dev[0].request("AUTOSCAN ")
 
+@remote_compatible
 def test_autoscan_exponential(dev, apdev):
     """autoscan_exponential"""
     hostapd.add_ap(apdev[0], { "ssid": "autoscan" })

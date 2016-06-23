@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import base64
 import binascii
 import struct
@@ -314,6 +315,7 @@ def test_ap_nai_home_realm_query(dev, apdev):
     if "NAI Realm list" not in ev:
         raise Exception("Missing NAI Realm list: " + ev)
 
+@remote_compatible
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""
     try:
@@ -594,6 +596,7 @@ def test_ap_hs20_auto_interworking(dev, apdev):
     if status['hs20'] != "2":
         raise Exception("Unexpected HS 2.0 support indication")
 
+@remote_compatible
 def test_ap_hs20_auto_interworking_no_match(dev, apdev):
     """Hotspot 2.0 connection with auto_interworking=1 and no matching network"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "mismatch" })
@@ -633,6 +636,7 @@ def test_ap_hs20_auto_interworking_no_match(dev, apdev):
         dev[0].dump_monitor()
     dev[0].request("DISCONNECT")
 
+@remote_compatible
 def test_ap_hs20_auto_interworking_no_cred_match(dev, apdev):
     """Hotspot 2.0 connection with auto_interworking=1 but no cred match"""
     bssid = apdev[0]['bssid']
@@ -669,6 +673,7 @@ def eap_test(dev, ap, eap_params, method, user):
     interworking_select(dev, bssid, freq="2412")
     interworking_connect(dev, bssid, method)
 
+@remote_compatible
 def test_ap_hs20_eap_unknown(dev, apdev):
     """Hotspot 2.0 connection with unknown EAP method"""
     bssid = apdev[0]['bssid']
@@ -694,6 +699,7 @@ def test_ap_hs20_eap_peap_gtc(dev, apdev):
     """Hotspot 2.0 connection with PEAP/GTC"""
     eap_test(dev[0], apdev[0], "25[3:6]", "PEAP", "user")
 
+@remote_compatible
 def test_ap_hs20_eap_peap_unknown(dev, apdev):
     """Hotspot 2.0 connection with PEAP/unknown"""
     bssid = apdev[0]['bssid']
@@ -720,6 +726,7 @@ def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):
     check_eap_capa(dev[0], "MSCHAPV2")
     eap_test(dev[0], apdev[0], "21[3:26][6:7][99:99]", "TTLS", "user")
 
+@remote_compatible
 def test_ap_hs20_eap_ttls_eap_unknown(dev, apdev):
     """Hotspot 2.0 connection with TTLS/EAP-unknown"""
     bssid = apdev[0]['bssid']
@@ -731,6 +738,7 @@ def test_ap_hs20_eap_ttls_eap_unknown(dev, apdev):
     dev[0].add_cred_values(default_cred())
     interworking_select(dev[0], None, no_match=True, freq="2412")
 
+@remote_compatible
 def test_ap_hs20_eap_ttls_eap_unsupported(dev, apdev):
     """Hotspot 2.0 connection with TTLS/EAP-OTP(unsupported)"""
     bssid = apdev[0]['bssid']
@@ -742,6 +750,7 @@ def test_ap_hs20_eap_ttls_eap_unsupported(dev, apdev):
     dev[0].add_cred_values(default_cred())
     interworking_select(dev[0], None, no_match=True, freq="2412")
 
+@remote_compatible
 def test_ap_hs20_eap_ttls_unknown(dev, apdev):
     """Hotspot 2.0 connection with TTLS/unknown"""
     bssid = apdev[0]['bssid']
@@ -779,6 +788,7 @@ def test_ap_hs20_eap_tls(dev, apdev):
     interworking_select(dev[0], bssid, freq="2412")
     interworking_connect(dev[0], bssid, "TLS")
 
+@remote_compatible
 def test_ap_hs20_eap_cert_unknown(dev, apdev):
     """Hotspot 2.0 connection with certificate, but unknown EAP method"""
     bssid = apdev[0]['bssid']
@@ -794,6 +804,7 @@ def test_ap_hs20_eap_cert_unknown(dev, apdev):
                              'private_key': "auth_serv/user.key"})
     interworking_select(dev[0], None, no_match=True, freq="2412")
 
+@remote_compatible
 def test_ap_hs20_eap_cert_unsupported(dev, apdev):
     """Hotspot 2.0 connection with certificate, but unsupported TTLS"""
     bssid = apdev[0]['bssid']
@@ -809,6 +820,7 @@ def test_ap_hs20_eap_cert_unsupported(dev, apdev):
                              'private_key': "auth_serv/user.key"})
     interworking_select(dev[0], None, no_match=True, freq="2412")
 
+@remote_compatible
 def test_ap_hs20_eap_invalid_cred(dev, apdev):
     """Hotspot 2.0 connection with invalid cred configuration"""
     bssid = apdev[0]['bssid']

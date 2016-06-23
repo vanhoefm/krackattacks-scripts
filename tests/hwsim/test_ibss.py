@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -348,6 +349,7 @@ def test_ibss_wep(dev):
     connect_ibss_cmd(dev[1], id)
     bssid1 = wait_ibss_connection(dev[1])
 
+@remote_compatible
 def test_ibss_rsn_error_case(dev):
     """IBSS RSN regression test for IBSS_RSN prior IBSS setup"""
     if "FAIL" not in dev[0].request("IBSS_RSN 02:03:04:05:06:07"):

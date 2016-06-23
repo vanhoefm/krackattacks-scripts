@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -13,6 +14,7 @@ import hostapd
 from utils import skip_with_fips
 from wlantest import Wlantest
 
+@remote_compatible
 def test_peerkey(dev, apdev):
     """RSN AP and PeerKey between two STAs"""
     ssid = "test-peerkey"
@@ -47,6 +49,7 @@ def test_peerkey_unknown_peer(dev, apdev):
     dev[0].request("STKSTART " + dev[2].p2p_interface_addr())
     time.sleep(0.5)
 
+@remote_compatible
 def test_peerkey_pairwise_mismatch(dev, apdev):
     """RSN TKIP+CCMP AP and PeerKey between two STAs using different ciphers"""
     skip_with_fips(dev[0])

@@ -4,9 +4,11 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
 
+@remote_compatible
 def test_wep_open_auth(dev, apdev):
     """WEP Open System authentication"""
     hapd = hostapd.add_ap(apdev[0],
@@ -25,6 +27,7 @@ def test_wep_open_auth(dev, apdev):
     if "[WEP]" not in bss['flags']:
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
+@remote_compatible
 def test_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""
     hapd = hostapd.add_ap(apdev[0],
@@ -39,6 +42,7 @@ def test_wep_shared_key_auth(dev, apdev):
                    wep_key0='"hello12345678"',
                    scan_freq="2412")
 
+@remote_compatible
 def test_wep_shared_key_auth_not_allowed(dev, apdev):
     """WEP Shared Key authentication not allowed"""
     hostapd.add_ap(apdev[0],

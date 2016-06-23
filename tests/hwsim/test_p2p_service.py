@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -87,6 +88,7 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
 
     return ev
 
+@remote_compatible
 def test_p2p_service_discovery(dev):
     """P2P service discovery"""
     addr0 = dev[0].p2p_dev_addr()
@@ -132,6 +134,7 @@ def test_p2p_service_discovery4(dev):
         if "496e7465726e6574" not in ev:
             raise Exception("Unexpected service discovery response contents (UPnP)")
 
+@remote_compatible
 def test_p2p_service_discovery_multiple_queries(dev):
     """P2P service discovery with multiple queries"""
     for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
@@ -161,6 +164,7 @@ def test_p2p_service_discovery_fragmentation(dev):
             if "496e7465726e6574" not in ev:
                 raise Exception("Unexpected service discovery response contents (UPnP)")
 
+@remote_compatible
 def test_p2p_service_discovery_bonjour(dev):
     """P2P service discovery (Bonjour)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "02000101")
@@ -171,6 +175,7 @@ def test_p2p_service_discovery_bonjour(dev):
     if "496e7465726e6574" in ev:
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
 
+@remote_compatible
 def test_p2p_service_discovery_bonjour2(dev):
     """P2P service discovery (Bonjour AFS)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "130001010b5f6166706f766572746370c00c000c01")
@@ -181,6 +186,7 @@ def test_p2p_service_discovery_bonjour2(dev):
     if "496e7465726e6574" in ev:
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
 
+@remote_compatible
 def test_p2p_service_discovery_bonjour3(dev):
     """P2P service discovery (Bonjour AFS - no match)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "130001010b5f6166706f766572746370c00c000c02")
@@ -193,6 +199,7 @@ def test_p2p_service_discovery_bonjour3(dev):
     if "496e7465726e6574" in ev:
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
 
+@remote_compatible
 def test_p2p_service_discovery_upnp(dev):
     """P2P service discovery (UPnP)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "02000201")
@@ -201,6 +208,7 @@ def test_p2p_service_discovery_upnp(dev):
     if "496e7465726e6574" not in ev:
         raise Exception("Unexpected service discovery response contents (UPnP)")
 
+@remote_compatible
 def test_p2p_service_discovery_upnp2(dev):
     """P2P service discovery (UPnP using request helper)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "upnp 10 ssdp:all", "0b00020110737364703a616c6c")
@@ -209,6 +217,7 @@ def test_p2p_service_discovery_upnp2(dev):
     if "496e7465726e6574" not in ev:
         raise Exception("Unexpected service discovery response contents (UPnP)")
 
+@remote_compatible
 def test_p2p_service_discovery_upnp3(dev):
     """P2P service discovery (UPnP using request helper - no match)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "upnp 10 ssdp:foo", "0b00020110737364703a666f6f")
@@ -219,6 +228,7 @@ def test_p2p_service_discovery_upnp3(dev):
     if "496e7465726e6574" in ev:
         raise Exception("Unexpected service discovery response contents (UPnP)")
 
+@remote_compatible
 def test_p2p_service_discovery_ws(dev):
     """P2P service discovery (WS-Discovery)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "02000301")
@@ -229,6 +239,7 @@ def test_p2p_service_discovery_ws(dev):
     if "0300030101" not in ev:
         raise Exception("Unexpected service discovery response contents (WS)")
 
+@remote_compatible
 def test_p2p_service_discovery_wfd(dev):
     """P2P service discovery (Wi-Fi Display)"""
     dev[0].global_request("SET wifi_display 1")
@@ -240,6 +251,7 @@ def test_p2p_service_discovery_wfd(dev):
     if "0300040101" not in ev:
         raise Exception("Unexpected response to WFD SD query (protocol was disabled)")
 
+@remote_compatible
 def test_p2p_service_discovery_req_cancel(dev):
     """Cancel a P2P service discovery request"""
     if "FAIL" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ ab"):
@@ -263,6 +275,7 @@ def test_p2p_service_discovery_req_cancel(dev):
     if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query):
         raise Exception("Unexpected SD(broadcast) cancel failure")
 
+@remote_compatible
 def test_p2p_service_discovery_go(dev):
     """P2P service discovery from GO"""
     addr0 = dev[0].p2p_dev_addr()
@@ -387,6 +400,7 @@ def _test_p2p_service_discovery_external(dev):
         if "FAIL" not in dev[0].global_request("P2P_SERV_DISC_RESP " + cmd):
             raise Exception("Invalid P2P_SERV_DISC_RESP accepted: " + cmd)
 
+@remote_compatible
 def test_p2p_service_discovery_external(dev):
     """P2P service discovery using external response"""
     try:
@@ -394,6 +408,7 @@ def test_p2p_service_discovery_external(dev):
     finally:
         dev[0].global_request("P2P_SERV_DISC_EXTERNAL 0")
 
+@remote_compatible
 def test_p2p_service_discovery_invalid_commands(dev):
     """P2P service discovery invalid commands"""
     for cmd in [ "bonjour",
@@ -454,6 +469,7 @@ def get_p2p_state(dev):
         raise Exception("Could not get p2p_state")
     return p2p_state
 
+@remote_compatible
 def test_p2p_service_discovery_peer_not_listening(dev):
     """P2P service discovery and peer not listening"""
     addr0 = dev[0].p2p_dev_addr()
@@ -483,6 +499,7 @@ def test_p2p_service_discovery_peer_not_listening(dev):
     if p2p_state != "IDLE":
         raise Exception("Unexpected p2p_state after P2P_FIND timeout: " + p2p_state)
 
+@remote_compatible
 def test_p2p_service_discovery_peer_not_listening2(dev):
     """P2P service discovery and peer not listening"""
     addr0 = dev[0].p2p_dev_addr()

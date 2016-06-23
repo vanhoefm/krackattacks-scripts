@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import hashlib
 import hmac
@@ -27,6 +28,7 @@ def connect(dev, ssid, wait_connect=True):
                 password_hex="0123456789abcdef0123456789abcdef",
                 wait_connect=wait_connect)
 
+@remote_compatible
 def test_radius_auth_unreachable(dev, apdev):
     """RADIUS Authentication server unreachable"""
     params = hostapd.wpa2_eap_params(ssid="radius-auth")
@@ -1138,6 +1140,7 @@ def test_radius_auth_force_client_addr(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     connect(dev[0], "radius-auth")
 
+@remote_compatible
 def test_radius_auth_force_invalid_client_addr(dev, apdev):
     """RADIUS client address specified and invalid address"""
     params = hostapd.wpa2_eap_params(ssid="radius-auth")

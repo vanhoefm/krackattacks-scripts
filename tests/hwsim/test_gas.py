@@ -5,6 +5,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import binascii
 import logging
@@ -298,6 +299,7 @@ def test_gas_comeback_delay(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+@remote_compatible
 def test_gas_stop_fetch_anqp(dev, apdev):
     """Stop FETCH_ANQP operation"""
     hapd = start_ap(apdev[0])
@@ -930,6 +932,7 @@ def test_gas_query_deinit(dev, apdev):
     # GAS query has not yet been started.
     wpas.interface_remove("wlan5")
 
+@remote_compatible
 def test_gas_anqp_oom_wpas(dev, apdev):
     """GAS/ANQP query and OOM in wpa_supplicant"""
     hapd = start_ap(apdev[0])

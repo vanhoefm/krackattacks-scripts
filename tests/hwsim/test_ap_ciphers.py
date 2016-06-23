@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -63,11 +64,13 @@ def check_group_mgmt_cipher(dev, ap, cipher):
     if res != group_mgmt:
         raise Exception("Unexpected group mgmt cipher: " + res)
 
+@remote_compatible
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
     skip_with_fips(dev[0])
     check_cipher(dev[0], apdev[0], "TKIP")
 
+@remote_compatible
 def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by AP)"""
     skip_with_fips(dev[0])
@@ -102,6 +105,7 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection during TKIP countermeasures")
 
+@remote_compatible
 def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by STA)"""
     skip_with_fips(dev[0])
@@ -136,6 +140,7 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection during TKIP countermeasures")
 
+@remote_compatible
 def test_ap_cipher_ccmp(dev, apdev):
     """WPA2-PSK/CCMP connection"""
     check_cipher(dev[0], apdev[0], "CCMP")
@@ -152,6 +157,7 @@ def test_ap_cipher_gcmp_256(dev, apdev):
     """WPA2-PSK/GCMP-256 connection"""
     check_cipher(dev[0], apdev[0], "GCMP-256")
 
+@remote_compatible
 def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
     """WPA2-PSK/CCMP/ and WPA-PSK/TKIP mixed configuration"""
     skip_with_fips(dev[0])
@@ -194,6 +200,7 @@ def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
     hwsim_utils.test_connectivity(dev[1], hapd)
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+@remote_compatible
 def test_ap_cipher_bip(dev, apdev):
     """WPA2-PSK with BIP"""
     check_group_mgmt_cipher(dev[0], apdev[0], "AES-128-CMAC")

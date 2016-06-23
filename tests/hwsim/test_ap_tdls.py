@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -163,6 +164,7 @@ def check_tdls_link(sta0, sta1, connected=True):
         if connected:
             raise Exception("Expected TDLS link status to be connected")
 
+@remote_compatible
 def test_ap_tdls_discovery(dev, apdev):
     """WPA2-PSK AP and two stations using TDLS discovery"""
     hapd = start_ap_wpa2_psk(apdev[0])

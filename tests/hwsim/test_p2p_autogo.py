@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import subprocess
 import logging
@@ -176,6 +177,7 @@ def test_autogo_m2d(dev):
     if ev is None:
         raise Exception("No M2D event on group interface (2)")
 
+@remote_compatible
 def test_autogo_fail(dev):
     """P2P autonomous GO and incorrect PIN"""
     autogo(dev[0], freq=2412)
@@ -339,6 +341,7 @@ def test_autogo_chan_switch(dev):
     time.sleep(0.1)
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
 
+@remote_compatible
 def test_autogo_extra_cred(dev):
     """P2P autonomous GO sending two WPS credentials"""
     if "FAIL" in dev[0].request("SET wps_testing_dummy_cred 1"):
@@ -365,6 +368,7 @@ def test_autogo_ifdown(dev):
     if res['ifname'] not in ev:
         raise Exception("Unexpected group removal event: " + ev)
 
+@remote_compatible
 def test_autogo_start_during_scan(dev):
     """P2P autonomous GO started during ongoing manual scan"""
     try:
@@ -418,6 +422,7 @@ def test_autogo_passphrase_len(dev):
     finally:
         dev[0].request("SET p2p_passphrase_len 8")
 
+@remote_compatible
 def test_autogo_bridge(dev):
     """P2P autonomous GO in a bridge"""
     try:
@@ -451,6 +456,7 @@ def test_autogo_bridge(dev):
         dev[0].cmd_execute(['brctl', 'delbr', 'p2p-br0', '2>', '/dev/null'],
                            shell=True)
 
+@remote_compatible
 def test_presence_req_on_group_interface(dev):
     """P2P_PRESENCE_REQ on group interface"""
     dev[1].global_request("SET p2p_no_group_iface 0")
@@ -528,6 +534,7 @@ def test_autogo_join_auto(dev):
     dev[1].wait_go_ending_session()
     dev[1].flush_scan_cache()
 
+@remote_compatible
 def test_autogo_join_auto_go_neg(dev):
     """P2P_CONNECT-auto fallback to GO Neg"""
     dev[1].flush_scan_cache()
@@ -564,6 +571,7 @@ def test_autogo_join_auto_go_neg(dev):
     dev[1].wait_go_ending_session()
     dev[1].flush_scan_cache()
 
+@remote_compatible
 def test_autogo_join_auto_go_neg_after_seeing_go(dev):
     """P2P_CONNECT-auto fallback to GO Neg after seeing GO"""
     autogo(dev[0], freq=2412)
@@ -709,6 +717,7 @@ def rx_pd_req(dev):
     p2p['freq'] = msg['freq']
     return p2p
 
+@remote_compatible
 def test_autogo_scan(dev):
     """P2P autonomous GO and no P2P IE in Probe Response scan results"""
     addr0 = dev[0].p2p_dev_addr()
@@ -784,6 +793,7 @@ def test_autogo_scan(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 
+@remote_compatible
 def test_autogo_join_before_found(dev):
     """P2P client joining a group before having found GO Device Address"""
     dev[0].global_request("SET p2p_no_group_iface 0")

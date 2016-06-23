@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import binascii
@@ -22,6 +23,7 @@ def nl80211_command(dev, cmd, attr):
         raise Exception("nl80211 command failed")
     return binascii.unhexlify(res)
 
+@remote_compatible
 def test_cfg80211_disassociate(dev, apdev):
     """cfg80211 disassociation command"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -93,6 +95,7 @@ def test_cfg80211_tx_frame(dev, apdev, params):
         if freq[1] != "2412":
             raise Exception("Second Action frame on unexpected channel: %s MHz" % freq[1])
 
+@remote_compatible
 def test_cfg80211_wep_key_idx_change(dev, apdev):
     """WEP Shared Key authentication and key index change without deauth"""
     hapd = hostapd.add_ap(apdev[0],
@@ -122,6 +125,7 @@ def test_cfg80211_wep_key_idx_change(dev, apdev):
     dev[0].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_cfg80211_hostapd_ext_sta_remove(dev, apdev):
     """cfg80211 DEL_STATION issued externally to hostapd"""
     hapd = hostapd.add_ap(apdev[0],

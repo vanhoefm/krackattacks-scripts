@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -399,6 +400,7 @@ def set_no_group_iface(dev, enable):
     else:
         dev.global_request("SET p2p_no_group_iface 0")
 
+@remote_compatible
 def test_p2ps_exact_search(dev):
     """P2PS exact service request"""
     p2ps_advertise(r_dev=dev[0], r_role='1', svc_name='org.wi-fi.wfds.send.rx',
@@ -410,6 +412,7 @@ def test_p2ps_exact_search(dev):
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")
 
+@remote_compatible
 def test_p2ps_exact_search_srvinfo(dev):
     """P2PS exact service request with service info"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
@@ -422,6 +425,7 @@ def test_p2ps_exact_search_srvinfo(dev):
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")
 
+@remote_compatible
 def test_p2ps_nonexact_search(dev):
     """P2PS nonexact seek request"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.play.rx',
@@ -434,6 +438,7 @@ def test_p2ps_nonexact_search(dev):
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")
 
+@remote_compatible
 def test_p2ps_nonexact_search_srvinfo(dev):
     """P2PS nonexact seek request with service info"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
@@ -446,6 +451,7 @@ def test_p2ps_nonexact_search_srvinfo(dev):
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")
 
+@remote_compatible
 def test_p2ps_connect_p2ps_method_nonautoaccept(dev):
     """P2PS connect for non-auto-accept and P2PS config method"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
@@ -462,6 +468,7 @@ def test_p2ps_connect_p2ps_method_nonautoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_p2ps_method_autoaccept(dev):
     """P2PS connection with P2PS default config method and auto-accept"""
     p2ps_advertise(r_dev=dev[0], r_role='1', svc_name='org.wi-fi.wfds.send.rx',
@@ -478,6 +485,7 @@ def test_p2ps_connect_p2ps_method_autoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_keypad_method_nonautoaccept(dev):
     """P2PS Connection with non-auto-accept and seeker having keypad method"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
@@ -495,6 +503,7 @@ def test_p2ps_connect_keypad_method_nonautoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_display_method_nonautoaccept(dev):
     """P2PS connection with non-auto-accept and seeker having display method"""
     p2ps_advertise(r_dev=dev[0], r_role='0', svc_name='org.wi-fi.wfds.send.rx',
@@ -511,6 +520,7 @@ def test_p2ps_connect_display_method_nonautoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_keypad_method_autoaccept(dev):
     """P2PS connection with auto-accept and keypad method on seeker side"""
     p2ps_advertise(r_dev=dev[0], r_role='1', svc_name='org.wi-fi.wfds.send.rx',
@@ -527,6 +537,7 @@ def test_p2ps_connect_keypad_method_autoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_display_method_autoaccept(dev):
     """P2PS connection with auto-accept and display method on seeker side"""
     p2ps_advertise(r_dev=dev[0], r_role='1', svc_name='org.wi-fi.wfds.send.rx',
@@ -543,6 +554,7 @@ def test_p2ps_connect_display_method_autoaccept(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_adv_go_p2ps_method(dev):
     """P2PS auto-accept connection with advertisement as GO and P2PS method"""
     p2ps_advertise(r_dev=dev[0], r_role='4', svc_name='org.wi-fi.wfds.send.rx',
@@ -559,6 +571,7 @@ def test_p2ps_connect_adv_go_p2ps_method(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_adv_go_p2ps_method_group_iface(dev):
     """P2PS auto-accept connection with advertisement as GO and P2PS method using separate group interface"""
     set_no_group_iface(dev[0], 0)
@@ -577,6 +590,7 @@ def test_p2ps_connect_adv_go_p2ps_method_group_iface(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_adv_client_p2ps_method(dev):
     """P2PS auto-accept connection with advertisement as Client and P2PS method"""
     p2ps_advertise(r_dev=dev[0], r_role='2', svc_name='org.wi-fi.wfds.send.rx',
@@ -608,10 +622,12 @@ def p2ps_connect_adv_go_pin_method(dev, keep_group=False):
             raise Exception("Unable to remove the advertisement instance")
         remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_connect_adv_go_pin_method(dev):
     """P2PS advertiser as GO with keypad config method on seeker side and auto-accept"""
     p2ps_connect_adv_go_pin_method(dev)
 
+@remote_compatible
 def test_p2ps_connect_adv_client_pin_method(dev):
     """P2PS advertiser as client with keypad config method on seeker side and auto-accept"""
     dev[0].flush_scan_cache()
@@ -845,6 +861,7 @@ def test_p2ps_connect_adv_go_persistent(dev):
     p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_adv_go_persistent_no_peer_entry(dev):
     """P2PS advertisement as GO having persistent group (no peer entry)"""
     go_neg_pin_authorized_persistent(i_dev=dev[0], i_intent=15,
@@ -863,6 +880,7 @@ def test_p2ps_adv_go_persistent_no_peer_entry(dev):
     if "persist=" not in ev0 or "persist=" not in ev1:
         raise Exception("Persistent group isn't used by peers")
 
+@remote_compatible
 def test_p2ps_pd_follow_on_status_failure(dev):
     """P2PS PD follow on request with status 11"""
     addr0 = dev[0].p2p_dev_addr()
@@ -921,6 +939,7 @@ def test_p2ps_go_probe(dev):
     dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
     remove_group(dev[0], dev[1])
 
+@remote_compatible
 def test_p2ps_wildcard_p2ps(dev):
     """P2PS wildcard SD Probe Request/Response"""
     p2ps_wildcard = "org.wi-fi.wfds"
@@ -1049,34 +1068,40 @@ def p2ps_test_feature_capability_cpt(dev, adv_cpt, seeker_cpt, adv_role,
     if ev is None:
         raise Exception("Unable to remove the advertisement instance")
 
+@remote_compatible
 def test_p2ps_feature_capability_mac_autoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser MAC, seeker UDP:MAC, autoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC", seeker_cpt="UDP:MAC",
                                      adv_role="4", result="MAC")
 
+@remote_compatible
 def test_p2ps_feature_capability_mac_nonautoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser:MAC, seeker UDP:MAC, nonautoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC", seeker_cpt="UDP:MAC",
                                      adv_role="0", result="MAC")
 
+@remote_compatible
 def test_p2ps_feature_capability_mac_udp_autoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser MAC:UDP, seeker UDP:MAC, autoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC:UDP",
                                      seeker_cpt="UDP:MAC", adv_role="2",
                                      result="MAC")
 
+@remote_compatible
 def test_p2ps_feature_capability_mac_udp_nonautoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser MAC:UDP, seeker UDP:MAC, nonautoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="MAC:UDP",
                                      seeker_cpt="UDP:MAC", adv_role="0",
                                      result="UDP")
 
+@remote_compatible
 def test_p2ps_feature_capability_udp_mac_autoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser UDP:MAC, seeker MAC:UDP, autoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="UDP:MAC",
                                      seeker_cpt="MAC:UDP", adv_role="2",
                                      result="UDP")
 
+@remote_compatible
 def test_p2ps_feature_capability_udp_mac_nonautoaccept(dev):
     """P2PS PD Feature Capability CPT: advertiser UDP:MAC, seeker MAC:UDP,  nonautoaccept"""
     p2ps_test_feature_capability_cpt(dev, adv_cpt="UDP:MAC",
@@ -1205,6 +1230,7 @@ def test_p2ps_channel_both_connected_different_mcc(dev, apdev):
 def clear_disallow_handler(seeker, advertiser):
     advertiser.global_request("P2P_SET disallow_freq ")
 
+@remote_compatible
 def test_p2ps_channel_disallow_freq(dev, apdev):
     """P2PS connection with P2PS method - disallow freqs"""
     set_no_group_iface(dev[0], 0)
@@ -1299,6 +1325,7 @@ def test_p2ps_channel_sta_connected_disallow_freq_mcc(dev, apdev):
             dev[0].global_request("P2P_SET disallow_freq ")
             dev[0].global_request("P2P_SERVICE_DEL asp all")
 
+@remote_compatible
 def test_p2ps_active_go_adv(dev, apdev):
     """P2PS connection with P2PS method - active GO on advertiser"""
     set_no_group_iface(dev[0], 0)
@@ -1330,6 +1357,7 @@ def test_p2ps_active_go_adv(dev, apdev):
         remove_group(dev[0], dev[1])
         dev[0].global_request("P2P_SERVICE_DEL asp all")
 
+@remote_compatible
 def test_p2ps_active_go_seeker(dev, apdev):
     """P2PS connection with P2PS method - active GO on seeker"""
     set_no_group_iface(dev[0], 0)
@@ -1437,6 +1465,7 @@ def test_p2ps_channel_active_go_and_station_different(dev, apdev):
         dev[0].global_request("P2P_SERVICE_DEL asp all")
         set_random_listen_chan(dev[1])
 
+@remote_compatible
 def test_p2ps_channel_active_go_and_station_different_mcc(dev, apdev):
     """P2PS connection, active P2P GO and station on channel"""
     if dev[0].get_mcc() == 1:
@@ -1532,6 +1561,7 @@ def run_p2ps_connect_p2p_device2(dev, no_group_iface):
             raise Exception("Unable to remove the advertisement instance")
         remove_group(wpas, dev[0])
 
+@remote_compatible
 def test_p2ps_connect_p2ps_method_no_pin(dev):
     """P2P group formation using P2PS method without specifying PIN"""
     dev[0].p2p_listen()

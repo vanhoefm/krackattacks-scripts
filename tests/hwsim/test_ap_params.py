@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
@@ -13,6 +14,7 @@ import hostapd
 from tshark import run_tshark
 from utils import alloc_fail
 
+@remote_compatible
 def test_ap_fragmentation_rts_set_high(dev, apdev):
     """WPA2-PSK AP with fragmentation and RTS thresholds larger than frame length"""
     ssid = "test-wpa2-psk"
@@ -24,6 +26,7 @@ def test_ap_fragmentation_rts_set_high(dev, apdev):
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_fragmentation_open(dev, apdev):
     """Open AP with fragmentation threshold"""
     ssid = "fragmentation"
@@ -34,6 +37,7 @@ def test_ap_fragmentation_open(dev, apdev):
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_fragmentation_wpa2(dev, apdev):
     """WPA2-PSK AP with fragmentation threshold"""
     ssid = "test-wpa2-psk"
@@ -80,6 +84,7 @@ def test_ap_element_parse(dev, apdev):
     if "38050102030405" not in bss['ie']:
         raise Exception("Timeout element not shown in scan results")
 
+@remote_compatible
 def test_ap_element_parse_oom(dev, apdev):
     """Information element parsing OOM"""
     bssid = apdev[0]['bssid']
@@ -150,6 +155,7 @@ def test_ap_acl_deny(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected association")
 
+@remote_compatible
 def test_ap_wds_sta(dev, apdev):
     """WPA2-PSK AP with STA using 4addr mode"""
     ssid = "test-wpa2-psk"
@@ -172,6 +178,7 @@ def test_ap_wds_sta(dev, apdev):
         dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
         dev[0].cmd_execute(['brctl', 'delbr', 'wds-br0'])
 
+@remote_compatible
 def test_ap_inactivity_poll(dev, apdev):
     """AP using inactivity poll"""
     ssid = "test-wpa2-psk"
@@ -190,6 +197,7 @@ def test_ap_inactivity_poll(dev, apdev):
     if ev is None:
         raise Exception("STA disconnection on inactivity was not reported")
 
+@remote_compatible
 def test_ap_inactivity_disconnect(dev, apdev):
     """AP using inactivity disconnect"""
     ssid = "test-wpa2-psk"
@@ -209,6 +217,7 @@ def test_ap_inactivity_disconnect(dev, apdev):
     if ev is None:
         raise Exception("STA disconnection on inactivity was not reported")
 
+@remote_compatible
 def test_ap_basic_rates(dev, apdev):
     """Open AP with lots of basic rates"""
     ssid = "basic rates"
@@ -218,6 +227,7 @@ def test_ap_basic_rates(dev, apdev):
     hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ap_short_preamble(dev, apdev):
     """Open AP with short preamble"""
     ssid = "short preamble"
@@ -249,6 +259,7 @@ def test_ap_spectrum_management_required(dev, apdev):
         hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_max_listen_interval(dev, apdev):
     """Open AP with maximum listen interval limit"""
     ssid = "listen"
@@ -263,6 +274,7 @@ def test_ap_max_listen_interval(dev, apdev):
     if "status_code=51" not in ev:
         raise Exception("Unexpected ASSOC-REJECT reason")
 
+@remote_compatible
 def test_ap_max_num_sta(dev, apdev):
     """Open AP with maximum STA count"""
     ssid = "max"
@@ -305,6 +317,7 @@ def test_ap_max_num_sta_no_probe_resp(dev, apdev, params):
         if seen:
             raise Exception("AP found unexpectedly")
 
+@remote_compatible
 def test_ap_tx_queue_params(dev, apdev):
     """Open AP with TX queue params set"""
     ssid = "tx"

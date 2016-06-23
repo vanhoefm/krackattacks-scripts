@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import time
@@ -50,6 +51,7 @@ def test_monitor_iface_multi_bss(dev, apdev):
     dev[0].connect("monitor-iface", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_monitor_iface_unknown_sta(dev, apdev):
     """AP mode monitor interface and Data frame from unknown STA"""
     ssid = "monitor-iface-pmf"

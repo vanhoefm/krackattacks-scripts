@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import subprocess
 import logging
@@ -34,6 +35,7 @@ def ap_wps_params(ssid):
              "wpa_passphrase": "12345678", "wpa": "2",
              "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"}
 
+@remote_compatible
 def test_nfc_wps_password_token_sta(dev, apdev):
     """NFC tag with password token on the station/Enrollee"""
     ssid = "test-wps-nfc-pw-token-conf"
@@ -93,6 +95,7 @@ def test_nfc_wps_config_token_init(dev, apdev):
     dev[0].wait_connected(timeout=15)
     check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
 
+@remote_compatible
 def test_nfc_wps_password_token_sta_init(dev, apdev):
     """Initial AP configuration with first WPS NFC Enrollee"""
     ssid = "test-wps-nfc-pw-token-init"
@@ -112,6 +115,7 @@ def test_nfc_wps_password_token_sta_init(dev, apdev):
     dev[0].wait_connected(timeout=30)
     check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
 
+@remote_compatible
 def test_nfc_wps_password_token_ap(dev, apdev):
     """WPS registrar configuring an AP using AP password token"""
     ssid = "test-wps-nfc-pw-token-init"
@@ -180,6 +184,7 @@ def _test_nfc_wps_handover_init(dev, apdev):
         if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR"):
             raise Exception("Unexpected NFC_GET_HANDOVER_SEL success during OOM")
 
+@remote_compatible
 def test_nfc_wps_handover_errors(dev, apdev):
     """WPS AP NFC handover report error cases"""
     ssid = "test-wps-nfc-handover"
@@ -415,6 +420,7 @@ def start_ap_er(er, ap, ssid):
     er.request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
     return hapd
 
+@remote_compatible
 def test_nfc_wps_er_pw_token(dev, apdev):
     """WPS NFC password token from Enrollee to ER"""
     try:
@@ -444,6 +450,7 @@ def _test_nfc_wps_er_pw_token(dev, apdev):
     dev[1].wait_connected(timeout=15)
     check_wpa2_connection(dev[1], apdev[0], hapd, ssid)
 
+@remote_compatible
 def test_nfc_wps_er_config_token(dev, apdev):
     """WPS NFC configuration token from ER to Enrollee"""
     try:
@@ -564,6 +571,7 @@ def _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     if "WPS-FAIL" not in ev:
         raise Exception("Public key hash mismatch not detected")
 
+@remote_compatible
 def test_nfc_invalid_ndef_record(dev, apdev):
     """Invalid NFC NDEF record handling"""
     tests = [ "11223344",

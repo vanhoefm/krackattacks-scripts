@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 import os
 import time
@@ -15,6 +16,7 @@ import hostapd
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
+@remote_compatible
 def test_sae(dev, apdev):
     """SAE with default group"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -38,6 +40,7 @@ def test_sae(dev, apdev):
     if "[WPA2-SAE-CCMP]" not in bss['flags']:
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
+@remote_compatible
 def test_sae_password_ecc(dev, apdev):
     """SAE with number of different passwords (ECC)"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -57,6 +60,7 @@ def test_sae_password_ecc(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
 
+@remote_compatible
 def test_sae_password_ffc(dev, apdev):
     """SAE with number of different passwords (FFC)"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -77,6 +81,7 @@ def test_sae_password_ffc(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
 
+@remote_compatible
 def test_sae_pmksa_caching(dev, apdev):
     """SAE and PMKSA caching"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -99,6 +104,7 @@ def test_sae_pmksa_caching(dev, apdev):
     if dev[0].get_status_field('sae_group') is not None:
             raise Exception("SAE group claimed to have been used")
 
+@remote_compatible
 def test_sae_pmksa_caching_disabled(dev, apdev):
     """SAE and PMKSA caching disabled"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -172,6 +178,7 @@ def test_sae_groups(dev, apdev):
         dev[0].wait_disconnected()
         dev[0].dump_monitor()
 
+@remote_compatible
 def test_sae_group_nego(dev, apdev):
     """SAE group negotiation"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -188,6 +195,7 @@ def test_sae_group_nego(dev, apdev):
     if dev[0].get_status_field('sae_group') != '19':
         raise Exception("Expected SAE group not used")
 
+@remote_compatible
 def test_sae_anti_clogging(dev, apdev):
     """SAE anti clogging"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -238,6 +246,7 @@ def test_sae_mixed(dev, apdev):
         dev[i].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")
 
+@remote_compatible
 def test_sae_missing_password(dev, apdev):
     """SAE and missing password"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -380,6 +389,7 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
     verify_not_present(buf, sae_kck, fname, "SAE(KCK)")
 
+@remote_compatible
 def test_sae_oom_wpas(dev, apdev):
     """SAE and OOM in wpa_supplicant"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -404,6 +414,7 @@ def test_sae_oom_wpas(dev, apdev):
                        scan_freq="2412")
         dev[0].request("REMOVE_NETWORK all")
 
+@remote_compatible
 def test_sae_proto_ecc(dev, apdev):
     """SAE protocol testing (ECC)"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -502,6 +513,7 @@ def test_sae_proto_ecc(dev, apdev):
         hapd.set("ext_mgmt_frame_handling", "0")
         hapd.dump_monitor()
 
+@remote_compatible
 def test_sae_proto_ffc(dev, apdev):
     """SAE protocol testing (FFC)"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -582,6 +594,7 @@ def test_sae_proto_ffc(dev, apdev):
         hapd.set("ext_mgmt_frame_handling", "0")
         hapd.dump_monitor()
 
+@remote_compatible
 def test_sae_no_ffc_by_default(dev, apdev):
     """SAE and default groups rejecting FFC"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -642,14 +655,17 @@ def sae_reflection_attack(apdev, dev, group):
         if req['subtype'] == 11:
             raise Exception("Unexpected Authentication frame seen")
 
+@remote_compatible
 def test_sae_reflection_attack_ecc(dev, apdev):
     """SAE reflection attack (ECC)"""
     sae_reflection_attack(apdev[0], dev[0], 19)
 
+@remote_compatible
 def test_sae_reflection_attack_ffc(dev, apdev):
     """SAE reflection attack (FFC)"""
     sae_reflection_attack(apdev[0], dev[0], 5)
 
+@remote_compatible
 def test_sae_anti_clogging_proto(dev, apdev):
     """SAE anti clogging protocol testing"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -692,6 +708,7 @@ def test_sae_anti_clogging_proto(dev, apdev):
         if req['subtype'] == 11:
             raise Exception("Unexpected Authentication frame seen")
 
+@remote_compatible
 def test_sae_no_random(dev, apdev):
     """SAE and no random numbers available"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -712,6 +729,7 @@ def test_sae_no_random(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
+@remote_compatible
 def test_sae_pwe_failure(dev, apdev):
     """SAE and pwe failure"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
@@ -752,6 +770,7 @@ def test_sae_pwe_failure(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
 
+@remote_compatible
 def test_sae_bignum_failure(dev, apdev):
     """SAE and bignum failure"""
     if "SAE" not in dev[0].get_capability("auth_alg"):

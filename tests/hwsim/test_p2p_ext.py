@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
@@ -11,6 +12,7 @@ import os
 from tshark import run_tshark
 from p2p_utils import *
 
+@remote_compatible
 def test_p2p_ext_discovery(dev):
     """P2P device discovery with vendor specific extensions"""
     addr0 = dev[0].p2p_dev_addr()
@@ -71,6 +73,7 @@ def test_p2p_ext_discovery(dev):
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 1 *")
 
+@remote_compatible
 def test_p2p_ext_discovery_go(dev):
     """P2P device discovery with vendor specific extensions for GO"""
     addr0 = dev[0].p2p_dev_addr()

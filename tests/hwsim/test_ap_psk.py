@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import binascii
 from Crypto.Cipher import AES
 import hashlib
@@ -27,6 +28,7 @@ def check_mib(dev, vals):
         if mib[v[0]] != v[1]:
             raise Exception("Unexpected {} = {} (expected {})".format(v[0], mib[v[0]], v[1]))
 
+@remote_compatible
 def test_ap_wpa2_psk(dev, apdev):
     """WPA2-PSK AP with PSK instead of passphrase"""
     ssid = "test-wpa2-psk"
@@ -68,6 +70,7 @@ def test_ap_wpa2_psk_file(dev, apdev):
         raise Exception("Timed out while waiting for failure report")
     dev[1].request("REMOVE_NETWORK all")
 
+@remote_compatible
 def test_ap_wpa2_psk_mem(dev, apdev):
     """WPA2-PSK AP with passphrase only in memory"""
     try:
@@ -102,6 +105,7 @@ def _test_ap_wpa2_psk_mem(dev, apdev):
     dev[1].request("CTRL-RSP-PSK_PASSPHRASE-" + id + ':' + psk)
     dev[1].wait_connected(timeout=10)
 
+@remote_compatible
 def test_ap_wpa2_ptk_rekey(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by station"""
     ssid = "test-wpa2-psk"
@@ -114,6 +118,7 @@ def test_ap_wpa2_ptk_rekey(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by AP"""
     ssid = "test-wpa2-psk"
@@ -127,6 +132,7 @@ def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_sha256_ptk_rekey(dev, apdev):
     """WPA2-PSK/SHA256 AKM AP and PTK rekey enforced by station"""
     ssid = "test-wpa2-psk"
@@ -143,6 +149,7 @@ def test_ap_wpa2_sha256_ptk_rekey(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-6"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-6") ])
 
+@remote_compatible
 def test_ap_wpa2_sha256_ptk_rekey_ap(dev, apdev):
     """WPA2-PSK/SHA256 AKM AP and PTK rekey enforced by AP"""
     ssid = "test-wpa2-psk"
@@ -160,6 +167,7 @@ def test_ap_wpa2_sha256_ptk_rekey_ap(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-6"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-6") ])
 
+@remote_compatible
 def test_ap_wpa_ptk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by station"""
     skip_with_fips(dev[0])
@@ -175,6 +183,7 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa_ptk_rekey_ap(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by AP"""
     skip_with_fips(dev[0])
@@ -189,6 +198,7 @@ def test_ap_wpa_ptk_rekey_ap(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa_ccmp(dev, apdev):
     """WPA-PSK/CCMP"""
     ssid = "test-wpa-psk"
@@ -270,6 +280,7 @@ def test_ap_wpa2_psk_file(dev, apdev):
         except:
             pass
 
+@remote_compatible
 def test_ap_wpa2_psk_wildcard_ssid(dev, apdev):
     """WPA2-PSK AP and wildcard SSID configuration"""
     ssid = "test-wpa2-psk"
@@ -281,6 +292,7 @@ def test_ap_wpa2_psk_wildcard_ssid(dev, apdev):
                    scan_freq="2412")
     dev[1].connect("", bssid=apdev[0]['bssid'], raw_psk=psk, scan_freq="2412")
 
+@remote_compatible
 def test_ap_wpa2_gtk_rekey(dev, apdev):
     """WPA2-PSK AP and GTK rekey enforced by AP"""
     ssid = "test-wpa2-psk"
@@ -294,6 +306,7 @@ def test_ap_wpa2_gtk_rekey(dev, apdev):
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa_gtk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and GTK rekey enforced by AP"""
     skip_with_fips(dev[0])
@@ -308,6 +321,7 @@ def test_ap_wpa_gtk_rekey(dev, apdev):
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_gmk_rekey(dev, apdev):
     """WPA2-PSK AP and GMK and GTK rekey enforced by AP"""
     ssid = "test-wpa2-psk"
@@ -323,6 +337,7 @@ def test_ap_wpa2_gmk_rekey(dev, apdev):
             raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_strict_rekey(dev, apdev):
     """WPA2-PSK AP and strict GTK rekey enforced by AP"""
     ssid = "test-wpa2-psk"
@@ -338,6 +353,7 @@ def test_ap_wpa2_strict_rekey(dev, apdev):
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_bridge_fdb(dev, apdev):
     """Bridge FDB entry removal"""
     hapd = None
@@ -372,6 +388,7 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
                                        'down'])
         hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0'])
 
+@remote_compatible
 def test_ap_wpa2_already_in_bridge(dev, apdev):
     """hostapd behavior with interface already in bridge"""
     ifname = apdev[0]['ifname']
@@ -397,6 +414,7 @@ def test_ap_wpa2_already_in_bridge(dev, apdev):
         hostapd.cmd_execute(apdev[0], ['iw', ifname, 'set', 'type', 'station'])
         hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', br_ifname])
 
+@remote_compatible
 def test_ap_wpa2_in_different_bridge(dev, apdev):
     """hostapd behavior with interface in different bridge"""
     ifname = apdev[0]['ifname']
@@ -435,6 +453,7 @@ def test_ap_wpa2_in_different_bridge(dev, apdev):
                                        "2>", "/dev/null"], shell=True)
         hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', br_ifname])
 
+@remote_compatible
 def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
     """hostapd behavior with interface added to bridge externally"""
     ifname = apdev[0]['ifname']
@@ -711,6 +730,7 @@ def eapol_test(apdev, dev, wpa2=True):
     snonce = binascii.unhexlify('1111111111111111111111111111111111111111111111111111111111111111')
     return (bssid,ssid,hapd,snonce,pmk,addr,rsne)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol(dev, apdev):
     """WPA2-PSK AP using external EAPOL supplicant"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -738,6 +758,7 @@ def test_ap_wpa2_psk_ext_eapol(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_retry1(dev, apdev):
     """WPA2 4-way handshake with EAPOL-Key 1/4 retransmitted"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -764,6 +785,7 @@ def test_ap_wpa2_psk_ext_eapol_retry1(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_retry1b(dev, apdev):
     """WPA2 4-way handshake with EAPOL-Key 1/4 and 2/4 retransmitted"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -785,6 +807,7 @@ def test_ap_wpa2_psk_ext_eapol_retry1b(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_retry1c(dev, apdev):
     """WPA2 4-way handshake with EAPOL-Key 1/4 and 2/4 retransmitted and SNonce changing"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -808,6 +831,7 @@ def test_ap_wpa2_psk_ext_eapol_retry1c(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_retry1d(dev, apdev):
     """WPA2 4-way handshake with EAPOL-Key 1/4 and 2/4 retransmitted and SNonce changing and older used"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -831,6 +855,7 @@ def test_ap_wpa2_psk_ext_eapol_retry1d(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_type_diff(dev, apdev):
     """WPA2 4-way handshake using external EAPOL supplicant"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -861,6 +886,7 @@ def test_ap_wpa2_psk_ext_eapol_type_diff(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa_psk_ext_eapol(dev, apdev):
     """WPA2-PSK AP using external EAPOL supplicant"""
     (bssid,ssid,hapd,snonce,pmk,addr,wpae) = eapol_test(apdev[0], dev[0],
@@ -888,6 +914,7 @@ def test_ap_wpa_psk_ext_eapol(dev, apdev):
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_ext_eapol_key_info(dev, apdev):
     """WPA2-PSK 4-way handshake with strange key info values"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -1364,6 +1391,7 @@ def test_ap_wpa2_psk_supp_proto_unexpected_group_msg(dev, apdev):
         raise Exception("Unexpected group key message not reported")
     dev[0].wait_disconnected(timeout=1)
 
+@remote_compatible
 def test_ap_wpa2_psk_supp_proto_msg_1_invalid_kde(dev, apdev):
     """WPA2-PSK supplicant protocol testing: invalid KDE in msg 1/4"""
     (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
@@ -1840,6 +1868,7 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
 
+@remote_compatible
 def test_ap_wpa2_psk_wep(dev, apdev):
     """WPA2-PSK AP and WEP enabled"""
     ssid = "test-wpa2-psk"
@@ -1884,6 +1913,7 @@ def _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
     wpas.connect(ssid, psk=passphrase, scan_freq="2412")
     wpas.dump_monitor()
 
+@remote_compatible
 def test_ap_wpa2_psk_ifdown(dev, apdev):
     """AP with open mode and external ifconfig down"""
     ssid = "test-wpa2-psk"
@@ -1973,6 +2003,7 @@ def test_ap_wpa2_psk_drop_first_msg_4(dev, apdev):
         # case, this exception can be uncommented here.
         #raise Exception("Unexpected disconnection")
 
+@remote_compatible
 def test_ap_wpa2_psk_disable_enable(dev, apdev):
     """WPA2-PSK AP getting disabled and re-enabled"""
     ssid = "test-wpa2-psk"
@@ -1990,6 +2021,7 @@ def test_ap_wpa2_psk_disable_enable(dev, apdev):
         dev[0].wait_connected()
         hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
     """WPA2-PSK AP and station using incorrect passphrase"""
     ssid = "test-wpa2-psk"
@@ -2009,6 +2041,7 @@ def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
 
     dev[0].wait_connected(timeout=20)
 
+@remote_compatible
 def test_ap_wpa_ie_parsing(dev, apdev):
     """WPA IE parsing"""
     skip_with_fips(dev[0])
@@ -2069,6 +2102,7 @@ def test_ap_wpa_ie_parsing(dev, apdev):
         finally:
             dev[0].request("VENDOR_ELEM_REMOVE 13 *")
 
+@remote_compatible
 def test_ap_wpa2_psk_no_random(dev, apdev):
     """WPA2-PSK AP and no random numbers available"""
     ssid = "test-wpa2-psk"
@@ -2087,6 +2121,7 @@ def test_ap_wpa2_psk_no_random(dev, apdev):
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
 
+@remote_compatible
 def test_rsn_ie_proto_psk_sta(dev, apdev):
     """RSN element protocol testing for PSK cases on STA side"""
     bssid = apdev[0]['bssid']
@@ -2126,6 +2161,7 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
         dev[0].select_network(id, freq=2412)
         dev[0].wait_connected()
 
+@remote_compatible
 def test_ap_cli_order(dev, apdev):
     ssid = "test-rsn-setup"
     passphrase = 'zzzzzzzz'
@@ -2155,6 +2191,7 @@ def set_test_assoc_ie(dev, ie):
     if "OK" not in dev.request("TEST_ASSOC_IE " + ie):
         raise Exception("Could not set TEST_ASSOC_IE")
 
+@remote_compatible
 def test_ap_wpa2_psk_assoc_rsn(dev, apdev):
     """WPA2-PSK AP and association request RSN IE differences"""
     ssid = "test-wpa2-psk"

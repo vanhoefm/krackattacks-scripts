@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 
@@ -59,6 +60,7 @@ def test_mbo_assoc_disallow(dev, apdev, params):
     if "Destination address: " + hapd2.own_addr() in out:
         raise Exception("Association request sent to disallowed AP 2")
 
+@remote_compatible
 def test_mbo_cell_capa_update(dev, apdev):
     """MBO cellular data capability update"""
     ssid = "test-wnm-mbo"
@@ -85,6 +87,7 @@ def test_mbo_cell_capa_update(dev, apdev):
     if sta['mbo_cell_capa'] != '3':
         raise Exception("mbo_cell_capa not updated properly")
 
+@remote_compatible
 def test_mbo_cell_capa_update_pmf(dev, apdev):
     """MBO cellular data capability update with PMF required"""
     ssid = "test-wnm-mbo"
@@ -116,6 +119,7 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
     if sta['mbo_cell_capa'] != '3':
         raise Exception("mbo_cell_capa not updated properly")
 
+@remote_compatible
 def test_mbo_non_pref_chan(dev, apdev):
     """MBO non-preferred channel list"""
     ssid = "test-wnm-mbo"
@@ -199,6 +203,7 @@ def test_mbo_non_pref_chan(dev, apdev):
     if 'non_pref_chan[0]' in sta:
         raise Exception("Unexpected non_pref_chan[0] value (update 4)")
 
+@remote_compatible
 def test_mbo_sta_supp_op_classes(dev, apdev):
     """MBO STA supported operating classes"""
     ssid = "test-wnm-mbo"

@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -13,6 +14,7 @@ import hostapd
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 
+@remote_compatible
 def test_ap_pmf_required(dev, apdev):
     """WPA2-PSK AP with PMF required"""
     ssid = "test-pmf-required"
@@ -50,6 +52,7 @@ def test_ap_pmf_required(dev, apdev):
                           dev[1].p2p_interface_addr()) < 1:
         raise Exception("STA did not reply to SA Query")
 
+@remote_compatible
 def test_ap_pmf_optional(dev, apdev):
     """WPA2-PSK AP with PMF optional"""
     ssid = "test-pmf-optional"
@@ -73,6 +76,7 @@ def test_ap_pmf_optional(dev, apdev):
     wt.require_sta_pmf(apdev[0]['bssid'], dev[0].p2p_interface_addr())
     wt.require_sta_pmf_mandatory(apdev[0]['bssid'], dev[1].p2p_interface_addr())
 
+@remote_compatible
 def test_ap_pmf_optional_2akm(dev, apdev):
     """WPA2-PSK AP with PMF optional (2 AKMs)"""
     ssid = "test-pmf-optional-2akm"
@@ -100,6 +104,7 @@ def test_ap_pmf_optional_2akm(dev, apdev):
     wt.require_sta_key_mgmt(apdev[0]['bssid'], dev[1].p2p_interface_addr(),
                             "PSK-SHA256")
 
+@remote_compatible
 def test_ap_pmf_negative(dev, apdev):
     """WPA2-PSK AP without PMF (negative test)"""
     ssid = "test-pmf-negative"
@@ -123,6 +128,7 @@ def test_ap_pmf_negative(dev, apdev):
         logger.debug("Ignore expected exception: " + str(e))
     wt.require_ap_no_pmf(apdev[0]['bssid'])
 
+@remote_compatible
 def test_ap_pmf_assoc_comeback(dev, apdev):
     """WPA2-PSK AP with PMF association comeback"""
     ssid = "assoc-comeback"
@@ -147,6 +153,7 @@ def test_ap_pmf_assoc_comeback(dev, apdev):
                           dev[0].p2p_interface_addr()) < 1:
         raise Exception("AP did not use association comeback request")
 
+@remote_compatible
 def test_ap_pmf_assoc_comeback2(dev, apdev):
     """WPA2-PSK AP with PMF association comeback (using DROP_SA)"""
     ssid = "assoc-comeback"
@@ -354,6 +361,7 @@ def test_ap_pmf_optional_eap(dev, apdev):
                    ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
                    ieee80211w="2", scan_freq="2412")
 
+@remote_compatible
 def test_ap_pmf_required_sha1(dev, apdev):
     """WPA2-PSK AP with PMF required with SHA1 AKM"""
     ssid = "test-pmf-required-sha1"
@@ -374,6 +382,7 @@ def test_ap_pmf_required_sha1(dev, apdev):
         raise Exception("Scan results missing RSN element info")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+@remote_compatible
 def test_ap_pmf_toggle(dev, apdev):
     """WPA2-PSK AP with PMF optional and changing PMF on reassociation"""
     try:
@@ -429,6 +438,7 @@ def _test_ap_pmf_toggle(dev, apdev):
     if "yes" not in [l for l in data.splitlines() if "MFP" in l][0]:
         raise Exception("Kernel STA entry did not have MFP enabled")
 
+@remote_compatible
 def test_ap_pmf_required_sta_no_pmf(dev, apdev):
     """WPA2-PSK AP with PMF required and PMF disabled on STA"""
     ssid = "test-pmf-required"

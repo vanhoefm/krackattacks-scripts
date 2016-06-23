@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import os
 import subprocess
 import time
@@ -213,6 +214,7 @@ def test_dfs_radar(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_dfs_radar_on_non_dfs_channel(dev, apdev):
     """DFS radar detection test code on non-DFS channel"""
     params = { "ssid": "radar" }

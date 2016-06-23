@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -62,6 +63,7 @@ def check_scan_retry(dev, params, bssid):
             return
     raise Exception("Unexpectedly old BSS entry")
 
+@remote_compatible
 def test_scan(dev, apdev):
     """Control interface behavior on scan parameters"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -86,6 +88,7 @@ def test_scan(dev, apdev):
     logger.info("Active single-channel scan on AP's operating channel")
     check_scan_retry(dev[0], "freq=2412 passive=0 use_id=1", bssid)
 
+@remote_compatible
 def test_scan_tsf(dev, apdev):
     """Scan and TSF updates from Beacon/Probe Response frames"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan",
@@ -110,6 +113,7 @@ def test_scan_tsf(dev, apdev):
     if 0 in tsf:
         raise Exception("0 TSF reported")
 
+@remote_compatible
 def test_scan_only(dev, apdev):
     """Control interface behavior on scan parameters with type=only"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -134,6 +138,7 @@ def test_scan_only(dev, apdev):
     logger.info("Active single-channel scan on AP's operating channel")
     check_scan_retry(dev[0], "type=only freq=2412 passive=0 use_id=1", bssid)
 
+@remote_compatible
 def test_scan_external_trigger(dev, apdev):
     """Avoid operations during externally triggered scan"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -160,6 +165,7 @@ def test_scan_bss_expiration_count(dev, apdev):
     if bssid in dev[0].request("SCAN_RESULTS"):
         raise Exception("BSS found after two scans without match")
 
+@remote_compatible
 def test_scan_bss_expiration_age(dev, apdev):
     """BSS entry expiration based on age"""
     try:
@@ -189,6 +195,7 @@ def test_scan_bss_expiration_age(dev, apdev):
     finally:
         dev[0].request("BSS_EXPIRE_AGE 180")
 
+@remote_compatible
 def test_scan_filter(dev, apdev):
     """Filter scan results based on SSID"""
     try:
@@ -211,6 +218,7 @@ def test_scan_filter(dev, apdev):
     finally:
         dev[0].request("SET filter_ssids 0")
 
+@remote_compatible
 def test_scan_int(dev, apdev):
     """scan interval configuration"""
     try:
@@ -325,6 +333,7 @@ def test_scan_bss_operations(dev, apdev):
     if len(res) != 0:
         raise Exception("Unexpected result after BSS_FLUSH 0")
 
+@remote_compatible
 def test_scan_and_interface_disabled(dev, apdev):
     """Scan operation when interface gets disabled"""
     try:
@@ -346,6 +355,7 @@ def test_scan_and_interface_disabled(dev, apdev):
     finally:
         dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")
 
+@remote_compatible
 def test_scan_for_auth(dev, apdev):
     """cfg80211 workaround with scan-for-auth"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -375,6 +385,7 @@ def test_scan_for_auth(dev, apdev):
 
     dev[0].wait_connected(timeout=15)
 
+@remote_compatible
 def test_scan_for_auth_fail(dev, apdev):
     """cfg80211 workaround with scan-for-auth failing"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
@@ -411,6 +422,7 @@ def test_scan_for_auth_fail(dev, apdev):
         raise Exception("Unexpected connection")
     dev[0].request("DISCONNECT")
 
+@remote_compatible
 def test_scan_for_auth_wep(dev, apdev):
     """cfg80211 scan-for-auth workaround with WEP keys"""
     dev[0].flush_scan_cache()
@@ -443,6 +455,7 @@ def test_scan_for_auth_wep(dev, apdev):
 
     dev[0].wait_connected(timeout=15)
 
+@remote_compatible
 def test_scan_hidden(dev, apdev):
     """Control interface behavior on scan parameters"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
@@ -572,6 +585,7 @@ def test_scan_and_bss_entry_removed(dev, apdev):
     dev[0].flush_scan_cache()
     wpas.flush_scan_cache()
 
+@remote_compatible
 def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
     """SCAN commands while non-scan radio_work is in progress"""
     id = dev[0].request("RADIO_WORK add test-work-a")
@@ -678,6 +692,7 @@ def test_scan_setband(dev, apdev):
             dev[i].request("SET setband AUTO")
             dev[i].flush_scan_cache()
 
+@remote_compatible
 def test_scan_hidden_many(dev, apdev):
     """scan_ssid=1 with large number of profile with hidden SSID"""
     try:
@@ -775,6 +790,7 @@ def _test_scan_random_mac(dev, apdev, params):
         if not found:
             raise Exception("Fixed OUI random address not seen")
 
+@remote_compatible
 def test_scan_trigger_failure(dev, apdev):
     """Scan trigger to the driver failing"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -818,6 +834,7 @@ def test_scan_trigger_failure(dev, apdev):
         raise Exception("wpa_state COMPLETED not restored")
     dev[0].request("SET test_failure 0")
 
+@remote_compatible
 def test_scan_specify_ssid(dev, apdev):
     """Control interface behavior on scan SSID parameter"""
     dev[0].flush_scan_cache()
@@ -846,6 +863,7 @@ def test_scan_specify_ssid(dev, apdev):
     if "FAIL" not in dev[0].request("SCAN ssid foo"):
         raise Exception("Invalid SCAN command accepted")
 
+@remote_compatible
 def test_scan_ap_scan_2_ap_mode(dev, apdev):
     """AP_SCAN 2 AP mode and scan()"""
     try:
@@ -966,6 +984,7 @@ def _test_scan_dfs(dev, apdev, params):
             if f in [ 2467, 2472 ]:
                 raise Exception("Active scan on US-disallowed channel: %d" % f)
 
+@remote_compatible
 def test_scan_abort(dev, apdev):
     """Aborting a full scan"""
     dev[0].request("SCAN")
@@ -978,6 +997,7 @@ def test_scan_abort(dev, apdev):
     if ev is None:
         raise Exception("Scan did not terminate")
 
+@remote_compatible
 def test_scan_abort_on_connect(dev, apdev):
     """Aborting a full scan on connection request"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -991,6 +1011,7 @@ def test_scan_abort_on_connect(dev, apdev):
         raise Exception("Scan did not start")
     dev[0].connect("test-scan", key_mgmt="NONE")
 
+@remote_compatible
 def test_scan_ext(dev, apdev):
     """Custom IE in Probe Request frame"""
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
@@ -1093,6 +1114,7 @@ def test_scan_fail(dev, apdev):
     with alloc_fail(dev[0], 1, "wpa_bss_add"):
         dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
 
+@remote_compatible
 def test_scan_freq_list(dev, apdev):
     """Scan with SET freq_list and scan_cur_freq"""
     try:

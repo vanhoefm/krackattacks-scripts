@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import base64
 import binascii
 from Crypto.Cipher import AES
@@ -38,6 +39,7 @@ def wps_start_ap(apdev, ssid="test-wps-conf"):
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" }
     return hostapd.add_ap(apdev, params)
 
+@remote_compatible
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
     ssid = "test-wps"
@@ -159,6 +161,7 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared from AP2")
 
+@remote_compatible
 def test_ap_wps_init_through_wps_config(dev, apdev):
     """Initial AP configuration using wps_config command"""
     ssid = "test-wps-init-config"
@@ -177,6 +180,7 @@ def test_ap_wps_init_through_wps_config(dev, apdev):
     dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
                    pairwise="CCMP", group="CCMP")
 
+@remote_compatible
 def test_ap_wps_init_through_wps_config_2(dev, apdev):
     """AP configuration using wps_config and wps_cred_processing=2"""
     ssid = "test-wps-init-config"
@@ -191,6 +195,7 @@ def test_ap_wps_init_through_wps_config_2(dev, apdev):
     if "100e" not in ev:
         raise Exception("WPS-NEW-AP-SETTINGS did not include Credential")
 
+@remote_compatible
 def test_ap_wps_invalid_wps_config_passphrase(dev, apdev):
     """AP configuration using wps_config command with invalid passphrase"""
     ssid = "test-wps-init-config"
@@ -279,6 +284,7 @@ def test_ap_wps_conf_chan14(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_twice(dev, apdev):
     """WPS provisioning with twice to change passphrase"""
     ssid = "test-wps-twice"
@@ -307,6 +313,7 @@ def test_ap_wps_twice(dev, apdev):
     if len(networks) > 1:
         raise Exception("Unexpected duplicated network block present")
 
+@remote_compatible
 def test_ap_wps_incorrect_pin(dev, apdev):
     """WPS PIN provisioning with incorrect PIN"""
     ssid = "test-wps-incorrect-pin"
@@ -349,6 +356,7 @@ def test_ap_wps_incorrect_pin(dev, apdev):
         raise Exception("PIN error detected on incorrect message")
     dev[0].wait_disconnected(timeout=10)
 
+@remote_compatible
 def test_ap_wps_conf_pin(dev, apdev):
     """WPS PIN provisioning with configured AP"""
     ssid = "test-wps-conf-pin"
@@ -444,6 +452,7 @@ def test_ap_wps_conf_pin_mixed_mode(dev, apdev):
     dev[0].request("SET wps_force_auth_types ")
     dev[0].request("SET wps_force_encr_types ")
 
+@remote_compatible
 def test_ap_wps_conf_pin_v1(dev, apdev):
     """WPS PIN provisioning with configured WPS v1.0 AP"""
     ssid = "test-wps-conf-pin-v1"
@@ -469,6 +478,7 @@ def test_ap_wps_conf_pin_v1(dev, apdev):
     dev[0].wait_connected(timeout=30)
     hapd.request("SET wps_version_number 0x20")
 
+@remote_compatible
 def test_ap_wps_conf_pin_2sta(dev, apdev):
     """Two stations trying to use WPS PIN at the same time"""
     ssid = "test-wps-conf-pin2"
@@ -490,6 +500,7 @@ def test_ap_wps_conf_pin_2sta(dev, apdev):
     dev[0].wait_connected(timeout=30)
     dev[1].wait_connected(timeout=30)
 
+@remote_compatible
 def test_ap_wps_conf_pin_timeout(dev, apdev):
     """WPS PIN provisioning with configured AP timing out PIN"""
     ssid = "test-wps-conf-pin"
@@ -900,6 +911,7 @@ def test_ap_wps_setup_locked_2(dev, apdev):
     dev[0].request("WPS_CANCEL")
     dev[0].wait_disconnected()
 
+@remote_compatible
 def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     """WPS PBC session overlap with two active APs"""
     params = { "ssid": "wps1", "eap_server": "1", "wps_state": "2",
@@ -925,6 +937,7 @@ def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     hapd2.request("DISABLE")
     dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     """WPS PBC session overlap with two active STAs"""
     ssid = "test-wps-pbc-overlap"
@@ -962,6 +975,7 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     dev[0].flush_scan_cache()
     dev[1].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_cancel(dev, apdev):
     """WPS AP cancelling enabled config method"""
     ssid = "test-wps-ap-cancel"
@@ -1486,6 +1500,7 @@ def _test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
     if ev is None:
         raise Exception("WPS ER did not report success")
 
+@remote_compatible
 def test_ap_wps_er_config_ap(dev, apdev):
     """WPS ER configuring AP over UPnP"""
     try:
@@ -1540,6 +1555,7 @@ def _test_ap_wps_er_config_ap(dev, apdev):
     if "OK" not in dev[0].request("WPS_ER_STOP"):
         raise Exception("WPS_ER_STOP failed")
 
+@remote_compatible
 def test_ap_wps_er_cache_ap_settings(dev, apdev):
     """WPS ER caching AP settings"""
     try:
@@ -1833,6 +1849,7 @@ def _test_ap_wps_er_set_sel_reg_oom(dev, apdev):
 
     dev[0].request("WPS_ER_STOP")
 
+@remote_compatible
 def test_ap_wps_er_learn_oom(dev, apdev):
     """WPS ER learn OOM"""
     try:
@@ -1935,6 +1952,7 @@ def test_ap_wps_fragmentation(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+@remote_compatible
 def test_ap_wps_new_version_sta(dev, apdev):
     """WPS compatibility with new version number on the station"""
     ssid = "test-wps-ver"
@@ -1951,6 +1969,7 @@ def test_ap_wps_new_version_sta(dev, apdev):
     dev[0].request("WPS_PBC " + apdev[0]['bssid'])
     dev[0].wait_connected(timeout=30)
 
+@remote_compatible
 def test_ap_wps_new_version_ap(dev, apdev):
     """WPS compatibility with new version number on the AP"""
     ssid = "test-wps-ver"
@@ -1968,6 +1987,7 @@ def test_ap_wps_new_version_ap(dev, apdev):
     dev[0].wait_connected(timeout=30)
     hapd.request("SET wps_version_number 0x20")
 
+@remote_compatible
 def test_ap_wps_check_pin(dev, apdev):
     """Verify PIN checking through control interface"""
     hapd = hostapd.add_ap(apdev[0],
@@ -2037,6 +2057,7 @@ def test_ap_wps_wep_enroll(dev, apdev):
     if "msg=12" not in ev or "reason=2 (WEP Prohibited)" not in ev:
         raise Exception("Unexpected WPS-FAIL event: " + ev)
 
+@remote_compatible
 def test_ap_wps_ie_fragmentation(dev, apdev):
     """WPS AP using fragmented WPS IE"""
     ssid = "test-wps-ie-fragmentation"
@@ -3400,6 +3421,7 @@ def test_ap_wps_upnp_http_proto_chunked(dev, apdev):
         pass
     conn.close()
 
+@remote_compatible
 def test_ap_wps_disabled(dev, apdev):
     """WPS operations while WPS is disabled"""
     ssid = "test-wps-disabled"
@@ -3432,6 +3454,7 @@ def test_ap_wps_mixed_cred(dev, apdev):
     if pairwise != "CCMP TKIP" and pairwise != "CCMP GCMP TKIP":
         raise Exception("Unexpected merged pairwise field value: " + pairwise)
 
+@remote_compatible
 def test_ap_wps_while_connected(dev, apdev):
     """WPS PBC provisioning while connected to another AP"""
     ssid = "test-wps-conf"
@@ -3452,6 +3475,7 @@ def test_ap_wps_while_connected(dev, apdev):
     if status['bssid'] != apdev[0]['bssid']:
         raise Exception("Unexpected BSSID")
 
+@remote_compatible
 def test_ap_wps_while_connected_no_autoconnect(dev, apdev):
     """WPS PBC provisioning while connected to another AP and STA_AUTOCONNECT disabled"""
     ssid = "test-wps-conf"
@@ -3477,6 +3501,7 @@ def test_ap_wps_while_connected_no_autoconnect(dev, apdev):
     finally:
         dev[0].request("STA_AUTOCONNECT 1")
 
+@remote_compatible
 def test_ap_wps_from_event(dev, apdev):
     """WPS PBC event on AP to enable PBC"""
     ssid = "test-wps-conf"
@@ -3532,6 +3557,7 @@ def test_ap_wps_ap_scan_2(dev, apdev):
     wpas.wait_connected(timeout=30)
     wpas.dump_monitor()
 
+@remote_compatible
 def test_ap_wps_eapol_workaround(dev, apdev):
     """EAPOL workaround code path for 802.1X header length mismatch"""
     ssid = "test-wps"
@@ -3638,6 +3664,7 @@ def test_ap_wps_iteration_error(dev, apdev):
         raise Exception("No WPS-CRED-RECEIVED for the second AP")
     dev[0].wait_connected(timeout=15)
 
+@remote_compatible
 def test_ap_wps_priority(dev, apdev):
     """WPS PIN provisioning with configured AP and wps_priority"""
     ssid = "test-wps-conf-pin"
@@ -3661,6 +3688,7 @@ def test_ap_wps_priority(dev, apdev):
     finally:
         dev[0].request("SET wps_priority 0")
 
+@remote_compatible
 def test_ap_wps_and_non_wps(dev, apdev):
     """WPS and non-WPS AP in single hostapd process"""
     params = { "ssid": "wps", "eap_server": "1", "wps_state": "1" }
@@ -3696,6 +3724,7 @@ def test_ap_wps_init_oom(dev, apdev):
     hapd.request("WPS_PIN any " + pin)
     dev[0].wait_connected(timeout=30)
 
+@remote_compatible
 def test_ap_wps_er_oom(dev, apdev):
     """WPS ER OOM in XML processing"""
     try:
@@ -3744,6 +3773,7 @@ def _test_ap_wps_er_oom(dev, apdev):
         if ev is None:
             raise Exception("Enrollee discovery timed out")
 
+@remote_compatible
 def test_ap_wps_er_init_oom(dev, apdev):
     """WPS ER and OOM during init"""
     try:
@@ -3768,6 +3798,7 @@ def _test_ap_wps_er_init_oom(dev, apdev):
         if "FAIL" not in dev[0].request("WPS_ER_START ifname=lo"):
             raise Exception("WPS_ER_START succeeded during os_get_random failure")
 
+@remote_compatible
 def test_ap_wps_er_init_fail(dev, apdev):
     """WPS ER init failure"""
     if "FAIL" not in dev[0].request("WPS_ER_START ifname=does-not-exist"):
@@ -4866,6 +4897,7 @@ def test_ap_wps_init_oom(dev, apdev):
 
     dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_invalid_assoc_req_elem(dev, apdev):
     """WPS and invalid IE in Association Request frame"""
     ssid = "test-wps"
@@ -4905,6 +4937,7 @@ def test_ap_wps_pbc_pin_mismatch(dev, apdev):
     hapd.request("WPS_CANCEL")
     dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_ie_invalid(dev, apdev):
     """WPS PIN attempt with AP that has invalid WSC IE"""
     ssid = "test-wps"
@@ -4921,6 +4954,7 @@ def test_ap_wps_ie_invalid(dev, apdev):
         raise Exception("Scan did not complete")
     dev[0].request("WPS_CANCEL")
 
+@remote_compatible
 def test_ap_wps_scan_prio_order(dev, apdev):
     """WPS scan priority ordering"""
     ssid = "test-wps"
@@ -4995,6 +5029,7 @@ def test_ap_wps_assoc_resp_ie_oom(dev, apdev):
             raise Exception("Association not seen")
     dev[0].request("WPS_CANCEL")
 
+@remote_compatible
 def test_ap_wps_bss_info_errors(dev, apdev):
     """WPS BSS info errors"""
     params = { "ssid": "1",
@@ -5043,17 +5078,20 @@ def wps_run_pbc_fail(apdev, dev):
     hapd = wps_start_ap(apdev)
     wps_run_pbc_fail_ap(apdev, dev, hapd)
 
+@remote_compatible
 def test_ap_wps_pk_oom(dev, apdev):
     """WPS and public key OOM"""
     with alloc_fail(dev[0], 1, "wps_build_public_key"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_pk_oom_ap(dev, apdev):
     """WPS and public key OOM on AP"""
     hapd = wps_start_ap(apdev[0])
     with alloc_fail(hapd, 1, "wps_build_public_key"):
         wps_run_pbc_fail_ap(apdev[0], dev[0], hapd)
 
+@remote_compatible
 def test_ap_wps_encr_oom_ap(dev, apdev):
     """WPS and encrypted settings decryption OOM on AP"""
     hapd = wps_start_ap(apdev[0])
@@ -5068,32 +5106,38 @@ def test_ap_wps_encr_oom_ap(dev, apdev):
         dev[0].request("WPS_CANCEL")
     dev[0].wait_disconnected()
 
+@remote_compatible
 def test_ap_wps_encr_no_random_ap(dev, apdev):
     """WPS and no random data available for encryption on AP"""
     hapd = wps_start_ap(apdev[0])
     with fail_test(hapd, 1, "os_get_random;wps_build_encr_settings"):
         wps_run_pbc_fail_ap(apdev[0], dev[0], hapd)
 
+@remote_compatible
 def test_ap_wps_e_hash_no_random_sta(dev, apdev):
     """WPS and no random data available for e-hash on STA"""
     with fail_test(dev[0], 1, "os_get_random;wps_build_e_hash"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_m1_no_random(dev, apdev):
     """WPS and no random for M1 on STA"""
     with fail_test(dev[0], 1, "os_get_random;wps_build_m1"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_m1_oom(dev, apdev):
     """WPS and OOM for M1 on STA"""
     with alloc_fail(dev[0], 1, "wps_build_m1"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_m3_oom(dev, apdev):
     """WPS and OOM for M3 on STA"""
     with alloc_fail(dev[0], 1, "wps_build_m3"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_m5_oom(dev, apdev):
     """WPS and OOM for M5 on STA"""
     hapd = wps_start_ap(apdev[0])
@@ -5109,12 +5153,14 @@ def test_ap_wps_m5_oom(dev, apdev):
             dev[0].wait_disconnected()
     dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_m5_no_random(dev, apdev):
     """WPS and no random for M5 on STA"""
     with fail_test(dev[0], 1,
                    "os_get_random;wps_build_encr_settings;wps_build_m5"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_m7_oom(dev, apdev):
     """WPS and OOM for M7 on STA"""
     hapd = wps_start_ap(apdev[0])
@@ -5130,12 +5176,14 @@ def test_ap_wps_m7_oom(dev, apdev):
             dev[0].wait_disconnected()
     dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_wps_m7_no_random(dev, apdev):
     """WPS and no random for M7 on STA"""
     with fail_test(dev[0], 1,
                    "os_get_random;wps_build_encr_settings;wps_build_m7"):
         wps_run_pbc_fail(apdev[0], dev[0])
 
+@remote_compatible
 def test_ap_wps_wsc_done_oom(dev, apdev):
     """WPS and OOM for WSC_Done on STA"""
     with alloc_fail(dev[0], 1, "wps_build_wsc_done"):
@@ -5797,6 +5845,7 @@ def test_ap_wps_m4_msg_type_m2d(dev, apdev):
     """WPS and M4 but Message Type M2D"""
     wps_m4_but_other(dev[0], apdev[0], "M4/M2D", "06")
 
+@remote_compatible
 def test_ap_wps_config_methods(dev, apdev):
     """WPS configuration method parsing"""
     ssid = "test-wps-conf"
@@ -7734,10 +7783,12 @@ def test_wps_ext_ap_settings_success(dev, apdev):
     ap_settings += build_wsc_attr(ATTR_MAC_ADDR, binascii.unhexlify(apdev[0]['bssid'].replace(':', '')))
     wps_run_ap_settings_proto(dev, apdev, ap_settings, True)
 
+@remote_compatible
 def test_wps_ext_ap_settings_missing(dev, apdev):
     """WPS and AP Settings: missing"""
     wps_run_ap_settings_proto(dev, apdev, None, False)
 
+@remote_compatible
 def test_wps_ext_ap_settings_mac_addr_mismatch(dev, apdev):
     """WPS and AP Settings: MAC Address mismatch"""
     ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
@@ -7748,6 +7799,7 @@ def test_wps_ext_ap_settings_mac_addr_mismatch(dev, apdev):
     ap_settings += build_wsc_attr(ATTR_MAC_ADDR, '\x00\x00\x00\x00\x00\x00')
     wps_run_ap_settings_proto(dev, apdev, ap_settings, True)
 
+@remote_compatible
 def test_wps_ext_ap_settings_mac_addr_missing(dev, apdev):
     """WPS and AP Settings: missing MAC Address"""
     ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
@@ -7757,6 +7809,7 @@ def test_wps_ext_ap_settings_mac_addr_missing(dev, apdev):
     ap_settings += build_wsc_attr(ATTR_NETWORK_KEY, '')
     wps_run_ap_settings_proto(dev, apdev, ap_settings, False)
 
+@remote_compatible
 def test_wps_ext_ap_settings_reject_encr_type(dev, apdev):
     """WPS and AP Settings: reject Encr Type"""
     ap_settings = build_wsc_attr(ATTR_NETWORK_INDEX, '\x01')
@@ -7767,6 +7820,7 @@ def test_wps_ext_ap_settings_reject_encr_type(dev, apdev):
     ap_settings += build_wsc_attr(ATTR_MAC_ADDR, binascii.unhexlify(apdev[0]['bssid'].replace(':', '')))
     wps_run_ap_settings_proto(dev, apdev, ap_settings, False)
 
+@remote_compatible
 def test_wps_ext_ap_settings_m2d(dev, apdev):
     """WPS and AP Settings: M2D"""
     addr,bssid,hapd = wps_start_ext_reg(apdev[0], dev[0])
@@ -7804,6 +7858,7 @@ def wps_wait_ap_nack(hapd, dev, e_nonce, r_nonce):
     send_wsc_msg(hapd, dev.own_addr(), nack)
     dev.wait_disconnected()
 
+@remote_compatible
 def test_wps_ext_m3_missing_e_hash1(dev, apdev):
     """WPS proto: M3 missing E-Hash1"""
     pin = "12345670"
@@ -7848,6 +7903,7 @@ def test_wps_ext_m3_missing_e_hash1(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m3_missing_e_hash2(dev, apdev):
     """WPS proto: M3 missing E-Hash2"""
     pin = "12345670"
@@ -7892,6 +7948,7 @@ def test_wps_ext_m3_missing_e_hash2(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m5_missing_e_snonce1(dev, apdev):
     """WPS proto: M5 missing E-SNonce1"""
     pin = "12345670"
@@ -7951,6 +8008,7 @@ def test_wps_ext_m5_missing_e_snonce1(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m5_e_snonce1_mismatch(dev, apdev):
     """WPS proto: M5 E-SNonce1 mismatch"""
     pin = "12345670"
@@ -8082,6 +8140,7 @@ def test_wps_ext_m7_missing_e_snonce2(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m7_e_snonce2_mismatch(dev, apdev):
     """WPS proto: M7 E-SNonce2 mismatch"""
     pin = "12345670"
@@ -8154,6 +8213,7 @@ def test_wps_ext_m7_e_snonce2_mismatch(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m1_pubkey_oom(dev, apdev):
     """WPS proto: M1 PubKey OOM"""
     pin = "12345670"
@@ -8184,6 +8244,7 @@ def wps_wait_eap_failure(hapd, dev):
         raise Exception("EAP-Failure not reported")
     dev.wait_disconnected()
 
+@remote_compatible
 def test_wps_ext_m3_m1(dev, apdev):
     """WPS proto: M3 replaced with M1"""
     pin = "12345670"
@@ -8228,6 +8289,7 @@ def test_wps_ext_m3_m1(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m5_m3(dev, apdev):
     """WPS proto: M5 replaced with M3"""
     pin = "12345670"
@@ -8286,6 +8348,7 @@ def test_wps_ext_m5_m3(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m3_m2(dev, apdev):
     """WPS proto: M3 replaced with M2"""
     pin = "12345670"
@@ -8328,6 +8391,7 @@ def test_wps_ext_m3_m2(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m3_m5(dev, apdev):
     """WPS proto: M3 replaced with M5"""
     pin = "12345670"
@@ -8372,6 +8436,7 @@ def test_wps_ext_m3_m5(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m3_m7(dev, apdev):
     """WPS proto: M3 replaced with M7"""
     pin = "12345670"
@@ -8416,6 +8481,7 @@ def test_wps_ext_m3_m7(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m3_done(dev, apdev):
     """WPS proto: M3 replaced with WSC_Done"""
     pin = "12345670"
@@ -8457,6 +8523,7 @@ def test_wps_ext_m3_done(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_nack_invalid(dev, apdev):
     """WPS proto: M2 followed by invalid NACK"""
     pin = "12345670"
@@ -8495,6 +8562,7 @@ def test_wps_ext_m2_nack_invalid(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_nack_no_msg_type(dev, apdev):
     """WPS proto: M2 followed by NACK without Msg Type"""
     pin = "12345670"
@@ -8533,6 +8601,7 @@ def test_wps_ext_m2_nack_no_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_nack_invalid_msg_type(dev, apdev):
     """WPS proto: M2 followed by NACK with invalid Msg Type"""
     pin = "12345670"
@@ -8571,6 +8640,7 @@ def test_wps_ext_m2_nack_invalid_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_nack_e_nonce_mismatch(dev, apdev):
     """WPS proto: M2 followed by NACK with e-nonce mismatch"""
     pin = "12345670"
@@ -8609,6 +8679,7 @@ def test_wps_ext_m2_nack_e_nonce_mismatch(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_nack_no_config_error(dev, apdev):
     """WPS proto: M2 followed by NACK without Config Error"""
     pin = "12345670"
@@ -8647,6 +8718,7 @@ def test_wps_ext_m2_nack_no_config_error(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_ack_invalid(dev, apdev):
     """WPS proto: M2 followed by invalid ACK"""
     pin = "12345670"
@@ -8685,6 +8757,7 @@ def test_wps_ext_m2_ack_invalid(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_ack(dev, apdev):
     """WPS proto: M2 followed by ACK"""
     pin = "12345670"
@@ -8722,6 +8795,7 @@ def test_wps_ext_m2_ack(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_ack_no_msg_type(dev, apdev):
     """WPS proto: M2 followed by ACK missing Msg Type"""
     pin = "12345670"
@@ -8760,6 +8834,7 @@ def test_wps_ext_m2_ack_no_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_ack_invalid_msg_type(dev, apdev):
     """WPS proto: M2 followed by ACK with invalid Msg Type"""
     pin = "12345670"
@@ -8798,6 +8873,7 @@ def test_wps_ext_m2_ack_invalid_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m2_ack_e_nonce_mismatch(dev, apdev):
     """WPS proto: M2 followed by ACK with e-nonce mismatch"""
     pin = "12345670"
@@ -8836,6 +8912,7 @@ def test_wps_ext_m2_ack_e_nonce_mismatch(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m1_invalid(dev, apdev):
     """WPS proto: M1 failing parsing"""
     pin = "12345670"
@@ -8947,6 +9024,7 @@ def wps_ext_wsc_done(dev, apdev):
     msg, m8_attrs, raw_m8_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M8)
     return hapd, msg, e_nonce, r_nonce
 
+@remote_compatible
 def test_wps_ext_wsc_done_invalid(dev, apdev):
     """WPS proto: invalid WSC_Done"""
     hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
@@ -8958,6 +9036,7 @@ def test_wps_ext_wsc_done_invalid(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_wsc_done_no_msg_type(dev, apdev):
     """WPS proto: invalid WSC_Done"""
     hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
@@ -8972,6 +9051,7 @@ def test_wps_ext_wsc_done_no_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_wsc_done_wrong_msg_type(dev, apdev):
     """WPS proto: WSC_Done with wrong Msg Type"""
     hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
@@ -8986,6 +9066,7 @@ def test_wps_ext_wsc_done_wrong_msg_type(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_wsc_done_no_e_nonce(dev, apdev):
     """WPS proto: WSC_Done without e_nonce"""
     hapd, msg, e_nonce, r_nonce = wps_ext_wsc_done(dev, apdev)
@@ -9014,6 +9095,7 @@ def test_wps_ext_wsc_done_no_r_nonce(dev, apdev):
 
     wps_wait_eap_failure(hapd, dev[0])
 
+@remote_compatible
 def test_wps_ext_m7_no_encr_settings(dev, apdev):
     """WPS proto: M7 without Encr Settings"""
     pin = "12345670"
@@ -9086,6 +9168,7 @@ def test_wps_ext_m7_no_encr_settings(dev, apdev):
 
     wps_wait_ap_nack(hapd, dev[0], e_nonce, r_nonce)
 
+@remote_compatible
 def test_wps_ext_m1_workaround(dev, apdev):
     """WPS proto: M1 Manufacturer/Model workaround"""
     pin = "12345670"
@@ -9112,6 +9195,7 @@ def test_wps_ext_m1_workaround(dev, apdev):
     logger.debug("Receive M2 from AP")
     msg, m2_attrs, raw_m2_attrs = recv_wsc_msg(hapd, WSC_MSG, WPS_M2)
 
+@remote_compatible
 def test_ap_wps_disable_enable(dev, apdev):
     """WPS and DISABLE/ENABLE AP"""
     hapd = wps_start_ap(apdev[0])
@@ -9281,6 +9365,7 @@ def wait_scan_stopped(dev):
         logger.debug("Waiting for scan to complete")
         time.sleep(0.1)
 
+@remote_compatible
 def test_ap_wps_eap_wsc_errors(dev, apdev):
     """WPS and EAP-WSC error cases"""
     ssid = "test-wps-conf-pin"

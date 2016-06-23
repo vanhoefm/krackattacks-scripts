@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
@@ -65,6 +66,7 @@ def test_ap_ht40_scan(dev, apdev):
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
 
+@remote_compatible
 def test_ap_ht40_scan_conflict(dev, apdev):
     """HT40 co-ex scan conflict"""
     clear_scan_cache(apdev[0])
@@ -105,6 +107,7 @@ def test_ap_ht40_scan_conflict(dev, apdev):
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
 
+@remote_compatible
 def test_ap_ht40_scan_conflict2(dev, apdev):
     """HT40 co-ex scan conflict (HT40-)"""
     clear_scan_cache(apdev[0])
@@ -192,6 +195,7 @@ def test_ap_ht40_scan_not_affected(dev, apdev):
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
 
+@remote_compatible
 def test_ap_ht40_scan_legacy_conflict(dev, apdev):
     """HT40 co-ex scan conflict with legacy 20 MHz AP"""
     clear_scan_cache(apdev[0])
@@ -231,6 +235,7 @@ def test_ap_ht40_scan_legacy_conflict(dev, apdev):
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
 
+@remote_compatible
 def test_ap_ht40_scan_ht20_conflict(dev, apdev):
     """HT40 co-ex scan conflict with HT 20 MHz AP"""
     clear_scan_cache(apdev[0])
@@ -787,6 +792,7 @@ def test_ap_require_ht(dev, apdev):
                    ampdu_density="1", disable_ht40="1", disable_sgi="1",
                    disable_ldpc="1")
 
+@remote_compatible
 def test_ap_require_ht_limited_rates(dev, apdev):
     """Require HT with limited supported rates"""
     params = { "ssid": "require-ht",
@@ -804,6 +810,7 @@ def test_ap_require_ht_limited_rates(dev, apdev):
     if "status_code=27" not in ev:
         raise Exception("Unexpected rejection status code")
 
+@remote_compatible
 def test_ap_ht_capab_not_supported(dev, apdev):
     """HT configuration with driver not supporting all ht_capab entries"""
     params = { "ssid": "test-ht40",
@@ -1028,6 +1035,7 @@ def test_ap_ht40_csa3(dev, apdev):
         set_world_reg(apdev[0], None, dev[0])
         dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_ap_ht_smps(dev, apdev):
     """SMPS AP configuration options"""
     params = { "ssid": "ht1", "ht_capab": "[SMPS-STATIC]" }
@@ -1043,6 +1051,7 @@ def test_ap_ht_smps(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     hwsim_utils.test_connectivity(dev[1], hapd2)
 
+@remote_compatible
 def test_prefer_ht20(dev, apdev):
     """Preference on HT20 over no-HT"""
     params = { "ssid": "test",
@@ -1098,6 +1107,7 @@ def test_prefer_ht40(dev, apdev):
     if est != "135000":
         raise Exception("Unexpected BSS1 est_throughput: " + est)
 
+@remote_compatible
 def test_prefer_ht20_during_roam(dev, apdev):
     """Preference on HT20 over no-HT in roaming consideration"""
     params = { "ssid": "test",
@@ -1121,6 +1131,7 @@ def test_prefer_ht20_during_roam(dev, apdev):
     if dev[0].get_status_field('bssid') != bssid2:
         raise Exception("Unexpected BSS selected")
 
+@remote_compatible
 def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
     """HT40 on 5 GHz with invalid channel pair"""
     clear_scan_cache(apdev[0])
@@ -1141,6 +1152,7 @@ def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
     finally:
         set_world_reg(apdev[0], None, None)
 
+@remote_compatible
 def test_ap_ht40_5ghz_disabled_sec(dev, apdev):
     """HT40 on 5 GHz with disabled secondary channel"""
     clear_scan_cache(apdev[0])

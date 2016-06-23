@@ -5,11 +5,13 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 
 import hostapd
 
+@remote_compatible
 def test_ssid_hex_encoded(dev, apdev):
     """SSID configuration using hex encoded version"""
     hostapd.add_ap(apdev[0], { "ssid2": '68656c6c6f' })
@@ -29,11 +31,13 @@ def test_ssid_printf_encoded(dev, apdev):
         raise Exception("Unexpected difference in SSID")
     dev[2].connect(ssid2='P"' + ssid + '"', key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ssid_1_octet(dev, apdev):
     """SSID with one octet"""
     hostapd.add_ap(apdev[0], { "ssid": '1' })
     dev[0].connect("1", key_mgmt="NONE", scan_freq="2412")
 
+@remote_compatible
 def test_ssid_32_octets(dev, apdev):
     """SSID with 32 octets"""
     hostapd.add_ap(apdev[0],
@@ -41,6 +45,7 @@ def test_ssid_32_octets(dev, apdev):
     dev[0].connect("1234567890abcdef1234567890ABCDEF", key_mgmt="NONE",
                    scan_freq="2412")
 
+@remote_compatible
 def test_ssid_utf8(dev, apdev):
     """SSID with UTF8 encoding"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": 'testi-åäöÅÄÖ-testi',
@@ -69,6 +74,7 @@ def clear_scan_cache(hapd, dev):
     dev[0].flush_scan_cache()
     dev[1].flush_scan_cache()
 
+@remote_compatible
 def test_ssid_hidden(dev, apdev):
     """Hidden SSID"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": 'secret',
@@ -81,6 +87,7 @@ def test_ssid_hidden(dev, apdev):
         raise Exception("Unexpected connection")
     clear_scan_cache(hapd, dev)
 
+@remote_compatible
 def test_ssid_hidden2(dev, apdev):
     """Hidden SSID using zero octets as payload"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": 'secret2',
@@ -93,6 +100,7 @@ def test_ssid_hidden2(dev, apdev):
         raise Exception("Unexpected connection")
     clear_scan_cache(hapd, dev)
 
+@remote_compatible
 def test_ssid_hidden_wpa2(dev, apdev):
     """Hidden SSID with WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="secret", passphrase="12345678")

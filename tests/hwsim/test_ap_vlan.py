@@ -6,6 +6,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from remotehost import remote_compatible
 import time
 import subprocess
 import logging
@@ -531,6 +532,7 @@ def test_ap_vlan_without_station(dev, apdev, p):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'brvlan1'])
 
+@remote_compatible
 def test_ap_open_per_sta_vif(dev, apdev):
     """AP VLAN with open network"""
     params = { "ssid": "test-vlan-open",
@@ -541,6 +543,7 @@ def test_ap_open_per_sta_vif(dev, apdev):
     hwsim_utils.test_connectivity_iface(dev[0], hapd,
                                         apdev[0]['ifname'] + ".4096")
 
+@remote_compatible
 def test_ap_vlan_open_per_sta_vif(dev, apdev):
     """AP VLAN (dynamic) with open network"""
     params = { "ssid": "test-vlan-open",

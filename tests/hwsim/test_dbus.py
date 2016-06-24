@@ -2727,6 +2727,7 @@ def test_dbus_p2p_discovery(dev, apdev):
             TestDbus.__init__(self, bus)
             self.found = False
             self.found2 = False
+            self.found_prop = False
             self.lost = False
             self.find_stopped = False
 
@@ -2735,6 +2736,8 @@ def test_dbus_p2p_discovery(dev, apdev):
             gobject.timeout_add(15000, self.timeout)
             self.add_signal(self.deviceFound, WPAS_DBUS_IFACE_P2PDEVICE,
                             "DeviceFound")
+            self.add_signal(self.deviceFoundProperties,
+                            WPAS_DBUS_IFACE_P2PDEVICE, "DeviceFoundProperties")
             self.add_signal(self.deviceLost, WPAS_DBUS_IFACE_P2PDEVICE,
                             "DeviceLost")
             self.add_signal(self.provisionDiscoveryResponseEnterPin,
@@ -2801,6 +2804,12 @@ def test_dbus_p2p_discovery(dev, apdev):
                 if "UnknownError: Failed to call wpas_p2p_reject" not in str(e):
                     raise Exception("Unexpected error message for invalid RejectPeer(): " + str(e))
             self.loop.quit()
+
+        def deviceFoundProperties(self, path, properties):
+            logger.debug("deviceFoundProperties: path=%s" % path)
+            logger.debug("peer properties: " + str(properties))
+            if properties['DeviceAddress'] == a1:
+                self.found_prop = True
 
         def provisionDiscoveryResponseEnterPin(self, peer_object):
             logger.debug("provisionDiscoveryResponseEnterPin - peer=%s" % peer_object)

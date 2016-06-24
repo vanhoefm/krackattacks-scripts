@@ -7706,7 +7706,7 @@ static int wpa_driver_nl80211_update_ft_ies(void *priv, const u8 *md,
 }
 
 
-const u8 * wpa_driver_nl80211_get_macaddr(void *priv)
+static const u8 * wpa_driver_nl80211_get_macaddr(void *priv)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;

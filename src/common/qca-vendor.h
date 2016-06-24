@@ -89,6 +89,19 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED: Event used by driver,
  *	which supports DFS offloading, to indicate a radar pattern has been
  *	detected. The channel is now unusable.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_START: Command used to
+ *	start the P2P Listen offload function in device and pass the listen
+ *	channel, period, interval, count, device types, and vendor specific
+ *	information elements to the device driver and firmware.
+ *	Uses the attributes defines in
+ *	enum qca_wlan_vendor_attr_p2p_listen_offload.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_STOP: Command/event used to
+ *	indicate stop request/response of the P2P Listen offload function in
+ *	device. As an event, it indicates either the feature stopped after it
+ *	was already running or feature has actually failed to start. Uses the
+ *	attributes defines in enum qca_wlan_vendor_attr_p2p_listen_offload.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -171,6 +184,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_TSF = 119,
 	QCA_NL80211_VENDOR_SUBCMD_WISA = 120,
 	/* 121 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_START = 122,
+	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_STOP = 123,
 };
 
 
@@ -227,6 +242,43 @@ enum qca_wlan_vendor_attr_roam_auth {
 	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AFTER_LAST - 1
 };
 
+enum qca_wlan_vendor_attr_p2p_listen_offload {
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_INVALID = 0,
+	/* A 32-bit unsigned value; the P2P listen frequency (MHz); must be one
+	 * of the social channels.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_CHANNEL,
+	/* A 32-bit unsigned value; the P2P listen offload period (ms).
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_PERIOD,
+	/* A 32-bit unsigned value; the P2P listen interval duration (ms).
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_INTERVAL,
+	/* A 32-bit unsigned value; number of interval times the firmware needs
+	 * to run the offloaded P2P listen operation before it stops.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_COUNT,
+	/* An array of arbitrary binary data with one or more 8-byte values.
+	 * The device types include both primary and secondary device types.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_DEVICE_TYPES,
+	/* An array of unsigned 8-bit characters; vendor information elements.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_VENDOR_IE,
+	/* A 32-bit unsigned value; a control flag to indicate whether listen
+	 * results need to be flushed to wpa_supplicant.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_CTRL_FLAG,
+	/* A 8-bit unsigned value; reason code for P2P listen offload stop
+	 * event.
+	 */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_STOP_REASON,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_MAX =
+	QCA_WLAN_VENDOR_ATTR_P2P_LISTEN_OFFLOAD_AFTER_LAST - 1
+};
+
 enum qca_wlan_vendor_attr_acs_offload {
 	QCA_WLAN_VENDOR_ATTR_ACS_CHANNEL_INVALID = 0,
 	QCA_WLAN_VENDOR_ATTR_ACS_PRIMARY_CHANNEL,
@@ -265,12 +317,19 @@ enum qca_wlan_vendor_acs_hw_mode {
  *	band selection based on channel selection results.
  * @QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS: Device supports
  * 	simultaneous off-channel operations.
+ * @QCA_WLAN_VENDOR_FEATURE_P2P_LISTEN_OFFLOAD: Device supports P2P
+ *	Listen offload; a mechanism where the station's firmware takes care of
+ *	responding to incoming Probe Request frames received from other P2P
+ *	Devices whilst in Listen state, rather than having the user space
+ *	wpa_supplicant do it. Information from received P2P requests are
+ *	forwarded from firmware to host whenever the host processor wakes up.
  * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
  */
 enum qca_wlan_vendor_features {
 	QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD	= 0,
 	QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY     = 1,
 	QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS = 2,
+	QCA_WLAN_VENDOR_FEATURE_P2P_LISTEN_OFFLOAD	= 3,
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 

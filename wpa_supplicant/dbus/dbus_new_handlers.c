@@ -3228,9 +3228,11 @@ dbus_bool_t wpas_dbus_getter_current_auth_mode(
 			    "EAP-%s", eap_mode);
 		auth_mode = eap_mode_buf;
 
-	} else {
+	} else if (wpa_s->current_ssid) {
 		auth_mode = wpa_key_mgmt_txt(wpa_s->key_mgmt,
 					     wpa_s->current_ssid->proto);
+	} else {
+		auth_mode = "UNKNOWN";
 	}
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,

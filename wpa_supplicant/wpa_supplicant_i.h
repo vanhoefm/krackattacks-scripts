@@ -893,6 +893,7 @@ struct wpa_supplicant {
 
 	unsigned int p2p_go_max_oper_chwidth;
 	unsigned int p2p_go_vht_center_freq2;
+	int p2p_lo_started;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

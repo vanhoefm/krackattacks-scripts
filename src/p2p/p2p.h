@@ -1555,12 +1555,13 @@ enum p2p_probe_req_status {
  * @ie: Information elements from the Probe Request frame body
  * @ie_len: Length of ie buffer in octets
  * @rx_freq: Probe Request frame RX frequency
+ * @p2p_lo_started: Whether P2P Listen Offload is started
  * Returns: value indicating the type and status of the probe request
  */
 enum p2p_probe_req_status
 p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		 const u8 *bssid, const u8 *ie, size_t ie_len,
-		 unsigned int rx_freq);
+		 unsigned int rx_freq, int p2p_lo_started);
 
 /**
  * p2p_rx_action - Report received Action frame
@@ -2382,5 +2383,8 @@ void p2p_set_own_pref_freq_list(struct p2p_data *p2p,
  */
 int p2p_group_get_common_freqs(struct p2p_group *group, int *common_freqs,
 			       unsigned int *num);
+
+struct wpabuf * p2p_build_probe_resp_template(struct p2p_data *p2p,
+					      unsigned int freq);
 
 #endif /* P2P_H */

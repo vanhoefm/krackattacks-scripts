@@ -207,6 +207,10 @@ int wpas_p2p_wps_eapol_cb(struct wpa_supplicant *wpa_s);
 void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 			 struct wps_event_fail *fail);
 int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname);
+int wpas_p2p_lo_start(struct wpa_supplicant *wpa_s, unsigned int freq,
+		      unsigned int period, unsigned int interval,
+		      unsigned int count);
+int wpas_p2p_lo_stop(struct wpa_supplicant *wpa_s);
 
 #else /* CONFIG_P2P */
 

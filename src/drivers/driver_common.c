@@ -80,6 +80,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(NEW_PEER_CANDIDATE);
 	E2S(ACS_CHANNEL_SELECTED);
 	E2S(DFS_CAC_STARTED);
+	E2S(P2P_LO_STOP);
 	}
 
 	return "UNKNOWN";

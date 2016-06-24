@@ -946,4 +946,27 @@ static inline int wpa_drv_get_ext_capa(struct wpa_supplicant *wpa_s,
 					    &wpa_s->extended_capa_len);
 }
 
+static inline int wpa_drv_p2p_lo_start(struct wpa_supplicant *wpa_s,
+				       unsigned int channel,
+				       unsigned int period,
+				       unsigned int interval,
+				       unsigned int count,
+				       const u8 *device_types,
+				       size_t dev_types_len,
+				       const u8 *ies, size_t ies_len)
+{
+	if (!wpa_s->driver->p2p_lo_start)
+		return -1;
+	return wpa_s->driver->p2p_lo_start(wpa_s->drv_priv, channel, period,
+					   interval, count, device_types,
+					   dev_types_len, ies, ies_len);
+}
+
+static inline int wpa_drv_p2p_lo_stop(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->driver->p2p_lo_stop)
+		return -1;
+	return wpa_s->driver->p2p_lo_stop(wpa_s->drv_priv);
+}
+
 #endif /* DRIVER_I_H */

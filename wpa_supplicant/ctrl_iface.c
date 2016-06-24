@@ -6283,6 +6283,21 @@ static int p2p_ctrl_remove_client(struct wpa_supplicant *wpa_s, const char *cmd)
 	return 0;
 }
 
+
+static int p2p_ctrl_iface_p2p_lo_start(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int freq = 0, period = 0, interval = 0, count = 0;
+
+	if (sscanf(cmd, "%d %d %d %d", &freq, &period, &interval, &count) != 4)
+	{
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: Invalid P2P LO Start parameter: '%s'", cmd);
+		return -1;
+	}
+
+	return wpas_p2p_lo_start(wpa_s, freq, period, interval, count);
+}
+
 #endif /* CONFIG_P2P */
 
 
@@ -8967,6 +8982,12 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_REMOVE_CLIENT ", 18) == 0) {
 		if (p2p_ctrl_remove_client(wpa_s, buf + 18) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_LO_START ", 13) == 0) {
+		if (p2p_ctrl_iface_p2p_lo_start(wpa_s, buf + 13))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_LO_STOP") == 0) {
+		if (wpas_p2p_lo_stop(wpa_s))
 			reply_len = -1;
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_WIFI_DISPLAY

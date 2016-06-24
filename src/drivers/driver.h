@@ -4865,4 +4865,46 @@ wpa_get_wowlan_triggers(const char *wowlan_triggers,
 /* NULL terminated array of linked in driver wrappers */
 extern const struct wpa_driver_ops *const wpa_drivers[];
 
+
+/* Available drivers */
+
+#ifdef CONFIG_DRIVER_WEXT
+extern const struct wpa_driver_ops wpa_driver_wext_ops; /* driver_wext.c */
+#endif /* CONFIG_DRIVER_WEXT */
+#ifdef CONFIG_DRIVER_NL80211
+/* driver_nl80211.c */
+extern const struct wpa_driver_ops wpa_driver_nl80211_ops;
+#endif /* CONFIG_DRIVER_NL80211 */
+#ifdef CONFIG_DRIVER_HOSTAP
+extern const struct wpa_driver_ops wpa_driver_hostap_ops; /* driver_hostap.c */
+#endif /* CONFIG_DRIVER_HOSTAP */
+#ifdef CONFIG_DRIVER_BSD
+extern const struct wpa_driver_ops wpa_driver_bsd_ops; /* driver_bsd.c */
+#endif /* CONFIG_DRIVER_BSD */
+#ifdef CONFIG_DRIVER_OPENBSD
+/* driver_openbsd.c */
+extern const struct wpa_driver_ops wpa_driver_openbsd_ops;
+#endif /* CONFIG_DRIVER_OPENBSD */
+#ifdef CONFIG_DRIVER_NDIS
+extern struct wpa_driver_ops wpa_driver_ndis_ops; /* driver_ndis.c */
+#endif /* CONFIG_DRIVER_NDIS */
+#ifdef CONFIG_DRIVER_WIRED
+extern const struct wpa_driver_ops wpa_driver_wired_ops; /* driver_wired.c */
+#endif /* CONFIG_DRIVER_WIRED */
+#ifdef CONFIG_DRIVER_MACSEC_QCA
+/* driver_macsec_qca.c */
+extern const struct wpa_driver_ops wpa_driver_macsec_qca_ops;
+#endif /* CONFIG_DRIVER_MACSEC_QCA */
+#ifdef CONFIG_DRIVER_ROBOSWITCH
+/* driver_roboswitch.c */
+extern const struct wpa_driver_ops wpa_driver_roboswitch_ops;
+#endif /* CONFIG_DRIVER_ROBOSWITCH */
+#ifdef CONFIG_DRIVER_ATHEROS
+/* driver_atheros.c */
+extern const struct wpa_driver_ops wpa_driver_atheros_ops;
+#endif /* CONFIG_DRIVER_ATHEROS */
+#ifdef CONFIG_DRIVER_NONE
+extern const struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
+#endif /* CONFIG_DRIVER_NONE */
+
 #endif /* DRIVER_H */

@@ -14,11 +14,11 @@
 #include "driver.h"
 
 #include <sys/ioctl.h>
+#undef IFNAMSIZ
 #include <net/if.h>
 #ifdef __linux__
 #include <netpacket/packet.h>
 #include <net/if_arp.h>
-#include <net/if.h>
 #endif /* __linux__ */
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 #include <net/if_dl.h>

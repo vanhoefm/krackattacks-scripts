@@ -208,6 +208,13 @@ def test_wpas_mesh_open(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+    state = dev[0].get_status_field("wpa_state")
+    if state != "COMPLETED":
+        raise Exception("Unexpected wpa_state on dev0: " + state)
+    state = dev[1].get_status_field("wpa_state")
+    if state != "COMPLETED":
+        raise Exception("Unexpected wpa_state on dev1: " + state)
+
 def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
     check_mesh_support(dev[0])
@@ -268,6 +275,13 @@ def test_wpas_mesh_secure(dev, apdev):
 
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+    state = dev[0].get_status_field("wpa_state")
+    if state != "COMPLETED":
+        raise Exception("Unexpected wpa_state on dev0: " + state)
+    state = dev[1].get_status_field("wpa_state")
+    if state != "COMPLETED":
+        raise Exception("Unexpected wpa_state on dev1: " + state)
 
 def test_mesh_secure_pmf(dev, apdev):
     """Secure mesh network connectivity with PMF enabled"""

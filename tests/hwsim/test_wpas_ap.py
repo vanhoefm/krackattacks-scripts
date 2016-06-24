@@ -238,6 +238,25 @@ def test_wpas_ap_wps(dev):
     if "FAIL" not in dev[0].request("WPS_AP_PIN set"):
         raise Exception("Invalid WPS_AP_PIN command not rejected")
 
+def test_wpas_ap_wps_frag(dev):
+    """wpa_supplicant AP mode - WPS operations with fragmentation"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-wps")
+    dev[0].set_network_quoted(id, "psk", "1234567890")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].set_network(id, "fragment_size", "300")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+    bssid = dev[0].own_addr()
+
+    pin = dev[1].wps_read_pin()
+    dev[0].request("WPS_PIN any " + pin)
+    dev[1].scan_for_bss(bssid, freq="2412")
+    dev[1].request("WPS_PIN " + bssid + " " + pin)
+    dev[1].wait_connected(timeout=30)
+
 def test_wpas_ap_wps_pbc_overlap(dev):
     """wpa_supplicant AP mode - WPS operations with PBC overlap"""
     id = dev[0].add_network()

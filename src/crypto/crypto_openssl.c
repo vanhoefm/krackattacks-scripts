@@ -653,7 +653,8 @@ err:
 	DH *dh;
 	struct wpabuf *pubkey = NULL, *privkey = NULL;
 	size_t publen, privlen;
-	BIGNUM *p = NULL, *g, *priv_key = NULL, *pub_key = NULL;
+	BIGNUM *p = NULL, *g;
+	const BIGNUM *priv_key = NULL, *pub_key = NULL;
 
 	*priv = NULL;
 	wpabuf_free(*publ);

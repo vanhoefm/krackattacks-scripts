@@ -109,7 +109,8 @@ static int wpas_create_receive_sc(void *wpa_s, u32 channel,
 				  enum validate_frames vf,
 				  enum confidentiality_offset co)
 {
-	return wpa_drv_create_receive_sc(wpa_s, channel, sci->addr, sci->port,
+	return wpa_drv_create_receive_sc(wpa_s, channel, sci->addr,
+					 be_to_host16(sci->port),
 					 conf_offset_val(co), vf);
 }
 
@@ -150,7 +151,8 @@ wpas_create_transmit_sc(void *wpa_s, u32 channel,
 			const struct ieee802_1x_mka_sci *sci,
 			enum confidentiality_offset co)
 {
-	return wpa_drv_create_transmit_sc(wpa_s, channel, sci->addr, sci->port,
+	return wpa_drv_create_transmit_sc(wpa_s, channel, sci->addr,
+					  be_to_host16(sci->port),
 					  conf_offset_val(co));
 }
 

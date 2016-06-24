@@ -682,7 +682,7 @@ ieee802_1x_mka_encode_basic_body(
 
 	os_memcpy(body->actor_sci.addr, kay->actor_sci.addr,
 		  sizeof(kay->actor_sci.addr));
-	body->actor_sci.port = host_to_be16(kay->actor_sci.port);
+	body->actor_sci.port = kay->actor_sci.port;
 
 	os_memcpy(body->actor_mi, participant->mi, sizeof(body->actor_mi));
 	participant->mn = participant->mn + 1;
@@ -738,7 +738,7 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 	participant->current_peer_id.mn =  be_to_host32(body->actor_mn);
 	os_memcpy(participant->current_peer_sci.addr, body->actor_sci.addr,
 		  sizeof(participant->current_peer_sci.addr));
-	participant->current_peer_sci.port = be_to_host16(body->actor_sci.port);
+	participant->current_peer_sci.port = body->actor_sci.port;
 
 	/* handler peer */
 	peer = ieee802_1x_kay_get_peer(participant, body->actor_mi);
@@ -3152,7 +3152,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 
 	os_strlcpy(kay->if_name, ifname, IFNAMSIZ);
 	os_memcpy(kay->actor_sci.addr, addr, ETH_ALEN);
-	kay->actor_sci.port = 0x0001;
+	kay->actor_sci.port = host_to_be16(0x0001);
 	kay->actor_priority = DEFAULT_PRIO_NOT_KEY_SERVER;
 
 	/* While actor acts as a key server, shall distribute sakey */

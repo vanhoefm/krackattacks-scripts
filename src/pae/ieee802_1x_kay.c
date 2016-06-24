@@ -735,7 +735,7 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 	}
 
 	os_memcpy(participant->current_peer_id.mi, body->actor_mi, MI_LEN);
-	participant->current_peer_id.mn =  be_to_host32(body->actor_mn);
+	participant->current_peer_id.mn = body->actor_mn;
 	os_memcpy(participant->current_peer_sci.addr, body->actor_sci.addr,
 		  sizeof(participant->current_peer_sci.addr));
 	participant->current_peer_sci.port = body->actor_sci.port;
@@ -3016,7 +3016,8 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 			if (!ieee802_1x_kay_create_live_peer(
 				    participant,
 				    participant->current_peer_id.mi,
-				    participant->current_peer_id.mn))
+				    be_to_host32(
+					    participant->current_peer_id.mn)))
 				return -1;
 			ieee802_1x_kay_elect_key_server(participant);
 			ieee802_1x_kay_decide_macsec_use(participant);
@@ -3025,7 +3026,7 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 			    participant, participant->current_peer_id.mi)) {
 			ieee802_1x_kay_move_live_peer(
 				participant, participant->current_peer_id.mi,
-				participant->current_peer_id.mn);
+				be_to_host32(participant->current_peer_id.mn));
 			ieee802_1x_kay_elect_key_server(participant);
 			ieee802_1x_kay_decide_macsec_use(participant);
 		}

@@ -410,9 +410,25 @@ enum qca_vendor_attr_wisa_cmd {
  *
  *	This vendor element may be included in GO Negotiation Request, P2P
  *	Invitation Request, and Provision Discovery Request frames.
+ *
+ * @QCA_VENDOR_ELEM_HE_CAPAB: HE Capabilities element.
+ *	This element can be used for pre-standard publication testing of HE
+ *	before P802.11ax draft assigns the element ID. The payload of this
+ *	vendor specific element is defined by the latest P802.11ax draft.
+ *	Please note that the draft is still work in progress and this element
+ *	payload is subject to change.
+ *
+ * @QCA_VENDOR_ELEM_HE_OPER: HE Operation element.
+ *	This element can be used for pre-standard publication testing of HE
+ *	before P802.11ax draft assigns the element ID. The payload of this
+ *	vendor specific element is defined by the latest P802.11ax draft.
+ *	Please note that the draft is still work in progress and this element
+ *	payload is subject to change.
  */
 enum qca_vendor_element_id {
 	QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST = 0,
+	QCA_VENDOR_ELEM_HE_CAPAB = 1,
+	QCA_VENDOR_ELEM_HE_OPER = 2,
 };
 
 /**

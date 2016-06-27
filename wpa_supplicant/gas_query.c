@@ -512,6 +512,14 @@ int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 	if (gas == NULL || len < 4)
 		return -1;
 
+	pos = data;
+	action = *pos++;
+	dialog_token = *pos++;
+
+	if (action != WLAN_PA_GAS_INITIAL_RESP &&
+	    action != WLAN_PA_GAS_COMEBACK_RESP)
+		return -1; /* Not a GAS response */
+
 	prot = categ == WLAN_ACTION_PROTECTED_DUAL;
 	pmf = pmf_in_use(gas->wpa_s, sa);
 	if (prot && !pmf) {
@@ -522,14 +530,6 @@ int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 		wpa_printf(MSG_DEBUG, "GAS: Drop unexpected unprotected GAS frame when PMF is enabled");
 		return 0;
 	}
-
-	pos = data;
-	action = *pos++;
-	dialog_token = *pos++;
-
-	if (action != WLAN_PA_GAS_INITIAL_RESP &&
-	    action != WLAN_PA_GAS_COMEBACK_RESP)
-		return -1; /* Not a GAS response */
 
 	query = gas_query_get_pending(gas, sa, dialog_token);
 	if (query == NULL) {

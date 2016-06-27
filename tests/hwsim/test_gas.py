@@ -1262,3 +1262,48 @@ def _test_gas_anqp_address3_ap_non_compliant(dev, apdev, params):
         raise Exception("GAS request used unexpected Address3 field value: " + res[0])
     if res[1] != bssid:
         raise Exception("GAS response used unexpected Address3 field value: " + res[1])
+
+def test_gas_prot_vs_not_prot(dev, apdev, params):
+    """GAS/ANQP query protected vs. not protected"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("test-gas", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem", scan_freq="2412",
+                   ieee80211w="2")
+
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("No GAS-QUERY-DONE event")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected GAS result: " + ev)
+
+    # GAS: Drop unexpected unprotected GAS frame when PMF is enabled
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    res = dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=d0003a010200000000000200000003000200000003001000040b00000005006c027f000000")
+    dev[0].request("SET ext_mgmt_frame_handling 0")
+    if "OK" not in res:
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # GAS: No pending query found for 02:00:00:00:03:00 dialog token 0
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    res = dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=d0003a010200000000000200000003000200000003001000040b00000005006c027f000000")
+    dev[0].request("SET ext_mgmt_frame_handling 0")
+    if "OK" not in res:
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    # GAS: Drop unexpected protected GAS frame when PMF is disabled
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    res = dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=d0003a010200000000000200000003000200000003001000090b00000005006c027f000000")
+    dev[0].request("SET ext_mgmt_frame_handling 0")
+    if "OK" not in res:
+        raise Exception("MGMT_RX_PROCESS failed")

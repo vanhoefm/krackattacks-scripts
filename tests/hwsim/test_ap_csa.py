@@ -27,7 +27,13 @@ def switch_channel(ap, count, freq):
         raise Exception("CSA finished event timed out")
     if "freq=" + str(freq) not in ev:
         raise Exception("Unexpected channel in CSA finished event")
-    time.sleep(0.1)
+
+def wait_channel_switch(dev, freq):
+    ev = dev.wait_event(["CTRL-EVENT-CHANNEL-SWITCH"], timeout=5)
+    if ev is None:
+        raise Exception("Channel switch not reported")
+    if "freq=%d" % freq not in ev:
+        raise Exception("Unexpected frequency: " + ev)
 
 # This function checks whether the provided dev, which may be either
 # WpaSupplicant or Hostapd supports CSA.
@@ -43,6 +49,7 @@ def test_ap_csa_1_switch(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
+    wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_2_switches(dev, apdev):
@@ -52,8 +59,10 @@ def test_ap_csa_2_switches(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
+    wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2412)
+    wait_channel_switch(dev[0], 2412)
     hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_1_switch_count_0(dev, apdev):
@@ -109,6 +118,7 @@ def test_ap_csa_1_switch_count_2(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 2, 2462)
+    wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_ecsa_only(dev, apdev):
@@ -118,6 +128,7 @@ def test_ap_csa_ecsa_only(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
+    wait_channel_switch(dev[0], 2462)
     hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_invalid(dev, apdev):

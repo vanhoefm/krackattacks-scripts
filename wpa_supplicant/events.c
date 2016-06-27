@@ -3669,6 +3669,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (!data || !wpa_s->current_ssid)
 			break;
 
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CHANNEL_SWITCH
+			"freq=%d ht_enabled=%d ch_offset=%d ch_width=%s cf1=%d cf2=%d",
+			data->ch_switch.freq,
+			data->ch_switch.ht_enabled,
+			data->ch_switch.ch_offset,
+			channel_width_to_string(data->ch_switch.ch_width),
+			data->ch_switch.cf1,
+			data->ch_switch.cf2);
+
 		wpa_s->assoc_freq = data->ch_switch.freq;
 		wpa_s->current_ssid->frequency = data->ch_switch.freq;
 

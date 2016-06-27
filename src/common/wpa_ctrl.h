@@ -76,6 +76,8 @@ extern "C" {
 #define WPA_EVENT_SIGNAL_CHANGE "CTRL-EVENT-SIGNAL-CHANGE "
 /** Regulatory domain channel */
 #define WPA_EVENT_REGDOM_CHANGE "CTRL-EVENT-REGDOM-CHANGE "
+/** Channel switch (followed by freq=<MHz> and other channel parameters) */
+#define WPA_EVENT_CHANNEL_SWITCH "CTRL-EVENT-CHANNEL-SWITCH "
 
 /** IP subnet status change notification
  *

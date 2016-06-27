@@ -860,6 +860,25 @@ def test_gas_no_pending(dev, apdev):
     if status_code != 60:
         raise Exception("Unexpected status code {} (expected 60)".format(status_code))
 
+def test_gas_delete_at_deinit(dev, apdev):
+    """GAS query deleted at deinit"""
+    hapd = start_ap(apdev[0])
+    hapd.set("gas_comeback_delay", "1000")
+    bssid = apdev[0]['bssid']
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    wpas.request("ANQP_GET " + bssid + " 258")
+
+    wpas.global_request("INTERFACE_REMOVE " + wpas.ifname)
+    ev = wpas.wait_event(["GAS-QUERY-DONE"], timeout=2)
+    del wpas
+    if ev is None:
+        raise Exception("GAS-QUERY-DONE not seen")
+    if "result=DELETED_AT_DEINIT" not in ev:
+        raise Exception("Unexpected result code: " + ev)
+
 def test_gas_missing_payload(dev, apdev):
     """No action code in the query frame"""
     bssid = apdev[0]['bssid']

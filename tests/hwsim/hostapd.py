@@ -42,11 +42,14 @@ class HostapdGlobal:
             self.dbg = hostname + "/" + str(port)
         self.mon.attach()
 
-    def cmd_execute(self, cmd_array):
+    def cmd_execute(self, cmd_array, shell=False):
         if self.hostname is None:
-            cmd = ' '.join(cmd_array)
+            if shell:
+                cmd = ' '.join(cmd_array)
+            else:
+                cmd = cmd_array
             proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
-                                    stdout=subprocess.PIPE, shell=True)
+                                    stdout=subprocess.PIPE, shell=shell)
             out = proc.communicate()[0]
             ret = proc.returncode
             return ret, out
@@ -146,14 +149,14 @@ class Hostapd:
         self.bssid = None
         self.bssidx = bssidx
 
-    def cmd_execute(self, cmd_array):
+    def cmd_execute(self, cmd_array, shell=False):
         if self.hostname is None:
-            cmd = ""
-            for arg in cmd_array:
-                cmd += arg + " "
-            cmd = cmd.strip()
+            if shell:
+                cmd = ' '.join(cmd_array)
+            else:
+                cmd = cmd_array
             proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
-                                    stdout=subprocess.PIPE, shell=True)
+                                    stdout=subprocess.PIPE, shell=shell)
             out = proc.communicate()[0]
             ret = proc.returncode
             return ret, out
@@ -588,6 +591,6 @@ def ht40_minus_params(channel="1", ssid=None, country=None):
     params['ht_capab'] = "[HT40-]"
     return params
 
-def cmd_execute(apdev, cmd):
+def cmd_execute(apdev, cmd, shell=False):
     hapd_global = HostapdGlobal(apdev)
-    return hapd_global.cmd_execute(cmd)
+    return hapd_global.cmd_execute(cmd, shell=shell)

@@ -49,11 +49,14 @@ class WpaSupplicant:
         else:
             self.global_mon = None
 
-    def cmd_execute(self, cmd_array):
+    def cmd_execute(self, cmd_array, shell=False):
         if self.hostname is None:
-            cmd = ' '.join(cmd_array)
+            if shell:
+                cmd = ' '.join(cmd_array)
+            else:
+                cmd = cmd_array
             proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
-                                    stdout=subprocess.PIPE, shell=True)
+                                    stdout=subprocess.PIPE, shell=shell)
             out = proc.communicate()[0]
             ret = proc.returncode
             return ret, out

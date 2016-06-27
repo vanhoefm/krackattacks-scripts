@@ -86,12 +86,14 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
 
     dev[0].dump_monitor()
-    dev[0].cmd_execute([ "echo", "-n", apdev[0]['bssid'], ">", testfile ])
+    dev[0].cmd_execute([ "echo", "-n", apdev[0]['bssid'], ">", testfile ],
+                       shell=True)
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
-    dev[0].cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ])
+    dev[0].cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ],
+                       shell=True)
     ev = dev[0].wait_disconnected(timeout=10,
                                   error="No disconnection after two Michael MIC failures")
     if "reason=14" not in ev:
@@ -118,12 +120,14 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
 
     dev[0].dump_monitor()
-    hapd.cmd_execute([ "echo", "-n", dev[0].own_addr(), ">", testfile ])
+    hapd.cmd_execute([ "echo", "-n", dev[0].own_addr(), ">", testfile ],
+                     shell=True)
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
-    hapd.cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ])
+    hapd.cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ],
+                     shell=True)
     ev = dev[0].wait_disconnected(timeout=10,
                                   error="No disconnection after two Michael MIC failures")
     if "reason=14 locally_generated=1" not in ev:

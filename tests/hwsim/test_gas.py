@@ -1307,3 +1307,49 @@ def test_gas_prot_vs_not_prot(dev, apdev, params):
     dev[0].request("SET ext_mgmt_frame_handling 0")
     if "OK" not in res:
         raise Exception("MGMT_RX_PROCESS failed")
+
+def test_gas_failures(dev, apdev):
+    """GAS failure cases"""
+    hapd = start_ap(apdev[0])
+    hapd.set("gas_comeback_delay", "5")
+    bssid = apdev[0]['bssid']
+
+    hapd2 = start_ap(apdev[1])
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    dev[0].scan_for_bss(bssid2, freq="2412")
+
+    tests = [ (bssid, "gas_build_req;gas_query_tx_comeback_req"),
+              (bssid, "gas_query_tx;gas_query_tx_comeback_req"),
+              (bssid, "gas_query_append;gas_query_rx_comeback"),
+              (bssid2, "gas_query_append;gas_query_rx_initial"),
+              (bssid2, "wpabuf_alloc_copy;gas_query_rx_initial"),
+              (bssid, "gas_query_tx;gas_query_tx_initial_req") ]
+    for addr,func in tests:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].request("ANQP_GET " + addr + " 258")
+            ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=5)
+            if ev is None:
+                raise Exception("No GAS-QUERY-DONE seen")
+            if "result=INTERNAL_ERROR" not in ev:
+                raise Exception("Unexpected result code: " + ev)
+        dev[0].dump_monitor()
+
+    tests = [ "=gas_query_req", "radio_add_work;gas_query_req" ]
+    for func in tests:
+        with alloc_fail(dev[0], 1, func):
+            if "FAIL" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+                raise Exception("ANQP_GET succeeded unexpectedly during OOM")
+        dev[0].dump_monitor()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.scan_for_bss(bssid2, freq="2412")
+    wpas.request("SET preassoc_mac_addr 1111")
+    wpas.request("ANQP_GET " + bssid2 + " 258")
+    ev = wpas.wait_event(["Failed to assign random MAC address for GAS"],
+                         timeout=5)
+    wpas.request("SET preassoc_mac_addr 0")
+    if ev is None:
+        raise Exception("No random MAC address error seen")

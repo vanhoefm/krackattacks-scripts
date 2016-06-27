@@ -9338,9 +9338,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.vendor_cmd = nl80211_vendor_cmd,
 	.set_qos_map = nl80211_set_qos_map,
 	.set_wowlan = nl80211_set_wowlan,
-#ifdef CONFIG_DRIVER_NL80211_QCA
-	.roaming = nl80211_roaming,
-#endif /* CONFIG_DRIVER_NL80211_QCA */
 	.set_mac_addr = nl80211_set_mac_addr,
 #ifdef CONFIG_MESH
 	.init_mesh = wpa_driver_nl80211_init_mesh,
@@ -9355,6 +9352,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.del_tx_ts = nl80211_del_ts,
 	.get_ifindex = nl80211_get_ifindex,
 #ifdef CONFIG_DRIVER_NL80211_QCA
+	.roaming = nl80211_roaming,
 	.do_acs = wpa_driver_do_acs,
 	.set_band = nl80211_set_band,
 	.get_pref_freq_list = nl80211_get_pref_freq_list,

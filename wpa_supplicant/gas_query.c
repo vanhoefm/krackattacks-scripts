@@ -696,7 +696,7 @@ static void gas_query_tx_initial_req(struct gas_query *gas,
 			 GAS_QUERY_WAIT_TIME_INITIAL) < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
 			   MACSTR, MAC2STR(query->addr));
-		gas_query_free(query, 1);
+		gas_query_done(gas, query, GAS_QUERY_INTERNAL_ERROR);
 		return;
 	}
 	gas->current = query;

@@ -653,7 +653,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 	if (aes_siv_decrypt(sta->aek, crypt, crypt_len, 3,
 			    aad, aad_len, ampe_buf)) {
 		wpa_printf(MSG_ERROR, "Mesh RSN: frame verification failed!");
-		ret = -1;
+		ret = -2;
 		goto free;
 	}
 

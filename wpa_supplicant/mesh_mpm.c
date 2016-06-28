@@ -1144,13 +1144,23 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	if (!sta->my_lid)
 		mesh_mpm_init_link(wpa_s, sta);
 
-	if ((mconf->security & MESH_CONF_SEC_AMPE) &&
-	    mesh_rsn_process_ampe(wpa_s, sta, &elems,
-				  &mgmt->u.action.category,
-				  peer_mgmt_ie.chosen_pmk,
-				  ies, ie_len)) {
-		wpa_printf(MSG_DEBUG, "MPM: RSN process rejected frame");
-		return;
+	if (mconf->security & MESH_CONF_SEC_AMPE) {
+		int res;
+
+		res = mesh_rsn_process_ampe(wpa_s, sta, &elems,
+					    &mgmt->u.action.category,
+					    peer_mgmt_ie.chosen_pmk,
+					    ies, ie_len);
+		if (res) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: RSN process rejected frame (res=%d)",
+				   res);
+			if (action_field == PLINK_OPEN && res == -2) {
+				/* AES-SIV decryption failed */
+				mesh_mpm_fsm(wpa_s, sta, OPN_RJCT);
+			}
+			return;
+		}
 	}
 
 	if (sta->plink_state == PLINK_BLOCKED) {

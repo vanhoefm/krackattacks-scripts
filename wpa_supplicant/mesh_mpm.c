@@ -1113,6 +1113,10 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		llid = WPA_GET_LE16(peer_mgmt_ie.plid);
 	wpa_printf(MSG_DEBUG, "MPM: plid=0x%x llid=0x%x", plid, llid);
 
+	if (action_field == PLINK_CLOSE)
+		wpa_printf(MSG_DEBUG, "MPM: close reason=%u",
+			   WPA_GET_LE16(peer_mgmt_ie.reason));
+
 	sta = ap_get_sta(hapd, mgmt->sa);
 
 	/*

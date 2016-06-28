@@ -1185,6 +1185,9 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 				   "MPM: Peer link num over quota(%d)",
 				   hapd->max_plinks);
 		} else if (sta->peer_lid && sta->peer_lid != plid) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: peer_lid mismatch: 0x%x != 0x%x",
+				   sta->peer_lid, plid);
 			return; /* no FSM event */
 		} else {
 			sta->peer_lid = plid;
@@ -1200,6 +1203,9 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 				   hapd->max_plinks);
 		} else if (sta->my_lid != llid ||
 			   (sta->peer_lid && sta->peer_lid != plid)) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: lid mismatch: my_lid: 0x%x != 0x%x or peer_lid: 0x%x != 0x%x",
+				   sta->my_lid, llid, sta->peer_lid, plid);
 			return; /* no FSM event */
 		} else {
 			if (!sta->peer_lid)
@@ -1219,12 +1225,19 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 			 * restarted.
 			 */
 			event = CLS_ACPT;
-		else if (sta->peer_lid != plid)
+		else if (sta->peer_lid != plid) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: peer_lid mismatch: 0x%x != 0x%x",
+				   sta->peer_lid, plid);
 			return; /* no FSM event */
-		else if (peer_mgmt_ie.plid && sta->my_lid != llid)
+		} else if (peer_mgmt_ie.plid && sta->my_lid != llid) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: my_lid mismatch: 0x%x != 0x%x",
+				   sta->my_lid, llid);
 			return; /* no FSM event */
-		else
+		} else {
 			event = CLS_ACPT;
+		}
 		break;
 	default:
 		/*

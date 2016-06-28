@@ -1833,3 +1833,54 @@ def test_mesh_mpm_init_proto(dev, apdev):
         raise Exception("Unexpected MESH_PEER_REMOVE success(2)")
     if "FAIL" not in dev[1].request("MESH_PEER_ADD 02:00:00:00:01:02"):
         raise Exception("Unexpected MESH_PEER_ADD success")
+
+def test_mesh_holding(dev, apdev):
+    """Mesh MPM FSM and HOLDING state event OPN_ACPT"""
+    check_mesh_support(dev[0])
+    add_open_mesh_network(dev[0])
+    add_open_mesh_network(dev[1])
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE " + addr1):
+        raise Exception("Failed to remove peer")
+
+    rx_msg = dev[0].mgmt_rx()
+    if rx_msg is None:
+        raise Exception("MGMT-RX timeout")
+    if rx_msg['subtype'] != 13:
+        raise Exception("Unexpected management frame")
+    payload = rx_msg['payload']
+    (categ, action) = struct.unpack('BB', payload[0:2])
+    if categ != 0x0f or action != 0x03:
+        raise Exception("Did not see Mesh Peering Close")
+
+    peer_lid = payload[-6:-4].encode("hex")
+    my_lid = payload[-4:-2].encode("hex")
+
+    # Drop Mesh Peering Close and instead, process an unexpected Mesh Peering
+    # Open to trigger transmission of another Mesh Peering Close in the HOLDING
+    # state based on an OPN_ACPT event.
+
+    dst = addr0.replace(':', '')
+    src = addr1.replace(':', '')
+    hdr = "d000ac00" + dst + src + src + "1000"
+    fixed = "0f010000"
+    supp_rates = "010802040b168c129824"
+    ext_supp_rates = "3204b048606c"
+    mesh_id = "720e777061732d6d6573682d6f70656e"
+    mesh_conf = "710701010001000009"
+    mpm = "7504" + my_lid + peer_lid
+    ht_capab = "2d1a7c001bffff000000000000000000000100000000000000000000"
+    ht_oper = "3d160b000000000000000000000000000000000000000000"
+
+    frame = hdr + fixed + supp_rates + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+        raise Exception("MGMT_RX_PROCESS failed")
+    time.sleep(0.1)

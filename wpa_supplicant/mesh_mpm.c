@@ -35,12 +35,10 @@ enum plink_event {
 	PLINK_UNDEFINED,
 	OPN_ACPT,
 	OPN_RJCT,
-	OPN_IGNR,
 	CNF_ACPT,
 	CNF_RJCT,
-	CNF_IGNR,
 	CLS_ACPT,
-	CLS_IGNR
+	REQ_RJCT
 };
 
 static const char * const mplstate[] = {
@@ -58,12 +56,10 @@ static const char * const mplevent[] = {
 	[PLINK_UNDEFINED] = "UNDEFINED",
 	[OPN_ACPT] = "OPN_ACPT",
 	[OPN_RJCT] = "OPN_RJCT",
-	[OPN_IGNR] = "OPN_IGNR",
 	[CNF_ACPT] = "CNF_ACPT",
 	[CNF_RJCT] = "CNF_RJCT",
-	[CNF_IGNR] = "CNF_IGNR",
 	[CLS_ACPT] = "CLS_ACPT",
-	[CLS_IGNR] = "CLS_IGNR"
+	[REQ_RJCT] = "REQ_RJCT",
 };
 
 
@@ -847,11 +843,10 @@ static void mesh_mpm_plink_estab(struct wpa_supplicant *wpa_s,
 
 
 static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
-			 enum plink_event event)
+			 enum plink_event event, u16 reason)
 {
 	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
-	u16 reason = 0;
 
 	wpa_msg(wpa_s, MSG_DEBUG, "MPM " MACSTR " state %s event %s",
 		MAC2STR(sta->addr), mplstate[sta->plink_state],
@@ -868,6 +863,10 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			mesh_mpm_send_plink_action(wpa_s, sta, PLINK_CONFIRM,
 						   0);
 			break;
+		case REQ_RJCT:
+			mesh_mpm_send_plink_action(wpa_s, sta,
+						   PLINK_CLOSE, reason);
+			break;
 		default:
 			break;
 		}
@@ -876,7 +875,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		switch (event) {
 		case OPN_RJCT:
 		case CNF_RJCT:
-			reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
+			if (!reason)
+				reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
 			/* fall-through */
 		case CLS_ACPT:
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
@@ -911,7 +911,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		switch (event) {
 		case OPN_RJCT:
 		case CNF_RJCT:
-			reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
+			if (!reason)
+				reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
 			/* fall-through */
 		case CLS_ACPT:
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
@@ -942,7 +943,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		switch (event) {
 		case OPN_RJCT:
 		case CNF_RJCT:
-			reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
+			if (!reason)
+				reason = WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION;
 			/* fall-through */
 		case CLS_ACPT:
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
@@ -971,7 +973,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		switch (event) {
 		case CLS_ACPT:
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
-			reason = WLAN_REASON_MESH_CLOSE_RCVD;
+			if (!reason)
+				reason = WLAN_REASON_MESH_CLOSE_RCVD;
 
 			eloop_register_timeout(
 				conf->dot11MeshHoldingTimeout / 1000,
@@ -1039,6 +1042,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	const u8 *ies;
 	size_t ie_len;
 	int ret;
+	u16 reason = 0;
 
 	if (mgmt->u.action.category != WLAN_ACTION_SELF_PROTECTED)
 		return;
@@ -1157,7 +1161,8 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 				   res);
 			if (action_field == PLINK_OPEN && res == -2) {
 				/* AES-SIV decryption failed */
-				mesh_mpm_fsm(wpa_s, sta, OPN_RJCT);
+				mesh_mpm_fsm(wpa_s, sta, OPN_RJCT,
+					     WLAN_REASON_MESH_INVALID_GTK);
 			}
 			return;
 		}
@@ -1172,12 +1177,13 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	switch (action_field) {
 	case PLINK_OPEN:
 		if (plink_free_count(hapd) == 0) {
-			event = OPN_IGNR;
+			event = REQ_RJCT;
+			reason = WLAN_REASON_MESH_MAX_PEERS;
 			wpa_printf(MSG_INFO,
 				   "MPM: Peer link num over quota(%d)",
 				   hapd->max_plinks);
 		} else if (sta->peer_lid && sta->peer_lid != plid) {
-			event = OPN_IGNR;
+			return; /* no FSM event */
 		} else {
 			sta->peer_lid = plid;
 			event = OPN_ACPT;
@@ -1185,13 +1191,14 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		break;
 	case PLINK_CONFIRM:
 		if (plink_free_count(hapd) == 0) {
-			event = CNF_IGNR;
+			event = REQ_RJCT;
+			reason = WLAN_REASON_MESH_MAX_PEERS;
 			wpa_printf(MSG_INFO,
 				   "MPM: Peer link num over quota(%d)",
 				   hapd->max_plinks);
 		} else if (sta->my_lid != llid ||
 			   (sta->peer_lid && sta->peer_lid != plid)) {
-			event = CNF_IGNR;
+			return; /* no FSM event */
 		} else {
 			if (!sta->peer_lid)
 				sta->peer_lid = plid;
@@ -1211,9 +1218,9 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 			 */
 			event = CLS_ACPT;
 		else if (sta->peer_lid != plid)
-			event = CLS_IGNR;
+			return; /* no FSM event */
 		else if (peer_mgmt_ie.plid && sta->my_lid != llid)
-			event = CLS_IGNR;
+			return; /* no FSM event */
 		else
 			event = CLS_ACPT;
 		break;
@@ -1225,7 +1232,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		 */
 		return;
 	}
-	mesh_mpm_fsm(wpa_s, sta, event);
+	mesh_mpm_fsm(wpa_s, sta, event, reason);
 }
 
 

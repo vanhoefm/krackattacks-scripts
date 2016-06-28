@@ -3839,11 +3839,11 @@ static u32 sta_flags_nl80211(int flags)
 static u32 sta_plink_state_nl80211(enum mesh_plink_state state)
 {
 	switch (state) {
-	case PLINK_LISTEN:
+	case PLINK_IDLE:
 		return NL80211_PLINK_LISTEN;
-	case PLINK_OPEN_SENT:
+	case PLINK_OPN_SNT:
 		return NL80211_PLINK_OPN_SNT;
-	case PLINK_OPEN_RCVD:
+	case PLINK_OPN_RCVD:
 		return NL80211_PLINK_OPN_RCVD;
 	case PLINK_CNF_RCVD:
 		return NL80211_PLINK_CNF_RCVD;

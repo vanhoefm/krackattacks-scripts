@@ -320,13 +320,13 @@ enum wpa_ctrl_req_type {
 #define EAP_MAX_METHODS 8
 
 enum mesh_plink_state {
-	PLINK_LISTEN = 1,
-	PLINK_OPEN_SENT,
-	PLINK_OPEN_RCVD,
+	PLINK_IDLE = 1,
+	PLINK_OPN_SNT,
+	PLINK_OPN_RCVD,
 	PLINK_CNF_RCVD,
 	PLINK_ESTAB,
 	PLINK_HOLDING,
-	PLINK_BLOCKED,
+	PLINK_BLOCKED, /* not defined in the IEEE 802.11 standard */
 };
 
 enum set_band {

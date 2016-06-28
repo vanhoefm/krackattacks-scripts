@@ -45,9 +45,9 @@ enum plink_event {
 
 static const char * const mplstate[] = {
 	[0] = "UNINITIALIZED",
-	[PLINK_LISTEN] = "LISTEN",
-	[PLINK_OPEN_SENT] = "OPEN_SENT",
-	[PLINK_OPEN_RCVD] = "OPEN_RCVD",
+	[PLINK_IDLE] = "IDLE",
+	[PLINK_OPN_SNT] = "OPN_SNT",
+	[PLINK_OPN_RCVD] = "OPN_RCVD",
 	[PLINK_CNF_RCVD] = "CNF_RCVD",
 	[PLINK_ESTAB] = "ESTAB",
 	[PLINK_HOLDING] = "HOLDING",
@@ -200,7 +200,7 @@ static void mesh_mpm_init_link(struct wpa_supplicant *wpa_s,
 	 * We do not use wpa_mesh_set_plink_state() here because there is no
 	 * entry in kernel yet.
 	 */
-	sta->plink_state = PLINK_LISTEN;
+	sta->plink_state = PLINK_IDLE;
 }
 
 
@@ -424,8 +424,8 @@ static void plink_timer(void *eloop_ctx, void *user_data)
 	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 
 	switch (sta->plink_state) {
-	case PLINK_OPEN_RCVD:
-	case PLINK_OPEN_SENT:
+	case PLINK_OPN_RCVD:
+	case PLINK_OPN_SNT:
 		/* retry timer */
 		if (sta->mpm_retries < conf->dot11MeshMaxRetries) {
 			eloop_register_timeout(
@@ -559,7 +559,7 @@ int mesh_mpm_connect_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 		return -1;
 	}
 
-	if ((PLINK_OPEN_SENT <= sta->plink_state &&
+	if ((PLINK_OPN_SNT <= sta->plink_state &&
 	    sta->plink_state <= PLINK_ESTAB) ||
 	    (sta->sae && sta->sae->state > SAE_NOTHING)) {
 		wpa_msg(wpa_s, MSG_INFO,
@@ -568,7 +568,7 @@ int mesh_mpm_connect_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 	}
 
 	if (conf->security == MESH_CONF_SEC_NONE) {
-		mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
+		mesh_mpm_plink_open(wpa_s, sta, PLINK_OPN_SNT);
 	} else {
 		mesh_rsn_auth_sae_sta(wpa_s, sta);
 		os_memcpy(hapd->mesh_required_peer, addr, ETH_ALEN);
@@ -631,7 +631,7 @@ void mesh_mpm_auth_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
 	if (!sta->my_lid)
 		mesh_mpm_init_link(wpa_s, sta);
 
-	mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
+	mesh_mpm_plink_open(wpa_s, sta, PLINK_OPN_SNT);
 }
 
 /*
@@ -770,9 +770,9 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 	}
 
 	if (conf->security == MESH_CONF_SEC_NONE) {
-		if (sta->plink_state < PLINK_OPEN_SENT ||
+		if (sta->plink_state < PLINK_OPN_SNT ||
 		    sta->plink_state > PLINK_ESTAB)
-			mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
+			mesh_mpm_plink_open(wpa_s, sta, PLINK_OPN_SNT);
 	} else {
 		mesh_rsn_auth_sae_sta(wpa_s, sta);
 	}
@@ -858,13 +858,13 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		mplevent[event]);
 
 	switch (sta->plink_state) {
-	case PLINK_LISTEN:
+	case PLINK_IDLE:
 		switch (event) {
 		case CLS_ACPT:
 			mesh_mpm_fsm_restart(wpa_s, sta);
 			break;
 		case OPN_ACPT:
-			mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_RCVD);
+			mesh_mpm_plink_open(wpa_s, sta, PLINK_OPN_RCVD);
 			mesh_mpm_send_plink_action(wpa_s, sta, PLINK_CONFIRM,
 						   0);
 			break;
@@ -872,7 +872,7 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			break;
 		}
 		break;
-	case PLINK_OPEN_SENT:
+	case PLINK_OPN_SNT:
 		switch (event) {
 		case OPN_RJCT:
 		case CNF_RJCT:
@@ -891,7 +891,7 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			break;
 		case OPN_ACPT:
 			/* retry timer is left untouched */
-			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_OPEN_RCVD);
+			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_OPN_RCVD);
 			mesh_mpm_send_plink_action(wpa_s, sta,
 						   PLINK_CONFIRM, 0);
 			break;
@@ -907,7 +907,7 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			break;
 		}
 		break;
-	case PLINK_OPEN_RCVD:
+	case PLINK_OPN_RCVD:
 		switch (event) {
 		case OPN_RJCT:
 		case CNF_RJCT:

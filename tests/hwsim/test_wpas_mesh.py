@@ -1733,3 +1733,84 @@ def test_mesh_peering_proto(dev, apdev):
 
     if test != 7:
         raise Exception("Not all test frames completed")
+
+def test_mesh_mpm_init_proto(dev, apdev):
+    """Mesh peering management protocol testing for peer addition"""
+    check_mesh_support(dev[0])
+    add_open_mesh_network(dev[0])
+    check_mesh_group_added(dev[0])
+    dev[0].dump_monitor()
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    addr = "020000000100"
+    hdr = "d000ac00020000000000" + addr + addr + "1000"
+    fixed = "0f010000"
+    supp_rates = "010802040b168c129824"
+    ext_supp_rates = "3204b048606c"
+    mesh_id = "720e777061732d6d6573682d6f70656e"
+    mesh_conf = "710701010001000009"
+    mpm = "75040000079d"
+    ht_capab = "2d1a7c001bffff000000000000000000000100000000000000000000"
+    ht_oper = "3d160b000000000000000000000000000000000000000000"
+
+    dev[0].request("NOTE no supported rates")
+    frame = hdr + fixed + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE Invalid supported rates element length 33+0")
+    long_supp_rates = "012100112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00"
+    frame = hdr + fixed + long_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE Too short mesh config")
+    short_mesh_conf = "710401010001"
+    frame = hdr + fixed + supp_rates + mesh_id + short_mesh_conf + mpm + ht_capab + ht_oper
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE Add STA failure")
+    frame = hdr + fixed + supp_rates + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_sta_add"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE Send Action failure")
+    with fail_test(dev[0], 1, "driver_nl80211_send_action"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE Set STA failure")
+    addr = "020000000101"
+    hdr = "d000ac00020000000000" + addr + addr + "1000"
+    frame = hdr + fixed + supp_rates + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    with fail_test(dev[0], 2, "wpa_driver_nl80211_sta_add"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE ap_sta_add OOM")
+    addr = "020000000102"
+    hdr = "d000ac00020000000000" + addr + addr + "1000"
+    frame = hdr + fixed + supp_rates + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    with alloc_fail(dev[0], 1, "ap_sta_add"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("NOTE hostapd_get_aid() failure")
+    addr = "020000000103"
+    hdr = "d000ac00020000000000" + addr + addr + "1000"
+    frame = hdr + fixed + supp_rates + ext_supp_rates + mesh_id + mesh_conf + mpm + ht_capab + ht_oper
+    with fail_test(dev[0], 1, "hostapd_get_aid"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    if "OK" not in dev[0].request("MESH_PEER_REMOVE 02:00:00:00:01:00"):
+        raise Exception("Failed to remove peer")
+    if "FAIL" not in dev[0].request("MESH_PEER_REMOVE 02:00:00:00:01:02"):
+        raise Exception("Unexpected MESH_PEER_REMOVE success")
+    if "FAIL" not in dev[1].request("MESH_PEER_REMOVE 02:00:00:00:01:02"):
+        raise Exception("Unexpected MESH_PEER_REMOVE success(2)")
+    if "FAIL" not in dev[1].request("MESH_PEER_ADD 02:00:00:00:01:02"):
+        raise Exception("Unexpected MESH_PEER_ADD success")

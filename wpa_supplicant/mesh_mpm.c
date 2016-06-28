@@ -971,6 +971,8 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 		break;
 	case PLINK_ESTAB:
 		switch (event) {
+		case OPN_RJCT:
+		case CNF_RJCT:
 		case CLS_ACPT:
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
 			if (!reason)

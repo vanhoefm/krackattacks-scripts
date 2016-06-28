@@ -1884,3 +1884,42 @@ def test_mesh_holding(dev, apdev):
     if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % frame):
         raise Exception("MGMT_RX_PROCESS failed")
     time.sleep(0.1)
+
+def test_mesh_cnf_rcvd_event_cls_acpt(dev, apdev):
+    """Mesh peering management protocol testing - CLS_ACPT event in CNF_RCVD"""
+    check_mesh_support(dev[0])
+    add_open_mesh_network(dev[0])
+    check_mesh_group_added(dev[0])
+    dev[0].dump_monitor()
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    add_open_mesh_network(dev[1])
+    check_mesh_group_added(dev[1])
+
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+
+    rx_msg = dev[0].mgmt_rx()
+    # Drop Mesh Peering Open
+
+    rx_msg = dev[0].mgmt_rx()
+    # Allow Mesh Peering Confirm to go through
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq={} datarate={} ssi_signal={} frame={}".format(rx_msg['freq'], rx_msg['datarate'], rx_msg['ssi_signal'], rx_msg['frame'].encode('hex'))):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    payload = rx_msg['payload']
+    peer_lid = payload[51:53].encode("hex")
+    my_lid = payload[53:55].encode("hex")
+
+    dst = addr0.replace(':', '')
+    src = addr1.replace(':', '')
+    hdr = "d000ac00" + dst + src + src + "1000"
+    fixed = "0f03"
+    mesh_id = "720e777061732d6d6573682d6f70656e"
+    mpm = "75080000" + peer_lid + my_lid + "3700"
+    frame = hdr + fixed + mesh_id + mpm
+
+    # Inject Mesh Peering Close to hit "state CNF_RCVD event CLS_ACPT" to
+    # HOLDING transition.
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + frame):
+        raise Exception("MGMT_RX_PROCESS failed")

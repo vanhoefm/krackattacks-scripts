@@ -1385,6 +1385,9 @@ int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
 		return 0;
 	}
 
+	if (TEST_FAIL())
+		return -1;
+
 	for (i = 0; i < AID_WORDS; i++) {
 		if (hapd->sta_aid[i] == (u32) -1)
 			continue;

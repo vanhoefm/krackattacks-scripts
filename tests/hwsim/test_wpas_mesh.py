@@ -238,6 +238,34 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+def test_mesh_open_no_auto2(dev, apdev):
+    """Open mesh network connectivity, no_auto on both peers"""
+    check_mesh_support(dev[0])
+    id = add_open_mesh_network(dev[0], start=False)
+    dev[0].set_network(id, "no_auto_peer", "1")
+    dev[0].mesh_group_add(id)
+
+    id = add_open_mesh_network(dev[1], start=False)
+    dev[1].set_network(id, "no_auto_peer", "1")
+    dev[1].mesh_group_add(id)
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    ev = dev[0].wait_event(["will not initiate new peer link"], timeout=10)
+    if ev is None:
+        raise Exception("Missing no-initiate message")
+    addr1 = dev[1].own_addr()
+    if "OK" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD failed")
+    if "FAIL" not in dev[0].request("MESH_PEER_ADD ff:ff:ff:ff:ff:ff"):
+        raise Exception("MESH_PEER_ADD with unknown STA succeeded")
+    check_mesh_peer_connected(dev[0], timeout=30)
+    check_mesh_peer_connected(dev[1])
+    if "FAIL" not in dev[0].request("MESH_PEER_ADD " + addr1):
+        raise Exception("MESH_PEER_ADD succeeded for connected STA")
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
 def add_mesh_secure_net(dev, psk=True, pmf=False, pairwise=None, group=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")

@@ -504,9 +504,11 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 	int ret = 0;
 	size_t len;
 
-	len = sizeof(*ampe) + rsn->mgtk_len + WPA_KEY_RSC_LEN + 4;
+	len = sizeof(*ampe);
+	if (cat[1] == PLINK_OPEN)
+		len += rsn->mgtk_len + WPA_KEY_RSC_LEN + 4;
 #ifdef CONFIG_IEEE80211W
-	if (rsn->igtk_len)
+	if (cat[1] == PLINK_OPEN && rsn->igtk_len)
 		len += 2 + 6 + rsn->igtk_len;
 #endif /* CONFIG_IEEE80211W */
 
@@ -532,6 +534,8 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 	os_memcpy(ampe->peer_nonce, sta->peer_nonce, WPA_NONCE_LEN);
 
 	pos = (u8 *) (ampe + 1);
+	if (cat[1] != PLINK_OPEN)
+		goto skip_keys;
 
 	/* TODO: Key Replay Counter[8] optionally for
 	 * Mesh Group Key Inform/Acknowledge frames */
@@ -563,6 +567,7 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 	}
 #endif /* CONFIG_IEEE80211W */
 
+skip_keys:
 	wpa_hexdump_key(MSG_DEBUG, "mesh: Plaintext AMPE element",
 			ampe_ie, 2 + len);
 
@@ -681,6 +686,28 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 
 	/* TODO: Key Replay Counter[8] in Mesh Group Key Inform/Acknowledge
 	 * frames */
+
+	/*
+	 * GTKdata shall not be included in Mesh Peering Confirm. While the
+	 * standard does not state the same about IGTKdata, that same constraint
+	 * needs to apply for it. It makes no sense to include the keys in Mesh
+	 * Peering Close frames either, so while the standard does not seem to
+	 * have a shall statement for these, they are described without
+	 * mentioning GTKdata.
+	 *
+	 * An earlier implementation used to add GTKdata to both Mesh Peering
+	 * Open and Mesh Peering Confirm frames, so ignore the possibly present
+	 * GTKdata frame without rejecting the frame as a backwards
+	 * compatibility mechanism.
+	 */
+	if (cat[1] != PLINK_OPEN) {
+		if (end > pos) {
+			wpa_hexdump_key(MSG_DEBUG,
+					"mesh: Ignore unexpected GTKdata(etc.) fields in the end of AMPE element in Mesh Peering Confirm/Close",
+					pos, end - pos);
+		}
+		goto free;
+	}
 
 	/*
 	 * GTKdata[variable]:

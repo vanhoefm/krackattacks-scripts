@@ -553,6 +553,25 @@ def test_wpas_mesh_secure_dropped_frame(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+def test_mesh_secure_fail(dev, apdev):
+    """Secure mesh network connectivity failure"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0], pmf=True)
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1], pmf=True)
+
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_sta_add;mesh_mpm_auth_peer"):
+        dev[1].mesh_group_add(id)
+
+        check_mesh_group_added(dev[0])
+        check_mesh_group_added(dev[1])
+
+        check_mesh_peer_connected(dev[0])
+        check_mesh_peer_connected(dev[1])
+
 def test_wpas_mesh_ctrl(dev):
     """wpa_supplicant ctrl_iface mesh command error cases"""
     check_mesh_support(dev[0])

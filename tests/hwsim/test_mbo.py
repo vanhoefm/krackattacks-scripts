@@ -13,6 +13,7 @@ import os
 import time
 
 from tshark import run_tshark
+from utils import alloc_fail, fail_test
 
 def test_mbo_assoc_disallow(dev, apdev, params):
     hapd1 = hostapd.add_ap(apdev[0], { "ssid": "MBO", "mbo": "1" })
@@ -248,3 +249,25 @@ def test_mbo_sta_supp_op_classes(dev, apdev):
         raise Exception("Unexpected current operating class %d" % supp[0])
     if 115 not in supp:
         raise Exception("Operating class 115 missing")
+
+def test_mbo_failures(dev, apdev):
+    """MBO failure cases"""
+    ssid = "test-wnm-mbo"
+    params = { 'ssid': ssid, 'mbo': '1' }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    with alloc_fail(dev[0], 1, "wpas_mbo_ie"):
+        dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(dev[0], 1, "wpas_mbo_send_wnm_notification"):
+        if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
+            raise Exception("Failed to set STA as cellular data capable")
+    with fail_test(dev[0], 1, "wpas_mbo_send_wnm_notification"):
+        if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
+            raise Exception("Failed to set STA as cellular data not-capable")
+    with alloc_fail(dev[0], 1, "wpas_mbo_update_non_pref_chan"):
+        if "FAIL" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
+            raise Exception("non_pref_chan value accepted during OOM")
+    with alloc_fail(dev[0], 2, "wpas_mbo_update_non_pref_chan"):
+        if "FAIL" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
+            raise Exception("non_pref_chan value accepted during OOM")

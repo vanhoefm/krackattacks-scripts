@@ -129,6 +129,12 @@ def test_mbo_non_pref_chan(dev, apdev):
     params = { 'ssid': ssid, 'mbo': '1' }
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
+    if "FAIL" not in dev[0].request("SET non_pref_chan 81:7:200:99"):
+        raise Exception("Invalid non_pref_chan value accepted")
+    if "FAIL" not in dev[0].request("SET non_pref_chan 81:15:200:3"):
+        raise Exception("Invalid non_pref_chan value accepted")
+    if "FAIL" not in dev[0].request("SET non_pref_chan 81:7:200:3 81:7:201:3"):
+        raise Exception("Invalid non_pref_chan value accepted")
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
         raise Exception("Failed to set non-preferred channel list")
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:1:123 81:9:100:2"):

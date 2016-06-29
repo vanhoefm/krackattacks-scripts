@@ -271,3 +271,44 @@ def test_mbo_failures(dev, apdev):
     with alloc_fail(dev[0], 2, "wpas_mbo_update_non_pref_chan"):
         if "FAIL" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
             raise Exception("non_pref_chan value accepted during OOM")
+
+def test_mbo_wnm_bss_tm_ie_parsing(dev, apdev):
+    """MBO BSS transition request MBO IE parsing"""
+    ssid = "test-wnm-mbo"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+    addr = dev[0].own_addr()
+    dev[0].connect(ssid, psk="12345678", key_mgmt="WPA-PSK",
+                   proto="WPA2", ieee80211w="0", scan_freq="2412")
+
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+    hdr = "d0003a01" + addr.replace(':', '') + bssid.replace(':', '') + bssid.replace(':', '') + "3000"
+    btm_hdr = "0a070100030001"
+
+    tests = [ ("Truncated attribute in MBO IE", "dd06506f9a160101"),
+              ("Unexpected cell data capa attribute length in MBO IE",
+               "dd09506f9a160501030500"),
+              ("Unexpected transition reason attribute length in MBO IE",
+               "dd06506f9a160600"),
+              ("Unexpected assoc retry delay attribute length in MBO IE",
+               "dd0c506f9a160100080200000800"),
+              ("Unknown attribute id 255 in MBO IE",
+               "dd06506f9a16ff00") ]
+
+    for test, mbo_ie in tests:
+        logger.info(test)
+        dev[0].request("NOTE " + test)
+        frame = hdr + btm_hdr + mbo_ie
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + frame):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    logger.info("Unexpected association retry delay")
+    dev[0].request("NOTE Unexpected association retry delay")
+    btm_hdr = "0a070108030001112233445566778899aabbcc"
+    mbo_ie = "dd08506f9a1608020000"
+    frame = hdr + btm_hdr + mbo_ie
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + frame):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    dev[0].request("SET ext_mgmt_frame_handling 0")

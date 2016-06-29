@@ -79,6 +79,9 @@ def test_mbo_cell_capa_update(dev, apdev):
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
         raise Exception("Failed to set STA as cellular data not-capable")
+    # Duplicate update for additional code coverage
+    if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
+        raise Exception("Failed to set STA as cellular data not-capable")
 
     time.sleep(0.2)
     sta = hapd.get_sta(addr)

@@ -532,9 +532,26 @@ static enum chan_allowed verify_channel(struct hostapd_hw_modes *mode,
 			return NOT_ALLOWED;
 		res2 = allow_channel(mode, channel + 4, NULL);
 	} else if (bw == BW80) {
-		res2 = verify_80mhz(mode, channel);
+		/*
+		 * channel is a center channel and as such, not necessarily a
+		 * valid 20 MHz channels. Override earlier allow_channel()
+		 * result and use only the 80 MHz specific version.
+		 */
+		res2 = res = verify_80mhz(mode, channel);
 	} else if (bw == BW160) {
-		res2 = verify_160mhz(mode, channel);
+		/*
+		 * channel is a center channel and as such, not necessarily a
+		 * valid 20 MHz channels. Override earlier allow_channel()
+		 * result and use only the 160 MHz specific version.
+		 */
+		res2 = res = verify_160mhz(mode, channel);
+	} else if (bw == BW80P80) {
+		/*
+		 * channel is a center channel and as such, not necessarily a
+		 * valid 20 MHz channels. Override earlier allow_channel()
+		 * result and use only the 80 MHz specific version.
+		 */
+		res2 = res = verify_80mhz(mode, channel);
 	}
 
 	if (res == NOT_ALLOWED || res2 == NOT_ALLOWED)
@@ -550,38 +567,64 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
 	int chan;
 	size_t i;
 	struct hostapd_hw_modes *mode;
+	int found;
 
 	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, op_class->mode);
 	if (!mode)
 		return 0;
 
-	if (op_class->op_class == 128 || op_class->op_class == 130) {
+	if (op_class->op_class == 128) {
 		u8 channels[] = { 42, 58, 106, 122, 138, 155 };
 
+		found = 0;
 		for (i = 0; i < ARRAY_SIZE(channels); i++) {
 			if (verify_channel(mode, channels[i], op_class->bw) ==
-			    NOT_ALLOWED)
-				return 0;
+			    ALLOWED)
+				return 1;
 		}
 
-		return 1;
+		return 0;
 	}
 
 	if (op_class->op_class == 129) {
-		if (verify_channel(mode, 50, op_class->bw) == NOT_ALLOWED ||
-		    verify_channel(mode, 114, op_class->bw) == NOT_ALLOWED)
-			return 0;
-
-		return 1;
+		/* Check if either 160 MHz channels is allowed */
+		return verify_channel(mode, 50, op_class->bw) == ALLOWED ||
+			verify_channel(mode, 114, op_class->bw) == ALLOWED;
 	}
 
+	if (op_class->op_class == 130) {
+		/* Need at least two non-contiguous 80 MHz segments */
+		found = 0;
+
+		if (verify_channel(mode, 42, op_class->bw) == ALLOWED ||
+		    verify_channel(mode, 58, op_class->bw) == ALLOWED)
+			found++;
+		if (verify_channel(mode, 106, op_class->bw) == ALLOWED ||
+		    verify_channel(mode, 122, op_class->bw) == ALLOWED ||
+		    verify_channel(mode, 138, op_class->bw) == ALLOWED)
+			found++;
+		if (verify_channel(mode, 106, op_class->bw) == ALLOWED &&
+		    verify_channel(mode, 138, op_class->bw) == ALLOWED)
+			found++;
+		if (verify_channel(mode, 155, op_class->bw) == ALLOWED)
+			found++;
+
+		if (found >= 2)
+			return 1;
+
+		return 0;
+	}
+
+	found = 0;
 	for (chan = op_class->min_chan; chan <= op_class->max_chan;
 	     chan += op_class->inc) {
-		if (verify_channel(mode, chan, op_class->bw) == NOT_ALLOWED)
-			return 0;
+		if (verify_channel(mode, chan, op_class->bw) == ALLOWED) {
+			found = 1;
+			break;
+		}
 	}
 
-	return 1;
+	return found;
 }
 
 

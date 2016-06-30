@@ -12,8 +12,114 @@ import hostapd
 import os
 import time
 
+import hostapd
 from tshark import run_tshark
 from utils import alloc_fail, fail_test
+
+def set_reg(country_code, apdev0=None, apdev1=None, dev0=None):
+    if apdev0:
+        hostapd.cmd_execute(apdev0, ['iw', 'reg', 'set', country_code])
+    if apdev1:
+        hostapd.cmd_execute(apdev1, ['iw', 'reg', 'set', country_code])
+    if dev0:
+        dev0.cmd_execute(['iw', 'reg', 'set', country_code])
+
+def run_mbo_supp_oper_classes(dev, apdev, hapd, hapd2, country):
+    """MBO and supported operating classes"""
+    addr = dev[0].own_addr()
+
+    res2 = None
+    res5 = None
+
+    dev[0].flush_scan_cache()
+    dev[0].dump_monitor()
+
+    logger.info("Country: " + country)
+    set_reg(country, apdev[0], apdev[1], dev[0])
+    for j in range(5):
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+        if ev is None:
+            raise Exception("No regdom change event")
+        if "alpha2=" + country in ev:
+            break
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[2].dump_monitor()
+    if hapd:
+        hapd.set("country_code", country)
+        hapd.enable()
+        dev[0].scan_for_bss(hapd.own_addr(), 5180, force_scan=True)
+        dev[0].connect("test-wnm-mbo", key_mgmt="NONE", scan_freq="5180")
+        sta = hapd.get_sta(addr)
+        res5 = sta['supp_op_classes'][2:]
+        dev[0].request("REMOVE_NETWORK all")
+        hapd.disable()
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+    hapd2.set("country_code", country)
+    hapd2.enable()
+    dev[0].scan_for_bss(hapd2.own_addr(), 2412, force_scan=True)
+    dev[0].connect("test-wnm-mbo-2", key_mgmt="NONE", scan_freq="2412")
+    sta = hapd2.get_sta(addr)
+    res2 = sta['supp_op_classes'][2:]
+    dev[0].request("REMOVE_NETWORK all")
+    hapd2.disable()
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    return res2, res5
+
+def test_mbo_supp_oper_classes(dev, apdev):
+    """MBO and supported operating classes"""
+    params = { 'ssid': "test-wnm-mbo",
+               'mbo': '1',
+               "country_code": "US",
+               'ieee80211d': '1',
+               "ieee80211n": "1",
+               "hw_mode": "a",
+               "channel": "36" }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+
+    params = { 'ssid': "test-wnm-mbo-2",
+               'mbo': '1',
+               "country_code": "US",
+               'ieee80211d': '1',
+               "ieee80211n": "1",
+               "hw_mode": "g",
+               "channel": "1" }
+    hapd2 = hostapd.add_ap(apdev[1], params, no_enable=True)
+
+    try:
+        za2, za5 = run_mbo_supp_oper_classes(dev, apdev, hapd, hapd2, "ZA")
+        fi2, fi5 = run_mbo_supp_oper_classes(dev, apdev, hapd, hapd2, "FI")
+        us2, us5 = run_mbo_supp_oper_classes(dev, apdev, hapd, hapd2, "US")
+        jp2, jp5 = run_mbo_supp_oper_classes(dev, apdev, hapd, hapd2, "JP")
+        bd2, bd5 = run_mbo_supp_oper_classes(dev, apdev, None, hapd2, "BD")
+        kz2, kz5 = run_mbo_supp_oper_classes(dev, apdev, None, hapd2, "KZ")
+    finally:
+        dev[0].dump_monitor()
+        set_reg("00", apdev[0], apdev[1], dev[0])
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+
+    za = "515354737475767778797a7b808182"
+    fi = "515354737475767778797a7b808182"
+    us = "515354737475767778797a7b7c7d7e7f808182"
+    jp = "51525354737475767778797a7b808182"
+    bd = "5153547c7d7e7f80"
+    kz = "515354"
+
+    tests = [ ("ZA", za, za2, za5, True),
+              ("FI", fi, fi2, fi5, True),
+              ("US", us, us2, us5, True),
+              ("JP", jp, jp2, jp5, True),
+              ("BD", bd, bd2, bd5, False),
+              ("KZ", kz, kz2, kz5, False) ]
+    for country, expected, res2, res5, inc5 in tests:
+        if res2 != expected:
+            raise Exception("Unexpected supp_op_class string (country=%s, 2.4 GHz): %s (expected: %s)" % (country, res2, expected))
+        if inc5 and res5 != expected:
+            raise Exception("Unexpected supp_op_class string (country=%s, 5 GHz): %s (expected: %s)" % (country, res5, expected))
 
 def test_mbo_assoc_disallow(dev, apdev, params):
     hapd1 = hostapd.add_ap(apdev[0], { "ssid": "MBO", "mbo": "1" })

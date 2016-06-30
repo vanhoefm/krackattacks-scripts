@@ -588,6 +588,12 @@ static void wpa_set_scan_ssids(struct wpa_supplicant *wpa_s,
 	unsigned int i;
 	struct wpa_ssid *ssid;
 
+	/*
+	 * For devices with max_ssids greater than 1, leave the last slot empty
+	 * for adding the wildcard scan entry.
+	 */
+	max_ssids = max_ssids > 1 ? max_ssids - 1 : max_ssids;
+
 	for (i = 0; i < wpa_s->scan_id_count; i++) {
 		unsigned int j;
 

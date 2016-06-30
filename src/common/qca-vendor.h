@@ -649,6 +649,21 @@ enum qca_wlan_vendor_attr_config {
 	/* 8-bit unsigned value to configure the maximum RX MPDU for
 	 * aggregation. */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION,
+	/* 8-bit unsigned value to configure the Non aggregrate/11g sw
+	 * retry threshold (0 disable, 31 max). */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY,
+	/* 8-bit unsigned value to configure the aggregrate sw
+	 * retry threshold (0 disable, 31 max). */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY,
+	/* 8-bit unsigned value to configure the MGMT frame
+	 * retry threshold (0 disable, 31 max). */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY,
+	/* 8-bit unsigned value to configure the CTRL frame
+	 * retry threshold (0 disable, 31 max). */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY,
+	/* 8-bit unsigned value to configure the propagation delay for
+	 * 2G/5G band (0~63, units in us) */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

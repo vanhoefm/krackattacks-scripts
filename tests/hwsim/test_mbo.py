@@ -122,6 +122,23 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
     if sta['mbo_cell_capa'] != '3':
         raise Exception("mbo_cell_capa not updated properly")
 
+def test_mbo_wnm_token_wrap(dev, apdev):
+    """MBO WNM token wrap around"""
+    ssid = "test-wnm-mbo"
+    params = { 'ssid': ssid, 'mbo': '1' }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+    # Trigger transmission of 256 WNM-Notification frames to wrap around the
+    # 8-bit mbo_wnm_token counter.
+    for i in range(128):
+        if "OK" not in dev[0].request("SET mbo_cell_capa 1"):
+            raise Exception("Failed to set STA as cellular data capable")
+        if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
+            raise Exception("Failed to set STA as cellular data not-capable")
+
 @remote_compatible
 def test_mbo_non_pref_chan(dev, apdev):
     """MBO non-preferred channel list"""

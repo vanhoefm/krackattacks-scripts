@@ -916,6 +916,7 @@ static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 				 struct nlattr *tb[])
 {
 	unsigned int freq;
+	union wpa_event_data event;
 
 	if (tb[NL80211_ATTR_MAC] == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: No address in IBSS joined "
@@ -935,7 +936,10 @@ static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 		drv->first_bss->freq = freq;
 	}
 
-	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, NULL);
+	os_memset(&event, 0, sizeof(event));
+	event.assoc_info.freq = freq;
+
+	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
 
 

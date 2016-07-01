@@ -144,6 +144,10 @@ def test_ibss_rsn(dev):
     if "OK" not in dev[0].request("IBSS_RSN " + dev[1].p2p_interface_addr()):
         raise Exception("IBSS_RSN command failed")
 
+    key_mgmt = dev[0].get_status_field("key_mgmt")
+    if key_mgmt != "WPA2-PSK":
+        raise Exception("Unexpected STATUS key_mgmt: " + key_mgmt)
+
 def test_ibss_wpa_none(dev):
     """IBSS WPA-None"""
     ssid="ibss-wpa-none"
@@ -207,6 +211,10 @@ def test_ibss_wpa_none(dev):
         hwsim_utils.test_connectivity(dev[1], dev[2])
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
+
+    key_mgmt = dev[0].get_status_field("key_mgmt")
+    if key_mgmt != "WPA-NONE":
+        raise Exception("Unexpected STATUS key_mgmt: " + key_mgmt)
 
 def test_ibss_wpa_none_ccmp(dev):
     """IBSS WPA-None/CCMP"""
@@ -279,6 +287,10 @@ def test_ibss_open(dev):
     freq1 = dev[1].get_status_field("freq")
     if freq0 != "2412" or freq1 != "2412":
         raise Exception("IBSS operating frequency not reported correctly (%s %s)" % (freq0, freq1))
+
+    key_mgmt = dev[0].get_status_field("key_mgmt")
+    if key_mgmt != "NONE":
+        raise Exception("Unexpected STATUS key_mgmt: " + key_mgmt)
 
 def test_ibss_open_fixed_bssid(dev):
     """IBSS open (no security) and fixed BSSID"""

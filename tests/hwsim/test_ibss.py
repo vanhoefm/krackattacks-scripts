@@ -275,6 +275,11 @@ def test_ibss_open(dev):
     if "[IBSS]" not in bss['flags']:
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
+    freq0 = dev[0].get_status_field("freq")
+    freq1 = dev[1].get_status_field("freq")
+    if freq0 != "2412" or freq1 != "2412":
+        raise Exception("IBSS operating frequency not reported correctly (%s %s)" % (freq0, freq1))
+
 def test_ibss_open_fixed_bssid(dev):
     """IBSS open (no security) and fixed BSSID"""
     ssid="ibss"

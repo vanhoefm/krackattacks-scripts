@@ -4032,6 +4032,15 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			if (!(params->flags & WPA_STA_ASSOCIATED))
 				upd.mask |= BIT(NL80211_STA_FLAG_ASSOCIATED);
 		}
+#ifdef CONFIG_MESH
+	} else {
+		if (params->plink_state == PLINK_ESTAB && params->peer_aid) {
+			ret = nla_put_u16(msg, NL80211_ATTR_MESH_PEER_AID,
+					  params->peer_aid);
+			if (ret)
+				goto fail;
+		}
+#endif /* CONFIG_MESH */
 	}
 
 	wpa_printf(MSG_DEBUG, "  * flags set=0x%x mask=0x%x",

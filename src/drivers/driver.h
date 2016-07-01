@@ -1425,6 +1425,7 @@ struct hostapd_sta_add_params {
 	u32 flags_mask; /* unset bits in flags */
 #ifdef CONFIG_MESH
 	enum mesh_plink_state plink_state;
+	u16 peer_aid;
 #endif /* CONFIG_MESH */
 	int set; /* Set STA parameters instead of add */
 	u8 qosinfo;

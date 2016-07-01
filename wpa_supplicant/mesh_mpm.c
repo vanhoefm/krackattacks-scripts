@@ -191,6 +191,7 @@ static void mesh_mpm_init_link(struct wpa_supplicant *wpa_s,
 
 	sta->my_lid = llid;
 	sta->peer_lid = 0;
+	sta->peer_aid = 0;
 
 	/*
 	 * We do not use wpa_mesh_set_plink_state() here because there is no
@@ -390,6 +391,7 @@ void wpa_mesh_set_plink_state(struct wpa_supplicant *wpa_s,
 	os_memset(&params, 0, sizeof(params));
 	params.addr = sta->addr;
 	params.plink_state = state;
+	params.peer_aid = sta->peer_aid;
 	params.set = 1;
 
 	ret = wpa_drv_sta_add(wpa_s, &params);
@@ -696,6 +698,7 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 	params.addr = addr;
 	params.plink_state = sta->plink_state;
 	params.aid = sta->aid;
+	params.peer_aid = sta->peer_aid;
 	params.listen_interval = 100;
 	params.ht_capabilities = sta->ht_capabilities;
 	params.vht_capabilities = sta->vht_capabilities;
@@ -1037,7 +1040,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 	struct mesh_conf *mconf = wpa_s->ifmsh->mconf;
 	struct sta_info *sta;
-	u16 plid = 0, llid = 0;
+	u16 plid = 0, llid = 0, aid = 0;
 	enum plink_event event;
 	struct ieee802_11_elems elems;
 	struct mesh_peer_mgmt_ie peer_mgmt_ie;
@@ -1075,7 +1078,8 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		ie_len -= 2;
 	}
 	if (action_field == PLINK_CONFIRM) {
-		wpa_printf(MSG_DEBUG, "MPM: AID 0x%x", WPA_GET_LE16(ies));
+		aid = WPA_GET_LE16(ies);
+		wpa_printf(MSG_DEBUG, "MPM: AID 0x%x", aid);
 		ies += 2;	/* aid */
 		ie_len -= 2;
 	}
@@ -1210,6 +1214,7 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		} else {
 			if (!sta->peer_lid)
 				sta->peer_lid = plid;
+			sta->peer_aid = aid;
 			event = CNF_ACPT;
 		}
 		break;

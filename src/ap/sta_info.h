@@ -80,6 +80,7 @@ struct sta_info {
 	enum mesh_plink_state plink_state;
 	u16 peer_lid;
 	u16 my_lid;
+	u16 peer_aid;
 	u16 mpm_close_reason;
 	int mpm_retries;
 	u8 my_nonce[WPA_NONCE_LEN];

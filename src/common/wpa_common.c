@@ -1184,6 +1184,8 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 			"WPA2-PSK" : "WPA-PSK";
 	case WPA_KEY_MGMT_NONE:
 		return "NONE";
+	case WPA_KEY_MGMT_WPA_NONE:
+		return "WPA-NONE";
 	case WPA_KEY_MGMT_IEEE8021X_NO_WPA:
 		return "IEEE 802.1X (no WPA)";
 #ifdef CONFIG_IEEE80211R

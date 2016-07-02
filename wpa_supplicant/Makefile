@@ -931,7 +931,11 @@ ifdef CONFIG_NATIVE_WINDOWS
 #dynamic symbol loading that is now used in pcsc_funcs.c
 #LIBS += -lwinscard
 else
+ifdef CONFIG_OSX
+LIBS += -framework PCSC
+else
 LIBS += -lpcsclite -lpthread
+endif
 endif
 endif
 

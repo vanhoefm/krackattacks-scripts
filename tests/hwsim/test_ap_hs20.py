@@ -1581,6 +1581,23 @@ def test_ap_hs20_max_bss_load2(dev, apdev):
     if len(ev) != 1 or "over_max_bss_load=1" in ev[0]:
         raise Exception("Maximum BSS Load case reported incorrectly")
 
+def test_ap_hs20_max_bss_load_roaming(dev, apdev):
+    """Hotspot 2.0 and maximum BSS load (roaming)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = hs20_ap_params()
+    params['bss_load_test'] = "12:200:20000"
+    hostapd.add_ap(apdev[0], params)
+
+    values = default_cred()
+    values['domain'] = "roaming.example.com"
+    values['max_bss_load'] = "100"
+    events = policy_test(dev[0], apdev[0], values, only_one=True)
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[0]['bssid'] in e]
+    if len(ev) != 1:
+        raise Exception("No INTERWORKING-AP event")
+    if "over_max_bss_load=1" in ev[0]:
+        raise Exception("Maximum BSS Load reported for roaming")
+
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""
     check_eap_capa(dev[0], "MSCHAPV2")

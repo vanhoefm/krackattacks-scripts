@@ -1950,3 +1950,11 @@ def test_wpas_ctrl_signal_monitor(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     dev[1].request("REMOVE_NETWORK all")
     dev[1].wait_disconnected()
+
+def test_wpas_ctrl_p2p_listen_offload(dev, apdev):
+    """wpa_supplicant P2P_LO_START and P2P_LO_STOP commands"""
+    dev[0].request("P2P_LO_STOP")
+    dev[0].request("P2P_LO_START ")
+    dev[0].request("P2P_LO_START 2412")
+    dev[0].request("P2P_LO_START 2412 100 200 3")
+    dev[0].request("P2P_LO_STOP")

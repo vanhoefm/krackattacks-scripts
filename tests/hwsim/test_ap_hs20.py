@@ -1604,6 +1604,37 @@ def _test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     if conn_bssid != bssid2:
         raise Exception("Connected to incorrect BSS")
 
+def test_ap_hs20_multi_cred_sp_prio_same(dev, apdev):
+    """Hotspot 2.0 multi-cred and same sp_priority"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    hlr_auc_gw_available()
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['domain_name']
+    params['anqp_3gpp_cell_net'] = "232,01"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    id1 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'ca_cert': "auth_serv/ca.pem",
+                                   'username': "hs20-test",
+                                   'password': "password",
+                                   'domain': "domain1.example.com",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority': "1" })
+    id2 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'ca_cert': "auth_serv/ca.pem",
+                                   'username': "hs20-test",
+                                   'password': "password",
+                                   'domain': "domain2.example.com",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority': "1" })
+    dev[0].dump_monitor()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    check_auto_select(dev[0], bssid)
+
 def check_conn_capab_selection(dev, type, missing):
     dev.request("INTERWORKING_SELECT freq=2412")
     ev = dev.wait_event(["INTERWORKING-AP"])

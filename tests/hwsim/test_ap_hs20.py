@@ -23,6 +23,7 @@ from tshark import run_tshark
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 from test_ap_eap import check_eap_capa, check_domain_match_full
+from test_gas import gas_rx, parse_gas, action_response, send_gas_resp, ACTION_CATEG_PUBLIC, GAS_INITIAL_RESPONSE
 
 def hs20_ap_params(ssid="test-hs20"):
     params = hostapd.wpa2_params(ssid=ssid)
@@ -4155,3 +4156,126 @@ def test_ap_hs20_interworking_oom(dev, apdev):
             if ev is None:
                 raise Exception("ANQP did not start")
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+def test_ap_hs20_anqp_invalid_gas_response(dev, apdev):
+    """Hotspot 2.0 network selection and invalid GAS response"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    dev[0].hs20_enable()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'roaming_consortium': "112234",
+                                  'eap': 'TTLS' })
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+
+    logger.info("ANQP: Unexpected Advertisement Protocol in response")
+    resp = action_response(query)
+    adv_proto = struct.pack('8B', 108, 6, 127, 0xdd, 0x00, 0x11, 0x22, 0x33)
+    data = struct.pack('<H', 0)
+    resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                  GAS_INITIAL_RESPONSE,
+                                  gas['dialog_token'], 0, 0) + adv_proto + data
+    send_gas_resp(hapd, resp)
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("No ANQP-QUERY-DONE seen")
+    if "result=INVALID_FRAME" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+
+    logger.info("ANQP: Invalid element length for Info ID 1234")
+    resp = action_response(query)
+    adv_proto = struct.pack('BBBB', 108, 2, 127, 0)
+    elements = struct.pack('<HH', 1234, 1)
+    data = struct.pack('<H', len(elements)) + elements
+    resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                  GAS_INITIAL_RESPONSE,
+                                  gas['dialog_token'], 0, 0) + adv_proto + data
+    send_gas_resp(hapd, resp)
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("No ANQP-QUERY-DONE seen")
+    if "result=INVALID_FRAME" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    with alloc_fail(dev[0], 1, "=anqp_add_extra"):
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+
+        query = gas_rx(hapd)
+        gas = parse_gas(query['payload'])
+
+        resp = action_response(query)
+        elements = struct.pack('<HHHH', 1, 0, 1, 0)
+        data = struct.pack('<H', len(elements)) + elements
+        resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                      GAS_INITIAL_RESPONSE,
+                                      gas['dialog_token'], 0, 0) + adv_proto + data
+        send_gas_resp(hapd, resp)
+
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+        if ev is None:
+            raise Exception("No ANQP-QUERY-DONE seen")
+        if "result=SUCCESS" not in ev:
+            raise Exception("Unexpected result: " + ev)
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc_copy;anqp_add_extra"):
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+
+        query = gas_rx(hapd)
+        gas = parse_gas(query['payload'])
+
+        resp = action_response(query)
+        elements = struct.pack('<HHHH', 1, 0, 1, 0)
+        data = struct.pack('<H', len(elements)) + elements
+        resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                      GAS_INITIAL_RESPONSE,
+                                      gas['dialog_token'], 0, 0) + adv_proto + data
+        send_gas_resp(hapd, resp)
+
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+        if ev is None:
+            raise Exception("No ANQP-QUERY-DONE seen")
+        if "result=SUCCESS" not in ev:
+            raise Exception("Unexpected result: " + ev)
+
+    tests = [ struct.pack('<HH', 0xdddd, 0),
+              struct.pack('<HH3B', 0xdddd, 3, 0x50, 0x6f, 0x9a),
+              struct.pack('<HH4B', 0xdddd, 4, 0x50, 0x6f, 0x9a, 0),
+              struct.pack('<HH4B', 0xdddd, 4, 0x11, 0x22, 0x33, 0),
+              struct.pack('<HHHH', 1, 0, 1, 0) ]
+    for elements in tests:
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+
+        query = gas_rx(hapd)
+        gas = parse_gas(query['payload'])
+
+        resp = action_response(query)
+        data = struct.pack('<H', len(elements)) + elements
+        resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                      GAS_INITIAL_RESPONSE,
+                                      gas['dialog_token'], 0, 0) + adv_proto + data
+        send_gas_resp(hapd, resp)
+
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+        if ev is None:
+            raise Exception("No ANQP-QUERY-DONE seen")
+        if "result=SUCCESS" not in ev:
+            raise Exception("Unexpected result: " + ev)

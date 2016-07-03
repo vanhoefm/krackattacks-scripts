@@ -17,7 +17,7 @@ import socket
 import subprocess
 
 import hostapd
-from utils import HwsimSkip, skip_with_fips, alloc_fail
+from utils import HwsimSkip, skip_with_fips, alloc_fail, wait_fail_trigger
 import hwsim_utils
 from tshark import run_tshark
 from wlantest import Wlantest
@@ -3996,3 +3996,38 @@ def test_ap_hs20_cred_and_no_roaming_consortium(dev, apdev):
                                   'roaming_consortium': "112234",
                                   'eap': 'TTLS' })
     interworking_select(dev[0], bssid, "home", freq=2412, no_match=True)
+
+def test_ap_hs20_interworking_oom(dev, apdev):
+    """Hotspot 2.0 network selection and OOM"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,no.match.here;example.com;no.match.here.either,21[2:1][5:7]",
+                            "0,example.com,13[5:6],21[2:4][5:7]",
+                            "0,another.example.com" ]
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'eap': 'TTLS' })
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    funcs = [ "wpabuf_alloc;interworking_anqp_send_req",
+              "anqp_build_req;interworking_anqp_send_req",
+              "gas_query_req;interworking_anqp_send_req",
+              "dup_binstr;nai_realm_parse_realm",
+              "=nai_realm_parse_realm",
+              "=nai_realm_parse",
+              "=nai_realm_match" ]
+    for func in funcs:
+        with alloc_fail(dev[0], 1, func):
+            dev[0].request("INTERWORKING_SELECT auto freq=2412")
+            ev = dev[0].wait_event(["Starting ANQP"], timeout=5)
+            if ev is None:
+                raise Exception("ANQP did not start")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")

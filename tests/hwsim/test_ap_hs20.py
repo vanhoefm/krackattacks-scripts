@@ -1342,6 +1342,27 @@ def test_ap_hs20_req_roaming_consortium(dev, apdev):
         if "FAIL" not in dev[0].request('SET_CRED {} required_roaming_consortium {}'.format(id, val)):
             raise Exception("Invalid roaming consortium value accepted: " + val)
 
+def test_ap_hs20_req_roaming_consortium_no_match(dev, apdev):
+    """Hotspot 2.0 required roaming consortium and no match"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    params = hs20_ap_params()
+    del params['roaming_consortium']
+    hostapd.add_ap(apdev[0], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['roaming_consortium'] = [ "223345" ]
+    hostapd.add_ap(apdev[1], params)
+
+    values = default_cred()
+    values['required_roaming_consortium'] = "223344"
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(values)
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=10)
+    if ev is None:
+        raise Exception("INTERWORKING-NO-MATCH not reported")
+
 def test_ap_hs20_excluded_ssid(dev, apdev):
     """Hotspot 2.0 exclusion based on SSID"""
     check_eap_capa(dev[0], "MSCHAPV2")

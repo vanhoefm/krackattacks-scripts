@@ -375,7 +375,8 @@ def test_gas_anqp_get(dev, apdev):
              "00:11:22:33:44:55 hs20:32",
              "00:11:22:33:44:55",
              "00:11:22:33:44:55 ",
-             "00:11:22:33:44:55 0" ]
+             "00:11:22:33:44:55 0",
+             "00:11:22:33:44:55 1" ]
     for cmd in cmds:
         if "FAIL" not in dev[0].request("ANQP_GET " + cmd):
             raise Exception("Invalid ANQP_GET accepted")

@@ -1065,7 +1065,7 @@ def test_fst_disconnect_non_fst_sta(dev, apdev, test_params):
 def test_fst_disconnect_fst_sta(dev, apdev, test_params):
     """FST disconnect FST STA"""
     ap1, ap2, fst_sta1, fst_sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
-    external_sta_connected = False;
+    external_sta_connected = False
     try:
         vals = fst_sta1.scan(freq=fst_test_common.fst_test_def_freq_a)
         fst_sta1.connect(ap1, key_mgmt="NONE",

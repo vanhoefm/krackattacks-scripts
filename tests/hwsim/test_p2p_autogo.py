@@ -255,28 +255,28 @@ def test_autogo_tdls(dev):
     dev[1].tdls_setup(addr2)
     time.sleep(1)
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
-    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr1, addr2);
+    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr1, addr2)
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
-    dl = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2);
+    dl = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2)
     if dl == 0:
         raise Exception("No valid frames through direct link")
-    wt.tdls_clear(bssid, addr1, addr2);
+    wt.tdls_clear(bssid, addr1, addr2)
     dev[1].tdls_teardown(addr2)
     time.sleep(1)
-    teardown = wt.get_tdls_counter("teardown", bssid, addr1, addr2);
+    teardown = wt.get_tdls_counter("teardown", bssid, addr1, addr2)
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
-    wt.tdls_clear(bssid, addr1, addr2);
+    wt.tdls_clear(bssid, addr1, addr2)
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
-    ap_path = wt.get_tdls_counter("valid_ap_path", bssid, addr1, addr2);
+    ap_path = wt.get_tdls_counter("valid_ap_path", bssid, addr1, addr2)
     if ap_path == 0:
         raise Exception("No valid frames via AP path")
-    direct_link = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2);
+    direct_link = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2)
     if direct_link > 0:
         raise Exception("Unexpected frames through direct link")
     idirect_link = wt.get_tdls_counter("invalid_direct_link", bssid, addr1,
-                                       addr2);
+                                       addr2)
     if idirect_link > 0:
         raise Exception("Unexpected frames through direct link (invalid)")
     dev[2].remove_group()

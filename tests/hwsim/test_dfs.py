@@ -113,18 +113,18 @@ def test_dfs(dev, apdev):
         if ev is None:
             raise Exception("DFS-RADAR-DETECTED event not reported")
         if "freq=5260" not in ev:
-            raise Exception("Incorrect frequency in radar detected event: " + ev);
+            raise Exception("Incorrect frequency in radar detected event: " + ev)
         ev = hapd.wait_event(["DFS-NEW-CHANNEL"], timeout=70)
         if ev is None:
             raise Exception("DFS-NEW-CHANNEL event not reported")
         if "freq=5260" in ev:
-            raise Exception("Channel did not change after radar was detected");
+            raise Exception("Channel did not change after radar was detected")
 
         ev = hapd.wait_event(["AP-CSA-FINISHED"], timeout=70)
         if ev is None:
             raise Exception("AP-CSA-FINISHED event not reported")
         if "freq=5260" in ev:
-            raise Exception("Channel did not change after radar was detected(2)");
+            raise Exception("Channel did not change after radar was detected(2)")
         time.sleep(1)
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:

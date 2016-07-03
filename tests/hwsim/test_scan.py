@@ -854,7 +854,7 @@ def test_scan_specify_ssid(dev, apdev):
     if bss is None:
         raise Exception("BSS entry for hidden AP not found")
     if 'test-hidden' not in dev[0].request("SCAN_RESULTS"):
-        raise Exception("Expected SSID not included in the scan results");
+        raise Exception("Expected SSID not included in the scan results")
 
     hapd.disable()
     dev[0].flush_scan_cache(freq=2432)

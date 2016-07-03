@@ -18,7 +18,7 @@ def execute_thread(command, reply):
     cmd = ' '.join(command)
     logger.debug("thread run: " + cmd)
     try:
-        status = 0;
+        status = 0
         buf = subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         status = e.returncode
@@ -47,7 +47,7 @@ class Host():
     def local_execute(self, command):
         logger.debug("execute: " + str(command))
         try:
-            status = 0;
+            status = 0
             buf = subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             status = e.returncode

@@ -2477,7 +2477,7 @@ def test_ap_wps_ssdp_msearch(dev, apdev):
     ssdp_send_msearch("upnp:rootdevice")
     ssdp_send_msearch("uuid:" + ap_uuid)
     ssdp_send_msearch("urn:schemas-wifialliance-org:service:WFAWLANConfig:1")
-    ssdp_send_msearch("urn:schemas-wifialliance-org:device:WFADevice:1");
+    ssdp_send_msearch("urn:schemas-wifialliance-org:device:WFADevice:1")
 
     msg = '\r\n'.join([
             'M-SEARCH * HTTP/1.1',

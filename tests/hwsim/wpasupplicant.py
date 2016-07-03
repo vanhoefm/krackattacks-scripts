@@ -381,7 +381,7 @@ class WpaSupplicant:
             if field in params:
                 self.set_cred(id, field, params[field])
 
-        return id;
+        return id
 
     def select_network(self, id, freq=None):
         if freq:
@@ -679,14 +679,14 @@ class WpaSupplicant:
     def p2p_go_neg_auth_result(self, timeout=1, expect_failure=False):
         go_neg_res = None
         ev = self.wait_global_event(["P2P-GO-NEG-SUCCESS",
-                                     "P2P-GO-NEG-FAILURE"], timeout);
+                                     "P2P-GO-NEG-FAILURE"], timeout)
         if ev is None:
             if expect_failure:
                 return None
             raise Exception("Group formation timed out")
         if "P2P-GO-NEG-SUCCESS" in ev:
             go_neg_res = ev
-            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout);
+            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout)
             if ev is None:
                 if expect_failure:
                     return None

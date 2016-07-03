@@ -196,10 +196,10 @@ def test_ap_ft_pmf(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd0 = hostapd.add_ap(apdev[0], params)
     params = ft_params2(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd1 = hostapd.add_ap(apdev[1], params)
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase)
@@ -351,10 +351,10 @@ def test_ap_ft_pmf_over_ds(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd0 = hostapd.add_ap(apdev[0], params)
     params = ft_params2(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd1 = hostapd.add_ap(apdev[1], params)
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True)
@@ -483,10 +483,10 @@ def test_ap_ft_mismatching_rrb_key_push(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd0 = hostapd.add_ap(apdev[0], params)
     params = ft_params2_incorrect_rrb_key(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd1 = hostapd.add_ap(apdev[1], params)
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
@@ -535,10 +535,10 @@ def test_ap_ft_mismatching_rrb_r0kh_push(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd0 = hostapd.add_ap(apdev[0], params)
     params = ft_params2_r0kh_mismatch(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "2";
+    params["ieee80211w"] = "2"
     hapd1 = hostapd.add_ap(apdev[1], params)
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
@@ -953,7 +953,7 @@ def test_rsn_ie_proto_ft_psk_sta(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(ssid=ssid, passphrase=passphrase)
-    params["ieee80211w"] = "1";
+    params["ieee80211w"] = "1"
     # This is the RSN element used normally by hostapd
     params['own_ie_override'] = '30140100000fac040100000fac040100000fac048c00' + '3603a1b201'
     hapd = hostapd.add_ap(apdev[0], params)

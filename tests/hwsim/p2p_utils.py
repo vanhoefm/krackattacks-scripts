@@ -121,7 +121,7 @@ def invite(inv, resp, extra=None, persistent_reconnect=True, use_listen=True):
     peer = inv.get_peer(addr)
     cmd = "P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr
     if extra:
-        cmd = cmd + " " + extra;
+        cmd = cmd + " " + extra
     inv.global_request(cmd)
 
 def check_result(go, cli):

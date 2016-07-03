@@ -72,7 +72,7 @@ def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
                         timeout=15)
     if ev is None:
-        raise Exception("Network selection timed out");
+        raise Exception("Network selection timed out")
     if no_match:
         if "INTERWORKING-NO-MATCH" not in ev:
             raise Exception("Unexpected network match")
@@ -84,7 +84,7 @@ def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
         ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
                             timeout=15)
         if ev is None:
-            raise Exception("Network selection timed out");
+            raise Exception("Network selection timed out")
         if "INTERWORKING-NO-MATCH" in ev:
             raise Exception("Matching network not found")
     if bssid and bssid not in ev:
@@ -420,7 +420,7 @@ def test_ap_hs20_select(dev, apdev):
                                   'domain': "no.match.example.com" })
     interworking_select(dev[0], bssid, "roaming", freq="2412")
 
-    dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
+    dev[0].set_cred_quoted(id, "realm", "no.match.example.com")
     interworking_select(dev[0], bssid, no_match=True, freq="2412")
 
     res = dev[0].request("SCAN_RESULTS")
@@ -1639,7 +1639,7 @@ def check_conn_capab_selection(dev, type, missing):
     dev.request("INTERWORKING_SELECT freq=2412")
     ev = dev.wait_event(["INTERWORKING-AP"])
     if ev is None:
-        raise Exception("Network selection timed out");
+        raise Exception("Network selection timed out")
     if "type=" + type not in ev:
         raise Exception("Unexpected network type")
     if missing and "conn_capab_missing=1" not in ev:
@@ -1702,7 +1702,7 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
     for i in range(0, 2):
         ev = dev[0].wait_event(["INTERWORKING-AP"])
         if ev is None:
-            raise Exception("Network selection timed out");
+            raise Exception("Network selection timed out")
         if bssid in ev and "conn_capab_missing=1" not in ev:
             raise Exception("Missing protocol connection capability not reported")
         if bssid2 in ev and "conn_capab_missing=1" in ev:
@@ -1739,7 +1739,7 @@ def check_bandwidth_selection(dev, type, below):
     dev.request("INTERWORKING_SELECT freq=2412")
     ev = dev.wait_event(["INTERWORKING-AP"])
     if ev is None:
-        raise Exception("Network selection timed out");
+        raise Exception("Network selection timed out")
     logger.debug("BSS entries:\n" + dev.request("BSS RANGE=ALL"))
     if "type=" + type not in ev:
         raise Exception("Unexpected network type")
@@ -2654,7 +2654,7 @@ def test_ap_hs20_fetch_osu_stop(dev, apdev):
         ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
                                timeout=15)
         if ev is None:
-            raise Exception("Network selection timed out");
+            raise Exception("Network selection timed out")
 
         dev[0].dump_monitor()
         if "OK" not in dev[0].request("FETCH_OSU"):

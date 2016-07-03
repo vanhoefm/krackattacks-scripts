@@ -1755,7 +1755,7 @@ def get_key_locations(buf, key, keyname):
         if pos < 0:
             break
         logger.info("Found %s at %d" % (keyname, pos))
-        context = 128;
+        context = 128
         start = pos - context if pos > context else 0
         before = binascii.hexlify(buf[start:pos])
         context += len(key)

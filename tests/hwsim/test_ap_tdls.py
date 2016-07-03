@@ -88,7 +88,7 @@ def tdls_check_dl(sta0, sta1, bssid, addr0, addr1):
 
 def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
     wt = Wlantest()
-    wt.tdls_clear(bssid, addr0, addr1);
+    wt.tdls_clear(bssid, addr0, addr1)
     hwsim_utils.test_connectivity_sta(sta0, sta1)
     [dl,inv_dl,ap,inv_ap] = wlantest_tdls_packet_counters(bssid, addr0, addr1)
     if dl > 0:
@@ -112,8 +112,8 @@ def setup_tdls(sta0, sta1, hapd, reverse=False, expect_fail=False):
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
     wt = Wlantest()
-    wt.tdls_clear(bssid, addr0, addr1);
-    wt.tdls_clear(bssid, addr1, addr0);
+    wt.tdls_clear(bssid, addr0, addr1)
+    wt.tdls_clear(bssid, addr1, addr0)
     sta0.tdls_setup(addr1)
     time.sleep(1)
     if expect_fail:
@@ -122,7 +122,7 @@ def setup_tdls(sta0, sta1, hapd, reverse=False, expect_fail=False):
     if reverse:
         addr1 = sta0.p2p_interface_addr()
         addr0 = sta1.p2p_interface_addr()
-    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr0, addr1);
+    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr0, addr1)
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
@@ -142,7 +142,7 @@ def teardown_tdls(sta0, sta1, hapd, responder=False, wildcard=False):
         sta0.tdls_teardown(addr1)
     time.sleep(1)
     wt = Wlantest()
-    teardown = wt.get_tdls_counter("teardown", bssid, addr0, addr1);
+    teardown = wt.get_tdls_counter("teardown", bssid, addr0, addr1)
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
     tdls_check_ap(sta0, sta1, bssid, addr0, addr1)

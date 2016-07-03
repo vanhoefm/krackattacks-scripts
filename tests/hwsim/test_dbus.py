@@ -419,13 +419,13 @@ def _test_dbus_get_set_wps(dev, apdev):
                        dbus_interface=dbus.PROPERTIES_IFACE)
             if if_obj.Get(WPAS_DBUS_IFACE_WPS, "ProcessCredentials",
                           dbus_interface=dbus.PROPERTIES_IFACE) != True:
-                raise Exception("Unexpected Get(ProcessCredentials) result after Set");
+                raise Exception("Unexpected Get(ProcessCredentials) result after Set")
             if_obj.Set(WPAS_DBUS_IFACE_WPS, "ProcessCredentials",
                        dbus.Boolean(0),
                        dbus_interface=dbus.PROPERTIES_IFACE)
             if if_obj.Get(WPAS_DBUS_IFACE_WPS, "ProcessCredentials",
                           dbus_interface=dbus.PROPERTIES_IFACE) != False:
-                raise Exception("Unexpected Get(ProcessCredentials) result after Set");
+                raise Exception("Unexpected Get(ProcessCredentials) result after Set")
 
             self.dbus_sets_done = True
             return False
@@ -4190,7 +4190,7 @@ def test_dbus_p2p_go_neg_auth(dev, apdev):
             if not dev1.discover_peer(addr0):
                 raise Exception("Peer not found")
             dev1.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=0")
-            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
             if ev is None:
                 raise Exception("Group formation timed out")
             self.sta_group_ev = ev
@@ -4279,7 +4279,7 @@ def test_dbus_p2p_go_neg_init(dev, apdev):
             if ev is None:
                 raise Exception("Timeout while waiting for GO Neg Request")
             dev1.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=15")
-            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
             if ev is None:
                 raise Exception("Group formation timed out")
             self.sta_group_ev = ev
@@ -4369,7 +4369,7 @@ def test_dbus_p2p_group_termination_by_go(dev, apdev):
             if ev is None:
                 raise Exception("Timeout while waiting for GO Neg Request")
             dev1.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=15")
-            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
             if ev is None:
                 raise Exception("Group formation timed out")
             self.sta_group_ev = ev
@@ -4465,7 +4465,7 @@ def _test_dbus_p2p_group_idle_timeout(dev, apdev):
             if ev is None:
                 raise Exception("Timeout while waiting for GO Neg Request")
             dev1.global_request("P2P_CONNECT " + addr0 + " 12345670 display go_intent=15")
-            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+            ev = dev1.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
             if ev is None:
                 raise Exception("Group formation timed out")
             self.sta_group_ev = ev
@@ -4700,7 +4700,7 @@ def test_dbus_p2p_two_groups(dev, apdev):
                 dev2 = WpaSupplicant('wlan2', '/tmp/wpas-wlan2')
                 dev2.scan_for_bss(bssid, freq=2412)
                 dev2.global_request("P2P_CONNECT " + bssid + " 12345670 join freq=2412")
-                ev = dev2.wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+                ev = dev2.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
                 if ev is None:
                     raise Exception("Group join timed out")
                 self.dev2_group_ev = ev

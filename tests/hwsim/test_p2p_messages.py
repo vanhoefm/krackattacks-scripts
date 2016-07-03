@@ -999,7 +999,7 @@ def test_p2p_msg_invitation_resp(dev, apdev):
     msg['payload'] += ie_p2p(attrs)
     mgmt_tx(dev[1], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr0, addr0, rx_msg['freq'], binascii.hexlify(msg['payload'])))
 
-    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
         raise Exception("Group was not started")
 
@@ -1031,11 +1031,11 @@ def test_p2p_msg_invitation_resend(dev, apdev):
     mgmt_tx(dev[1], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr0, addr0, rx_msg['freq'], binascii.hexlify(msg['payload'])))
     ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
     if ev is None:
-        raise Exception("Timeout on invitation result");
+        raise Exception("Timeout on invitation result")
     if "status=7" not in ev:
         raise Exception("Unexpected invitation result: " + ev)
 
-    logger.info("Any channel allowed, only preference provided in invitation");
+    logger.info("Any channel allowed, only preference provided in invitation")
     invite(dev[0], dev[1], extra="pref=2422")
     rx_msg = dev[1].mgmt_rx()
     if rx_msg is None:
@@ -1054,14 +1054,14 @@ def test_p2p_msg_invitation_resend(dev, apdev):
     mgmt_tx(dev[1], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr0, addr0, rx_msg['freq'], binascii.hexlify(msg['payload'])))
     ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
     if ev is None:
-        raise Exception("Timeout on invitation result");
+        raise Exception("Timeout on invitation result")
     if "status=0" not in ev:
         raise Exception("Unexpected invitation result: " + ev)
 
-    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
         raise Exception("Group was not started on dev0")
-    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15);
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
         raise Exception("Group was not started on dev1")
 
@@ -1076,7 +1076,7 @@ def test_p2p_msg_invitation_resend_duplicate(dev, apdev):
     if "FAIL" in dev[1].request("SET ext_mgmt_frame_handling 1"):
         raise Exception("Failed to enable external management frame handling")
 
-    logger.info("Any channel allowed, only preference provided in invitation");
+    logger.info("Any channel allowed, only preference provided in invitation")
     invite(dev[0], dev[1], extra="pref=2422")
     rx_msg = dev[1].mgmt_rx()
     if rx_msg is None:
@@ -1116,7 +1116,7 @@ def test_p2p_msg_invitation_resend_duplicate(dev, apdev):
 
     ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
     if ev is None:
-        raise Exception("Timeout on invitation result");
+        raise Exception("Timeout on invitation result")
     if "status=0" not in ev:
         raise Exception("Unexpected invitation result: " + ev)
     ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
@@ -1296,10 +1296,10 @@ def test_p2p_msg_go_neg_both_start(dev, apdev):
     ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("GO Neg did not succeed")
-    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5);
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
     if ev is None:
         raise Exception("Group formation not succeed")
-    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=5);
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
     if ev is None:
         raise Exception("Group formation not succeed")
 

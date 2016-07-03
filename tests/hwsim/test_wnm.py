@@ -78,8 +78,8 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
 def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     """WNM ESS Disassociation Imminent"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
-    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
-    params["ieee80211w"] = "2";
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
     params["bss_transition"] = "1"
     hapd = hostapd.add_ap(apdev[0], params)
 
@@ -195,8 +195,8 @@ def test_wnm_sleep_mode_ap_oom(dev, apdev):
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     """WNM Sleep Mode - RSN with PMF"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
-    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
-    params["ieee80211w"] = "2";
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
     params["time_advertisement"] = "2"
     params["time_zone"] = "EST5"
     params["wnm_sleep_mode"] = "1"
@@ -565,7 +565,7 @@ def test_wnm_bss_tm(dev, apdev):
             raise Exception("Unexpected scan started")
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.5)
         if ev is not None:
-            raise Exception("Unexpected reassociation");
+            raise Exception("Unexpected reassociation")
     finally:
         dev[0].request("DISCONNECT")
         if hapd:

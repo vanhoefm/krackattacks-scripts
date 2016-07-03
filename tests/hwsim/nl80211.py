@@ -346,7 +346,7 @@ def parse_nl80211_attrs(msg):
         alen,attr = struct.unpack("@HH", msg[0:4])
         if alen < 4:
             raise Exception("Too short nl80211 attribute")
-        alen -= 4;
+        alen -= 4
         msg = msg[4:]
         if alen > len(msg):
             raise Exception("nl80211 attribute underflow")

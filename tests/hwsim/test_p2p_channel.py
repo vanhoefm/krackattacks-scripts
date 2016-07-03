@@ -235,7 +235,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
 
     if dev[0].get_mcc() > 1:
         logger.info("Skip as-client case due to MCC being enabled")
-        return;
+        return
 
     #dev[0] as client
     [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=1, r_dev=dev[1],
@@ -859,7 +859,7 @@ def _test_p2p_go_move_scm_peer_supports(dev, apdev):
 
         hapd = hostapd.add_ap(apdev[0], { "ssid" : 'ap-test',
                                           "channel" : '11' })
-        logger.info('Connecting client to to an AP on channel 11');
+        logger.info('Connecting client to to an AP on channel 11')
         dev[0].connect("ap-test", key_mgmt="NONE",
                        scan_freq="2462")
 
@@ -909,7 +909,7 @@ def _test_p2p_go_move_scm_peer_does_not_support(dev, apdev):
 
         hapd = hostapd.add_ap(apdev[0], { "ssid" : 'ap-test',
                                           "channel" : '11' })
-        logger.info('Connecting client to to an AP on channel 11');
+        logger.info('Connecting client to to an AP on channel 11')
         dev[0].connect("ap-test", key_mgmt="NONE",
                        scan_freq="2462")
 
@@ -1010,7 +1010,7 @@ def test_p2p_delay_go_csa(dev, apdev, params):
         addr1 = dev[1].p2p_dev_addr()
 
         try:
-            dev[1].p2p_listen();
+            dev[1].p2p_listen()
             if not wpas.discover_peer(addr1, social=True):
                 raise Exception("Peer " + addr1 + " not found")
             wpas.p2p_stop_find()
@@ -1048,7 +1048,7 @@ def test_p2p_delay_go_csa(dev, apdev, params):
 
             pin = dev[1].wps_read_pin()
             dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " join auth")
-            dev[1].p2p_listen();
+            dev[1].p2p_listen()
 
             # Force P2P GO channel switch on successful invitation signaling
             wpas.group_request("SET p2p_go_csa_on_inv 1")

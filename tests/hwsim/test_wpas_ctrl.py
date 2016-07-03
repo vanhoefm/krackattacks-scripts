@@ -189,10 +189,10 @@ def test_wpas_ctrl_network(dev):
         raise Exception("Too short PSK accepted")
     if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' psk "1234567890123456789012345678901234567890123456789012345678901234"'):
         raise Exception("Too long PSK accepted")
-    dev[0].set_network_quoted(id, "psk", "123456768");
-    dev[0].set_network_quoted(id, "psk", "123456789012345678901234567890123456789012345678901234567890123");
+    dev[0].set_network_quoted(id, "psk", "123456768")
+    dev[0].set_network_quoted(id, "psk", "123456789012345678901234567890123456789012345678901234567890123")
     if dev[0].get_network(id, "psk") != '*':
-        raise Exception("Unexpected psk read result");
+        raise Exception("Unexpected psk read result")
 
     if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' eap UNKNOWN'):
         raise Exception("Unknown EAP method accepted")

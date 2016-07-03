@@ -180,8 +180,8 @@ def test_wext_pmf(dev, apdev):
     wpas = get_wext_interface()
 
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
-    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
-    params["ieee80211w"] = "2";
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
     hapd = hostapd.add_ap(apdev[0], params)
 
     wpas.connect("wext-wpa2-psk", psk="12345678", ieee80211w="1",

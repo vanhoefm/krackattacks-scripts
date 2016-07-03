@@ -88,7 +88,7 @@ def test_ap_roam_wpa2_psk_failed(dev, apdev, params):
 
     ev = dev[0].wait_event(["CTRL-EVENT-SSID-REENABLED"], 3)
     if not ev:
-        raise Exception("CTRL-EVENT-SSID-REENABLED not seen");
+        raise Exception("CTRL-EVENT-SSID-REENABLED not seen")
 
     dev[0].wait_connected(timeout=5)
     hwsim_utils.test_connectivity(dev[0], hapd0)

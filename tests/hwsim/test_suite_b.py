@@ -23,7 +23,7 @@ def check_suite_b_capa(dev):
 def check_suite_b_tls_lib(dev):
     tls = dev[0].request("GET tls_library")
     if not tls.startswith("OpenSSL"):
-        raise HwsimSkip("TLS library not supported for Suite B: " + tls);
+        raise HwsimSkip("TLS library not supported for Suite B: " + tls)
     supported = False
     for ver in [ '1.0.2', '1.1.0' ]:
         if "build=OpenSSL " + ver in tls and "run=OpenSSL " + ver in tls:

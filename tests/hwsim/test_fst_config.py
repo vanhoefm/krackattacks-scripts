@@ -147,7 +147,7 @@ class FstLauncher:
             self.nof_aps -= 1
         else:
             self.nof_stas -= 1
-        config_file = self.get_cfg_pathname(cfg);
+        config_file = self.get_cfg_pathname(cfg)
         if os.path.exists(config_file):
             os.remove(config_file)
 

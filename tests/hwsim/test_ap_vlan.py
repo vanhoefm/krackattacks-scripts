@@ -57,8 +57,8 @@ def test_ap_vlan_wpa2(dev, apdev):
     """AP VLAN with WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="test-vlan",
                                  passphrase="12345678")
-    params['dynamic_vlan'] = "1";
-    params['accept_mac_file'] = "hostapd.accept";
+    params['dynamic_vlan'] = "1"
+    params['accept_mac_file'] = "hostapd.accept"
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", psk="12345678", scan_freq="2412")
@@ -71,7 +71,7 @@ def test_ap_vlan_wpa2(dev, apdev):
 def test_ap_vlan_wpa2_radius(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
-    params['dynamic_vlan'] = "1";
+    params['dynamic_vlan'] = "1"
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
@@ -93,7 +93,7 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
 def test_ap_vlan_wpa2_radius_2(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS EGRESS_VLANID attributes"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
-    params['dynamic_vlan'] = "1";
+    params['dynamic_vlan'] = "1"
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
@@ -141,7 +141,7 @@ def generic_ap_vlan_wpa2_radius_id_change(dev, apdev, tagged):
     authserv = hostapd.add_ap(apdev[1], as_params)
 
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
-    params['dynamic_vlan'] = "1";
+    params['dynamic_vlan'] = "1"
     params['auth_server_port'] = "18128"
     hapd = hostapd.add_ap(apdev[0], params)
 
@@ -230,7 +230,7 @@ def generic_ap_vlan_wpa2_radius_id_change(dev, apdev, tagged):
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
-    params['dynamic_vlan'] = "2";
+    params['dynamic_vlan'] = "2"
     hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
@@ -461,9 +461,9 @@ def test_ap_vlan_without_station(dev, apdev, p):
         # inject decrypted frames into pcap
         params = hostapd.wpa2_params(ssid="test-vlan",
                                      passphrase="12345678x")
-        params['dynamic_vlan'] = "1";
+        params['dynamic_vlan'] = "1"
         params['vlan_file'] = 'hostapd.wlan3.vlan'
-        params['accept_mac_file'] = "hostapd.accept";
+        params['accept_mac_file'] = "hostapd.accept"
         hapd = hostapd.add_ap(apdev[0], params)
 
         # inject some traffic
@@ -614,8 +614,8 @@ def test_ap_vlan_reconnect(dev, apdev):
     """AP VLAN with WPA2-PSK connect, disconnect, connect"""
     params = hostapd.wpa2_params(ssid="test-vlan",
                                  passphrase="12345678")
-    params['dynamic_vlan'] = "1";
-    params['accept_mac_file'] = "hostapd.accept";
+    params['dynamic_vlan'] = "1"
+    params['accept_mac_file'] = "hostapd.accept"
     hapd = hostapd.add_ap(apdev[0], params)
 
     logger.info("connect sta")

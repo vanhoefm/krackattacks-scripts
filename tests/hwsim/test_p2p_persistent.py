@@ -392,13 +392,13 @@ def test_persistent_group_without_persistent_reconnect(dev):
 
     ev = dev[0].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=15)
     if ev is None:
-        raise Exception("No invitation request reported");
+        raise Exception("No invitation request reported")
     if "persistent=" not in ev:
         raise Exception("Invalid invitation type reported: " + ev)
 
     ev2 = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
     if ev2 is None:
-        raise Exception("No invitation response reported");
+        raise Exception("No invitation response reported")
     if "status=1" not in ev2:
         raise Exception("Unexpected status: " + ev2)
     dev[1].p2p_listen()
@@ -432,13 +432,13 @@ def test_persistent_group_without_persistent_reconnect(dev):
 
     ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=15)
     if ev is None:
-        raise Exception("No invitation request reported");
+        raise Exception("No invitation request reported")
     if "persistent=" not in ev:
         raise Exception("Invalid invitation type reported: " + ev)
 
     ev2 = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
     if ev2 is None:
-        raise Exception("No invitation response reported");
+        raise Exception("No invitation response reported")
     if "status=1" not in ev2:
         raise Exception("Unexpected status: " + ev2)
     dev[0].p2p_listen()

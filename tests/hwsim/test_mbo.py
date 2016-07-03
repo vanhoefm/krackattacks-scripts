@@ -203,8 +203,8 @@ def test_mbo_cell_capa_update_pmf(dev, apdev):
     ssid = "test-wnm-mbo"
     passphrase = "12345678"
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
-    params["ieee80211w"] = "2";
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
     params['mbo'] = '1'
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']

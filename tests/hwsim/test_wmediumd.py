@@ -39,6 +39,6 @@ def test_wmediumd_simple(dev, apdev):
             p.terminate()
             p.wait()
         # test that releasing hwsim works correctly
-        _test_ap_open(dev, apdev);
+        _test_ap_open(dev, apdev)
     finally:
         os.unlink(fn)

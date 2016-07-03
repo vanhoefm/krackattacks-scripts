@@ -1119,7 +1119,7 @@ def test_p2ps_channel_one_connected(dev, apdev):
         dev[1].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2442")
 
         (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True, join_extra=" freq=2442")
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
 
         if freq != '2442':
             raise Exception('Unexpected frequency for group 2442 != ' + freq)
@@ -1151,7 +1151,7 @@ def test_p2ps_channel_both_connected_same(dev, apdev):
 
         tmpdev = [ dev[2], dev[1] ]
         (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True, join_extra=" freq=2437", flush=False)
-        freq = dev[2].get_group_status_field('freq');
+        freq = dev[2].get_group_status_field('freq')
 
         if freq != '2437':
             raise Exception('Unexpected frequency for group 2437 != ' + freq)
@@ -1193,7 +1193,7 @@ def test_p2ps_channel_both_connected_different(dev, apdev):
         ev1, ev0 = p2ps_provision(dev[1], dev[0], adv_id, auto_accept=False,
                                   handler=disconnect_handler)
         p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
         if freq != '2457':
             raise Exception('Unexpected frequency for group 2457 != ' + freq)
     finally:
@@ -1219,7 +1219,7 @@ def test_p2ps_channel_both_connected_different_mcc(dev, apdev):
         dev[1].connect("bss-channel-10", key_mgmt="NONE", scan_freq="2457")
 
         (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(dev, keep_group=True)
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
 
         if freq != '2422' and freq != '2457':
             raise Exception('Unexpected frequency for group =' + freq)
@@ -1252,7 +1252,7 @@ def test_p2ps_channel_disallow_freq(dev, apdev):
                                   handler=clear_disallow_handler)
         p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
 
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
         if freq != '2412':
             raise Exception('Unexpected frequency for group 2412 != ' + freq)
     finally:
@@ -1287,7 +1287,7 @@ def test_p2ps_channel_sta_connected_disallow_freq(dev, apdev):
                                   handler=clear_disallow_handler)
         p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
 
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
         if freq != '2437':
             raise Exception('Unexpected frequency for group 2437 != ' + freq)
     finally:
@@ -1317,7 +1317,7 @@ def test_p2ps_channel_sta_connected_disallow_freq_mcc(dev, apdev):
             tmpdev = [ dev[0], wpas ]
             (grp_ifname0, grp_ifname1, ifnames) = p2ps_connect_p2ps_method(tmpdev, keep_group=True)
 
-            freq = dev[0].get_group_status_field('freq');
+            freq = dev[0].get_group_status_field('freq')
             if freq == '2437':
                 raise Exception('Unexpected frequency=2437')
         finally:
@@ -1458,7 +1458,7 @@ def test_p2ps_channel_active_go_and_station_different(dev, apdev):
                                   handler=disconnect_handler, adv_role='2',
                                   seeker_role='4')
         p2ps_connect_pd(dev[0], dev[1], ev0, ev1)
-        freq = dev[0].get_group_status_field('freq');
+        freq = dev[0].get_group_status_field('freq')
         if freq != '2462':
             raise Exception('Unexpected frequency for group 2462!=' + freq)
     finally:

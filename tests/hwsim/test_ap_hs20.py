@@ -479,6 +479,30 @@ def test_ap_hs20_sim_invalid(dev, apdev):
     # This hits "No valid IMSI available" in build_root_nai()
     interworking_select(dev[0], bssid, freq="2412")
 
+def test_ap_hs20_sim_oom(dev, apdev):
+    """Hotspot 2.0 with simulated SIM and EAP-SIM - OOM"""
+    hlr_auc_gw_available()
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    params['domain_name'] = "wlan.mnc444.mcc555.3gppnetwork.org"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'imsi': "555444-333222111", 'eap': "SIM",
+                          'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
+    dev[0].scan_for_bss(bssid, freq=2412)
+    interworking_select(dev[0], bssid, freq="2412")
+
+    with alloc_fail(dev[0], 1, "wpa_config_add_network;interworking_connect_3gpp"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "=interworking_connect_3gpp"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
 def test_ap_hs20_aka(dev, apdev):
     """Hotspot 2.0 with simulated USIM and EAP-AKA"""
     hlr_auc_gw_available()

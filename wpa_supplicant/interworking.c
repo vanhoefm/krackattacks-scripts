@@ -1588,9 +1588,8 @@ fail:
 }
 
 
-static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
-				       struct wpa_bss *bss, int allow_excluded,
-				       int only_add)
+int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
+			 int only_add)
 {
 	struct wpa_cred *cred, *cred_rc, *cred_3gpp;
 	struct wpa_ssid *ssid;
@@ -1598,7 +1597,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	struct nai_realm_eap *eap = NULL;
 	u16 count, i;
 	char buf[100];
-	int excluded = 0, *excl = allow_excluded ? &excluded : NULL;
+	int excluded = 0, *excl = &excluded;
 	const char *name;
 
 	if (wpa_s->conf->cred == NULL || bss == NULL)
@@ -1612,8 +1611,8 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_printf(MSG_DEBUG, "Interworking: Considering BSS " MACSTR
-		   " for connection (allow_excluded=%d)",
-		   MAC2STR(bss->bssid), allow_excluded);
+		   " for connection",
+		   MAC2STR(bss->bssid));
 
 	if (!wpa_bss_get_ie(bss, WLAN_EID_RSN)) {
 		/*
@@ -1631,7 +1630,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"Interworking: Highest roaming consortium matching credential priority %d sp_priority %d",
 			cred_rc->priority, cred_rc->sp_priority);
-		if (allow_excluded && excl && !(*excl))
+		if (excl && !(*excl))
 			excl = NULL;
 	}
 
@@ -1640,7 +1639,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"Interworking: Highest NAI Realm list matching credential priority %d sp_priority %d",
 			cred->priority, cred->sp_priority);
-		if (allow_excluded && excl && !(*excl))
+		if (excl && !(*excl))
 			excl = NULL;
 	}
 
@@ -1650,7 +1649,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"Interworking: Highest 3GPP matching credential priority %d sp_priority %d",
 			cred_3gpp->priority, cred_3gpp->sp_priority);
-		if (allow_excluded && excl && !(*excl))
+		if (excl && !(*excl))
 			excl = NULL;
 	}
 
@@ -1663,7 +1662,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_DEBUG,
 				"Interworking: Highest roaming consortium matching credential priority %d sp_priority %d (ignore BW)",
 				cred_rc->priority, cred_rc->sp_priority);
-			if (allow_excluded && excl && !(*excl))
+			if (excl && !(*excl))
 				excl = NULL;
 		}
 
@@ -1673,7 +1672,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_DEBUG,
 				"Interworking: Highest NAI Realm list matching credential priority %d sp_priority %d (ignore BW)",
 				cred->priority, cred->sp_priority);
-			if (allow_excluded && excl && !(*excl))
+			if (excl && !(*excl))
 				excl = NULL;
 		}
 
@@ -1683,7 +1682,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_DEBUG,
 				"Interworking: Highest 3GPP matching credential priority %d sp_priority %d (ignore BW)",
 				cred_3gpp->priority, cred_3gpp->sp_priority);
-			if (allow_excluded && excl && !(*excl))
+			if (excl && !(*excl))
 				excl = NULL;
 		}
 	}
@@ -1845,13 +1844,6 @@ fail:
 	wpa_config_remove_network(wpa_s->conf, ssid->id);
 	nai_realm_free(realm, count);
 	return -1;
-}
-
-
-int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
-			 int only_add)
-{
-	return interworking_connect_helper(wpa_s, bss, 1, only_add);
 }
 
 

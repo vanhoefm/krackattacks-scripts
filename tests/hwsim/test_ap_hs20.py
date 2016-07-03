@@ -450,7 +450,7 @@ def hs20_simulated_sim(dev, ap, method):
     dev.hs20_enable()
     dev.add_cred_values({ 'imsi': "555444-333222111", 'eap': method,
                           'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
-    interworking_select(dev, "home", freq="2412")
+    interworking_select(dev, bssid, "home", freq="2412")
     interworking_connect(dev, bssid, method)
     check_sp_type(dev, "home")
 
@@ -503,7 +503,7 @@ def test_ap_hs20_ext_sim(dev, apdev):
     try:
         dev[0].request("SET external_sim 1")
         dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-        interworking_select(dev[0], "home", freq="2412")
+        interworking_select(dev[0], bssid, "home", freq="2412")
         interworking_ext_sim_connect(dev[0], bssid, "SIM")
         check_sp_type(dev[0], "home")
     finally:
@@ -523,7 +523,7 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
     try:
         dev[0].request("SET external_sim 1")
         dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-        interworking_select(dev[0], "roaming", freq="2412")
+        interworking_select(dev[0], bssid, "roaming", freq="2412")
         interworking_ext_sim_connect(dev[0], bssid, "SIM")
         check_sp_type(dev[0], "roaming")
     finally:

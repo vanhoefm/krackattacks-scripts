@@ -1876,6 +1876,33 @@ def test_ap_hs20_min_bandwidth_home(dev, apdev):
 
     check_auto_select(dev[0], bssid2)
 
+def test_ap_hs20_min_bandwidth_home2(dev, apdev):
+    """Hotspot 2.0 network selection with min bandwidth - special cases"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    values = bw_cred(domain="example.com", dl_home=5490, ul_home=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", False)
+
+    logger.info("WAN link at capacity")
+    hapd.set('hs20_wan_metrics', "09:8000:1000:80:240:3000")
+    check_bandwidth_selection(dev[0], "home", True)
+
+    logger.info("Downlink/Uplink Load was not measured")
+    hapd.set('hs20_wan_metrics', "01:8000:1000:80:240:0")
+    check_bandwidth_selection(dev[0], "home", False)
+
+    logger.info("Uplink and Downlink max values")
+    hapd.set('hs20_wan_metrics', "01:4294967295:4294967295:80:240:3000")
+    check_bandwidth_selection(dev[0], "home", False)
+
+    dev[0].remove_cred(id)
+
 def test_ap_hs20_min_bandwidth_home_hidden_ssid_in_scan_res(dev, apdev):
     """Hotspot 2.0 network selection with min bandwidth (home) while hidden SSID is included in scan results"""
     check_eap_capa(dev[0], "MSCHAPV2")

@@ -3978,3 +3978,21 @@ def test_ap_hs20_cred_with_nai_realm(dev, apdev):
                                   'eap': 'TTLS' })
     interworking_select(dev[0], bssid, "home", freq=2412, no_match=True)
     dev[0].remove_cred(id)
+
+def test_ap_hs20_cred_and_no_roaming_consortium(dev, apdev):
+    """Hotspot 2.0 network selection and no roaming consortium"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['roaming_consortium']
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'roaming_consortium': "112234",
+                                  'eap': 'TTLS' })
+    interworking_select(dev[0], bssid, "home", freq=2412, no_match=True)

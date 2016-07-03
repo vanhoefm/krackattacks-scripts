@@ -393,6 +393,16 @@ def test_gas_anqp_get(dev, apdev):
         if "FAIL" not in dev[0].request("HS20_ANQP_GET " + cmd):
             raise Exception("Invalid HS20_ANQP_GET accepted")
 
+def test_gas_anqp_get_oom(dev, apdev):
+    """GAS/ANQP query OOM"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;anqp_send_req"):
+        if "FAIL" not in dev[0].request("ANQP_GET " + bssid + " 258,268,hs20:3,hs20:4"):
+            raise Exception("ANQP_GET command accepted during OOM")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

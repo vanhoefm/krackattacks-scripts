@@ -796,6 +796,32 @@ def test_gas_unknown_adv_proto(dev, apdev):
     if status != "59":
         raise Exception("Unexpected GAS-RESPONSE-INFO status")
 
+def test_gas_request_oom(dev, apdev):
+    """GAS_REQUEST OOM"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+
+    with alloc_fail(dev[0], 1, "gas_build_req;gas_send_request"):
+        if "FAIL" not in dev[0].request("GAS_REQUEST " + bssid + " 42"):
+            raise Exception("GAS query request rejected")
+
+    with alloc_fail(dev[0], 1, "gas_query_req;gas_send_request"):
+        if "FAIL" not in dev[0].request("GAS_REQUEST " + bssid + " 42"):
+            raise Exception("GAS query request rejected")
+
+    with alloc_fail(dev[0], 1, "wpabuf_dup;gas_resp_cb"):
+        if "OK" not in dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101"):
+            raise Exception("GAS query request rejected")
+        ev = dev[0].wait_event(["GAS-RESPONSE-INFO"], timeout=10)
+        if ev is None:
+            raise Exception("No GAS response")
+        if "status_code=0" not in ev:
+            raise Exception("GAS response indicated a failure")
+
 def test_gas_max_pending(dev, apdev):
     """GAS and maximum pending query limit"""
     hapd = start_ap(apdev[0])

@@ -915,6 +915,25 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
             raise Exception("Timeout on already-connected event")
         dev[0].remove_cred(id)
 
+def test_ap_hs20_roaming_consortium_invalid(dev, apdev):
+    """Hotspot 2.0 connection and invalid roaming consortium ANQP-element"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    # Override Roaming Consortium ANQP-element with an incorrectly encoded
+    # value.
+    params['anqp_elem'] = "261:04fedcba"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'username': "user",
+                                  'password': "password",
+                                  'domain': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'roaming_consortium': "fedcba",
+                                  'eap': "PEAP" })
+    interworking_select(dev[0], bssid, "home", freq="2412", no_match=True)
+
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""
     check_eap_capa(dev[0], "MSCHAPV2")

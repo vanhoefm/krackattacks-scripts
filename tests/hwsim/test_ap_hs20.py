@@ -1806,6 +1806,20 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
         if bssid2 in ev and "conn_capab_missing=1" in ev:
             raise Exception("Protocol connection capability not reported correctly")
 
+def test_ap_hs20_req_conn_capab2(dev, apdev):
+    """Hotspot 2.0 network selection with req_conn_capab (not present)"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    del params['hs20_conn_capab']
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    values = conn_capab_cred(domain="example.org", req_conn_capab="6:1234")
+    id = dev[0].add_cred_values(values)
+    check_conn_capab_selection(dev[0], "roaming", False)
+
 def test_ap_hs20_req_conn_capab_and_roaming_partner_preference(dev, apdev):
     """Hotspot 2.0 and req_conn_capab with roaming partner preference"""
     check_eap_capa(dev[0], "MSCHAPV2")

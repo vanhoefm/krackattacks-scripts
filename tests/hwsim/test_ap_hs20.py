@@ -3952,3 +3952,29 @@ def test_ap_hs20_anqp_format_errors(dev, apdev):
         if ev is None:
             raise Exception("Network selection timed out")
         dev[0].dump_monitor()
+
+def test_ap_hs20_cred_with_nai_realm(dev, apdev):
+    """Hotspot 2.0 network selection and cred_with_nai_realm cred->realm"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'eap': 'TTLS' })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'realm': "foo.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'roaming_consortium': "112234",
+                                  'eap': 'TTLS' })
+    interworking_select(dev[0], bssid, "home", freq=2412, no_match=True)
+    dev[0].remove_cred(id)

@@ -4476,6 +4476,40 @@ def test_ap_hs20_no_rsn_connect(dev, apdev):
     if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
         raise Exception("Unexpected INTERWORKING_CONNECT success")
 
+def test_ap_hs20_multiple_home_cred(dev, apdev):
+    """Hotspot 2.0 and select with multiple matching home credentials"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]" ]
+    params['domain_name'] = "example.com"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-other")
+    params['hessid'] = bssid2
+    params['nai_realm'] = [ "0,example.org,13[5:6],21[2:4][5:7]" ]
+    params['domain_name'] = "example.org"
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'priority': '2',
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
+    id2 = dev[0].add_cred_values({ 'realm': "example.org",
+                                   'priority': '3',
+                                   'username': "hs20-test",
+                                   'password': "password",
+                                   'domain': "example.org" })
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_connected(timeout=15)
+    if bssid2 not in ev:
+        raise Exception("Connected to incorrect network")
+
 def test_ap_hs20_anqp_invalid_gas_response(dev, apdev):
     """Hotspot 2.0 network selection and invalid GAS response"""
     bssid = apdev[0]['bssid']

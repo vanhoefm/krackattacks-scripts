@@ -4530,6 +4530,26 @@ def test_ap_hs20_no_rsn_connect(dev, apdev):
     if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
         raise Exception("Unexpected INTERWORKING_CONNECT success")
 
+def test_ap_hs20_no_match_connect(dev, apdev):
+    """Hotspot 2.0 and connect attempt without matching cred"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    id = dev[0].add_cred_values({ 'realm': "example.org",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.org",
+                                  'roaming_consortium': "112234",
+                                  'eap': 'TTLS' })
+
+    interworking_select(dev[0], bssid, freq=2412, no_match=True)
+    if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
+        raise Exception("Unexpected INTERWORKING_CONNECT success")
+
 def test_ap_hs20_multiple_home_cred(dev, apdev):
     """Hotspot 2.0 and select with multiple matching home credentials"""
     bssid = apdev[0]['bssid']

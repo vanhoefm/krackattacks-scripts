@@ -4440,6 +4440,37 @@ def test_ap_hs20_no_cred_connect(dev, apdev):
     if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
         raise Exception("Unexpected INTERWORKING_CONNECT success")
 
+def test_ap_hs20_no_rsn_connect(dev, apdev):
+    """Hotspot 2.0 and connect attempt without RSN"""
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa_params(ssid="test-hs20")
+    params['wpa_key_mgmt'] = "WPA-EAP"
+    params['ieee80211w'] = "1"
+    params['ieee8021x'] = "1"
+    params['auth_server_addr'] = "127.0.0.1"
+    params['auth_server_port'] = "1812"
+    params['auth_server_shared_secret'] = "radius"
+    params['interworking'] = "1"
+    params['roaming_consortium'] = [ "112233", "1020304050", "010203040506",
+                                     "fedcba" ]
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
+                            "0,another.example.com" ]
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com",
+                                  'roaming_consortium': "112233",
+                                  'eap': 'TTLS' })
+
+    interworking_select(dev[0], bssid, freq=2412, no_match=True)
+    if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
+        raise Exception("Unexpected INTERWORKING_CONNECT success")
+
 def test_ap_hs20_anqp_invalid_gas_response(dev, apdev):
     """Hotspot 2.0 network selection and invalid GAS response"""
     bssid = apdev[0]['bssid']

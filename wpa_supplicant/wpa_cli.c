@@ -711,6 +711,13 @@ static int wpa_cli_cmd_dump(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DRIVER_FLAGS");
+}
+
+
 static int wpa_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_cli_cmd(ctrl, "GET", 1, argc, argv);
@@ -2963,6 +2970,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "get", wpa_cli_cmd_get, wpa_cli_complete_get,
 	  cli_cmd_flag_none,
 	  "<name> = get information" },
+	{ "driver_flags", wpa_cli_cmd_driver_flags, NULL,
+	  cli_cmd_flag_none,
+	  "= list driver flags" },
 	{ "logon", wpa_cli_cmd_logon, NULL,
 	  cli_cmd_flag_none,
 	  "= IEEE 802.1X EAPOL state machine logon" },

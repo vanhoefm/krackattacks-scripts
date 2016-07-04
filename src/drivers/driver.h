@@ -4916,6 +4916,8 @@ int vht_supported(const struct hostapd_hw_modes *mode);
 struct wowlan_triggers *
 wpa_get_wowlan_triggers(const char *wowlan_triggers,
 			const struct wpa_driver_capa *capa);
+/* Convert driver flag to string */
+const char * driver_flag_to_string(u64 flag);
 
 /* NULL terminated array of linked in driver wrappers */
 extern const struct wpa_driver_ops *const wpa_drivers[];

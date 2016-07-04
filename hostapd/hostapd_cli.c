@@ -1218,6 +1218,13 @@ static int hostapd_cli_cmd_req_range(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DRIVER_FLAGS");
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1283,6 +1290,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor },
 	{ "req_lci", hostapd_cli_cmd_req_lci },
 	{ "req_range", hostapd_cli_cmd_req_range },
+	{ "driver_flags", hostapd_cli_cmd_driver_flags },
 	{ NULL, NULL }
 };
 

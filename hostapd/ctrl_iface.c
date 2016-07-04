@@ -2254,6 +2254,34 @@ static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_ctrl_driver_flags(struct hostapd_iface *iface, char *buf,
+				     size_t buflen)
+{
+	int ret, i;
+	char *pos, *end;
+
+	ret = os_snprintf(buf, buflen, "%016llX:\n",
+			  (long long unsigned) iface->drv_flags);
+	if (os_snprintf_error(buflen, ret))
+		return -1;
+
+	pos = buf + ret;
+	end = buf + buflen;
+
+	for (i = 0; i < 64; i++) {
+		if (iface->drv_flags & (1LLU << i)) {
+			ret = os_snprintf(pos, end - pos, "%s\n",
+					  driver_flag_to_string(1LLU << i));
+			if (os_snprintf_error(end - pos, ret))
+				return -1;
+			pos += ret;
+		}
+	}
+
+	return pos - buf;
+}
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2510,6 +2538,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "REQ_RANGE ", 10) == 0) {
 		if (hostapd_ctrl_iface_req_range(hapd, buf + 10))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "DRIVER_FLAGS") == 0) {
+		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
+						      reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

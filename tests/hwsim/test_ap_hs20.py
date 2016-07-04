@@ -1013,6 +1013,48 @@ def test_ap_hs20_roaming_consortium_constraints(dev, apdev):
     dev[0].remove_cred(id2)
     dev[0].remove_cred(id3)
 
+def test_ap_hs20_connect_no_full_match(dev, apdev):
+    """Hotspot 2.0 connection and no full match"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+
+    vals = { 'username': "user",
+             'password': "password",
+             'domain': "example.com",
+             'ca_cert': "auth_serv/ca.pem",
+             'roaming_consortium': "fedcba",
+             'eap': "TTLS",
+             'min_dl_bandwidth_home': "65500" }
+    id = dev[0].add_cred_values(vals)
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    if "below_min_backhaul=1" not in ev:
+        raise Exception("below_min_backhaul not reported")
+    interworking_connect(dev[0], bssid, "TTLS")
+    dev[0].remove_cred(id)
+    dev[0].wait_disconnected()
+
+    vals = { 'imsi': "555444-333222111", 'eap': "SIM",
+             'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+             'min_dl_bandwidth_roaming': "65500" }
+    id = dev[0].add_cred_values(vals)
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    if "below_min_backhaul=1" not in ev:
+        raise Exception("below_min_backhaul not reported")
+    interworking_connect(dev[0], bssid, "SIM")
+    dev[0].remove_cred(id)
+    dev[0].wait_disconnected()
+
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""
     check_eap_capa(dev[0], "MSCHAPV2")

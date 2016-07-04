@@ -213,6 +213,60 @@ def test_ap_anqp_sharing(dev, apdev):
     if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
         raise Exception("ANQP results were not unshared")
 
+def test_ap_anqp_no_sharing_diff_ess(dev, apdev):
+    """ANQP no sharing between ESSs"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].flush_scan_cache()
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-another")
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    logger.info("Normal network selection with shared ANQP results")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    interworking_select(dev[0], None, "home", freq="2412")
+
+def test_ap_anqp_no_sharing_missing_info(dev, apdev):
+    """ANQP no sharing due to missing information"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].flush_scan_cache()
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['roaming_consortium']
+    del params['domain_name']
+    del params['anqp_3gpp_cell_net']
+    del params['nai_realm']
+    hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    logger.info("Normal network selection with shared ANQP results")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    interworking_select(dev[0], None, "home", freq="2412")
+
 def test_ap_anqp_sharing_oom(dev, apdev):
     """ANQP sharing within ESS and explicit unshare OOM"""
     check_eap_capa(dev[0], "MSCHAPV2")

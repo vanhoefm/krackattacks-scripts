@@ -935,6 +935,32 @@ def test_ap_hs20_roaming_consortium_invalid(dev, apdev):
                                   'eap': "PEAP" })
     interworking_select(dev[0], bssid, "home", freq="2412", no_match=True)
 
+def test_ap_hs20_roaming_consortium_element(dev, apdev):
+    """Hotspot 2.0 connection and invalid roaming consortium element"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['roaming_consortium']
+    params['vendor_elements'] = '6f00'
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    id = dev[0].add_cred_values({ 'username': "user",
+                                  'password': "password",
+                                  'domain': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'roaming_consortium': "112233",
+                                  'eap': "PEAP" })
+    interworking_select(dev[0], bssid, freq="2412", no_match=True)
+
+    hapd.set('vendor_elements', '6f020001')
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    interworking_select(dev[0], bssid, freq="2412", no_match=True)
+
 def test_ap_hs20_roaming_consortium_constraints(dev, apdev):
     """Hotspot 2.0 connection and roaming consortium constraints"""
     bssid = apdev[0]['bssid']

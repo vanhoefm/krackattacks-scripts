@@ -4428,6 +4428,18 @@ def test_ap_hs20_interworking_oom(dev, apdev):
                 raise Exception("ANQP did not start")
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
+def test_ap_hs20_no_cred_connect(dev, apdev):
+    """Hotspot 2.0 and connect attempt without credential"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    if "FAIL" not in dev[0].request("INTERWORKING_CONNECT " + bssid):
+        raise Exception("Unexpected INTERWORKING_CONNECT success")
+
 def test_ap_hs20_anqp_invalid_gas_response(dev, apdev):
     """Hotspot 2.0 network selection and invalid GAS response"""
     bssid = apdev[0]['bssid']

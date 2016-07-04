@@ -1013,6 +1013,87 @@ def test_ap_hs20_roaming_consortium_constraints(dev, apdev):
     dev[0].remove_cred(id2)
     dev[0].remove_cred(id3)
 
+def test_ap_hs20_3gpp_constraints(dev, apdev):
+    """Hotspot 2.0 connection and 3GPP credential constraints"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    params['domain_name'] = "wlan.mnc444.mcc555.3gppnetwork.org"
+    params['bss_load_test'] = "12:200:20000"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+
+    vals = { 'imsi': "555444-333222111",
+             'eap': "SIM",
+             'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123" }
+    vals2 = vals.copy()
+    vals2['required_roaming_consortium'] = "223344"
+    id = dev[0].add_cred_values(vals2)
+    interworking_select(dev[0], bssid, "home", freq="2412", no_match=True)
+    dev[0].remove_cred(id)
+
+    vals2 = vals.copy()
+    vals2['min_dl_bandwidth_home'] = "65500"
+    id = dev[0].add_cred_values(vals2)
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    if "below_min_backhaul=1" not in ev:
+        raise Exception("below_min_backhaul not reported")
+    dev[0].remove_cred(id)
+
+    vals2 = vals.copy()
+    vals2['max_bss_load'] = "100"
+    id = dev[0].add_cred_values(vals2)
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    if "over_max_bss_load=1" not in ev:
+        raise Exception("over_max_bss_load not reported")
+    dev[0].remove_cred(id)
+
+    values = default_cred()
+    values['roaming_consortium'] = "fedcba"
+    id3 = dev[0].add_cred_values(values)
+
+    vals2 = vals.copy()
+    vals2['roaming_consortium'] = "fedcba"
+    vals2['priority'] = "2"
+    id = dev[0].add_cred_values(vals2)
+
+    values = default_cred()
+    values['roaming_consortium'] = "fedcba"
+    id2 = dev[0].add_cred_values(values)
+
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    dev[0].remove_cred(id)
+    dev[0].remove_cred(id2)
+    dev[0].remove_cred(id3)
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    params['bss_load_test'] = "12:200:20000"
+    hapd = hostapd.add_ap(apdev[0], params)
+    vals2 = vals.copy()
+    vals2['req_conn_capab'] = "6:1234"
+    id = dev[0].add_cred_values(vals2)
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"], timeout=15)
+    if ev is None:
+        raise Exception("No AP found")
+    if "conn_capab_missing=1" not in ev:
+        raise Exception("conn_capab_missing not reported")
+    dev[0].remove_cred(id)
+
 def test_ap_hs20_connect_no_full_match(dev, apdev):
     """Hotspot 2.0 connection and no full match"""
     bssid = apdev[0]['bssid']

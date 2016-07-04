@@ -762,6 +762,11 @@ def test_ap_hs20_eap_ttls_mschap(dev, apdev):
     skip_with_fips(dev[0])
     eap_test(dev[0], apdev[0], "21[2:3]", "TTLS", "mschap user")
 
+def test_ap_hs20_eap_ttls_default(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/default"""
+    skip_with_fips(dev[0])
+    eap_test(dev[0], apdev[0], "21", "TTLS", "hs20-test")
+
 def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with TTLS/EAP-MSCHAPv2"""
     check_eap_capa(dev[0], "MSCHAPV2")

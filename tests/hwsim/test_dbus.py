@@ -161,6 +161,27 @@ def test_dbus_getall(dev, apdev):
     if ssid != '"test"':
         raise Exception("Unexpected SSID in network entry")
 
+def test_dbus_getall_oom(dev, apdev):
+    """D-Bus GetAll wpa_config_get_all() OOM"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    id = dev[0].add_network()
+    dev[0].set_network(id, "disabled", "0")
+    dev[0].set_network_quoted(id, "ssid", "test")
+
+    res = if_obj.Get(WPAS_DBUS_IFACE, 'Networks',
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+    if len(res) != 1:
+        raise Exception("Missing Networks entry: " + str(res))
+    net_obj = bus.get_object(WPAS_DBUS_SERVICE, res[0])
+    for i in range(1, 50):
+        with alloc_fail(dev[0], i, "wpa_config_get_all"):
+            try:
+                props = net_obj.GetAll(WPAS_DBUS_NETWORK,
+                                       dbus_interface=dbus.PROPERTIES_IFACE)
+            except dbus.exceptions.DBusException, e:
+                pass
+
 def dbus_get(dbus, wpas_obj, prop, expect=None, byte_arrays=False):
     val = wpas_obj.Get(WPAS_DBUS_SERVICE, prop,
                        dbus_interface=dbus.PROPERTIES_IFACE,

@@ -3004,6 +3004,58 @@ def test_ap_hs20_req_hs20_icon(dev, apdev):
     if "OK" not in dev[0].request("DEL_HS20_ICON " + bssid + " test_logo"):
         raise Exception("DEL_HS20_ICON failed")
 
+def test_ap_hs20_req_hs20_icon_oom(dev, apdev):
+    """Hotspot 2.0 icon fetch OOM with REQ_HS20_ICON"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = [ "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png",
+                            "128:80:zxx:image/png:test_logo:auth_serv/sha512-server.pem" ]
+    params['osu_ssid'] = '"HS 2.0 OSU open"'
+    params['osu_method_list'] = "1"
+    params['osu_friendly_name'] = [ "eng:Test OSU", "fin:Testi-OSU" ]
+    params['osu_icon'] = [ "w1fi_logo", "w1fi_logo2" ]
+    params['osu_service_desc'] = [ "eng:Example services", "fin:Esimerkkipalveluja" ]
+    params['osu_server_uri'] = "https://example.com/osu/"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    if "FAIL" not in dev[0].request("REQ_HS20_ICON 11:22:33:44:55:66 w1fi_logo"):
+        raise Exception("REQ_HS20_ICON succeeded with unknown BSSID")
+
+    with alloc_fail(dev[0], 1, "hs20_build_anqp_req;hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON succeeded during OOM")
+
+    with alloc_fail(dev[0], 1, "gas_query_req;hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON succeeded during OOM")
+
+    with alloc_fail(dev[0], 1, "=hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON succeeded during OOM")
+    with alloc_fail(dev[0], 2, "=hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON succeeded during OOM")
+
+    if "OK" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+        raise Exception("REQ_HS20_ICON failed")
+    ev = dev[0].wait_event(["RX-HS20-ICON"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on RX-HS20-ICON (1)")
+
+    with alloc_fail(dev[0], 1, "hs20_get_icon"):
+        if "FAIL" not in dev[0].request("GET_HS20_ICON " + bssid + "w1fi_logo 0 100"):
+            raise Exception("GET_HS20_ICON succeeded during OOM")
+
+    if "OK" not in dev[0].request("DEL_HS20_ICON " + bssid + " w1fi_logo"):
+        raise Exception("DEL_HS20_ICON failed")
+
+    with alloc_fail(dev[0], 1, "=hs20_process_icon_binary_file"):
+        if "OK" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
 def test_ap_hs20_req_hs20_icon_parallel(dev, apdev):
     """Hotspot 2.0 OSU provider and multi-icon parallel fetch with REQ_HS20_ICON"""
     bssid = apdev[0]['bssid']

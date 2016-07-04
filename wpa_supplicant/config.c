@@ -2669,9 +2669,8 @@ char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
 	return props;
 
 err:
-	value = *props;
-	while (value)
-		os_free(value++);
+	for (i = 0; props[i]; i++)
+		os_free(props[i]);
 	os_free(props);
 	return NULL;
 #endif /* NO_CONFIG_WRITE */

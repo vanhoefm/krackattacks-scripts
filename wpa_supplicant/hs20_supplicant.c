@@ -320,7 +320,7 @@ int hs20_get_icon(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 
 	b64 = base64_encode(&icon->image[offset], size, &b64_size);
-	if (buf_len >= b64_size) {
+	if (b64 && buf_len >= b64_size) {
 		os_memcpy(reply, b64, b64_size);
 		reply_size = b64_size;
 	} else {

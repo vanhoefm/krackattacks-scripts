@@ -4443,3 +4443,291 @@ def test_ap_hs20_anqp_invalid_gas_response(dev, apdev):
             raise Exception("No ANQP-QUERY-DONE seen")
         if "result=SUCCESS" not in ev:
             raise Exception("Unexpected result: " + ev)
+
+def test_ap_hs20_set_profile_failures(dev, apdev):
+    """Hotspot 2.0 and failures during profile configuration"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'domain': "example.com",
+                                  'username': "test",
+                                  'password': "secret",
+                                  'eap': 'TTLS' })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE ssid->eap.eap_methods = os_malloc()")
+    with alloc_fail(dev[0], 1, "interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'domain': "example.com",
+                                  'username': "hs20-test-with-domain@example.com",
+                                  'password': "password" })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE anon = os_malloc()")
+    with alloc_fail(dev[0], 1, "interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE Successful connection with cred->username including realm")
+    dev[0].request("INTERWORKING_CONNECT " + bssid)
+    dev[0].wait_connected()
+    dev[0].remove_cred(id)
+    dev[0].wait_disconnected()
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'domain': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password" })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE anon = os_malloc() (second)")
+    with alloc_fail(dev[0], 1, "interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "wpa_config_add_network;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "=interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set(eap)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_eap;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set(TTLS-NON_EAP_MSCHAPV2-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'roaming_consortium': "112233",
+                                  'domain': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'eap': 'TTLS',
+                                  'phase2': "auth=MSCHAPV2" })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE anon = os_strdup()")
+    with alloc_fail(dev[0], 2, "interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(anonymous_identity)")
+    with alloc_fail(dev[0], 1, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE Successful connection with cred->realm not included")
+    dev[0].request("INTERWORKING_CONNECT " + bssid)
+    dev[0].wait_connected()
+    dev[0].remove_cred(id)
+    dev[0].wait_disconnected()
+
+    id = dev[0].add_cred_values({ 'roaming_consortium': "112233",
+                                  'domain': "example.com",
+                                  'realm': "example.com",
+                                  'username': "user",
+                                  'password': "password",
+                                  'eap': 'PEAP' })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE id = os_strdup()")
+    with alloc_fail(dev[0], 2, "interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(identity)")
+    with alloc_fail(dev[0], 1, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'roaming_consortium': "112233",
+                                  'domain': "example.com",
+                                  'realm': "example.com",
+                                  'username': "user",
+                                  'password': "password",
+                                  'eap': "TTLS" })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE wpa_config_set_quoted(identity) (second)")
+    with alloc_fail(dev[0], 2, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(password)")
+    with alloc_fail(dev[0], 3, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "wpa_config_add_network;interworking_connect_roaming_consortium"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "=interworking_connect_roaming_consortium"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'roaming_consortium': "112233",
+                                  'domain': "example.com",
+                                  'realm': "example.com",
+                                  'username': "user",
+                                  'eap': "PEAP" })
+    dev[0].set_cred(id, "password", "ext:password");
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE wpa_config_set(password)")
+    with alloc_fail(dev[0], 3, "wpa_config_set;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "interworking_set_hs20_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'domain': "example.com",
+                                  'username': "certificate-user",
+                                  'phase1': "include_tls_length=0",
+                                  'domain_suffix_match': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'client_cert': "auth_serv/user.pem",
+                                  'private_key': "auth_serv/user.key",
+                                  'private_key_passwd': "secret" })
+    interworking_select(dev[0], bssid, "home", freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE wpa_config_set_quoted(client_cert)")
+    with alloc_fail(dev[0], 2, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(private_key)")
+    with alloc_fail(dev[0], 3, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(private_key_passwd)")
+    with alloc_fail(dev[0], 4, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(ca_cert)")
+    with alloc_fail(dev[0], 5, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(domain_suffix_match)")
+    with alloc_fail(dev[0], 6, "=wpa_config_set_quoted;interworking_set_eap_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    with alloc_fail(dev[0], 1, "interworking_set_hs20_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'imsi': "555444-333222111", 'eap': "SIM",
+                                  'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].dump_monitor()
+    with alloc_fail(dev[0], 1, "interworking_set_hs20_params"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set_quoted(password;milenage)")
+    with alloc_fail(dev[0], 2, "=wpa_config_set_quoted;interworking_connect_3gpp"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set(eap)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_eap;wpa_config_set;interworking_connect_3gpp"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE set_root_nai:wpa_config_set(identity)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;interworking_connect_3gpp"):
+            dev[0].request("INTERWORKING_CONNECT " + bssid)
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].remove_cred(id)
+
+    id = dev[0].add_cred_values({ 'roaming_consortium': "112233",
+                                  'username': "user@example.com",
+                                  'password': "password" })
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE Interworking: No EAP method set for credential using roaming consortium")
+    dev[0].request("INTERWORKING_CONNECT " + bssid)
+    dev[0].remove_cred(id)
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,25[3:26]"
+    hapd = hostapd.add_ap(apdev[0], params)
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'domain': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password" })
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].dump_monitor()
+    dev[0].request("NOTE wpa_config_set(PEAP/FAST-phase1)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set(PEAP/FAST-pac_interworking)")
+    with alloc_fail(dev[0], 2, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("NOTE wpa_config_set(PEAP/FAST-phase2)")
+    with alloc_fail(dev[0], 3, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21"
+    hapd = hostapd.add_ap(apdev[0], params)
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].request("NOTE wpa_config_set(TTLS-defaults-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[2:3]"
+    hapd = hostapd.add_ap(apdev[0], params)
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].request("NOTE wpa_config_set(TTLS-NON_EAP_MSCHAP-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[2:2]"
+    hapd = hostapd.add_ap(apdev[0], params)
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].request("NOTE wpa_config_set(TTLS-NON_EAP_CHAP-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[2:1]"
+    hapd = hostapd.add_ap(apdev[0], params)
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].request("NOTE wpa_config_set(TTLS-NON_EAP_PAP-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    hapd.disable()
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[3:26]"
+    hapd = hostapd.add_ap(apdev[0], params)
+    interworking_select(dev[0], bssid, freq=2412)
+    dev[0].request("NOTE wpa_config_set(TTLS-EAP-MSCHAPV2-phase2)")
+    with alloc_fail(dev[0], 1, "wpa_config_parse_str;wpa_config_set;interworking_connect"):
+        dev[0].request("INTERWORKING_CONNECT " + bssid)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    dev[0].remove_cred(id)

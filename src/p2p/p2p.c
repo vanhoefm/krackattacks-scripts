@@ -788,11 +788,11 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		dev->oper_ssid_len = msg.ssid[1];
 	}
 
-	if (msg.adv_service_instance && msg.adv_service_instance_len) {
-		wpabuf_free(dev->info.p2ps_instance);
+	wpabuf_free(dev->info.p2ps_instance);
+	dev->info.p2ps_instance = NULL;
+	if (msg.adv_service_instance && msg.adv_service_instance_len)
 		dev->info.p2ps_instance = wpabuf_alloc_copy(
 			msg.adv_service_instance, msg.adv_service_instance_len);
-	}
 
 	if (freq >= 2412 && freq <= 2484 && msg.ds_params &&
 	    *msg.ds_params >= 1 && *msg.ds_params <= 14) {

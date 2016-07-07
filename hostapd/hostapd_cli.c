@@ -75,6 +75,7 @@ static int ping_interval = 5;
 static int interactive = 0;
 
 static void print_help(FILE *stream, const char *cmd);
+static char ** list_cmd_list(void);
 
 
 static void usage(void)
@@ -101,6 +102,24 @@ static void usage(void)
 		"interface found in the\n"
 		"                socket path)\n\n");
 	print_help(stderr, NULL);
+}
+
+
+static int get_cmd_arg_num(const char *str, int pos)
+{
+	int arg = 0, i;
+
+	for (i = 0; i <= pos; i++) {
+		if (str[i] != ' ') {
+			arg++;
+			while (i <= pos && str[i] != ' ')
+				i++;
+		}
+	}
+
+	if (arg > 0)
+		arg--;
+	return arg;
 }
 
 
@@ -754,6 +773,21 @@ static int hostapd_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** hostapd_cli_complete_help(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = list_cmd_list();
+		break;
+	}
+
+	return res;
+}
+
+
 static int hostapd_cli_cmd_license(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -1259,7 +1293,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "bss_tm_req", hostapd_cli_cmd_bss_tm_req, NULL, NULL },
 	{ "get_config", hostapd_cli_cmd_get_config, NULL,
 	  "= show current configuration" },
-	{ "help", hostapd_cli_cmd_help, NULL,
+	{ "help", hostapd_cli_cmd_help, hostapd_cli_complete_help,
 	  "= show this usage help" },
 	{ "interface", hostapd_cli_cmd_interface, NULL,
 	  "[ifname] = show interfaces/select interface" },

@@ -74,9 +74,11 @@ static const char *pid_file = NULL;
 static const char *action_file = NULL;
 static int ping_interval = 5;
 static int interactive = 0;
+static int event_handler_registered = 0;
 
 static void print_help(FILE *stream, const char *cmd);
 static char ** list_cmd_list(void);
+static void hostapd_cli_receive(int sock, void *eloop_ctx, void *sock_ctx);
 
 
 static void usage(void)
@@ -130,6 +132,30 @@ static int str_starts(const char *src, const char *match)
 }
 
 
+static void register_event_handler(struct wpa_ctrl *ctrl)
+{
+	if (!ctrl_conn)
+		return;
+	if (interactive) {
+		event_handler_registered =
+			!eloop_register_read_sock(wpa_ctrl_get_fd(ctrl),
+						  hostapd_cli_receive,
+						  NULL, NULL);
+	}
+}
+
+
+static void unregister_event_handler(struct wpa_ctrl *ctrl)
+{
+	if (!ctrl_conn)
+		return;
+	if (interactive && event_handler_registered) {
+		eloop_unregister_read_sock(wpa_ctrl_get_fd(ctrl));
+		event_handler_registered = 0;
+	}
+}
+
+
 static struct wpa_ctrl * hostapd_cli_open_connection(const char *ifname)
 {
 #ifndef CONFIG_CTRL_IFACE_UDP
@@ -169,6 +195,7 @@ static void hostapd_cli_close_connection(void)
 	if (ctrl_conn == NULL)
 		return;
 
+	unregister_event_handler(ctrl_conn);
 	if (hostapd_cli_attached) {
 		wpa_ctrl_detach(ctrl_conn);
 		hostapd_cli_attached = 0;
@@ -944,6 +971,7 @@ static int hostapd_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc,
 		printf("Connected to interface '%s.\n", ctrl_ifname);
 		if (wpa_ctrl_attach(ctrl_conn) == 0) {
 			hostapd_cli_attached = 1;
+			register_event_handler(ctrl_conn);
 		} else {
 			printf("Warning: Failed to attach to "
 			       "hostapd.\n");
@@ -1404,6 +1432,11 @@ static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static void cli_event(const char *str)
+{
+}
+
+
 static void hostapd_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 				     int action_monitor)
 {
@@ -1418,6 +1451,7 @@ static void hostapd_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 			if (action_monitor)
 				hostapd_cli_action_process(buf, len);
 			else {
+				cli_event(buf);
 				if (in_read && first)
 					printf("\n");
 				first = 0;
@@ -1428,6 +1462,12 @@ static void hostapd_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 			break;
 		}
 	}
+}
+
+
+static void hostapd_cli_receive(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	hostapd_cli_recv_pending(ctrl_conn, 0, 0);
 }
 
 
@@ -1475,6 +1515,7 @@ static void hostapd_cli_ping(void *eloop_ctx, void *timeout_ctx)
 			printf("Connection to hostapd re-established\n");
 			if (wpa_ctrl_attach(ctrl_conn) == 0) {
 				hostapd_cli_attached = 1;
+				register_event_handler(ctrl_conn);
 			} else {
 				printf("Warning: Failed to attach to "
 				       "hostapd.\n");
@@ -1736,6 +1777,7 @@ int main(int argc, char *argv[])
 	if (interactive || action_file) {
 		if (wpa_ctrl_attach(ctrl_conn) == 0) {
 			hostapd_cli_attached = 1;
+			register_event_handler(ctrl_conn);
 		} else {
 			printf("Warning: Failed to attach to hostapd.\n");
 			if (action_file)
@@ -1753,6 +1795,7 @@ int main(int argc, char *argv[])
 	else
 		wpa_request(ctrl_conn, argc - optind, &argv[optind]);
 
+	unregister_event_handler(ctrl_conn);
 	os_free(ctrl_ifname);
 	eloop_destroy();
 	hostapd_cli_cleanup();

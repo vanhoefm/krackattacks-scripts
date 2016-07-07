@@ -58,38 +58,6 @@ static const char *const hostapd_cli_full_license =
 "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n"
 "\n";
 
-static const char *const commands_help =
-"Commands:\n"
-"   mib                  get MIB variables (dot1x, dot11, radius)\n"
-"   sta <addr>           get MIB variables for one station\n"
-"   all_sta              get MIB variables for all stations\n"
-"   new_sta <addr>       add a new station\n"
-"   deauthenticate <addr>  deauthenticate a station\n"
-"   disassociate <addr>  disassociate a station\n"
-#ifdef CONFIG_IEEE80211W
-"   sa_query <addr>      send SA Query to a station\n"
-#endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_WPS
-"   wps_pin <uuid> <pin> [timeout] [addr]  add WPS Enrollee PIN\n"
-"   wps_check_pin <PIN>  verify PIN checksum\n"
-"   wps_pbc              indicate button pushed to initiate PBC\n"
-"   wps_cancel           cancel the pending WPS operation\n"
-#ifdef CONFIG_WPS_NFC
-"   wps_nfc_tag_read <hexdump>  report read NFC tag with WPS data\n"
-"   wps_nfc_config_token <WPS/NDEF>  build NFC configuration token\n"
-"   wps_nfc_token <WPS/NDEF/enable/disable>  manager NFC password token\n"
-#endif /* CONFIG_WPS_NFC */
-"   wps_ap_pin <cmd> [params..]  enable/disable AP PIN\n"
-"   wps_config <SSID> <auth> <encr> <key>  configure AP\n"
-"   wps_get_status       show current WPS status\n"
-#endif /* CONFIG_WPS */
-"   get_config           show current configuration\n"
-"   help                 show this usage help\n"
-"   interface [ifname]   show interfaces/select interface\n"
-"   level <debug level>  change debug level\n"
-"   license              show full hostapd_cli license\n"
-"   quit                 exit hostapd_cli\n";
-
 static struct wpa_ctrl *ctrl_conn;
 static int hostapd_cli_quit = 0;
 static int hostapd_cli_attached = 0;
@@ -105,6 +73,8 @@ static const char *pid_file = NULL;
 static const char *action_file = NULL;
 static int ping_interval = 5;
 static int interactive = 0;
+
+static void print_help(FILE *stream, const char *cmd);
 
 
 static void usage(void)
@@ -129,9 +99,14 @@ static void usage(void)
 		"   -B           run a daemon in the background\n"
 		"   -i<ifname>   Interface to listen on (default: first "
 		"interface found in the\n"
-		"                socket path)\n\n"
-		"%s",
-		commands_help);
+		"                socket path)\n\n");
+	print_help(stderr, NULL);
+}
+
+
+static int str_starts(const char *src, const char *match)
+{
+	return os_strncmp(src, match, os_strlen(match)) == 0;
 }
 
 
@@ -774,7 +749,7 @@ static int hostapd_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc,
 
 static int hostapd_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	printf("%s", commands_help);
+	print_help(stdout, argc > 0 ? argv[0] : NULL);
 	return 0;
 }
 
@@ -1320,6 +1295,39 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "driver_flags", hostapd_cli_cmd_driver_flags, NULL, NULL },
 	{ NULL, NULL, NULL, NULL }
 };
+
+
+/*
+ * Prints command usage, lines are padded with the specified string.
+ */
+static void print_cmd_help(FILE *stream, const struct hostapd_cli_cmd *cmd,
+			   const char *pad)
+{
+	char c;
+	size_t n;
+
+	if (cmd->usage == NULL)
+		return;
+	fprintf(stream, "%s%s ", pad, cmd->cmd);
+	for (n = 0; (c = cmd->usage[n]); n++) {
+		fprintf(stream, "%c", c);
+		if (c == '\n')
+			fprintf(stream, "%s", pad);
+	}
+	fprintf(stream, "\n");
+}
+
+
+static void print_help(FILE *stream, const char *cmd)
+{
+	int n;
+
+	fprintf(stream, "commands:\n");
+	for (n = 0; hostapd_cli_commands[n].cmd; n++) {
+		if (cmd == NULL || str_starts(hostapd_cli_commands[n].cmd, cmd))
+			print_cmd_help(stream, &hostapd_cli_commands[n], "  ");
+	}
+}
 
 
 static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])

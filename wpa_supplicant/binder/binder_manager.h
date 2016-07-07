@@ -7,14 +7,14 @@
  * See README for more details.
  */
 
-#ifndef BINDER_MANAGER_H
-#define BINDER_MANAGER_H
+#ifndef WPA_SUPPLICANT_BINDER_BINDER_MANAGER_H
+#define WPA_SUPPLICANT_BINDER_BINDER_MANAGER_H
 
 #include <map>
 #include <string>
 
-#include "supplicant.h"
 #include "iface.h"
+#include "supplicant.h"
 
 struct wpa_global;
 struct wpa_supplicant;
@@ -27,16 +27,17 @@ namespace wpa_supplicant_binder {
  * class which is created by the supplicant core and can be used
  * to get references to the binder objects.
  */
-class BinderManager {
+class BinderManager
+{
 public:
-	static BinderManager * getInstance();
+	static BinderManager *getInstance();
 	static void destroyInstance();
 	int registerBinderService(struct wpa_global *global);
 	int registerInterface(struct wpa_supplicant *wpa_s);
 	int unregisterInterface(struct wpa_supplicant *wpa_s);
 	int getIfaceBinderObjectByKey(
-		const void *iface_object_key,
-		android::sp<fi::w1::wpa_supplicant::IIface> *iface_object);
+	    const void *iface_object_key,
+	    android::sp<fi::w1::wpa_supplicant::IIface> *iface_object);
 
 private:
 	BinderManager() = default;
@@ -54,4 +55,4 @@ private:
 
 } /* namespace wpa_supplicant_binder */
 
-#endif /* BINDER_MANAGER_H */
+#endif /* WPA_SUPPLICANT_BINDER_BINDER_MANAGER_H */

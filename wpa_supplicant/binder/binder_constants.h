@@ -7,8 +7,8 @@
  * See README for more details.
  */
 
-#ifndef BINDER_CONSTANTS_H
-#define BINDER_CONSTANTS_H
+#ifndef WPA_SUPPLICANT_BINDER_BINDER_CONSTANTS_H
+#define WPA_SUPPLICANT_BINDER_BINDER_CONSTANTS_H
 
 namespace wpa_supplicant_binder {
 namespace binder_constants {
@@ -18,4 +18,4 @@ extern const char kServiceName[];
 } /* namespace binder_constants */
 } /* namespace wpa_supplicant_binder */
 
-#endif /* BINDER_CONSTANTS_H */
+#endif /* WPA_SUPPLICANT_BINDER_BINDER_CONSTANTS_H */

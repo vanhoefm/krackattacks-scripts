@@ -7,14 +7,14 @@
  * See README for more details.
  */
 
-#ifndef IFACE_H
-#define IFACE_H
+#ifndef WPA_SUPPLICANT_BINDER_IFACE_H
+#define WPA_SUPPLICANT_BINDER_IFACE_H
 
 #include "fi/w1/wpa_supplicant/BnIface.h"
 
 extern "C" {
-#include "utils/includes.h"
 #include "utils/common.h"
+#include "utils/includes.h"
 #include "../wpa_supplicant_i.h"
 }
 
@@ -39,4 +39,4 @@ private:
 
 } /* namespace wpa_supplicant_binder */
 
-#endif /* IFACE_H */
+#endif /* WPA_SUPPLICANT_BINDER_IFACE_H */

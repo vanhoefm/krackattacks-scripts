@@ -14,7 +14,8 @@
 extern "C" {
 #endif // _cplusplus
 
-struct wpas_binder_priv {
+struct wpas_binder_priv
+{
 	int binder_fd;
 	struct wpa_global *global;
 	void *binder_manager;

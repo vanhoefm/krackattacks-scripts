@@ -7,8 +7,8 @@
  * See README for more details.
  */
 
-#ifndef BINDER_H
-#define BINDER_H
+#ifndef WPA_SUPPLICANT_BINDER_BINDER_H
+#define WPA_SUPPLICANT_BINDER_BINDER_H
 
 #ifdef _cplusplus
 extern "C" {
@@ -22,13 +22,13 @@ extern "C" {
 struct wpas_binder_priv;
 struct wpa_global;
 
-struct wpas_binder_priv * wpas_binder_init(struct wpa_global *global);
+struct wpas_binder_priv *wpas_binder_init(struct wpa_global *global);
 void wpas_binder_deinit(struct wpas_binder_priv *priv);
 
 #ifdef CONFIG_CTRL_IFACE_BINDER
 int wpas_binder_register_interface(struct wpa_supplicant *wpa_s);
 int wpas_binder_unregister_interface(struct wpa_supplicant *wpa_s);
-#else /* CONFIG_CTRL_IFACE_BINDER */
+#else  /* CONFIG_CTRL_IFACE_BINDER */
 static inline int wpas_binder_register_interface(struct wpa_supplicant *wpa_s)
 {
 	return 0;
@@ -43,4 +43,4 @@ static inline int wpas_binder_unregister_interface(struct wpa_supplicant *wpa_s)
 }
 #endif /* _cplusplus */
 
-#endif /* BINDER_H */
+#endif /* WPA_SUPPLICANT_BINDER_BINDER_H */

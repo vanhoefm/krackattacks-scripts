@@ -13,21 +13,20 @@
 #include "binder_manager.h"
 
 extern "C" {
-#include "utils/includes.h"
 #include "utils/common.h"
+#include "utils/includes.h"
 }
 
 namespace wpa_supplicant_binder {
 
 BinderManager *BinderManager::instance_ = NULL;
 
-BinderManager * BinderManager::getInstance()
+BinderManager *BinderManager::getInstance()
 {
 	if (!instance_)
 		instance_ = new BinderManager();
 	return instance_;
 }
-
 
 void BinderManager::destroyInstance()
 {
@@ -36,7 +35,6 @@ void BinderManager::destroyInstance()
 	instance_ = NULL;
 }
 
-
 int BinderManager::registerBinderService(struct wpa_global *global)
 {
 	/* Create the main binder service object and register with
@@ -44,11 +42,9 @@ int BinderManager::registerBinderService(struct wpa_global *global)
 	supplicant_object_ = new Supplicant(global);
 	android::String16 service_name(binder_constants::kServiceName);
 	android::defaultServiceManager()->addService(
-		service_name,
-		android::IInterface::asBinder(supplicant_object_));
+	    service_name, android::IInterface::asBinder(supplicant_object_));
 	return 0;
 }
-
 
 int BinderManager::registerInterface(struct wpa_supplicant *wpa_s)
 {
@@ -72,7 +68,6 @@ int BinderManager::registerInterface(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
-
 int BinderManager::unregisterInterface(struct wpa_supplicant *wpa_s)
 {
 	if (!wpa_s || !wpa_s->binder_object_key)
@@ -88,10 +83,9 @@ int BinderManager::unregisterInterface(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
-
 int BinderManager::getIfaceBinderObjectByKey(
-	const void *iface_object_key,
-	android::sp<fi::w1::wpa_supplicant::IIface> *iface_object)
+    const void *iface_object_key,
+    android::sp<fi::w1::wpa_supplicant::IIface> *iface_object)
 {
 	if (!iface_object_key || !iface_object)
 		return 1;

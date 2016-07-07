@@ -11,9 +11,6 @@
 
 namespace wpa_supplicant_binder {
 
-Iface::Iface(struct wpa_supplicant *wpa_s)
-	: wpa_s_(wpa_s)
-{
-}
+Iface::Iface(struct wpa_supplicant *wpa_s) : wpa_s_(wpa_s) {}
 
 } /* namespace wpa_supplicant_binder */

@@ -87,7 +87,10 @@ OBJS += ../src/ap/bss_load.o
 OBJS += ../src/ap/neighbor_db.o
 OBJS += ../src/ap/rrm.o
 
-OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
+OBJS_c = hostapd_cli.o
+OBJS_c += ../src/common/wpa_ctrl.o
+OBJS_c += ../src/utils/os_$(CONFIG_OS).o
+OBJS_c += ../src/common/cli.o
 
 NEED_RC4=y
 NEED_AES=y

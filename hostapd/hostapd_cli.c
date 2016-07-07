@@ -15,6 +15,7 @@
 #include "utils/eloop.h"
 #include "utils/edit.h"
 #include "common/version.h"
+#include "common/cli.h"
 
 #ifndef CONFIG_NO_CTRL_IFACE
 

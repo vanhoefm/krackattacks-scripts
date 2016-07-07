@@ -947,7 +947,10 @@ ifdef CONFIG_ANDROID_LOG
 L_CFLAGS += -DCONFIG_ANDROID_LOG
 endif
 
-OBJS_c = hostapd_cli.c src/common/wpa_ctrl.c src/utils/os_$(CONFIG_OS).c
+OBJS_c = hostapd_cli.c
+OBJS_c += src/common/wpa_ctrl.c
+OBJS_c += src/utils/os_$(CONFIG_OS).c
+OBJS_c += src/common/cli.c
 OBJS_c += src/utils/eloop.c
 OBJS_c += src/utils/common.c
 ifdef CONFIG_WPA_TRACE

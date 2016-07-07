@@ -962,6 +962,28 @@ static int hostapd_cli_cmd_level(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static void hostapd_cli_get_interfaces(struct wpa_ctrl *ctrl,
+				       struct dl_list *interfaces)
+{
+	struct dirent *dent;
+	DIR *dir;
+
+	if (!ctrl || !interfaces)
+		return;
+	dir = opendir(ctrl_iface_dir);
+	if (dir == NULL)
+		return;
+
+	while ((dent = readdir(dir))) {
+		if (strcmp(dent->d_name, ".") == 0 ||
+		    strcmp(dent->d_name, "..") == 0)
+			continue;
+		cli_txt_list_add(interfaces, dent->d_name);
+	}
+	closedir(dir);
+}
+
+
 static void hostapd_cli_list_interfaces(struct wpa_ctrl *ctrl)
 {
 	struct dirent *dent;
@@ -1013,6 +1035,24 @@ static int hostapd_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc,
 			ctrl_ifname);
 	}
 	return 0;
+}
+
+
+static char ** hostapd_complete_interface(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	DEFINE_DL_LIST(interfaces);
+
+	switch (arg) {
+	case 1:
+		hostapd_cli_get_interfaces(ctrl_conn, &interfaces);
+		res = cli_txt_list_array(&interfaces);
+		cli_txt_list_flush(&interfaces);
+		break;
+	}
+
+	return res;
 }
 
 
@@ -1358,7 +1398,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "= show current configuration" },
 	{ "help", hostapd_cli_cmd_help, hostapd_cli_complete_help,
 	  "= show this usage help" },
-	{ "interface", hostapd_cli_cmd_interface, NULL,
+	{ "interface", hostapd_cli_cmd_interface, hostapd_complete_interface,
 	  "[ifname] = show interfaces/select interface" },
 #ifdef CONFIG_FST
 	{ "fst", hostapd_cli_cmd_fst, NULL, NULL },

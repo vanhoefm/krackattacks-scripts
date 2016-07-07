@@ -11,6 +11,9 @@
 
 #include "utils/list.h"
 
+extern const char *const cli_license;
+extern const char *const cli_full_license;
+
 struct cli_txt_entry {
 	struct dl_list list;
 	char *txt;

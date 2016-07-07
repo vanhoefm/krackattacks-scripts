@@ -49,6 +49,12 @@ ifeq ($(TARGET_ARCH),arm)
 L_CFLAGS += -mabi=aapcs-linux
 endif
 
+# C++ flags for binder interface
+L_CPPFLAGS := -std=c++11 -Wall -Werror
+# TODO: Remove these allowed warnings later.
+L_CPPFLAGS += -Wno-unused-variable -Wno-unused-parameter
+L_CPPFLAGS += -Wno-unused-private-field
+
 INCLUDES = $(LOCAL_PATH)
 INCLUDES += $(LOCAL_PATH)/src
 INCLUDES += $(LOCAL_PATH)/src/common
@@ -1350,13 +1356,8 @@ OBJS += $(DBUS_OBJS)
 L_CFLAGS += $(DBUS_CFLAGS)
 
 ifdef CONFIG_CTRL_IFACE_BINDER
-BINDER=y
+WPA_SUPPLICANT_USE_BINDER=y
 L_CFLAGS += -DCONFIG_BINDER -DCONFIG_CTRL_IFACE_BINDER
-OBJS += binder/binder.cpp binder/binder_manager.cpp
-OBJS += binder/supplicant.cpp binder/iface.cpp
-OBJS += binder/fi/w1/wpa_supplicant/ISupplicant.aidl
-OBJS += binder/fi/w1/wpa_supplicant/ISupplicantCallbacks.aidl
-OBJS += binder/fi/w1/wpa_supplicant/IIface.aidl
 endif
 
 ifdef CONFIG_READLINE
@@ -1596,9 +1597,9 @@ LOCAL_C_INCLUDES := $(INCLUDES)
 ifeq ($(DBUS), y)
 LOCAL_SHARED_LIBRARIES += libdbus
 endif
-ifeq ($(BINDER), y)
-LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/binder frameworks/native/aidl/binder
-LOCAL_SHARED_LIBRARIES += libutils libbinder
+ifeq ($(WPA_SUPPLICANT_USE_BINDER), y)
+LOCAL_SHARED_LIBRARIES += libbinder libutils
+LOCAL_STATIC_LIBRARIES += libwpa_binder libwpa_binder_interface
 endif
 include $(BUILD_EXECUTABLE)
 
@@ -1638,3 +1639,42 @@ LOCAL_COPY_HEADERS_TO := libwpa_client
 LOCAL_COPY_HEADERS := src/common/wpa_ctrl.h
 LOCAL_COPY_HEADERS += src/common/qca-vendor.h
 include $(BUILD_SHARED_LIBRARY)
+
+ifeq ($(WPA_SUPPLICANT_USE_BINDER), y)
+### Binder interface library ###
+########################
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libwpa_binder_interface
+LOCAL_AIDL_INCLUDES := \
+    $(LOCAL_PATH)/binder \
+    frameworks/native/aidl/binder
+LOCAL_EXPORT_C_INCLUDE_DIRS := \
+    $(LOCAL_PATH)/binder
+LOCAL_CPPFLAGS := $(L_CPPFLAGS)
+LOCAL_SRC_FILES := \
+    binder/binder_constants.cpp \
+    binder/fi/w1/wpa_supplicant/ISupplicant.aidl \
+    binder/fi/w1/wpa_supplicant/ISupplicantCallbacks.aidl \
+    binder/fi/w1/wpa_supplicant/IIface.aidl
+LOCAL_SHARED_LIBRARIES := libbinder
+include $(BUILD_STATIC_LIBRARY)
+
+### Binder service library ###
+########################
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libwpa_binder
+LOCAL_CPPFLAGS := $(L_CPPFLAGS)
+LOCAL_CFLAGS := $(L_CFLAGS)
+LOCAL_C_INCLUDES := $(INCLUDES)
+LOCAL_SRC_FILES := \
+    binder/binder.cpp binder/binder_manager.cpp \
+    binder/supplicant.cpp binder/iface.cpp
+LOCAL_SHARED_LIBRARIES := \
+    libbinder \
+    libutils
+LOCAL_STATIC_LIBRARIES := libwpa_binder_interface
+include $(BUILD_STATIC_LIBRARY)
+
+endif # BINDER == y

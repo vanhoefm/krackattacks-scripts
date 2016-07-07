@@ -29,8 +29,6 @@ namespace wpa_supplicant_binder {
  */
 class BinderManager {
 public:
-	static const char kBinderServiceName[];
-
 	static BinderManager * getInstance();
 	static void destroyInstance();
 	int registerBinderService(struct wpa_global *global);

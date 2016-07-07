@@ -9,6 +9,7 @@
 
 #include <binder/IServiceManager.h>
 
+#include "binder_constants.h"
 #include "binder_manager.h"
 
 extern "C" {
@@ -18,9 +19,7 @@ extern "C" {
 
 namespace wpa_supplicant_binder {
 
-const char BinderManager::kBinderServiceName[] = "fi.w1.wpa_supplicant";
 BinderManager *BinderManager::instance_ = NULL;
-
 
 BinderManager * BinderManager::getInstance()
 {
@@ -43,7 +42,7 @@ int BinderManager::registerBinderService(struct wpa_global *global)
 	/* Create the main binder service object and register with
 	 * system service manager. */
 	supplicant_object_ = new Supplicant(global);
-	android::String16 service_name(kBinderServiceName);
+	android::String16 service_name(binder_constants::kServiceName);
 	android::defaultServiceManager()->addService(
 		service_name,
 		android::IInterface::asBinder(supplicant_object_));

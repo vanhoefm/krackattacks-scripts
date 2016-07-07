@@ -76,6 +76,8 @@ static int ping_interval = 5;
 static int interactive = 0;
 static int event_handler_registered = 0;
 
+static DEFINE_DL_LIST(stations); /* struct cli_txt_entry */
+
 static void print_help(FILE *stream, const char *cmd);
 static char ** list_cmd_list(void);
 static void hostapd_cli_receive(int sock, void *eloop_ctx, void *sock_ctx);
@@ -406,6 +408,21 @@ static int hostapd_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static char ** hostapd_complete_deauthenticate(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
+}
+
+
 static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -421,6 +438,21 @@ static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 	else
 		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static char ** hostapd_complete_disassociate(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
 }
 
 
@@ -1283,9 +1315,11 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	   "= get MIB variables for all stations" },
 	{ "new_sta", hostapd_cli_cmd_new_sta, NULL,
 	  "<addr> = add a new station" },
-	{ "deauthenticate", hostapd_cli_cmd_deauthenticate, NULL,
+	{ "deauthenticate", hostapd_cli_cmd_deauthenticate,
+	  hostapd_complete_deauthenticate,
 	  "<addr> = deauthenticate a station" },
-	{ "disassociate", hostapd_cli_cmd_disassociate, NULL,
+	{ "disassociate", hostapd_cli_cmd_disassociate,
+	  hostapd_complete_disassociate,
 	  "<addr> = disassociate a station" },
 #ifdef CONFIG_IEEE80211W
 	{ "sa_query", hostapd_cli_cmd_sa_query, NULL,
@@ -1434,6 +1468,29 @@ static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static void cli_event(const char *str)
 {
+	const char *start, *s;
+
+	start = os_strchr(str, '>');
+	if (start == NULL)
+		return;
+
+	start++;
+
+	if (str_starts(start, AP_STA_CONNECTED)) {
+		s = os_strchr(start, ' ');
+		if (s == NULL)
+			return;
+		cli_txt_list_add(&stations, s + 1);
+		return;
+	}
+
+	if (str_starts(start, AP_STA_DISCONNECTED)) {
+		s = os_strchr(start, ' ');
+		if (s == NULL)
+			return;
+		cli_txt_list_del_addr(&stations, s + 1);
+		return;
+	}
 }
 
 
@@ -1625,6 +1682,7 @@ static void hostapd_cli_interactive(void)
 
 	eloop_run();
 
+	cli_txt_list_flush(&stations);
 	edit_deinit(NULL, NULL);
 	eloop_cancel_timeout(hostapd_cli_ping, NULL, NULL);
 }

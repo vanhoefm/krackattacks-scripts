@@ -1228,70 +1228,97 @@ static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
+	char ** (*completion)(const char *str, int pos);
+	const char *usage;
 };
 
 static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
-	{ "ping", hostapd_cli_cmd_ping },
-	{ "mib", hostapd_cli_cmd_mib },
-	{ "relog", hostapd_cli_cmd_relog },
-	{ "status", hostapd_cli_cmd_status },
-	{ "sta", hostapd_cli_cmd_sta },
-	{ "all_sta", hostapd_cli_cmd_all_sta },
-	{ "new_sta", hostapd_cli_cmd_new_sta },
-	{ "deauthenticate", hostapd_cli_cmd_deauthenticate },
-	{ "disassociate", hostapd_cli_cmd_disassociate },
+	{ "ping", hostapd_cli_cmd_ping, NULL,
+	  "= pings hostapd" },
+	{ "mib", hostapd_cli_cmd_mib, NULL,
+	  "= get MIB variables (dot1x, dot11, radius)" },
+	{ "relog", hostapd_cli_cmd_relog, NULL, NULL },
+	{ "status", hostapd_cli_cmd_status, NULL, NULL },
+	{ "sta", hostapd_cli_cmd_sta, NULL,
+	  "<addr> = get MIB variables for one station" },
+	{ "all_sta", hostapd_cli_cmd_all_sta, NULL,
+	   "= get MIB variables for all stations" },
+	{ "new_sta", hostapd_cli_cmd_new_sta, NULL,
+	  "<addr> = add a new station" },
+	{ "deauthenticate", hostapd_cli_cmd_deauthenticate, NULL,
+	  "<addr> = deauthenticate a station" },
+	{ "disassociate", hostapd_cli_cmd_disassociate, NULL,
+	  "<addr> = disassociate a station" },
 #ifdef CONFIG_IEEE80211W
-	{ "sa_query", hostapd_cli_cmd_sa_query },
+	{ "sa_query", hostapd_cli_cmd_sa_query, NULL,
+	  "<addr> = send SA Query to a station" },
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
-	{ "wps_pin", hostapd_cli_cmd_wps_pin },
-	{ "wps_check_pin", hostapd_cli_cmd_wps_check_pin },
-	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
-	{ "wps_cancel", hostapd_cli_cmd_wps_cancel },
+	{ "wps_pin", hostapd_cli_cmd_wps_pin, NULL,
+	  "<uuid> <pin> [timeout] [addr] = add WPS Enrollee PIN" },
+	{ "wps_check_pin", hostapd_cli_cmd_wps_check_pin, NULL,
+	  "<PIN> = verify PIN checksum" },
+	{ "wps_pbc", hostapd_cli_cmd_wps_pbc, NULL,
+	  "= indicate button pushed to initiate PBC" },
+	{ "wps_cancel", hostapd_cli_cmd_wps_cancel, NULL,
+	  "= cancel the pending WPS operation" },
 #ifdef CONFIG_WPS_NFC
-	{ "wps_nfc_tag_read", hostapd_cli_cmd_wps_nfc_tag_read },
-	{ "wps_nfc_config_token", hostapd_cli_cmd_wps_nfc_config_token },
-	{ "wps_nfc_token", hostapd_cli_cmd_wps_nfc_token },
-	{ "nfc_get_handover_sel", hostapd_cli_cmd_nfc_get_handover_sel },
+	{ "wps_nfc_tag_read", hostapd_cli_cmd_wps_nfc_tag_read, NULL,
+	  "<hexdump> = report read NFC tag with WPS data" },
+	{ "wps_nfc_config_token", hostapd_cli_cmd_wps_nfc_config_token, NULL,
+	  "<WPS/NDEF> = build NFC configuration token" },
+	{ "wps_nfc_token", hostapd_cli_cmd_wps_nfc_token, NULL,
+	  "<WPS/NDEF/enable/disable> = manager NFC password token" },
+	{ "nfc_get_handover_sel", hostapd_cli_cmd_nfc_get_handover_sel, NULL,
+	  NULL },
 #endif /* CONFIG_WPS_NFC */
-	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
-	{ "wps_config", hostapd_cli_cmd_wps_config },
-	{ "wps_get_status", hostapd_cli_cmd_wps_get_status },
+	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin, NULL,
+	  "<cmd> [params..] = enable/disable AP PIN" },
+	{ "wps_config", hostapd_cli_cmd_wps_config, NULL,
+	  "<SSID> <auth> <encr> <key> = configure AP" },
+	{ "wps_get_status", hostapd_cli_cmd_wps_get_status, NULL,
+	  "= show current WPS status" },
 #endif /* CONFIG_WPS */
-	{ "disassoc_imminent", hostapd_cli_cmd_disassoc_imminent },
-	{ "ess_disassoc", hostapd_cli_cmd_ess_disassoc },
-	{ "bss_tm_req", hostapd_cli_cmd_bss_tm_req },
-	{ "get_config", hostapd_cli_cmd_get_config },
-	{ "help", hostapd_cli_cmd_help },
-	{ "interface", hostapd_cli_cmd_interface },
+	{ "disassoc_imminent", hostapd_cli_cmd_disassoc_imminent, NULL, NULL },
+	{ "ess_disassoc", hostapd_cli_cmd_ess_disassoc, NULL, NULL },
+	{ "bss_tm_req", hostapd_cli_cmd_bss_tm_req, NULL, NULL },
+	{ "get_config", hostapd_cli_cmd_get_config, NULL,
+	  "= show current configuration" },
+	{ "help", hostapd_cli_cmd_help, NULL,
+	  "= show this usage help" },
+	{ "interface", hostapd_cli_cmd_interface, NULL,
+	  "[ifname] = show interfaces/select interface" },
 #ifdef CONFIG_FST
-	{ "fst", hostapd_cli_cmd_fst },
+	{ "fst", hostapd_cli_cmd_fst, NULL, NULL },
 #endif /* CONFIG_FST */
-	{ "raw", hostapd_cli_cmd_raw },
-	{ "level", hostapd_cli_cmd_level },
-	{ "license", hostapd_cli_cmd_license },
-	{ "quit", hostapd_cli_cmd_quit },
-	{ "set", hostapd_cli_cmd_set },
-	{ "get", hostapd_cli_cmd_get },
-	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set },
-	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf },
-	{ "chan_switch", hostapd_cli_cmd_chan_switch },
-	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif },
-	{ "hs20_deauth_req", hostapd_cli_cmd_hs20_deauth_req },
-	{ "vendor", hostapd_cli_cmd_vendor },
-	{ "enable", hostapd_cli_cmd_enable },
-	{ "reload", hostapd_cli_cmd_reload },
-	{ "disable", hostapd_cli_cmd_disable },
-	{ "erp_flush", hostapd_cli_cmd_erp_flush },
-	{ "log_level", hostapd_cli_cmd_log_level },
-	{ "pmksa", hostapd_cli_cmd_pmksa },
-	{ "pmksa_flush", hostapd_cli_cmd_pmksa_flush },
-	{ "set_neighbor", hostapd_cli_cmd_set_neighbor },
-	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor },
-	{ "req_lci", hostapd_cli_cmd_req_lci },
-	{ "req_range", hostapd_cli_cmd_req_range },
-	{ "driver_flags", hostapd_cli_cmd_driver_flags },
-	{ NULL, NULL }
+	{ "raw", hostapd_cli_cmd_raw, NULL, NULL },
+	{ "level", hostapd_cli_cmd_level, NULL,
+	  "<debug level> = change debug level" },
+	{ "license", hostapd_cli_cmd_license, NULL,
+	  "= show full hostapd_cli license" },
+	{ "quit", hostapd_cli_cmd_quit, NULL,
+	  "= exit hostapd_cli" },
+	{ "set", hostapd_cli_cmd_set, NULL, NULL },
+	{ "get", hostapd_cli_cmd_get, NULL, NULL },
+	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set, NULL, NULL },
+	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf, NULL, NULL },
+	{ "chan_switch", hostapd_cli_cmd_chan_switch, NULL, NULL },
+	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif, NULL, NULL },
+	{ "hs20_deauth_req", hostapd_cli_cmd_hs20_deauth_req, NULL, NULL },
+	{ "vendor", hostapd_cli_cmd_vendor, NULL, NULL },
+	{ "enable", hostapd_cli_cmd_enable, NULL, NULL },
+	{ "reload", hostapd_cli_cmd_reload, NULL, NULL },
+	{ "disable", hostapd_cli_cmd_disable, NULL, NULL },
+	{ "erp_flush", hostapd_cli_cmd_erp_flush, NULL, NULL },
+	{ "log_level", hostapd_cli_cmd_log_level, NULL, NULL },
+	{ "pmksa", hostapd_cli_cmd_pmksa, NULL, NULL },
+	{ "pmksa_flush", hostapd_cli_cmd_pmksa_flush, NULL, NULL },
+	{ "set_neighbor", hostapd_cli_cmd_set_neighbor, NULL, NULL },
+	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor, NULL, NULL },
+	{ "req_lci", hostapd_cli_cmd_req_lci, NULL, NULL },
+	{ "req_range", hostapd_cli_cmd_req_range, NULL, NULL },
+	{ "driver_flags", hostapd_cli_cmd_driver_flags, NULL, NULL },
+	{ NULL, NULL, NULL, NULL }
 };
 
 
@@ -1439,13 +1466,77 @@ static void hostapd_cli_edit_eof_cb(void *ctx)
 }
 
 
+static char ** list_cmd_list(void)
+{
+	char **res;
+	int i, count;
+
+	count = ARRAY_SIZE(hostapd_cli_commands);
+	res = os_calloc(count + 1, sizeof(char *));
+	if (res == NULL)
+		return NULL;
+
+	for (i = 0; hostapd_cli_commands[i].cmd; i++) {
+		res[i] = os_strdup(hostapd_cli_commands[i].cmd);
+		if (res[i] == NULL)
+			break;
+	}
+
+	return res;
+}
+
+
+static char ** hostapd_cli_cmd_completion(const char *cmd, const char *str,
+				      int pos)
+{
+	int i;
+
+	for (i = 0; hostapd_cli_commands[i].cmd; i++) {
+		if (os_strcasecmp(hostapd_cli_commands[i].cmd, cmd) != 0)
+			continue;
+		if (hostapd_cli_commands[i].completion)
+			return hostapd_cli_commands[i].completion(str, pos);
+		if (!hostapd_cli_commands[i].usage)
+			return NULL;
+		edit_clear_line();
+		printf("\r%s\n", hostapd_cli_commands[i].usage);
+		edit_redraw();
+		break;
+	}
+
+	return NULL;
+}
+
+
+static char ** hostapd_cli_edit_completion_cb(void *ctx, const char *str,
+					      int pos)
+{
+	char **res;
+	const char *end;
+	char *cmd;
+
+	end = os_strchr(str, ' ');
+	if (end == NULL || str + pos < end)
+		return list_cmd_list();
+
+	cmd = os_malloc(pos + 1);
+	if (cmd == NULL)
+		return NULL;
+	os_memcpy(cmd, str, pos);
+	cmd[end - str] = '\0';
+	res = hostapd_cli_cmd_completion(cmd, str, pos);
+	os_free(cmd);
+	return res;
+}
+
+
 static void hostapd_cli_interactive(void)
 {
 	printf("\nInteractive mode\n\n");
 
 	eloop_register_signal_terminate(hostapd_cli_eloop_terminate, NULL);
 	edit_init(hostapd_cli_edit_cmd_cb, hostapd_cli_edit_eof_cb,
-		  NULL, NULL, NULL, NULL);
+		  hostapd_cli_edit_completion_cb, NULL, NULL, NULL);
 	eloop_register_timeout(ping_interval, 0, hostapd_cli_ping, NULL, NULL);
 
 	eloop_run();

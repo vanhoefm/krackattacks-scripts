@@ -1824,6 +1824,48 @@ static int wpa_cli_cmd_get_capability(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static char ** wpa_cli_complete_get_capability(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	const char *fields[] = {
+		"eap", "pairwise", "group", "group_mgmt", "key_mgmt",
+		"proto", "auth_alg", "modes", "channels", "freq",
+#ifdef CONFIG_TDLS
+		"tdls",
+#endif /* CONFIG_TDLS */
+#ifdef CONFIG_ERP
+		"erp",
+#endif /* CONFIG_ERP */
+#ifdef CONFIG_FIPS
+		"fips",
+#endif /* CONFIG_FIPS */
+#ifdef CONFIG_ACS
+		"acs",
+#endif /* CONFIG_ACS */
+	};
+	int i, num_fields = ARRAY_SIZE(fields);
+	char **res = NULL;
+
+	if (arg == 1) {
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(fields[i]);
+			if (res[i] == NULL)
+				return res;
+		}
+	}
+	if (arg == 2) {
+		res = os_calloc(1 + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		res[0] = os_strdup("strict");
+	}
+	return res;
+}
+
+
 static int wpa_cli_list_interfaces(struct wpa_ctrl *ctrl)
 {
 	printf("Available interfaces:\n");
@@ -3100,8 +3142,8 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "bss", wpa_cli_cmd_bss, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,
 	  "<<idx> | <bssid>> = get detailed scan result info" },
-	{ "get_capability", wpa_cli_cmd_get_capability, NULL,
-	  cli_cmd_flag_none,
+	{ "get_capability", wpa_cli_cmd_get_capability,
+	  wpa_cli_complete_get_capability, cli_cmd_flag_none,
 	  "<eap/pairwise/group/key_mgmt/proto/auth_alg/channels/freq/modes> "
 	  "= get capabilities" },
 	{ "reconfigure", wpa_cli_cmd_reconfigure, NULL,

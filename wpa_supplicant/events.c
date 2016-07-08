@@ -1014,8 +1014,10 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
-		if (!bss_is_ess(bss) && !bss_is_pbss(bss)) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - neither ESS nor PBSS network");
+		if (ssid->mode != IEEE80211_MODE_MESH && !bss_is_ess(bss) &&
+		    !bss_is_pbss(bss)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"   skip - not ESS, PBSS, or MBSS");
 			continue;
 		}
 
@@ -1624,6 +1626,14 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 
 	selected = wpa_supplicant_pick_network(wpa_s, &ssid);
 
+#ifdef CONFIG_MESH
+	if (wpa_s->ifmsh) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"Avoiding join because we already joined a mesh group");
+		return 0;
+	}
+#endif /* CONFIG_MESH */
+
 	if (selected) {
 		int skip;
 		skip = !wpa_supplicant_need_to_roam(wpa_s, selected, ssid);
@@ -1652,13 +1662,6 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 		 */
 		return 1;
 	} else {
-#ifdef CONFIG_MESH
-		if (wpa_s->ifmsh) {
-			wpa_msg(wpa_s, MSG_INFO,
-				"Avoiding join because we already joined a mesh group");
-			return 0;
-		}
-#endif /* CONFIG_MESH */
 		wpa_dbg(wpa_s, MSG_DEBUG, "No suitable network found");
 		ssid = wpa_supplicant_pick_new_network(wpa_s);
 		if (ssid) {

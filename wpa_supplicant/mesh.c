@@ -400,6 +400,10 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		params.beacon_int = ssid->beacon_int;
 	else if (wpa_s->conf->beacon_int > 0)
 		params.beacon_int = wpa_s->conf->beacon_int;
+	if (ssid->dtim_period > 0)
+		params.dtim_period = ssid->dtim_period;
+	else if (wpa_s->conf->dtim_period > 0)
+		params.dtim_period = wpa_s->conf->dtim_period;
 	params.max_peer_links = wpa_s->conf->max_peer_links;
 
 	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {

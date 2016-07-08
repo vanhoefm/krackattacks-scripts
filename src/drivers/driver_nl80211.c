@@ -3468,6 +3468,17 @@ static int nl80211_put_beacon_int(struct nl_msg *msg, int beacon_int)
 }
 
 
+static int nl80211_put_dtim_period(struct nl_msg *msg, int dtim_period)
+{
+	if (dtim_period > 0) {
+		wpa_printf(MSG_DEBUG, "  * dtim_period=%d", dtim_period);
+		return nla_put_u32(msg, NL80211_ATTR_DTIM_PERIOD, dtim_period);
+	}
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -3504,7 +3515,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	    nla_put(msg, NL80211_ATTR_BEACON_TAIL, params->tail_len,
 		    params->tail) ||
 	    nl80211_put_beacon_int(msg, params->beacon_int) ||
-	    nla_put_u32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period) ||
+	    nl80211_put_dtim_period(msg, params->dtim_period) ||
 	    nla_put(msg, NL80211_ATTR_SSID, params->ssid_len, params->ssid))
 		goto fail;
 	if (params->proberesp && params->proberesp_len) {
@@ -8400,7 +8411,8 @@ static int nl80211_join_mesh(struct i802_bss *bss,
 	    nl80211_put_freq_params(msg, &params->freq) ||
 	    nl80211_put_basic_rates(msg, params->basic_rates) ||
 	    nl80211_put_mesh_id(msg, params->meshid, params->meshid_len) ||
-	    nl80211_put_beacon_int(msg, params->beacon_int))
+	    nl80211_put_beacon_int(msg, params->beacon_int) ||
+	    nl80211_put_dtim_period(msg, params->dtim_period))
 		goto fail;
 
 	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);

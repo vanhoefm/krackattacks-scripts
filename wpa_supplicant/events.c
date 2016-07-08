@@ -1033,6 +1033,14 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
+#ifdef CONFIG_MESH
+		if (ssid->mode == IEEE80211_MODE_MESH && ssid->frequency > 0 &&
+		    ssid->frequency != bss->freq) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - frequency not allowed (mesh)");
+			continue;
+		}
+#endif /* CONFIG_MESH */
+
 		if (!rate_match(wpa_s, bss)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - rate sets do "
 				"not match");

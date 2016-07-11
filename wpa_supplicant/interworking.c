@@ -2796,7 +2796,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 
 	switch (info_id) {
 	case ANQP_CAPABILITY_LIST:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" ANQP Capability list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Capability list",
 				  pos, slen);
@@ -2806,7 +2806,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_VENUE_NAME:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" Venue Name", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Venue Name", pos, slen);
 		if (anqp) {
@@ -2815,7 +2815,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_NETWORK_AUTH_TYPE:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" Network Authentication Type information",
 			MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Network Authentication "
@@ -2826,7 +2826,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_ROAMING_CONSORTIUM:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" Roaming Consortium list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Roaming Consortium",
 				  pos, slen);
@@ -2836,7 +2836,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_IP_ADDR_TYPE_AVAILABILITY:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" IP Address Type Availability information",
 			MAC2STR(sa));
 		wpa_hexdump(MSG_MSGDUMP, "ANQP: IP Address Availability",
@@ -2848,7 +2848,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_NAI_REALM:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" NAI Realm list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: NAI Realm", pos, slen);
 		if (anqp) {
@@ -2857,7 +2857,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_3GPP_CELLULAR_NETWORK:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" 3GPP Cellular Network information", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: 3GPP Cellular Network",
 				  pos, slen);
@@ -2867,7 +2867,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case ANQP_DOMAIN_NAME:
-		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
 			" Domain Name list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_MSGDUMP, "ANQP: Domain Name", pos, slen);
 		if (anqp) {

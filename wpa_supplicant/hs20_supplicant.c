@@ -436,14 +436,14 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 			icon->image_len = slen;
 			hs20_remove_duplicate_icons(wpa_s, icon);
 			wpa_msg(wpa_s, MSG_INFO,
-				"RX-HS20-ICON " MACSTR " %s %u",
+				RX_HS20_ICON MACSTR " %s %u",
 				MAC2STR(sa), icon->file_name,
 				(unsigned int) icon->image_len);
 			return 0;
 		}
 	}
 
-	wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR " Icon Binary File",
+	wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR " Icon Binary File",
 		MAC2STR(sa));
 
 	if (slen < 4) {
@@ -506,7 +506,7 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 	}
 	fclose(f);
 
-	wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP-ICON %s", fname);
+	wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP_ICON "%s", fname);
 	return 0;
 }
 
@@ -570,7 +570,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 
 	switch (subtype) {
 	case HS20_STYPE_CAPABILITY_LIST:
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" HS Capability List", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "HS Capability List", pos, slen);
 		if (anqp) {
@@ -580,7 +580,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case HS20_STYPE_OPERATOR_FRIENDLY_NAME:
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" Operator Friendly Name", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "oper friendly name", pos, slen);
 		if (anqp) {
@@ -596,7 +596,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 				"Metrics value from " MACSTR, MAC2STR(sa));
 			break;
 		}
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" WAN Metrics %02x:%u:%u:%u:%u:%u", MAC2STR(sa),
 			pos[0], WPA_GET_LE32(pos + 1), WPA_GET_LE32(pos + 5),
 			pos[9], pos[10], WPA_GET_LE16(pos + 11));
@@ -606,7 +606,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case HS20_STYPE_CONNECTION_CAPABILITY:
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" Connection Capability", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "conn capability", pos, slen);
 		if (anqp) {
@@ -616,7 +616,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case HS20_STYPE_OPERATING_CLASS:
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" Operating Class", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "Operating Class", pos, slen);
 		if (anqp) {
@@ -626,7 +626,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case HS20_STYPE_OSU_PROVIDERS_LIST:
-		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+		wpa_msg(wpa_s, MSG_INFO, RX_HS20_ANQP MACSTR
 			" OSU Providers list", MAC2STR(sa));
 		wpa_s->num_prov_found++;
 		if (anqp) {

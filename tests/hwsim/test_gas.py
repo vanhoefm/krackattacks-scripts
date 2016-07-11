@@ -388,7 +388,8 @@ def test_gas_anqp_get(dev, apdev):
              "00:11:22:33:44:55 32",
              "00:11:22:33:44:55",
              "00:11:22:33:44:55 ",
-             "00:11:22:33:44:55 0" ]
+             "00:11:22:33:44:55 0",
+             "00:11:22:33:44:55 1" ]
     for cmd in cmds:
         if "FAIL" not in dev[0].request("HS20_ANQP_GET " + cmd):
             raise Exception("Invalid HS20_ANQP_GET accepted")
@@ -402,6 +403,18 @@ def test_gas_anqp_get_oom(dev, apdev):
     with alloc_fail(dev[0], 1, "wpabuf_alloc;anqp_send_req"):
         if "FAIL" not in dev[0].request("ANQP_GET " + bssid + " 258,268,hs20:3,hs20:4"):
             raise Exception("ANQP_GET command accepted during OOM")
+    with alloc_fail(dev[0], 1, "hs20_build_anqp_req;hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("HS20_ANQP_GET " + bssid + " 1"):
+            raise Exception("HS20_ANQP_GET command accepted during OOM")
+    with alloc_fail(dev[0], 1, "gas_query_req;hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("HS20_ANQP_GET " + bssid + " 1"):
+            raise Exception("HS20_ANQP_GET command accepted during OOM")
+    with alloc_fail(dev[0], 1, "=hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON command accepted during OOM")
+    with alloc_fail(dev[0], 2, "=hs20_anqp_send_req"):
+        if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
+            raise Exception("REQ_HS20_ICON command accepted during OOM")
 
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)

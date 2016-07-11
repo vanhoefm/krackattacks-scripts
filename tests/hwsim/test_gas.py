@@ -416,6 +416,28 @@ def test_gas_anqp_get_oom(dev, apdev):
         if "FAIL" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
             raise Exception("REQ_HS20_ICON command accepted during OOM")
 
+def test_gas_anqp_icon_binary_proto(dev, apdev):
+    """GAS/ANQP and icon binary protocol testing"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    tests = [ '010000', '01000000', '00000000', '00030000', '00020000',
+              '00000100', '0001ff0100ee', '0001ff0200ee' ]
+    for test in tests:
+        dev[0].request("HS20_ICON_REQUEST " + bssid + " w1fi_logo")
+        query = gas_rx(hapd)
+        gas = parse_gas(query['payload'])
+        resp = action_response(query)
+        data = binascii.unhexlify(test)
+        data = binascii.unhexlify('506f9a110b00') + data
+        data = struct.pack('<HHH', len(data) + 4, 0xdddd, len(data)) + data
+        resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + data
+        send_gas_resp(hapd, resp)
+        expect_gas_result(dev[0], "SUCCESS")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

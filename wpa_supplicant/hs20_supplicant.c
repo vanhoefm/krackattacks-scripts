@@ -205,8 +205,8 @@ void hs20_put_anqp_req(u32 stypes, const u8 *payload, size_t payload_len,
 }
 
 
-struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
-				    size_t payload_len)
+static struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
+					   size_t payload_len)
 {
 	struct wpabuf *buf;
 

@@ -438,6 +438,28 @@ def test_gas_anqp_icon_binary_proto(dev, apdev):
         send_gas_resp(hapd, resp)
         expect_gas_result(dev[0], "SUCCESS")
 
+def test_gas_anqp_hs20_proto(dev, apdev):
+    """GAS/ANQP and Hotspot 2.0 element protocol testing"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    tests = [ '00', '0100', '0201', '0300', '0400', '0500', '0600', '0700',
+              '0800', '0900', '0a00', '0b0000000000' ]
+    for test in tests:
+        dev[0].request("HS20_ANQP_GET " + bssid + " 3,4")
+        query = gas_rx(hapd)
+        gas = parse_gas(query['payload'])
+        resp = action_response(query)
+        data = binascii.unhexlify(test)
+        data = binascii.unhexlify('506f9a11') + data
+        data = struct.pack('<HHH', len(data) + 4, 0xdddd, len(data)) + data
+        resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + data
+        send_gas_resp(hapd, resp)
+        expect_gas_result(dev[0], "SUCCESS")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

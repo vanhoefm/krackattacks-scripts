@@ -2434,6 +2434,19 @@ def _test_ap_hs20_deauth_req_from_radius(dev, apdev):
         raise Exception("Unexpected deauth imminent contents")
     dev[0].wait_disconnected(timeout=3)
 
+def test_ap_hs20_deauth_req_without_pmf(dev, apdev):
+    """Hotspot 2.0 connection and deauthentication request without PMF"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].request("SET pmf 0")
+    eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
+    dev[0].dump_monitor()
+    addr = dev[0].own_addr()
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("HS20_DEAUTH_REQ " + addr + " 1 120 http://example.com/")
+    ev = dev[0].wait_event(["HS20-DEAUTH-IMMINENT-NOTICE"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Deauth imminent notice without PMF accepted")
+
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""
     check_eap_capa(dev[0], "MSCHAPV2")

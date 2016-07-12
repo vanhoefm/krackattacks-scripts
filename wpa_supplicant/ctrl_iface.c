@@ -9053,7 +9053,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (del_hs20_icon(wpa_s, buf + 14) < 0)
 			reply_len = -1;
 	} else if (os_strcmp(buf, "FETCH_OSU") == 0) {
-		if (hs20_fetch_osu(wpa_s) < 0)
+		if (hs20_fetch_osu(wpa_s, 0) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "FETCH_OSU no-scan") == 0) {
+		if (hs20_fetch_osu(wpa_s, 1) < 0)
 			reply_len = -1;
 	} else if (os_strcmp(buf, "CANCEL_FETCH_OSU") == 0) {
 		hs20_cancel_fetch_osu(wpa_s);

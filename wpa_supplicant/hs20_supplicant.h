@@ -31,7 +31,7 @@ void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
 void hs20_free_osu_prov(struct wpa_supplicant *wpa_s);
 void hs20_next_osu_icon(struct wpa_supplicant *wpa_s);
 void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s);
-int hs20_fetch_osu(struct wpa_supplicant *wpa_s);
+int hs20_fetch_osu(struct wpa_supplicant *wpa_s, int skip_scan);
 void hs20_cancel_fetch_osu(struct wpa_supplicant *wpa_s);
 void hs20_icon_fetch_failed(struct wpa_supplicant *wpa_s);
 void hs20_start_osu_scan(struct wpa_supplicant *wpa_s);

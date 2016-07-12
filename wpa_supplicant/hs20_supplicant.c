@@ -1076,7 +1076,7 @@ static void hs20_osu_scan_res_handler(struct wpa_supplicant *wpa_s,
 }
 
 
-int hs20_fetch_osu(struct wpa_supplicant *wpa_s)
+int hs20_fetch_osu(struct wpa_supplicant *wpa_s, int skip_scan)
 {
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Cannot start fetch_osu - "
@@ -1107,7 +1107,16 @@ int hs20_fetch_osu(struct wpa_supplicant *wpa_s)
 	wpa_msg(wpa_s, MSG_INFO, "Starting OSU provisioning information fetch");
 	wpa_s->num_osu_scans = 0;
 	wpa_s->num_prov_found = 0;
-	hs20_start_osu_scan(wpa_s);
+	if (skip_scan) {
+		wpa_s->network_select = 0;
+		wpa_s->fetch_all_anqp = 1;
+		wpa_s->fetch_osu_info = 1;
+		wpa_s->fetch_osu_icon_in_progress = 0;
+
+		interworking_start_fetch_anqp(wpa_s);
+	} else {
+		hs20_start_osu_scan(wpa_s);
+	}
 
 	return 0;
 }

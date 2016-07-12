@@ -23,7 +23,7 @@ from tshark import run_tshark
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 from test_ap_eap import check_eap_capa, check_domain_match_full
-from test_gas import gas_rx, parse_gas, action_response, send_gas_resp, ACTION_CATEG_PUBLIC, GAS_INITIAL_RESPONSE
+from test_gas import gas_rx, parse_gas, action_response, anqp_initial_resp, send_gas_resp, ACTION_CATEG_PUBLIC, GAS_INITIAL_RESPONSE
 
 def hs20_ap_params(ssid="test-hs20"):
     params = hostapd.wpa2_params(ssid=ssid)
@@ -3242,6 +3242,159 @@ def test_ap_hs20_fetch_osu_stop(dev, apdev):
         for f in files:
             os.remove(dir + "/" + f)
         os.rmdir(dir)
+
+def test_ap_hs20_fetch_osu_proto(dev, apdev):
+    """Hotspot 2.0 OSU provider and protocol testing"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dir = "/tmp/osu-fetch"
+    if os.path.isdir(dir):
+       files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+       for f in files:
+           os.remove(dir + "/" + f)
+    else:
+        try:
+            os.makedirs(dir)
+        except:
+            pass
+
+    tests = [ ( "Empty provider list (no OSU SSID field)", '' ),
+              ( "HS 2.0: Not enough room for OSU SSID",
+                binascii.unhexlify('01') ),
+              ( "HS 2.0: Invalid OSU SSID Length 33",
+                binascii.unhexlify('21') + 33*'A' ),
+              ( "HS 2.0: Not enough room for Number of OSU Providers",
+                binascii.unhexlify('0130') ),
+              ( "Truncated OSU Provider",
+                binascii.unhexlify('013001020000') ),
+              ( "HS 2.0: Ignored 5 bytes of extra data after OSU Providers",
+                binascii.unhexlify('0130001122334455') ),
+              ( "HS 2.0: Not enough room for OSU Friendly Name Length",
+                binascii.unhexlify('013001000000') ),
+              ( "HS 2.0: Not enough room for OSU Friendly Name Duples",
+                build_prov('0100') ),
+              ( "Invalid OSU Friendly Name", build_prov('040000000000') ),
+              ( "Invalid OSU Friendly Name(2)", build_prov('040004000000') ),
+              ( "HS 2.0: Not enough room for OSU Server URI length",
+                build_prov('0000') ),
+              ( "HS 2.0: Not enough room for OSU Server URI",
+                build_prov('000001') ),
+              ( "HS 2.0: Not enough room for OSU Method list length",
+                build_prov('000000') ),
+              ( "HS 2.0: Not enough room for OSU Method list",
+                build_prov('00000001') ),
+              ( "HS 2.0: Not enough room for Icons Available Length",
+                build_prov('00000000') ),
+              ( "HS 2.0: Not enough room for Icons Available Length(2)",
+                build_prov('00000001ff00') ),
+              ( "HS 2.0: Not enough room for Icons Available",
+                build_prov('000000000100') ),
+              ( "HS 2.0: Invalid Icon Metadata",
+                build_prov('00000000010000') ),
+              ( "HS 2.0: Not room for Icon Type",
+                build_prov('000000000900111122223333330200') ),
+              ( "HS 2.0: Not room for Icon Filename length",
+                build_prov('000000000900111122223333330100') ),
+              ( "HS 2.0: Not room for Icon Filename",
+                build_prov('000000000900111122223333330001') ),
+              ( "HS 2.0: Not enough room for OSU_NAI",
+                build_prov('000000000000') ),
+              ( "HS 2.0: Not enough room for OSU_NAI(2)",
+                build_prov('00000000000001') ),
+              ( "HS 2.0: Not enough room for OSU Service Description Length",
+                build_prov('00000000000000') ),
+              ( "HS 2.0: Not enough room for OSU Service Description Length(2)",
+                build_prov('0000000000000000') ),
+              ( "HS 2.0: Not enough room for OSU Service Description Duples",
+                build_prov('000000000000000100') ),
+              ( "Invalid OSU Service Description",
+                build_prov('00000000000000040000000000') ),
+              ( "Invalid OSU Service Description(2)",
+                build_prov('00000000000000040004000000') ) ]
+
+    try:
+        dev[0].request("SET osu_dir " + dir)
+        run_fetch_osu_icon_failure(hapd, dev, bssid)
+        for note, prov in tests:
+            run_fetch_osu(hapd, dev, bssid, note, prov)
+    finally:
+        files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+        for f in files:
+            os.remove(dir + "/" + f)
+        os.rmdir(dir)
+
+def build_prov(prov):
+    data = binascii.unhexlify(prov)
+    return binascii.unhexlify('013001') + struct.pack('<H', len(data)) + data
+
+def handle_osu_prov_fetch(hapd, dev, prov):
+    # GAS/ANQP query for OSU Providers List
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+    dialog_token = gas['dialog_token']
+
+    resp = action_response(query)
+    osu_prov = struct.pack('<HH', 0xdddd, len(prov) + 6) + binascii.unhexlify('506f9a110800') + prov
+    data = struct.pack('<H', len(osu_prov)) + osu_prov
+    resp['payload'] = anqp_initial_resp(dialog_token, 0) + data
+    send_gas_resp(hapd, resp)
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP query response for OSU Providers not received")
+    if "OSU Providers list" not in ev:
+        raise Exception("ANQP query response for OSU Providers not received(2)")
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP query for OSU Providers list not completed")
+
+def start_osu_fetch(hapd, dev, bssid, note):
+    hapd.set("ext_mgmt_frame_handling", "0")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].dump_monitor()
+    dev[0].request("NOTE " + note)
+    dev[0].request("FETCH_OSU no-scan")
+
+def wait_osu_fetch_completed(dev):
+    ev = dev[0].wait_event(["OSU provider fetch completed"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on OSU fetch")
+
+def run_fetch_osu_icon_failure(hapd, dev, bssid):
+    start_osu_fetch(hapd, dev, bssid, "Icon fetch failure")
+
+    prov = binascii.unhexlify('01ff' + '01' + '800019000b656e6754657374204f53550c66696e54657374692d4f53551868747470733a2f2f6578616d706c652e636f6d2f6f73752f01011b00800050007a787809696d6167652f706e6709773166695f6c6f676f002a0013656e674578616d706c652073657276696365731566696e4573696d65726b6b6970616c76656c756a61')
+    handle_osu_prov_fetch(hapd, dev, prov)
+
+    # GAS/ANQP query for icon
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+    dialog_token = gas['dialog_token']
+
+    resp = action_response(query)
+    # Unexpected Advertisement Protocol in response
+    adv_proto = struct.pack('8B', 108, 6, 127, 0xdd, 0x00, 0x11, 0x22, 0x33)
+    data = struct.pack('<H', 0)
+    resp['payload'] = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC,
+                                  GAS_INITIAL_RESPONSE,
+                                  gas['dialog_token'], 0, 0) + adv_proto + data
+    send_gas_resp(hapd, resp)
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP query for icon not completed")
+
+    wait_osu_fetch_completed(dev)
+
+def run_fetch_osu(hapd, dev, bssid, note, prov):
+    start_osu_fetch(hapd, dev, bssid, note)
+    handle_osu_prov_fetch(hapd, dev, prov)
+    wait_osu_fetch_completed(dev)
 
 def test_ap_hs20_ft(dev, apdev):
     """Hotspot 2.0 connection with FT"""

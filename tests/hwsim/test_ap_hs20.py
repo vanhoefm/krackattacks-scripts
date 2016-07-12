@@ -2950,6 +2950,43 @@ def test_ap_hs20_fetch_osu_no_info(dev, apdev):
             os.remove(dir + "/" + f)
         os.rmdir(dir)
 
+def test_ap_hs20_fetch_osu_no_icon(dev, apdev):
+    """Hotspot 2.0 OSU provider and no icon found"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo-no-file.png"
+    params['osu_ssid'] = '"HS 2.0 OSU open"'
+    params['osu_method_list'] = "1"
+    params['osu_friendly_name'] = [ "eng:Test OSU", "fin:Testi-OSU" ]
+    params['osu_icon'] = "w1fi_logo"
+    params['osu_service_desc'] = [ "eng:Example services", "fin:Esimerkkipalveluja" ]
+    params['osu_server_uri'] = "https://example.com/osu/"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dir = "/tmp/osu-fetch"
+    if os.path.isdir(dir):
+       files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+       for f in files:
+           os.remove(dir + "/" + f)
+    else:
+        try:
+            os.makedirs(dir)
+        except:
+            pass
+    dev[0].scan_for_bss(bssid, freq="2412")
+    try:
+        dev[0].request("SET osu_dir " + dir)
+        dev[0].request("FETCH_OSU")
+        ev = dev[0].wait_event(["OSU provider fetch completed"], timeout=30)
+        if ev is None:
+            raise Exception("Timeout on OSU fetch")
+    finally:
+        files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+        for f in files:
+            os.remove(dir + "/" + f)
+        os.rmdir(dir)
+
 def get_icon(dev, bssid, iconname):
     icon = ""
     pos = 0

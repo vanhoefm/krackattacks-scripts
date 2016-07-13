@@ -815,7 +815,8 @@ class WpaSupplicant:
             except:
                 pass
             self.gctrl_mon = None
-        ev = self.wait_global_event(["P2P-GROUP-REMOVED"], timeout=3)
+        timeout = 3 if self.hostname is None else 10
+        ev = self.wait_global_event(["P2P-GROUP-REMOVED"], timeout=timeout)
         if ev is None:
             raise Exception("Group removal event timed out")
         if "reason=GO_ENDING_SESSION" not in ev:

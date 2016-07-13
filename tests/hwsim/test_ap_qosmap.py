@@ -22,7 +22,8 @@ def check_qos_map(ap, hapd, dev, sta, dscp, tid, ap_tid=None):
     wt = Wlantest()
     wt.clear_sta_counters(bssid, sta)
     hwsim_utils.test_connectivity(dev, hapd, dscp=dscp, config=False)
-    time.sleep(0.02)
+    sleep_time = 0.02 if dev.hostname is None else 0.2
+    time.sleep(sleep_time)
     tx = wt.get_tx_tid(bssid, sta, tid)
     if tx == 0:
         [ tx, rx ] = wt.get_tid_counters(bssid, sta)

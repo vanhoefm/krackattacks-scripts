@@ -405,7 +405,9 @@ class WpaSupplicant:
             raise Exception("MESH_GROUP_REMOVE failed")
         return None
 
-    def connect_network(self, id, timeout=10):
+    def connect_network(self, id, timeout=None):
+        if timeout is None:
+            timeout = 10 if self.hostname is None else 60
         self.dump_monitor()
         self.select_network(id)
         self.wait_connected(timeout=timeout)
@@ -1239,7 +1241,9 @@ class WpaSupplicant:
             raise Exception(error)
         return ev
 
-    def wait_disconnected(self, timeout=10, error="Disconnection timed out"):
+    def wait_disconnected(self, timeout=None, error="Disconnection timed out"):
+        if timeout is None:
+            timeout = 10 if self.hostname is None else 30
         ev = self.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=timeout)
         if ev is None:
             raise Exception(error)

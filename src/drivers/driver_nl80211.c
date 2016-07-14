@@ -3706,7 +3706,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 					   "nl80211: Frequency set succeeded for ht2040 coex");
 				bss->bandwidth = params->freq->bandwidth;
 			}
-		} else if (!beacon_set) {
+		} else if (!beacon_set && params->freq) {
 			/*
 			 * cfg80211 updates the driver on frequence change in AP
 			 * mode only at the point when beaconing is started, so

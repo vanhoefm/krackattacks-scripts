@@ -2880,6 +2880,12 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         raise Exception("GET_HS20_ICON 5..15 failed")
     if "FAIL" not in  dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 100000 10"):
         raise Exception("Unexpected success of GET_HS20_ICON with too large offset")
+    if "FAIL" not in dev[2].request("GET_HS20_ICON " + bssid + " no_such_logo 0 10"):
+        raise Exception("GET_HS20_ICON for not existing icon succeeded")
+    if "FAIL" not in dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 0 3070"):
+        raise Exception("GET_HS20_ICON with too many output bytes to fit the buffer succeeded")
+    if "FAIL" not in dev[2].request("GET_HS20_ICON " + bssid + " w1fi_logo 0 0"):
+        raise Exception("GET_HS20_ICON 0..0 succeeded")
     icon = ""
     pos = 0
     while True:

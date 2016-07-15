@@ -5249,3 +5249,39 @@ def test_ap_hs20_set_profile_failures(dev, apdev):
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
     dev[0].remove_cred(id)
+
+def test_ap_hs20_unexpected(dev, apdev):
+    """Unexpected Hotspot 2.0 AP configuration"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa_eap_params(ssid="test-hs20-fake")
+    params['wpa'] = "3"
+    params['wpa_pairwise'] = "TKIP CCMP"
+    params['rsn_pairwise'] = "CCMP"
+    #params['vendor_elements'] = 'dd07506f9a10140000'
+    params['vendor_elements'] = 'dd04506f9a10'
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("test-hs20-fake", key_mgmt="WPA-EAP", eap="TTLS",
+                   pairwise="TKIP",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")
+
+    dev[1].hs20_enable()
+    dev[1].scan_for_bss(bssid, freq="2412")
+    dev[1].connect("test-hs20-fake", key_mgmt="WPA-EAP", eap="TTLS",
+                   proto="WPA",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")
+
+    dev[2].hs20_enable()
+    dev[2].scan_for_bss(bssid, freq="2412")
+    dev[2].connect("test-hs20-fake", key_mgmt="WPA-EAP", eap="TTLS",
+                   proto="RSN", pairwise="CCMP",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")

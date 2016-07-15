@@ -3332,6 +3332,29 @@ def test_ap_hs20_fetch_osu_proto(dev, apdev):
             os.remove(dir + "/" + f)
         os.rmdir(dir)
 
+def test_ap_hs20_fetch_osu_invalid_dir(dev, apdev):
+    """Hotspot 2.0 OSU provider and invalid directory"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png"
+    params['osu_ssid'] = '"HS 2.0 OSU open"'
+    params['osu_method_list'] = "1"
+    params['osu_friendly_name'] = [ "eng:Test OSU", "fin:Testi-OSU" ]
+    params['osu_icon'] = "w1fi_logo"
+    params['osu_service_desc'] = [ "eng:Example services", "fin:Esimerkkipalveluja" ]
+    params['osu_server_uri'] = "https://example.com/osu/"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dir = "/tmp/osu-fetch-no-such-dir"
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].request("SET osu_dir " + dir)
+    dev[0].request("FETCH_OSU no-scan")
+    ev = dev[0].wait_event(["Could not write OSU provider information"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("Timeout on OSU fetch")
+
 def build_prov(prov):
     data = binascii.unhexlify(prov)
     return binascii.unhexlify('013001') + struct.pack('<H', len(data)) + data

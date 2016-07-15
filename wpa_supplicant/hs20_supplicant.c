@@ -703,6 +703,8 @@ static void hs20_osu_fetch_done(struct wpa_supplicant *wpa_s)
 		 wpa_s->conf->osu_dir);
 	f = fopen(fname, "w");
 	if (f == NULL) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"Could not write OSU provider information");
 		hs20_free_osu_prov(wpa_s);
 		wpa_s->fetch_anqp_in_progress = 0;
 		return;

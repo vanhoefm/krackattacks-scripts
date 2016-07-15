@@ -754,7 +754,7 @@ err:
 
 	priv_key = BN_bin2bn(wpabuf_head(priv), wpabuf_len(priv), NULL);
 	pub_key = BN_bin2bn(wpabuf_head(publ), wpabuf_len(publ), NULL);
-	if (!priv_key || !pub_key || DH_set0_key(dh, pub_key, priv_key) != 0)
+	if (!priv_key || !pub_key || DH_set0_key(dh, pub_key, priv_key) != 1)
 		goto err;
 	pub_key = NULL;
 	priv_key = NULL;

@@ -4451,9 +4451,10 @@ def test_ap_wpa2_eap_too_many_roundtrips(dev, apdev):
                    wait_connect=False, scan_freq="2412", ieee80211w="1",
                    anonymous_identity="ttls", password="password",
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
-                   fragment_size="10")
-    ev = dev[0].wait_event(["EAP: more than"], timeout=20)
-    if ev is None:
+                   fragment_size="8")
+    ev = dev[0].wait_event(["EAP: more than",
+                            "CTRL-EVENT-EAP-SUCCESS"], timeout=20)
+    if ev is None or "EAP: more than" not in ev:
         raise Exception("EAP roundtrip limit not reached")
 
 def test_ap_wpa2_eap_expanded_nak(dev, apdev):

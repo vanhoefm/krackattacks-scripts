@@ -802,6 +802,11 @@ def test_ap_ft_oom(dev, apdev):
     with fail_test(dev[0], 1, "os_get_random;wpa_ft_prepare_auth_request"):
         dev[0].roam(dst, fail_test=True)
 
+    dev[0].request("REMOVE_NETWORK all")
+    with alloc_fail(dev[0], 1, "=sme_update_ft_ies"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+
 def test_ap_ft_over_ds_proto(dev, apdev):
     """WPA2-PSK-FT AP over DS protocol testing"""
     ssid = "test-ft"

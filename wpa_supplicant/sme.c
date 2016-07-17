@@ -1585,8 +1585,10 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	nbuf = os_realloc_array(wpa_s->sme.sa_query_trans_id,
 				wpa_s->sme.sa_query_count + 1,
 				WLAN_SA_QUERY_TR_ID_LEN);
-	if (nbuf == NULL)
+	if (nbuf == NULL) {
+		sme_stop_sa_query(wpa_s);
 		return;
+	}
 	if (wpa_s->sme.sa_query_count == 0) {
 		/* Starting a new SA Query procedure */
 		os_get_reltime(&wpa_s->sme.sa_query_start);
@@ -1597,6 +1599,7 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 
 	if (os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN) < 0) {
 		wpa_printf(MSG_DEBUG, "Could not generate SA Query ID");
+		sme_stop_sa_query(wpa_s);
 		return;
 	}
 

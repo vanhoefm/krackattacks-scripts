@@ -411,3 +411,19 @@ def test_ieee8021x_open_leap(dev, apdev):
                    scan_freq="2412")
     ev = dev[1].wait_event(["CTRL-EVENT-AUTH-REJECT"], timeout=5)
     dev[1].request("DISCONNECT")
+
+def test_ieee8021x_and_wpa_enabled(dev, apdev):
+    """IEEE 802.1X connection using dynamic WEP104 when WPA enabled"""
+    skip_with_fips(dev[0])
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-wep"
+    params["ieee8021x"] = "1"
+    params["wep_key_len_broadcast"] = "13"
+    params["wep_key_len_unicast"] = "13"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X WPA-EAP", eap="PSK",
+                   identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)

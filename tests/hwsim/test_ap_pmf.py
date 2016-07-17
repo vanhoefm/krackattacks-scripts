@@ -11,6 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import alloc_fail, fail_test, wait_fail_trigger
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 
@@ -175,11 +176,7 @@ def test_ap_pmf_assoc_comeback2(dev, apdev):
                           dev[0].p2p_interface_addr()) < 1:
         raise Exception("AP did not use reassociation comeback request")
 
-def test_ap_pmf_sta_sa_query(dev, apdev):
-    """WPA2-PSK AP with station using SA Query"""
-    ssid = "assoc-comeback"
-    addr = dev[0].own_addr()
-
+def start_wpas_ap(ssid):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="use_monitor=1")
     id = wpas.add_network()
@@ -192,9 +189,18 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
     wpas.set_network(id, "pairwise", "CCMP")
     wpas.set_network(id, "group", "CCMP")
     wpas.set_network(id, "frequency", "2412")
+    wpas.set_network(id, "scan_freq", "2412")
     wpas.connect_network(id)
-    bssid = wpas.own_addr()
     wpas.dump_monitor()
+    return wpas
+
+def test_ap_pmf_sta_sa_query(dev, apdev):
+    """WPA2-PSK AP with station using SA Query"""
+    ssid = "assoc-comeback"
+    addr = dev[0].own_addr()
+
+    wpas = start_wpas_ap(ssid)
+    bssid = wpas.own_addr()
 
     Wlantest.setup(wpas)
     wt = Wlantest()
@@ -231,21 +237,8 @@ def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
     ssid = "assoc-comeback"
     addr = dev[0].own_addr()
 
-    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
-    wpas.interface_add("wlan5", drv_params="use_monitor=1")
-    id = wpas.add_network()
-    wpas.set_network(id, "mode", "2")
-    wpas.set_network_quoted(id, "ssid", ssid)
-    wpas.set_network(id, "proto", "WPA2")
-    wpas.set_network(id, "key_mgmt", "WPA-PSK-SHA256")
-    wpas.set_network(id, "ieee80211w", "2")
-    wpas.set_network_quoted(id, "psk", "12345678")
-    wpas.set_network(id, "pairwise", "CCMP")
-    wpas.set_network(id, "group", "CCMP")
-    wpas.set_network(id, "frequency", "2412")
-    wpas.connect_network(id)
+    wpas = start_wpas_ap(ssid)
     bssid = wpas.own_addr()
-    wpas.dump_monitor()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
@@ -275,19 +268,7 @@ def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     ssid = "deauth-attack"
     addr = dev[0].own_addr()
 
-    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
-    wpas.interface_add("wlan5", drv_params="use_monitor=1")
-    id = wpas.add_network()
-    wpas.set_network(id, "mode", "2")
-    wpas.set_network_quoted(id, "ssid", ssid)
-    wpas.set_network(id, "proto", "WPA2")
-    wpas.set_network(id, "key_mgmt", "WPA-PSK-SHA256")
-    wpas.set_network(id, "ieee80211w", "2")
-    wpas.set_network_quoted(id, "psk", "12345678")
-    wpas.set_network(id, "pairwise", "CCMP")
-    wpas.set_network(id, "group", "CCMP")
-    wpas.set_network(id, "frequency", "2412")
-    wpas.connect_network(id)
+    wpas = start_wpas_ap(ssid)
     bssid = wpas.own_addr()
 
     Wlantest.setup(wpas)
@@ -325,6 +306,36 @@ def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     num_resp = wt.get_sta_counter("valid_saqueryresp_rx", bssid, addr)
     if num_req != 2 or num_resp != 2:
         raise Exception("Unexpected number of SA Query procedures (req=%d resp=%d)" % (num_req, num_resp))
+
+def test_ap_pmf_sta_sa_query_oom(dev, apdev):
+    """WPA2-PSK AP with station using SA Query (OOM)"""
+    ssid = "assoc-comeback"
+    addr = dev[0].own_addr()
+    wpas = start_wpas_ap(ssid)
+    dev[0].connect(ssid, psk="12345678", ieee80211w="1",
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
+    with alloc_fail(dev[0], 1, "=sme_sa_query_timer"):
+        wpas.request("DEAUTHENTICATE " + addr + " reason=6 test=0")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+    dev[0].request("DISCONNECT")
+    wpas.request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+def test_ap_pmf_sta_sa_query_local_failure(dev, apdev):
+    """WPA2-PSK AP with station using SA Query (local failure)"""
+    ssid = "assoc-comeback"
+    addr = dev[0].own_addr()
+    wpas = start_wpas_ap(ssid)
+    dev[0].connect(ssid, psk="12345678", ieee80211w="1",
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
+    with fail_test(dev[0], 1, "os_get_random;sme_sa_query_timer"):
+        wpas.request("DEAUTHENTICATE " + addr + " reason=6 test=0")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+    dev[0].request("DISCONNECT")
+    wpas.request("DISCONNECT")
+    dev[0].wait_disconnected()
 
 def test_ap_pmf_required_eap(dev, apdev):
     """WPA2-EAP AP with PMF required"""

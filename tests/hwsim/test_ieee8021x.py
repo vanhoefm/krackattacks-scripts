@@ -393,3 +393,21 @@ def test_ieee8021x_auth_awhile(dev, apdev):
     ev = hapd.wait_event(["CTRL-EVENT-EAP-PROPOSED"], timeout=10)
     if ev is None:
         raise Exception("Authentication restart not seen")
+
+def test_ieee8021x_open_leap(dev, apdev):
+    """IEEE 802.1X connection with LEAP included in configuration"""
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-open"
+    params["ieee8021x"] = "1"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[1].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                   eap="LEAP", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412", wait_connect=False)
+    dev[0].connect("ieee8021x-open", key_mgmt="IEEE8021X", eapol_flags="0",
+                   eap="PSK LEAP", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+    ev = dev[1].wait_event(["CTRL-EVENT-AUTH-REJECT"], timeout=5)
+    dev[1].request("DISCONNECT")

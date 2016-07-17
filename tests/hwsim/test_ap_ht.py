@@ -537,7 +537,23 @@ def test_obss_scan(dev, apdev):
                "channel": "9",
                "ieee80211n": "0" }
     hostapd.add_ap(apdev[1], params)
+    run_obss_scan(hapd, dev)
 
+def test_obss_scan_ht40_plus(dev, apdev):
+    """Overlapping BSS scan request (HT40+)"""
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40+]",
+               "obss_interval": "10" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    params = { "ssid": "another-bss",
+               "channel": "9",
+               "ieee80211n": "0" }
+    hostapd.add_ap(apdev[1], params)
+    run_obss_scan(hapd, dev)
+
+def run_obss_scan(hapd, dev):
     dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
     hapd.set("ext_mgmt_frame_handling", "1")
     logger.info("Waiting for OBSS scan to occur")

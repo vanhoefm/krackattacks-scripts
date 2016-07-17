@@ -414,6 +414,29 @@ def test_sae_oom_wpas(dev, apdev):
                        scan_freq="2412")
         dev[0].request("REMOVE_NETWORK all")
 
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;sme_auth_build_sae_commit"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;sme_auth_build_sae_confirm"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412", wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(dev[0], 1, "=sme_authenticate"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412", wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(dev[0], 1, "radio_add_work;sme_authenticate"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412", wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+
 @remote_compatible
 def test_sae_proto_ecc(dev, apdev):
     """SAE protocol testing (ECC)"""

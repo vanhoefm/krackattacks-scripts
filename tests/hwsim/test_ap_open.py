@@ -15,7 +15,7 @@ import os
 import hostapd
 import hwsim_utils
 from tshark import run_tshark
-from utils import alloc_fail
+from utils import alloc_fail, fail_test, wait_fail_trigger
 from wpasupplicant import WpaSupplicant
 
 @remote_compatible
@@ -592,3 +592,19 @@ def test_ap_open_pmf_default(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected dev[1] connection")
     dev[1].request("DISCONNECT")
+
+def test_ap_open_drv_fail(dev, apdev):
+    """AP with open mode and driver operations failing"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_authenticate"):
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                       wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_associate"):
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                       wait_connect=False)
+        wait_fail_trigger(dev[0], "GET_FAIL")
+        dev[0].request("REMOVE_NETWORK all")

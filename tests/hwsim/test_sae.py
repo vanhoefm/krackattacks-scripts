@@ -874,3 +874,72 @@ def test_sae_bignum_failure(dev, apdev):
                            scan_freq="2412", wait_connect=False)
             wait_fail_trigger(dev[0], "GET_FAIL")
             dev[0].request("REMOVE_NETWORK all")
+
+def test_sae_invalid_anti_clogging_token_req(dev, apdev):
+    """SAE and invalid anti-clogging token request"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].request("SET sae_groups 19")
+    dev[0].scan_for_bss(bssid, freq=2412)
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["SME: Trying to authenticate"])
+    if ev is None:
+        raise Exception("No authentication attempt seen")
+    dev[0].dump_monitor()
+
+    for i in range(0, 10):
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out (commit)")
+        if req['subtype'] == 11:
+            break
+        req = None
+    if not req:
+        raise Exception("Authentication frame (commit) not received")
+
+    hapd.dump_monitor()
+    resp = {}
+    resp['fc'] = req['fc']
+    resp['da'] = req['sa']
+    resp['sa'] = req['da']
+    resp['bssid'] = req['bssid']
+    resp['payload'] = binascii.unhexlify("030001004c0013")
+    hapd.mgmt_tx(resp)
+
+    ev = dev[0].wait_event(["SME: Trying to authenticate"])
+    if ev is None:
+        raise Exception("No authentication attempt seen")
+    dev[0].dump_monitor()
+
+    for i in range(0, 10):
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out (commit) (2)")
+        if req['subtype'] == 11:
+            break
+        req = None
+    if not req:
+        raise Exception("Authentication frame (commit) not received (2)")
+
+    hapd.dump_monitor()
+    resp = {}
+    resp['fc'] = req['fc']
+    resp['da'] = req['sa']
+    resp['sa'] = req['da']
+    resp['bssid'] = req['bssid']
+    resp['payload'] = binascii.unhexlify("030001000100")
+    hapd.mgmt_tx(resp)
+
+    ev = dev[0].wait_event(["SME: Trying to authenticate"])
+    if ev is None:
+        raise Exception("No authentication attempt seen")
+    dev[0].dump_monitor()
+
+    dev[0].request("DISCONNECT")

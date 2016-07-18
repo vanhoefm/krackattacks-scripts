@@ -576,7 +576,6 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
 	if (op_class->op_class == 128) {
 		u8 channels[] = { 42, 58, 106, 122, 138, 155 };
 
-		found = 0;
 		for (i = 0; i < ARRAY_SIZE(channels); i++) {
 			if (verify_channel(mode, channels[i], op_class->bw) ==
 			    ALLOWED)

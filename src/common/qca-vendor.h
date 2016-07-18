@@ -102,6 +102,19 @@ enum qca_radiotap_vendor_ids {
  *	device. As an event, it indicates either the feature stopped after it
  *	was already running or feature has actually failed to start. Uses the
  *	attributes defines in enum qca_wlan_vendor_attr_p2p_listen_offload.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH: After AP starts
+ *	beaconing, this sub command provides the driver, the frequencies on the
+ *	5 GHz band to check for any radar activity. Driver selects one channel
+ *	from this priority list provided through
+ *	@QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_FREQ_LIST and starts
+ *	to check for radar activity on it. If no radar activity is detected
+ *	during the channel availability check period, driver internally switches
+ *	to the selected frequency of operation. If the frequency is zero, driver
+ *	internally selects a channel. The status of this conditional switch is
+ *	indicated through an event using the same sub command through
+ *	@QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_STATUS. Attributes are
+ *	listed in qca_wlan_vendor_attr_sap_conditional_chan_switch.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -186,6 +199,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* 121 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_START = 122,
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_STOP = 123,
+	QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH = 124,
 };
 
 
@@ -659,6 +673,25 @@ enum qca_wlan_vendor_attr_sap_config {
 	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_MAX =
 	QCA_WLAN_VENDOR_ATTR_SAP_CONFIG_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_sap_conditional_chan_switch - Parameters for AP
+ *					conditional channel switch
+ */
+enum qca_wlan_vendor_attr_sap_conditional_chan_switch {
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_INVALID = 0,
+	/* Priority based frequency list (an array of u32 values in host byte
+	 * order) */
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_FREQ_LIST = 1,
+	/* Status of the conditional switch (u32).
+	 * 0: Success, Non-zero: Failure
+	 */
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_STATUS = 2,
+
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_MAX =
+	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

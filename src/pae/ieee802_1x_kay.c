@@ -3057,7 +3057,8 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 			goto next_para_set;
 
 		handled[body_type] = TRUE;
-		if (mak_body_handler[body_type].body_rx) {
+		if (body_type < ARRAY_SIZE(mak_body_handler) &&
+		    mak_body_handler[body_type].body_rx) {
 			mak_body_handler[body_type].body_rx
 				(participant, pos, left_len);
 		} else {

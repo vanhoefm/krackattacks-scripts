@@ -2919,14 +2919,9 @@ static int wpa_supplicant_ctrl_iface_add_network(
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: ADD_NETWORK");
 
-	ssid = wpa_config_add_network(wpa_s->conf);
+	ssid = wpa_supplicant_add_network(wpa_s);
 	if (ssid == NULL)
 		return -1;
-
-	wpas_notify_network_added(wpa_s, ssid);
-
-	ssid->disabled = 1;
-	wpa_config_set_network_defaults(ssid);
 
 	ret = os_snprintf(buf, buflen, "%d\n", ssid->id);
 	if (os_snprintf_error(buflen, ret))
@@ -2940,7 +2935,7 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 {
 	int id;
 	struct wpa_ssid *ssid;
-	int was_disabled;
+	int result;
 
 	/* cmd: "<network id>" or "all" */
 	if (os_strcmp(cmd, "all") == 0) {
@@ -2976,54 +2971,17 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 	id = atoi(cmd);
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_NETWORK id=%d", id);
 
-	ssid = wpa_config_get_network(wpa_s->conf, id);
-	if (ssid)
-		wpas_notify_network_removed(wpa_s, ssid);
-	if (ssid == NULL) {
+	result = wpa_supplicant_remove_network(wpa_s, id);
+	if (result == -1) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
 			   "id=%d", id);
 		return -1;
 	}
-
-	if (wpa_s->last_ssid == ssid)
-		wpa_s->last_ssid = NULL;
-
-	if (ssid == wpa_s->current_ssid || wpa_s->current_ssid == NULL) {
-#ifdef CONFIG_SME
-		wpa_s->sme.prev_bssid_set = 0;
-#endif /* CONFIG_SME */
-		/*
-		 * Invalidate the EAP session cache if the current or
-		 * previously used network is removed.
-		 */
-		eapol_sm_invalidate_cached_session(wpa_s->eapol);
-	}
-
-	if (ssid == wpa_s->current_ssid) {
-		wpa_sm_set_config(wpa_s->wpa, NULL);
-		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
-
-		if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
-			wpa_s->own_disconnect_req = 1;
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
-	}
-
-	was_disabled = ssid->disabled;
-
-	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
+	if (result == -2) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Not able to remove the "
 			   "network id=%d", id);
 		return -1;
 	}
-
-	if (!was_disabled && wpa_s->sched_scanning) {
-		wpa_printf(MSG_DEBUG, "Stop ongoing sched_scan to remove "
-			   "network from filters");
-		wpa_supplicant_cancel_sched_scan(wpa_s);
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-	}
-
 	return 0;
 }
 

@@ -2753,6 +2753,95 @@ static void wpa_supplicant_enable_one_network(struct wpa_supplicant *wpa_s,
 
 
 /**
+ * wpa_supplicant_add_network - Add a new network
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: The new network configuration or %NULL if operation failed
+ *
+ * This function performs the following operations:
+ * 1. Adds a new network.
+ * 2. Send network addition notification.
+ * 3. Marks the network disabled.
+ * 4. Set network default parameters.
+ */
+struct wpa_ssid * wpa_supplicant_add_network(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (!ssid)
+		return NULL;
+	wpas_notify_network_added(wpa_s, ssid);
+	ssid->disabled = 1;
+	wpa_config_set_network_defaults(ssid);
+
+	return ssid;
+}
+
+
+/**
+ * wpa_supplicant_remove_network - Remove a configured network based on id
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @id: Unique network id to search for
+ * Returns: 0 on success, or -1 if the network was not found, -2 if the network
+ * could not be removed
+ *
+ * This function performs the following operations:
+ * 1. Removes the network.
+ * 2. Send network removal notification.
+ * 3. Update internal state machines.
+ * 4. Stop any running sched scans.
+ */
+int wpa_supplicant_remove_network(struct wpa_supplicant *wpa_s, int id)
+{
+	struct wpa_ssid *ssid;
+	int was_disabled;
+
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (!ssid)
+		return -1;
+	wpas_notify_network_removed(wpa_s, ssid);
+
+	if (wpa_s->last_ssid == ssid)
+		wpa_s->last_ssid = NULL;
+
+	if (ssid == wpa_s->current_ssid || !wpa_s->current_ssid) {
+#ifdef CONFIG_SME
+		wpa_s->sme.prev_bssid_set = 0;
+#endif /* CONFIG_SME */
+		/*
+		 * Invalidate the EAP session cache if the current or
+		 * previously used network is removed.
+		 */
+		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+	}
+
+	if (ssid == wpa_s->current_ssid) {
+		wpa_sm_set_config(wpa_s->wpa, NULL);
+		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+
+		if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
+			wpa_s->own_disconnect_req = 1;
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+	}
+
+	was_disabled = ssid->disabled;
+
+	if (wpa_config_remove_network(wpa_s->conf, id) < 0)
+		return -2;
+
+	if (!was_disabled && wpa_s->sched_scanning) {
+		wpa_printf(MSG_DEBUG,
+			   "Stop ongoing sched_scan to remove network from filters");
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	}
+
+	return 0;
+}
+
+
+/**
  * wpa_supplicant_enable_network - Mark a configured network as enabled
  * @wpa_s: wpa_supplicant structure for a network interface
  * @ssid: wpa_ssid structure for a configured network or %NULL

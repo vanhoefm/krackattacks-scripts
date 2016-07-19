@@ -2097,7 +2097,6 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 	struct ieee802_1x_kay_peer *key_server = NULL;
 	struct ieee802_1x_kay *kay = participant->kay;
 	Boolean i_is_key_server;
-	int i;
 
 	if (participant->is_obliged_key_server) {
 		participant->new_sak = TRUE;
@@ -2122,11 +2121,9 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 			key_server = peer;
 		} else if (peer->key_server_priority ==
 			   key_server->key_server_priority) {
-			for (i = 0; i < 6; i++) {
-				if (peer->sci.addr[i] <
-				    key_server->sci.addr[i])
-					key_server = peer;
-			}
+			if (os_memcmp(peer->sci.addr, key_server->sci.addr,
+				      ETH_ALEN) < 0)
+				key_server = peer;
 		}
 	}
 
@@ -2138,20 +2135,12 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 			i_is_key_server = TRUE;
 		} else if (kay->actor_priority
 					== key_server->key_server_priority) {
-			for (i = 0; i < 6; i++) {
-				if (kay->actor_sci.addr[i]
-					< key_server->sci.addr[i]) {
-					i_is_key_server = TRUE;
-				}
-			}
+			if (os_memcmp(kay->actor_sci.addr, key_server->sci.addr,
+				      ETH_ALEN) < 0)
+				i_is_key_server = TRUE;
 		}
-	}
-
-	if (!key_server && !i_is_key_server) {
-		participant->principal = FALSE;
-		participant->is_key_server = FALSE;
-		participant->is_elected = FALSE;
-		return 0;
+	} else if (participant->can_be_key_server) {
+		i_is_key_server = TRUE;
 	}
 
 	if (i_is_key_server) {
@@ -2172,9 +2161,7 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 		os_memcpy(&kay->key_server_sci, &kay->actor_sci,
 			  sizeof(kay->key_server_sci));
 		kay->key_server_priority = kay->actor_priority;
-	}
-
-	if (key_server) {
+	} else if (key_server) {
 		ieee802_1x_cp_set_electedself(kay->cp, FALSE);
 		if (os_memcmp(&kay->key_server_sci, &key_server->sci,
 			      sizeof(kay->key_server_sci))) {
@@ -2189,6 +2176,10 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 		os_memcpy(&kay->key_server_sci, &key_server->sci,
 			  sizeof(kay->key_server_sci));
 		kay->key_server_priority = key_server->key_server_priority;
+	} else {
+		participant->principal = FALSE;
+		participant->is_key_server = FALSE;
+		participant->is_elected = FALSE;
 	}
 
 	return 0;
@@ -3320,7 +3311,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 	default:
 		participant->is_obliged_key_server = FALSE;
 		participant->can_be_key_server = TRUE;
-		participant->is_key_server = FALSE;
+		participant->is_key_server = TRUE;
 		participant->is_elected = FALSE;
 		break;
 	}

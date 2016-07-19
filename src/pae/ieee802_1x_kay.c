@@ -3018,9 +3018,12 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 		}
 		if (ieee802_1x_kay_is_in_potential_peer(
 			    participant, participant->current_peer_id.mi)) {
-			ieee802_1x_kay_move_live_peer(
-				participant, participant->current_peer_id.mi,
-				be_to_host32(participant->current_peer_id.mn));
+			if (!ieee802_1x_kay_move_live_peer(
+				    participant,
+				    participant->current_peer_id.mi,
+				    be_to_host32(participant->
+						 current_peer_id.mn)))
+				return -1;
 			ieee802_1x_kay_elect_key_server(participant);
 			ieee802_1x_kay_decide_macsec_use(participant);
 		}

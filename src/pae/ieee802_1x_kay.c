@@ -532,14 +532,16 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 	peer->sak_used = FALSE;
 	os_memcpy(&peer->sci, &participant->current_peer_sci,
 		  sizeof(peer->sci));
-	dl_list_add(&participant->live_peers, &peer->list);
 
 	secy_get_available_receive_sc(participant->kay, &sc_ch);
 
 	rxsc = ieee802_1x_kay_init_receive_sc(&peer->sci, sc_ch);
-	if (!rxsc)
+	if (!rxsc) {
+		os_free(peer);
 		return NULL;
+	}
 
+	dl_list_add(&participant->live_peers, &peer->list);
 	dl_list_add(&participant->rxsc_list, &rxsc->list);
 	secy_create_receive_sc(participant->kay, rxsc);
 

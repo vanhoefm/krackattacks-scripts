@@ -1000,6 +1000,12 @@ static int ieee802_1x_mka_decode_live_peer_body(
 
 	hdr = (const struct ieee802_1x_mka_hdr *) peer_msg;
 	body_len = get_mka_param_body_len(hdr);
+	if (body_len % 16 != 0) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: MKA Peer Packet Body Length (%zu bytes) should be a multiple of 16 octets",
+			   body_len);
+		return -1;
+	}
 
 	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
 		peer_mi = MKA_HDR_LEN + peer_msg + i;
@@ -1054,6 +1060,12 @@ ieee802_1x_mka_decode_potential_peer_body(
 
 	hdr = (struct ieee802_1x_mka_hdr *) peer_msg;
 	body_len = get_mka_param_body_len(hdr);
+	if (body_len % 16 != 0) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: MKA Peer Packet Body Length (%zu bytes) should be a multiple of 16 octets",
+			   body_len);
+		return -1;
+	}
 
 	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
 		peer_mi = MKA_HDR_LEN + peer_msg + i;

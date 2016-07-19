@@ -1156,7 +1156,7 @@ ieee802_1x_mka_encode_sak_use_body(
 	u32 pn = 1;
 
 	length = ieee802_1x_mka_get_sak_use_length(participant);
-	body = wpabuf_put(buf, sizeof(struct ieee802_1x_mka_sak_use_body));
+	body = wpabuf_put(buf, length);
 
 	body->type = MKA_SAK_USE;
 	set_mka_param_body_len(body, length - MKA_HDR_LEN);

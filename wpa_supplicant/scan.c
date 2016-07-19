@@ -426,6 +426,39 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_INTERWORKING */
 
 
+void wpa_supplicant_set_default_scan_ies(struct wpa_supplicant *wpa_s)
+{
+	struct wpabuf *default_ies = NULL;
+	u8 ext_capab[18];
+	int ext_capab_len;
+	enum wpa_driver_if_type type = WPA_IF_STATION;
+
+#ifdef CONFIG_P2P
+	if (wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_CLIENT)
+		type = WPA_IF_P2P_CLIENT;
+#endif /* CONFIG_P2P */
+
+	wpa_drv_get_ext_capa(wpa_s, type);
+
+	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
+					     sizeof(ext_capab));
+	if (ext_capab_len > 0 &&
+	    wpabuf_resize(&default_ies, ext_capab_len) == 0)
+		wpabuf_put_data(default_ies, ext_capab, ext_capab_len);
+
+#ifdef CONFIG_MBO
+	/* Send cellular capabilities for potential MBO STAs */
+	if (wpabuf_resize(&default_ies, 9) == 0)
+		wpas_mbo_scan_ie(wpa_s, default_ies);
+#endif /* CONFIG_MBO */
+
+	if (default_ies)
+		wpa_drv_set_default_scan_ies(wpa_s, wpabuf_head(default_ies),
+					     wpabuf_len(default_ies));
+	wpabuf_free(default_ies);
+}
+
+
 static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *extra_ie = NULL;

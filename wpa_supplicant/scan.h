@@ -56,5 +56,6 @@ void filter_scan_res(struct wpa_supplicant *wpa_s,
 void scan_snr(struct wpa_scan_res *res);
 void scan_est_throughput(struct wpa_supplicant *wpa_s,
 			 struct wpa_scan_res *res);
+void wpa_supplicant_set_default_scan_ies(struct wpa_supplicant *wpa_s);
 
 #endif /* SCAN_H */

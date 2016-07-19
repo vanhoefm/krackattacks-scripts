@@ -969,4 +969,12 @@ static inline int wpa_drv_p2p_lo_stop(struct wpa_supplicant *wpa_s)
 	return wpa_s->driver->p2p_lo_stop(wpa_s->drv_priv);
 }
 
+static inline int wpa_drv_set_default_scan_ies(struct wpa_supplicant *wpa_s,
+					       const u8 *ies, size_t len)
+{
+	if (!wpa_s->driver->set_default_scan_ies)
+		return -1;
+	return wpa_s->driver->set_default_scan_ies(wpa_s->drv_priv, ies, len);
+}
+
 #endif /* DRIVER_I_H */

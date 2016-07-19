@@ -4875,6 +4875,8 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	wpas_mbo_update_non_pref_chan(wpa_s, wpa_s->conf->non_pref_chan);
 #endif /* CONFIG_MBO */
 
+	wpa_supplicant_set_default_scan_ies(wpa_s);
+
 	return 0;
 }
 

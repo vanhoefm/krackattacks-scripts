@@ -159,6 +159,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int set_prob_oper_freq:1;
 	unsigned int scan_vendor_cmd_avail:1;
 	unsigned int connect_reassoc:1;
+	unsigned int set_wifi_conf_vendor_cmd_avail:1;
 
 	u64 vendor_scan_cookie;
 	u64 remain_on_chan_cookie;
@@ -301,5 +302,6 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv);
 int wpa_driver_nl80211_abort_scan(void *priv);
 int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
 				   struct wpa_driver_scan_params *params);
+int nl80211_set_default_scan_ies(void *priv, const u8 *ies, size_t ies_len);
 
 #endif /* DRIVER_NL80211_H */

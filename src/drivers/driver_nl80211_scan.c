@@ -1070,4 +1070,54 @@ fail:
 	return ret;
 }
 
+
+/**
+ * nl80211_set_default_scan_ies - Set the scan default IEs to the driver
+ * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
+ * @ies: Pointer to IEs buffer
+ * @ies_len: Length of IEs in bytes
+ * Returns: 0 on success, -1 on failure
+ */
+int nl80211_set_default_scan_ies(void *priv, const u8 *ies, size_t ies_len)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg = NULL;
+	struct nlattr *attr;
+	int ret = -1;
+
+	if (!drv->set_wifi_conf_vendor_cmd_avail)
+		return -1;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION))
+		goto fail;
+
+	attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+	if (attr == NULL)
+		goto fail;
+
+	wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan default IEs", ies, ies_len);
+	if (nla_put(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES,
+		    ies_len, ies))
+		goto fail;
+
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Set scan default IEs failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto fail;
+	}
+
+fail:
+	nlmsg_free(msg);
+	return ret;
+}
+
 #endif /* CONFIG_DRIVER_NL80211_QCA */

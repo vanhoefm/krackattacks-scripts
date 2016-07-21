@@ -3788,6 +3788,12 @@ static int nl80211_put_freq_params(struct nl_msg *msg,
 		wpa_printf(MSG_DEBUG, "  * channel_type=%d", ct);
 		if (nla_put_u32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE, ct))
 			return -ENOBUFS;
+	} else {
+		wpa_printf(MSG_DEBUG, "  * channel_type=%d",
+			   NL80211_CHAN_NO_HT);
+		if (nla_put_u32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
+				NL80211_CHAN_NO_HT))
+			return -ENOBUFS;
 	}
 	return 0;
 }

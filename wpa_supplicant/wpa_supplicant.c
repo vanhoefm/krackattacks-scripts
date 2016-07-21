@@ -1873,6 +1873,13 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	if (!mode)
 		return;
 
+#ifdef CONFIG_HT_OVERRIDES
+	if (ssid->disable_ht) {
+		freq->ht_enabled = 0;
+		return;
+	}
+#endif /* CONFIG_HT_OVERRIDES */
+
 	freq->ht_enabled = ht_supported(mode);
 	if (!freq->ht_enabled)
 		return;

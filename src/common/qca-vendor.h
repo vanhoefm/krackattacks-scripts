@@ -664,6 +664,10 @@ enum qca_wlan_vendor_attr_config {
 	/* 8-bit unsigned value to configure the propagation delay for
 	 * 2G/5G band (0~63, units in us) */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY,
+	/* Unsigned 32-bit value to configure the number of unicast TX fail
+	 * packet count. The peer is disconnected once this threshold is
+	 * reached. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

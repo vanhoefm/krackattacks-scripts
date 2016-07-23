@@ -1958,3 +1958,18 @@ def test_wpas_ctrl_p2p_listen_offload(dev, apdev):
     dev[0].request("P2P_LO_START 2412")
     dev[0].request("P2P_LO_START 2412 100 200 3")
     dev[0].request("P2P_LO_STOP")
+
+def test_wpas_ctrl_driver_flags(dev, apdev):
+    """DRIVER_FLAGS command"""
+    params = hostapd.wpa2_params(ssid="test", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd_flags = hapd.request("DRIVER_FLAGS")
+    wpas_flags = dev[0].request("DRIVER_FLAGS")
+    if "FAIL" in hapd_flags:
+        raise Exception("DRIVER_FLAGS failed")
+    if hapd_flags != wpas_flags:
+        raise Exception("Unexpected difference in hostapd vs. wpa_supplicant DRIVER_FLAGS output")
+    logger.info("DRIVER_FLAGS: " + hapd_flags)
+    flags = hapd_flags.split('\n')
+    if 'AP' not in flags:
+        raise Exception("AP flag missing from DRIVER_FLAGS")

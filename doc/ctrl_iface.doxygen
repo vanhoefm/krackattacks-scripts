@@ -557,7 +557,7 @@ Device Address>" to indicate the entry following the specified peer
 
 Enable/disable extended listen timing. Without parameters, this
 command disables extended listen timing. When enabling the feature,
-two parameters are used: availibility period and availability interval
+two parameters are used: availability period and availability interval
 (both in milliseconds and with range of 1-65535).
 
 

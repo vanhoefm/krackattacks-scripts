@@ -313,7 +313,7 @@ services. This value is included in all SD request and response
 frames. The value received from the peers will be included in the
 \ref p2p_config::sd_request() and \ref p2p_config::sd_response() callbacks. The
 value to be sent to the peers is incremented with a call to
-\ref p2p_sd_service_update() whenever availibility of the local services
+\ref p2p_sd_service_update() whenever availability of the local services
 changes.
 
 

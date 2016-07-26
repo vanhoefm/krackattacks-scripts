@@ -636,8 +636,7 @@ hostapd_parse_radius_attr(const char *value)
 }
 
 
-static int hostapd_parse_das_client(struct hostapd_bss_config *bss,
-				    const char *val)
+static int hostapd_parse_das_client(struct hostapd_bss_config *bss, char *val)
 {
 	char *secret;
 
@@ -645,7 +644,7 @@ static int hostapd_parse_das_client(struct hostapd_bss_config *bss,
 	if (secret == NULL)
 		return -1;
 
-	secret++;
+	*secret++ = '\0';
 
 	if (hostapd_parse_ip_addr(val, &bss->radius_das_client_addr))
 		return -1;

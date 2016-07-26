@@ -538,7 +538,8 @@ int radius_msg_verify_acct_req(struct radius_msg *msg, const u8 *secret,
 
 
 int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,
-			      size_t secret_len)
+			      size_t secret_len,
+			      int require_message_authenticator)
 {
 	const u8 *addr[4];
 	size_t len[4];
@@ -577,7 +578,11 @@ int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,
 	}
 
 	if (attr == NULL) {
-		/* Message-Authenticator is MAY; not required */
+		if (require_message_authenticator) {
+			wpa_printf(MSG_WARNING,
+				   "Missing Message-Authenticator attribute in RADIUS message");
+			return 1;
+		}
 		return 0;
 	}
 

@@ -2411,6 +2411,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->radius_das_time_window = atoi(pos);
 	} else if (os_strcmp(buf, "radius_das_require_event_timestamp") == 0) {
 		bss->radius_das_require_event_timestamp = atoi(pos);
+	} else if (os_strcmp(buf, "radius_das_require_message_authenticator") ==
+		   0) {
+		bss->radius_das_require_message_authenticator = atoi(pos);
 #endif /* CONFIG_NO_RADIUS */
 	} else if (os_strcmp(buf, "auth_algs") == 0) {
 		bss->auth_algs = atoi(pos);

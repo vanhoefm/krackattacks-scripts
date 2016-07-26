@@ -1044,6 +1044,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		das_conf.time_window = conf->radius_das_time_window;
 		das_conf.require_event_timestamp =
 			conf->radius_das_require_event_timestamp;
+		das_conf.require_message_authenticator =
+			conf->radius_das_require_message_authenticator;
 		das_conf.ctx = hapd;
 		das_conf.disconnect = hostapd_das_disconnect;
 		hapd->radius_das = radius_das_init(&das_conf);

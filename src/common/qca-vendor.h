@@ -115,6 +115,9 @@ enum qca_radiotap_vendor_ids {
  *	indicated through an event using the same sub command through
  *	@QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_STATUS. Attributes are
  *	listed in qca_wlan_vendor_attr_sap_conditional_chan_switch.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GPIO_CONFIG_COMMAND: Set GPIO pins. This uses the
+ *	attributes defined in enum qca_wlan_gpio_attr.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -200,6 +203,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_START = 122,
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_STOP = 123,
 	QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH = 124,
+	QCA_NL80211_VENDOR_SUBCMD_GPIO_CONFIG_COMMAND = 125,
 };
 
 
@@ -734,6 +738,28 @@ enum qca_wlan_vendor_attr_sap_conditional_chan_switch {
 	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_MAX =
 	QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_gpio_attr - Parameters for GPIO configuration
+ */
+enum qca_wlan_gpio_attr {
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_INVALID = 0,
+	/* Unsigned 32-bit attribute for GPIO command */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_COMMAND,
+	/* Unsigned 32-bit attribute for GPIO PIN number to configure */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_PINNUM,
+	/* Unsigned 32-bit attribute for GPIO value to configure */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_VALUE,
+	/* Unsigned 32-bit attribute for GPIO pull type */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_PULL_TYPE,
+	/* Unsigned 32-bit attribute for GPIO interrupt mode */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_INTR_MODE,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST,
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_MAX =
+	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

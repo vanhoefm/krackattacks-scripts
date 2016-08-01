@@ -679,6 +679,18 @@ enum qca_wlan_vendor_attr_config {
 	 * present in the scan request, then that IE should be added to the IEs
 	 * sent in the Probe Request frames for that scan request. */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES,
+	/* Unsigned 32-bit attribute for generic commands */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND,
+	/* Unsigned 32-bit value attribute for generic commands */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE,
+	/* Unsigned 32-bit data attribute for generic command response */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA,
+	/* Unsigned 32-bit length attribute for
+	 * QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH,
+	/* Unsigned 32-bit flags attribute for
+	 * QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

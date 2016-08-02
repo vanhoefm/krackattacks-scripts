@@ -514,20 +514,28 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			  "channel=%u\n"
 			  "secondary_channel=%d\n"
 			  "ieee80211n=%d\n"
-			  "ieee80211ac=%d\n"
-			  "vht_oper_chwidth=%d\n"
-			  "vht_oper_centr_freq_seg0_idx=%d\n"
-			  "vht_oper_centr_freq_seg1_idx=%d\n",
+			  "ieee80211ac=%d\n",
 			  iface->conf->channel,
-			  iface->conf->secondary_channel,
-			  iface->conf->ieee80211n,
-			  iface->conf->ieee80211ac,
-			  iface->conf->vht_oper_chwidth,
-			  iface->conf->vht_oper_centr_freq_seg0_idx,
-			  iface->conf->vht_oper_centr_freq_seg1_idx);
+			  iface->conf->ieee80211n && !hapd->conf->disable_11n ?
+			  iface->conf->secondary_channel : 0,
+			  iface->conf->ieee80211n && !hapd->conf->disable_11n,
+			  iface->conf->ieee80211ac &&
+			  !hapd->conf->disable_11ac);
 	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
+	if (iface->conf->ieee80211ac && !hapd->conf->disable_11ac) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "vht_oper_chwidth=%d\n"
+				  "vht_oper_centr_freq_seg0_idx=%d\n"
+				  "vht_oper_centr_freq_seg1_idx=%d\n",
+				  iface->conf->vht_oper_chwidth,
+				  iface->conf->vht_oper_centr_freq_seg0_idx,
+				  iface->conf->vht_oper_centr_freq_seg1_idx);
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+	}
 
 	for (i = 0; i < iface->num_bss; i++) {
 		struct hostapd_data *bss = iface->bss[i];

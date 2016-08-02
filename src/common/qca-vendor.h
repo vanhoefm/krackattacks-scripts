@@ -603,8 +603,8 @@ enum qca_vendor_attr_txpower_decr_db {
 };
 
 /* Attributes for data used by
- * QCA_NL80211_VENDOR_SUBCMD_SET_CONFIGURATION and
- * QCA_NL80211_VENDOR_SUBCMD_GET_CONFIGURATION subcommands.
+ * QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION and
+ * QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION subcommands.
  */
 enum qca_wlan_vendor_attr_config {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_INVALID,

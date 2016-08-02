@@ -4,6 +4,10 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
+import subprocess
+
 from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
@@ -84,3 +88,38 @@ def test_wep_shared_key_auth_multi_key(dev, apdev):
     dev[2].request("REASSOCIATE")
     dev[2].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[2], hapd)
+
+def test_wep_ht_vht(dev, apdev):
+    """WEP and HT/VHT"""
+    dev[0].flush_scan_cache()
+    try:
+        hapd = None
+        params = { "ssid": "test-vht40-wep",
+                   "country_code": "SE",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "ht_capab": "[HT40+]",
+                   "vht_capab": "",
+                   "vht_oper_chwidth": "0",
+                   "vht_oper_centr_freq_seg0_idx": "0",
+                   "wep_key0": '"hello"' }
+        hapd = hostapd.add_ap(apdev[0], params)
+        dev[0].connect("test-vht40-wep", scan_freq="5180", key_mgmt="NONE",
+                       wep_key0='"hello"')
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        status = hapd.get_status()
+        logger.info("hostapd STATUS: " + str(status))
+        if status["ieee80211n"] != "0":
+            raise Exception("Unexpected STATUS ieee80211n value")
+        if status["ieee80211ac"] != "0":
+            raise Exception("Unexpected STATUS ieee80211ac value")
+        if status["secondary_channel"] != "0":
+            raise Exception("Unexpected STATUS secondary_channel value")
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

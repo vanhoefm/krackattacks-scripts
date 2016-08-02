@@ -50,6 +50,18 @@ def test_ap_vht80(dev, apdev):
         est = dev[0].get_bss(bssid)['est_throughput']
         if est != "390001":
             raise Exception("Unexpected BSS est_throughput: " + est)
+        status = hapd.get_status()
+        logger.info("hostapd STATUS: " + str(status))
+        if status["ieee80211n"] != "1":
+            raise Exception("Unexpected STATUS ieee80211n value")
+        if status["ieee80211ac"] != "1":
+            raise Exception("Unexpected STATUS ieee80211ac value")
+        if status["secondary_channel"] != "1":
+            raise Exception("Unexpected STATUS secondary_channel value")
+        if status["vht_oper_chwidth"] != "1":
+            raise Exception("Unexpected STATUS vht_oper_chwidth value")
+        if status["vht_oper_centr_freq_seg0_idx"] != "42":
+            raise Exception("Unexpected STATUS vht_oper_centr_freq_seg0_idx value")
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():

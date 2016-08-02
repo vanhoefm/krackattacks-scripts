@@ -1076,7 +1076,7 @@ static int wpas_p2p_persistent_group(struct wpa_supplicant *wpa_s,
 		   "go_dev_addr=" MACSTR,
 		   MAC2STR(bssid), group_capab, MAC2STR(go_dev_addr));
 
-	return group_capab & P2P_GROUP_CAPAB_PERSISTENT_GROUP;
+	return !!(group_capab & P2P_GROUP_CAPAB_PERSISTENT_GROUP);
 }
 
 

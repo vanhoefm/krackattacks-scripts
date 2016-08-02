@@ -841,6 +841,15 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 #endif /* CONFIG_IEEE80211N */
 
+#ifdef CONFIG_IEEE80211AC
+	if (full_config && conf->ieee80211ac &&
+	    bss->ssid.security_policy == SECURITY_STATIC_WEP) {
+		bss->disable_11ac = 1;
+		wpa_printf(MSG_ERROR,
+			   "VHT (IEEE 802.11ac) with WEP is not allowed, disabling VHT capabilities");
+	}
+#endif /* CONFIG_IEEE80211AC */
+
 #ifdef CONFIG_WPS
 	if (full_config && bss->wps_state && bss->ignore_broadcast_ssid) {
 		wpa_printf(MSG_INFO, "WPS: ignore_broadcast_ssid "

@@ -592,6 +592,9 @@ struct hostapd_bss_config {
 #ifdef CONFIG_MBO
 	int mbo_enabled;
 #endif /* CONFIG_MBO */
+
+	int ftm_responder;
+	int ftm_initiator;
 };
 
 

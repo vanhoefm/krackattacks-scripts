@@ -218,6 +218,12 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 		if (hapd->conf->ssid.utf8_ssid)
 			*pos |= 0x01; /* Bit 48 - UTF-8 SSID */
 		break;
+	case 8: /* Bits 64-71 */
+		if (hapd->conf->ftm_responder)
+			*pos |= 0x40; /* Bit 70 - FTM responder */
+		if (hapd->conf->ftm_initiator)
+			*pos |= 0x80; /* Bit 71 - FTM initiator */
+		break;
 	}
 }
 
@@ -237,6 +243,9 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		len = 1;
 	if (len < 7 && hapd->conf->ssid.utf8_ssid)
 		len = 7;
+	if (len < 9 &&
+	    (hapd->conf->ftm_initiator || hapd->conf->ftm_responder))
+		len = 9;
 #ifdef CONFIG_WNM
 	if (len < 4)
 		len = 4;

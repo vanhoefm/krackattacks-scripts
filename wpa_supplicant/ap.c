@@ -468,6 +468,9 @@ no_wps:
 			wpabuf_dup(wpa_s->conf->ap_vendor_elements);
 	}
 
+	bss->ftm_responder = wpa_s->conf->ftm_responder;
+	bss->ftm_initiator = wpa_s->conf->ftm_initiator;
+
 	return 0;
 }
 

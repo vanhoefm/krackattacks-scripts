@@ -1302,6 +1302,32 @@ struct wpa_config {
 	 *	sent to not-associated AP; if associated, AP BSSID)
 	 */
 	int gas_address3;
+
+	/**
+	 * ftm_responder - Publish FTM (fine timing measurement)
+	 * responder functionality
+	 *
+	 * Values:
+	 * 0 - do not publish FTM responder functionality (Default)
+	 * 1 - publish FTM responder functionality in
+	 *	bit 70 of Extended Capabilities element
+	 * Note, actual FTM responder operation is managed outside
+	 * wpa_supplicant.
+	 */
+	int ftm_responder;
+
+	/**
+	 * ftm_initiator - Publish FTM (fine timing measurement)
+	 * initiator functionality
+	 *
+	 * Values:
+	 * 0 - do not publish FTM initiator functionality (Default)
+	 * 1 - publish FTM initiator functionality in
+	 *	bit 71 of Extended Capabilities element
+	 * Note, actual FTM initiator operation is managed outside
+	 * wpa_supplicant.
+	 */
+	int ftm_initiator;
 };
 
 

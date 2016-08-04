@@ -723,6 +723,11 @@ enum qca_wlan_vendor_attr_config {
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY to control the access.
 	 * Zero length payload can be used to clear this access constraint. */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST,
+	/* Unsigned 32-bit, specifies the interface index (netdev) for which the
+	 * corresponding configurations are applied. If the interface index is
+	 * not specified, the configurations are attributed to the respective
+	 * wiphy. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

@@ -421,6 +421,25 @@ enum qca_set_band {
 };
 
 /**
+ * enum qca_access_policy - Access control policy
+ *
+ * Access control policy is applied on the configured IE
+ * (QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE).
+ * To be set with QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY.
+ *
+ * @QCA_ACCESS_POLICY_ACCEPT_UNLESS_LISTED: Deny Wi-Fi connections which match
+ *	the specific configuration (IE) set, i.e., allow all the
+ *	connections which do not match the configuration.
+ * @QCA_ACCESS_POLICY_DENY_UNLESS_LISTED: Accept Wi-Fi connections which match
+ *	the specific configuration (IE) set, i.e., deny all the
+ *	connections which do not match the configuration.
+ */
+enum qca_access_policy {
+	QCA_ACCESS_POLICY_ACCEPT_UNLESS_LISTED,
+	QCA_ACCESS_POLICY_DENY_UNLESS_LISTED,
+};
+
+/**
  * enum qca_vendor_attr_get_tsf: Vendor attributes for TSF capture
  * @QCA_WLAN_VENDOR_ATTR_TSF_CMD: enum qca_tsf_operation (u32)
  * @QCA_WLAN_VENDOR_ATTR_TSF_TIMER_VALUE: Unsigned 64 bit TSF timer value
@@ -695,6 +714,15 @@ enum qca_wlan_vendor_attr_config {
 	/* Unsigned 32-bit flags attribute for
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS,
+	/* Unsigned 32-bit, defining the access policy.
+	 * See enum qca_access_policy. Used with
+	 * QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY,
+	/* Sets the list of full set of IEs for which a specific access policy
+	 * has to be applied. Used along with
+	 * QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY to control the access.
+	 * Zero length payload can be used to clear this access constraint. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

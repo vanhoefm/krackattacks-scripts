@@ -2605,7 +2605,6 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		    struct hostapd_frame_info *fi)
 {
 	struct ieee80211_mgmt *mgmt;
-	int broadcast;
 	u16 fc, stype;
 	int ret = 0;
 
@@ -2621,11 +2620,7 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		return 1;
 	}
 
-	broadcast = mgmt->bssid[0] == 0xff && mgmt->bssid[1] == 0xff &&
-		mgmt->bssid[2] == 0xff && mgmt->bssid[3] == 0xff &&
-		mgmt->bssid[4] == 0xff && mgmt->bssid[5] == 0xff;
-
-	if (!broadcast &&
+	if (!is_broadcast_ether_addr(mgmt->bssid) &&
 #ifdef CONFIG_P2P
 	    /* Invitation responses can be sent with the peer MAC as BSSID */
 	    !((hapd->conf->p2p & P2P_GROUP_OWNER) &&

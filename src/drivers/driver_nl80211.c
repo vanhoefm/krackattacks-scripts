@@ -8422,18 +8422,20 @@ static int nl80211_put_mesh_config(struct nl_msg *msg,
 	if (!container)
 		return -1;
 
-	if (nla_put_u32(msg, NL80211_MESHCONF_AUTO_OPEN_PLINKS,
-			!!(params->flags &
-			   WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS)) ||
-	    nla_put_u16(msg, NL80211_MESHCONF_MAX_PEER_LINKS,
-			params->max_peer_links))
+	if (((params->flags & WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS) &&
+	     nla_put_u32(msg, NL80211_MESHCONF_AUTO_OPEN_PLINKS,
+			 params->auto_plinks)) ||
+	    ((params->flags & WPA_DRIVER_MESH_CONF_FLAG_MAX_PEER_LINKS) &&
+	     nla_put_u16(msg, NL80211_MESHCONF_MAX_PEER_LINKS,
+			 params->max_peer_links)))
 		return -1;
 
 	/*
 	 * Set NL80211_MESHCONF_PLINK_TIMEOUT even if user mpm is used because
 	 * the timer could disconnect stations even in that case.
 	 */
-	if (nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT,
+	if ((params->flags & WPA_DRIVER_MESH_CONF_FLAG_PEER_LINK_TIMEOUT) &&
+	    nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT,
 			params->peer_link_timeout)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set PLINK_TIMEOUT");
 		return -1;
@@ -8489,6 +8491,9 @@ static int nl80211_join_mesh(struct i802_bss *bss,
 		goto fail;
 	nla_nest_end(msg, container);
 
+	params->conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS;
+	params->conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_PEER_LINK_TIMEOUT;
+	params->conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_MAX_PEER_LINKS;
 	if (nl80211_put_mesh_config(msg, &params->conf) < 0)
 		goto fail;
 

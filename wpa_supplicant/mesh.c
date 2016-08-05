@@ -414,10 +414,10 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 
 	if (wpa_s->conf->user_mpm) {
 		params.flags |= WPA_DRIVER_MESH_FLAG_USER_MPM;
-		params.conf.flags &= ~WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS;
+		params.conf.auto_plinks = 0;
 	} else {
 		params.flags |= WPA_DRIVER_MESH_FLAG_DRIVER_MPM;
-		params.conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS;
+		params.conf.auto_plinks = 1;
 	}
 	params.conf.peer_link_timeout = wpa_s->conf->mesh_max_inactivity;
 

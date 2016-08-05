@@ -1121,6 +1121,7 @@ struct wpa_driver_mesh_bss_params {
 #define WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS		0x00000001
 #define WPA_DRIVER_MESH_CONF_FLAG_PEER_LINK_TIMEOUT	0x00000002
 #define WPA_DRIVER_MESH_CONF_FLAG_MAX_PEER_LINKS	0x00000004
+#define WPA_DRIVER_MESH_CONF_FLAG_HT_OP_MODE		0x00000008
 	/*
 	 * TODO: Other mesh configuration parameters would go here.
 	 * See NL80211_MESHCONF_* for all the mesh config parameters.
@@ -1129,6 +1130,7 @@ struct wpa_driver_mesh_bss_params {
 	int auto_plinks;
 	int peer_link_timeout;
 	int max_peer_links;
+	u16 ht_opmode;
 };
 
 struct wpa_driver_mesh_join_params {

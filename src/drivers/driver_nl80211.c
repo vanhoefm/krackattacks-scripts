@@ -200,6 +200,10 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv,
 
 static int i802_set_iface_flags(struct i802_bss *bss, int up);
 static int nl80211_set_param(void *priv, const char *param);
+#ifdef CONFIG_MESH
+static int nl80211_put_mesh_config(struct nl_msg *msg,
+				   struct wpa_driver_mesh_bss_params *params);
+#endif /* CONFIG_MESH */
 
 
 /* Converts nl80211_chan_width to a common format */
@@ -3480,6 +3484,37 @@ static int nl80211_put_dtim_period(struct nl_msg *msg, int dtim_period)
 }
 
 
+#ifdef CONFIG_MESH
+static int nl80211_set_mesh_config(void *priv,
+				   struct wpa_driver_mesh_bss_params *params)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_MESH_CONFIG);
+	if (!msg)
+		return -1;
+
+	ret = nl80211_put_mesh_config(msg, params);
+	if (ret < 0) {
+		nlmsg_free(msg);
+		return ret;
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Mesh config set failed: %d (%s)",
+			   ret, strerror(-ret));
+		return ret;
+	}
+	return 0;
+}
+#endif /* CONFIG_MESH */
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -3493,6 +3528,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	int smps_mode;
 	u32 suites[10], suite;
 	u32 ver;
+#ifdef CONFIG_MESH
+	struct wpa_driver_mesh_bss_params mesh_params;
+#endif /* CONFIG_MESH */
 
 	beacon_set = params->reenable ? 0 : bss->beacon_set;
 
@@ -3718,6 +3756,18 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			bss->bandwidth = params->freq->bandwidth;
 		}
 	}
+
+#ifdef CONFIG_MESH
+	if (is_mesh_interface(drv->nlmode) && params->ht_opmode != -1) {
+		os_memset(&mesh_params, 0, sizeof(mesh_params));
+		mesh_params.flags |= WPA_DRIVER_MESH_CONF_FLAG_HT_OP_MODE;
+		mesh_params.ht_opmode = params->ht_opmode;
+		ret = nl80211_set_mesh_config(priv, &mesh_params);
+		if (ret < 0)
+			return ret;
+	}
+#endif /* CONFIG_MESH */
+
 	return ret;
 fail:
 	nlmsg_free(msg);
@@ -8438,6 +8488,12 @@ static int nl80211_put_mesh_config(struct nl_msg *msg,
 	    nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT,
 			params->peer_link_timeout)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set PLINK_TIMEOUT");
+		return -1;
+	}
+
+	if ((params->flags & WPA_DRIVER_MESH_CONF_FLAG_HT_OP_MODE) &&
+	    nla_put_u16(msg, NL80211_MESHCONF_HT_OPMODE, params->ht_opmode)) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to set HT_OP_MODE");
 		return -1;
 	}
 

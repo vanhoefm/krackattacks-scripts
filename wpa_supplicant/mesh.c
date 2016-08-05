@@ -438,6 +438,8 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		params.ies = wpa_s->ifmsh->mconf->rsn_ie;
 		params.ie_len = wpa_s->ifmsh->mconf->rsn_ie_len;
 		params.basic_rates = wpa_s->ifmsh->basic_rates;
+		params.conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_HT_OP_MODE;
+		params.conf.ht_opmode = wpa_s->ifmsh->bss[0]->iface->ht_op_mode;
 	}
 
 	wpa_msg(wpa_s, MSG_INFO, "joining mesh %s",

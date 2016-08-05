@@ -8465,7 +8465,7 @@ static int nl80211_join_mesh(struct i802_bss *bss,
 	    nla_put_u32(msg, NL80211_MESHCONF_AUTO_OPEN_PLINKS, 0))
 		goto fail;
 	if (nla_put_u16(msg, NL80211_MESHCONF_MAX_PEER_LINKS,
-			params->max_peer_links))
+			params->conf.max_peer_links))
 		goto fail;
 
 	/*

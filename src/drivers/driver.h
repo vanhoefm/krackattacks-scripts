@@ -1125,6 +1125,7 @@ struct wpa_driver_mesh_bss_params {
 	 */
 	unsigned int flags;
 	int peer_link_timeout;
+	int max_peer_links;
 };
 
 struct wpa_driver_mesh_join_params {
@@ -1136,7 +1137,6 @@ struct wpa_driver_mesh_join_params {
 	struct hostapd_freq_params freq;
 	int beacon_int;
 	int dtim_period;
-	int max_peer_links;
 	struct wpa_driver_mesh_bss_params conf;
 #define WPA_DRIVER_MESH_FLAG_USER_MPM	0x00000001
 #define WPA_DRIVER_MESH_FLAG_DRIVER_MPM	0x00000002

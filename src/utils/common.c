@@ -1194,3 +1194,9 @@ int ssid_parse(const char *buf, struct wpa_ssid_value *ssid)
 
 	return ssid->ssid_len ? 0 : -1;
 }
+
+
+int str_starts(const char *str, const char *start)
+{
+	return os_strncmp(str, start, os_strlen(start)) == 0;
+}

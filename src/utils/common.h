@@ -550,6 +550,8 @@ size_t utf8_unescape(const char *inp, size_t in_size,
 		     char *outp, size_t out_size);
 int is_ctrl_char(char c);
 
+int str_starts(const char *str, const char *start);
+
 
 /*
  * gcc 4.4 ends up generating strict-aliasing warnings about some very common

@@ -269,12 +269,6 @@ static void hostapd_wps_enrollee_seen_cb(void *ctx, const u8 *addr,
 }
 
 
-static int str_starts(const char *str, const char *start)
-{
-	return os_strncmp(str, start, os_strlen(start)) == 0;
-}
-
-
 static void wps_reload_config(void *eloop_data, void *user_ctx)
 {
 	struct hostapd_iface *iface = eloop_data;

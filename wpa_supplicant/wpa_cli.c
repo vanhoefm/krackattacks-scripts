@@ -108,12 +108,6 @@ static int get_cmd_arg_num(const char *str, int pos)
 }
 
 
-static int str_starts(const char *src, const char *match)
-{
-	return os_strncmp(src, match, os_strlen(match)) == 0;
-}
-
-
 static int wpa_cli_show_event(const char *event)
 {
 	const char *start;

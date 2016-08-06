@@ -188,3 +188,21 @@ char ** cli_txt_list_array(struct dl_list *txt_list)
 
 	return res;
 }
+
+
+int get_cmd_arg_num(const char *str, int pos)
+{
+	int arg = 0, i;
+
+	for (i = 0; i <= pos; i++) {
+		if (str[i] != ' ') {
+			arg++;
+			while (i <= pos && str[i] != ' ')
+				i++;
+		}
+	}
+
+	if (arg > 0)
+		arg--;
+	return arg;
+}

@@ -37,4 +37,6 @@ int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt,
 
 char ** cli_txt_list_array(struct dl_list *txt_list);
 
+int get_cmd_arg_num(const char *str, int pos);
+
 #endif /* CLI_H */

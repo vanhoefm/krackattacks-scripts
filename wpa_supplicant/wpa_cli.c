@@ -90,24 +90,6 @@ static void usage(void)
 }
 
 
-static int get_cmd_arg_num(const char *str, int pos)
-{
-	int arg = 0, i;
-
-	for (i = 0; i <= pos; i++) {
-		if (str[i] != ' ') {
-			arg++;
-			while (i <= pos && str[i] != ' ')
-				i++;
-		}
-	}
-
-	if (arg > 0)
-		arg--;
-	return arg;
-}
-
-
 static int wpa_cli_show_event(const char *event)
 {
 	const char *start;

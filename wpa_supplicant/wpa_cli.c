@@ -3515,12 +3515,6 @@ static int wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
-static int str_match(const char *a, const char *b)
-{
-	return os_strncmp(a, b, os_strlen(b)) == 0;
-}
-
-
 static int wpa_cli_exec(const char *program, const char *arg1,
 			const char *arg2)
 {
@@ -3576,7 +3570,7 @@ static void wpa_cli_action_process(const char *msg)
 			pos = prev;
 	}
 
-	if (str_match(pos, WPA_EVENT_CONNECTED)) {
+	if (str_starts(pos, WPA_EVENT_CONNECTED)) {
 		int new_id = -1;
 		os_unsetenv("WPA_ID");
 		os_unsetenv("WPA_ID_STR");
@@ -3612,48 +3606,48 @@ static void wpa_cli_action_process(const char *msg)
 			wpa_cli_last_id = new_id;
 			wpa_cli_exec(action_file, ifname, "CONNECTED");
 		}
-	} else if (str_match(pos, WPA_EVENT_DISCONNECTED)) {
+	} else if (str_starts(pos, WPA_EVENT_DISCONNECTED)) {
 		if (wpa_cli_connected) {
 			wpa_cli_connected = 0;
 			wpa_cli_exec(action_file, ifname, "DISCONNECTED");
 		}
-	} else if (str_match(pos, AP_EVENT_ENABLED)) {
+	} else if (str_starts(pos, AP_EVENT_ENABLED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, AP_EVENT_DISABLED)) {
+	} else if (str_starts(pos, AP_EVENT_DISABLED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, MESH_GROUP_STARTED)) {
+	} else if (str_starts(pos, MESH_GROUP_STARTED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, MESH_GROUP_REMOVED)) {
+	} else if (str_starts(pos, MESH_GROUP_REMOVED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, MESH_PEER_CONNECTED)) {
+	} else if (str_starts(pos, MESH_PEER_CONNECTED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, MESH_PEER_DISCONNECTED)) {
+	} else if (str_starts(pos, MESH_PEER_DISCONNECTED)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
-	} else if (str_match(pos, P2P_EVENT_GROUP_STARTED)) {
+	} else if (str_starts(pos, P2P_EVENT_GROUP_STARTED)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, P2P_EVENT_GROUP_REMOVED)) {
+	} else if (str_starts(pos, P2P_EVENT_GROUP_REMOVED)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, P2P_EVENT_CROSS_CONNECT_ENABLE)) {
+	} else if (str_starts(pos, P2P_EVENT_CROSS_CONNECT_ENABLE)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, P2P_EVENT_CROSS_CONNECT_DISABLE)) {
+	} else if (str_starts(pos, P2P_EVENT_CROSS_CONNECT_DISABLE)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, P2P_EVENT_GO_NEG_FAILURE)) {
+	} else if (str_starts(pos, P2P_EVENT_GO_NEG_FAILURE)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, WPS_EVENT_SUCCESS)) {
+	} else if (str_starts(pos, WPS_EVENT_SUCCESS)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, WPS_EVENT_FAIL)) {
+	} else if (str_starts(pos, WPS_EVENT_FAIL)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, AP_STA_CONNECTED)) {
+	} else if (str_starts(pos, AP_STA_CONNECTED)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, AP_STA_DISCONNECTED)) {
+	} else if (str_starts(pos, AP_STA_DISCONNECTED)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, ESS_DISASSOC_IMMINENT)) {
+	} else if (str_starts(pos, ESS_DISASSOC_IMMINENT)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, HS20_SUBSCRIPTION_REMEDIATION)) {
+	} else if (str_starts(pos, HS20_SUBSCRIPTION_REMEDIATION)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, HS20_DEAUTH_IMMINENT_NOTICE)) {
+	} else if (str_starts(pos, HS20_DEAUTH_IMMINENT_NOTICE)) {
 		wpa_cli_exec(action_file, ifname, pos);
-	} else if (str_match(pos, WPA_EVENT_TERMINATING)) {
+	} else if (str_starts(pos, WPA_EVENT_TERMINATING)) {
 		printf("wpa_supplicant is terminating - stop monitoring\n");
 		wpa_cli_quit = 1;
 	}
@@ -3763,7 +3757,7 @@ static int check_terminating(const char *msg)
 			pos = msg;
 	}
 
-	if (str_match(pos, WPA_EVENT_TERMINATING) && ctrl_conn) {
+	if (str_starts(pos, WPA_EVENT_TERMINATING) && ctrl_conn) {
 		edit_clear_line();
 		printf("\rConnection to wpa_supplicant lost - trying to "
 		       "reconnect\n");

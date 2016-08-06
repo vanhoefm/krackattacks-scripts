@@ -41,4 +41,7 @@ int get_cmd_arg_num(const char *str, int pos);
 int write_cmd(char *buf, size_t buflen, const char *cmd, int argc,
 	      char *argv[]);
 
+#define max_args 10
+int tokenize_cmd(char *cmd, char *argv[]);
+
 #endif /* CLI_H */

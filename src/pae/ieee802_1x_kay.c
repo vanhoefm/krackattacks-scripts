@@ -98,7 +98,7 @@ static unsigned int get_mka_param_body_len(const void *body)
 }
 
 
-static int get_mka_param_body_type(const void *body)
+static u8 get_mka_param_body_type(const void *body)
 {
 	const struct ieee802_1x_mka_hdr *hdr = body;
 	return hdr->type;
@@ -919,7 +919,7 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 	struct ieee802_1x_mka_hdr *hdr;
 	size_t body_len;
 	size_t left_len;
-	int body_type;
+	u8 body_type;
 	u32 peer_mn;
 	be32 _peer_mn;
 	const u8 *peer_mi;
@@ -1762,7 +1762,7 @@ ieee802_1x_mka_decode_icv_body(struct ieee802_1x_mka_participant *participant,
 	struct ieee802_1x_mka_icv_body *body;
 	size_t body_len;
 	size_t left_len;
-	int body_type;
+	u8 body_type;
 	const u8 *pos;
 
 	pos = mka_msg;
@@ -2977,7 +2977,7 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 	struct ieee802_1x_mka_hdr *hdr;
 	size_t body_len;
 	size_t left_len;
-	int body_type;
+	u8 body_type;
 	int i;
 	const u8 *pos;
 	Boolean my_included;

@@ -414,6 +414,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 
 	if (!hostapd_config_get_radius_attr(req_attr,
 					    RADIUS_ATTR_NAS_PORT) &&
+	    sta->aid > 0 &&
 	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT, sta->aid)) {
 		wpa_printf(MSG_ERROR, "Could not add NAS-Port");
 		return -1;

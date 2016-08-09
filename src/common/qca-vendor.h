@@ -728,6 +728,8 @@ enum qca_wlan_vendor_attr_config {
 	 * not specified, the configurations are attributed to the respective
 	 * wiphy. */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX,
+	/* 8-bit unsigned value to trigger QPower: 1-Enable, 0-Disable */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

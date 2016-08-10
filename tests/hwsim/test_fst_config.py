@@ -162,7 +162,7 @@ class FstLauncher:
                            'alt-hostapd/hostapd/hostapd')
         if not os.path.exists(prg):
             prg = '../../hostapd/hostapd'
-        cmd = [ prg, '-B', '-ddd',
+        cmd = [ prg, '-B', '-dddt',
                 '-P', pidfile, '-f', mylogfile, '-g', self.hapd_fst_global]
         for i in range(0, len(self.cfgs_to_run)):
             cfg = self.cfgs_to_run[i]
@@ -189,7 +189,7 @@ class FstLauncher:
                            'alt-wpa_supplicant/wpa_supplicant/wpa_supplicant')
         if not os.path.exists(prg):
             prg = '../../wpa_supplicant/wpa_supplicant'
-        cmd = [ prg, '-B', '-ddd',
+        cmd = [ prg, '-B', '-dddt',
                 '-P' + pidfile, '-f', mylogfile, '-g', self.wsup_fst_global ]
         sta_no = 0
         for i in range(0, len(self.cfgs_to_run)):
@@ -212,18 +212,26 @@ class FstLauncher:
         """Terminates hostapd/wpa_supplicant processes previously launched with
         run_hostapd/run_wpa_supplicant"""
         pidfile = self.fst_logpath + '/' + 'myhostapd.pid'
-        self.kill_pid(pidfile)
+        self.kill_pid(pidfile, self.nof_aps > 0)
         pidfile = self.fst_logpath + '/' + 'mywpa_supplicant.pid'
-        self.kill_pid(pidfile)
+        self.kill_pid(pidfile, self.nof_stas > 0)
         self.reg_ctrl.stop()
         while len(self.cfgs_to_run) != 0:
             cfg = self.cfgs_to_run[0]
             self.remove_cfg(cfg)
 
-    def kill_pid(self, pidfile):
+    def kill_pid(self, pidfile, try_again=False):
         """Kills process by PID file"""
         if not os.path.exists(pidfile):
-            return
+            if not try_again:
+                return
+            # It might take some time for the process to write the PID file,
+            # so wait a bit longer before giving up.
+            self.logger.info("kill_pid: pidfile %s does not exist - try again after a second" % pidfile)
+            time.sleep(1)
+            if not os.path.exists(pidfile):
+                self.logger.info("kill_pid: pidfile %s does not exist - could not kill the process" % pidfile)
+                return
         pid = -1
         try:
             pf = file(pidfile, 'r')

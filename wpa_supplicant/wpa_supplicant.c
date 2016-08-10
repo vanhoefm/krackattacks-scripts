@@ -6024,6 +6024,27 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 }
 
 
+/**
+ * wpas_request_disconnection - Request disconnection
+ * @wpa_s: Pointer to the network interface
+ *
+ * This function is used to request disconnection from the currently connected
+ * network. This will stop any ongoing scans and initiate deauthentication.
+ */
+void wpas_request_disconnection(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_SME
+	wpa_s->sme.prev_bssid_set = 0;
+#endif /* CONFIG_SME */
+	wpa_s->reassociate = 0;
+	wpa_s->disconnected = 1;
+	wpa_supplicant_cancel_sched_scan(wpa_s);
+	wpa_supplicant_cancel_scan(wpa_s);
+	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
+}
+
+
 void dump_freq_data(struct wpa_supplicant *wpa_s, const char *title,
 		    struct wpa_used_freq_data *freqs_data,
 		    unsigned int len)

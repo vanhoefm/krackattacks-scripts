@@ -1069,8 +1069,7 @@ out:
 DBusMessage * wpas_dbus_iface_disconnect(DBusMessage *message,
 					 struct wpa_supplicant *wpa_s)
 {
-	wpa_s->disconnected = 1;
-	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	wpas_request_disconnection(wpa_s);
 
 	return wpas_dbus_new_success_reply(message);
 }

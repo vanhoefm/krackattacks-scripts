@@ -9127,16 +9127,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_list_networks(
 			wpa_s, NULL, reply, reply_size);
 	} else if (os_strcmp(buf, "DISCONNECT") == 0) {
-#ifdef CONFIG_SME
-		wpa_s->sme.prev_bssid_set = 0;
-#endif /* CONFIG_SME */
-		wpa_s->reassociate = 0;
-		wpa_s->disconnected = 1;
-		wpa_supplicant_cancel_sched_scan(wpa_s);
-		wpa_supplicant_cancel_scan(wpa_s);
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
-		eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
+		wpas_request_disconnection(wpa_s);
 	} else if (os_strcmp(buf, "SCAN") == 0) {
 		wpas_ctrl_scan(wpa_s, NULL, reply, reply_size, &reply_len);
 	} else if (os_strncmp(buf, "SCAN ", 5) == 0) {

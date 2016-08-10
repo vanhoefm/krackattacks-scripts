@@ -1475,10 +1475,7 @@ DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->current_ssid != NULL) {
-		wpa_s->disconnected = 1;
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
-
+		wpas_request_disconnection(wpa_s);
 		return NULL;
 	}
 

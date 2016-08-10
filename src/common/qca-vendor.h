@@ -118,6 +118,12 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_GPIO_CONFIG_COMMAND: Set GPIO pins. This uses the
  *	attributes defined in enum qca_wlan_gpio_attr.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_HW_CAPABILITY: Fetch hardware capabilities.
+ *	This uses @QCA_WLAN_VENDOR_ATTR_GET_HW_CAPABILITY to indicate which
+ *	capabilities are to be fetched and other
+ *	enum qca_wlan_vendor_attr_get_hw_capability attributes to return the
+ *	requested capabilities.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -204,6 +210,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_STOP = 123,
 	QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH = 124,
 	QCA_NL80211_VENDOR_SUBCMD_GPIO_CONFIG_COMMAND = 125,
+	QCA_NL80211_VENDOR_SUBCMD_GET_HW_CAPABILITY = 126,
 };
 
 
@@ -795,6 +802,34 @@ enum qca_wlan_gpio_attr {
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST,
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_MAX =
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_hw_capability - Wi-Fi hardware capability
+ */
+enum qca_wlan_vendor_attr_get_hw_capability {
+	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_INVALID,
+	/* Antenna isolation
+	 * An attribute used in the response.
+	 * The content of this attribute is encoded in a byte array. Each byte
+	 * value is an antenna isolation value. The array length is the number
+	 * of antennas.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ANTENNA_ISOLATION,
+	/* Request HW capability
+	 * An attribute used in the request.
+	 * The content of this attribute is a u32 array for one or more of
+	 * hardware capabilities (attribute IDs) that are being requested. Each
+	 * u32 value has a value from this
+	 * enum qca_wlan_vendor_attr_get_hw_capability
+	 * identifying which capabilities are requested.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_HW_CAPABILITY,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_MAX =
+	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

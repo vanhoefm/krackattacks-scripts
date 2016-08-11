@@ -868,6 +868,16 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 		return;
 	}
 
+	if (stype == WLAN_FC_STYPE_ACTION &&
+	    (os_memcmp(drv->own_addr, mgmt->bssid, ETH_ALEN) == 0 ||
+	     is_broadcast_ether_addr(mgmt->bssid))) {
+		os_memset(&event, 0, sizeof(event));
+		event.rx_mgmt.frame = buf;
+		event.rx_mgmt.frame_len = len;
+		wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
+		return;
+	}
+
 	if (os_memcmp(drv->own_addr, mgmt->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_DEBUG, "%s: BSSID does not match - ignore",
 			   __func__);
@@ -888,12 +898,6 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 		ielen = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.reassoc_req));
 		iebuf = mgmt->u.reassoc_req.variable;
 		drv_event_assoc(drv->hapd, mgmt->sa, iebuf, ielen, 1);
-		break;
-	case WLAN_FC_STYPE_ACTION:
-		os_memset(&event, 0, sizeof(event));
-		event.rx_mgmt.frame = buf;
-		event.rx_mgmt.frame_len = len;
-		wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
 		break;
 	case WLAN_FC_STYPE_AUTH:
 		if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth))

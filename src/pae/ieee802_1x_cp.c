@@ -184,16 +184,13 @@ SM_STATE(CP, AUTHENTICATED)
 
 SM_STATE(CP, SECURED)
 {
-	struct ieee802_1x_cp_conf conf;
-
 	SM_ENTRY(CP, SECURED);
 
 	sm->chgd_server = FALSE;
 
-	ieee802_1x_kay_cp_conf(sm->kay, &conf);
-	sm->protect_frames = conf.protect;
-	sm->replay_protect = conf.replay_protect;
-	sm->validate_frames = conf.validate;
+	sm->protect_frames = sm->kay->macsec_protect;
+	sm->replay_protect = sm->kay->macsec_replay_protect;
+	sm->validate_frames = sm->kay->macsec_validate;
 
 	/* NOTE: now no other than default cipher suite (AES-GCM-128) */
 	sm->current_cipher_suite = sm->cipher_suite;
@@ -426,9 +423,7 @@ SM_STEP(CP)
 /**
  * ieee802_1x_cp_sm_init -
  */
-struct ieee802_1x_cp_sm * ieee802_1x_cp_sm_init(
-	struct ieee802_1x_kay *kay,
-	struct ieee802_1x_cp_conf *pcp_conf)
+struct ieee802_1x_cp_sm * ieee802_1x_cp_sm_init(struct ieee802_1x_kay *kay)
 {
 	struct ieee802_1x_cp_sm *sm;
 
@@ -444,10 +439,10 @@ struct ieee802_1x_cp_sm * ieee802_1x_cp_sm_init(
 
 	sm->chgd_server = FALSE;
 
-	sm->protect_frames = pcp_conf->protect;
-	sm->validate_frames = pcp_conf->validate;
-	sm->replay_protect = pcp_conf->replay_protect;
-	sm->replay_window = pcp_conf->replay_window;
+	sm->protect_frames = kay->macsec_protect;
+	sm->validate_frames = kay->macsec_validate;
+	sm->replay_protect = kay->macsec_replay_protect;
+	sm->replay_window = kay->macsec_replay_window;
 
 	sm->controlled_port_enabled = FALSE;
 

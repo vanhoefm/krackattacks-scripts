@@ -14,7 +14,6 @@
 #include "common/ieee802_1x_defs.h"
 
 struct macsec_init_params;
-struct ieee802_1x_cp_conf;
 
 #define MI_LEN			12
 #define MAX_KEY_LEN		32  /* 32 bytes, 256 bits */
@@ -186,7 +185,5 @@ int ieee802_1x_kay_enable_tx_sas(struct ieee802_1x_kay *kay,
 int ieee802_1x_kay_enable_rx_sas(struct ieee802_1x_kay *kay,
 				 struct ieee802_1x_mka_ki *lki);
 int ieee802_1x_kay_enable_new_info(struct ieee802_1x_kay *kay);
-int ieee802_1x_kay_cp_conf(struct ieee802_1x_kay *kay,
-			   struct ieee802_1x_cp_conf *pconf);
 
 #endif /* IEEE802_1X_KAY_H */

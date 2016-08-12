@@ -2828,38 +2828,6 @@ int ieee802_1x_kay_enable_new_info(struct ieee802_1x_kay *kay)
 
 
 /**
- * ieee802_1x_kay_cp_conf -
- */
-int ieee802_1x_kay_cp_conf(struct ieee802_1x_kay *kay,
-			   struct ieee802_1x_cp_conf *pconf)
-{
-	pconf->protect = kay->macsec_protect;
-	pconf->replay_protect = kay->macsec_replay_protect;
-	pconf->validate = kay->macsec_validate;
-
-	return 0;
-}
-
-
-/**
- * ieee802_1x_kay_alloc_cp_sm -
- */
-static struct ieee802_1x_cp_sm *
-ieee802_1x_kay_alloc_cp_sm(struct ieee802_1x_kay *kay)
-{
-	struct ieee802_1x_cp_conf conf;
-
-	os_memset(&conf, 0, sizeof(conf));
-	conf.protect = kay->macsec_protect;
-	conf.replay_protect = kay->macsec_replay_protect;
-	conf.validate = kay->macsec_validate;
-	conf.replay_window = kay->macsec_replay_window;
-
-	return ieee802_1x_cp_sm_init(kay, &conf);
-}
-
-
-/**
  * ieee802_1x_kay_mkpdu_sanity_check -
  *     sanity check specified in clause 11.11.2 of IEEE802.1X-2010
  */
@@ -3178,7 +3146,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	wpa_printf(MSG_DEBUG, "KaY: secy init macsec done");
 
 	/* init CP */
-	kay->cp = ieee802_1x_kay_alloc_cp_sm(kay);
+	kay->cp = ieee802_1x_cp_sm_init(kay);
 	if (kay->cp == NULL) {
 		ieee802_1x_kay_deinit(kay);
 		return NULL;

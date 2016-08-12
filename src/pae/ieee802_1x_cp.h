@@ -16,17 +16,7 @@ struct ieee802_1x_cp_sm;
 struct ieee802_1x_kay;
 struct ieee802_1x_mka_ki;
 
-struct ieee802_1x_cp_conf {
-	Boolean protect;
-	Boolean replay_protect;
-	enum validate_frames validate;
-	u32 replay_window;
-};
-
-
-struct ieee802_1x_cp_sm *
-ieee802_1x_cp_sm_init(struct ieee802_1x_kay *kay,
-		      struct ieee802_1x_cp_conf *pcp_conf);
+struct ieee802_1x_cp_sm * ieee802_1x_cp_sm_init(struct ieee802_1x_kay *kay);
 void ieee802_1x_cp_sm_deinit(struct ieee802_1x_cp_sm *sm);
 void ieee802_1x_cp_sm_step(void *cp_ctx);
 void ieee802_1x_cp_connect_pending(void *cp_ctx);

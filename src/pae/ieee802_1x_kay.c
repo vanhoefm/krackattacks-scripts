@@ -1069,14 +1069,11 @@ ieee802_1x_mka_decode_potential_peer_body(
 	struct ieee802_1x_mka_participant *participant,
 	const u8 *peer_msg, size_t msg_len)
 {
-	struct ieee802_1x_mka_hdr *hdr;
+	const struct ieee802_1x_mka_hdr *hdr;
 	size_t body_len;
-	u32 peer_mn;
-	be32 _peer_mn;
-	const u8 *peer_mi;
 	size_t i;
 
-	hdr = (struct ieee802_1x_mka_hdr *) peer_msg;
+	hdr = (const struct ieee802_1x_mka_hdr *) peer_msg;
 	body_len = get_mka_param_body_len(hdr);
 	if (body_len % 16 != 0) {
 		wpa_printf(MSG_ERROR,
@@ -1085,10 +1082,13 @@ ieee802_1x_mka_decode_potential_peer_body(
 		return -1;
 	}
 
-	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
-		peer_mi = MKA_HDR_LEN + peer_msg + i;
-		os_memcpy(&_peer_mn, peer_mi + MI_LEN, sizeof(_peer_mn));
-		peer_mn = be_to_host32(_peer_mn);
+	for (i = 0; i < body_len; i += sizeof(struct ieee802_1x_mka_peer_id)) {
+		const struct ieee802_1x_mka_peer_id *peer_mi;
+		u32 peer_mn;
+
+		peer_mi = (struct ieee802_1x_mka_peer_id *)
+			(peer_msg + MKA_HDR_LEN + i);
+		peer_mn = be_to_host32(peer_mi->mn);
 
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {

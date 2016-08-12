@@ -129,7 +129,7 @@ ieee802_1x_mka_dump_basic_body(struct ieee802_1x_mka_basic_body *body)
 	wpa_printf(MSG_DEBUG, "\tKeySvr........: %d", body->key_server);
 	wpa_printf(MSG_DEBUG, "\tMACSecDesired.: %d", body->macsec_desired);
 	wpa_printf(MSG_DEBUG, "\tMACSecCapable.: %d", body->macsec_capability);
-	wpa_printf(MSG_DEBUG, "\tBody Length...: %d", (int) body_len);
+	wpa_printf(MSG_DEBUG, "\tBody Length...: %zu", body_len);
 	wpa_printf(MSG_DEBUG, "\tSCI MAC.......: " MACSTR,
 		   MAC2STR(body->actor_sci.addr));
 	wpa_printf(MSG_DEBUG, "\tSCI Port .....: %d",
@@ -162,10 +162,10 @@ ieee802_1x_mka_dump_peer_body(struct ieee802_1x_mka_peer_body *body)
 	body_len = get_mka_param_body_len(body);
 	if (body->type == MKA_LIVE_PEER_LIST) {
 		wpa_printf(MSG_DEBUG, "*** Live Peer List ***");
-		wpa_printf(MSG_DEBUG, "\tBody Length...: %d", (int) body_len);
+		wpa_printf(MSG_DEBUG, "\tBody Length...: %zu", body_len);
 	} else if (body->type == MKA_POTENTIAL_PEER_LIST) {
 		wpa_printf(MSG_DEBUG, "*** Potential Live Peer List ***");
-		wpa_printf(MSG_DEBUG, "\tBody Length...: %d", (int) body_len);
+		wpa_printf(MSG_DEBUG, "\tBody Length...: %zu", body_len);
 	}
 
 	for (i = 0; i < body_len; i += MI_LEN + sizeof(mn)) {
@@ -193,7 +193,7 @@ ieee802_1x_mka_dump_dist_sak_body(struct ieee802_1x_mka_dist_sak_body *body)
 	wpa_printf(MSG_INFO, "\tDistributed AN........: %d", body->dan);
 	wpa_printf(MSG_INFO, "\tConfidentiality Offset: %d",
 		   body->confid_offset);
-	wpa_printf(MSG_INFO, "\tBody Length...........: %d", (int) body_len);
+	wpa_printf(MSG_INFO, "\tBody Length...........: %zu", body_len);
 	if (!body_len)
 		return;
 
@@ -457,8 +457,8 @@ ieee802_1x_kay_init_receive_sa(struct receive_sc *psc, u8 an, u32 lowest_pn,
 
 	dl_list_add(&psc->sa_list, &psa->list);
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Create receive SA(AN: %d lowest_pn: %u of SC(channel: %d)",
-		   (int) an, lowest_pn, psc->channel);
+		   "KaY: Create receive SA(AN: %hhu lowest_pn: %u of SC(channel: %d)",
+		   an, lowest_pn, psc->channel);
 
 	return psa;
 }
@@ -471,8 +471,8 @@ static void ieee802_1x_kay_deinit_receive_sa(struct receive_sa *psa)
 {
 	psa->pkey = NULL;
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Delete receive SA(an: %d) of SC(channel: %d)",
-		   psa->an, psa->sc->channel);
+		   "KaY: Delete receive SA(an: %hhu) of SC",
+		   psa->an);
 	dl_list_del(&psa->list);
 	os_free(psa);
 }
@@ -967,16 +967,16 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 
 		if (left_len < (MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN)) {
 			wpa_printf(MSG_ERROR,
-				   "KaY: MKA Peer Packet Body Length (%d bytes) is less than the Parameter Set Header Length (%d bytes) + the Parameter Set Body Length (%d bytes) + %d bytes of ICV",
-				   (int) left_len, (int) MKA_HDR_LEN,
-				   (int) body_len, DEFAULT_ICV_LEN);
+				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
+				   left_len, MKA_HDR_LEN,
+				   body_len, DEFAULT_ICV_LEN);
 			goto SKIP_PEER;
 		}
 
 		if ((body_len % 16) != 0) {
 			wpa_printf(MSG_ERROR,
-				   "KaY: MKA Peer Packet Body Length (%d bytes) should multiple of 16 octets",
-				   (int) body_len);
+				   "KaY: MKA Peer Packet Body Length (%zu bytes) should be a multiple of 16 octets",
+				   body_len);
 			goto SKIP_PEER;
 		}
 
@@ -1306,8 +1306,8 @@ ieee802_1x_mka_decode_sak_use_body(
 
 	if ((body_len != 0) && (body_len < 40)) {
 		wpa_printf(MSG_ERROR,
-			   "KaY: MKA Use SAK Packet Body Length (%d bytes) should be 0, 40, or more octets",
-			   (int) body_len);
+			   "KaY: MKA Use SAK Packet Body Length (%zu bytes) should be 0, 40, or more octets",
+			   body_len);
 		return -1;
 	}
 
@@ -1570,8 +1570,8 @@ ieee802_1x_mka_decode_dist_sak_body(
 	body_len = get_mka_param_body_len(hdr);
 	if ((body_len != 0) && (body_len != 28) && (body_len < 36)) {
 		wpa_printf(MSG_ERROR,
-			   "KaY: MKA Use SAK Packet Body Length (%d bytes) should be 0, 28, 36, or more octets",
-			   (int) body_len);
+			   "KaY: MKA Use SAK Packet Body Length (%zu bytes) should be 0, 28, 36, or more octets",
+			   body_len);
 		return -1;
 	}
 
@@ -1838,8 +1838,8 @@ ieee802_1x_mka_decode_dist_cak_body(
 	body_len = get_mka_param_body_len(hdr);
 	if (body_len < 28) {
 		wpa_printf(MSG_ERROR,
-			   "KaY: MKA Use SAK Packet Body Length (%d bytes) should be 28 or more octets",
-			   (int) body_len);
+			   "KaY: MKA Use SAK Packet Body Length (%zu bytes) should be 28 or more octets",
+			   body_len);
 		return -1;
 	}
 
@@ -1862,8 +1862,8 @@ ieee802_1x_mka_decode_kmd_body(
 	body_len = get_mka_param_body_len(hdr);
 	if (body_len < 5) {
 		wpa_printf(MSG_ERROR,
-			   "KaY: MKA Use SAK Packet Body Length (%d bytes) should be 5 or more octets",
-			   (int) body_len);
+			   "KaY: MKA Use SAK Packet Body Length (%zu bytes) should be 5 or more octets",
+			   body_len);
 		return -1;
 	}
 
@@ -2531,8 +2531,8 @@ ieee802_1x_kay_init_transmit_sa(struct transmit_sc *psc, u8 an, u32 next_PN,
 
 	dl_list_add(&psc->sa_list, &psa->list);
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Create transmit SA(an: %d, next_PN: %u) of SC(channel: %d)",
-		   (int) an, next_PN, psc->channel);
+		   "KaY: Create transmit SA(an: %hhu, next_PN: %u) of SC(channel: %d)",
+		   an, next_PN, psc->channel);
 
 	return psa;
 }
@@ -2545,8 +2545,8 @@ static void ieee802_1x_kay_deinit_transmit_sa(struct transmit_sa *psa)
 {
 	psa->pkey = NULL;
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Delete transmit SA(an: %d) of SC(channel: %d)",
-		   psa->an, psa->sc->channel);
+		   "KaY: Delete transmit SA(an: %hhu) of SC",
+		   psa->an);
 	dl_list_del(&psa->list);
 	os_free(psa);
 }
@@ -2940,9 +2940,9 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 	/* EAPOL-MKA body should comprise basic parameter set and ICV */
 	if (mka_msg_len < MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN) {
 		wpa_printf(MSG_ERROR,
-			   "KaY: Received EAPOL-MKA Packet Body Length (%d bytes) is less than the Basic Parameter Set Header Length (%d bytes) + the Basic Parameter Set Body Length (%d bytes) + %d bytes of ICV",
-			   (int) mka_msg_len, (int) MKA_HDR_LEN,
-			   (int) body_len, DEFAULT_ICV_LEN);
+			   "KaY: Received EAPOL-MKA Packet Body Length (%zu bytes) is less than the Basic Parameter Set Header Length (%zu bytes) + the Basic Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
+			   mka_msg_len, MKA_HDR_LEN,
+			   body_len, DEFAULT_ICV_LEN);
 		return -1;
 	}
 
@@ -3073,9 +3073,9 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 
 		if (left_len < (MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN)) {
 			wpa_printf(MSG_ERROR,
-				   "KaY: MKA Peer Packet Body Length (%d bytes) is less than the Parameter Set Header Length (%d bytes) + the Parameter Set Body Length (%d bytes) + %d bytes of ICV",
-				   (int) left_len, (int) MKA_HDR_LEN,
-				   (int) body_len, DEFAULT_ICV_LEN);
+				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
+				   left_len, MKA_HDR_LEN,
+				   body_len, DEFAULT_ICV_LEN);
 			goto next_para_set;
 		}
 
@@ -3089,7 +3089,7 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 				(participant, pos, left_len);
 		} else {
 			wpa_printf(MSG_ERROR,
-				   "The type %d not supported in this MKA version %d",
+				   "The type %d is not supported in this MKA version %d",
 				   body_type, MKA_VERSION_ID);
 		}
 

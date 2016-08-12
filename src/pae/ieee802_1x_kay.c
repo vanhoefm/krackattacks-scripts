@@ -1756,12 +1756,9 @@ ieee802_1x_mka_encode_icv_body(struct ieee802_1x_mka_participant *participant,
 		return -1;
 	}
 
-	if (length != DEFAULT_ICV_LEN)  {
-		os_memcpy(wpabuf_put(buf, length - MKA_HDR_LEN), cmac,
-			  length - MKA_HDR_LEN);
-	} else {
-		os_memcpy(wpabuf_put(buf, length), cmac, length);
-	}
+	if (length != DEFAULT_ICV_LEN)
+		length -= MKA_HDR_LEN;
+	os_memcpy(wpabuf_put(buf, length), cmac, length);
 
 	return 0;
 }

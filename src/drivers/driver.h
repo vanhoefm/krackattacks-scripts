@@ -3319,7 +3319,7 @@ struct wpa_driver_ops {
 	 * @cs: EUI64 identifier
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*set_current_cipher_suite)(void *priv, const u8 *cs);
+	int (*set_current_cipher_suite)(void *priv, u64 cs);
 
 	/**
 	 * enable_controlled_port - Set controlled port status

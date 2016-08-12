@@ -36,7 +36,7 @@ void ieee802_1x_cp_connect_secure(void *cp_ctx);
 void ieee802_1x_cp_signal_chgdserver(void *cp_ctx);
 void ieee802_1x_cp_set_electedself(void *cp_ctx, Boolean status);
 void ieee802_1x_cp_set_authorizationdata(void *cp_ctx, u8 *pdata, int len);
-void ieee802_1x_cp_set_ciphersuite(void *cp_ctx, void *pid);
+void ieee802_1x_cp_set_ciphersuite(void *cp_ctx, u64 cs);
 void ieee802_1x_cp_set_offset(void *cp_ctx, enum confidentiality_offset offset);
 void ieee802_1x_cp_signal_newsak(void *cp_ctx);
 void ieee802_1x_cp_set_distributedki(void *cp_ctx,

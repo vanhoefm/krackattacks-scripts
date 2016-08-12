@@ -147,7 +147,7 @@ struct receive_sa {
 };
 
 struct macsec_ciphersuite {
-	u8 id[CS_ID_LEN];
+	u64 id;
 	char name[32];
 	enum macsec_cap capable;
 	int sak_len; /* unit: byte */

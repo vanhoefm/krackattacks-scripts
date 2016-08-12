@@ -59,7 +59,7 @@ struct ieee802_1x_kay_ctx {
 	int (*macsec_deinit)(void *ctx);
 	int (*enable_protect_frames)(void *ctx, Boolean enabled);
 	int (*set_replay_protect)(void *ctx, Boolean enabled, u32 window);
-	int (*set_current_cipher_suite)(void *ctx, const u8 *cs);
+	int (*set_current_cipher_suite)(void *ctx, u64 cs);
 	int (*enable_controlled_port)(void *ctx, Boolean enabled);
 	int (*get_receive_lowest_pn)(void *ctx, u32 channel, u8 an,
 				     u32 *lowest_pn);

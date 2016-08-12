@@ -65,8 +65,7 @@ int secy_cp_control_replay(struct ieee802_1x_kay *kay, Boolean enabled, u32 win)
 }
 
 
-int secy_cp_control_current_cipher_suite(struct ieee802_1x_kay *kay,
-					 const u8 *cs)
+int secy_cp_control_current_cipher_suite(struct ieee802_1x_kay *kay, u64 cs)
 {
 	struct ieee802_1x_kay_ctx *ops;
 

@@ -361,12 +361,17 @@ ieee802_1x_kay_get_peer(struct ieee802_1x_mka_participant *participant,
  */
 static struct macsec_ciphersuite *
 ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
-				u8 *cs_id)
+				const u8 *cs_id)
 {
 	unsigned int i;
+	u64 cs;
+	be64 _cs;
+
+	os_memcpy(&_cs, cs_id, CS_ID_LEN);
+	cs = be_to_host64(_cs);
 
 	for (i = 0; i < CS_TABLE_SIZE; i++) {
-		if (os_memcmp(cipher_suite_tbl[i].id, cs_id, CS_ID_LEN) == 0)
+		if (cipher_suite_tbl[i].id == cs)
 			return &cipher_suite_tbl[i];
 	}
 
@@ -1440,7 +1445,10 @@ ieee802_1x_mka_encode_dist_sak_body(
 	cs_index = participant->kay->macsec_csindex;
 	sak_pos = 0;
 	if (cs_index != DEFAULT_CS_INDEX) {
-		os_memcpy(body->sak, cipher_suite_tbl[cs_index].id, CS_ID_LEN);
+		be64 cs;
+
+		cs = host_to_be64(cipher_suite_tbl[cs_index].id);
+		os_memcpy(body->sak, &cs, CS_ID_LEN);
 		sak_pos = CS_ID_LEN;
 	}
 	if (aes_wrap(participant->kek.key, 16,

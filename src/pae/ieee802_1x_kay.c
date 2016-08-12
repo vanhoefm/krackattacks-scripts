@@ -39,12 +39,11 @@ static u8 mka_algo_agility[4] = MKA_ALGO_AGILITY_2009;
 static struct macsec_ciphersuite cipher_suite_tbl[] = {
 	/* GCM-AES-128 */
 	{
-		CS_ID_GCM_AES_128,
-		CS_NAME_GCM_AES_128,
-		MACSEC_CAP_INTEG_AND_CONF_0_30_50,
-		16,
-
-		0 /* index */
+		.id = CS_ID_GCM_AES_128,
+		.name = CS_NAME_GCM_AES_128,
+		.capable = MACSEC_CAP_INTEG_AND_CONF_0_30_50,
+		.sak_len = DEFAULT_SA_KEY_LEN,
+		.index = 0,
 	},
 };
 #define CS_TABLE_SIZE (ARRAY_SIZE(cipher_suite_tbl))
@@ -52,16 +51,21 @@ static struct macsec_ciphersuite cipher_suite_tbl[] = {
 
 static struct mka_alg mka_alg_tbl[] = {
 	{
-		MKA_ALGO_AGILITY_2009,
-		/* 128-bit CAK, KEK, ICK, ICV */
-		16, 16,	16, 16,
-		ieee802_1x_cak_128bits_aes_cmac,
-		ieee802_1x_ckn_128bits_aes_cmac,
-		ieee802_1x_kek_128bits_aes_cmac,
-		ieee802_1x_ick_128bits_aes_cmac,
-		ieee802_1x_icv_128bits_aes_cmac,
+		.parameter = MKA_ALGO_AGILITY_2009,
 
-		1, /* index */
+		/* 128-bit CAK, KEK, ICK, ICV */
+		.cak_len = DEFAULT_ICV_LEN,
+		.kek_len = DEFAULT_ICV_LEN,
+		.ick_len = DEFAULT_ICV_LEN,
+		.icv_len = DEFAULT_ICV_LEN,
+
+		.cak_trfm = ieee802_1x_cak_128bits_aes_cmac,
+		.ckn_trfm = ieee802_1x_ckn_128bits_aes_cmac,
+		.kek_trfm = ieee802_1x_kek_128bits_aes_cmac,
+		.ick_trfm = ieee802_1x_ick_128bits_aes_cmac,
+		.icv_hash = ieee802_1x_icv_128bits_aes_cmac,
+
+		.index = 1,
 	},
 };
 #define MKA_ALG_TABLE_SIZE (ARRAY_SIZE(mka_alg_tbl))

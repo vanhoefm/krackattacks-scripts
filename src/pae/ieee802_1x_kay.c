@@ -726,6 +726,17 @@ ieee802_1x_mka_encode_basic_body(
 }
 
 
+static Boolean
+reset_participant_mi(struct ieee802_1x_mka_participant *participant)
+{
+	if (os_get_random(participant->mi, sizeof(participant->mi)) < 0)
+		return FALSE;
+	participant->mn = 0;
+
+	return TRUE;
+}
+
+
 /**
  * ieee802_1x_mka_decode_basic_body -
  */
@@ -757,9 +768,8 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 
 	/* If the peer's MI is my MI, I will choose new MI */
 	if (os_memcmp(body->actor_mi, participant->mi, MI_LEN) == 0) {
-		if (os_get_random(participant->mi, sizeof(participant->mi)) < 0)
+		if (!reset_participant_mi(participant))
 			return NULL;
-		participant->mn = 0;
 	}
 
 	os_memcpy(participant->current_peer_id.mi, body->actor_mi, MI_LEN);
@@ -1040,13 +1050,9 @@ static int ieee802_1x_mka_decode_live_peer_body(
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {
 			/* My message id is used by other participant */
-			if (peer_mn > participant->mn) {
-				if (os_get_random(participant->mi,
-						  sizeof(participant->mi)) < 0)
-					wpa_printf(MSG_DEBUG,
-						   "KaY: Could not update mi");
-				participant->mn = 0;
-			}
+			if (peer_mn > participant->mn &&
+			    !reset_participant_mi(participant))
+				wpa_printf(MSG_DEBUG, "KaY: Could not update mi");
 			continue;
 		}
 		if (!is_included)
@@ -1100,13 +1106,9 @@ ieee802_1x_mka_decode_potential_peer_body(
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {
 			/* My message id is used by other participant */
-			if (peer_mn > participant->mn) {
-				if (os_get_random(participant->mi,
-						  sizeof(participant->mi)) < 0)
-					wpa_printf(MSG_DEBUG,
-						   "KaY: Could not update mi");
-				participant->mn = 0;
-			}
+			if (peer_mn > participant->mn &&
+			    !reset_participant_mi(participant))
+				wpa_printf(MSG_DEBUG, "KaY: Could not update mi");
 			continue;
 		}
 	}
@@ -3365,9 +3367,8 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 	participant->retry_count = 0;
 	participant->kay = kay;
 
-	if (os_get_random(participant->mi, sizeof(participant->mi)) < 0)
+	if (!reset_participant_mi(participant))
 		goto fail;
-	participant->mn = 0;
 
 	participant->lrx = FALSE;
 	participant->ltx = FALSE;

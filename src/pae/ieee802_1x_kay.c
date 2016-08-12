@@ -874,7 +874,6 @@ ieee802_1x_mka_encode_live_peer_body(
 				       sizeof(struct ieee802_1x_mka_peer_id));
 		os_memcpy(body_peer->mi, peer->mi, MI_LEN);
 		body_peer->mn = host_to_be32(peer->mn);
-		body_peer++;
 	}
 
 	ieee802_1x_mka_dump_peer_body(body);
@@ -935,7 +934,6 @@ ieee802_1x_mka_encode_potential_peer_body(
 				       sizeof(struct ieee802_1x_mka_peer_id));
 		os_memcpy(body_peer->mi, peer->mi, MI_LEN);
 		body_peer->mn = host_to_be32(peer->mn);
-		body_peer++;
 	}
 
 	ieee802_1x_mka_dump_peer_body(body);

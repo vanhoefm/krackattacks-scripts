@@ -29,6 +29,8 @@
 
 #define PENDING_PN_EXHAUSTION 0xC0000000
 
+#define MKA_ALIGN_LENGTH(len) (((len) + 0x3) & ~0x3)
+
 /* IEEE Std 802.1X-2010, Table 9-1 - MKA Algorithm Agility */
 #define MKA_ALGO_AGILITY_2009 { 0x00, 0x80, 0xC2, 0x01 }
 static u8 mka_algo_agility[4] = MKA_ALGO_AGILITY_2009;
@@ -673,7 +675,7 @@ ieee802_1x_mka_basic_body_length(struct ieee802_1x_mka_participant *participant)
 
 	length = sizeof(struct ieee802_1x_mka_basic_body);
 	length += participant->ckn.len;
-	return (length + 0x3) & ~0x3;
+	return MKA_ALIGN_LENGTH(length);
 }
 
 
@@ -829,7 +831,7 @@ ieee802_1x_mka_get_live_peer_length(
 			 struct ieee802_1x_kay_peer, list)
 		len += sizeof(struct ieee802_1x_mka_peer_id);
 
-	return (len + 0x3) & ~0x3;
+	return MKA_ALIGN_LENGTH(len);
 }
 
 
@@ -890,7 +892,7 @@ ieee802_1x_mka_get_potential_peer_length(
 			 struct ieee802_1x_kay_peer, list)
 		len += sizeof(struct ieee802_1x_mka_peer_id);
 
-	return (len + 0x3) & ~0x3;
+	return MKA_ALIGN_LENGTH(len);
 }
 
 
@@ -1134,12 +1136,8 @@ ieee802_1x_mka_get_sak_use_length(
 
 	if (participant->kay->macsec_desired && participant->advised_desired)
 		length = sizeof(struct ieee802_1x_mka_sak_use_body);
-	else
-		length = MKA_HDR_LEN;
 
-	length = (length + 0x3) & ~0x3;
-
-	return length;
+	return MKA_ALIGN_LENGTH(length);
 }
 
 
@@ -1443,7 +1441,7 @@ static int
 ieee802_1x_mka_get_dist_sak_length(
 	struct ieee802_1x_mka_participant *participant)
 {
-	int length;
+	int length = MKA_HDR_LEN;
 	int cs_index = participant->kay->macsec_csindex;
 
 	if (participant->advised_desired) {
@@ -1452,12 +1450,9 @@ ieee802_1x_mka_get_dist_sak_length(
 			length += CS_ID_LEN;
 
 		length += cipher_suite_tbl[cs_index].sak_len + 8;
-	} else {
-		length = MKA_HDR_LEN;
 	}
-	length = (length + 0x3) & ~0x3;
 
-	return length;
+	return MKA_ALIGN_LENGTH(length);
 }
 
 
@@ -1743,7 +1738,7 @@ ieee802_1x_mka_get_icv_length(struct ieee802_1x_mka_participant *participant)
 	length = sizeof(struct ieee802_1x_mka_icv_body);
 	length += mka_alg_tbl[participant->kay->mka_algindex].icv_len;
 
-	return (length + 0x3) & ~0x3;
+	return MKA_ALIGN_LENGTH(length);
 }
 
 

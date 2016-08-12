@@ -1402,7 +1402,7 @@ ieee802_1x_mka_get_dist_sak_length(
 	int length = MKA_HDR_LEN;
 	unsigned int cs_index = participant->kay->macsec_csindex;
 
-	if (participant->advised_desired) {
+	if (participant->advised_desired && cs_index < CS_TABLE_SIZE) {
 		length = sizeof(struct ieee802_1x_mka_dist_sak_body);
 		if (cs_index != DEFAULT_CS_INDEX)
 			length += CS_ID_LEN;
@@ -1444,6 +1444,8 @@ ieee802_1x_mka_encode_dist_sak_body(
 	body->kn = host_to_be32(sak->key_identifier.kn);
 	cs_index = participant->kay->macsec_csindex;
 	sak_pos = 0;
+	if (cs_index >= CS_TABLE_SIZE)
+		return -1;
 	if (cs_index != DEFAULT_CS_INDEX) {
 		be64 cs;
 
@@ -1467,39 +1469,13 @@ ieee802_1x_mka_encode_dist_sak_body(
 /**
  * ieee802_1x_kay_init_data_key -
  */
-static struct data_key *
-ieee802_1x_kay_init_data_key(const struct key_conf *conf)
+static void ieee802_1x_kay_init_data_key(struct data_key *pkey)
 {
-	struct data_key *pkey;
-
-	if (!conf)
-		return NULL;
-
-	pkey = os_zalloc(sizeof(*pkey));
-	if (pkey == NULL) {
-		wpa_printf(MSG_ERROR, "%s: out of memory", __func__);
-		return NULL;
-	}
-
-	pkey->key = os_zalloc(conf->key_len);
-	if (pkey->key == NULL) {
-		wpa_printf(MSG_ERROR, "%s: out of memory", __func__);
-		os_free(pkey);
-		return NULL;
-	}
-
-	os_memcpy(pkey->key, conf->key, conf->key_len);
-	os_memcpy(&pkey->key_identifier, &conf->ki,
-		  sizeof(pkey->key_identifier));
-	pkey->confidentiality_offset = conf->offset;
-	pkey->an = conf->an;
-	pkey->transmits = conf->tx;
-	pkey->receives = conf->rx;
+	pkey->transmits = TRUE;
+	pkey->receives = TRUE;
 	os_get_time(&pkey->created_time);
 
 	pkey->user = 1;
-
-	return pkey;
 }
 
 
@@ -1516,9 +1492,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 	struct ieee802_1x_kay_peer *peer;
 	struct macsec_ciphersuite *cs;
 	size_t body_len;
-	struct key_conf *conf;
 	struct data_key *sa_key = NULL;
-	struct ieee802_1x_mka_ki sak_ki;
 	int sak_len;
 	u8 *wrap_sak;
 	u8 *unwrap_sak;
@@ -1597,6 +1571,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		sak_len = DEFAULT_SA_KEY_LEN;
 		wrap_sak =  body->sak;
 		kay->macsec_csindex = DEFAULT_CS_INDEX;
+		cs = &cipher_suite_tbl[kay->macsec_csindex];
 	} else {
 		cs = ieee802_1x_kay_get_cipher_suite(participant, body->sak);
 		if (!cs) {
@@ -1622,60 +1597,35 @@ ieee802_1x_mka_decode_dist_sak_body(
 	}
 	wpa_hexdump(MSG_DEBUG, "\tAES Key Unwrap of SAK:", unwrap_sak, sak_len);
 
-	conf = os_zalloc(sizeof(*conf));
-	if (!conf) {
-		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
-		os_free(unwrap_sak);
-		return -1;
-	}
-	conf->key_len = sak_len;
-
-	conf->key = os_zalloc(conf->key_len);
-	if (!conf->key) {
-		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
-		os_free(unwrap_sak);
-		os_free(conf);
-		return -1;
-	}
-
-	os_memcpy(conf->key, unwrap_sak, conf->key_len);
-
-	os_memcpy(&sak_ki.mi, &participant->current_peer_id.mi,
-		  sizeof(sak_ki.mi));
-	sak_ki.kn = be_to_host32(body->kn);
-
-	os_memcpy(conf->ki.mi, sak_ki.mi, MI_LEN);
-	conf->ki.kn = sak_ki.kn;
-	conf->an = body->dan;
-	conf->offset = body->confid_offset;
-	conf->rx = TRUE;
-	conf->tx = TRUE;
-
-	sa_key = ieee802_1x_kay_init_data_key(conf);
+	sa_key = os_zalloc(sizeof(*sa_key));
 	if (!sa_key) {
 		os_free(unwrap_sak);
-		os_free(conf->key);
-		os_free(conf);
 		return -1;
 	}
+
+	os_memcpy(&sa_key->key_identifier.mi, &participant->current_peer_id.mi,
+		  MI_LEN);
+	sa_key->key_identifier.kn = be_to_host32(body->kn);
+
+	sa_key->key = unwrap_sak;
+	sa_key->key_len = sak_len;
+
+	sa_key->confidentiality_offset = body->confid_offset;
+	sa_key->an = body->dan;
+	ieee802_1x_kay_init_data_key(sa_key);
 
 	dl_list_add(&participant->sak_list, &sa_key->list);
 
-	ieee802_1x_cp_set_ciphersuite(kay->cp,
-				      cipher_suite_tbl[kay->macsec_csindex].id);
+	ieee802_1x_cp_set_ciphersuite(kay->cp, cs->id);
 	ieee802_1x_cp_sm_step(kay->cp);
 	ieee802_1x_cp_set_offset(kay->cp, body->confid_offset);
 	ieee802_1x_cp_sm_step(kay->cp);
-	ieee802_1x_cp_set_distributedki(kay->cp, &sak_ki);
+	ieee802_1x_cp_set_distributedki(kay->cp, &sa_key->key_identifier);
 	ieee802_1x_cp_set_distributedan(kay->cp, body->dan);
 	ieee802_1x_cp_signal_newsak(kay->cp);
 	ieee802_1x_cp_sm_step(kay->cp);
 
 	participant->to_use_sak = TRUE;
-
-	os_free(unwrap_sak);
-	os_free(conf->key);
-	os_free(conf);
 
 	return 0;
 }
@@ -1949,11 +1899,13 @@ static int
 ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 {
 	struct data_key *sa_key = NULL;
-	struct key_conf *conf;
 	struct ieee802_1x_kay_peer *peer;
 	struct ieee802_1x_kay *kay = participant->kay;
 	int ctx_len, ctx_offset;
 	u8 *context;
+	unsigned int key_len;
+	u8 *key;
+	struct macsec_ciphersuite *cs;
 
 	/* check condition for generating a fresh SAK:
 	 * must have one live peer
@@ -1980,40 +1932,29 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 		return -1;
 	}
 
-	conf = os_zalloc(sizeof(*conf));
-	if (!conf) {
-		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
-		return -1;
-	}
-	conf->key_len = cipher_suite_tbl[kay->macsec_csindex].sak_len;
-
-	conf->key = os_zalloc(conf->key_len);
-	if (!conf->key) {
-		os_free(conf);
+	cs = &cipher_suite_tbl[kay->macsec_csindex];
+	key_len = cs->sak_len;
+	key = os_zalloc(key_len);
+	if (!key) {
 		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
 		return -1;
 	}
 
-	ctx_len = conf->key_len + sizeof(kay->dist_kn);
+	ctx_len = key_len + sizeof(kay->dist_kn);
 	dl_list_for_each(peer, &participant->live_peers,
 			 struct ieee802_1x_kay_peer, list)
 		ctx_len += sizeof(peer->mi);
 	ctx_len += sizeof(participant->mi);
 
 	context = os_zalloc(ctx_len);
-	if (!context) {
-		os_free(conf->key);
-		os_free(conf);
-		return -1;
-	}
+	if (!context)
+		goto fail;
+
 	ctx_offset = 0;
-	if (os_get_random(context + ctx_offset, conf->key_len) < 0) {
-		os_free(context);
-		os_free(conf->key);
-		os_free(conf);
-		return -1;
-	}
-	ctx_offset += conf->key_len;
+	if (os_get_random(context + ctx_offset, key_len) < 0)
+		goto fail;
+
+	ctx_offset += key_len;
 	dl_list_for_each(peer, &participant->live_peers,
 			 struct ieee802_1x_kay_peer, list) {
 		os_memcpy(context + ctx_offset, peer->mi, sizeof(peer->mi));
@@ -2024,46 +1965,44 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	ctx_offset += sizeof(participant->mi);
 	os_memcpy(context + ctx_offset, &kay->dist_kn, sizeof(kay->dist_kn));
 
-	if (conf->key_len == 16) {
+	if (key_len == 16) {
 		ieee802_1x_sak_128bits_aes_cmac(participant->cak.key,
-						context, ctx_len, conf->key);
-	} else if (conf->key_len == 32) {
+						context, ctx_len, key);
+	} else if (key_len == 32) {
 		ieee802_1x_sak_128bits_aes_cmac(participant->cak.key,
-						context, ctx_len, conf->key);
+						context, ctx_len, key);
 	} else {
 		wpa_printf(MSG_ERROR, "KaY: SAK Length not support");
-		os_free(conf->key);
-		os_free(conf);
-		os_free(context);
-		return -1;
+		goto fail;
 	}
-	wpa_hexdump(MSG_DEBUG, "KaY: generated new SAK",
-		    conf->key, conf->key_len);
+	wpa_hexdump(MSG_DEBUG, "KaY: generated new SAK", key, key_len);
+	os_free(context);
+	context = NULL;
 
-	os_memcpy(conf->ki.mi, participant->mi, MI_LEN);
-	conf->ki.kn = kay->dist_kn;
-	conf->an = kay->dist_an;
-	conf->offset = kay->macsec_confidentiality;
-	conf->rx = TRUE;
-	conf->tx = TRUE;
-
-	sa_key = ieee802_1x_kay_init_data_key(conf);
+	sa_key = os_zalloc(sizeof(*sa_key));
 	if (!sa_key) {
-		os_free(conf->key);
-		os_free(conf);
-		os_free(context);
-		return -1;
+		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
+		goto fail;
 	}
+
+	sa_key->key = key;
+	sa_key->key_len = key_len;
+	os_memcpy(sa_key->key_identifier.mi, participant->mi, MI_LEN);
+	sa_key->key_identifier.kn = kay->dist_kn;
+
+	sa_key->confidentiality_offset = kay->macsec_confidentiality;
+	sa_key->an = kay->dist_an;
+	ieee802_1x_kay_init_data_key(sa_key);
+
 	participant->new_key = sa_key;
 
 	dl_list_add(&participant->sak_list, &sa_key->list);
-	ieee802_1x_cp_set_ciphersuite(kay->cp,
-				      cipher_suite_tbl[kay->macsec_csindex].id);
+	ieee802_1x_cp_set_ciphersuite(kay->cp, cs->id);
 	ieee802_1x_cp_sm_step(kay->cp);
-	ieee802_1x_cp_set_offset(kay->cp, conf->offset);
+	ieee802_1x_cp_set_offset(kay->cp, kay->macsec_confidentiality);
 	ieee802_1x_cp_sm_step(kay->cp);
-	ieee802_1x_cp_set_distributedki(kay->cp, &conf->ki);
-	ieee802_1x_cp_set_distributedan(kay->cp, conf->an);
+	ieee802_1x_cp_set_distributedki(kay->cp, &sa_key->key_identifier);
+	ieee802_1x_cp_set_distributedan(kay->cp, sa_key->an);
 	ieee802_1x_cp_signal_newsak(kay->cp);
 	ieee802_1x_cp_sm_step(kay->cp);
 
@@ -2078,10 +2017,12 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 
 	kay->dist_time = time(NULL);
 
-	os_free(conf->key);
-	os_free(conf);
-	os_free(context);
 	return 0;
+
+fail:
+	os_free(key);
+	os_free(context);
+	return -1;
 }
 
 

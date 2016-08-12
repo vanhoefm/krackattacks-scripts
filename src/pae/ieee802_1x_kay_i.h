@@ -54,16 +54,6 @@ struct ieee802_1x_kay_peer {
 	struct dl_list list;
 };
 
-struct key_conf {
-	u8 *key;
-	struct ieee802_1x_mka_ki ki;
-	enum confidentiality_offset offset;
-	u8 an;
-	Boolean tx;
-	Boolean rx;
-	int key_len; /* unit: byte */
-};
-
 struct data_key {
 	u8 *key;
 	int key_len;

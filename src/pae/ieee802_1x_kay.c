@@ -948,27 +948,24 @@ static Boolean
 ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 			     const u8 *mka_msg, size_t msg_len)
 {
-	Boolean included = FALSE;
 	struct ieee802_1x_mka_hdr *hdr;
 	size_t body_len;
 	size_t left_len;
 	u8 body_type;
-	u32 peer_mn;
-	be32 _peer_mn;
-	const u8 *peer_mi;
 	const u8 *pos;
 	size_t i;
 
-	pos = mka_msg;
-	left_len = msg_len;
-	while (left_len > (MKA_HDR_LEN + DEFAULT_ICV_LEN)) {
+	for (pos = mka_msg, left_len = msg_len;
+	     left_len > MKA_HDR_LEN + DEFAULT_ICV_LEN;
+	     left_len -= body_len + MKA_HDR_LEN,
+		     pos += body_len + MKA_HDR_LEN) {
 		hdr = (struct ieee802_1x_mka_hdr *) pos;
 		body_len = get_mka_param_body_len(hdr);
 		body_type = get_mka_param_body_type(hdr);
 
 		if (body_type != MKA_LIVE_PEER_LIST &&
 		    body_type != MKA_POTENTIAL_PEER_LIST)
-			goto SKIP_PEER;
+			continue;
 
 		ieee802_1x_mka_dump_peer_body(
 			(struct ieee802_1x_mka_peer_body *)pos);
@@ -978,34 +975,27 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
 				   left_len, MKA_HDR_LEN,
 				   body_len, DEFAULT_ICV_LEN);
-			goto SKIP_PEER;
+			continue;
 		}
 
 		if ((body_len % 16) != 0) {
 			wpa_printf(MSG_ERROR,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) should be a multiple of 16 octets",
 				   body_len);
-			goto SKIP_PEER;
+			continue;
 		}
 
-		for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
-			peer_mi = MKA_HDR_LEN + pos + i;
-			os_memcpy(&_peer_mn, peer_mi + MI_LEN,
-				  sizeof(_peer_mn));
-			peer_mn = be_to_host32(_peer_mn);
-			if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0 &&
-			    peer_mn == participant->mn) {
-				included = TRUE;
-				break;
-			}
+		for (i = 0; i < body_len;
+		     i += sizeof(struct ieee802_1x_mka_peer_id)) {
+			const struct ieee802_1x_mka_peer_id *peer_mi;
+
+			peer_mi = (const struct ieee802_1x_mka_peer_id *)
+				(pos + MKA_HDR_LEN + i);
+			if (os_memcmp(peer_mi->mi, participant->mi,
+				      MI_LEN) == 0 &&
+			    be_to_host32(peer_mi->mn) == participant->mn)
+				return TRUE;
 		}
-
-		if (included)
-			return TRUE;
-
-SKIP_PEER:
-		left_len -= body_len + MKA_HDR_LEN;
-		pos += body_len + MKA_HDR_LEN;
 	}
 
 	return FALSE;
@@ -1022,9 +1012,6 @@ static int ieee802_1x_mka_decode_live_peer_body(
 	const struct ieee802_1x_mka_hdr *hdr;
 	struct ieee802_1x_kay_peer *peer;
 	size_t body_len;
-	u32 peer_mn;
-	be32 _peer_mn;
-	const u8 *peer_mi;
 	size_t i;
 	Boolean is_included;
 
@@ -1040,10 +1027,13 @@ static int ieee802_1x_mka_decode_live_peer_body(
 		return -1;
 	}
 
-	for (i = 0; i < body_len; i += MI_LEN + sizeof(peer_mn)) {
-		peer_mi = MKA_HDR_LEN + peer_msg + i;
-		os_memcpy(&_peer_mn, peer_mi + MI_LEN, sizeof(_peer_mn));
-		peer_mn = be_to_host32(_peer_mn);
+	for (i = 0; i < body_len; i += sizeof(struct ieee802_1x_mka_peer_id)) {
+		const struct ieee802_1x_mka_peer_id *peer_mi;
+		u32 peer_mn;
+
+		peer_mi = (const struct ieee802_1x_mka_peer_id *)
+			(peer_msg + MKA_HDR_LEN + i);
+		peer_mn = be_to_host32(peer_mi->mn);
 
 		/* it is myself */
 		if (os_memcmp(peer_mi, participant->mi, MI_LEN) == 0) {
@@ -1053,18 +1043,17 @@ static int ieee802_1x_mka_decode_live_peer_body(
 				wpa_printf(MSG_DEBUG, "KaY: Could not update mi");
 			continue;
 		}
+
 		if (!is_included)
 			continue;
 
-		peer = ieee802_1x_kay_get_peer(participant, peer_mi);
-		if (NULL != peer) {
+		peer = ieee802_1x_kay_get_peer(participant, peer_mi->mi);
+		if (peer) {
 			peer->mn = peer_mn;
 			peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
-		} else {
-			if (!ieee802_1x_kay_create_potential_peer(
-				participant, peer_mi, peer_mn)) {
-				return -1;
-			}
+		} else if (!ieee802_1x_kay_create_potential_peer(
+				participant, peer_mi->mi, peer_mn)) {
+			return -1;
 		}
 	}
 
@@ -3063,7 +3052,9 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 		handled[i] = FALSE;
 
 	handled[0] = TRUE;
-	while (left_len > MKA_HDR_LEN + DEFAULT_ICV_LEN) {
+	for (; left_len > MKA_HDR_LEN + DEFAULT_ICV_LEN;
+	     pos += body_len + MKA_HDR_LEN,
+		     left_len -= body_len + MKA_HDR_LEN) {
 		hdr = (struct ieee802_1x_mka_hdr *) pos;
 		body_len = get_mka_param_body_len(hdr);
 		body_type = get_mka_param_body_type(hdr);
@@ -3076,11 +3067,11 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
 				   left_len, MKA_HDR_LEN,
 				   body_len, DEFAULT_ICV_LEN);
-			goto next_para_set;
+			continue;
 		}
 
 		if (handled[body_type])
-			goto next_para_set;
+			continue;
 
 		handled[body_type] = TRUE;
 		if (body_type < ARRAY_SIZE(mka_body_handler) &&
@@ -3092,10 +3083,6 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 				   "The type %d is not supported in this MKA version %d",
 				   body_type, MKA_VERSION_ID);
 		}
-
-next_para_set:
-		pos += body_len + MKA_HDR_LEN;
-		left_len -= body_len + MKA_HDR_LEN;
 	}
 
 	kay->active = TRUE;

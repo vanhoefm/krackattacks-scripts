@@ -1111,10 +1111,7 @@ static Boolean
 ieee802_1x_mka_sak_use_body_present(
 	struct ieee802_1x_mka_participant *participant)
 {
-	if (participant->to_use_sak)
-		return TRUE;
-	else
-		return FALSE;
+	return participant->to_use_sak;
 }
 
 

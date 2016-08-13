@@ -50,7 +50,7 @@ def wait_4way_handshake2(dev1, dev2, dev3):
 
 def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
              group=None, beacon_int=None, bssid=None, scan_freq=None,
-             wep_key0=None, freq=2412, chwidth=0):
+             wep_key0=None, freq=2412, chwidth=0, group_rekey=0):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", str(freq))
@@ -75,11 +75,14 @@ def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
         dev.set_network(id, "bssid", bssid)
     if wep_key0:
         dev.set_network(id, "wep_key0", wep_key0)
+    if group_rekey:
+        dev.set_network(id, "group_rekey", str(group_rekey))
     dev.request("ENABLE_NETWORK " + str(id) + " no-connect")
     return id
 
-def add_ibss_rsn(dev, ssid):
-    return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "CCMP", "CCMP")
+def add_ibss_rsn(dev, ssid, group_rekey=0, scan_freq=None):
+    return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "CCMP", "CCMP",
+                    group_rekey=group_rekey, scan_freq=scan_freq)
 
 def add_ibss_rsn_tkip(dev, ssid):
     return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "TKIP", "TKIP")
@@ -147,6 +150,35 @@ def test_ibss_rsn(dev):
     key_mgmt = dev[0].get_status_field("key_mgmt")
     if key_mgmt != "WPA2-PSK":
         raise Exception("Unexpected STATUS key_mgmt: " + key_mgmt)
+
+def test_ibss_rsn_group_rekey(dev):
+    """IBSS RSN group rekeying"""
+    ssid="ibss-rsn"
+
+    logger.info("Start IBSS on the first STA")
+    id = add_ibss_rsn(dev[0], ssid, group_rekey=4, scan_freq=2412)
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+    dev[0].dump_monitor()
+
+    logger.info("Join two STAs to the IBSS")
+
+    dev[1].scan_for_bss(bssid0, freq=2412)
+    id = add_ibss_rsn(dev[1], ssid, scan_freq=2412)
+    connect_ibss_cmd(dev[1], id)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        raise Exception("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+    wait_4way_handshake(dev[0], dev[1])
+    wait_4way_handshake(dev[1], dev[0])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+    ev = dev[1].wait_event(["WPA: Group rekeying completed"], timeout=10)
+    if ev is None:
+        raise Exception("No group rekeying reported")
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
 def test_ibss_wpa_none(dev):
     """IBSS WPA-None"""

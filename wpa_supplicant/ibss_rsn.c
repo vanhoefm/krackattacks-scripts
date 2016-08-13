@@ -404,7 +404,7 @@ static void auth_set_eapol(void *ctx, const u8 *addr,
 
 
 static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
-				    const u8 *own_addr)
+				    const u8 *own_addr, struct wpa_ssid *ssid)
 {
 	struct wpa_auth_config conf;
 	struct wpa_auth_callbacks cb;
@@ -418,7 +418,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	conf.rsn_pairwise = WPA_CIPHER_CCMP;
 	conf.wpa_group = WPA_CIPHER_CCMP;
 	conf.eapol_version = 2;
-	conf.wpa_group_rekey = 600;
+	conf.wpa_group_rekey = ssid->group_rekey ? ssid->group_rekey : 600;
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = ibss_rsn;
@@ -665,7 +665,8 @@ void ibss_rsn_stop(struct ibss_rsn *ibss_rsn, const u8 *peermac)
 }
 
 
-struct ibss_rsn * ibss_rsn_init(struct wpa_supplicant *wpa_s)
+struct ibss_rsn * ibss_rsn_init(struct wpa_supplicant *wpa_s,
+				struct wpa_ssid *ssid)
 {
 	struct ibss_rsn *ibss_rsn;
 
@@ -674,7 +675,7 @@ struct ibss_rsn * ibss_rsn_init(struct wpa_supplicant *wpa_s)
 		return NULL;
 	ibss_rsn->wpa_s = wpa_s;
 
-	if (ibss_rsn_auth_init_group(ibss_rsn, wpa_s->own_addr) < 0) {
+	if (ibss_rsn_auth_init_group(ibss_rsn, wpa_s->own_addr, ssid) < 0) {
 		ibss_rsn_deinit(ibss_rsn);
 		return NULL;
 	}

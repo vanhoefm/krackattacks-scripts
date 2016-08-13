@@ -487,6 +487,14 @@ struct wpa_ssid {
 	int wpa_ptk_rekey;
 
 	/**
+	 * group_rekey - Group rekeying time in seconds
+	 *
+	 * This value, if non-zero, is used as the dot11RSNAConfigGroupRekeyTime
+	 * parameter when operating in Authenticator role in IBSS.
+	 */
+	int group_rekey;
+
+	/**
 	 * scan_freq - Array of frequencies to scan or %NULL for all
 	 *
 	 * This is an optional zero-terminated array of frequencies in

@@ -2417,7 +2417,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE &&
 	    wpa_s->ibss_rsn == NULL) {
-		wpa_s->ibss_rsn = ibss_rsn_init(wpa_s);
+		wpa_s->ibss_rsn = ibss_rsn_init(wpa_s, wpa_s->current_ssid);
 		if (!wpa_s->ibss_rsn) {
 			wpa_msg(wpa_s, MSG_INFO, "Failed to init IBSS RSN");
 			wpa_supplicant_deauthenticate(

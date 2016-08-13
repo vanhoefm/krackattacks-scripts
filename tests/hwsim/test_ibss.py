@@ -12,7 +12,7 @@ import re
 import subprocess
 
 import hwsim_utils
-from utils import alloc_fail
+from utils import alloc_fail, wait_fail_trigger
 
 def connect_ibss_cmd(dev, id, freq=2412):
     dev.dump_monitor()
@@ -498,6 +498,87 @@ def test_ibss_rsn_oom(dev):
     """IBSS RSN OOM during wpa_init"""
     with alloc_fail(dev[0], 1, "wpa_init"):
         ssid="ibss-rsn"
-        id = add_ibss_rsn(dev[0], ssid)
+        id = add_ibss_rsn(dev[0], ssid, scan_freq=2412)
         connect_ibss_cmd(dev[0], id)
         bssid0 = wait_ibss_connection(dev[0])
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()
+
+    with alloc_fail(dev[0], 1, "=ibss_rsn_init"):
+        ssid="ibss-rsn"
+        id = add_ibss_rsn(dev[0], ssid, scan_freq=2412)
+        connect_ibss_cmd(dev[0], id)
+        bssid0 = wait_ibss_connection(dev[0])
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()
+
+def send_eapol_rx(dev, dst):
+    if "OK" not in dev.request("EAPOL_RX %s 0203005f02008a001000000000000000013a54fb19d8a785f5986bdc2ba800553550bc9513e6603eb50809154588c22b110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" % dst):
+        raise Exception("EAPOL_RX for %s failed" % dst)
+
+def test_ibss_rsn_eapol_trigger(dev):
+    """IBSS RSN and EAPOL trigger for a new peer"""
+    ssid="ibss-rsn"
+
+    id = add_ibss_rsn(dev[0], ssid, scan_freq=2412)
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    send_eapol_rx(dev[0], "02:ff:00:00:00:01")
+    send_eapol_rx(dev[0], "02:ff:00:00:00:01")
+
+    dst = "02:ff:00:00:00:01"
+    logger.info("Too short EAPOL frame")
+    if "OK" not in dev[0].request("EAPOL_RX %s 0203005e02008a001000000000000000013a54fb19d8a785f5986bdc2ba800553550bc9513e6603eb50809154588c22b1100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" % dst):
+        raise Exception("EAPOL_RX for %s failed" % dst)
+    logger.info("RSN: EAPOL frame (type 255) discarded, not a Key frame")
+    if "OK" not in dev[0].request("EAPOL_RX %s 02ff005f02008a001000000000000000013a54fb19d8a785f5986bdc2ba800553550bc9513e6603eb50809154588c22b110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" % dst):
+        raise Exception("EAPOL_RX for %s failed" % dst)
+    logger.info("RSN: EAPOL frame payload size 96 invalid (frame size 99)")
+    if "OK" not in dev[0].request("EAPOL_RX %s 0203006002008a001000000000000000013a54fb19d8a785f5986bdc2ba800553550bc9513e6603eb50809154588c22b110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" % dst):
+        raise Exception("EAPOL_RX for %s failed" % dst)
+    logger.info("RSN: EAPOL-Key type (255) unknown, discarded")
+    if "OK" not in dev[0].request("EAPOL_RX %s 0203005fff008a001000000000000000013a54fb19d8a785f5986bdc2ba800553550bc9513e6603eb50809154588c22b110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" % dst):
+        raise Exception("EAPOL_RX for %s failed" % dst)
+
+    with alloc_fail(dev[0], 1, "ibss_rsn_rx_eapol"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:02")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "wpa_auth_sta_init;ibss_rsn_auth_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:03")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "=ibss_rsn_peer_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:04")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "ibss_rsn_process_rx_eapol"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:05")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1,
+                    "wpa_sm_set_assoc_wpa_ie_default;ibss_rsn_supp_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:06")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "wpa_sm_init;ibss_rsn_supp_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:07")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "=ibss_rsn_supp_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:08")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "supp_alloc_eapol"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:09")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with alloc_fail(dev[0], 1, "wpa_validate_wpa_ie;ibss_rsn_auth_init"):
+        send_eapol_rx(dev[0], "02:ff:00:00:00:0a")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    logger.info("RSN: Timeout on waiting Authentication frame response")
+    if "OK" not in dev[0].request("IBSS_RSN 02:ff:00:00:00:0b"):
+        raise Exception("Unexpected IBSS_RSN result")
+    time.sleep(1.1)

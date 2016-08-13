@@ -221,6 +221,7 @@ static int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 	peer->supp = wpa_sm_init(ctx);
 	if (peer->supp == NULL) {
 		wpa_printf(MSG_DEBUG, "SUPP: wpa_sm_init() failed");
+		os_free(ctx);
 		return -1;
 	}
 

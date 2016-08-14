@@ -50,11 +50,6 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	if (radius_msg_make_authenticator(msg) < 0) {
-		wpa_printf(MSG_INFO, "Could not make Request Authenticator");
-		goto fail;
-	}
-
 	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_STATUS_TYPE,
 				       status_type)) {
 		wpa_printf(MSG_INFO, "Could not add Acct-Status-Type");

@@ -300,13 +300,35 @@ static struct ieee802_1x_kay_peer * get_peer_mi(struct dl_list *peers,
 
 
 /**
+ * ieee802_1x_kay_get_potential_peer
+ */
+static struct ieee802_1x_kay_peer *
+ieee802_1x_kay_get_potential_peer(
+	struct ieee802_1x_mka_participant *participant, const u8 *mi)
+{
+	return get_peer_mi(&participant->potential_peers, mi);
+}
+
+
+/**
+ * ieee802_1x_kay_get_live_peer
+ */
+static struct ieee802_1x_kay_peer *
+ieee802_1x_kay_get_live_peer(struct ieee802_1x_mka_participant *participant,
+			     const u8 *mi)
+{
+	return get_peer_mi(&participant->live_peers, mi);
+}
+
+
+/**
  * ieee802_1x_kay_is_in_potential_peer
  */
 static Boolean
 ieee802_1x_kay_is_in_potential_peer(
 	struct ieee802_1x_mka_participant *participant, const u8 *mi)
 {
-	return get_peer_mi(&participant->potential_peers, mi) != NULL;
+	return ieee802_1x_kay_get_potential_peer(participant, mi) != NULL;
 }
 
 
@@ -317,7 +339,7 @@ static Boolean
 ieee802_1x_kay_is_in_live_peer(
 	struct ieee802_1x_mka_participant *participant, const u8 *mi)
 {
-	return get_peer_mi(&participant->live_peers, mi) != NULL;
+	return ieee802_1x_kay_get_live_peer(participant, mi) != NULL;
 }
 
 
@@ -342,22 +364,11 @@ ieee802_1x_kay_get_peer(struct ieee802_1x_mka_participant *participant,
 {
 	struct ieee802_1x_kay_peer *peer;
 
-	peer = get_peer_mi(&participant->live_peers, mi);
+	peer = ieee802_1x_kay_get_live_peer(participant, mi);
 	if (peer)
 		return peer;
 
-	return get_peer_mi(&participant->potential_peers, mi);
-}
-
-
-/**
- * ieee802_1x_kay_get_live_peer
- */
-static struct ieee802_1x_kay_peer *
-ieee802_1x_kay_get_live_peer(struct ieee802_1x_mka_participant *participant,
-			     const u8 *mi)
-{
-	return get_peer_mi(&participant->live_peers, mi);
+	return ieee802_1x_kay_get_potential_peer(participant, mi);
 }
 
 
@@ -605,11 +616,7 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 	struct receive_sc *rxsc;
 	u32 sc_ch = 0;
 
-	dl_list_for_each(peer, &participant->potential_peers,
-			 struct ieee802_1x_kay_peer, list) {
-		if (os_memcmp(peer->mi, mi, MI_LEN) == 0)
-			break;
-	}
+	peer = ieee802_1x_kay_get_potential_peer(participant, mi);
 
 	rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci,
 					      sc_ch);

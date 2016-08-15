@@ -3317,11 +3317,9 @@ struct wpa_driver_ops {
 	 * set_current_cipher_suite - Set current cipher suite
 	 * @priv: Private driver interface data
 	 * @cs: EUI64 identifier
-	 * @cs_len: Length of the cs buffer in octets
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*set_current_cipher_suite)(void *priv, const u8 *cs,
-					size_t cs_len);
+	int (*set_current_cipher_suite)(void *priv, const u8 *cs);
 
 	/**
 	 * enable_controlled_port - Set controlled port status

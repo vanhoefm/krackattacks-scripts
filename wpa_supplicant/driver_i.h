@@ -733,12 +733,11 @@ static inline int wpa_drv_set_replay_protect(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_set_current_cipher_suite(struct wpa_supplicant *wpa_s,
-						   const u8 *cs, size_t cs_len)
+						   const u8 *cs)
 {
 	if (!wpa_s->driver->set_current_cipher_suite)
 		return -1;
-	return wpa_s->driver->set_current_cipher_suite(wpa_s->drv_priv, cs,
-						       cs_len);
+	return wpa_s->driver->set_current_cipher_suite(wpa_s->drv_priv, cs);
 }
 
 static inline int wpa_drv_enable_controlled_port(struct wpa_supplicant *wpa_s,

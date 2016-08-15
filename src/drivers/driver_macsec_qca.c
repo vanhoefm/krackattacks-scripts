@@ -485,15 +485,13 @@ static int macsec_qca_set_replay_protect(void *priv, Boolean enabled,
 }
 
 
-static int macsec_qca_set_current_cipher_suite(void *priv, const u8 *cs,
-					       size_t cs_len)
+static int macsec_qca_set_current_cipher_suite(void *priv, const u8 *cs)
 {
 	u8 default_cs_id[] = CS_ID_GCM_AES_128;
 
-	if (cs_len != CS_ID_LEN ||
-	    os_memcmp(cs, default_cs_id, cs_len) != 0) {
+	if (os_memcmp(cs, default_cs_id, CS_ID_LEN) != 0) {
 		wpa_hexdump(MSG_ERROR, "macsec: NOT supported CipherSuite",
-			    cs, cs_len);
+			    cs, CS_ID_LEN);
 		return -1;
 	}
 

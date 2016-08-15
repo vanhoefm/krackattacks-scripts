@@ -198,8 +198,7 @@ SM_STATE(CP, SECURED)
 
 	/* NOTE: now no other than default cipher suiter(AES-GCM-128) */
 	os_memcpy(sm->current_cipher_suite, sm->cipher_suite, CS_ID_LEN);
-	secy_cp_control_current_cipher_suite(sm->kay, sm->current_cipher_suite,
-					     CS_ID_LEN);
+	secy_cp_control_current_cipher_suite(sm->kay, sm->current_cipher_suite);
 
 	sm->confidentiality_offset = sm->cipher_offset;
 

@@ -50,10 +50,9 @@ static int wpas_set_replay_protect(void *wpa_s, Boolean enabled, u32 window)
 }
 
 
-static int wpas_set_current_cipher_suite(void *wpa_s, const u8 *cs,
-					 size_t cs_len)
+static int wpas_set_current_cipher_suite(void *wpa_s, const u8 *cs)
 {
-	return wpa_drv_set_current_cipher_suite(wpa_s, cs, cs_len);
+	return wpa_drv_set_current_cipher_suite(wpa_s, cs);
 }
 
 

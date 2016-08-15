@@ -311,6 +311,9 @@ struct hostapd_sta_info {
 	struct dl_list list;
 	u8 addr[ETH_ALEN];
 	struct os_reltime last_seen;
+#ifdef CONFIG_TAXONOMY
+	struct wpabuf *probe_ie_taxonomy;
+#endif /* CONFIG_TAXONOMY */
 };
 
 /**

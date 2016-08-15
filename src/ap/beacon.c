@@ -600,7 +600,7 @@ void sta_track_expire(struct hostapd_iface *iface, int force)
 			   MAC2STR(info->addr));
 		dl_list_del(&info->list);
 		iface->num_sta_seen--;
-		os_free(info);
+		sta_track_del(info);
 	}
 }
 
@@ -674,6 +674,23 @@ sta_track_seen_on(struct hostapd_iface *iface, const u8 *addr,
 
 	return NULL;
 }
+
+
+#ifdef CONFIG_TAXONOMY
+void sta_track_claim_taxonomy_info(struct hostapd_iface *iface, const u8 *addr,
+				   struct wpabuf **probe_ie_taxonomy)
+{
+	struct hostapd_sta_info *info;
+
+	info = sta_track_get(iface, addr);
+	if (!info)
+		return;
+
+	wpabuf_free(*probe_ie_taxonomy);
+	*probe_ie_taxonomy = info->probe_ie_taxonomy;
+	info->probe_ie_taxonomy = NULL;
+}
+#endif /* CONFIG_TAXONOMY */
 
 
 void handle_probe_req(struct hostapd_data *hapd,
@@ -787,9 +804,16 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 #ifdef CONFIG_TAXONOMY
 	{
-		struct sta_info *sta = ap_get_sta(hapd, mgmt->sa);
-		if (sta)
+		struct sta_info *sta;
+		struct hostapd_sta_info *info;
+
+		if ((sta = ap_get_sta(hapd, mgmt->sa)) != NULL) {
 			taxonomy_sta_info_probe_req(hapd, sta, ie, ie_len);
+		} else if ((info = sta_track_get(hapd->iface,
+						 mgmt->sa)) != NULL) {
+			taxonomy_hostapd_sta_info_probe_req(hapd, info,
+							    ie, ie_len);
+		}
 	}
 #endif /* CONFIG_TAXONOMY */
 
@@ -959,6 +983,16 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
 }
 
 #endif /* NEED_AP_MLME */
+
+
+void sta_track_del(struct hostapd_sta_info *info)
+{
+#ifdef CONFIG_TAXONOMY
+	wpabuf_free(info->probe_ie_taxonomy);
+	info->probe_ie_taxonomy = NULL;
+#endif /* CONFIG_TAXONOMY */
+	os_free(info);
+}
 
 
 int ieee802_11_build_ap_params(struct hostapd_data *hapd,

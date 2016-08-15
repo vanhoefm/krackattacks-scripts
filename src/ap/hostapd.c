@@ -374,7 +374,7 @@ static void sta_track_deinit(struct hostapd_iface *iface)
 				     list))) {
 		dl_list_del(&info->list);
 		iface->num_sta_seen--;
-		os_free(info);
+		sta_track_del(info);
 	}
 }
 

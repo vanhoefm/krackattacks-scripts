@@ -12,6 +12,9 @@
 void taxonomy_sta_info_probe_req(const struct hostapd_data *hapd,
 				 struct sta_info *sta,
 				 const u8 *ie, size_t ie_len);
+void taxonomy_hostapd_sta_info_probe_req(const struct hostapd_data *hapd,
+					 struct hostapd_sta_info *sta,
+					 const u8 *ie, size_t ie_len);
 void taxonomy_sta_info_assoc_req(const struct hostapd_data *hapd,
 				 struct sta_info *sta,
 				 const u8 *ie, size_t ie_len);

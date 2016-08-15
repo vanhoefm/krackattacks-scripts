@@ -273,6 +273,15 @@ void taxonomy_sta_info_probe_req(const struct hostapd_data *hapd,
 }
 
 
+void taxonomy_hostapd_sta_info_probe_req(const struct hostapd_data *hapd,
+					 struct hostapd_sta_info *info,
+					 const u8 *ie, size_t ie_len)
+{
+	wpabuf_free(info->probe_ie_taxonomy);
+	info->probe_ie_taxonomy = wpabuf_alloc_copy(ie, ie_len);
+}
+
+
 void taxonomy_sta_info_assoc_req(const struct hostapd_data *hapd,
 				 struct sta_info *sta,
 				 const u8 *ie, size_t ie_len)

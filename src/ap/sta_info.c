@@ -667,6 +667,11 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	dl_list_init(&sta->ip6addr);
 
+#ifdef CONFIG_TAXONOMY
+	sta_track_claim_taxonomy_info(hapd->iface, addr,
+				      &sta->probe_ie_taxonomy);
+#endif /* CONFIG_TAXONOMY */
+
 	return sta;
 }
 

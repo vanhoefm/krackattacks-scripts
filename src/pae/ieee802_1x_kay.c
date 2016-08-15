@@ -383,12 +383,10 @@ ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
 
 	for (i = 0; i < CS_TABLE_SIZE; i++) {
 		if (os_memcmp(cipher_suite_tbl[i].id, cs_id, CS_ID_LEN) == 0)
-			break;
+			return &cipher_suite_tbl[i];
 	}
-	if (i >= CS_TABLE_SIZE)
-		return NULL;
 
-	return &cipher_suite_tbl[i];
+	return NULL;
 }
 
 

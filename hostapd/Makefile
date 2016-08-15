@@ -100,6 +100,11 @@ NEED_SHA1=y
 OBJS += ../src/drivers/drivers.o
 CFLAGS += -DHOSTAPD
 
+ifdef CONFIG_TAXONOMY
+CFLAGS += -DCONFIG_TAXONOMY
+OBJS += ../src/ap/taxonomy.o
+endif
+
 ifdef CONFIG_MODULE_TESTS
 CFLAGS += -DCONFIG_MODULE_TESTS
 OBJS += hapd_module_tests.o

@@ -44,6 +44,7 @@
 #include "dfs.h"
 #include "mbo_ap.h"
 #include "rrm.h"
+#include "taxonomy.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
@@ -2265,6 +2266,10 @@ static void handle_assoc(struct hostapd_data *hapd,
 	/* Make sure that the previously registered inactivity timer will not
 	 * remove the STA immediately. */
 	sta->timeout_next = STA_NULLFUNC;
+
+#ifdef CONFIG_TAXONOMY
+	taxonomy_sta_info_assoc_req(hapd, sta, pos, left);
+#endif /* CONFIG_TAXONOMY */
 
  fail:
 	/*

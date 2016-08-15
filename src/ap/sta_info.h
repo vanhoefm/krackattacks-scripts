@@ -214,6 +214,11 @@ struct sta_info {
 			      * received, starting from the Length field */
 
 	u8 rrm_enabled_capa[5];
+
+#ifdef CONFIG_TAXONOMY
+	struct wpabuf *probe_ie_taxonomy;
+	struct wpabuf *assoc_ie_taxonomy;
+#endif /* CONFIG_TAXONOMY */
 };
 
 

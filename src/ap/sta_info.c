@@ -222,6 +222,13 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hapd->iface->num_sta_ht_20mhz--;
 	}
 
+#ifdef CONFIG_TAXONOMY
+	wpabuf_free(sta->probe_ie_taxonomy);
+	sta->probe_ie_taxonomy = NULL;
+	wpabuf_free(sta->assoc_ie_taxonomy);
+	sta->assoc_ie_taxonomy = NULL;
+#endif /* CONFIG_TAXONOMY */
+
 #ifdef CONFIG_IEEE80211N
 	ht40_intolerant_remove(hapd->iface, sta);
 #endif /* CONFIG_IEEE80211N */

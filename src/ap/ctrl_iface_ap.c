@@ -23,6 +23,7 @@
 #include "ctrl_iface_ap.h"
 #include "ap_drv_ops.h"
 #include "mbo_ap.h"
+#include "taxonomy.h"
 
 
 static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
@@ -427,6 +428,28 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 
 	return 0;
 }
+
+
+#ifdef CONFIG_TAXONOMY
+int hostapd_ctrl_iface_signature(struct hostapd_data *hapd,
+				 const char *txtaddr,
+				 char *buf, size_t buflen)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "CTRL_IFACE SIGNATURE %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta)
+		return -1;
+
+	return retrieve_sta_taxonomy(hapd, sta, buf, buflen);
+}
+#endif /* CONFIG_TAXONOMY */
 
 
 int hostapd_ctrl_iface_poll_sta(struct hostapd_data *hapd,

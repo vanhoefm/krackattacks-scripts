@@ -29,6 +29,7 @@
 #include "beacon.h"
 #include "hs20.h"
 #include "dfs.h"
+#include "taxonomy.h"
 
 
 #ifdef NEED_AP_MLME
@@ -783,6 +784,14 @@ void handle_probe_req(struct hostapd_data *hapd,
 		elems.ssid_len = 0;
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_TAXONOMY
+	{
+		struct sta_info *sta = ap_get_sta(hapd, mgmt->sa);
+		if (sta)
+			taxonomy_sta_info_probe_req(hapd, sta, ie, ie_len);
+	}
+#endif /* CONFIG_TAXONOMY */
 
 	res = ssid_match(hapd, elems.ssid, elems.ssid_len,
 			 elems.ssid_list, elems.ssid_list_len);

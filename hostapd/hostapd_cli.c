@@ -366,6 +366,22 @@ static char ** hostapd_complete_disassociate(const char *str, int pos)
 }
 
 
+#ifdef CONFIG_TAXONOMY
+static int hostapd_cli_cmd_signature(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char buf[64];
+
+	if (argc != 1) {
+		printf("Invalid 'signature' command - exactly one argument, STA address, is required.\n");
+		return -1;
+	}
+	os_snprintf(buf, sizeof(buf), "SIGNATURE %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+#endif /* CONFIG_TAXONOMY */
+
+
 #ifdef CONFIG_IEEE80211W
 static int hostapd_cli_cmd_sa_query(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
@@ -1271,6 +1287,10 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "disassociate", hostapd_cli_cmd_disassociate,
 	  hostapd_complete_disassociate,
 	  "<addr> = disassociate a station" },
+#ifdef CONFIG_TAXONOMY
+	{ "signature", hostapd_cli_cmd_signature, NULL,
+	  "<addr> = get taxonomy signature for a station" },
+#endif /* CONFIG_TAXONOMY */
 #ifdef CONFIG_IEEE80211W
 	{ "sa_query", hostapd_cli_cmd_sa_query, NULL,
 	  "<addr> = send SA Query to a station" },

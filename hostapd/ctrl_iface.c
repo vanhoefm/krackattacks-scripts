@@ -2367,6 +2367,11 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "DISASSOCIATE ", 13) == 0) {
 		if (hostapd_ctrl_iface_disassociate(hapd, buf + 13))
 			reply_len = -1;
+#ifdef CONFIG_TAXONOMY
+	} else if (os_strncmp(buf, "SIGNATURE ", 10) == 0) {
+		reply_len = hostapd_ctrl_iface_signature(hapd, buf + 10,
+							 reply, reply_size);
+#endif /* CONFIG_TAXONOMY */
 	} else if (os_strncmp(buf, "POLL_STA ", 9) == 0) {
 		if (hostapd_ctrl_iface_poll_sta(hapd, buf + 9))
 			reply_len = -1;

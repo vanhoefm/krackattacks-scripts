@@ -79,16 +79,6 @@ static int is_ki_equal(struct ieee802_1x_mka_ki *ki1,
 }
 
 
-struct mka_param_body_handler {
-	int (*body_tx)(struct ieee802_1x_mka_participant *participant,
-		       struct wpabuf *buf);
-	int (*body_rx)(struct ieee802_1x_mka_participant *participant,
-		       const u8 *mka_msg, size_t msg_len);
-	int (*body_length)(struct ieee802_1x_mka_participant *participant);
-	Boolean (*body_present)(struct ieee802_1x_mka_participant *participant);
-};
-
-
 static void set_mka_param_body_len(void *body, unsigned int len)
 {
 	struct ieee802_1x_mka_hdr *hdr = body;
@@ -1865,77 +1855,87 @@ static int ieee802_1x_mka_decode_announce_body(
 }
 
 
+struct mka_param_body_handler {
+	int (*body_tx)(struct ieee802_1x_mka_participant *participant,
+		       struct wpabuf *buf);
+	int (*body_rx)(struct ieee802_1x_mka_participant *participant,
+		       const u8 *mka_msg, size_t msg_len);
+	int (*body_length)(struct ieee802_1x_mka_participant *participant);
+	Boolean (*body_present)(struct ieee802_1x_mka_participant *participant);
+};
+
+
 static struct mka_param_body_handler mka_body_handler[] = {
 	/* basic parameter set */
 	{
-		ieee802_1x_mka_encode_basic_body,
-		NULL,
-		ieee802_1x_mka_basic_body_length,
-		ieee802_1x_mka_basic_body_present
+		.body_tx      = ieee802_1x_mka_encode_basic_body,
+		.body_rx      = NULL,
+		.body_length  = ieee802_1x_mka_basic_body_length,
+		.body_present = ieee802_1x_mka_basic_body_present
 	},
 
 	/* live peer list parameter set */
 	{
-		ieee802_1x_mka_encode_live_peer_body,
-		ieee802_1x_mka_decode_live_peer_body,
-		ieee802_1x_mka_get_live_peer_length,
-		ieee802_1x_mka_live_peer_body_present
+		.body_tx      = ieee802_1x_mka_encode_live_peer_body,
+		.body_rx      = ieee802_1x_mka_decode_live_peer_body,
+		.body_length  = ieee802_1x_mka_get_live_peer_length,
+		.body_present = ieee802_1x_mka_live_peer_body_present
 	},
 
 	/* potential peer list parameter set */
 	{
-		ieee802_1x_mka_encode_potential_peer_body,
-		ieee802_1x_mka_decode_potential_peer_body,
-		ieee802_1x_mka_get_potential_peer_length,
-		ieee802_1x_mka_potential_peer_body_present
+		.body_tx      = ieee802_1x_mka_encode_potential_peer_body,
+		.body_rx      = ieee802_1x_mka_decode_potential_peer_body,
+		.body_length  = ieee802_1x_mka_get_potential_peer_length,
+		.body_present = ieee802_1x_mka_potential_peer_body_present
 	},
 
 	/* sak use parameter set */
 	{
-		ieee802_1x_mka_encode_sak_use_body,
-		ieee802_1x_mka_decode_sak_use_body,
-		ieee802_1x_mka_get_sak_use_length,
-		ieee802_1x_mka_sak_use_body_present
+		.body_tx      = ieee802_1x_mka_encode_sak_use_body,
+		.body_rx      = ieee802_1x_mka_decode_sak_use_body,
+		.body_length  = ieee802_1x_mka_get_sak_use_length,
+		.body_present = ieee802_1x_mka_sak_use_body_present
 	},
 
 	/* distribute sak parameter set */
 	{
-		ieee802_1x_mka_encode_dist_sak_body,
-		ieee802_1x_mka_decode_dist_sak_body,
-		ieee802_1x_mka_get_dist_sak_length,
-		ieee802_1x_mka_dist_sak_body_present
+		.body_tx      = ieee802_1x_mka_encode_dist_sak_body,
+		.body_rx      = ieee802_1x_mka_decode_dist_sak_body,
+		.body_length  = ieee802_1x_mka_get_dist_sak_length,
+		.body_present = ieee802_1x_mka_dist_sak_body_present
 	},
 
 	/* distribute cak parameter set */
 	{
-		NULL,
-		ieee802_1x_mka_decode_dist_cak_body,
-		NULL,
-		NULL
+		.body_tx      = NULL,
+		.body_rx      = ieee802_1x_mka_decode_dist_cak_body,
+		.body_length  = NULL,
+		.body_present = NULL
 	},
 
 	/* kmd parameter set */
 	{
-		NULL,
-		ieee802_1x_mka_decode_kmd_body,
-		NULL,
-		NULL
+		.body_tx      = NULL,
+		.body_rx      = ieee802_1x_mka_decode_kmd_body,
+		.body_length  = NULL,
+		.body_present = NULL
 	},
 
 	/* announce parameter set */
 	{
-		NULL,
-		ieee802_1x_mka_decode_announce_body,
-		NULL,
-		NULL
+		.body_tx      = NULL,
+		.body_rx      = ieee802_1x_mka_decode_announce_body,
+		.body_length  = NULL,
+		.body_present = NULL
 	},
 
 	/* icv parameter set */
 	{
-		ieee802_1x_mka_encode_icv_body,
-		NULL,
-		ieee802_1x_mka_get_icv_length,
-		ieee802_1x_mka_icv_body_present
+		.body_tx      = ieee802_1x_mka_encode_icv_body,
+		.body_rx      = NULL,
+		.body_length  = ieee802_1x_mka_get_icv_length,
+		.body_present = ieee802_1x_mka_icv_body_present
 	},
 };
 

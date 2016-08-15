@@ -2359,27 +2359,16 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 	participant = (struct ieee802_1x_mka_participant *)eloop_ctx;
 	kay = participant->kay;
 	if (participant->cak_life) {
-		if (now > participant->cak_life) {
-			kay->authenticated = FALSE;
-			kay->secured = FALSE;
-			kay->failed = TRUE;
-			ieee802_1x_kay_delete_mka(kay, &participant->ckn);
-			return;
-		}
+		if (now > participant->cak_life)
+			goto delete_mka;
 	}
 
 	/* should delete MKA instance if there are not live peers
 	 * when the MKA life elapsed since its creating */
 	if (participant->mka_life) {
 		if (dl_list_empty(&participant->live_peers)) {
-			if (now > participant->mka_life) {
-				kay->authenticated = FALSE;
-				kay->secured = FALSE;
-				kay->failed = TRUE;
-				ieee802_1x_kay_delete_mka(kay,
-							  &participant->ckn);
-				return;
-			}
+			if (now > participant->mka_life)
+				goto delete_mka;
 		} else {
 			participant->mka_life = 0;
 		}
@@ -2467,6 +2456,14 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 	eloop_register_timeout(MKA_HELLO_TIME / 1000, 0,
 			       ieee802_1x_participant_timer,
 			       participant, NULL);
+
+	return;
+
+delete_mka:
+	kay->authenticated = FALSE;
+	kay->secured = FALSE;
+	kay->failed = TRUE;
+	ieee802_1x_kay_delete_mka(kay, &participant->ckn);
 }
 
 

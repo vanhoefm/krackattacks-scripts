@@ -340,18 +340,6 @@ ieee802_1x_kay_is_in_live_peer(
 
 
 /**
- * ieee802_1x_kay_is_in_peer
- */
-static Boolean
-ieee802_1x_kay_is_in_peer(struct ieee802_1x_mka_participant *participant,
-			  const u8 *mi)
-{
-	return ieee802_1x_kay_is_in_live_peer(participant, mi) ||
-		ieee802_1x_kay_is_in_potential_peer(participant, mi);
-}
-
-
-/**
  * ieee802_1x_kay_get_peer
  */
 static struct ieee802_1x_kay_peer *
@@ -2974,7 +2962,6 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 	u8 body_type;
 	int i;
 	const u8 *pos;
-	Boolean my_included;
 	Boolean handled[256];
 
 	if (ieee802_1x_kay_mkpdu_sanity_check(kay, buf, len))
@@ -2995,21 +2982,10 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 	left_len -= body_len + MKA_HDR_LEN;
 
 	/* check i am in the peer's peer list */
-	my_included = ieee802_1x_mka_i_in_peerlist(participant, pos, left_len);
-	if (my_included) {
+	if (ieee802_1x_mka_i_in_peerlist(participant, pos, left_len) &&
+	    !ieee802_1x_kay_is_in_live_peer(participant,
+					    participant->current_peer_id.mi)) {
 		/* accept the peer as live peer */
-		if (!ieee802_1x_kay_is_in_peer(
-			    participant,
-			    participant->current_peer_id.mi)) {
-			if (!ieee802_1x_kay_create_live_peer(
-				    participant,
-				    participant->current_peer_id.mi,
-				    be_to_host32(
-					    participant->current_peer_id.mn)))
-				return -1;
-			ieee802_1x_kay_elect_key_server(participant);
-			ieee802_1x_kay_decide_macsec_use(participant);
-		}
 		if (ieee802_1x_kay_is_in_potential_peer(
 			    participant, participant->current_peer_id.mi)) {
 			if (!ieee802_1x_kay_move_live_peer(
@@ -3018,9 +2994,15 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 				    be_to_host32(participant->
 						 current_peer_id.mn)))
 				return -1;
-			ieee802_1x_kay_elect_key_server(participant);
-			ieee802_1x_kay_decide_macsec_use(participant);
+		} else if (!ieee802_1x_kay_create_live_peer(
+				   participant, participant->current_peer_id.mi,
+				   be_to_host32(participant->
+						current_peer_id.mn))) {
+				return -1;
 		}
+
+		ieee802_1x_kay_elect_key_server(participant);
+		ieee802_1x_kay_decide_macsec_use(participant);
 	}
 
 	/*

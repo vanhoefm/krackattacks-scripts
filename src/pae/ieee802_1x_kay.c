@@ -1395,10 +1395,7 @@ static Boolean
 ieee802_1x_mka_dist_sak_body_present(
 	struct ieee802_1x_mka_participant *participant)
 {
-	if (!participant->to_dist_sak || !participant->new_key)
-		return FALSE;
-
-	return TRUE;
+	return participant->to_dist_sak && participant->new_key;
 }
 
 

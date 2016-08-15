@@ -49,7 +49,7 @@ struct ieee802_1x_kay_peer {
 	Boolean is_key_server;
 	u8 key_server_priority;
 	Boolean macsec_desired;
-	enum macsec_cap macsec_capbility;
+	enum macsec_cap macsec_capability;
 	Boolean sak_used;
 	struct dl_list list;
 };
@@ -268,13 +268,13 @@ struct ieee802_1x_mka_basic_body {
 	/* octet 3 */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	u32 length:4;
-	u32 macsec_capbility:2;
+	u32 macsec_capability:2;
 	u32 macsec_desired:1;
 	u32 key_server:1;
 #elif __BYTE_ORDER == __BIG_ENDIAN
 	u32 key_server:1;
 	u32 macsec_desired:1;
-	u32 macsec_capbility:2;
+	u32 macsec_capability:2;
 	u32 length:4;
 #endif
 	/* octet 4 */

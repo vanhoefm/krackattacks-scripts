@@ -122,7 +122,7 @@ ieee802_1x_mka_dump_basic_body(struct ieee802_1x_mka_basic_body *body)
 	wpa_printf(MSG_DEBUG, "\tPriority......: %d", body->priority);
 	wpa_printf(MSG_DEBUG, "\tKeySvr........: %d", body->key_server);
 	wpa_printf(MSG_DEBUG, "\tMACSecDesired.: %d", body->macsec_desired);
-	wpa_printf(MSG_DEBUG, "\tMACSecCapable.: %d", body->macsec_capbility);
+	wpa_printf(MSG_DEBUG, "\tMACSecCapable.: %d", body->macsec_capability);
 	wpa_printf(MSG_DEBUG, "\tBody Length...: %d", (int) body_len);
 	wpa_printf(MSG_DEBUG, "\tSCI MAC.......: " MACSTR,
 		   MAC2STR(body->actor_sci.addr));
@@ -680,7 +680,7 @@ ieee802_1x_mka_encode_basic_body(
 		body->key_server = participant->can_be_key_server;
 
 	body->macsec_desired = kay->macsec_desired;
-	body->macsec_capbility = kay->macsec_capable;
+	body->macsec_capability = kay->macsec_capable;
 	set_mka_param_body_len(body, length - MKA_HDR_LEN);
 
 	os_memcpy(body->actor_sci.addr, kay->actor_sci.addr,
@@ -766,14 +766,14 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 			return NULL;
 
 		peer->macsec_desired = body->macsec_desired;
-		peer->macsec_capbility = body->macsec_capbility;
+		peer->macsec_capability = body->macsec_capability;
 		peer->is_key_server = (Boolean) body->key_server;
 		peer->key_server_priority = body->priority;
 	} else if (peer->mn < be_to_host32(body->actor_mn)) {
 		peer->mn = be_to_host32(body->actor_mn);
 		peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 		peer->macsec_desired = body->macsec_desired;
-		peer->macsec_capbility = body->macsec_capbility;
+		peer->macsec_capability = body->macsec_capability;
 		peer->is_key_server = (Boolean) body->key_server;
 		peer->key_server_priority = body->priority;
 	} else {
@@ -2237,11 +2237,11 @@ ieee802_1x_kay_decide_macsec_use(
 		if (!peer->macsec_desired)
 			continue;
 
-		if (peer->macsec_capbility == MACSEC_CAP_NOT_IMPLEMENTED)
+		if (peer->macsec_capability == MACSEC_CAP_NOT_IMPLEMENTED)
 			continue;
 
-		less_capability = (less_capability < peer->macsec_capbility) ?
-			less_capability : peer->macsec_capbility;
+		less_capability = (less_capability < peer->macsec_capability) ?
+			less_capability : peer->macsec_capability;
 		has_peer = TRUE;
 	}
 

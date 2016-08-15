@@ -2944,19 +2944,17 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 		wpa_printf(MSG_ERROR, "KaY: omac1_aes_128 failed");
 		return -1;
 	}
+
 	msg_icv = ieee802_1x_mka_decode_icv_body(participant, (u8 *) mka_hdr,
 						 mka_msg_len);
-
-	if (msg_icv) {
-		if (os_memcmp_const(msg_icv, icv,
-				    mka_alg_tbl[kay->mka_algindex].icv_len) !=
-		    0) {
-			wpa_printf(MSG_ERROR,
-				   "KaY: Computed ICV is not equal to Received ICV");
-		return -1;
-		}
-	} else {
+	if (!msg_icv) {
 		wpa_printf(MSG_ERROR, "KaY: No ICV");
+		return -1;
+	}
+	if (os_memcmp_const(msg_icv, icv,
+			    mka_alg_tbl[kay->mka_algindex].icv_len) != 0) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: Computed ICV is not equal to Received ICV");
 		return -1;
 	}
 

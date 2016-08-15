@@ -2089,6 +2089,18 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 }
 
 
+static int compare_priorities(const struct ieee802_1x_kay_peer *peer,
+			      const struct ieee802_1x_kay_peer *other)
+{
+	if (peer->key_server_priority < other->key_server_priority)
+		return -1;
+	if (other->key_server_priority < peer->key_server_priority)
+		return 1;
+
+	return os_memcmp(peer->sci.addr, other->sci.addr, ETH_ALEN);
+}
+
+
 /**
  * ieee802_1x_kay_elect_key_server - elect the key server
  * when to elect: whenever the live peers list changes
@@ -2119,29 +2131,19 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 			continue;
 		}
 
-		if (peer->key_server_priority <
-		    key_server->key_server_priority) {
+		if (compare_priorities(peer, key_server) < 0)
 			key_server = peer;
-		} else if (peer->key_server_priority ==
-			   key_server->key_server_priority) {
-			if (os_memcmp(peer->sci.addr, key_server->sci.addr,
-				      ETH_ALEN) < 0)
-				key_server = peer;
-		}
 	}
 
 	/* elect the key server between me and the above elected peer */
 	i_is_key_server = FALSE;
 	if (key_server && participant->can_be_key_server) {
-		if (kay->actor_priority
-			   < key_server->key_server_priority) {
+		struct ieee802_1x_kay_peer tmp;
+
+		tmp.key_server_priority = kay->actor_priority;
+		os_memcpy(&tmp.sci, &kay->actor_sci, sizeof(tmp.sci));
+		if (compare_priorities(&tmp, key_server) < 0)
 			i_is_key_server = TRUE;
-		} else if (kay->actor_priority
-					== key_server->key_server_priority) {
-			if (os_memcmp(kay->actor_sci.addr, key_server->sci.addr,
-				      ETH_ALEN) < 0)
-				i_is_key_server = TRUE;
-		}
 	} else if (participant->can_be_key_server) {
 		i_is_key_server = TRUE;
 	}

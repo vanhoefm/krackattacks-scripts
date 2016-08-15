@@ -48,8 +48,6 @@ struct mka_key_name {
 enum mka_created_mode {
 	PSK,
 	EAP_EXCHANGE,
-	DISTRIBUTED,
-	CACHED,
 };
 
 struct ieee802_1x_kay_ctx {

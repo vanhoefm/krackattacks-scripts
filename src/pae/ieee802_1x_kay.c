@@ -525,19 +525,22 @@ ieee802_1x_kay_deinit_receive_sc(
 }
 
 
-/**
- * ieee802_1x_kay_create_live_peer
- */
+static void ieee802_1x_kay_dump_peer(struct ieee802_1x_kay_peer *peer)
+{
+	wpa_hexdump(MSG_DEBUG, "\tMI: ", peer->mi, sizeof(peer->mi));
+	wpa_printf(MSG_DEBUG, "\tMN: %d", peer->mn);
+	wpa_hexdump(MSG_DEBUG, "\tSCI Addr: ", peer->sci.addr, ETH_ALEN);
+	wpa_printf(MSG_DEBUG, "\tPort: %d", peer->sci.port);
+}
+
+
 static struct ieee802_1x_kay_peer *
-ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
-				u8 *mi, u32 mn)
+ieee802_1x_kay_create_peer(const u8 *mi, u32 mn)
 {
 	struct ieee802_1x_kay_peer *peer;
-	struct receive_sc *rxsc;
-	u32 sc_ch = 0;
 
 	peer = os_zalloc(sizeof(*peer));
-	if (peer == NULL) {
+	if (!peer) {
 		wpa_printf(MSG_ERROR, "KaY-%s: out of memory", __func__);
 		return NULL;
 	}
@@ -546,6 +549,26 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 	peer->mn = mn;
 	peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 	peer->sak_used = FALSE;
+
+	return peer;
+}
+
+
+/**
+ * ieee802_1x_kay_create_live_peer
+ */
+static struct ieee802_1x_kay_peer *
+ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
+				const u8 *mi, u32 mn)
+{
+	struct ieee802_1x_kay_peer *peer;
+	struct receive_sc *rxsc;
+	u32 sc_ch = 0;
+
+	peer = ieee802_1x_kay_create_peer(mi, mn);
+	if (!peer)
+		return NULL;
+
 	os_memcpy(&peer->sci, &participant->current_peer_sci,
 		  sizeof(peer->sci));
 
@@ -562,10 +585,7 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 	secy_create_receive_sc(participant->kay, rxsc);
 
 	wpa_printf(MSG_DEBUG, "KaY: Live peer created");
-	wpa_hexdump(MSG_DEBUG, "\tMI: ", peer->mi, sizeof(peer->mi));
-	wpa_printf(MSG_DEBUG, "\tMN: %d", peer->mn);
-	wpa_hexdump(MSG_DEBUG, "\tSCI Addr: ", peer->sci.addr, ETH_ALEN);
-	wpa_printf(MSG_DEBUG, "\tPort: %d", peer->sci.port);
+	ieee802_1x_kay_dump_peer(peer);
 
 	return peer;
 }
@@ -580,24 +600,14 @@ ieee802_1x_kay_create_potential_peer(
 {
 	struct ieee802_1x_kay_peer *peer;
 
-	peer = os_zalloc(sizeof(*peer));
-	if (peer == NULL) {
-		wpa_printf(MSG_ERROR, "KaY-%s: out of memory", __func__);
+	peer = ieee802_1x_kay_create_peer(mi, mn);
+	if (!peer)
 		return NULL;
-	}
-
-	os_memcpy(peer->mi, mi, MI_LEN);
-	peer->mn = mn;
-	peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
-	peer->sak_used = FALSE;
 
 	dl_list_add(&participant->potential_peers, &peer->list);
 
 	wpa_printf(MSG_DEBUG, "KaY: potential peer created");
-	wpa_hexdump(MSG_DEBUG, "\tMI: ", peer->mi, sizeof(peer->mi));
-	wpa_printf(MSG_DEBUG, "\tMN: %d", peer->mn);
-	wpa_hexdump(MSG_DEBUG, "\tSCI Addr: ", peer->sci.addr, ETH_ALEN);
-	wpa_printf(MSG_DEBUG, "\tPort: %d", peer->sci.port);
+	ieee802_1x_kay_dump_peer(peer);
 
 	return peer;
 }
@@ -627,10 +637,7 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 	peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 
 	wpa_printf(MSG_DEBUG, "KaY: move potential peer to live peer");
-	wpa_hexdump(MSG_DEBUG, "\tMI: ", peer->mi, sizeof(peer->mi));
-	wpa_printf(MSG_DEBUG, "\tMN: %d", peer->mn);
-	wpa_hexdump(MSG_DEBUG, "\tSCI Addr: ", peer->sci.addr, ETH_ALEN);
-	wpa_printf(MSG_DEBUG, "\tPort: %d", peer->sci.port);
+	ieee802_1x_kay_dump_peer(peer);
 
 	dl_list_del(&peer->list);
 	dl_list_add_tail(&participant->live_peers, &peer->list);

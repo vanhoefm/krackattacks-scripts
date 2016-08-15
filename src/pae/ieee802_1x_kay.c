@@ -705,7 +705,7 @@ ieee802_1x_mka_encode_basic_body(
 	os_memcpy(body->actor_mi, participant->mi, sizeof(body->actor_mi));
 	participant->mn = participant->mn + 1;
 	body->actor_mn = host_to_be32(participant->mn);
-	os_memcpy(body->algo_agility, participant->kay->algo_agility,
+	os_memcpy(body->algo_agility, kay->algo_agility,
 		  sizeof(body->algo_agility));
 
 	os_memcpy(body->ckn, participant->ckn.name, participant->ckn.len);
@@ -1162,6 +1162,7 @@ ieee802_1x_mka_encode_sak_use_body(
 	struct wpabuf *buf)
 {
 	struct ieee802_1x_mka_sak_use_body *body;
+	struct ieee802_1x_kay *kay = participant->kay;
 	unsigned int length;
 	u32 pn = 1;
 
@@ -1182,9 +1183,9 @@ ieee802_1x_mka_encode_sak_use_body(
 	}
 
 	/* data protect, lowest accept packet number */
-	body->delay_protect = participant->kay->macsec_replay_protect;
+	body->delay_protect = kay->macsec_replay_protect;
 	pn = ieee802_1x_mka_get_lpn(participant, &participant->lki);
-	if (pn > participant->kay->pn_exhaustion) {
+	if (pn > kay->pn_exhaustion) {
 		wpa_printf(MSG_WARNING, "KaY: My LPN exhaustion");
 		if (participant->is_key_server)
 			participant->new_sak = TRUE;
@@ -1195,20 +1196,12 @@ ieee802_1x_mka_encode_sak_use_body(
 	body->olpn = host_to_be32(pn);
 
 	/* plain tx, plain rx */
-	if (participant->kay->macsec_protect)
-		body->ptx = FALSE;
-	else
-		body->ptx = TRUE;
-
-	if (participant->kay->macsec_validate == Strict)
-		body->prx = FALSE;
-	else
-		body->prx = TRUE;
+	body->ptx = !kay->macsec_protect;
+	body->prx = kay->macsec_validate != Strict;
 
 	/* latest key: rx, tx, key server member identifier key number */
 	body->lan = participant->lan;
-	os_memcpy(body->lsrv_mi, participant->lki.mi,
-		  sizeof(body->lsrv_mi));
+	os_memcpy(body->lsrv_mi, participant->lki.mi, sizeof(body->lsrv_mi));
 	body->lkn = host_to_be32(participant->lki.kn);
 	body->lrx = participant->lrx;
 	body->ltx = participant->ltx;
@@ -1229,16 +1222,11 @@ ieee802_1x_mka_encode_sak_use_body(
 
 	/* set CP's variable */
 	if (body->ltx) {
-		if (!participant->kay->tx_enable)
-			participant->kay->tx_enable = TRUE;
-
-		if (!participant->kay->port_enable)
-			participant->kay->port_enable = TRUE;
+		kay->tx_enable = TRUE;
+		kay->port_enable = TRUE;
 	}
-	if (body->lrx) {
-		if (!participant->kay->rx_enable)
-			participant->kay->rx_enable = TRUE;
-	}
+	if (body->lrx)
+		kay->rx_enable = TRUE;
 
 	ieee802_1x_mka_dump_sak_use_body(body);
 	return 0;
@@ -1263,6 +1251,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	u32 lpn;
 	Boolean all_receiving;
 	Boolean found;
+	struct ieee802_1x_kay *kay = participant->kay;
 
 	if (!participant->principal) {
 		wpa_printf(MSG_WARNING, "KaY: Participant is not principal");
@@ -1325,9 +1314,8 @@ ieee802_1x_mka_decode_sak_use_body(
 			peer->sak_used = TRUE;
 		}
 		if (body->ltx && peer->is_key_server) {
-			ieee802_1x_cp_set_servertransmitting(
-				participant->kay->cp, TRUE);
-			ieee802_1x_cp_sm_step(participant->kay->cp);
+			ieee802_1x_cp_set_servertransmitting(kay->cp, TRUE);
+			ieee802_1x_cp_sm_step(kay->cp);
 		}
 	}
 
@@ -1361,13 +1349,13 @@ ieee802_1x_mka_decode_sak_use_body(
 	}
 	if (all_receiving) {
 		participant->to_dist_sak = FALSE;
-		ieee802_1x_cp_set_allreceiving(participant->kay->cp, TRUE);
-		ieee802_1x_cp_sm_step(participant->kay->cp);
+		ieee802_1x_cp_set_allreceiving(kay->cp, TRUE);
+		ieee802_1x_cp_sm_step(kay->cp);
 	}
 
 	/* if i'm key server, and detects peer member pn exhaustion, rekey.*/
 	lpn = be_to_host32(body->llpn);
-	if (lpn > participant->kay->pn_exhaustion) {
+	if (lpn > kay->pn_exhaustion) {
 		if (participant->is_key_server) {
 			participant->new_sak = TRUE;
 			wpa_printf(MSG_WARNING, "KaY: Peer LPN exhaustion");
@@ -1390,9 +1378,9 @@ ieee802_1x_mka_decode_sak_use_body(
 	/* FIXME: Secy creates txsa with default npn. If MKA detected Latest Key
 	 * npn is larger than txsa's npn, set it to txsa.
 	 */
-	secy_get_transmit_next_pn(participant->kay, txsa);
+	secy_get_transmit_next_pn(kay, txsa);
 	if (lpn > txsa->next_pn) {
-		secy_set_transmit_next_pn(participant->kay, txsa);
+		secy_set_transmit_next_pn(kay, txsa);
 		wpa_printf(MSG_INFO, "KaY: update lpn =0x%x", lpn);
 	}
 
@@ -1541,6 +1529,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 	int sak_len;
 	u8 *wrap_sak;
 	u8 *unwrap_sak;
+	struct ieee802_1x_kay *kay = participant->kay;
 
 	hdr = (struct ieee802_1x_mka_hdr *) mka_msg;
 	body_len = get_mka_param_body_len(hdr);
@@ -1561,8 +1550,8 @@ ieee802_1x_mka_decode_dist_sak_body(
 			   "KaY: I can't accept the distributed SAK as myself is key server ");
 		return -1;
 	}
-	if (!participant->kay->macsec_desired ||
-	    participant->kay->macsec_capable == MACSEC_CAP_NOT_IMPLEMENTED) {
+	if (!kay->macsec_desired ||
+	    kay->macsec_capable == MACSEC_CAP_NOT_IMPLEMENTED) {
 		wpa_printf(MSG_ERROR,
 			   "KaY: I am not MACsec-desired or without MACsec capable");
 		return -1;
@@ -1575,27 +1564,29 @@ ieee802_1x_mka_decode_dist_sak_body(
 			   "KaY: The key server is not in my live peers list");
 		return -1;
 	}
-	if (!sci_equal(&participant->kay->key_server_sci, &peer->sci)) {
+	if (!sci_equal(&kay->key_server_sci, &peer->sci)) {
 		wpa_printf(MSG_ERROR, "KaY: The key server is not elected");
 		return -1;
 	}
+
 	if (body_len == 0) {
-		participant->kay->authenticated = TRUE;
-		participant->kay->secured = FALSE;
-		participant->kay->failed = FALSE;
+		kay->authenticated = TRUE;
+		kay->secured = FALSE;
+		kay->failed = FALSE;
 		participant->advised_desired = FALSE;
-		ieee802_1x_cp_connect_authenticated(participant->kay->cp);
-		ieee802_1x_cp_sm_step(participant->kay->cp);
+		ieee802_1x_cp_connect_authenticated(kay->cp);
+		ieee802_1x_cp_sm_step(kay->cp);
 		wpa_printf(MSG_WARNING, "KaY:The Key server advise no MACsec");
 		participant->to_use_sak = TRUE;
 		return 0;
 	}
+
 	participant->advised_desired = TRUE;
-	participant->kay->authenticated = FALSE;
-	participant->kay->secured = TRUE;
-	participant->kay->failed = FALSE;
-	ieee802_1x_cp_connect_secure(participant->kay->cp);
-	ieee802_1x_cp_sm_step(participant->kay->cp);
+	kay->authenticated = FALSE;
+	kay->secured = TRUE;
+	kay->failed = FALSE;
+	ieee802_1x_cp_connect_secure(kay->cp);
+	ieee802_1x_cp_sm_step(kay->cp);
 
 	body = (struct ieee802_1x_mka_dist_sak_body *)mka_msg;
 	ieee802_1x_mka_dump_dist_sak_body(body);
@@ -1608,10 +1599,11 @@ ieee802_1x_mka_decode_dist_sak_body(
 			return 0;
 		}
 	}
+
 	if (body_len == 28) {
 		sak_len = DEFAULT_SA_KEY_LEN;
 		wrap_sak =  body->sak;
-		participant->kay->macsec_csindex = DEFAULT_CS_INDEX;
+		kay->macsec_csindex = DEFAULT_CS_INDEX;
 	} else {
 		cs = ieee802_1x_kay_get_cipher_suite(participant, body->sak);
 		if (!cs) {
@@ -1621,7 +1613,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		}
 		sak_len = cs->sak_len;
 		wrap_sak = body->sak + CS_ID_LEN;
-		participant->kay->macsec_csindex = cs->index;
+		kay->macsec_csindex = cs->index;
 	}
 
 	unwrap_sak = os_zalloc(sak_len);
@@ -1676,16 +1668,15 @@ ieee802_1x_mka_decode_dist_sak_body(
 
 	dl_list_add(&participant->sak_list, &sa_key->list);
 
-	ieee802_1x_cp_set_ciphersuite(
-		participant->kay->cp,
-		cipher_suite_tbl[participant->kay->macsec_csindex].id);
-	ieee802_1x_cp_sm_step(participant->kay->cp);
-	ieee802_1x_cp_set_offset(participant->kay->cp, body->confid_offset);
-	ieee802_1x_cp_sm_step(participant->kay->cp);
-	ieee802_1x_cp_set_distributedki(participant->kay->cp, &sak_ki);
-	ieee802_1x_cp_set_distributedan(participant->kay->cp, body->dan);
-	ieee802_1x_cp_signal_newsak(participant->kay->cp);
-	ieee802_1x_cp_sm_step(participant->kay->cp);
+	ieee802_1x_cp_set_ciphersuite(kay->cp,
+				      cipher_suite_tbl[kay->macsec_csindex].id);
+	ieee802_1x_cp_sm_step(kay->cp);
+	ieee802_1x_cp_set_offset(kay->cp, body->confid_offset);
+	ieee802_1x_cp_sm_step(kay->cp);
+	ieee802_1x_cp_set_distributedki(kay->cp, &sak_ki);
+	ieee802_1x_cp_set_distributedan(kay->cp, body->dan);
+	ieee802_1x_cp_signal_newsak(kay->cp);
+	ieee802_1x_cp_sm_step(kay->cp);
 
 	participant->to_use_sak = TRUE;
 
@@ -2057,8 +2048,8 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 		    conf->key, conf->key_len);
 
 	os_memcpy(conf->ki.mi, participant->mi, MI_LEN);
-	conf->ki.kn = participant->kay->dist_kn;
-	conf->an = participant->kay->dist_an;
+	conf->ki.kn = kay->dist_kn;
+	conf->an = kay->dist_an;
 	conf->offset = kay->macsec_confidentiality;
 	conf->rx = TRUE;
 	conf->tx = TRUE;
@@ -2073,7 +2064,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	participant->new_key = sa_key;
 
 	dl_list_add(&participant->sak_list, &sa_key->list);
-	ieee802_1x_cp_set_ciphersuite(participant->kay->cp,
+	ieee802_1x_cp_set_ciphersuite(kay->cp,
 				      cipher_suite_tbl[kay->macsec_csindex].id);
 	ieee802_1x_cp_sm_step(kay->cp);
 	ieee802_1x_cp_set_offset(kay->cp, conf->offset);
@@ -2087,12 +2078,12 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 			 struct ieee802_1x_kay_peer, list)
 		peer->sak_used = FALSE;
 
-	participant->kay->dist_kn++;
-	participant->kay->dist_an++;
-	if (participant->kay->dist_an > 3)
-		participant->kay->dist_an = 0;
+	kay->dist_kn++;
+	kay->dist_an++;
+	if (kay->dist_an > 3)
+		kay->dist_an = 0;
 
-	participant->kay->dist_time = time(NULL);
+	kay->dist_time = time(NULL);
 
 	os_free(conf->key);
 	os_free(conf);

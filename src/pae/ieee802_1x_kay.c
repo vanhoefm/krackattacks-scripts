@@ -276,7 +276,7 @@ ieee802_1x_kay_get_principal_participant(struct ieee802_1x_kay *kay)
 			return participant;
 	}
 
-	wpa_printf(MSG_DEBUG, "KaY: principal participant is not founded");
+	wpa_printf(MSG_DEBUG, "KaY: principal participant is not found");
 	return NULL;
 }
 
@@ -1262,7 +1262,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	struct ieee802_1x_mka_ki ki;
 	u32 lpn;
 	Boolean all_receiving;
-	Boolean founded;
+	Boolean found;
 
 	if (!participant->principal) {
 		wpa_printf(MSG_WARNING, "KaY: Participant is not principal");
@@ -1304,17 +1304,17 @@ ieee802_1x_mka_decode_sak_use_body(
 
 	/* check latest key is valid */
 	if (body->ltx || body->lrx) {
-		founded = FALSE;
+		found = FALSE;
 		os_memcpy(ki.mi, body->lsrv_mi, sizeof(ki.mi));
 		ki.kn = be_to_host32(body->lkn);
 		dl_list_for_each(sa_key, &participant->sak_list,
 				 struct data_key, list) {
 			if (is_ki_equal(&sa_key->key_identifier, &ki)) {
-				founded = TRUE;
+				found = TRUE;
 				break;
 			}
 		}
-		if (!founded) {
+		if (!found) {
 			wpa_printf(MSG_WARNING, "KaY: Latest key is invalid");
 			return -1;
 		}
@@ -1374,15 +1374,15 @@ ieee802_1x_mka_decode_sak_use_body(
 		}
 	}
 
-	founded = FALSE;
+	found = FALSE;
 	dl_list_for_each(txsa, &participant->txsc->sa_list,
 			 struct transmit_sa, list) {
 		if (sa_key != NULL && txsa->pkey == sa_key) {
-			founded = TRUE;
+			found = TRUE;
 			break;
 		}
 	}
-	if (!founded) {
+	if (!found) {
 		wpa_printf(MSG_WARNING, "KaY: Can't find txsa");
 		return -1;
 	}
@@ -2904,13 +2904,13 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	/* MKPDU should not less than 32 octets */
+	/* MKPDU should not be less than 32 octets */
 	mka_msg_len = be_to_host16(eapol_hdr->length);
 	if (mka_msg_len < 32) {
 		wpa_printf(MSG_MSGDUMP, "KaY: MKPDU is less than 32 octets");
 		return -1;
 	}
-	/* MKPDU should multiple 4 octets */
+	/* MKPDU should be a multiple of 4 octets */
 	if ((mka_msg_len % 4) != 0) {
 		wpa_printf(MSG_MSGDUMP,
 			   "KaY: MKPDU is not multiple of 4 octets");

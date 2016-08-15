@@ -1871,7 +1871,7 @@ static int ieee802_1x_mka_decode_announce_body(
 }
 
 
-static struct mka_param_body_handler mak_body_handler[] = {
+static struct mka_param_body_handler mka_body_handler[] = {
 	/* basic parameter set */
 	{
 		ieee802_1x_mka_encode_basic_body,
@@ -2306,10 +2306,10 @@ ieee802_1x_kay_encode_mkpdu(struct ieee802_1x_mka_participant *participant,
 	eapol_hdr->type = IEEE802_1X_TYPE_EAPOL_MKA;
 	eapol_hdr->length = host_to_be16(pbuf->size - pbuf->used);
 
-	for (i = 0; i < ARRAY_SIZE(mak_body_handler); i++) {
-		if (mak_body_handler[i].body_present &&
-		    mak_body_handler[i].body_present(participant)) {
-			if (mak_body_handler[i].body_tx(participant, pbuf))
+	for (i = 0; i < ARRAY_SIZE(mka_body_handler); i++) {
+		if (mka_body_handler[i].body_present &&
+		    mka_body_handler[i].body_present(participant)) {
+			if (mka_body_handler[i].body_tx(participant, pbuf))
 				return -1;
 		}
 	}
@@ -2331,10 +2331,10 @@ ieee802_1x_participant_send_mkpdu(
 
 	wpa_printf(MSG_DEBUG, "KaY: to enpacket and send the MKPDU");
 	length += sizeof(struct ieee802_1x_hdr) + sizeof(struct ieee8023_hdr);
-	for (i = 0; i < ARRAY_SIZE(mak_body_handler); i++) {
-		if (mak_body_handler[i].body_present &&
-		    mak_body_handler[i].body_present(participant))
-			length += mak_body_handler[i].body_length(participant);
+	for (i = 0; i < ARRAY_SIZE(mka_body_handler); i++) {
+		if (mka_body_handler[i].body_present &&
+		    mka_body_handler[i].body_present(participant))
+			length += mka_body_handler[i].body_length(participant);
 	}
 
 	buf = wpabuf_alloc(length);
@@ -3072,9 +3072,9 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 			goto next_para_set;
 
 		handled[body_type] = TRUE;
-		if (body_type < ARRAY_SIZE(mak_body_handler) &&
-		    mak_body_handler[body_type].body_rx) {
-			mak_body_handler[body_type].body_rx
+		if (body_type < ARRAY_SIZE(mka_body_handler) &&
+		    mka_body_handler[body_type].body_rx) {
+			mka_body_handler[body_type].body_rx
 				(participant, pos, left_len);
 		} else {
 			wpa_printf(MSG_ERROR,

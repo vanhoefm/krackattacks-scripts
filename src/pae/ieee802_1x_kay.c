@@ -381,6 +381,13 @@ ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
 }
 
 
+static Boolean sci_equal(const struct ieee802_1x_mka_sci *a,
+			 const struct ieee802_1x_mka_sci *b)
+{
+	return os_memcmp(a, b, sizeof(struct ieee802_1x_mka_sci)) == 0;
+}
+
+
 /**
  * ieee802_1x_kay_get_peer_sci
  */
@@ -392,13 +399,13 @@ ieee802_1x_kay_get_peer_sci(struct ieee802_1x_mka_participant *participant,
 
 	dl_list_for_each(peer, &participant->live_peers,
 			 struct ieee802_1x_kay_peer, list) {
-		if (os_memcmp(&peer->sci, sci, sizeof(peer->sci)) == 0)
+		if (sci_equal(&peer->sci, sci))
 			return peer;
 	}
 
 	dl_list_for_each(peer, &participant->potential_peers,
 			 struct ieee802_1x_kay_peer, list) {
-		if (os_memcmp(&peer->sci, sci, sizeof(peer->sci)) == 0)
+		if (sci_equal(&peer->sci, sci))
 			return peer;
 	}
 
@@ -1581,8 +1588,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 			   "KaY: The key server is not in my live peers list");
 		return -1;
 	}
-	if (os_memcmp(&participant->kay->key_server_sci,
-		      &peer->sci, sizeof(struct ieee802_1x_mka_sci)) != 0) {
+	if (!sci_equal(&participant->kay->key_server_sci, &peer->sci)) {
 		wpa_printf(MSG_ERROR, "KaY: The key server is not elected");
 		return -1;
 	}
@@ -2160,8 +2166,7 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 
 	if (i_is_key_server) {
 		ieee802_1x_cp_set_electedself(kay->cp, TRUE);
-		if (os_memcmp(&kay->key_server_sci, &kay->actor_sci,
-			      sizeof(kay->key_server_sci))) {
+		if (!sci_equal(&kay->key_server_sci, &kay->actor_sci)) {
 			ieee802_1x_cp_signal_chgdserver(kay->cp);
 			ieee802_1x_cp_sm_step(kay->cp);
 		}
@@ -2178,8 +2183,7 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 		kay->key_server_priority = kay->actor_priority;
 	} else if (key_server) {
 		ieee802_1x_cp_set_electedself(kay->cp, FALSE);
-		if (os_memcmp(&kay->key_server_sci, &key_server->sci,
-			      sizeof(kay->key_server_sci))) {
+		if (!sci_equal(&kay->key_server_sci, &key_server->sci)) {
 			ieee802_1x_cp_signal_chgdserver(kay->cp);
 			ieee802_1x_cp_sm_step(kay->cp);
 		}
@@ -2408,8 +2412,7 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 			dl_list_for_each_safe(rxsc, pre_rxsc,
 					      &participant->rxsc_list,
 					      struct receive_sc, list) {
-				if (os_memcmp(&rxsc->sci, &peer->sci,
-					      sizeof(rxsc->sci)) == 0) {
+				if (sci_equal(&rxsc->sci, &peer->sci)) {
 					secy_delete_receive_sc(kay, rxsc);
 					ieee802_1x_kay_deinit_receive_sc(
 						participant, rxsc);

@@ -2557,8 +2557,9 @@ static int handle_action(struct hostapd_data *hapd,
 		       "handle_action - unknown action category %d or invalid "
 		       "frame",
 		       mgmt->u.action.category);
-	if (!(mgmt->da[0] & 0x01) && !(mgmt->u.action.category & 0x80) &&
-	    !(mgmt->sa[0] & 0x01)) {
+	if (!is_multicast_ether_addr(mgmt->da) &&
+	    !(mgmt->u.action.category & 0x80) &&
+	    !is_multicast_ether_addr(mgmt->sa)) {
 		struct ieee80211_mgmt *resp;
 
 		/*
@@ -2901,7 +2902,7 @@ static void handle_deauth_cb(struct hostapd_data *hapd,
 			     size_t len, int ok)
 {
 	struct sta_info *sta;
-	if (mgmt->da[0] & 0x01)
+	if (is_multicast_ether_addr(mgmt->da))
 		return;
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
@@ -2925,7 +2926,7 @@ static void handle_disassoc_cb(struct hostapd_data *hapd,
 			       size_t len, int ok)
 {
 	struct sta_info *sta;
-	if (mgmt->da[0] & 0x01)
+	if (is_multicast_ether_addr(mgmt->da))
 		return;
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
@@ -3130,7 +3131,7 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 
 	wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated STA "
 		   MACSTR, MAC2STR(src));
-	if (src[0] & 0x01) {
+	if (is_multicast_ether_addr(src)) {
 		/* Broadcast bit set in SA?! Ignore the frame silently. */
 		return;
 	}

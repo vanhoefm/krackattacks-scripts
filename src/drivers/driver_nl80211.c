@@ -4384,8 +4384,7 @@ static int nl80211_setup_ap(struct i802_bss *bss)
 				   "nl80211: Failed to subscribe for mgmt frames from SME driver - trying to run without it");
 
 	if (!drv->device_ap_sme && drv->use_monitor &&
-	    nl80211_create_monitor_interface(drv) &&
-	    !drv->device_ap_sme)
+	    nl80211_create_monitor_interface(drv))
 		return -1;
 
 	if (drv->device_ap_sme &&

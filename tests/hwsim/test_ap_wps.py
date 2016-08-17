@@ -4418,11 +4418,8 @@ RGV2aWNlIEEQSQAGADcqAAEg
     for i in range(20):
         socks[i] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,
                                  socket.IPPROTO_TCP)
-        try:
-            socks[i].connect(addr)
-        except:
-            logger.info("connect %d failed" % i)
-            pass
+        socks[i].settimeout(10)
+        socks[i].connect(addr)
     for i in range(20):
         socks[i].send("GET / HTTP/1.1\r\n\r\n")
     count = 0

@@ -3587,8 +3587,10 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		goto fail;
 
 	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
-	    params->pairwise_ciphers & (WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40) &&
-	    nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT))
+	    (!params->pairwise_ciphers ||
+	     params->pairwise_ciphers & (WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40)) &&
+	    (nla_put_u16(msg, NL80211_ATTR_CONTROL_PORT_ETHERTYPE, ETH_P_PAE) ||
+	     nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT)))
 		goto fail;
 
 	wpa_printf(MSG_DEBUG, "nl80211: pairwise_ciphers=0x%x",
@@ -4902,6 +4904,14 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	}
 
 	if (nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT))
+		return -1;
+
+	if (params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
+	    (params->pairwise_suite == WPA_CIPHER_NONE ||
+	     params->pairwise_suite == WPA_CIPHER_WEP104 ||
+	     params->pairwise_suite == WPA_CIPHER_WEP40) &&
+	    (nla_put_u16(msg, NL80211_ATTR_CONTROL_PORT_ETHERTYPE, ETH_P_PAE) ||
+	     nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT)))
 		return -1;
 
 	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED &&

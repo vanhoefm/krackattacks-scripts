@@ -1636,10 +1636,15 @@ static int radius_client_dump_acct_server(char *buf, size_t buflen,
 int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 			  size_t buflen)
 {
-	struct hostapd_radius_servers *conf = radius->conf;
+	struct hostapd_radius_servers *conf;
 	int i;
 	struct hostapd_radius_server *serv;
 	int count = 0;
+
+	if (!radius)
+		return 0;
+
+	conf = radius->conf;
 
 	if (conf->auth_servers) {
 		for (i = 0; i < conf->num_auth_servers; i++) {

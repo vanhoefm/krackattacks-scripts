@@ -1901,6 +1901,11 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	if (pri_chan->flag & (HOSTAPD_CHAN_DISABLED | HOSTAPD_CHAN_NO_IR))
 		return;
 
+#ifdef CONFIG_HT_OVERRIDES
+	if (ssid->disable_ht40)
+		return;
+#endif /* CONFIG_HT_OVERRIDES */
+
 	/* Check/setup HT40+/HT40- */
 	for (j = 0; j < ARRAY_SIZE(ht40plus); j++) {
 		if (ht40plus[j] == channel) {

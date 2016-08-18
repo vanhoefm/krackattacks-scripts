@@ -13,7 +13,7 @@ import os
 
 import hwsim_utils
 import hostapd
-from utils import alloc_fail
+from utils import alloc_fail, require_under_vm
 from test_ap_acs import force_prev_ap_on_24g
 
 @remote_compatible
@@ -463,3 +463,44 @@ def test_ap_add_with_driver(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
     hapd.disable()
+
+def test_ap_iapp(dev, apdev):
+    """IAPP and multiple BSSes"""
+    require_under_vm()
+    try:
+        _test_ap_iapp(dev, apdev)
+    finally:
+        subprocess.call(['ifconfig', 'br-multicast', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'br-multicast'],
+                        stderr=open('/dev/null', 'w'))
+
+def _test_ap_iapp(dev, apdev):
+    br_ifname = 'br-multicast'
+    subprocess.call(['brctl', 'addbr', br_ifname])
+    subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+    subprocess.call(['ip', 'addr', 'add', '10.174.65.206/31', 'dev', br_ifname])
+    subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+    subprocess.call(['ip', 'route', 'add', '224.0.0.0/4', 'dev', br_ifname])
+
+    params = { "ssid": "test-1",
+               "bridge": br_ifname,
+               "iapp_interface": br_ifname }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].connect("test-1", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("test-1", key_mgmt="NONE", scan_freq="2412")
+
+    hapd2 = hostapd.add_ap(apdev[1], params)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2412)
+    dev[0].roam(apdev[1]['bssid'])
+    dev[0].roam(apdev[0]['bssid'])
+
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[1].wait_disconnected()
+
+    hapd.disable()
+    hapd2.disable()

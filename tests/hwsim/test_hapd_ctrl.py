@@ -614,3 +614,33 @@ def test_hapd_ctrl_disconnect_no_tx(dev, apdev):
         raise Exception("Disconnection event not seen after TX attempt")
     if "reason=7" not in ev:
         raise Exception("Unexpected disconnection reason: " + ev)
+
+def test_hapd_ctrl_mib(dev, apdev):
+    """hostapd and MIB ctrl_iface command with open network"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    mib = hapd.request("MIB")
+    if len(mib) != 0:
+        raise Exception("Unexpected MIB response: " + mib)
+
+    mib = hapd.request("MIB radius_server")
+    if len(mib) != 0:
+        raise Exception("Unexpected 'MIB radius_server' response: " + mib)
+
+    if "FAIL" not in hapd.request("MIB foo"):
+        raise Exception("'MIB foo' succeeded")
+
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+    mib = hapd.request("MIB")
+    if "FAIL" in mib:
+        raise Exception("Unexpected MIB response: " + mib)
+
+    mib = hapd.request("MIB radius_server")
+    if len(mib) != 0:
+        raise Exception("Unexpected 'MIB radius_server' response: " + mib)
+
+    if "FAIL" not in hapd.request("MIB foo"):
+        raise Exception("'MIB foo' succeeded")

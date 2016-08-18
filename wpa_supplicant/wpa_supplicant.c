@@ -1930,22 +1930,16 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 
 	freq->channel = pri_chan->chan;
 
-	switch (ht40) {
-	case -1:
+	if (ht40 == -1) {
 		if (!(pri_chan->flag & HOSTAPD_CHAN_HT40MINUS))
 			return;
-		freq->sec_channel_offset = -1;
-		break;
-	case 1:
+	} else {
 		if (!(pri_chan->flag & HOSTAPD_CHAN_HT40PLUS))
 			return;
-		freq->sec_channel_offset = 1;
-		break;
-	default:
-		break;
 	}
+	freq->sec_channel_offset = ht40;
 
-	if (freq->sec_channel_offset && obss_scan) {
+	if (obss_scan) {
 		struct wpa_scan_results *scan_res;
 
 		scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0);

@@ -912,7 +912,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 	hapd->started = 1;
-	dl_list_init(&hapd->nr_db);
 
 	if (!first || first == -1) {
 		u8 *addr = hapd->own_addr;
@@ -2002,6 +2001,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	hapd->driver = hapd->iconf->driver;
 	hapd->ctrl_sock = -1;
 	dl_list_init(&hapd->ctrl_dst);
+	dl_list_init(&hapd->nr_db);
 
 	return hapd;
 }

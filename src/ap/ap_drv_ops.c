@@ -623,7 +623,7 @@ int hostapd_drv_set_key(const char *ifname, struct hostapd_data *hapd,
 int hostapd_drv_send_mlme(struct hostapd_data *hapd,
 			  const void *msg, size_t len, int noack)
 {
-	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
+	if (!hapd->driver || !hapd->driver->send_mlme || !hapd->drv_priv)
 		return 0;
 	return hapd->driver->send_mlme(hapd->drv_priv, msg, len, noack, 0,
 				       NULL, 0);
@@ -644,7 +644,7 @@ int hostapd_drv_send_mlme_csa(struct hostapd_data *hapd,
 int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
 			   const u8 *addr, int reason)
 {
-	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
+	if (!hapd->driver || !hapd->driver->sta_deauth || !hapd->drv_priv)
 		return 0;
 	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
 					reason);
@@ -654,7 +654,7 @@ int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
 int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
 			     const u8 *addr, int reason)
 {
-	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
+	if (!hapd->driver || !hapd->driver->sta_disassoc || !hapd->drv_priv)
 		return 0;
 	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
 					  reason);
@@ -680,7 +680,7 @@ int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	};
 
-	if (hapd->driver == NULL || hapd->driver->send_action == NULL)
+	if (!hapd->driver || !hapd->driver->send_action || !hapd->drv_priv)
 		return 0;
 	bssid = hapd->own_addr;
 	if (!is_multicast_ether_addr(dst) &&
@@ -754,7 +754,7 @@ int hostapd_start_dfs_cac(struct hostapd_iface *iface,
 int hostapd_drv_set_qos_map(struct hostapd_data *hapd,
 			    const u8 *qos_map_set, u8 qos_map_set_len)
 {
-	if (hapd->driver == NULL || hapd->driver->set_qos_map == NULL)
+	if (!hapd->driver || !hapd->driver->set_qos_map || !hapd->drv_priv)
 		return 0;
 	return hapd->driver->set_qos_map(hapd->drv_priv, qos_map_set,
 					 qos_map_set_len);

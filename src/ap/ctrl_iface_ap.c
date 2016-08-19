@@ -258,7 +258,7 @@ static int p2p_manager_disconnect(struct hostapd_data *hapd, u16 stype,
 	int ret;
 	u8 *pos;
 
-	if (hapd->driver->send_frame == NULL)
+	if (!hapd->drv_priv || !hapd->driver->send_frame)
 		return -1;
 
 	mgmt = os_zalloc(sizeof(*mgmt) + 100);
@@ -325,7 +325,7 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	if (pos) {
 		struct ieee80211_mgmt mgmt;
 		int encrypt;
-		if (hapd->driver->send_frame == NULL)
+		if (!hapd->drv_priv || !hapd->driver->send_frame)
 			return -1;
 		pos += 6;
 		encrypt = atoi(pos);
@@ -388,7 +388,7 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	if (pos) {
 		struct ieee80211_mgmt mgmt;
 		int encrypt;
-		if (hapd->driver->send_frame == NULL)
+		if (!hapd->drv_priv || !hapd->driver->send_frame)
 			return -1;
 		pos += 6;
 		encrypt = atoi(pos);

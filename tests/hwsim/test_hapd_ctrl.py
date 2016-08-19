@@ -644,3 +644,67 @@ def test_hapd_ctrl_mib(dev, apdev):
 
     if "FAIL" not in hapd.request("MIB foo"):
         raise Exception("'MIB foo' succeeded")
+
+def test_hapd_ctrl_not_yet_fully_enabled(dev, apdev):
+    """hostapd and ctrl_iface commands when BSS not yet fully enabled"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+
+    if not hapd.ping():
+        raise Exception("PING failed")
+    if "FAIL" in hapd.request("MIB"):
+        raise Exception("MIB failed")
+    if len(hapd.request("MIB radius_server")) != 0:
+        raise Exception("Unexpected 'MIB radius_server' response")
+    if "state=UNINITIALIZED" not in hapd.request("STATUS"):
+        raise Exception("Unexpected STATUS response")
+    if "FAIL" not in hapd.request("STATUS-DRIVER"):
+        raise Exception("Unexpected response to STATUS-DRIVER")
+    if len(hapd.request("STA-FIRST")) != 0:
+        raise Exception("Unexpected response to STA-FIRST")
+    if "FAIL" not in hapd.request("STA ff:ff:ff:ff:ff:ff"):
+        raise Exception("Unexpected response to STA")
+    cmds = [ "NEW_STA 02:ff:ff:ff:ff:ff",
+             "DEAUTHENTICATE 02:ff:ff:ff:ff:ff",
+             "DEAUTHENTICATE 02:ff:ff:ff:ff:ff test=0",
+             "DEAUTHENTICATE 02:ff:ff:ff:ff:ff p2p=0",
+             "DEAUTHENTICATE 02:ff:ff:ff:ff:ff tx=0",
+             "DISASSOCIATE 02:ff:ff:ff:ff:ff",
+             "DISASSOCIATE 02:ff:ff:ff:ff:ff test=0",
+             "DISASSOCIATE 02:ff:ff:ff:ff:ff p2p=0",
+             "DISASSOCIATE 02:ff:ff:ff:ff:ff tx=0",
+             "SA_QUERY 02:ff:ff:ff:ff:ff",
+             "WPS_PIN any 12345670",
+             "WPS_PBC",
+             "WPS_CANCEL",
+             "WPS_AP_PIN random",
+             "WPS_AP_PIN disable",
+             "WPS_CHECK_PIN 123456789",
+             "WPS_GET_STATUS",
+             "WPS_NFC_TAG_READ 00",
+             "WPS_NFC_CONFIG_TOKEN NDEF",
+             "WPS_NFC_TOKEN WPS",
+             "NFC_GET_HANDOVER_SEL NDEF WPS-CR",
+             "NFC_REPORT_HANDOVER RESP WPS 00 00",
+             "SET_QOS_MAP_SET 22,6,8,15,0,7,255,255,16,31,32,39,255,255,40,47,48,55",
+             "SEND_QOS_MAP_CONF 02:ff:ff:ff:ff:ff",
+             "HS20_WNM_NOTIF 02:ff:ff:ff:ff:ff https://example.com/",
+             "HS20_DEAUTH_REQ 02:ff:ff:ff:ff:ff 1 120 https://example.com/",
+             "DISASSOC_IMMINENT 02:ff:ff:ff:ff:ff 10",
+             "ESS_DISASSOC 02:ff:ff:ff:ff:ff 10 https://example.com/",
+             "BSS_TM_REQ 02:ff:ff:ff:ff:ff",
+             "GET_CONFIG",
+             "RADAR DETECTED freq=5260 ht_enabled=1 chan_width=1",
+             "CHAN_SWITCH 5 5200 ht sec_channel_offset=-1 bandwidth=40",
+             "TRACK_STA_LIST",
+             "PMKSA",
+             "PMKSA_FLUSH",
+             "SET_NEIGHBOR 00:11:22:33:44:55 ssid=\"test1\"",
+             "REMOVE_NEIGHBOR 00:11:22:33:44:55 ssid=\"test1\"",
+             "REQ_LCI 00:11:22:33:44:55",
+             "REQ_RANGE 00:11:22:33:44:55",
+             "DRIVER_FLAGS",
+             "STOP_AP" ]
+    for cmd in cmds:
+        hapd.request(cmd)

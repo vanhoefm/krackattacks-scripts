@@ -2040,6 +2040,9 @@ static int hostapd_ctrl_iface_track_sta_list(struct hostapd_data *hapd,
 	struct hostapd_sta_info *info;
 	struct os_reltime now;
 
+	if (!iface->num_sta_seen)
+		return 0;
+
 	sta_track_expire(iface, 0);
 
 	pos = buf;

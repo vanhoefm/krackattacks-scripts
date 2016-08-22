@@ -234,9 +234,17 @@ class FstLauncher:
                 return
         pid = -1
         try:
-            pf = file(pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            for i in range(3):
+                pf = file(pidfile, 'r')
+                pidtxt = pf.read().strip()
+                self.logger.debug("kill_pid: %s: '%s'" % (pidfile, pidtxt))
+                pf.close()
+                try:
+                    pid = int(pidtxt)
+                    break
+                except Exception, e:
+                    self.logger.debug("kill_pid: No valid PID found: %s" % str(e))
+                    time.sleep(1)
             self.logger.debug("kill_pid %s --> pid %d" % (pidfile, pid))
             os.kill(pid, signal.SIGTERM)
             for i in range(10):

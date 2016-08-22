@@ -116,9 +116,15 @@ def test_mbo_supp_oper_classes(dev, apdev):
               ("BD", bd, bd2, bd5, False),
               ("KZ", kz, kz2, kz5, False) ]
     for country, expected, res2, res5, inc5 in tests:
-        if res2 != expected:
+        # For now, allow operating class 129 to be missing since not all
+        # installed regdb files include the 160 MHz channels.
+        expected2 = expected.replace('808182', '8082')
+        # For now, allow operating classes 121-123 to be missing since not all
+        # installed regdb files include the related US DFS channels.
+        expected2 = expected2.replace('78797a7b7c', '787c')
+        if res2 != expected and res2 != expected2:
             raise Exception("Unexpected supp_op_class string (country=%s, 2.4 GHz): %s (expected: %s)" % (country, res2, expected))
-        if inc5 and res5 != expected:
+        if inc5 and res5 != expected and res5 != expected2:
             raise Exception("Unexpected supp_op_class string (country=%s, 5 GHz): %s (expected: %s)" % (country, res5, expected))
 
 def test_mbo_assoc_disallow(dev, apdev, params):

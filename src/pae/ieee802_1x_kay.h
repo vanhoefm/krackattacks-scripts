@@ -124,7 +124,7 @@ struct ieee802_1x_kay {
 	Boolean is_obliged_key_server;
 	char if_name[IFNAMSIZ];
 
-	int macsec_csindex;  /*  MACsec cipher suite table index */
+	unsigned int macsec_csindex;  /* MACsec cipher suite table index */
 	int mka_algindex;  /* MKA alg table index */
 
 	u32 dist_kn;
@@ -169,7 +169,7 @@ void ieee802_1x_kay_mka_participate(struct ieee802_1x_kay *kay,
 				    Boolean status);
 int ieee802_1x_kay_new_sak(struct ieee802_1x_kay *kay);
 int ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
-				       int cs_index);
+				       unsigned int cs_index);
 
 int ieee802_1x_kay_set_latest_sa_attr(struct ieee802_1x_kay *kay,
 				      struct ieee802_1x_mka_ki *lki, u8 lan,

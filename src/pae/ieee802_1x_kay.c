@@ -1395,7 +1395,7 @@ ieee802_1x_mka_get_dist_sak_length(
 	struct ieee802_1x_mka_participant *participant)
 {
 	int length = MKA_HDR_LEN;
-	int cs_index = participant->kay->macsec_csindex;
+	unsigned int cs_index = participant->kay->macsec_csindex;
 
 	if (participant->advised_desired) {
 		length = sizeof(struct ieee802_1x_mka_dist_sak_body);
@@ -1420,7 +1420,7 @@ ieee802_1x_mka_encode_dist_sak_body(
 	struct ieee802_1x_mka_dist_sak_body *body;
 	struct data_key *sak;
 	unsigned int length;
-	int cs_index;
+	unsigned int cs_index;
 	int sak_pos;
 
 	length = ieee802_1x_mka_get_dist_sak_length(participant);
@@ -3488,14 +3488,15 @@ ieee802_1x_kay_new_sak(struct ieee802_1x_kay *kay)
  * ieee802_1x_kay_change_cipher_suite -
  */
 int
-ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay, int cs_index)
+ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
+				   unsigned int cs_index)
 {
 	struct ieee802_1x_mka_participant *participant;
 
 	if (!kay)
 		return -1;
 
-	if ((unsigned int) cs_index >= CS_TABLE_SIZE) {
+	if (cs_index >= CS_TABLE_SIZE) {
 		wpa_printf(MSG_ERROR,
 			   "KaY: Configured cipher suite index is out of range");
 		return -1;

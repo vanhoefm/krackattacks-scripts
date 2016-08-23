@@ -3240,6 +3240,30 @@ dbus_bool_t wpas_dbus_getter_bridge_ifname(
 
 
 /**
+ * wpas_dbus_getter_config_file - Get interface configuration file path
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "ConfigFile" property.
+ */
+dbus_bool_t wpas_dbus_getter_config_file(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *confname = "";
+
+	if (wpa_s->confname)
+		confname = wpa_s->confname;
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&confname, error);
+}
+
+
+/**
  * wpas_dbus_getter_bsss - Get array of BSSs objects
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

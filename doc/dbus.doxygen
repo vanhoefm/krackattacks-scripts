@@ -681,6 +681,11 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>ConfigFile - s - (read)</h3>
+	<p>Configuration file path. Returns an empty string if no configuration file is in use.</p>
+      </li>
+
+      <li>
 	<h3>CurrentBSS - o - (read)</h3>
 	<p>Path to D-Bus object representing BSS which wpa_supplicant is associated with, or "/" if is not associated at all.</p>
       </li>

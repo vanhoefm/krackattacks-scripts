@@ -150,6 +150,7 @@ DECLARE_ACCESSOR(wpas_dbus_setter_scan_interval);
 DECLARE_ACCESSOR(wpas_dbus_getter_ifname);
 DECLARE_ACCESSOR(wpas_dbus_getter_driver);
 DECLARE_ACCESSOR(wpas_dbus_getter_bridge_ifname);
+DECLARE_ACCESSOR(wpas_dbus_getter_config_file);
 DECLARE_ACCESSOR(wpas_dbus_getter_current_bss);
 DECLARE_ACCESSOR(wpas_dbus_getter_current_network);
 DECLARE_ACCESSOR(wpas_dbus_getter_current_auth_mode);

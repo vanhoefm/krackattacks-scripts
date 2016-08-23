@@ -3158,6 +3158,11 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  NULL,
 	  NULL
 	},
+	{ "ConfigFile", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  wpas_dbus_getter_config_file,
+	  NULL,
+	  NULL
+	},
 	{ "CurrentBSS", WPAS_DBUS_NEW_IFACE_INTERFACE, "o",
 	  wpas_dbus_getter_current_bss,
 	  NULL,

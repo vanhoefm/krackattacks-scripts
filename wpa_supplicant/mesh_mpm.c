@@ -348,7 +348,7 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 	if (type != PLINK_CLOSE && wpa_s->mesh_vht_enabled) {
 		u8 vht_capa_oper[2 + 12 + 2 + 5];
 
-		pos = hostapd_eid_vht_capabilities(bss, vht_capa_oper);
+		pos = hostapd_eid_vht_capabilities(bss, vht_capa_oper, 0);
 		pos = hostapd_eid_vht_operation(bss, pos);
 		wpabuf_put_data(buf, vht_capa_oper, pos - vht_capa_oper);
 	}

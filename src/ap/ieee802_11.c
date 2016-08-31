@@ -1944,7 +1944,23 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_IEEE80211AC
 	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) {
-		p = hostapd_eid_vht_capabilities(hapd, p);
+		u32 nsts = 0, sta_nsts;
+
+		if (hapd->conf->use_sta_nsts && sta->vht_capabilities) {
+			struct ieee80211_vht_capabilities *capa;
+
+			nsts = (hapd->iface->conf->vht_capab >>
+				VHT_CAP_BEAMFORMEE_STS_OFFSET) & 7;
+			capa = sta->vht_capabilities;
+			sta_nsts = (le_to_host32(capa->vht_capabilities_info) >>
+				    VHT_CAP_BEAMFORMEE_STS_OFFSET) & 7;
+
+			if (nsts < sta_nsts)
+				nsts = 0;
+			else
+				nsts = sta_nsts;
+		}
+		p = hostapd_eid_vht_capabilities(hapd, p, nsts);
 		p = hostapd_eid_vht_operation(hapd, p);
 	}
 #endif /* CONFIG_IEEE80211AC */

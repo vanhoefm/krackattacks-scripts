@@ -582,6 +582,7 @@ struct hostapd_bss_config {
 	u8 radio_measurements[RRM_CAPABILITIES_IE_LEN];
 
 	int vendor_vht;
+	int use_sta_nsts;
 
 	char *no_probe_resp_if_seen_on;
 	char *no_auth_if_seen_on;

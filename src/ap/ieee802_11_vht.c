@@ -20,7 +20,7 @@
 #include "dfs.h"
 
 
-u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid)
+u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid, u32 nsts)
 {
 	struct ieee80211_vht_capabilities *cap;
 	struct hostapd_hw_modes *mode = hapd->iface->current_mode;
@@ -49,6 +49,18 @@ u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid)
 	os_memset(cap, 0, sizeof(*cap));
 	cap->vht_capabilities_info = host_to_le32(
 		hapd->iface->conf->vht_capab);
+
+	if (nsts != 0) {
+		u32 hapd_nsts;
+
+		hapd_nsts = le_to_host32(cap->vht_capabilities_info);
+		hapd_nsts = (hapd_nsts >> VHT_CAP_BEAMFORMEE_STS_OFFSET) & 7;
+		cap->vht_capabilities_info &=
+			~(host_to_le32(hapd_nsts <<
+				       VHT_CAP_BEAMFORMEE_STS_OFFSET));
+		cap->vht_capabilities_info |=
+			host_to_le32(nsts << VHT_CAP_BEAMFORMEE_STS_OFFSET);
+	}
 
 	/* Supported MCS set comes from hw */
 	os_memcpy(&cap->vht_supported_mcs_set, mode->vht_mcs_set, 8);
@@ -398,7 +410,7 @@ u8 * hostapd_eid_vendor_vht(struct hostapd_data *hapd, u8 *eid)
 	WPA_PUT_BE32(pos, (OUI_BROADCOM << 8) | VENDOR_VHT_TYPE);
 	pos += 4;
 	*pos++ = VENDOR_VHT_SUBTYPE;
-	pos = hostapd_eid_vht_capabilities(hapd, pos);
+	pos = hostapd_eid_vht_capabilities(hapd, pos, 0);
 	pos = hostapd_eid_vht_operation(hapd, pos);
 
 	return pos;

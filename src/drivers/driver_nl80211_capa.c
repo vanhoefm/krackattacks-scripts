@@ -66,7 +66,6 @@ struct wiphy_info_data {
 	unsigned int device_ap_sme:1;
 	unsigned int poll_command_supported:1;
 	unsigned int data_tx_status:1;
-	unsigned int monitor_supported:1;
 	unsigned int auth_supported:1;
 	unsigned int connect_supported:1;
 	unsigned int p2p_go_supported:1;
@@ -128,9 +127,6 @@ static void wiphy_info_supported_iftypes(struct wiphy_info_data *info,
 			break;
 		case NL80211_IFTYPE_P2P_CLIENT:
 			info->p2p_client_supported = 1;
-			break;
-		case NL80211_IFTYPE_MONITOR:
-			info->monitor_supported = 1;
 			break;
 		}
 	}
@@ -1038,21 +1034,8 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	 * If poll command and tx status are supported, mac80211 is new enough
 	 * to have everything we need to not need monitor interfaces.
 	 */
-	drv->use_monitor = !info.poll_command_supported || !info.data_tx_status;
-
-	if (drv->device_ap_sme && drv->use_monitor) {
-		/*
-		 * Non-mac80211 drivers may not support monitor interface.
-		 * Make sure we do not get stuck with incorrect capability here
-		 * by explicitly testing this.
-		 */
-		if (!info.monitor_supported) {
-			wpa_printf(MSG_DEBUG, "nl80211: Disable use_monitor "
-				   "with device_ap_sme since no monitor mode "
-				   "support detected");
-			drv->use_monitor = 0;
-		}
-	}
+	drv->use_monitor = !info.device_ap_sme &&
+		(!info.poll_command_supported || !info.data_tx_status);
 
 	/*
 	 * If we aren't going to use monitor interfaces, but the

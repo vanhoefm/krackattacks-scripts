@@ -632,6 +632,8 @@ void sta_track_add(struct hostapd_iface *iface, const u8 *addr)
 
 	/* Add a new entry */
 	info = os_zalloc(sizeof(*info));
+	if (info == NULL)
+		return;
 	os_memcpy(info->addr, addr, ETH_ALEN);
 	os_get_reltime(&info->last_seen);
 

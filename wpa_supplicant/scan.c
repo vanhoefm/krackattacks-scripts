@@ -1256,6 +1256,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	if (max_sched_scan_ssids < 1 || wpa_s->conf->disable_scan_offload)
 		return -1;
 
+	wpa_s->sched_scan_stop_req = 0;
+
 	if (wpa_s->sched_scanning) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Already sched scanning");
 		return 0;
@@ -1553,6 +1555,9 @@ void wpa_supplicant_cancel_sched_scan(struct wpa_supplicant *wpa_s)
 {
 	if (!wpa_s->sched_scanning)
 		return;
+
+	if (wpa_s->sched_scanning)
+		wpa_s->sched_scan_stop_req = 1;
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Cancelling sched scan");
 	eloop_cancel_timeout(wpa_supplicant_sched_scan_timeout, wpa_s, NULL);
@@ -2530,6 +2535,7 @@ int wpas_stop_pno(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	ret = wpa_supplicant_stop_sched_scan(wpa_s);
+	wpa_s->sched_scan_stop_req = 1;
 
 	wpa_s->pno = 0;
 	wpa_s->pno_sched_pending = 0;

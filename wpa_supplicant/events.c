@@ -4066,6 +4066,20 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 
 		/*
+		 * If the driver stopped scanning without being requested to,
+		 * request a new scan to continue scanning for networks.
+		 */
+		if (!wpa_s->sched_scan_stop_req &&
+		    wpa_s->wpa_state == WPA_SCANNING) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Restart scanning after unexpected sched_scan stop event");
+			wpa_supplicant_req_scan(wpa_s, 1, 0);
+			break;
+		}
+
+		wpa_s->sched_scan_stop_req = 0;
+
+		/*
 		 * Start a new sched scan to continue searching for more SSIDs
 		 * either if timed out or PNO schedule scan is pending.
 		 */

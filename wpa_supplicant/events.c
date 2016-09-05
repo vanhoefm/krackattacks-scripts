@@ -2518,6 +2518,7 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 	struct wpa_bss *fast_reconnect = NULL;
 	struct wpa_ssid *fast_reconnect_ssid = NULL;
 	struct wpa_ssid *last_ssid;
+	struct wpa_bss *curr = NULL;
 
 	authenticating = wpa_s->wpa_state == WPA_AUTHENTICATING;
 	os_memcpy(prev_pending_bssid, wpa_s->pending_bssid, ETH_ALEN);
@@ -2532,6 +2533,19 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 			"IBSS/WPA-None mode");
 		return;
 	}
+
+	if (!wpa_s->disconnected && wpa_s->wpa_state >= WPA_AUTHENTICATING &&
+	    reason_code == WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY &&
+	    locally_generated)
+		/*
+		 * Remove the inactive AP (which is probably out of range) from
+		 * the BSS list after marking disassociation. In particular
+		 * mac80211-based drivers use the
+		 * WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY reason code in
+		 * locally generated disconnection events for cases where the
+		 * AP does not reply anymore.
+		 */
+		curr = wpa_s->current_bss;
 
 	if (could_be_psk_mismatch(wpa_s, reason_code, locally_generated)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
@@ -2593,6 +2607,9 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 	}
 	last_ssid = wpa_s->current_ssid;
 	wpa_supplicant_mark_disassoc(wpa_s);
+
+	if (curr)
+		wpa_bss_remove(wpa_s, curr, "Connection to AP lost");
 
 	if (authenticating && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)) {
 		sme_disassoc_while_authenticating(wpa_s, prev_pending_bssid);

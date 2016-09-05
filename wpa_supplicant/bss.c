@@ -214,8 +214,8 @@ static void wpa_bss_update_pending_connect(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
-			   const char *reason)
+void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
+		    const char *reason)
 {
 	if (wpa_s->last_scan_res) {
 		unsigned int i;

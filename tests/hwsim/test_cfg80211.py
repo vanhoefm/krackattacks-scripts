@@ -15,6 +15,7 @@ import hostapd
 import hwsim_utils
 from tshark import run_tshark
 from nl80211 import *
+from wpasupplicant import WpaSupplicant
 
 def nl80211_command(dev, cmd, attr):
     res = dev.request("VENDOR ffffffff {} {}".format(nl80211_cmd[cmd],
@@ -66,12 +67,12 @@ def nl80211_remain_on_channel(dev, ifindex, freq, duration):
 
 def test_cfg80211_tx_frame(dev, apdev, params):
     """cfg80211 offchannel TX frame command"""
-    ifindex = int(dev[0].get_driver_status_field("ifindex"))
 
-    frame = binascii.unhexlify("d000000002000000010002000000000002000000010000000409506f9a090001dd5e506f9a0902020025080401001f0502006414060500585804510b0906000200000000000b1000585804510b0102030405060708090a0b0d1d000200000000000108000000000000000000101100084465766963652041110500585804510bdd190050f204104a0001101012000200011049000600372a000120")
-
-    dev[0].request("P2P_GROUP_ADD freq=2412")
-    res = nl80211_frame(dev[0], ifindex, frame, freq=2422, duration=500,
+    dev[0].p2p_start_go(freq='2412')
+    go = WpaSupplicant(dev[0].group_ifname)
+    frame = binascii.unhexlify("d0000000020000000100" + go.own_addr().translate(None, ':') + "02000000010000000409506f9a090001dd5e506f9a0902020025080401001f0502006414060500585804510b0906000200000000000b1000585804510b0102030405060708090a0b0d1d000200000000000108000000000000000000101100084465766963652041110500585804510bdd190050f204104a0001101012000200011049000600372a000120")
+    ifindex = int(go.get_driver_status_field("ifindex"))
+    res = nl80211_frame(go, ifindex, frame, freq=2422, duration=500,
                         offchannel_tx_ok=True)
     time.sleep(0.1)
 
@@ -79,10 +80,12 @@ def test_cfg80211_tx_frame(dev, apdev, params):
     #nl80211_frame_wait_cancel(dev[0], ifindex, res[nl80211_attr['COOKIE']])
 
     # note: this Action frame ends up getting sent incorrectly on 2422 MHz
-    nl80211_frame(dev[0], ifindex, frame, freq=2412)
+    nl80211_frame(go, ifindex, frame, freq=2412)
     time.sleep(1.5)
     # note: also the Deauthenticate frame sent by the GO going down ends up
     # being transmitted incorrectly on 2422 MHz.
+
+    del go
 
     out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
                      "wlan.fc.type_subtype == 13", ["radiotap.channel.freq"])

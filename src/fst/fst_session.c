@@ -364,7 +364,6 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 	struct fst_iface *new_iface = NULL;
 	struct fst_group *g;
 	u8 new_iface_peer_addr[ETH_ALEN];
-	const struct wpabuf *peer_mbies;
 	size_t plen;
 
 	if (frame_len < IEEE80211_HDRLEN + 1 + sizeof(*req))  {
@@ -400,36 +399,18 @@ static void fst_session_handle_setup_request(struct fst_iface *iface,
 				 MAC2STR(mgmt->sa));
 	}
 
-	peer_mbies = fst_iface_get_peer_mb_ie(iface, mgmt->sa);
-	if (peer_mbies) {
-		new_iface = fst_group_get_new_iface_by_stie_and_mbie(
-			g, wpabuf_head(peer_mbies), wpabuf_len(peer_mbies),
-			&req->stie, new_iface_peer_addr);
-		if (new_iface)
-			fst_printf_iface(iface, MSG_INFO,
-					 "FST Request: new iface (%s:" MACSTR
-					 ") found by MB IEs",
-					 fst_iface_get_name(new_iface),
-					 MAC2STR(new_iface_peer_addr));
-	}
-
-	if (!new_iface) {
-		new_iface = fst_group_find_new_iface_by_stie(
-			g, iface, mgmt->sa, &req->stie,
-			new_iface_peer_addr);
-		if (new_iface)
-			fst_printf_iface(iface, MSG_INFO,
-					 "FST Request: new iface (%s:" MACSTR
-					 ") found by others",
-					 fst_iface_get_name(new_iface),
-					 MAC2STR(new_iface_peer_addr));
-	}
-
+	new_iface = fst_group_get_peer_other_connection(iface, mgmt->sa,
+							req->stie.new_band_id,
+							new_iface_peer_addr);
 	if (!new_iface) {
 		fst_printf_iface(iface, MSG_WARNING,
 				 "FST Request dropped: new iface not found");
 		return;
 	}
+	fst_printf_iface(iface, MSG_INFO,
+			 "FST Request: new iface (%s:" MACSTR ") found",
+			 fst_iface_get_name(new_iface),
+			 MAC2STR(new_iface_peer_addr));
 
 	s = fst_find_session_in_progress(mgmt->sa, g);
 	if (s) {

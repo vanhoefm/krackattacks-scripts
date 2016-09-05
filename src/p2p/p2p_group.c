@@ -1112,7 +1112,7 @@ int p2p_group_get_common_freqs(struct p2p_group *group, int *common_freqs,
 		struct p2p_device *dev;
 
 		dev = p2p_get_device(group->p2p, m->dev_addr);
-		if (!dev)
+		if (!dev || dev->channels.reg_classes == 0)
 			continue;
 
 		p2p_channels_intersect(&intersect, &dev->channels, &res);

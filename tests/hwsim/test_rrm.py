@@ -301,3 +301,23 @@ def test_rrm_ftm_range_req(dev, apdev):
     # request and not because the responder is not in the database.
     if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 10 00:11:22:33:44:55"):
         raise Exception("REQ_RANGE succeeded unexpectedly (responder not in database)")
+
+def test_rrm_ftm_capa_indication(dev, apdev):
+    """FTM capability indication"""
+    try:
+        _test_rrm_ftm_capa_indication(dev, apdev)
+    finally:
+        dev[0].request("SET ftm_initiator 0")
+        dev[0].request("SET ftm_responder 0")
+
+def _test_rrm_ftm_capa_indication(dev, apdev):
+    params = { "ssid": "ftm",
+               "ftm_responder": "1",
+               "ftm_initiator": "1", }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    if "OK" not in dev[0].request("SET ftm_initiator 1"):
+        raise Exception("could not set ftm_initiator")
+    if "OK" not in dev[0].request("SET ftm_responder 1"):
+        raise Exception("could not set ftm_responder")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412, force_scan=True)

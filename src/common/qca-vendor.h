@@ -124,6 +124,10 @@ enum qca_radiotap_vendor_ids {
  *	capabilities are to be fetched and other
  *	enum qca_wlan_vendor_attr_get_hw_capability attributes to return the
  *	requested capabilities.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_LL_STATS_EXT: Link layer statistics extension.
+ *	enum qca_wlan_vendor_attr_ll_stats_ext attributes are used with this
+ *	command and event.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -211,6 +215,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH = 124,
 	QCA_NL80211_VENDOR_SUBCMD_GPIO_CONFIG_COMMAND = 125,
 	QCA_NL80211_VENDOR_SUBCMD_GET_HW_CAPABILITY = 126,
+	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_EXT = 127,
 };
 
 
@@ -830,6 +835,47 @@ enum qca_wlan_vendor_attr_get_hw_capability {
 	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_MAX =
 	QCA_WLAN_VENDOR_ATTR_HW_CAPABILITY_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ll_stats_ext - Attributes for MAC layer monitoring
+ *    offload which is an extension for LL_STATS.
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_CFG_PERIOD: Monitoring period. Unit in ms.
+ *    If MAC counters do not exceed the threshold, FW will report monitored
+ *    link layer counters periodically as this setting. The first report is
+ *    always triggered by this timer.
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_CFG_THRESHOLD: It is a percentage (1-99).
+ *    For each MAC layer counter, FW holds two copies. One is the current value.
+ *    The other is the last report. Once a current counter's increment is larger
+ *    than the threshold, FW will indicate that counter to host even if the
+ *    monitoring timer does not expire.
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_PEER_PS_CHG: Peer STA power state change
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_TID: TID of MSDU
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_NUM_MSDU: Count of MSDU with the same
+ *    failure code.
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_TX_STATUS: TX failure code
+ *    1: TX packet discarded
+ *    2: No ACK
+ *    3: Postpone
+ */
+enum qca_wlan_vendor_attr_ll_stats_ext {
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_INVALID = 0,
+
+	/* Attributes for configurations */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_CFG_PERIOD,
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_CFG_THRESHOLD,
+
+	/* Attributes for events */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_PEER_PS_CHG,
+
+	/* TX failure event */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_TID,
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_NUM_MSDU,
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_TX_STATUS,
+
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_LAST,
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_MAX =
+		QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

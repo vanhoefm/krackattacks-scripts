@@ -2420,6 +2420,13 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 		}
 	}
 
+	if (wpa_s->sched_scan_stop_req) {
+		wpa_printf(MSG_DEBUG,
+			   "Schedule PNO after previous sched scan has stopped");
+		wpa_s->pno_sched_pending = 1;
+		return 0;
+	}
+
 	os_memset(&params, 0, sizeof(params));
 
 	num_ssid = num_match_ssid = 0;

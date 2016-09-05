@@ -44,6 +44,7 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src);
 void wpa_scan_free_params(struct wpa_driver_scan_params *params);
 int wpas_start_pno(struct wpa_supplicant *wpa_s);
 int wpas_stop_pno(struct wpa_supplicant *wpa_s);
+void wpas_scan_reset_sched_scan(struct wpa_supplicant *wpa_s);
 
 void wpas_mac_addr_rand_scan_clear(struct wpa_supplicant *wpa_s,
 				   unsigned int type);

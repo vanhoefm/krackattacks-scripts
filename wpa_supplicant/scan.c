@@ -2726,3 +2726,22 @@ fail:
 	wpa_printf(MSG_ERROR, "invalid scan plans list");
 	return -1;
 }
+
+
+/**
+ * wpas_scan_reset_sched_scan - Reset sched_scan state
+ * @wpa_s: Pointer to wpa_supplicant data
+ *
+ * This function is used to cancel a running scheduled scan and to reset an
+ * internal scan state to continue with a regular scan on the following
+ * wpa_supplicant_req_scan() calls.
+ */
+void wpas_scan_reset_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->normal_scans = 0;
+	if (wpa_s->sched_scanning) {
+		wpa_s->sched_scan_timed_out = 0;
+		wpa_s->prev_sched_ssid = NULL;
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+	}
+}

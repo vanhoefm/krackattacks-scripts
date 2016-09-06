@@ -3369,7 +3369,7 @@ static int wpas_p2p_get_center_80mhz(struct wpa_supplicant *wpa_s,
 				     u8 channel)
 {
 	u8 center_channels[] = { 42, 58, 106, 122, 138, 155 };
-	unsigned int i;
+	size_t i;
 
 	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return 0;

@@ -1080,7 +1080,7 @@ enum qca_wlan_vendor_attr_loc_capa_flags {
  * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_MAC_ADDR: The MAC address of the peer.
  * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_FLAGS: Various flags related
  *	to measurement. See enum qca_wlan_vendor_attr_ftm_peer_meas_flags.
- * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_PARAM: Nested attribute of
+ * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_PARAMS: Nested attribute of
  *	FTM measurement parameters, as specified by IEEE P802.11-REVmc/D7.0
  *	9.4.2.167. See enum qca_wlan_vendor_attr_ftm_meas_param for
  *	list of supported attributes.
@@ -1094,7 +1094,7 @@ enum qca_wlan_vendor_attr_ftm_peer_info {
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_INVALID,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MAC_ADDR,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_FLAGS,
-	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_PARAM,
+	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_PARAMS,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_SECURE_TOKEN_ID,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_AOA_BURST_PERIOD,
 	/* keep last */
@@ -1287,6 +1287,7 @@ enum qca_vendor_attr_loc_session_status {
  * @QCA_WLAN_VENDOR_ATTR_FTM_MEAS_PAD: Dummy attribute for padding.
  */
 enum qca_wlan_vendor_attr_ftm_meas {
+	QCA_WLAN_VENDOR_ATTR_FTM_MEAS_INVALID,
 	QCA_WLAN_VENDOR_ATTR_FTM_MEAS_T1,
 	QCA_WLAN_VENDOR_ATTR_FTM_MEAS_T2,
 	QCA_WLAN_VENDOR_ATTR_FTM_MEAS_T3,

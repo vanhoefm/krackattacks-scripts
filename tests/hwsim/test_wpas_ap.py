@@ -321,6 +321,9 @@ def test_wpas_ap_wps_disabled(dev):
 
 def test_wpas_ap_dfs(dev):
     """wpa_supplicant AP mode - DFS"""
+    if dev[0].get_mcc() > 1:
+        raise HwsimSkip("DFS is not supported with multi channel contexts")
+
     try:
         _test_wpas_ap_dfs(dev)
     finally:

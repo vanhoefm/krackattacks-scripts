@@ -5357,3 +5357,33 @@ def test_ap_hs20_unexpected(dev, apdev):
                    identity="hs20-test", password="password",
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                    scan_freq="2412")
+
+def test_ap_interworking_element_update(dev, apdev):
+    """Dynamic Interworking element update"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    bss = dev[0].get_bss(bssid)
+    logger.info("Before update: " + str(bss))
+    if '6b091e0701020000000300' not in bss['ie']:
+        raise Exception("Expected Interworking element not seen before update")
+
+    # Update configuration parameters related to Interworking element
+    hapd.set('access_network_type', '2')
+    hapd.set('asra', '1')
+    hapd.set('esr', '1')
+    hapd.set('uesa', '1')
+    hapd.set('venue_group', '2')
+    hapd.set('venue_type', '8')
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    bss = dev[0].get_bss(bssid)
+    logger.info("After update: " + str(bss))
+    if '6b09f20208020000000300' not in bss['ie']:
+        raise Exception("Expected Interworking element not seen after update")

@@ -14,6 +14,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/gas.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -804,4 +805,32 @@ void wpas_mbo_update_cell_capa(struct wpa_supplicant *wpa_s, u8 mbo_cell_capa)
 
 	wpas_mbo_send_wnm_notification(wpa_s, cell_capa, 7);
 	wpa_supplicant_set_default_scan_ies(wpa_s);
+}
+
+
+struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
+				   struct wpa_bss *bss)
+{
+	struct wpabuf *anqp_buf;
+	u8 *len_pos;
+
+	if (!wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
+		wpa_printf(MSG_INFO, "MBO: " MACSTR
+			   " does not support MBO - cannot request MBO ANQP elements from it",
+			   MAC2STR(bss->bssid));
+		return NULL;
+	}
+
+	anqp_buf = wpabuf_alloc(10);
+	if (!anqp_buf)
+		return NULL;
+
+	len_pos = gas_anqp_add_element(anqp_buf, ANQP_VENDOR_SPECIFIC);
+	wpabuf_put_be24(anqp_buf, OUI_WFA);
+	wpabuf_put_u8(anqp_buf, MBO_ANQP_OUI_TYPE);
+
+	wpabuf_put_u8(anqp_buf, MBO_ANQP_SUBTYPE_CELL_CONN_PREF);
+	gas_anqp_set_element_len(anqp_buf, len_pos);
+
+	return anqp_buf;
 }

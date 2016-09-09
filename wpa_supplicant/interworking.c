@@ -2692,10 +2692,11 @@ void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s)
 
 
 int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
-		  u16 info_ids[], size_t num_ids, u32 subtypes)
+		  u16 info_ids[], size_t num_ids, u32 subtypes,
+		  int get_cell_pref)
 {
 	struct wpabuf *buf;
-	struct wpabuf *hs20_buf = NULL;
+	struct wpabuf *extra_buf = NULL;
 	int ret = 0;
 	int freq;
 	struct wpa_bss *bss;
@@ -2718,15 +2719,31 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 
 #ifdef CONFIG_HS20
 	if (subtypes != 0) {
-		hs20_buf = wpabuf_alloc(100);
-		if (hs20_buf == NULL)
+		extra_buf = wpabuf_alloc(100);
+		if (extra_buf == NULL)
 			return -1;
-		hs20_put_anqp_req(subtypes, NULL, 0, hs20_buf);
+		hs20_put_anqp_req(subtypes, NULL, 0, extra_buf);
 	}
 #endif /* CONFIG_HS20 */
 
-	buf = anqp_build_req(info_ids, num_ids, hs20_buf);
-	wpabuf_free(hs20_buf);
+#ifdef CONFIG_MBO
+	if (get_cell_pref) {
+		struct wpabuf *mbo;
+
+		mbo = mbo_build_anqp_buf(wpa_s, bss);
+		if (mbo) {
+			if (wpabuf_resize(&extra_buf, wpabuf_len(mbo))) {
+				wpabuf_free(extra_buf);
+				return -1;
+			}
+			wpabuf_put_buf(extra_buf, mbo);
+			wpabuf_free(mbo);
+		}
+	}
+#endif /* CONFIG_MBO */
+
+	buf = anqp_build_req(info_ids, num_ids, extra_buf);
+	wpabuf_free(extra_buf);
 	if (buf == NULL)
 		return -1;
 

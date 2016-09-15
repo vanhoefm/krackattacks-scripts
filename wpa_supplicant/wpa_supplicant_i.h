@@ -1023,6 +1023,7 @@ struct wpa_supplicant {
 	struct l2_packet_data *l2_test;
 	unsigned int extra_roc_dur;
 	enum wpa_supplicant_test_failure test_failure;
+	unsigned int reject_btm_req_reason;
 	unsigned int p2p_go_csa_on_inv:1;
 	unsigned int ignore_auth_resp:1;
 	unsigned int ignore_assoc_disallow:1;

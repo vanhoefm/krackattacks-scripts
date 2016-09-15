@@ -515,6 +515,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		wpa_s->ignore_auth_resp = !!atoi(value);
 	} else if (os_strcasecmp(cmd, "ignore_assoc_disallow") == 0) {
 		wpa_s->ignore_assoc_disallow = !!atoi(value);
+	} else if (os_strcasecmp(cmd, "reject_btm_req_reason") == 0) {
+		wpa_s->reject_btm_req_reason = atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	} else if (os_strcmp(cmd, "blob") == 0) {
@@ -7205,6 +7207,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->p2p_go_csa_on_inv = 0;
 	wpa_s->ignore_auth_resp = 0;
 	wpa_s->ignore_assoc_disallow = 0;
+	wpa_s->reject_btm_req_reason = 0;
 	wpa_sm_set_test_assoc_ie(wpa_s->wpa, NULL);
 #endif /* CONFIG_TESTING_OPTIONS */
 

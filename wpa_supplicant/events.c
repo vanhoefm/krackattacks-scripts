@@ -1101,6 +1101,10 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 #ifdef CONFIG_MBO
+#ifdef CONFIG_TESTING_OPTIONS
+		if (wpa_s->ignore_assoc_disallow)
+			goto skip_assoc_disallow;
+#endif /* CONFIG_TESTING_OPTIONS */
 		assoc_disallow = wpas_mbo_get_bss_attr(
 			bss, MBO_ATTR_ID_ASSOC_DISALLOW);
 		if (assoc_disallow && assoc_disallow[1] >= 1) {
@@ -1115,6 +1119,9 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 				"   skip - MBO retry delay has not passed yet");
 			continue;
 		}
+#ifdef CONFIG_TESTING_OPTIONS
+	skip_assoc_disallow:
+#endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_MBO */
 
 		/* Matching configuration found */

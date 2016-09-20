@@ -160,10 +160,9 @@ struct ieee802_1x_kay_ctx {
 				  const struct ieee802_1x_mka_sci *sci,
 				  enum confidentiality_offset co);
 	int (*delete_transmit_sc)(void *ctx, u32 channel);
-	int (*create_transmit_sa)(void *ctx, u32 channel, u8 an, u32 next_pn,
-				  Boolean confidentiality, const u8 *sak);
-	int (*enable_transmit_sa)(void *ctx, u32 channel, u8 an);
-	int (*disable_transmit_sa)(void *ctx, u32 channel, u8 an);
+	int (*create_transmit_sa)(void *ctx, struct transmit_sa *sa);
+	int (*enable_transmit_sa)(void *ctx, struct transmit_sa *sa);
+	int (*disable_transmit_sa)(void *ctx, struct transmit_sa *sa);
 };
 
 struct ieee802_1x_kay {

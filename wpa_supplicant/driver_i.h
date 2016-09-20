@@ -857,31 +857,27 @@ static inline int wpa_drv_delete_transmit_sc(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_create_transmit_sa(struct wpa_supplicant *wpa_s,
-					     u32 channel, u8 an,
-					     u32 next_pn,
-					     Boolean confidentiality,
-					     const u8 *sak)
+					     struct transmit_sa *sa)
 {
 	if (!wpa_s->driver->create_transmit_sa)
 		return -1;
-	return wpa_s->driver->create_transmit_sa(wpa_s->drv_priv, channel, an,
-						 next_pn, confidentiality, sak);
+	return wpa_s->driver->create_transmit_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_enable_transmit_sa(struct wpa_supplicant *wpa_s,
-					     u32 channel, u8 an)
+					     struct transmit_sa *sa)
 {
 	if (!wpa_s->driver->enable_transmit_sa)
 		return -1;
-	return wpa_s->driver->enable_transmit_sa(wpa_s->drv_priv, channel, an);
+	return wpa_s->driver->enable_transmit_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_disable_transmit_sa(struct wpa_supplicant *wpa_s,
-					      u32 channel, u8 an)
+					      struct transmit_sa *sa)
 {
 	if (!wpa_s->driver->disable_transmit_sa)
 		return -1;
-	return wpa_s->driver->disable_transmit_sa(wpa_s->drv_priv, channel, an);
+	return wpa_s->driver->disable_transmit_sa(wpa_s->drv_priv, sa);
 }
 #endif /* CONFIG_MACSEC */
 

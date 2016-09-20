@@ -794,19 +794,18 @@ static int macsec_qca_delete_transmit_sc(void *priv, u32 channel)
 }
 
 
-static int macsec_qca_create_transmit_sa(void *priv, u32 channel, u8 an,
-					 u32 next_pn, Boolean confidentiality,
-					 const u8 *sak)
+static int macsec_qca_create_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	u8 tci = 0;
 	fal_tx_sak_t tx_sak;
 	int i;
+	u32 channel = sa->sc->channel;
 
 	wpa_printf(MSG_DEBUG,
 		   "%s: channel=%d, an=%d, next_pn=0x%x, confidentiality=%d",
-		   __func__, channel, an, next_pn, confidentiality);
+		   __func__, channel, sa->an, sa->next_pn, sa->confidentiality);
 
 	if (drv->always_include_sci)
 		tci |= TCI_SC;
@@ -815,45 +814,53 @@ static int macsec_qca_create_transmit_sa(void *priv, u32 channel, u8 an,
 	else if (drv->use_scb)
 		tci |= TCI_SCB;
 
-	if (confidentiality)
+	if (sa->confidentiality)
 		tci |= TCI_E | TCI_C;
 
 	os_memset(&tx_sak, 0, sizeof(tx_sak));
 	for (i = 0; i < 16; i++)
-		tx_sak.sak[i] = sak[15 - i];
+		tx_sak.sak[i] = sa->pkey->key[15 - i];
 
-	ret += nss_macsec_secy_tx_sa_next_pn_set(drv->secy_id, channel, an,
-						 next_pn);
-	ret += nss_macsec_secy_tx_sak_set(drv->secy_id, channel, an, &tx_sak);
+	ret += nss_macsec_secy_tx_sa_next_pn_set(drv->secy_id, channel, sa->an,
+						 sa->next_pn);
+	ret += nss_macsec_secy_tx_sak_set(drv->secy_id, channel, sa->an,
+					  &tx_sak);
 	ret += nss_macsec_secy_tx_sc_tci_7_2_set(drv->secy_id, channel,
 						 (tci >> 2));
-	ret += nss_macsec_secy_tx_sc_an_set(drv->secy_id, channel, an);
+	ret += nss_macsec_secy_tx_sc_an_set(drv->secy_id, channel, sa->an);
 
 	return ret;
 }
 
 
-static int macsec_qca_enable_transmit_sa(void *priv, u32 channel, u8 an)
+static int macsec_qca_enable_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
+	u32 channel = sa->sc->channel;
 
-	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel, an);
 
-	ret += nss_macsec_secy_tx_sa_en_set(drv->secy_id, channel, an, TRUE);
+	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
+		   sa->an);
+
+	ret += nss_macsec_secy_tx_sa_en_set(drv->secy_id, channel, sa->an,
+					    TRUE);
 
 	return ret;
 }
 
 
-static int macsec_qca_disable_transmit_sa(void *priv, u32 channel, u8 an)
+static int macsec_qca_disable_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
+	u32 channel = sa->sc->channel;
 
-	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel, an);
+	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
+		   sa->an);
 
-	ret += nss_macsec_secy_tx_sa_en_set(drv->secy_id, channel, an, FALSE);
+	ret += nss_macsec_secy_tx_sa_en_set(drv->secy_id, channel, sa->an,
+					    FALSE);
 
 	return ret;
 }

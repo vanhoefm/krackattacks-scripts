@@ -159,24 +159,21 @@ static int wpas_delete_transmit_sc(void *wpa_s, u32 channel)
 }
 
 
-static int wpas_create_transmit_sa(void *wpa_s, u32 channel, u8 an,
-				   u32 next_pn, Boolean confidentiality,
-				   const u8 *sak)
+static int wpas_create_transmit_sa(void *wpa_s, struct transmit_sa *sa)
 {
-	return wpa_drv_create_transmit_sa(wpa_s, channel, an, next_pn,
-					  confidentiality, sak);
+	return wpa_drv_create_transmit_sa(wpa_s, sa);
 }
 
 
-static int wpas_enable_transmit_sa(void *wpa_s, u32 channel, u8 an)
+static int wpas_enable_transmit_sa(void *wpa_s, struct transmit_sa *sa)
 {
-	return wpa_drv_enable_transmit_sa(wpa_s, channel, an);
+	return wpa_drv_enable_transmit_sa(wpa_s, sa);
 }
 
 
-static int wpas_disable_transmit_sa(void *wpa_s, u32 channel, u8 an)
+static int wpas_disable_transmit_sa(void *wpa_s, struct transmit_sa *sa)
 {
-	return wpa_drv_disable_transmit_sa(wpa_s, channel, an);
+	return wpa_drv_disable_transmit_sa(wpa_s, sa);
 }
 
 

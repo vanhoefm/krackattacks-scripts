@@ -3448,34 +3448,26 @@ struct wpa_driver_ops {
 	/**
 	 * create_transmit_sa - create secure association for transmit
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel index
-	 * @an: association number
-	 * @next_pn: the packet number used as next transmit packet
-	 * @confidentiality: True if the SA is to provide confidentiality
-	 *                   as well as integrity
-	 * @sak: the secure association key
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*create_transmit_sa)(void *priv, u32 channel, u8 an, u32 next_pn,
-				  Boolean confidentiality, const u8 *sak);
+	int (*create_transmit_sa)(void *priv, struct transmit_sa *sa);
 
 	/**
 	 * enable_transmit_sa - enable SA for transmit
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
-	 * @an: association number
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*enable_transmit_sa)(void *priv, u32 channel, u8 an);
+	int (*enable_transmit_sa)(void *priv, struct transmit_sa *sa);
 
 	/**
 	 * disable_transmit_sa - disable SA for transmit
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
-	 * @an: association number
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*disable_transmit_sa)(void *priv, u32 channel, u8 an);
+	int (*disable_transmit_sa)(void *priv, struct transmit_sa *sa);
 #endif /* CONFIG_MACSEC */
 
 	/**

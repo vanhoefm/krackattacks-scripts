@@ -382,9 +382,7 @@ int secy_create_transmit_sa(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->create_transmit_sa(ops->ctx, txsa->sc->channel, txsa->an,
-					txsa->next_pn, txsa->confidentiality,
-					txsa->pkey->key);
+	return ops->create_transmit_sa(ops->ctx, txsa);
 }
 
 
@@ -407,7 +405,7 @@ int secy_enable_transmit_sa(struct ieee802_1x_kay *kay,
 
 	txsa->enable_transmit = TRUE;
 
-	return ops->enable_transmit_sa(ops->ctx, txsa->sc->channel, txsa->an);
+	return ops->enable_transmit_sa(ops->ctx, txsa);
 }
 
 
@@ -430,7 +428,7 @@ int secy_disable_transmit_sa(struct ieee802_1x_kay *kay,
 
 	txsa->enable_transmit = FALSE;
 
-	return ops->disable_transmit_sa(ops->ctx, txsa->sc->channel, txsa->an);
+	return ops->disable_transmit_sa(ops->ctx, txsa);
 }
 
 

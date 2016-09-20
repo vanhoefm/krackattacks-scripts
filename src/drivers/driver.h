@@ -21,6 +21,9 @@
 
 #include "common/defs.h"
 #include "common/ieee802_11_defs.h"
+#ifdef CONFIG_MACSEC
+#include "pae/ieee802_1x_kay.h"
+#endif /* CONFIG_MACSEC */
 #include "utils/list.h"
 
 #define HOSTAPD_CHAN_DISABLED 0x00000001

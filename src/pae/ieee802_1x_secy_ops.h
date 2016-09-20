@@ -13,10 +13,6 @@
 #include "common/ieee802_1x_defs.h"
 
 struct ieee802_1x_kay_conf;
-struct receive_sa;
-struct transmit_sa;
-struct receive_sc;
-struct transmit_sc;
 
 int secy_init_macsec(struct ieee802_1x_kay *kay);
 int secy_deinit_macsec(struct ieee802_1x_kay *kay);

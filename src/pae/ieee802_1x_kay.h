@@ -49,6 +49,88 @@ enum mka_created_mode {
 	EAP_EXCHANGE,
 };
 
+struct data_key {
+	u8 *key;
+	int key_len;
+	struct ieee802_1x_mka_ki key_identifier;
+	enum confidentiality_offset confidentiality_offset;
+	u8 an;
+	Boolean transmits;
+	Boolean receives;
+	struct os_time created_time;
+	u32 next_pn;
+
+	/* not defined data */
+	Boolean rx_latest;
+	Boolean tx_latest;
+
+	int user;  /* FIXME: to indicate if it can be delete safely */
+
+	struct dl_list list;
+};
+
+/* TransmitSC in IEEE Std 802.1AE-2006, Figure 10-6 */
+struct transmit_sc {
+	struct ieee802_1x_mka_sci sci; /* const SCI sci */
+	Boolean transmitting; /* bool transmitting (read only) */
+
+	struct os_time created_time; /* Time createdTime */
+
+	u8 encoding_sa; /* AN encodingSA (read only) */
+	u8 enciphering_sa; /* AN encipheringSA (read only) */
+
+	/* not defined data */
+	unsigned int channel;
+
+	struct dl_list list;
+	struct dl_list sa_list;
+};
+
+/* TransmitSA in IEEE Std 802.1AE-2006, Figure 10-6 */
+struct transmit_sa {
+	Boolean in_use; /* bool inUse (read only) */
+	u32 next_pn; /* PN nextPN (read only) */
+	struct os_time created_time; /* Time createdTime */
+
+	Boolean enable_transmit; /* bool EnableTransmit */
+
+	u8 an;
+	Boolean confidentiality;
+	struct data_key *pkey;
+
+	struct transmit_sc *sc;
+	struct dl_list list; /* list entry in struct transmit_sc::sa_list */
+};
+
+/* ReceiveSC in IEEE Std 802.1AE-2006, Figure 10-6 */
+struct receive_sc {
+	struct ieee802_1x_mka_sci sci; /* const SCI sci */
+	Boolean receiving; /* bool receiving (read only) */
+
+	struct os_time created_time; /* Time createdTime */
+
+	unsigned int channel;
+
+	struct dl_list list;
+	struct dl_list sa_list;
+};
+
+/* ReceiveSA in IEEE Std 802.1AE-2006, Figure 10-6 */
+struct receive_sa {
+	Boolean enable_receive; /* bool enableReceive */
+	Boolean in_use; /* bool inUse (read only) */
+
+	u32 next_pn; /* PN nextPN (read only) */
+	u32 lowest_pn; /* PN lowestPN (read only) */
+	u8 an;
+	struct os_time created_time;
+
+	struct data_key *pkey;
+	struct receive_sc *sc; /* list entry in struct receive_sc::sa_list */
+
+	struct dl_list list;
+};
+
 struct ieee802_1x_kay_ctx {
 	/* pointer to arbitrary upper level context */
 	void *ctx;

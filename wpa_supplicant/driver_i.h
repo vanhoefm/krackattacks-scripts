@@ -802,29 +802,27 @@ static inline int wpa_drv_delete_receive_sc(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_create_receive_sa(struct wpa_supplicant *wpa_s,
-					    u32 channel, u8 an,
-					    u32 lowest_pn, const u8 *sak)
+					    struct receive_sa *sa)
 {
 	if (!wpa_s->driver->create_receive_sa)
 		return -1;
-	return wpa_s->driver->create_receive_sa(wpa_s->drv_priv, channel, an,
-						lowest_pn, sak);
+	return wpa_s->driver->create_receive_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_enable_receive_sa(struct wpa_supplicant *wpa_s,
-					    u32 channel, u8 an)
+					    struct receive_sa *sa)
 {
 	if (!wpa_s->driver->enable_receive_sa)
 		return -1;
-	return wpa_s->driver->enable_receive_sa(wpa_s->drv_priv, channel, an);
+	return wpa_s->driver->enable_receive_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_disable_receive_sa(struct wpa_supplicant *wpa_s,
-					     u32 channel, u8 an)
+					     struct receive_sa *sa)
 {
 	if (!wpa_s->driver->disable_receive_sa)
 		return -1;
-	return wpa_s->driver->disable_receive_sa(wpa_s->drv_priv, channel, an);
+	return wpa_s->driver->disable_receive_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int

@@ -3391,32 +3391,26 @@ struct wpa_driver_ops {
 	/**
 	 * create_receive_sa - create secure association for receive
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
-	 * @an: association number
-	 * @lowest_pn: the lowest packet number can be received
-	 * @sak: the secure association key
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*create_receive_sa)(void *priv, u32 channel, u8 an,
-				 u32 lowest_pn, const u8 *sak);
+	int (*create_receive_sa)(void *priv, struct receive_sa *sa);
 
 	/**
 	 * enable_receive_sa - enable the SA for receive
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
-	 * @an: association number
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*enable_receive_sa)(void *priv, u32 channel, u8 an);
+	int (*enable_receive_sa)(void *priv, struct receive_sa *sa);
 
 	/**
 	 * disable_receive_sa - disable SA for receive
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel index
-	 * @an: association number
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*disable_receive_sa)(void *priv, u32 channel, u8 an);
+	int (*disable_receive_sa)(void *priv, struct receive_sa *sa);
 
 	/**
 	 * get_available_transmit_sc - get available transmit channel

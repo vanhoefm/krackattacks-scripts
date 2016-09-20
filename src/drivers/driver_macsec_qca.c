@@ -667,49 +667,57 @@ static int macsec_qca_delete_receive_sc(void *priv, u32 channel)
 }
 
 
-static int macsec_qca_create_receive_sa(void *priv, u32 channel, u8 an,
-					u32 lowest_pn, const u8 *sak)
+static int macsec_qca_create_receive_sa(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	fal_rx_sak_t rx_sak;
 	int i = 0;
+	u32 channel = sa->sc->channel;
 
 	wpa_printf(MSG_DEBUG, "%s, channel=%d, an=%d, lpn=0x%x",
-		   __func__, channel, an, lowest_pn);
+		   __func__, channel, sa->an, sa->lowest_pn);
 
 	os_memset(&rx_sak, 0, sizeof(rx_sak));
 	for (i = 0; i < 16; i++)
-		rx_sak.sak[i] = sak[15 - i];
+		rx_sak.sak[i] = sa->pkey->key[15 - i];
 
-	ret += nss_macsec_secy_rx_sa_create(drv->secy_id, channel, an);
-	ret += nss_macsec_secy_rx_sak_set(drv->secy_id, channel, an, &rx_sak);
-
-	return ret;
-}
-
-
-static int macsec_qca_enable_receive_sa(void *priv, u32 channel, u8 an)
-{
-	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-
-	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel, an);
-
-	ret += nss_macsec_secy_rx_sa_en_set(drv->secy_id, channel, an, TRUE);
+	ret += nss_macsec_secy_rx_sa_create(drv->secy_id, channel, sa->an);
+	ret += nss_macsec_secy_rx_sak_set(drv->secy_id, channel, sa->an,
+					  &rx_sak);
 
 	return ret;
 }
 
 
-static int macsec_qca_disable_receive_sa(void *priv, u32 channel, u8 an)
+static int macsec_qca_enable_receive_sa(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
+	u32 channel = sa->sc->channel;
 
-	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel, an);
 
-	ret += nss_macsec_secy_rx_sa_en_set(drv->secy_id, channel, an, FALSE);
+	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
+		   sa->an);
+
+	ret += nss_macsec_secy_rx_sa_en_set(drv->secy_id, channel, sa->an,
+					    TRUE);
+
+	return ret;
+}
+
+
+static int macsec_qca_disable_receive_sa(void *priv, struct receive_sa *sa)
+{
+	struct macsec_qca_data *drv = priv;
+	int ret = 0;
+	u32 channel = sa->sc->channel;
+
+	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
+		   sa->an);
+
+	ret += nss_macsec_secy_rx_sa_en_set(drv->secy_id, channel, sa->an,
+					    FALSE);
 
 	return ret;
 }

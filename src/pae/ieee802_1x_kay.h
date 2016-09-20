@@ -151,10 +151,9 @@ struct ieee802_1x_kay_ctx {
 				 enum validate_frames vf,
 				 enum confidentiality_offset co);
 	int (*delete_receive_sc)(void *ctx, u32 channel);
-	int (*create_receive_sa)(void *ctx, u32 channel, u8 an, u32 lowest_pn,
-				 const u8 *sak);
-	int (*enable_receive_sa)(void *ctx, u32 channel, u8 an);
-	int (*disable_receive_sa)(void *ctx, u32 channel, u8 an);
+	int (*create_receive_sa)(void *ctx, struct receive_sa *sa);
+	int (*enable_receive_sa)(void *ctx, struct receive_sa *sa);
+	int (*disable_receive_sa)(void *ctx, struct receive_sa *sa);
 	int (*get_available_transmit_sc)(void *ctx, u32 *channel);
 	int (*create_transmit_sc)(void *ctx, u32 channel,
 				  const struct ieee802_1x_mka_sci *sci,

@@ -117,22 +117,21 @@ static int wpas_delete_receive_sc(void *wpa_s, u32 channel)
 }
 
 
-static int wpas_create_receive_sa(void *wpa_s, u32 channel, u8 an,
-				  u32 lowest_pn, const u8 *sak)
+static int wpas_create_receive_sa(void *wpa_s, struct receive_sa *sa)
 {
-	return wpa_drv_create_receive_sa(wpa_s, channel, an, lowest_pn, sak);
+	return wpa_drv_create_receive_sa(wpa_s, sa);
 }
 
 
-static int wpas_enable_receive_sa(void *wpa_s, u32 channel, u8 an)
+static int wpas_enable_receive_sa(void *wpa_s, struct receive_sa *sa)
 {
-	return wpa_drv_enable_receive_sa(wpa_s, channel, an);
+	return wpa_drv_enable_receive_sa(wpa_s, sa);
 }
 
 
-static int wpas_disable_receive_sa(void *wpa_s, u32 channel, u8 an)
+static int wpas_disable_receive_sa(void *wpa_s, struct receive_sa *sa)
 {
-	return wpa_drv_disable_receive_sa(wpa_s, channel, an);
+	return wpa_drv_disable_receive_sa(wpa_s, sa);
 }
 
 

@@ -253,8 +253,7 @@ int secy_create_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 		return -1;
 	}
 
-	return ops->create_receive_sa(ops->ctx, rxsa->sc->channel, rxsa->an,
-				      rxsa->lowest_pn, rxsa->pkey->key);
+	return ops->create_receive_sa(ops->ctx, rxsa);
 }
 
 
@@ -276,7 +275,7 @@ int secy_enable_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 
 	rxsa->enable_receive = TRUE;
 
-	return ops->enable_receive_sa(ops->ctx, rxsa->sc->channel, rxsa->an);
+	return ops->enable_receive_sa(ops->ctx, rxsa);
 }
 
 
@@ -298,7 +297,7 @@ int secy_disable_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 
 	rxsa->enable_receive = FALSE;
 
-	return ops->disable_receive_sa(ops->ctx, rxsa->sc->channel, rxsa->an);
+	return ops->disable_receive_sa(ops->ctx, rxsa);
 }
 
 

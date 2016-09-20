@@ -65,6 +65,45 @@ def test_ap_roam_wpa2_psk(dev, apdev):
 def get_blacklist(dev):
     return dev.request("BLACKLIST").splitlines()
 
+def test_ap_reconnect_auth_timeout(dev, apdev, params):
+    """Reconnect to 2nd AP and authentication times out"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5",
+                       drv_params="force_connect_cmd=1,force_bss_selection=1")
+
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+
+    wpas.scan_for_bss(bssid0, freq=2412)
+    id = wpas.connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+    hwsim_utils.test_connectivity(wpas, hapd0)
+
+    wpas.request("BLACKLIST " + bssid0)
+
+    wpas.scan_for_bss(bssid1, freq=2412)
+    wpas.request("DISCONNECT")
+    if "OK" not in wpas.request("SET ignore_auth_resp 1"):
+        raise Exception("SET ignore_auth_resp failed")
+    if "OK" not in wpas.request("ENABLE_NETWORK " + str(id)):
+        raise Exception("ENABLE_NETWORK failed")
+    if "OK" not in wpas.request("SELECT_NETWORK " + str(id)):
+        raise Exception("SELECT_NETWORK failed")
+
+    logger.info("Wait ~10s for auth timeout...")
+    time.sleep(10)
+    ev = wpas.wait_event(["CTRL-EVENT-SCAN-STARTED"], 12)
+    if not ev:
+        raise Exception("CTRL-EVENT-SCAN-STARTED not seen");
+
+    b = get_blacklist(wpas)
+    if '00:00:00:00:00:00' in b:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+    if bssid1 not in b:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+
 def test_ap_roam_with_reassoc_auth_timeout(dev, apdev, params):
     """Roam using reassoc between two APs and authentication times out"""
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')

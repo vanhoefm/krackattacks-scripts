@@ -1881,7 +1881,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->p2p_group = 1;
-	ssid->p2p_persistent_group = params->persistent_group;
+	ssid->p2p_persistent_group = !!params->persistent_group;
 	ssid->mode = group_formation ? WPAS_MODE_P2P_GROUP_FORMATION :
 		WPAS_MODE_P2P_GO;
 	ssid->frequency = params->freq;

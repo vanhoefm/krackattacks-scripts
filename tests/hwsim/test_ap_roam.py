@@ -11,6 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 @remote_compatible
 def test_ap_roam_open(dev, apdev):
@@ -60,6 +61,43 @@ def test_ap_roam_wpa2_psk(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd1)
     dev[0].roam(apdev[0]['bssid'])
     hwsim_utils.test_connectivity(dev[0], hapd0)
+
+def get_blacklist(dev):
+    return dev.request("BLACKLIST").splitlines()
+
+def test_ap_roam_with_reassoc_auth_timeout(dev, apdev, params):
+    """Roam using reassoc between two APs and authentication times out"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5",
+                       drv_params="force_connect_cmd=1,force_bss_selection=1")
+
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    id = wpas.connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+    hwsim_utils.test_connectivity(wpas, hapd0)
+
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    wpas.scan_for_bss(bssid1, freq=2412)
+
+    if "OK" not in wpas.request("SET_NETWORK " + str(id) + " bssid " + bssid1):
+        raise Exception("SET_NETWORK failed")
+    if "OK" not in wpas.request("SET ignore_auth_resp 1"):
+        raise Exception("SET ignore_auth_resp failed")
+    if "OK" not in wpas.request("REASSOCIATE"):
+        raise Exception("REASSOCIATE failed")
+
+    logger.info("Wait ~10s for auth timeout...")
+    time.sleep(10)
+    ev = wpas.wait_event(["CTRL-EVENT-SCAN-STARTED"], 12)
+    if not ev:
+        raise Exception("CTRL-EVENT-SCAN-STARTED not seen");
+
+    b = get_blacklist(wpas)
+    if bssid0 in b:
+        raise Exception("Unexpected blacklist contents: " + str(b))
 
 def test_ap_roam_wpa2_psk_failed(dev, apdev, params):
     """Roam failure with WPA2-PSK AP due to wrong passphrase"""

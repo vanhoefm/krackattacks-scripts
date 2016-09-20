@@ -62,24 +62,21 @@ static int wpas_enable_controlled_port(void *wpa_s, Boolean enabled)
 }
 
 
-static int wpas_get_receive_lowest_pn(void *wpa_s, u32 channel,
-				      u8 an, u32 *lowest_pn)
+static int wpas_get_receive_lowest_pn(void *wpa_s, struct receive_sa *sa)
 {
-	return wpa_drv_get_receive_lowest_pn(wpa_s, channel, an, lowest_pn);
+	return wpa_drv_get_receive_lowest_pn(wpa_s, sa);
 }
 
 
-static int wpas_get_transmit_next_pn(void *wpa_s, u32 channel,
-				      u8 an, u32 *next_pn)
+static int wpas_get_transmit_next_pn(void *wpa_s, struct transmit_sa *sa)
 {
-	return wpa_drv_get_transmit_next_pn(wpa_s, channel, an, next_pn);
+	return wpa_drv_get_transmit_next_pn(wpa_s, sa);
 }
 
 
-static int wpas_set_transmit_next_pn(void *wpa_s, u32 channel,
-				      u8 an, u32 next_pn)
+static int wpas_set_transmit_next_pn(void *wpa_s, struct transmit_sa *sa)
 {
-	return wpa_drv_set_transmit_next_pn(wpa_s, channel, an, next_pn);
+	return wpa_drv_set_transmit_next_pn(wpa_s, sa);
 }
 
 

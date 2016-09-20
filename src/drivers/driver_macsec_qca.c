@@ -29,6 +29,7 @@
 #include "utils/eloop.h"
 #include "common/defs.h"
 #include "common/ieee802_1x_defs.h"
+#include "pae/ieee802_1x_kay.h"
 #include "driver.h"
 
 #include "nss_macsec_secy.h"
@@ -515,16 +516,16 @@ static int macsec_qca_enable_controlled_port(void *priv, Boolean enabled)
 }
 
 
-static int macsec_qca_get_receive_lowest_pn(void *priv, u32 channel, u8 an,
-					    u32 *lowest_pn)
+static int macsec_qca_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	u32 next_pn = 0;
 	bool enabled = FALSE;
 	u32 win;
+	u32 channel = sa->sc->channel;
 
-	ret += nss_macsec_secy_rx_sa_next_pn_get(drv->secy_id, channel, an,
+	ret += nss_macsec_secy_rx_sa_next_pn_get(drv->secy_id, channel, sa->an,
 						 &next_pn);
 	ret += nss_macsec_secy_rx_sc_replay_protect_get(drv->secy_id, channel,
 							&enabled);
@@ -532,40 +533,42 @@ static int macsec_qca_get_receive_lowest_pn(void *priv, u32 channel, u8 an,
 							    channel, &win);
 
 	if (enabled)
-		*lowest_pn = (next_pn > win) ? (next_pn - win) : 1;
+		sa->lowest_pn = (next_pn > win) ? (next_pn - win) : 1;
 	else
-		*lowest_pn = next_pn;
+		sa->lowest_pn = next_pn;
 
-	wpa_printf(MSG_DEBUG, "%s: lpn=0x%x", __func__, *lowest_pn);
-
-	return ret;
-}
-
-
-static int macsec_qca_get_transmit_next_pn(void *priv, u32 channel, u8 an,
-					   u32 *next_pn)
-{
-	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-
-	ret += nss_macsec_secy_tx_sa_next_pn_get(drv->secy_id, channel, an,
-						 next_pn);
-
-	wpa_printf(MSG_DEBUG, "%s: npn=0x%x", __func__, *next_pn);
+	wpa_printf(MSG_DEBUG, "%s: lpn=0x%x", __func__, sa->lowest_pn);
 
 	return ret;
 }
 
 
-int macsec_qca_set_transmit_next_pn(void *priv, u32 channel, u8 an, u32 next_pn)
+static int macsec_qca_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
+	u32 channel = sa->sc->channel;
 
-	ret += nss_macsec_secy_tx_sa_next_pn_set(drv->secy_id, channel, an,
-						 next_pn);
+	ret += nss_macsec_secy_tx_sa_next_pn_get(drv->secy_id, channel, sa->an,
+						 &sa->next_pn);
 
-	wpa_printf(MSG_INFO, "%s: npn=0x%x", __func__, next_pn);
+	wpa_printf(MSG_DEBUG, "%s: npn=0x%x", __func__, sa->next_pn);
+
+	return ret;
+}
+
+
+int macsec_qca_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
+{
+	struct macsec_qca_data *drv = priv;
+	int ret = 0;
+	u32 channel = sa->sc->channel;
+
+
+	ret += nss_macsec_secy_tx_sa_next_pn_set(drv->secy_id, channel, sa->an,
+						 sa->next_pn);
+
+	wpa_printf(MSG_INFO, "%s: npn=0x%x", __func__, sa->next_pn);
 
 	return ret;
 }

@@ -3336,35 +3336,26 @@ struct wpa_driver_ops {
 	/**
 	 * get_receive_lowest_pn - Get receive lowest pn
 	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * @an: association number
-	 * @lowest_pn: lowest accept pn
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*get_receive_lowest_pn)(void *priv, u32 channel, u8 an,
-				     u32 *lowest_pn);
+	int (*get_receive_lowest_pn)(void *priv, struct receive_sa *sa);
 
 	/**
 	 * get_transmit_next_pn - Get transmit next pn
 	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * @an: association number
-	 * @next_pn: next pn
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*get_transmit_next_pn)(void *priv, u32 channel, u8 an,
-				    u32 *next_pn);
+	int (*get_transmit_next_pn)(void *priv, struct transmit_sa *sa);
 
 	/**
 	 * set_transmit_next_pn - Set transmit next pn
 	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * @an: association number
-	 * @next_pn: next pn
+	 * @sa: secure association
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*set_transmit_next_pn)(void *priv, u32 channel, u8 an,
-				    u32 next_pn);
+	int (*set_transmit_next_pn)(void *priv, struct transmit_sa *sa);
 
 	/**
 	 * get_available_receive_sc - get available receive channel

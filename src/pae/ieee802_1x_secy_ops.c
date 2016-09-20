@@ -130,10 +130,7 @@ int secy_get_receive_lowest_pn(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->get_receive_lowest_pn(ops->ctx,
-					rxsa->sc->channel,
-					rxsa->an,
-					&rxsa->lowest_pn);
+	return ops->get_receive_lowest_pn(ops->ctx, rxsa);
 }
 
 
@@ -154,10 +151,7 @@ int secy_get_transmit_next_pn(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->get_transmit_next_pn(ops->ctx,
-					txsa->sc->channel,
-					txsa->an,
-					&txsa->next_pn);
+	return ops->get_transmit_next_pn(ops->ctx, txsa);
 }
 
 
@@ -178,10 +172,7 @@ int secy_set_transmit_next_pn(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->set_transmit_next_pn(ops->ctx,
-					txsa->sc->channel,
-					txsa->an,
-					txsa->next_pn);
+	return ops->set_transmit_next_pn(ops->ctx, txsa);
 }
 
 

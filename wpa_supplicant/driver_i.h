@@ -749,33 +749,27 @@ static inline int wpa_drv_enable_controlled_port(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_get_receive_lowest_pn(struct wpa_supplicant *wpa_s,
-						u32 channel, u8 an,
-						u32 *lowest_pn)
+						struct receive_sa *sa)
 {
 	if (!wpa_s->driver->get_receive_lowest_pn)
 		return -1;
-	return wpa_s->driver->get_receive_lowest_pn(wpa_s->drv_priv, channel,
-						    an, lowest_pn);
+	return wpa_s->driver->get_receive_lowest_pn(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_get_transmit_next_pn(struct wpa_supplicant *wpa_s,
-						u32 channel, u8 an,
-						u32 *next_pn)
+						struct transmit_sa *sa)
 {
 	if (!wpa_s->driver->get_transmit_next_pn)
 		return -1;
-	return wpa_s->driver->get_transmit_next_pn(wpa_s->drv_priv, channel,
-						    an, next_pn);
+	return wpa_s->driver->get_transmit_next_pn(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_set_transmit_next_pn(struct wpa_supplicant *wpa_s,
-						u32 channel, u8 an,
-						u32 next_pn)
+						struct transmit_sa *sa)
 {
 	if (!wpa_s->driver->set_transmit_next_pn)
 		return -1;
-	return wpa_s->driver->set_transmit_next_pn(wpa_s->drv_priv, channel,
-						    an, next_pn);
+	return wpa_s->driver->set_transmit_next_pn(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_get_available_receive_sc(struct wpa_supplicant *wpa_s,

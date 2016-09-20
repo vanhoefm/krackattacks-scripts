@@ -142,11 +142,9 @@ struct ieee802_1x_kay_ctx {
 	int (*set_replay_protect)(void *ctx, Boolean enabled, u32 window);
 	int (*set_current_cipher_suite)(void *ctx, u64 cs);
 	int (*enable_controlled_port)(void *ctx, Boolean enabled);
-	int (*get_receive_lowest_pn)(void *ctx, u32 channel, u8 an,
-				     u32 *lowest_pn);
-	int (*get_transmit_next_pn)(void *ctx, u32 channel, u8 an,
-				    u32 *next_pn);
-	int (*set_transmit_next_pn)(void *ctx, u32 channel, u8 an, u32 next_pn);
+	int (*get_receive_lowest_pn)(void *ctx, struct receive_sa *sa);
+	int (*get_transmit_next_pn)(void *ctx, struct transmit_sa *sa);
+	int (*set_transmit_next_pn)(void *ctx, struct transmit_sa *sa);
 	int (*get_available_receive_sc)(void *ctx, u32 *channel);
 	int (*create_receive_sc)(void *ctx, u32 channel,
 				 struct ieee802_1x_mka_sci *sci,

@@ -3445,6 +3445,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		sme_event_auth(wpa_s, data);
 		break;
 	case EVENT_ASSOC:
+#ifdef CONFIG_TESTING_OPTIONS
+		if (wpa_s->ignore_auth_resp) {
+			wpa_printf(MSG_INFO,
+				   "EVENT_ASSOC - ignore_auth_resp active!");
+			break;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 		wpa_supplicant_event_assoc(wpa_s, data);
 		if (data && data->assoc_info.authorized)
 			wpa_supplicant_event_assoc_auth(wpa_s, data);
@@ -3459,6 +3466,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				    data ? &data->disassoc_info : NULL);
 		break;
 	case EVENT_DEAUTH:
+#ifdef CONFIG_TESTING_OPTIONS
+		if (wpa_s->ignore_auth_resp) {
+			wpa_printf(MSG_INFO,
+				   "EVENT_DEAUTH - ignore_auth_resp active!");
+			break;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 		wpas_event_deauth(wpa_s,
 				  data ? &data->deauth_info : NULL);
 		break;

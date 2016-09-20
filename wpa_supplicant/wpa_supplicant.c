@@ -3377,6 +3377,13 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	wpa_dbg(wpa_s, MSG_DEBUG, "RX EAPOL from " MACSTR, MAC2STR(src_addr));
 	wpa_hexdump(MSG_MSGDUMP, "RX EAPOL", buf, len);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->ignore_auth_resp) {
+		wpa_printf(MSG_INFO, "RX EAPOL - ignore_auth_resp active!");
+		return;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 #ifdef CONFIG_PEERKEY
 	if (wpa_s->wpa_state > WPA_ASSOCIATED && wpa_s->current_ssid &&
 	    wpa_s->current_ssid->peerkey &&

@@ -7017,6 +7017,12 @@ static int nl80211_set_param(void *priv, const char *param)
 		drv->force_connect_cmd = 1;
 	}
 
+	if (os_strstr(param, "force_bss_selection=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+		drv->capa.flags |= WPA_DRIVER_FLAGS_BSS_SELECTION;
+	}
+
 	if (os_strstr(param, "no_offchannel_tx=1")) {
 		struct i802_bss *bss = priv;
 		struct wpa_driver_nl80211_data *drv = bss->drv;

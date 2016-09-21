@@ -1886,6 +1886,10 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 						  "mode=P2P GO - group "
 						  "formation\n");
 				break;
+			case WPAS_MODE_MESH:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=mesh\n");
+				break;
 			default:
 				ret = 0;
 				break;

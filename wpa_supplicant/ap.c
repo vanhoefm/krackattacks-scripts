@@ -675,7 +675,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	wpa_s->ap_iface = hapd_iface = os_zalloc(sizeof(*wpa_s->ap_iface));
+	wpa_s->ap_iface = hapd_iface = hostapd_alloc_iface();
 	if (hapd_iface == NULL)
 		return -1;
 	hapd_iface->owner = wpa_s;

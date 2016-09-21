@@ -179,6 +179,9 @@ enum qca_radiotap_vendor_ids {
  *	Measurement data is reported in QCA_WLAN_VENDOR_ATTR_AOA_MEAS_RESULT.
  *	The antenna array(s) used in the measurement are reported in
  *	QCA_WLAN_VENDOR_ATTR_LOC_ANTENNA_ARRAY_MASK.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_ENCRYPTION_TEST: Encrypt/decrypt the given
+ *	data as per the given parameters.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -277,6 +280,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_AOA_MEAS = 134,
 	QCA_NL80211_VENDOR_SUBCMD_AOA_ABORT_MEAS = 135,
 	QCA_NL80211_VENDOR_SUBCMD_AOA_MEAS_RESULT = 136,
+	QCA_NL80211_VENDOR_SUBCMD_ENCRYPTION_TEST = 137,
 };
 
 
@@ -1316,6 +1320,44 @@ enum qca_wlan_vendor_attr_aoa_type {
 	QCA_WLAN_VENDOR_ATTR_AOA_TYPE_TOP_CIR_PHASE,
 	QCA_WLAN_VENDOR_ATTR_AOA_TYPE_TOP_CIR_PHASE_AMP,
 	QCA_WLAN_VENDOR_ATTR_AOA_TYPE_MAX
+};
+
+/**
+ * enum qca_wlan_vendor_attr_encryption_test - Attributes to
+ * validate encryption engine
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_NEEDS_DECRYPTION: Flag attribute.
+ *	This will be included if the request is for decryption; if not included,
+ *	the request is treated as a request for encryption by default.
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_CIPHER: Unsigned 32-bit value
+ *	indicating the key cipher suite. Takes same values as
+ *	NL80211_ATTR_KEY_CIPHER.
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_KEYID: Unsigned 8-bit value
+ *	Key Id to be used for encryption
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_TK: Array of 8-bit values.
+ *	Key (TK) to be used for encryption/decryption
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_PN: Array of 8-bit values.
+ *	Packet number to be specified for encryption/decryption
+ *	6 bytes for TKIP/CCMP/GCMP.
+ * @QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_DATA: Array of 8-bit values
+ *	representing the 802.11 packet (header + payload + FCS) that
+ *	needs to be encrypted/decrypted.
+ *	Encrypted/decrypted response from the driver will also be sent
+ *	to userspace with the same attribute.
+ */
+enum qca_wlan_vendor_attr_encryption_test {
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_NEEDS_DECRYPTION,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_CIPHER,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_KEYID,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_TK,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_PN,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_DATA,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_MAX =
+	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

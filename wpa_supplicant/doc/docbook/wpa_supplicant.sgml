@@ -377,13 +377,6 @@
       </varlistentry>
 
       <varlistentry>
-	<term>-t</term>
-	<listitem>
-	  <para>Include timestamp in debug messages.</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
 	<term>-h</term>
 	<listitem>
 	  <para>Help.  Show a usage message.</para>

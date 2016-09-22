@@ -215,6 +215,10 @@ def test_wpas_mesh_open(dev, apdev):
     if state != "COMPLETED":
         raise Exception("Unexpected wpa_state on dev1: " + state)
 
+    mode = dev[0].get_status_field("mode")
+    if mode != "mesh":
+        raise Exception("Unexpected mode: " + mode)
+
 def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
     check_mesh_support(dev[0])

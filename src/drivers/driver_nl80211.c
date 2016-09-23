@@ -6988,15 +6988,15 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 
 static int nl80211_set_param(void *priv, const char *param)
 {
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
 	if (param == NULL)
 		return 0;
 	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
 
 #ifdef CONFIG_P2P
 	if (os_strstr(param, "use_p2p_group_interface=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
-
 		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
 			   "interface");
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
@@ -7004,28 +7004,18 @@ static int nl80211_set_param(void *priv, const char *param)
 	}
 #endif /* CONFIG_P2P */
 
-	if (os_strstr(param, "use_monitor=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
+	if (os_strstr(param, "use_monitor=1"))
 		drv->use_monitor = 1;
-	}
 
 	if (os_strstr(param, "force_connect_cmd=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_SME;
 		drv->force_connect_cmd = 1;
 	}
 
-	if (os_strstr(param, "force_bss_selection=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
+	if (os_strstr(param, "force_bss_selection=1"))
 		drv->capa.flags |= WPA_DRIVER_FLAGS_BSS_SELECTION;
-	}
 
 	if (os_strstr(param, "no_offchannel_tx=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
 		drv->test_use_roc_tx = 1;
 	}

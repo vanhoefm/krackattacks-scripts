@@ -599,6 +599,8 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
+    for d in dev:
+        d.flush_scan_cache()
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-user-session-timeout",
                    password="abcdefghijklmnop0123456789abcdef",
@@ -614,6 +616,7 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
+    wpas.flush_scan_cache()
     wpas.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                  eap="GPSK", identity="gpsk user",
                  password="abcdefghijklmnop0123456789abcdef",
@@ -626,11 +629,13 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
     for sta in [ dev[1], dev[0], dev[2], wpas ]:
         sta.dump_monitor()
         sta.scan_for_bss(bssid2, freq="2412")
-        sta.request("ROAM " + bssid2)
+        if "OK" not in sta.request("ROAM " + bssid2):
+            raise Exception("ROAM command failed (" + sta.ifname + ")")
         ev = sta.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
         if ev is None:
             raise Exception("EAP success timed out")
         sta.wait_connected(timeout=10, error="Roaming timed out")
+        sta.dump_monitor()
 
     logger.info("Roam back to AP1")
     for sta in [ dev[1], wpas, dev[0], dev[2] ]:
@@ -658,8 +663,11 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
     params['okc'] = "1"
     hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
+    for d in dev:
+        d.flush_scan_cache()
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
+    wpas.flush_scan_cache()
     for sta in [ dev[0], dev[1], dev[2], wpas ]:
         sta.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                     eap="GPSK", identity="gpsk user",
@@ -684,6 +692,7 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
         pmksa2 = sta.get_pmksa(bssid2)
         if pmksa2 is None:
             raise Exception("No PMKSA cache entry created")
+        sta.dump_monitor()
 
     logger.info("Roam back to AP1")
     for sta in [ dev[0], dev[1], dev[2], wpas ]:

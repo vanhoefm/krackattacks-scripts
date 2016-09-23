@@ -2227,3 +2227,11 @@ def test_ap_wpa2_psk_assoc_rsn(dev, apdev):
             raise Exception("Unexpected status code: " + ev)
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()
+
+def test_ap_wpa_psk_rsn_pairwise(dev, apdev):
+    """WPA-PSK AP and only rsn_pairwise set"""
+    params = { "ssid": "wpapsk", "wpa": "1", "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": "TKIP", "wpa_passphrase": "1234567890" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect("wpapsk", psk="1234567890", proto="WPA", pairwise="TKIP",
+                   scan_freq="2412")

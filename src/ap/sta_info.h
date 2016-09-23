@@ -52,7 +52,6 @@ struct mbo_non_pref_chan_info {
 	u8 op_class;
 	u8 pref;
 	u8 reason_code;
-	u8 reason_detail;
 	u8 num_channels;
 	u8 channels[];
 };

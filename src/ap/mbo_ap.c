@@ -38,17 +38,16 @@ static void mbo_ap_parse_non_pref_chan(struct sta_info *sta,
 	size_t num_chan, i;
 	int ret;
 
-	if (len <= 4)
+	if (len <= 3)
 		return; /* Not enough room for any channels */
 
-	num_chan = len - 4;
+	num_chan = len - 3;
 	info = os_zalloc(sizeof(*info) + num_chan);
 	if (!info)
 		return;
 	info->op_class = buf[0];
-	info->pref = buf[len - 3];
-	info->reason_code = buf[len - 2];
-	info->reason_detail = buf[len - 1];
+	info->pref = buf[len - 2];
+	info->reason_code = buf[len - 1];
 	info->num_channels = num_chan;
 	buf++;
 	os_memcpy(info->channels, buf, num_chan);
@@ -75,9 +74,9 @@ static void mbo_ap_parse_non_pref_chan(struct sta_info *sta,
 	}
 
 	wpa_printf(MSG_DEBUG, "MBO: STA " MACSTR
-		   " non-preferred channel list (op class %u, pref %u, reason code %u, reason detail %u, channels %s)",
+		   " non-preferred channel list (op class %u, pref %u, reason code %u, channels %s)",
 		   MAC2STR(sta->addr), info->op_class, info->pref,
-		   info->reason_code, info->reason_detail, channels);
+		   info->reason_code, channels);
 }
 
 
@@ -133,9 +132,9 @@ int mbo_ap_get_info(struct sta_info *sta, char *buf, size_t buflen)
 		char *pos2 = pos;
 
 		ret = os_snprintf(pos2, end - pos2,
-				  "non_pref_chan[%u]=%u:%u:%u:%u:",
+				  "non_pref_chan[%u]=%u:%u:%u:",
 				  count, info->op_class, info->pref,
-				  info->reason_code, info->reason_detail);
+				  info->reason_code);
 		count++;
 		if (os_snprintf_error(end - pos2, ret))
 			break;

@@ -878,6 +878,10 @@ enum qca_wlan_vendor_attr_config {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX,
 	/* 8-bit unsigned value to trigger QPower: 1-Enable, 0-Disable */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER,
+	/* 8-bit unsigned value to configure the driver and below layers to
+	 * ignore the assoc disallowed set by APs while connecting
+	 * 1-Ignore, 0-Don't ignore */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

@@ -68,14 +68,13 @@ static void wpas_mbo_non_pref_chan_attr_body(struct wpa_supplicant *wpa_s,
 
 	wpabuf_put_u8(mbo, wpa_s->non_pref_chan[start].preference);
 	wpabuf_put_u8(mbo, wpa_s->non_pref_chan[start].reason);
-	wpabuf_put_u8(mbo, wpa_s->non_pref_chan[start].reason_detail);
 }
 
 
 static void wpas_mbo_non_pref_chan_attr(struct wpa_supplicant *wpa_s,
 					struct wpabuf *mbo, u8 start, u8 end)
 {
-	size_t size = end - start + 4;
+	size_t size = end - start + 3;
 
 	if (size + 2 > wpabuf_tailroom(mbo))
 		return;
@@ -100,7 +99,7 @@ static void wpas_mbo_non_pref_chan_subelement(struct wpa_supplicant *wpa_s,
 					      struct wpabuf *mbo, u8 start,
 					      u8 end)
 {
-	size_t size = end - start + 8;
+	size_t size = end - start + 7;
 
 	if (size + 2 > wpabuf_tailroom(mbo))
 		return;
@@ -131,7 +130,6 @@ static void wpas_mbo_non_pref_chan_attrs(struct wpa_supplicant *wpa_s,
 		if (!non_pref ||
 		    non_pref->oper_class != start_pref->oper_class ||
 		    non_pref->reason != start_pref->reason ||
-		    non_pref->reason_detail != start_pref->reason_detail ||
 		    non_pref->preference != start_pref->preference) {
 			if (subelement)
 				wpas_mbo_non_pref_chan_subelement(wpa_s, mbo,
@@ -250,9 +248,9 @@ static int wpa_non_pref_chan_is_eq(struct wpa_mbo_non_pref_channel *a,
  *
  * In MBO IE non-preferred channel subelement we can put many channels in an
  * attribute if they are in the same operating class and have the same
- * preference, reason, and reason detail. To make it easy for the functions that
- * build the IE attributes and WNM Request subelements, save the channels sorted
- * by their oper_class, reason, and reason_detail.
+ * preference and reason. To make it easy for the functions that build
+ * the IE attributes and WNM Request subelements, save the channels sorted
+ * by their oper_class and reason.
  */
 static int wpa_non_pref_chan_cmp(const void *_a, const void *_b)
 {
@@ -262,8 +260,6 @@ static int wpa_non_pref_chan_cmp(const void *_a, const void *_b)
 		return a->oper_class - b->oper_class;
 	if (a->reason != b->reason)
 		return a->reason - b->reason;
-	if (a->reason_detail != b->reason_detail)
-		return a->reason_detail - b->reason_detail;
 	return a->preference - b->preference;
 }
 
@@ -298,7 +294,6 @@ int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
 		unsigned int _chan;
 		unsigned int _preference;
 		unsigned int _reason;
-		unsigned int _reason_detail;
 
 		if (num == size) {
 			size = size ? size * 2 : 1;
@@ -314,13 +309,11 @@ int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
 
 		chan = &chans[num];
 
-		ret = sscanf(token, "%u:%u:%u:%u:%u", &_oper_class,
-			     &_chan, &_preference, &_reason,
-			     &_reason_detail);
-		if ((ret != 4 && ret != 5) ||
+		ret = sscanf(token, "%u:%u:%u:%u", &_oper_class,
+			     &_chan, &_preference, &_reason);
+		if (ret != 4 ||
 		    _oper_class > 255 || _chan > 255 ||
-		    _preference > 255 || _reason > 65535 ||
-		    (ret == 5 && _reason_detail > 255)) {
+		    _preference > 255 || _reason > 65535 ) {
 			wpa_printf(MSG_ERROR, "Invalid non-pref chan input %s",
 				   token);
 			goto fail;
@@ -329,7 +322,6 @@ int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
 		chan->chan = _chan;
 		chan->preference = _preference;
 		chan->reason = _reason;
-		chan->reason_detail = ret == 4 ? 0 : _reason_detail;
 
 		if (wpas_mbo_validate_non_pref_chan(chan->oper_class,
 						    chan->chan, chan->reason)) {

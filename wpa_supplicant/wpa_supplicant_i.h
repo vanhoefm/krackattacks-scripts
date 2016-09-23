@@ -1050,7 +1050,6 @@ struct wpa_supplicant {
 		enum mbo_non_pref_chan_reason reason;
 		u8 oper_class;
 		u8 chan;
-		u8 reason_detail;
 		u8 preference;
 	} *non_pref_chan;
 	size_t non_pref_chan_num;

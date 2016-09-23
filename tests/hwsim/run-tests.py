@@ -473,6 +473,10 @@ def main():
                     logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     logger.info(e)
                     result = "FAIL"
+            if args.no_reset:
+                print "Leaving devices in current state"
+            else:
+                reset_ok = reset_devs(dev, apdev)
             wpas = None
             try:
                 wpas = WpaSupplicant(global_iface="/tmp/wpas-wlan5")
@@ -483,10 +487,6 @@ def main():
                 pass
             if wpas:
                 wpas.close_ctrl()
-            if args.no_reset:
-                print "Leaving devices in current state"
-            else:
-                reset_ok = reset_devs(dev, apdev)
 
             for i in range(0, 3):
                 rename_log(args.logdir, 'log' + str(i), name, dev[i])

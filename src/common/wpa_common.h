@@ -430,6 +430,8 @@ struct wpa_ft_ies {
 	size_t igtk_len;
 	const u8 *ric;
 	size_t ric_len;
+	int key_mgmt;
+	int pairwise_cipher;
 };
 
 int wpa_ft_parse_ies(const u8 *ies, size_t ies_len, struct wpa_ft_ies *parse);

@@ -79,6 +79,11 @@ static inline int wpa_key_mgmt_ft(int akm)
 			 WPA_KEY_MGMT_FT_SAE));
 }
 
+static inline int wpa_key_mgmt_ft_psk(int akm)
+{
+	return !!(akm & WPA_KEY_MGMT_FT_PSK);
+}
+
 static inline int wpa_key_mgmt_sae(int akm)
 {
 	return !!(akm & (WPA_KEY_MGMT_SAE |

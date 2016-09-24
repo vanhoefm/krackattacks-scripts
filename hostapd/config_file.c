@@ -2559,6 +2559,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->pmk_r1_push = atoi(pos);
 	} else if (os_strcmp(buf, "ft_over_ds") == 0) {
 		bss->ft_over_ds = atoi(pos);
+	} else if (os_strcmp(buf, "ft_psk_generate_local") == 0) {
+		bss->ft_psk_generate_local = atoi(pos);
 #endif /* CONFIG_IEEE80211R */
 #ifndef CONFIG_NO_CTRL_IFACE
 	} else if (os_strcmp(buf, "ctrl_interface") == 0) {

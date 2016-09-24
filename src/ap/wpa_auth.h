@@ -170,6 +170,7 @@ struct wpa_auth_config {
 	struct ft_remote_r1kh *r1kh_list;
 	int pmk_r1_push;
 	int ft_over_ds;
+	int ft_psk_generate_local;
 #endif /* CONFIG_IEEE80211R */
 	int disable_gtk;
 	int ap_mlme;

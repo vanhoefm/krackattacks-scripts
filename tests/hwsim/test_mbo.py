@@ -267,7 +267,7 @@ def test_mbo_non_pref_chan(dev, apdev):
         raise Exception("Invalid non_pref_chan value accepted")
     if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:3"):
         raise Exception("Failed to set non-preferred channel list")
-    if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:1:123 81:9:100:2"):
+    if "OK" not in dev[0].request("SET non_pref_chan 81:7:200:1 81:9:100:2"):
         raise Exception("Failed to set non-preferred channel list")
 
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
@@ -277,11 +277,11 @@ def test_mbo_non_pref_chan(dev, apdev):
     logger.debug("STA: " + str(sta))
     if 'non_pref_chan[0]' not in sta:
         raise Exception("Missing non_pref_chan[0] value (assoc)")
-    if sta['non_pref_chan[0]'] != '81:200:1:123:7':
+    if sta['non_pref_chan[0]'] != '81:200:1:7':
         raise Exception("Unexpected non_pref_chan[0] value (assoc)")
     if 'non_pref_chan[1]' not in sta:
         raise Exception("Missing non_pref_chan[1] value (assoc)")
-    if sta['non_pref_chan[1]'] != '81:100:2:0:9':
+    if sta['non_pref_chan[1]'] != '81:100:2:9':
         raise Exception("Unexpected non_pref_chan[1] value (assoc)")
     if 'non_pref_chan[2]' in sta:
         raise Exception("Unexpected non_pref_chan[2] value (assoc)")
@@ -293,30 +293,26 @@ def test_mbo_non_pref_chan(dev, apdev):
     logger.debug("STA: " + str(sta))
     if 'non_pref_chan[0]' not in sta:
         raise Exception("Missing non_pref_chan[0] value (update 1)")
-    if sta['non_pref_chan[0]'] != '81:100:2:0:9':
+    if sta['non_pref_chan[0]'] != '81:100:2:9':
         raise Exception("Unexpected non_pref_chan[0] value (update 1)")
     if 'non_pref_chan[1]' in sta:
-        raise Exception("Unexpected non_pref_chan[2] value (update 1)")
+        raise Exception("Unexpected non_pref_chan[1] value (update 1)")
 
-    if "OK" not in dev[0].request("SET non_pref_chan 81:9:100:2 81:10:100:2 81:8:100:2 81:7:100:1:123 81:5:100:1:124"):
+    if "OK" not in dev[0].request("SET non_pref_chan 81:9:100:2 81:10:100:2 81:8:100:2 81:7:100:1 81:5:100:1"):
         raise Exception("Failed to update non-preferred channel list")
     time.sleep(0.1)
     sta = hapd.get_sta(addr)
     logger.debug("STA: " + str(sta))
     if 'non_pref_chan[0]' not in sta:
         raise Exception("Missing non_pref_chan[0] value (update 2)")
-    if sta['non_pref_chan[0]'] != '81:100:1:123:7':
+    if sta['non_pref_chan[0]'] != '81:100:1:7,5':
         raise Exception("Unexpected non_pref_chan[0] value (update 2)")
     if 'non_pref_chan[1]' not in sta:
         raise Exception("Missing non_pref_chan[1] value (update 2)")
-    if sta['non_pref_chan[1]'] != '81:100:1:124:5':
+    if sta['non_pref_chan[1]'] != '81:100:2:9,10,8':
         raise Exception("Unexpected non_pref_chan[1] value (update 2)")
-    if 'non_pref_chan[2]' not in sta:
-        raise Exception("Missing non_pref_chan[2] value (update 2)")
-    if sta['non_pref_chan[2]'] != '81:100:2:0:9,10,8':
+    if 'non_pref_chan[2]' in sta:
         raise Exception("Unexpected non_pref_chan[2] value (update 2)")
-    if 'non_pref_chan[3]' in sta:
-        raise Exception("Unexpected non_pref_chan[3] value (update 2)")
 
     if "OK" not in dev[0].request("SET non_pref_chan 81:5:90:2 82:14:91:2"):
         raise Exception("Failed to update non-preferred channel list")
@@ -325,11 +321,11 @@ def test_mbo_non_pref_chan(dev, apdev):
     logger.debug("STA: " + str(sta))
     if 'non_pref_chan[0]' not in sta:
         raise Exception("Missing non_pref_chan[0] value (update 3)")
-    if sta['non_pref_chan[0]'] != '81:90:2:0:5':
+    if sta['non_pref_chan[0]'] != '81:90:2:5':
         raise Exception("Unexpected non_pref_chan[0] value (update 3)")
     if 'non_pref_chan[1]' not in sta:
         raise Exception("Missing non_pref_chan[1] value (update 3)")
-    if sta['non_pref_chan[1]'] != '82:91:2:0:14':
+    if sta['non_pref_chan[1]'] != '82:91:2:14':
         raise Exception("Unexpected non_pref_chan[1] value (update 3)")
     if 'non_pref_chan[2]' in sta:
         raise Exception("Unexpected non_pref_chan[2] value (update 3)")

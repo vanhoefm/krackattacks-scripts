@@ -584,6 +584,122 @@ def test_ap_ft_mismatching_rrb_r0kh_pull(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               fail_test=True)
 
+def test_ap_ft_mismatching_rrb_key_push_eap(dev, apdev):
+    """WPA2-EAP-FT AP over DS with mismatching RRB key (push)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_incorrect_rrb_key(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
+              fail_test=True, eap=True)
+
+def test_ap_ft_mismatching_rrb_key_pull_eap(dev, apdev):
+    """WPA2-EAP-FT AP over DS with mismatching RRB key (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_incorrect_rrb_key(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
+              fail_test=True, eap=True)
+
+def test_ap_ft_mismatching_r0kh_id_pull_eap(dev, apdev):
+    """WPA2-EAP-FT AP over DS with mismatching R0KH-ID (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params["nas_identifier"] = "nas0.w1.fi"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+    dev[0].roam_over_ds(apdev[1]['bssid'], fail_test=True)
+
+def test_ap_ft_mismatching_rrb_r0kh_push_eap(dev, apdev):
+    """WPA2-EAP-FT AP over DS with mismatching R0KH key (push)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_r0kh_mismatch(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
+              fail_test=True, eap=True)
+
+def test_ap_ft_mismatching_rrb_r0kh_pull_eap(dev, apdev):
+    """WPA2-EAP-FT AP over DS with mismatching R0KH key (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1_r0kh_mismatch(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
+              fail_test=True, eap=True)
+
 def test_ap_ft_gtk_rekey(dev, apdev):
     """WPA2-PSK-FT AP and GTK rekey"""
     ssid = "test-ft"

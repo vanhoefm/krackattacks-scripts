@@ -164,8 +164,11 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_AOA_MEAS: Perform a standalone AOA (angle of
  *	arrival) measurement with a single peer. Specify peer MAC address in
- *	QCA_WLAN_VENDOR_ATTR_MAC_ADDR and measurement type in
- *	QCA_WLAN_VENDOR_ATTR_AOA_TYPE. Measurement result is reported in
+ *	QCA_WLAN_VENDOR_ATTR_MAC_ADDR and optionally frequency (MHz) in
+ *	QCA_WLAN_VENDOR_ATTR_FREQ (if not specified, locate peer in kernel
+ *	scan results cache and use the frequency from there).
+ *	Also specify measurement type in QCA_WLAN_VENDOR_ATTR_AOA_TYPE.
+ *	Measurement result is reported in
  *	QCA_NL80211_VENDOR_SUBCMD_AOA_MEAS_RESULT event.
  *
  * @QCA_NL80211_VENDOR_SUBCMD_AOA_ABORT_MEAS: Abort an AOA measurement. Specify
@@ -392,6 +395,8 @@ enum qca_wlan_vendor_attr {
 	/* Used in QCA_NL80211_VENDOR_SUBCMD_GET_CHAIN_RSSI command
 	 * to report the specific antenna RSSI value (unsigned 32 bit value) */
 	QCA_WLAN_VENDOR_ATTR_CHAIN_RSSI = 27,
+	/* Frequency in MHz, various uses. Unsigned 32 bit value */
+	QCA_WLAN_VENDOR_ATTR_FREQ = 28,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -1320,6 +1325,10 @@ enum qca_wlan_vendor_attr_loc_capa_flags {
  * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_AOA_BURST_PERIOD: Request AOA
  *	measurement every <value> bursts. If 0 or not specified,
  *	AOA measurements will be disabled for this peer.
+ * @QCA_WLAN_VENDOR_ATTR_FTM_PEER_FREQ: Frequency in MHz where
+ *	the measurement frames are exchanged. Optional; if not
+ *	specified, try to locate the peer in the kernel scan
+ *	results cache and use frequency from there.
  */
 enum qca_wlan_vendor_attr_ftm_peer_info {
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_INVALID,
@@ -1328,6 +1337,7 @@ enum qca_wlan_vendor_attr_ftm_peer_info {
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MEAS_PARAMS,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_SECURE_TOKEN_ID,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_AOA_BURST_PERIOD,
+	QCA_WLAN_VENDOR_ATTR_FTM_PEER_FREQ,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_FTM_PEER_MAX =

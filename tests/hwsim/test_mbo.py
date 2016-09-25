@@ -128,6 +128,7 @@ def test_mbo_supp_oper_classes(dev, apdev):
             raise Exception("Unexpected supp_op_class string (country=%s, 5 GHz): %s (expected: %s)" % (country, res5, expected))
 
 def test_mbo_assoc_disallow(dev, apdev, params):
+    """MBO and association disallowed"""
     hapd1 = hostapd.add_ap(apdev[0], { "ssid": "MBO", "mbo": "1" })
     hapd2 = hostapd.add_ap(apdev[1], { "ssid": "MBO", "mbo": "1" })
 
@@ -172,6 +173,37 @@ def test_mbo_assoc_disallow(dev, apdev, params):
                      filter, wait=False)
     if "Destination address: " + hapd2.own_addr() in out:
         raise Exception("Association request sent to disallowed AP 2")
+
+def test_mbo_assoc_disallow_ignore(dev, apdev):
+    """MBO and ignoring disallowed association"""
+    try:
+        _test_mbo_assoc_disallow_ignore(dev, apdev)
+    finally:
+        dev[0].request("SCAN_INTERVAL 5")
+
+def _test_mbo_assoc_disallow_ignore(dev, apdev):
+    hapd1 = hostapd.add_ap(apdev[0], { "ssid": "MBO", "mbo": "1" })
+    if "OK" not in hapd1.request("SET mbo_assoc_disallow 1"):
+        raise Exception("Failed to set mbo_assoc_disallow for AP1")
+
+    if "OK" not in dev[0].request("SCAN_INTERVAL 1"):
+        raise Exception("Failed to set scan interval")
+    dev[0].connect("MBO", key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=10)
+    if ev is None:
+        raise Exception("CTRL-EVENT-NETWORK-NOT-FOUND not seen")
+
+    if "OK" not in dev[0].request("SET ignore_assoc_disallow 1"):
+        raise Exception("Failed to set ignore_assoc_disallow")
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("CTRL-EVENT-ASSOC-REJECT not seen")
+    if "status_code=17" not in ev:
+        raise Exception("Unexpected association reject reason: " + ev)
+
+    if "OK" not in hapd1.request("SET mbo_assoc_disallow 0"):
+        raise Exception("Failed to set mbo_assoc_disallow for AP1")
+    dev[0].wait_connected()
 
 @remote_compatible
 def test_mbo_cell_capa_update(dev, apdev):

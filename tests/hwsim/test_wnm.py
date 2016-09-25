@@ -74,6 +74,26 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
 
+def test_wnm_ess_disassoc_imminent_reject(dev, apdev):
+    """WNM ESS Disassociation Imminent getting rejected"""
+    params = { "ssid": "test-wnm",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+    if "OK" not in dev[0].request("SET reject_btm_req_reason 123"):
+        raise Exception("Failed to set reject_btm_req_reason")
+
+    hapd.request("ESS_DISASSOC " + addr + " 1 http://example.com/session-info")
+    ev = hapd.wait_event(["BSS-TM-RESP"], timeout=10)
+    if ev is None:
+        raise Exception("BSS-TM-RESP not seen")
+    if "status_code=123" not in ev:
+        raise Exception("Unexpected response status: " + ev)
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
 @remote_compatible
 def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     """WNM ESS Disassociation Imminent"""
@@ -1384,3 +1404,39 @@ def test_wnm_bss_tm_connect_cmd(dev, apdev):
             raise Exception("No reassociation seen")
     if apdev[1]['bssid'] not in ev:
         raise Exception("Unexpected reassociation target: " + ev)
+
+def test_wnm_bss_tm_reject(dev, apdev):
+    """WNM BSS Transition Management request getting rejected"""
+    try:
+        hapd = None
+        params = { "ssid": "test-wnm",
+                   "country_code": "FI",
+                   "ieee80211d": "1",
+                   "hw_mode": "g",
+                   "channel": "1",
+                   "bss_transition": "1" }
+        hapd = hostapd.add_ap(apdev[0], params)
+
+        id = dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+        addr = dev[0].own_addr()
+        dev[0].dump_monitor()
+
+        if "OK" not in dev[0].request("SET reject_btm_req_reason 123"):
+            raise Exception("Failed to set reject_btm_req_reason")
+
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " disassoc_timer=1"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if addr not in ev:
+            raise Exception("Unexpected BSS Transition Management Response address")
+        if "status_code=123" not in ev:
+            raise Exception("Unexpected BSS Transition Management Response status: " + ev)
+        dev[0].wait_disconnected()
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

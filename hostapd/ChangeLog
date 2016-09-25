@@ -5,7 +5,7 @@ ChangeLog for hostapd
 	  [http://w1.fi/security/2015-7/] (CVE-2015-5314)
 	* fixed WPS configuration update vulnerability with malformed passphrase
 	  [http://w1.fi/security/2016-1/] (CVE-2016-4476)
-	* extended channel switch support fot VHT bandwidth changes
+	* extended channel switch support for VHT bandwidth changes
 	* added support for configuring new ANQP-elements with
 	  anqp_elem=<InfoID>:<hexdump of payload>
 	* fixed Suite B 192-bit AKM to use proper PMK length
@@ -30,6 +30,8 @@ ChangeLog for hostapd
 	  - minimal support for PKCS #12
 	  - support OCSP stapling (including ocsp_multi)
 	* added support for OpenSSL 1.1 API changes
+	  - drop support for OpenSSL 0.9.8
+	  - drop support for OpenSSL 1.0.0
 	* EAP-PEAP: support fast-connect crypto binding
 	* RADIUS
 	  - fix Called-Station-Id to not escape SSID
@@ -41,18 +43,34 @@ ChangeLog for hostapd
 	    Tunnel_password case
 	  - update full message for interim accounting updates
 	  - add Acct-Delay-Time into Accounting messages
+	  - add require_message_authenticator configuration option to require
+	    CoA/Disconnect-Request packets to be authenticated
 	* started to postpone WNM-Notification frame sending by 100 ms so that
 	  the STA has some more time to configure the key before this frame is
 	  received after the 4-way handshake
 	* VHT: added interoperability workaround for 80+80 and 160 MHz channels
 	* extended VLAN support (per-STA vif, etc.)
 	* fixed PMKID derivation with SAE
-	* nl80211: added support for full station state operations
+	* nl80211
+	  - added support for full station state operations
+	  - fix IEEE 802.1X/WEP EAP reauthentication and rekeying to use
+	    unencrypted EAPOL frames
 	* added initial MBO support; number of extensions to WNM BSS Transition
 	  Management
 	* added initial functionality for location related operations
 	* added assocresp_elements parameter to allow vendor specific elements
 	  to be added into (Re)Association Response frames
+	* improved Public Action frame addressing
+	  - use Address 3 = wildcard BSSID in GAS response if a query from an
+	    unassociated STA used that address
+	  - fix TX status processing for Address 3 = wildcard BSSID
+	  - add gas_address3 configuration parameter to control Address 3
+	    behavior
+	* added command line parameter -i to override interface parameter in
+	  hostapd.conf
+	* added command completion support to hostapd_cli
+	* added passive client taxonomy determination (CONFIG_TAXONOMY=y
+	  compile option and "SIGNATURE <addr>" control interface command)
 	* number of small fixes
 
 2015-09-27 - v2.5

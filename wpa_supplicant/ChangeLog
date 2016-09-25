@@ -23,8 +23,20 @@ ChangeLog for wpa_supplicant
 	  - fix PMKID derivation
 	  - improve robustness on various exchanges
 	  - fix peer link counting in reconnect case
+	  - improve mesh joining behavior
+	  - allow DTIM period to be configured
+	  - allow HT to be disabled (disable_ht=1)
 	  - add MESH_PEER_ADD and MESH_PEER_REMOVE commands
 	  - add support for PMKSA caching
+	  - add minimal support for SAE group negotiation
+	  - allow pairwise/group cipher to be configured in the network profile
+	  - use ieee80211w profile parameter to enable/disable PMF and derive
+	    a separate TX IGTK if PMF is enabled instead of using MGTK
+	    incorrectly
+	  - fix AEK and MTK derivation
+	  - remove GTKdata and IGTKdata from Mesh Peering Confirm/Close
+	  - note: these changes are not fully backwards compatible for secure
+	    (RSN) mesh network
 	* fixed PMKID derivation with SAE
 	* added support for requesting and fetching arbitrary ANQP-elements
 	  without internal support in wpa_supplicant for the specific element
@@ -69,7 +81,7 @@ ChangeLog for wpa_supplicant
 	* extended INTERFACE_ADD command to allow certain type (sta/ap)
 	  interface to be created
 	* fixed and improved various FST operations
-	* added 80+80 MHz VHT support for IBSS/mesh
+	* added 80+80 MHz and 160 MHz VHT support for IBSS/mesh
 	* fixed SIGNAL_POLL in IBSS and mesh cases
 	* added an option to abort an ongoing scan (used to speed up connection
 	  and can also be done with the new ABORT_SCAN command)
@@ -104,7 +116,7 @@ ChangeLog for wpa_supplicant
 	* enabled ACS support for AP mode operations with wpa_supplicant
 	* EAP-PEAP: fixed interoperability issue with Windows 2012r2 server
 	  ("Invalid Compound_MAC in cryptobinding TLV")
-	* EAP-TTLS; fixed success after fragmented final Phase 2 message
+	* EAP-TTLS: fixed success after fragmented final Phase 2 message
 	* VHT: added interoperability workaround for 80+80 and 160 MHz channels
 	* WNM: workaround for broken AP operating class behavior
 	* added kqueue(2) support for eloop (CONFIG_ELOOP_KQUEUE)
@@ -112,6 +124,8 @@ ChangeLog for wpa_supplicant
 	  - add support for full station state operations
 	  - do not add NL80211_ATTR_SMPS_MODE attribute if HT is disabled
 	  - add NL80211_ATTR_PREV_BSSID with Connect command
+	  - fix IEEE 802.1X/WEP EAP reauthentication and rekeying to use
+	    unencrypted EAPOL frames
 	* added initial MBO support; number of extensions to WNM BSS Transition
 	  Management
 	* added support for PBSS/PCP and P2P on 60 GHz
@@ -123,6 +137,11 @@ ChangeLog for wpa_supplicant
 	* started to ignore pmf=1/2 parameter for non-RSN networks
 	* added wps_disabled=1 network profile parameter to allow AP mode to
 	  be started without enabling WPS
+	* wpa_cli: added action script support for AP-ENABLED and AP-DISABLED
+	  events
+	* improved Public Action frame addressing
+	  - add gas_address3 configuration parameter to control Address 3
+	    behavior
 	* number of small fixes
 
 2015-09-27 - v2.5

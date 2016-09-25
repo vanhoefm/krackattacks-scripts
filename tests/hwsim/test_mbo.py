@@ -153,7 +153,7 @@ def test_mbo_assoc_disallow(dev, apdev, params):
                            "wlan.fc.type_subtype == 0x00",
                            display=['frame.time'], wait=False)
 
-    logger.debug("Allow associations to AP1 and disallow assications to AP2")
+    logger.debug("Allow associations to AP1 and disallow associations to AP2")
     if "OK" not in hapd1.request("SET mbo_assoc_disallow 0"):
         raise Exception("Failed to set mbo_assoc_disallow for AP1")
     if "OK" not in hapd2.request("SET mbo_assoc_disallow 1"):

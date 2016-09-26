@@ -588,3 +588,36 @@ def test_discovery_listen_find(dev):
         raise Exception("Device discovery timed out")
     if ev is None:
         raise Exception("Did not find peer quickly enough after stopped P2P_LISTEN")
+
+def test_discovery_long_listen(dev):
+    """Long P2P_LISTEN and offchannel TX"""
+    addr0 = dev[0].p2p_dev_addr()
+    dev[0].p2p_listen()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    addr = wpas.p2p_dev_addr()
+    if not wpas.discover_peer(addr0):
+        raise Exception("Device discovery timed out")
+    peer = wpas.get_peer(addr0)
+    chan = '1' if peer['listen_freq'] == '2462' else '11'
+
+    wpas.request("P2P_SET listen_channel " + chan)
+    wpas.request("P2P_LISTEN 10")
+    if not dev[0].discover_peer(addr):
+        raise Exception("Device discovery timed out (2)")
+
+    time.sleep(0.1)
+    wpas.global_request("P2P_PROV_DISC " + addr0 + " display")
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=15)
+    if ev is None:
+        raise Exception("Provision discovery timed out")
+    dev[0].p2p_stop_find()
+
+    # Verify that the long listen period is still continuing after off-channel
+    # TX of Provision Discovery frames.
+    if not dev[1].discover_peer(addr):
+        raise Exception("Device discovery timed out (3)")
+
+    dev[1].p2p_stop_find()
+    wpas.p2p_stop_find()

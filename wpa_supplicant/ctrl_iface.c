@@ -8564,10 +8564,7 @@ static int wpas_ctrl_iface_mac_rand_scan(struct wpa_supplicant *wpa_s,
 			}
 		} else if (wpa_s->sched_scanning &&
 			   (type & MAC_ADDR_RAND_SCHED_SCAN)) {
-			/* simulate timeout to restart the sched scan */
-			wpa_s->sched_scan_timed_out = 1;
-			wpa_s->prev_sched_ssid = NULL;
-			wpa_supplicant_cancel_sched_scan(wpa_s);
+			wpas_scan_restart_sched_scan(wpa_s);
 		}
 		return 0;
 	}
@@ -8593,12 +8590,8 @@ static int wpas_ctrl_iface_mac_rand_scan(struct wpa_supplicant *wpa_s,
 		wpas_mac_addr_rand_scan_set(wpa_s, MAC_ADDR_RAND_SCHED_SCAN,
 					    addr, mask);
 
-		if (wpa_s->sched_scanning && !wpa_s->pno) {
-			/* simulate timeout to restart the sched scan */
-			wpa_s->sched_scan_timed_out = 1;
-			wpa_s->prev_sched_ssid = NULL;
-			wpa_supplicant_cancel_sched_scan(wpa_s);
-		}
+		if (wpa_s->sched_scanning && !wpa_s->pno)
+			wpas_scan_restart_sched_scan(wpa_s);
 	}
 
 	if (type & MAC_ADDR_RAND_PNO) {

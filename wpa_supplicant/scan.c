@@ -2745,3 +2745,12 @@ void wpas_scan_reset_sched_scan(struct wpa_supplicant *wpa_s)
 		wpa_supplicant_cancel_sched_scan(wpa_s);
 	}
 }
+
+
+void wpas_scan_restart_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	/* simulate timeout to restart the sched scan */
+	wpa_s->sched_scan_timed_out = 1;
+	wpa_s->prev_sched_ssid = NULL;
+	wpa_supplicant_cancel_sched_scan(wpa_s);
+}

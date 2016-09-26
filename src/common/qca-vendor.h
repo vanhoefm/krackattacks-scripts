@@ -188,6 +188,46 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_GET_CHAIN_RSSI: Get antenna RSSI value for a
  *	specific chain.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SECTOR_CFG: Get low level
+ *	configuration for a DMG RF sector. Specify sector index in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_INDEX, sector type in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE and RF modules
+ *	to return sector information for in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_MODULE_MASK. Returns sector configuration
+ *	in QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG. Also return the
+ *	exact time where information was captured in
+ *	QCA_WLAN_VENDOR_ATTR_TSF.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SECTOR_CFG: Set low level
+ *	configuration for a DMG RF sector. Specify sector index in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_INDEX, sector type in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE and sector configuration
+ *	for one or more DMG RF modules in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SELECTED_SECTOR: Get selected
+ *	DMG RF sector for a station. This is the sector that the HW
+ *	will use to communicate with the station. Specify the MAC address
+ *	of associated station/AP/PCP in QCA_WLAN_VENDOR_ATTR_MAC_ADDR (not
+ *	needed for unassociated	station). Specify sector type to return in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE. Returns the selected
+ *	sector index in QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_INDEX.
+ *	Also return the exact time where the information was captured
+ *	in QCA_WLAN_VENDOR_ATTR_TSF.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SELECTED_SECTOR: Set the
+ *	selected DMG RF sector for a station. This is the sector that
+ *	the HW will use to communicate with the station.
+ *	Specify the MAC address of associated station/AP/PCP in
+ *	QCA_WLAN_VENDOR_ATTR_MAC_ADDR, the sector type to select in
+ *	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE and the sector index
+ *	in QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_INDEX.
+ *	The selected sector will be locked such that it will not be
+ *	modified like it normally does (for example when station
+ *	moves around). To unlock the selected sector for a station
+ *	pass the special value 0xFFFF in the sector index. To unlock
+ *	all connected stations also pass a broadcast MAC address.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -288,6 +328,11 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_AOA_MEAS_RESULT = 136,
 	QCA_NL80211_VENDOR_SUBCMD_ENCRYPTION_TEST = 137,
 	QCA_NL80211_VENDOR_SUBCMD_GET_CHAIN_RSSI = 138,
+	/* DMG low level RF sector operations */
+	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SECTOR_CFG = 139,
+	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SECTOR_CFG = 140,
+	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SELECTED_SECTOR = 141,
+	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SELECTED_SECTOR = 142,
 };
 
 
@@ -397,6 +442,34 @@ enum qca_wlan_vendor_attr {
 	QCA_WLAN_VENDOR_ATTR_CHAIN_RSSI = 27,
 	/* Frequency in MHz, various uses. Unsigned 32 bit value */
 	QCA_WLAN_VENDOR_ATTR_FREQ = 28,
+	/* TSF timer value, unsigned 64 bit value.
+	 * May be returned by various commands.
+	 */
+	QCA_WLAN_VENDOR_ATTR_TSF = 29,
+	/* DMG RF sector index, unsigned 16 bit number. Valid values are
+	 * 0..127 for sector indices or 65535 as special value used to
+	 * unlock sector selection in
+	 * QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SELECTED_SECTOR.
+	 */
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_INDEX = 30,
+	/* DMG RF sector type, unsigned 8 bit value. One of the values
+	 * in enum qca_wlan_vendor_attr_dmg_rf_sector_type.
+	 */
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE = 31,
+	/* Bitmask of DMG RF modules for which information is requested. Each
+	 * bit corresponds to an RF module with the same index as the bit
+	 * number. Unsigned 32 bit number but only low 8 bits can be set since
+	 * all DMG chips currently have up to 8 RF modules.
+	 */
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_MODULE_MASK = 32,
+	/* Array of nested attributes where each entry is DMG RF sector
+	 * configuration for a single RF module.
+	 * Attributes for each entry are taken from enum
+	 * qca_wlan_vendor_attr_dmg_rf_sector_cfg.
+	 * Specified in QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SECTOR_CFG
+	 * and returned by QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SECTOR_CFG.
+	 */
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG = 33,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -1595,6 +1668,64 @@ enum qca_wlan_vendor_attr_encryption_test {
 	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_MAX =
 	QCA_WLAN_VENDOR_ATTR_ENCRYPTION_TEST_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_dmg_rf_sector_type - Type of
+ * sector for DMG RF sector operations.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_RX: RX sector
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_TX: TX sector
+ */
+enum qca_wlan_vendor_attr_dmg_rf_sector_type {
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_RX,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_TX,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_MAX
+};
+
+/**
+ * enum qca_wlan_vendor_attr_dmg_rf_sector_cfg - Attributes for
+ * DMG RF sector configuration for a single RF module.
+ * The values are defined in a compact way which closely matches
+ * the way it is stored in HW registers.
+ * The configuration provides values for 32 antennas and 8 distribution
+ * amplifiers, and together describes the characteristics of the RF
+ * sector - such as a beam in some direction with some gain.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_MODULE_INDEX: Index
+ *	of RF module for this configuration.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE0: Bit 0 of edge
+ *	amplifier gain index. Unsigned 32 bit number containing
+ *	bits for all 32 antennas.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE1: Bit 1 of edge
+ *	amplifier gain index. Unsigned 32 bit number containing
+ *	bits for all 32 antennas.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE2: Bit 2 of edge
+ *	amplifier gain index. Unsigned 32 bit number containing
+ *	bits for all 32 antennas.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_PSH_HI: Phase values
+ *	for first 16 antennas, 2 bits per antenna.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_PSH_LO: Phase values
+ *	for last 16 antennas, 2 bits per antenna.
+ * @QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_DTYPE_X16: Contains
+ *	DTYPE values (3 bits) for each distribution amplifier, followed
+ *	by X16 switch bits for each distribution amplifier. There are
+ *	total of 8 distribution amplifiers.
+ */
+enum qca_wlan_vendor_attr_dmg_rf_sector_cfg {
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_MODULE_INDEX = 1,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE0 = 2,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE1 = 3,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_ETYPE2 = 4,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_PSH_HI = 5,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_PSH_LO = 6,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_DTYPE_X16 = 7,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_MAX =
+	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

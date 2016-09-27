@@ -3219,14 +3219,16 @@ static void wpa_supplicant_update_channel_list(
 		free_hw_features(ifs);
 		ifs->hw.modes = wpa_drv_get_hw_feature_data(
 			ifs, &ifs->hw.num_modes, &ifs->hw.flags);
-	}
 
-	/* Restart sched_scan with updated channel list */
-	if (wpa_s->sched_scanning) {
-		wpa_dbg(wpa_s, MSG_DEBUG,
-			"Channel list changed restart sched scan.");
-		wpa_supplicant_cancel_sched_scan(wpa_s);
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		/* Restart PNO/sched_scan with updated channel list */
+		if (ifs->pno) {
+			wpas_stop_pno(ifs);
+			wpas_start_pno(ifs);
+		} else if (ifs->sched_scanning && !ifs->pno_sched_pending) {
+			wpa_dbg(ifs, MSG_DEBUG,
+				"Channel list changed - restart sched_scan");
+			wpas_scan_restart_sched_scan(ifs);
+		}
 	}
 
 	wpas_p2p_update_channel_list(wpa_s, WPAS_P2P_CHANNEL_UPDATE_DRIVER);

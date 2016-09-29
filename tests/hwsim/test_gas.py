@@ -365,6 +365,18 @@ def test_gas_anqp_get(dev, apdev):
     if ev is None or "WAN Metrics" not in ev:
         raise Exception("Did not receive WAN Metrics")
 
+    logger.info("Attempt an MBO request with an AP that does not support MBO")
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 272,mbo:1"):
+        raise Exception("ANQP_GET command failed (2)")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out (2)")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out (2)")
+
     cmds = [ "",
              "foo",
              "00:11:22:33:44:55 258,hs20:-1",
@@ -373,6 +385,9 @@ def test_gas_anqp_get(dev, apdev):
              "00:11:22:33:44:55 hs20:-1",
              "00:11:22:33:44:55 hs20:0",
              "00:11:22:33:44:55 hs20:32",
+             "00:11:22:33:44:55 mbo:-1",
+             "00:11:22:33:44:55 mbo:0",
+             "00:11:22:33:44:55 mbo:999",
              "00:11:22:33:44:55",
              "00:11:22:33:44:55 ",
              "00:11:22:33:44:55 0",

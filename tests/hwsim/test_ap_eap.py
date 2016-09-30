@@ -2339,7 +2339,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS and server certificate hash"""
     check_cert_probe_support(dev[0])
     skip_with_fips(dev[0])
-    srv_cert_hash = "e75bd454c7b02d312e5006d75067c28ffa5baea422effeb2bbd572179cd000ca"
+    srv_cert_hash = "bdb9cb55d3df278e52a071abf58e7f0238fbec3ad8fb2c254742f63562628272"
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",

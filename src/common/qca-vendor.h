@@ -789,13 +789,13 @@ enum qca_vendor_attr_txpower_decr_db {
  * QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION subcommands.
  */
 enum qca_wlan_vendor_attr_config {
-	QCA_WLAN_VENDOR_ATTR_CONFIG_INVALID,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_INVALID = 0,
 	/* Unsigned 32-bit value to set the DTIM period.
 	 * Whether the wifi chipset wakes at every dtim beacon or a multiple of
 	 * the DTIM period. If DTIM is set to 3, the STA shall wake up every 3
 	 * DTIM beacons.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_DTIM,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_DTIM = 1,
 	/* Unsigned 32-bit value to set the wifi_iface stats averaging factor
 	 * used to calculate statistics like average the TSF offset or average
 	 * number of frame leaked.
@@ -804,52 +804,52 @@ enum qca_wlan_vendor_attr_config {
 	 * For instance, when evaluating leaky APs:
 	 * current_avg = ((num frame received within guard time) * factor + previous_avg * (0x10000 - factor)) / 0x10000
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR = 2,
 	/* Unsigned 32-bit value to configure guard time, i.e., when
 	 * implementing IEEE power management based on frame control PM bit, how
 	 * long the driver waits before shutting down the radio and after
 	 * receiving an ACK frame for a Data frame with PM bit set.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME = 3,
 	/* Unsigned 32-bit value to change the FTM capability dynamically */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT = 4,
 	/* Unsigned 16-bit value to configure maximum TX rate dynamically */
-	QCA_WLAN_VENDOR_ATTR_CONF_TX_RATE,
+	QCA_WLAN_VENDOR_ATTR_CONF_TX_RATE = 5,
 	/* Unsigned 32-bit value to configure the number of continuous
 	 * Beacon Miss which shall be used by the firmware to penalize
 	 * the RSSI.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS = 6,
 	/* Unsigned 8-bit value to configure the channel avoidance indication
 	 * behavior. Firmware to send only one indication and ignore duplicate
 	 * indications when set to avoid multiple Apps wakeups.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_AVOIDANCE_IND,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_AVOIDANCE_IND = 7,
 	/* 8-bit unsigned value to configure the maximum TX MPDU for
 	 * aggregation. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MPDU_AGGREGATION,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MPDU_AGGREGATION = 8,
 	/* 8-bit unsigned value to configure the maximum RX MPDU for
 	 * aggregation. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION = 9,
 	/* 8-bit unsigned value to configure the Non aggregrate/11g sw
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY = 10,
 	/* 8-bit unsigned value to configure the aggregrate sw
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY = 11,
 	/* 8-bit unsigned value to configure the MGMT frame
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY = 12,
 	/* 8-bit unsigned value to configure the CTRL frame
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY = 13,
 	/* 8-bit unsigned value to configure the propagation delay for
 	 * 2G/5G band (0~63, units in us) */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY = 14,
 	/* Unsigned 32-bit value to configure the number of unicast TX fail
 	 * packet count. The peer is disconnected once this threshold is
 	 * reached. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT = 15,
 	/* Attribute used to set scan default IEs to the driver.
 	 *
 	 * These IEs can be used by scan operations that will be initiated by
@@ -860,50 +860,50 @@ enum qca_wlan_vendor_attr_config {
 	 * driver. If a particular IE is present in the scan default IEs but not
 	 * present in the scan request, then that IE should be added to the IEs
 	 * sent in the Probe Request frames for that scan request. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES = 16,
 	/* Unsigned 32-bit attribute for generic commands */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND = 17,
 	/* Unsigned 32-bit value attribute for generic commands */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE = 18,
 	/* Unsigned 32-bit data attribute for generic command response */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA = 19,
 	/* Unsigned 32-bit length attribute for
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH = 20,
 	/* Unsigned 32-bit flags attribute for
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS = 21,
 	/* Unsigned 32-bit, defining the access policy.
 	 * See enum qca_access_policy. Used with
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY = 22,
 	/* Sets the list of full set of IEs for which a specific access policy
 	 * has to be applied. Used along with
 	 * QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY to control the access.
 	 * Zero length payload can be used to clear this access constraint. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST = 23,
 	/* Unsigned 32-bit, specifies the interface index (netdev) for which the
 	 * corresponding configurations are applied. If the interface index is
 	 * not specified, the configurations are attributed to the respective
 	 * wiphy. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX = 24,
 	/* 8-bit unsigned value to trigger QPower: 1-Enable, 0-Disable */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER = 25,
 	/* 8-bit unsigned value to configure the driver and below layers to
 	 * ignore the assoc disallowed set by APs while connecting
 	 * 1-Ignore, 0-Don't ignore */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED = 26,
 	/* 32-bit unsigned value to trigger antenna diversity features:
 	 * 1-Enable, 0-Disable */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_ENA,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_ENA = 27,
 	/* 32-bit unsigned value to configure specific chain antenna */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_CHAIN,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_CHAIN = 28,
 	/* 32-bit unsigned value to trigger cycle selftest
 	 * 1-Enable, 0-Disable */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SELFTEST,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SELFTEST = 29,
 	/* 32-bit unsigned to configure the cycle time of selftest
 	 * the unit is micro-second */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SELFTEST_INTVL,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SELFTEST_INTVL = 30,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

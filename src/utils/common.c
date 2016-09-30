@@ -1001,7 +1001,7 @@ int random_mac_addr_keep_oui(u8 *addr)
  * @delim: a string of delimiters
  * @last: a pointer to a character following the returned token
  *      It has to be set to NULL for the first call and passed for any
- *      futher call.
+ *      further call.
  * Returns: a pointer to token position in str or NULL
  *
  * This function is similar to str_token, but it can be used with both

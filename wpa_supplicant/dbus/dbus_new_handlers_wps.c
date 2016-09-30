@@ -325,7 +325,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
  * @wpa_s: %wpa_supplicant data structure
  * Returns: NULL on success or DBus error on failure
  *
- * Handler for "Cancel" method call. Returns NULL if WPS cancel successfull
+ * Handler for "Cancel" method call. Returns NULL if WPS cancel successful
  * or DBus error on WPS cancel failure
  */
 DBusMessage * wpas_dbus_handler_wps_cancel(DBusMessage *message,

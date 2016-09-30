@@ -2285,7 +2285,7 @@ struct wpabuf * wifi_display_encaps(struct wpabuf *subelems);
  * discovery (p2p_find). A random number of 100 TU units is picked for each
  * Listen state iteration from [min_disc_int,max_disc_int] range.
  *
- * max_disc_tu can be used to futher limit the discoverable duration. However,
+ * max_disc_tu can be used to further limit the discoverable duration. However,
  * it should be noted that use of this parameter is not recommended since it
  * would not be compliant with the P2P specification.
  */

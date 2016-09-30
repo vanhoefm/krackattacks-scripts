@@ -619,7 +619,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				 * message now to get alternating sequence of
 				 * Authentication frames between the AP and STA.
 				 * Confirm will be sent in
-				 * Commited -> Confirmed/Accepted transition
+				 * Committed -> Confirmed/Accepted transition
 				 * when receiving Confirm from STA.
 				 */
 			}

@@ -290,6 +290,10 @@ def test_ap_track_taxonomy(dev, apdev):
         _test_ap_track_taxonomy(dev, apdev)
     finally:
         dev[1].request("SET p2p_disabled 0")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+        dev[2].flush_scan_cache()
 
 def _test_ap_track_taxonomy(dev, apdev):
     params = { "ssid": "track",

@@ -1,6 +1,6 @@
 ChangeLog for hostapd
 
-????-??-?? - v2.6
+2016-10-02 - v2.6
 	* fixed EAP-pwd last fragment validation
 	  [http://w1.fi/security/2015-7/] (CVE-2015-5314)
 	* fixed WPS configuration update vulnerability with malformed passphrase

@@ -1,6 +1,6 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v2.6
+2016-10-02 - v2.6
 	* fixed WNM Sleep Mode processing when PMF is not enabled
 	  [http://w1.fi/security/2015-6/] (CVE-2015-5310)
 	* fixed EAP-pwd last fragment validation

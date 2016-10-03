@@ -6762,6 +6762,9 @@ static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
 		autoscan_init(wpa_s, 1);
 	else if (state == WPA_SCANNING)
 		wpa_supplicant_reinit_autoscan(wpa_s);
+	else
+		wpa_printf(MSG_DEBUG, "No autoscan update in state %s",
+			   wpa_supplicant_state_txt(state));
 
 	return 0;
 }

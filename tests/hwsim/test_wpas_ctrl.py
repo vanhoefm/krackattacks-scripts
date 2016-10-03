@@ -1913,12 +1913,14 @@ def test_wpas_ctrl_sched_scan_plans(dev, apdev):
     """wpa_supplicant sched_scan_plans parsing"""
     dev[0].request("SET sched_scan_plans foo")
     dev[0].request("SET sched_scan_plans 10:100 20:200 30")
-    with alloc_fail(dev[0], 1, "wpas_sched_scan_plans_set"):
-        dev[0].request("SET sched_scan_plans 10:100")
     dev[0].request("SET sched_scan_plans 4294967295:0")
     dev[0].request("SET sched_scan_plans 1 1")
     dev[0].request("SET sched_scan_plans  ")
-    dev[0].request("SET sched_scan_plans ")
+    try:
+        with alloc_fail(dev[0], 1, "wpas_sched_scan_plans_set"):
+            dev[0].request("SET sched_scan_plans 10:100")
+    finally:
+        dev[0].request("SET sched_scan_plans ")
 
 def test_wpas_ctrl_signal_monitor(dev, apdev):
     """wpa_supplicant SIGNAL_MONITOR command"""

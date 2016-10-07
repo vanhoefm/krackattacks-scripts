@@ -782,23 +782,21 @@ static inline int wpa_drv_get_available_receive_sc(struct wpa_supplicant *wpa_s,
 }
 
 static inline int
-wpa_drv_create_receive_sc(struct wpa_supplicant *wpa_s, u32 channel,
-			  const u8 *sci_addr, u16 sci_port,
+wpa_drv_create_receive_sc(struct wpa_supplicant *wpa_s, struct receive_sc *sc,
 			  unsigned int conf_offset, int validation)
 {
 	if (!wpa_s->driver->create_receive_sc)
 		return -1;
-	return wpa_s->driver->create_receive_sc(wpa_s->drv_priv, channel,
-						sci_addr, sci_port, conf_offset,
-						validation);
+	return wpa_s->driver->create_receive_sc(wpa_s->drv_priv, sc,
+						conf_offset, validation);
 }
 
 static inline int wpa_drv_delete_receive_sc(struct wpa_supplicant *wpa_s,
-					    u32 channel)
+					    struct receive_sc *sc)
 {
 	if (!wpa_s->driver->delete_receive_sc)
 		return -1;
-	return wpa_s->driver->delete_receive_sc(wpa_s->drv_priv, channel);
+	return wpa_s->driver->delete_receive_sc(wpa_s->drv_priv, sc);
 }
 
 static inline int wpa_drv_create_receive_sa(struct wpa_supplicant *wpa_s,

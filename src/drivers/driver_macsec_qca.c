@@ -601,8 +601,7 @@ static int macsec_qca_get_available_receive_sc(void *priv, u32 *channel)
 }
 
 
-static int macsec_qca_create_receive_sc(void *priv, u32 channel,
-					const u8 *sci_addr, u16 sci_port,
+static int macsec_qca_create_receive_sc(void *priv, struct receive_sc *sc,
 					unsigned int conf_offset,
 					int validation)
 {
@@ -611,6 +610,9 @@ static int macsec_qca_create_receive_sc(void *priv, u32 channel,
 	fal_rx_prc_lut_t entry;
 	fal_rx_sc_validate_frame_e vf;
 	enum validate_frames validate_frames = validation;
+	u32 channel = sc->channel;
+	const u8 *sci_addr = sc->sci.addr;
+	u16 sci_port = be_to_host16(sc->sci.port);
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -649,11 +651,12 @@ static int macsec_qca_create_receive_sc(void *priv, u32 channel,
 }
 
 
-static int macsec_qca_delete_receive_sc(void *priv, u32 channel)
+static int macsec_qca_delete_receive_sc(void *priv, struct receive_sc *sc)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	fal_rx_prc_lut_t entry;
+	u32 channel = sc->channel;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 

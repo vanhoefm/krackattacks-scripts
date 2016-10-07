@@ -3368,25 +3368,23 @@ struct wpa_driver_ops {
 	/**
 	 * create_receive_sc - create secure channel for receiving
 	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * @sci_addr: secure channel identifier - address
-	 * @sci_port: secure channel identifier - port
+	 * @sc: secure channel
 	 * @conf_offset: confidentiality offset (0, 30, or 50)
 	 * @validation: frame validation policy (0 = Disabled, 1 = Checked,
 	 *	2 = Strict)
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 */
-	int (*create_receive_sc)(void *priv, u32 channel, const u8 *sci_addr,
-				 u16 sci_port, unsigned int conf_offset,
+	int (*create_receive_sc)(void *priv, struct receive_sc *sc,
+				 unsigned int conf_offset,
 				 int validation);
 
 	/**
 	 * delete_receive_sc - delete secure connection for receiving
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
+	 * @sc: secure channel
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*delete_receive_sc)(void *priv, u32 channel);
+	int (*delete_receive_sc)(void *priv, struct receive_sc *sc);
 
 	/**
 	 * create_receive_sa - create secure association for receive

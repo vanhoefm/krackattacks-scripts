@@ -100,20 +100,17 @@ static unsigned int conf_offset_val(enum confidentiality_offset co)
 }
 
 
-static int wpas_create_receive_sc(void *wpa_s, u32 channel,
-				  struct ieee802_1x_mka_sci *sci,
+static int wpas_create_receive_sc(void *wpa_s, struct receive_sc *sc,
 				  enum validate_frames vf,
 				  enum confidentiality_offset co)
 {
-	return wpa_drv_create_receive_sc(wpa_s, channel, sci->addr,
-					 be_to_host16(sci->port),
-					 conf_offset_val(co), vf);
+	return wpa_drv_create_receive_sc(wpa_s, sc, conf_offset_val(co), vf);
 }
 
 
-static int wpas_delete_receive_sc(void *wpa_s, u32 channel)
+static int wpas_delete_receive_sc(void *wpa_s, struct receive_sc *sc)
 {
-	return wpa_drv_delete_receive_sc(wpa_s, channel);
+	return wpa_drv_delete_receive_sc(wpa_s, sc);
 }
 
 

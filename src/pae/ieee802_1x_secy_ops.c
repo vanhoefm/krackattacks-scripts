@@ -212,8 +212,7 @@ int secy_create_receive_sc(struct ieee802_1x_kay *kay, struct receive_sc *rxsc)
 		return -1;
 	}
 
-	return ops->create_receive_sc(ops->ctx, rxsc->channel, &rxsc->sci,
-				      kay->vf, kay->co);
+	return ops->create_receive_sc(ops->ctx, rxsc, kay->vf, kay->co);
 }
 
 
@@ -233,7 +232,7 @@ int secy_delete_receive_sc(struct ieee802_1x_kay *kay, struct receive_sc *rxsc)
 		return -1;
 	}
 
-	return ops->delete_receive_sc(ops->ctx, rxsc->channel);
+	return ops->delete_receive_sc(ops->ctx, rxsc);
 }
 
 

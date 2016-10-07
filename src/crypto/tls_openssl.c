@@ -3976,7 +3976,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		engine_id = "pkcs11";
 
 #if defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC) || defined(EAP_SERVER_FAST)
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	if (params->flags & TLS_CONN_EAP_FAST) {
 		wpa_printf(MSG_DEBUG,
 			   "OpenSSL: Use TLSv1_method() for EAP-FAST");

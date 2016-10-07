@@ -835,23 +835,21 @@ wpa_drv_get_available_transmit_sc(struct wpa_supplicant *wpa_s, u32 *channel)
 }
 
 static inline int
-wpa_drv_create_transmit_sc(struct wpa_supplicant *wpa_s, u32 channel,
-			   const u8 *sci_addr, u16 sci_port,
+wpa_drv_create_transmit_sc(struct wpa_supplicant *wpa_s, struct transmit_sc *sc,
 			   unsigned int conf_offset)
 {
 	if (!wpa_s->driver->create_transmit_sc)
 		return -1;
-	return wpa_s->driver->create_transmit_sc(wpa_s->drv_priv, channel,
-						 sci_addr, sci_port,
+	return wpa_s->driver->create_transmit_sc(wpa_s->drv_priv, sc,
 						 conf_offset);
 }
 
 static inline int wpa_drv_delete_transmit_sc(struct wpa_supplicant *wpa_s,
-					     u32 channel)
+					     struct transmit_sc *sc)
 {
 	if (!wpa_s->driver->delete_transmit_sc)
 		return -1;
-	return wpa_s->driver->delete_transmit_sc(wpa_s->drv_priv, channel);
+	return wpa_s->driver->delete_transmit_sc(wpa_s->drv_priv, sc);
 }
 
 static inline int wpa_drv_create_transmit_sa(struct wpa_supplicant *wpa_s,

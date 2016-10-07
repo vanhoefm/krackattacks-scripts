@@ -155,10 +155,9 @@ struct ieee802_1x_kay_ctx {
 	int (*enable_receive_sa)(void *ctx, struct receive_sa *sa);
 	int (*disable_receive_sa)(void *ctx, struct receive_sa *sa);
 	int (*get_available_transmit_sc)(void *ctx, u32 *channel);
-	int (*create_transmit_sc)(void *ctx, u32 channel,
-				  const struct ieee802_1x_mka_sci *sci,
+	int (*create_transmit_sc)(void *ctx, struct transmit_sc *sc,
 				  enum confidentiality_offset co);
-	int (*delete_transmit_sc)(void *ctx, u32 channel);
+	int (*delete_transmit_sc)(void *ctx, struct transmit_sc *sc);
 	int (*create_transmit_sa)(void *ctx, struct transmit_sa *sa);
 	int (*enable_transmit_sa)(void *ctx, struct transmit_sa *sa);
 	int (*disable_transmit_sa)(void *ctx, struct transmit_sa *sa);

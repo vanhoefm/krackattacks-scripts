@@ -750,14 +750,14 @@ static int macsec_qca_get_available_transmit_sc(void *priv, u32 *channel)
 }
 
 
-static int macsec_qca_create_transmit_sc(void *priv, u32 channel,
-					 const u8 *sci_addr, u16 sci_port,
+static int macsec_qca_create_transmit_sc(void *priv, struct transmit_sc *sc,
 					 unsigned int conf_offset)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	fal_tx_class_lut_t entry;
 	u8 psci[ETH_ALEN + 2];
+	u32 channel = sc->channel;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -768,9 +768,9 @@ static int macsec_qca_create_transmit_sc(void *priv, u32 channel,
 	entry.action = FAL_TX_CLASS_ACTION_FORWARD;
 	entry.channel = channel;
 
-	os_memcpy(psci, sci_addr, ETH_ALEN);
-	psci[6] = (sci_port >> 8) & 0xf;
-	psci[7] = sci_port & 0xf;
+	os_memcpy(psci, sc->sci.addr, ETH_ALEN);
+	psci[6] = (sc->sci.port >> 8) & 0xf;
+	psci[7] = sc->sci.port & 0xf;
 
 	ret += nss_macsec_secy_tx_class_lut_set(drv->secy_id, channel, &entry);
 	ret += nss_macsec_secy_tx_sc_create(drv->secy_id, channel, psci, 8);
@@ -784,11 +784,12 @@ static int macsec_qca_create_transmit_sc(void *priv, u32 channel,
 }
 
 
-static int macsec_qca_delete_transmit_sc(void *priv, u32 channel)
+static int macsec_qca_delete_transmit_sc(void *priv, struct transmit_sc *sc)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
 	fal_tx_class_lut_t entry;
+	u32 channel = sc->channel;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 

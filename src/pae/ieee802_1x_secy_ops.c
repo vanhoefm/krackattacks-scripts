@@ -338,8 +338,7 @@ int secy_create_transmit_sc(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->create_transmit_sc(ops->ctx, txsc->channel, &txsc->sci,
-				       kay->co);
+	return ops->create_transmit_sc(ops->ctx, txsc, kay->co);
 }
 
 
@@ -360,7 +359,7 @@ int secy_delete_transmit_sc(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	return ops->delete_transmit_sc(ops->ctx, txsc->channel);
+	return ops->delete_transmit_sc(ops->ctx, txsc);
 }
 
 

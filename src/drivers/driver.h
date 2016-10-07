@@ -3423,21 +3423,20 @@ struct wpa_driver_ops {
 	/**
 	 * create_transmit_sc - create secure connection for transmit
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
-	 * @sci_addr: secure channel identifier - address
-	 * @sci_port: secure channel identifier - port
+	 * @sc: secure channel
+	 * @conf_offset: confidentiality offset (0, 30, or 50)
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*create_transmit_sc)(void *priv, u32 channel, const u8 *sci_addr,
-				  u16 sci_port, unsigned int conf_offset);
+	int (*create_transmit_sc)(void *priv, struct transmit_sc *sc,
+				  unsigned int conf_offset);
 
 	/**
 	 * delete_transmit_sc - delete secure connection for transmit
 	 * @priv: private driver interface data from init()
-	 * @channel: secure channel
+	 * @sc: secure channel
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*delete_transmit_sc)(void *priv, u32 channel);
+	int (*delete_transmit_sc)(void *priv, struct transmit_sc *sc);
 
 	/**
 	 * create_transmit_sa - create secure association for transmit

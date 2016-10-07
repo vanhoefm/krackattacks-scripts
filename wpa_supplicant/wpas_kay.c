@@ -38,6 +38,12 @@ static int wpas_macsec_deinit(void *priv)
 }
 
 
+static int wpas_macsec_get_capability(void *priv, enum macsec_cap *cap)
+{
+	return wpa_drv_macsec_get_capability(priv, cap);
+}
+
+
 static int wpas_enable_protect_frames(void *wpa_s, Boolean enabled)
 {
 	return wpa_drv_enable_protect_frames(wpa_s, enabled);
@@ -191,6 +197,7 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 
 	kay_ctx->macsec_init = wpas_macsec_init;
 	kay_ctx->macsec_deinit = wpas_macsec_deinit;
+	kay_ctx->macsec_get_capability = wpas_macsec_get_capability;
 	kay_ctx->enable_protect_frames = wpas_enable_protect_frames;
 	kay_ctx->set_replay_protect = wpas_set_replay_protect;
 	kay_ctx->set_current_cipher_suite = wpas_set_current_cipher_suite;

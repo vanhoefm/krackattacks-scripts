@@ -3298,6 +3298,14 @@ struct wpa_driver_ops {
 	int (*macsec_deinit)(void *priv);
 
 	/**
+	 * macsec_get_capability - Inform MKA of this driver's capability
+	 * @priv: Private driver interface data
+	 * @cap: Driver's capability
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*macsec_get_capability)(void *priv, enum macsec_cap *cap);
+
+	/**
 	 * enable_protect_frames - Set protect frames status
 	 * @priv: Private driver interface data
 	 * @enabled: TRUE = protect frames enabled

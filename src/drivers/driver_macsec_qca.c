@@ -458,6 +458,16 @@ static int macsec_qca_macsec_deinit(void *priv)
 }
 
 
+static int macsec_qca_get_capability(void *priv, enum macsec_cap *cap)
+{
+	wpa_printf(MSG_DEBUG, "%s", __func__);
+
+	*cap = MACSEC_CAP_INTEG_AND_CONF_0_30_50;
+
+	return 0;
+}
+
+
 static int macsec_qca_enable_protect_frames(void *priv, Boolean enabled)
 {
 	struct macsec_qca_data *drv = priv;
@@ -889,6 +899,7 @@ const struct wpa_driver_ops wpa_driver_macsec_qca_ops = {
 
 	.macsec_init = macsec_qca_macsec_init,
 	.macsec_deinit = macsec_qca_macsec_deinit,
+	.macsec_get_capability = macsec_qca_get_capability,
 	.enable_protect_frames = macsec_qca_enable_protect_frames,
 	.set_replay_protect = macsec_qca_set_replay_protect,
 	.set_current_cipher_suite = macsec_qca_set_current_cipher_suite,

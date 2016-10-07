@@ -3069,13 +3069,20 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		kay->macsec_replay_window = 0;
 		kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
 	} else {
-		kay->macsec_capable = MACSEC_CAP_INTEG_AND_CONF_0_30_50;
+		if (secy_get_capability(kay, &kay->macsec_capable) < 0) {
+			os_free(kay);
+			return NULL;
+		}
+
 		kay->macsec_desired = TRUE;
 		kay->macsec_protect = TRUE;
 		kay->macsec_validate = Strict;
 		kay->macsec_replay_protect = FALSE;
 		kay->macsec_replay_window = 0;
-		kay->macsec_confidentiality = CONFIDENTIALITY_OFFSET_0;
+		if (kay->macsec_capable >= MACSEC_CAP_INTEG_AND_CONF)
+			kay->macsec_confidentiality = CONFIDENTIALITY_OFFSET_0;
+		else
+			kay->macsec_confidentiality = MACSEC_CAP_INTEGRITY;
 	}
 
 	wpa_printf(MSG_DEBUG, "KaY: state machine created");
@@ -3409,6 +3416,7 @@ ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
 				   unsigned int cs_index)
 {
 	struct ieee802_1x_mka_participant *participant;
+	enum macsec_cap secy_cap;
 
 	if (!kay)
 		return -1;
@@ -3426,6 +3434,12 @@ ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
 
 	kay->macsec_csindex = cs_index;
 	kay->macsec_capable = cipher_suite_tbl[kay->macsec_csindex].capable;
+
+	if (secy_get_capability(kay, &secy_cap) < 0)
+		return -3;
+
+	if (kay->macsec_capable > secy_cap)
+		kay->macsec_capable = secy_cap;
 
 	participant = ieee802_1x_kay_get_principal_participant(kay);
 	if (participant) {

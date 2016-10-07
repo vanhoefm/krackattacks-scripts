@@ -113,6 +113,26 @@ int secy_cp_control_enable_port(struct ieee802_1x_kay *kay, Boolean enabled)
 }
 
 
+int secy_get_capability(struct ieee802_1x_kay *kay, enum macsec_cap *cap)
+{
+	struct ieee802_1x_kay_ctx *ops;
+
+	if (!kay) {
+		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
+		return -1;
+	}
+
+	ops = kay->ctx;
+	if (!ops || !ops->macsec_get_capability) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: secy macsec_get_capability operation not supported");
+		return -1;
+	}
+
+	return ops->macsec_get_capability(ops->ctx, cap);
+}
+
+
 int secy_get_receive_lowest_pn(struct ieee802_1x_kay *kay,
 			       struct receive_sa *rxsa)
 {

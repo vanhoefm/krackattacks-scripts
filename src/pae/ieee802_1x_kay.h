@@ -138,6 +138,7 @@ struct ieee802_1x_kay_ctx {
 	/* abstract wpa driver interface */
 	int (*macsec_init)(void *ctx, struct macsec_init_params *params);
 	int (*macsec_deinit)(void *ctx);
+	int (*macsec_get_capability)(void *priv, enum macsec_cap *cap);
 	int (*enable_protect_frames)(void *ctx, Boolean enabled);
 	int (*set_replay_protect)(void *ctx, Boolean enabled, u32 window);
 	int (*set_current_cipher_suite)(void *ctx, u64 cs);

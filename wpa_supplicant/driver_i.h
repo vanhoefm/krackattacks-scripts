@@ -715,6 +715,14 @@ static inline int wpa_drv_macsec_deinit(struct wpa_supplicant *wpa_s)
 	return wpa_s->driver->macsec_deinit(wpa_s->drv_priv);
 }
 
+static inline int wpa_drv_macsec_get_capability(struct wpa_supplicant *wpa_s,
+						enum macsec_cap *cap)
+{
+	if (!wpa_s->driver->macsec_get_capability)
+		return -1;
+	return wpa_s->driver->macsec_get_capability(wpa_s->drv_priv, cap);
+}
+
 static inline int wpa_drv_enable_protect_frames(struct wpa_supplicant *wpa_s,
 						Boolean enabled)
 {

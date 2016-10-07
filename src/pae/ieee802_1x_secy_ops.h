@@ -28,6 +28,7 @@ int secy_cp_control_confidentiality_offset(struct ieee802_1x_kay *kay,
 int secy_cp_control_enable_port(struct ieee802_1x_kay *kay, Boolean flag);
 
 /****** KaY -> SecY *******/
+int secy_get_capability(struct ieee802_1x_kay *kay, enum macsec_cap *cap);
 int secy_get_receive_lowest_pn(struct ieee802_1x_kay *kay,
 			       struct receive_sa *rxsa);
 int secy_get_transmit_next_pn(struct ieee802_1x_kay *kay,

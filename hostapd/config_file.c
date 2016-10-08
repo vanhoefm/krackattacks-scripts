@@ -208,7 +208,8 @@ static int hostapd_config_read_maclist(const char *fname,
 
 	fclose(f);
 
-	qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
+	if (*acl)
+		qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
 
 	return 0;
 }

@@ -2177,8 +2177,10 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_WPS */
 
-	qsort(scan_res->res, scan_res->num, sizeof(struct wpa_scan_res *),
-	      compar);
+	if (scan_res->res) {
+		qsort(scan_res->res, scan_res->num,
+		      sizeof(struct wpa_scan_res *), compar);
+	}
 	dump_scan_res(scan_res);
 
 	wpa_bss_update_start(wpa_s);

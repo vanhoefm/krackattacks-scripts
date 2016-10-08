@@ -602,7 +602,9 @@ static void eap_pwd_process_id_resp(struct eap_sm *sm,
 	if ((data->group_num != be_to_host16(id->group_num)) ||
 	    (id->random_function != EAP_PWD_DEFAULT_RAND_FUNC) ||
 	    (os_memcmp(id->token, (u8 *)&data->token, sizeof(data->token))) ||
-	    (id->prf != EAP_PWD_DEFAULT_PRF)) {
+	    (id->prf != EAP_PWD_DEFAULT_PRF) ||
+	    id->prep !=
+	    data->password_hash ? EAP_PWD_PREP_MS : EAP_PWD_PREP_NONE) {
 		wpa_printf(MSG_INFO, "EAP-pwd: peer changed parameters");
 		eap_pwd_state(data, FAILURE);
 		return;

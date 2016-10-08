@@ -345,7 +345,7 @@ eap_pwd_perform_id_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	wpabuf_put_u8(data->outbuf, EAP_PWD_DEFAULT_RAND_FUNC);
 	wpabuf_put_u8(data->outbuf, EAP_PWD_DEFAULT_PRF);
 	wpabuf_put_data(data->outbuf, id->token, sizeof(id->token));
-	wpabuf_put_u8(data->outbuf, EAP_PWD_PREP_NONE);
+	wpabuf_put_u8(data->outbuf, id->prep);
 	wpabuf_put_data(data->outbuf, data->id_peer, data->id_peer_len);
 
 	eap_pwd_state(data, PWD_Commit_Req);

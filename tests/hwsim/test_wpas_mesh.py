@@ -1964,3 +1964,16 @@ def test_mesh_opn_snt_event_cls_acpt(dev, apdev):
     # HOLDING transition.
     if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + frame):
         raise Exception("MGMT_RX_PROCESS failed")
+
+def test_mesh_select_network(dev):
+    """Mesh network and SELECT_NETWORK"""
+    check_mesh_support(dev[0])
+    id0 = add_open_mesh_network(dev[0], start=False)
+    id1 = add_open_mesh_network(dev[1], start=False)
+    dev[0].select_network(id0)
+    dev[1].select_network(id1)
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+    hwsim_utils.test_connectivity(dev[0], dev[1])

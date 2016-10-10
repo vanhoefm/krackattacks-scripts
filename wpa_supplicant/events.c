@@ -1474,11 +1474,18 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 }
 
 
-/* Return != 0 if no scan results could be fetched or if scan results should not
- * be shared with other virtual interfaces. */
+/*
+ * Return a negative value if no scan results could be fetched or if scan
+ * results should not be shared with other virtual interfaces.
+ * Return 0 if scan results were fetched and may be shared with other
+ * interfaces.
+ * Return 1 if scan results may be shared with other virtual interfaces but may
+ * not trigger any operations.
+ * Return 2 if the interface was removed and cannot be used.
+ */
 static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data,
-					      int own_request)
+					      int own_request, int update_only)
 {
 	struct wpa_scan_results *scan_res = NULL;
 	int ret = 0;
@@ -1528,6 +1535,11 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_NO_RANDOM_POOL */
 
+	if (update_only) {
+		ret = 1;
+		goto scan_work_done;
+	}
+
 	if (own_request && wpa_s->scan_res_handler &&
 	    !(data && data->scan_info.external_scan)) {
 		void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
@@ -1536,7 +1548,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		scan_res_handler = wpa_s->scan_res_handler;
 		wpa_s->scan_res_handler = NULL;
 		scan_res_handler(wpa_s, scan_res);
-		ret = -2;
+		ret = 1;
 		goto scan_work_done;
 	}
 
@@ -1672,8 +1684,9 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 		if (new_scan)
 			wpa_supplicant_rsn_preauth_scan_results(wpa_s);
 		/*
-		 * Do not notify other virtual radios of scan results since we do not
-		 * want them to start other associations at the same time.
+		 * Do not allow other virtual radios to trigger operations based
+		 * on these scan results since we do not want them to start
+		 * other associations at the same time.
 		 */
 		return 1;
 	} else {
@@ -1757,7 +1770,7 @@ static int wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	struct wpa_supplicant *ifs;
 	int res;
 
-	res = _wpa_supplicant_event_scan_results(wpa_s, data, 1);
+	res = _wpa_supplicant_event_scan_results(wpa_s, data, 1, 0);
 	if (res == 2) {
 		/*
 		 * Interface may have been removed, so must not dereference
@@ -1765,7 +1778,8 @@ static int wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		 */
 		return 1;
 	}
-	if (res != 0) {
+
+	if (res < 0) {
 		/*
 		 * If no scan results could be fetched, then no need to
 		 * notify those interfaces that did not actually request
@@ -1785,7 +1799,10 @@ static int wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		if (ifs != wpa_s) {
 			wpa_printf(MSG_DEBUG, "%s: Updating scan results from "
 				   "sibling", ifs->ifname);
-			_wpa_supplicant_event_scan_results(ifs, data, 0);
+			res = _wpa_supplicant_event_scan_results(ifs, data, 0,
+								 res > 0);
+			if (res < 0)
+				return 0;
 		}
 	}
 

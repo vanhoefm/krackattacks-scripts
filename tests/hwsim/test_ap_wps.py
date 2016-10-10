@@ -9628,3 +9628,30 @@ def _test_ap_wps_and_bss_limit(dev, apdev):
     dev[0].set_network(id, "key_mgmt", "WPS")
 
     dev[0].scan(freq="2412")
+
+def test_ap_wps_pbc_2ap(dev, apdev):
+    """WPS PBC with two APs advertising same SSID"""
+    params = { "ssid": "wps", "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "wps_independent": "1"}
+    hapd = hostapd.add_ap(apdev[0], params)
+    params = { "ssid": "wps", "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "123456789", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "wps_independent": "1"}
+    hapd2 = hostapd.add_ap(apdev[1], params)
+    hapd.request("WPS_PBC")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.dump_monitor()
+
+    wpas.scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    wpas.scan_for_bss(apdev[1]['bssid'], freq="2412")
+    wpas.request("WPS_PBC")
+    wpas.wait_connected()
+    wpas.request("DISCONNECT")
+    hapd.request("DISABLE")
+    hapd2.request("DISABLE")
+    wpas.flush_scan_cache()

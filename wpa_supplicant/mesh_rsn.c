@@ -579,7 +579,7 @@ skip_keys:
 	/* encrypt after MIC */
 	mic_payload = wpabuf_put(buf, 2 + len + AES_BLOCK_SIZE);
 
-	if (aes_siv_encrypt(sta->aek, ampe_ie, 2 + len, 3,
+	if (aes_siv_encrypt(sta->aek, sizeof(sta->aek), ampe_ie, 2 + len, 3,
 			    aad, aad_len, mic_payload)) {
 		wpa_printf(MSG_ERROR, "protect frame: failed to encrypt");
 		ret = -ENOMEM;
@@ -650,7 +650,7 @@ int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 
 	os_memcpy(crypt, elems->mic, crypt_len);
 
-	if (aes_siv_decrypt(sta->aek, crypt, crypt_len, 3,
+	if (aes_siv_decrypt(sta->aek, sizeof(sta->aek), crypt, crypt_len, 3,
 			    aad, aad_len, ampe_buf)) {
 		wpa_printf(MSG_ERROR, "Mesh RSN: frame verification failed!");
 		ret = -2;

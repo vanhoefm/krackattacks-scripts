@@ -92,7 +92,7 @@ static int test_siv(void)
 	addr[0] = ad;
 	len[0] = sizeof(ad);
 
-	if (aes_siv_encrypt(key, plaintext, sizeof(plaintext),
+	if (aes_siv_encrypt(key, sizeof(key), plaintext, sizeof(plaintext),
 			    1, addr, len, out)) {
 		wpa_printf(MSG_ERROR, "AES-SIV mode encryption failed");
 		return 1;
@@ -103,7 +103,8 @@ static int test_siv(void)
 		return 1;
 	}
 
-	if (aes_siv_decrypt(key, iv_c, sizeof(iv_c), 1, addr, len, out)) {
+	if (aes_siv_decrypt(key, sizeof(key), iv_c, sizeof(iv_c),
+			    1, addr, len, out)) {
 		wpa_printf(MSG_ERROR, "AES-SIV mode decryption failed");
 		return 1;
 	}
@@ -121,7 +122,8 @@ static int test_siv(void)
 	addr[2] = nonce_2;
 	len[2] = sizeof(nonce_2);
 
-	if (aes_siv_encrypt(key_2, plaintext_2, sizeof(plaintext_2),
+	if (aes_siv_encrypt(key_2, sizeof(key_2),
+			    plaintext_2, sizeof(plaintext_2),
 			    3, addr, len, out)) {
 		wpa_printf(MSG_ERROR, "AES-SIV mode encryption failed");
 		return 1;
@@ -132,7 +134,8 @@ static int test_siv(void)
 		return 1;
 	}
 
-	if (aes_siv_decrypt(key_2, iv_c_2, sizeof(iv_c_2), 3, addr, len, out)) {
+	if (aes_siv_decrypt(key_2, sizeof(key_2), iv_c_2, sizeof(iv_c_2),
+			    3, addr, len, out)) {
 		wpa_printf(MSG_ERROR, "AES-SIV mode decryption failed");
 		return 1;
 	}

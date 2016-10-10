@@ -2461,12 +2461,14 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (bss) {
 		params.ssid = bss->ssid;
 		params.ssid_len = bss->ssid_len;
-		if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set) {
+		if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set ||
+		    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
 			wpa_printf(MSG_DEBUG, "Limit connection to BSSID "
 				   MACSTR " freq=%u MHz based on scan results "
-				   "(bssid_set=%d)",
+				   "(bssid_set=%d wps=%d)",
 				   MAC2STR(bss->bssid), bss->freq,
-				   ssid->bssid_set);
+				   ssid->bssid_set,
+				   wpa_s->key_mgmt == WPA_KEY_MGMT_WPS);
 			params.bssid = bss->bssid;
 			params.freq.freq = bss->freq;
 		}

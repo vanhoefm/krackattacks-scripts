@@ -2930,8 +2930,8 @@ def test_eap_proto_psk_errors(dev, apdev):
               (8, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
               (9, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
               (10, "aes_128_encrypt_block;eap_psk_derive_keys;eap_psk_process_3"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt;eap_psk_process_3"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt;eap_psk_process_3") ]
+              (1, "aes_ctr_encrypt;aes_128_eax_decrypt;eap_psk_process_3"),
+              (1, "aes_ctr_encrypt;aes_128_eax_encrypt;eap_psk_process_3") ]
     for count, func in tests:
         with fail_test(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",

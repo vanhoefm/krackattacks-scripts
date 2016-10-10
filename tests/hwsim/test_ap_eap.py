@@ -2811,7 +2811,7 @@ def test_ap_wpa2_eap_psk_oom(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
-    tests = [ (1, "aes_128_ctr_encrypt;aes_128_eax_encrypt"),
+    tests = [ (1, "aes_ctr_encrypt;aes_128_eax_encrypt"),
               (1, "omac1_aes_128;aes_128_eax_encrypt"),
               (2, "omac1_aes_128;aes_128_eax_encrypt"),
               (3, "omac1_aes_128;aes_128_eax_encrypt"),
@@ -2819,7 +2819,7 @@ def test_ap_wpa2_eap_psk_oom(dev, apdev):
               (1, "omac1_aes_128;aes_128_eax_decrypt"),
               (2, "omac1_aes_128;aes_128_eax_decrypt"),
               (3, "omac1_aes_128;aes_128_eax_decrypt"),
-              (1, "aes_128_ctr_encrypt;aes_128_eax_decrypt") ]
+              (1, "aes_ctr_encrypt;aes_128_eax_decrypt") ]
     for count, func in tests:
         with fail_test(dev[0], count, func):
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PSK",

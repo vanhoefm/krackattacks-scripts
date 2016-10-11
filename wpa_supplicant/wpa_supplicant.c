@@ -1691,11 +1691,13 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			wmm_ac_save_tspecs(wpa_s);
 			wpa_s->reassoc_same_bss = 1;
 		}
-	} else if (rand_style > 0) {
+	}
+
+	if (rand_style > 0 && !wpa_s->reassoc_same_ess) {
 		if (wpas_update_random_addr(wpa_s, rand_style) < 0)
 			return;
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
-	} else if (wpa_s->mac_addr_changed) {
+	} else if (rand_style == 0 && wpa_s->mac_addr_changed) {
 		if (wpa_drv_set_mac_addr(wpa_s, NULL) < 0) {
 			wpa_msg(wpa_s, MSG_INFO,
 				"Could not restore permanent MAC address");

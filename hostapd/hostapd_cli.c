@@ -1611,17 +1611,34 @@ static char ** hostapd_cli_edit_completion_cb(void *ctx, const char *str,
 
 static void hostapd_cli_interactive(void)
 {
+	char *hfile = NULL;
+	char *home;
+
 	printf("\nInteractive mode\n\n");
+
+#ifdef CONFIG_HOSTAPD_CLI_HISTORY_DIR
+	home = CONFIG_HOSTAPD_CLI_HISTORY_DIR;
+#else /* CONFIG_HOSTAPD_CLI_HISTORY_DIR */
+	home = getenv("HOME");
+#endif /* CONFIG_HOSTAPD_CLI_HISTORY_DIR */
+	if (home) {
+		const char *fname = ".hostapd_cli_history";
+		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;
+		hfile = os_malloc(hfile_len);
+		if (hfile)
+			os_snprintf(hfile, hfile_len, "%s/%s", home, fname);
+	}
 
 	eloop_register_signal_terminate(hostapd_cli_eloop_terminate, NULL);
 	edit_init(hostapd_cli_edit_cmd_cb, hostapd_cli_edit_eof_cb,
-		  hostapd_cli_edit_completion_cb, NULL, NULL, NULL);
+		  hostapd_cli_edit_completion_cb, NULL, hfile, NULL);
 	eloop_register_timeout(ping_interval, 0, hostapd_cli_ping, NULL, NULL);
 
 	eloop_run();
 
 	cli_txt_list_flush(&stations);
-	edit_deinit(NULL, NULL);
+	edit_deinit(hfile, NULL);
+	os_free(hfile);
 	eloop_cancel_timeout(hostapd_cli_ping, NULL, NULL);
 }
 

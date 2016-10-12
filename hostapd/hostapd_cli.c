@@ -286,6 +286,21 @@ static int hostapd_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** hostapd_complete_sta(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
+}
+
+
 static int hostapd_cli_cmd_new_sta(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -1275,7 +1290,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "= get MIB variables (dot1x, dot11, radius)" },
 	{ "relog", hostapd_cli_cmd_relog, NULL, NULL },
 	{ "status", hostapd_cli_cmd_status, NULL, NULL },
-	{ "sta", hostapd_cli_cmd_sta, NULL,
+	{ "sta", hostapd_cli_cmd_sta, hostapd_complete_sta,
 	  "<addr> = get MIB variables for one station" },
 	{ "all_sta", hostapd_cli_cmd_all_sta, NULL,
 	   "= get MIB variables for all stations" },

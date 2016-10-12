@@ -1737,7 +1737,7 @@ static int wpa_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 
 static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
-				char *addr, size_t addr_len)
+				char *addr, size_t addr_len, int print)
 {
 	char buf[4096], *pos;
 	size_t len;
@@ -1767,7 +1767,8 @@ static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 	buf[len] = '\0';
 	if (os_memcmp(buf, "FAIL", 4) == 0)
 		return -1;
-	printf("%s", buf);
+	if (print)
+		printf("%s", buf);
 
 	pos = buf;
 	while (*pos != '\0' && *pos != '\n')
@@ -1782,13 +1783,30 @@ static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char addr[32], cmd[64];
 
-	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr)))
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr), 1))
 		return 0;
 	do {
 		os_snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
-	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr)) == 0);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr), 1) == 0);
 
 	return -1;
+}
+
+
+static int wpa_cli_cmd_list_sta(struct wpa_ctrl *ctrl, int argc,
+				char *argv[])
+{
+	char addr[32], cmd[64];
+
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr), 0))
+		return 0;
+	do {
+		if (os_strcmp(addr, "") != 0)
+			printf("%s\n", addr);
+		os_snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr), 0) == 0);
+
+	return 0;
 }
 
 
@@ -3035,6 +3053,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "all_sta", wpa_cli_cmd_all_sta, NULL,
 	  cli_cmd_flag_none,
 	  "= get information about all associated stations (AP)" },
+	{ "list_sta", wpa_cli_cmd_list_sta, NULL,
+	  cli_cmd_flag_none,
+	  "= list all stations (AP)" },
 	{ "deauthenticate", wpa_cli_cmd_deauthenticate, NULL,
 	  cli_cmd_flag_none,
 	  "<addr> = deauthenticate a station" },

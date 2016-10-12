@@ -802,6 +802,23 @@ static int hostapd_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_list_sta(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	char addr[32], cmd[64];
+
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr), 0))
+		return 0;
+	do {
+		if (os_strcmp(addr, "") != 0)
+			printf("%s\n", addr);
+		os_snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr), 0) == 0);
+
+	return 0;
+}
+
+
 static int hostapd_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	print_help(stdout, argc > 0 ? argv[0] : NULL);
@@ -1332,6 +1349,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "<addr> = get MIB variables for one station" },
 	{ "all_sta", hostapd_cli_cmd_all_sta, NULL,
 	   "= get MIB variables for all stations" },
+	{ "list_sta", hostapd_cli_cmd_list_sta, NULL,
+	   "= list all stations" },
 	{ "new_sta", hostapd_cli_cmd_new_sta, NULL,
 	  "<addr> = add a new station" },
 	{ "deauthenticate", hostapd_cli_cmd_deauthenticate,

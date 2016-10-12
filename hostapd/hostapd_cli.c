@@ -46,6 +46,7 @@ static void print_help(FILE *stream, const char *cmd);
 static char ** list_cmd_list(void);
 static void hostapd_cli_receive(int sock, void *eloop_ctx, void *sock_ctx);
 static void update_stations(struct wpa_ctrl *ctrl);
+static void cli_event(const char *str);
 
 
 static void usage(void)
@@ -181,6 +182,7 @@ static int hostapd_cli_reconnect(const char *ifname)
 
 static void hostapd_cli_msg_cb(char *msg, size_t len)
 {
+	cli_event(msg);
 	printf("%s\n", msg);
 }
 

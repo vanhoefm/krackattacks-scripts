@@ -60,6 +60,9 @@ static DEFINE_DL_LIST(p2p_peers); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(ifnames); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(networks); /* struct cli_txt_entry */
+#ifdef CONFIG_AP
+static DEFINE_DL_LIST(stations); /* struct cli_txt_entry */
+#endif /* CONFIG_AP */
 
 
 static void print_help(const char *cmd);
@@ -68,6 +71,7 @@ static void wpa_cli_close_connection(void);
 static char * wpa_cli_get_default_ifname(void);
 static char ** wpa_list_cmd_list(void);
 static void update_networks(struct wpa_ctrl *ctrl);
+static void update_stations(struct wpa_ctrl *ctrl);
 
 
 static void usage(void)
@@ -1736,6 +1740,21 @@ static int wpa_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** wpa_cli_complete_sta(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
+}
+
+
 static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 				char *addr, size_t addr_len, int print)
 {
@@ -1817,11 +1836,42 @@ static int wpa_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static char ** wpa_cli_complete_deauthenticate(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
+}
+
+
 static int wpa_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
 	return wpa_cli_cmd(ctrl, "DISASSOCIATE", 1, argc, argv);
 }
+
+
+static char ** wpa_cli_complete_disassociate(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&stations);
+		break;
+	}
+
+	return res;
+}
+
 
 static int wpa_cli_cmd_chanswitch(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
@@ -3047,7 +3097,7 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },
 #ifdef CONFIG_AP
-	{ "sta", wpa_cli_cmd_sta, NULL,
+	{ "sta", wpa_cli_cmd_sta, wpa_cli_complete_sta,
 	  cli_cmd_flag_none,
 	  "<addr> = get information about an associated station (AP)" },
 	{ "all_sta", wpa_cli_cmd_all_sta, NULL,
@@ -3056,11 +3106,11 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "list_sta", wpa_cli_cmd_list_sta, NULL,
 	  cli_cmd_flag_none,
 	  "= list all stations (AP)" },
-	{ "deauthenticate", wpa_cli_cmd_deauthenticate, NULL,
-	  cli_cmd_flag_none,
+	{ "deauthenticate", wpa_cli_cmd_deauthenticate,
+	  wpa_cli_complete_deauthenticate, cli_cmd_flag_none,
 	  "<addr> = deauthenticate a station" },
-	{ "disassociate", wpa_cli_cmd_disassociate, NULL,
-	  cli_cmd_flag_none,
+	{ "disassociate", wpa_cli_cmd_disassociate,
+	  wpa_cli_complete_disassociate, cli_cmd_flag_none,
 	  "<addr> = disassociate a station" },
 	{ "chan_switch", wpa_cli_cmd_chanswitch, NULL,
 	  cli_cmd_flag_none,
@@ -3696,6 +3746,7 @@ static void wpa_cli_reconnect(void)
 		edit_clear_line();
 		printf("\rConnection to wpa_supplicant re-established\n");
 		edit_redraw();
+		update_stations(ctrl_conn);
 	}
 }
 
@@ -4008,6 +4059,27 @@ static void update_networks(struct wpa_ctrl *ctrl)
 }
 
 
+static void update_stations(struct wpa_ctrl *ctrl)
+{
+#ifdef CONFIG_AP
+	char addr[32], cmd[64];
+
+	if (!ctrl || !interactive)
+		return;
+
+	cli_txt_list_flush(&stations);
+
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr), 0))
+		return;
+	do {
+		if (os_strcmp(addr, "") != 0)
+			cli_txt_list_add(&stations, addr);
+		os_snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr), 0) == 0);
+#endif /* CONFIG_AP */
+}
+
+
 static void try_connection(void *eloop_ctx, void *timeout_ctx)
 {
 	if (ctrl_conn)
@@ -4029,6 +4101,7 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 
 	update_bssid_list(ctrl_conn);
 	update_networks(ctrl_conn);
+	update_stations(ctrl_conn);
 
 	if (warning_displayed)
 		printf("Connection established.\n");
@@ -4275,6 +4348,7 @@ int main(int argc, char *argv[])
 					       "control interface\n");
 				}
 			}
+			update_stations(ctrl_conn);
 		}
 	}
 

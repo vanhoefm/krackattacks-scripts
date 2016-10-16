@@ -218,7 +218,7 @@ static void wpa_cli_msg_cb(char *msg, size_t len)
 }
 
 
-static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
+static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd, int print)
 {
 	char buf[4096];
 	size_t len;
@@ -254,7 +254,7 @@ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
 }
 
 
-static int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
+static int wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd)
 {
 	return _wpa_ctrl_command(ctrl, cmd, 1);
 }
@@ -1755,7 +1755,7 @@ static char ** wpa_cli_complete_sta(const char *str, int pos)
 }
 
 
-static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
+static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, const char *cmd,
 				char *addr, size_t addr_len, int print)
 {
 	char buf[4096], *pos;
@@ -2244,7 +2244,7 @@ static char ** wpa_cli_complete_p2p_peer(const char *str, int pos)
 }
 
 
-static int wpa_ctrl_command_p2p_peer(struct wpa_ctrl *ctrl, char *cmd,
+static int wpa_ctrl_command_p2p_peer(struct wpa_ctrl *ctrl, const char *cmd,
 				     char *addr, size_t addr_len,
 				     int discovered)
 {
@@ -3969,7 +3969,7 @@ static void update_bssid_list(struct wpa_ctrl *ctrl)
 	char buf[4096];
 	size_t len = sizeof(buf);
 	int ret;
-	char *cmd = "BSS RANGE=ALL MASK=0x2";
+	const char *cmd = "BSS RANGE=ALL MASK=0x2";
 	char *pos, *end;
 
 	if (ctrl == NULL)
@@ -4000,7 +4000,7 @@ static void update_ifnames(struct wpa_ctrl *ctrl)
 	char buf[4096];
 	size_t len = sizeof(buf);
 	int ret;
-	char *cmd = "INTERFACES";
+	const char *cmd = "INTERFACES";
 	char *pos, *end;
 	char txt[200];
 
@@ -4032,7 +4032,7 @@ static void update_networks(struct wpa_ctrl *ctrl)
 	char buf[4096];
 	size_t len = sizeof(buf);
 	int ret;
-	char *cmd = "LIST_NETWORKS";
+	const char *cmd = "LIST_NETWORKS";
 	char *pos, *end;
 	int header = 1;
 

@@ -187,7 +187,7 @@ static void hostapd_cli_msg_cb(char *msg, size_t len)
 }
 
 
-static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
+static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd, int print)
 {
 	char buf[4096];
 	size_t len;
@@ -215,13 +215,13 @@ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
 }
 
 
-static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
+static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd)
 {
 	return _wpa_ctrl_command(ctrl, cmd, 1);
 }
 
 
-static int hostapd_cli_cmd(struct wpa_ctrl *ctrl, const char *cmd,
+static int hostapd_cli_cmd(struct wpa_ctrl *ctrl, const const char *cmd,
 			   int min_args, int argc, char *argv[])
 {
 	char buf[4096];
@@ -750,7 +750,7 @@ static int hostapd_cli_cmd_get_config(struct wpa_ctrl *ctrl, int argc,
 }
 
 
-static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
+static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, const char *cmd,
 				char *addr, size_t addr_len, int print)
 {
 	char buf[4096], *pos;

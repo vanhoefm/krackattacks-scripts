@@ -2832,7 +2832,16 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	} else
 		wpa_auth_sta_associated(hapd->wpa_auth, sta->wpa_sm);
 
-	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_INACTIVITY_TIMER)) {
+	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_WIRED) {
+		if (eloop_cancel_timeout(ap_handle_timer, hapd, sta) > 0) {
+			wpa_printf(MSG_DEBUG,
+				   "%s: %s: canceled wired ap_handle_timer timeout for "
+				   MACSTR,
+				   hapd->conf->iface, __func__,
+				   MAC2STR(sta->addr));
+		}
+	} else if (!(hapd->iface->drv_flags &
+		     WPA_DRIVER_FLAGS_INACTIVITY_TIMER)) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: %s: reschedule ap_handle_timer timeout for "
 			   MACSTR " (%d seconds - ap_max_inactivity)",

@@ -3022,6 +3022,8 @@ void p2p_flush(struct p2p_data *p2p)
 	os_free(p2p->after_scan_tx);
 	p2p->after_scan_tx = NULL;
 	p2p->ssid_set = 0;
+	p2ps_prov_free(p2p);
+	p2p_reset_pending_pd(p2p);
 }
 
 

@@ -2083,8 +2083,9 @@ static int hostapd_ctrl_iface_track_sta_list(struct hostapd_data *hapd,
 		int ret;
 
 		os_reltime_sub(&now, &info->last_seen, &age);
-		ret = os_snprintf(pos, end - pos, MACSTR " %u\n",
-				  MAC2STR(info->addr), (unsigned int) age.sec);
+		ret = os_snprintf(pos, end - pos, MACSTR " %u %d\n",
+				  MAC2STR(info->addr), (unsigned int) age.sec,
+				  info->ssi_signal);
 		if (os_snprintf_error(end - pos, ret))
 			break;
 		pos += ret;

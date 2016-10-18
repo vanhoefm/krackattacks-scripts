@@ -3029,7 +3029,7 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	}
 
 	if (hapd->iconf->track_sta_max_num)
-		sta_track_add(hapd->iface, mgmt->sa);
+		sta_track_add(hapd->iface, mgmt->sa, fi->ssi_signal);
 
 	switch (stype) {
 	case WLAN_FC_STYPE_AUTH:

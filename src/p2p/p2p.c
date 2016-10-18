@@ -2822,6 +2822,7 @@ void p2p_service_flush_asp(struct p2p_data *p2p)
 	}
 
 	p2p->p2ps_adv_list = NULL;
+	p2ps_prov_free(p2p);
 	p2p_dbg(p2p, "All ASP advertisements flushed");
 }
 

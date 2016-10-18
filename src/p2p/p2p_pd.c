@@ -1163,6 +1163,9 @@ out:
 					msg.group_id, msg.group_id_len);
 	}
 
+	if (reject != P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE)
+		p2ps_prov_free(p2p);
+
 	if (reject == P2P_SC_SUCCESS) {
 		switch (config_methods) {
 		case WPS_CONFIG_DISPLAY:

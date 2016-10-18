@@ -807,7 +807,7 @@ grp_owner:
 					      wpa_s->own_addr);
 		} else if (!s && !go_wpa_s) {
 			if (wpas_p2p_add_group_interface(wpa_s,
-							 WPA_IF_P2P_GO) < 0) {
+							 WPA_IF_P2P_GROUP) < 0) {
 				wpa_printf(MSG_ERROR,
 					   "P2P: Failed to allocate a new interface for the group");
 				return P2PS_SETUP_NONE;

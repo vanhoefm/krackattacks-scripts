@@ -1581,7 +1581,7 @@ out:
 					 report_config_methods);
 
 	if (p2p->state == P2P_PD_DURING_FIND) {
-		p2p_clear_timeout(p2p);
+		p2p_stop_listen_for_freq(p2p, 0);
 		p2p_continue_find(p2p);
 	}
 }

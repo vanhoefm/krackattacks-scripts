@@ -491,6 +491,15 @@ ieee802_1x_kay_init_receive_sc(const struct ieee802_1x_mka_sci *psci)
 }
 
 
+static void ieee802_1x_delete_receive_sa(struct ieee802_1x_kay *kay,
+					 struct receive_sa *sa)
+{
+	secy_disable_receive_sa(kay, sa);
+	secy_delete_receive_sa(kay, sa);
+	ieee802_1x_kay_deinit_receive_sa(sa);
+}
+
+
 /**
  * ieee802_1x_kay_deinit_receive_sc -
  **/
@@ -502,10 +511,9 @@ ieee802_1x_kay_deinit_receive_sc(
 
 	wpa_printf(MSG_DEBUG, "KaY: Delete receive SC");
 	dl_list_for_each_safe(psa, pre_sa, &psc->sa_list, struct receive_sa,
-			      list)  {
-		secy_disable_receive_sa(participant->kay, psa);
-		ieee802_1x_kay_deinit_receive_sa(psa);
-	}
+			      list)
+		ieee802_1x_delete_receive_sa(participant->kay, psa);
+
 	dl_list_del(&psc->list);
 	os_free(psc);
 }
@@ -2270,6 +2278,16 @@ ieee802_1x_participant_send_mkpdu(
 
 
 static void ieee802_1x_kay_deinit_transmit_sa(struct transmit_sa *psa);
+
+static void ieee802_1x_delete_transmit_sa(struct ieee802_1x_kay *kay,
+					  struct transmit_sa *sa)
+{
+	secy_disable_transmit_sa(kay, sa);
+	secy_delete_transmit_sa(kay, sa);
+	ieee802_1x_kay_deinit_transmit_sa(sa);
+}
+
+
 /**
  * ieee802_1x_participant_timer -
  */
@@ -2344,8 +2362,7 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 			dl_list_for_each_safe(txsa, pre_txsa,
 					      &participant->txsc->sa_list,
 					      struct transmit_sa, list) {
-				secy_disable_transmit_sa(kay, txsa);
-				ieee802_1x_kay_deinit_transmit_sa(txsa);
+				ieee802_1x_delete_transmit_sa(kay, txsa);
 			}
 
 			ieee802_1x_cp_connect_authenticated(kay->cp);
@@ -2487,11 +2504,8 @@ ieee802_1x_kay_deinit_transmit_sc(
 	struct transmit_sa *psa, *tmp;
 
 	wpa_printf(MSG_DEBUG, "KaY: Delete transmit SC");
-	dl_list_for_each_safe(psa, tmp, &psc->sa_list, struct transmit_sa,
-			      list) {
-		secy_disable_transmit_sa(participant->kay, psa);
-		ieee802_1x_kay_deinit_transmit_sa(psa);
-	}
+	dl_list_for_each_safe(psa, tmp, &psc->sa_list, struct transmit_sa, list)
+		ieee802_1x_delete_transmit_sa(participant->kay, psa);
 
 	os_free(psc);
 }
@@ -2569,6 +2583,32 @@ int ieee802_1x_kay_set_old_sa_attr(struct ieee802_1x_kay *kay,
 }
 
 
+static struct transmit_sa * lookup_txsa_by_an(struct transmit_sc *txsc, u8 an)
+{
+	struct transmit_sa *txsa;
+
+	dl_list_for_each(txsa, &txsc->sa_list, struct transmit_sa, list) {
+		if (txsa->an == an)
+			return txsa;
+	}
+
+	return NULL;
+}
+
+
+static struct receive_sa * lookup_rxsa_by_an(struct receive_sc *rxsc, u8 an)
+{
+	struct receive_sa *rxsa;
+
+	dl_list_for_each(rxsa, &rxsc->sa_list, struct receive_sa, list) {
+		if (rxsa->an == an)
+			return rxsa;
+	}
+
+	return NULL;
+}
+
+
 /**
  * ieee802_1x_kay_create_sas -
  */
@@ -2603,6 +2643,9 @@ int ieee802_1x_kay_create_sas(struct ieee802_1x_kay *kay,
 	}
 
 	dl_list_for_each(rxsc, &principal->rxsc_list, struct receive_sc, list) {
+		while ((rxsa = lookup_rxsa_by_an(rxsc, latest_sak->an)) != NULL)
+			ieee802_1x_delete_receive_sa(kay, rxsa);
+
 		rxsa = ieee802_1x_kay_init_receive_sa(rxsc, latest_sak->an, 1,
 						      latest_sak);
 		if (!rxsa)
@@ -2610,6 +2653,10 @@ int ieee802_1x_kay_create_sas(struct ieee802_1x_kay *kay,
 
 		secy_create_receive_sa(kay, rxsa);
 	}
+
+	while ((txsa = lookup_txsa_by_an(principal->txsc, latest_sak->an)) !=
+	       NULL)
+		ieee802_1x_delete_transmit_sa(kay, txsa);
 
 	txsa = ieee802_1x_kay_init_transmit_sa(principal->txsc, latest_sak->an,
 					       1, latest_sak);
@@ -2644,20 +2691,16 @@ int ieee802_1x_kay_delete_sas(struct ieee802_1x_kay *kay,
 	/* remove the transmit sa */
 	dl_list_for_each_safe(txsa, pre_txsa, &principal->txsc->sa_list,
 			      struct transmit_sa, list) {
-		if (is_ki_equal(&txsa->pkey->key_identifier, ki)) {
-			secy_disable_transmit_sa(kay, txsa);
-			ieee802_1x_kay_deinit_transmit_sa(txsa);
-		}
+		if (is_ki_equal(&txsa->pkey->key_identifier, ki))
+			ieee802_1x_delete_transmit_sa(kay, txsa);
 	}
 
 	/* remove the receive sa */
 	dl_list_for_each(rxsc, &principal->rxsc_list, struct receive_sc, list) {
 		dl_list_for_each_safe(rxsa, pre_rxsa, &rxsc->sa_list,
 				      struct receive_sa, list) {
-			if (is_ki_equal(&rxsa->pkey->key_identifier, ki)) {
-				secy_disable_receive_sa(kay, rxsa);
-				ieee802_1x_kay_deinit_receive_sa(rxsa);
-			}
+			if (is_ki_equal(&rxsa->pkey->key_identifier, ki))
+				ieee802_1x_delete_receive_sa(kay, rxsa);
 		}
 	}
 

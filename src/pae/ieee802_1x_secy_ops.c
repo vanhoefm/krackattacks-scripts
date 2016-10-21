@@ -256,6 +256,26 @@ int secy_create_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 }
 
 
+int secy_delete_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
+{
+	struct ieee802_1x_kay_ctx *ops;
+
+	if (!kay || !rxsa) {
+		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
+		return -1;
+	}
+
+	ops = kay->ctx;
+	if (!ops || !ops->delete_receive_sa) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: secy delete_receive_sa operation not supported");
+		return -1;
+	}
+
+	return ops->delete_receive_sa(ops->ctx, rxsa);
+}
+
+
 int secy_enable_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 {
 	struct ieee802_1x_kay_ctx *ops;
@@ -360,6 +380,27 @@ int secy_create_transmit_sa(struct ieee802_1x_kay *kay,
 	}
 
 	return ops->create_transmit_sa(ops->ctx, txsa);
+}
+
+
+int secy_delete_transmit_sa(struct ieee802_1x_kay *kay,
+			    struct transmit_sa *txsa)
+{
+	struct ieee802_1x_kay_ctx *ops;
+
+	if (!kay || !txsa) {
+		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
+		return -1;
+	}
+
+	ops = kay->ctx;
+	if (!ops || !ops->delete_transmit_sa) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: secy delete_transmit_sa operation not supported");
+		return -1;
+	}
+
+	return ops->delete_transmit_sa(ops->ctx, txsa);
 }
 
 

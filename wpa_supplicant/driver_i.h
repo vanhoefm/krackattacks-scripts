@@ -806,6 +806,14 @@ static inline int wpa_drv_create_receive_sa(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->create_receive_sa(wpa_s->drv_priv, sa);
 }
 
+static inline int wpa_drv_delete_receive_sa(struct wpa_supplicant *wpa_s,
+					    struct receive_sa *sa)
+{
+	if (!wpa_s->driver->delete_receive_sa)
+		return -1;
+	return wpa_s->driver->delete_receive_sa(wpa_s->drv_priv, sa);
+}
+
 static inline int wpa_drv_enable_receive_sa(struct wpa_supplicant *wpa_s,
 					    struct receive_sa *sa)
 {
@@ -846,6 +854,14 @@ static inline int wpa_drv_create_transmit_sa(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->driver->create_transmit_sa)
 		return -1;
 	return wpa_s->driver->create_transmit_sa(wpa_s->drv_priv, sa);
+}
+
+static inline int wpa_drv_delete_transmit_sa(struct wpa_supplicant *wpa_s,
+					     struct transmit_sa *sa)
+{
+	if (!wpa_s->driver->delete_transmit_sa)
+		return -1;
+	return wpa_s->driver->delete_transmit_sa(wpa_s->drv_priv, sa);
 }
 
 static inline int wpa_drv_enable_transmit_sa(struct wpa_supplicant *wpa_s,

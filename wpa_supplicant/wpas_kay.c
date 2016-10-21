@@ -120,6 +120,12 @@ static int wpas_create_receive_sa(void *wpa_s, struct receive_sa *sa)
 }
 
 
+static int wpas_delete_receive_sa(void *wpa_s, struct receive_sa *sa)
+{
+	return wpa_drv_delete_receive_sa(wpa_s, sa);
+}
+
+
 static int wpas_enable_receive_sa(void *wpa_s, struct receive_sa *sa)
 {
 	return wpa_drv_enable_receive_sa(wpa_s, sa);
@@ -149,6 +155,12 @@ static int wpas_delete_transmit_sc(void *wpa_s, struct transmit_sc *sc)
 static int wpas_create_transmit_sa(void *wpa_s, struct transmit_sa *sa)
 {
 	return wpa_drv_create_transmit_sa(wpa_s, sa);
+}
+
+
+static int wpas_delete_transmit_sa(void *wpa_s, struct transmit_sa *sa)
+{
+	return wpa_drv_delete_transmit_sa(wpa_s, sa);
 }
 
 
@@ -196,11 +208,13 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	kay_ctx->create_receive_sc = wpas_create_receive_sc;
 	kay_ctx->delete_receive_sc = wpas_delete_receive_sc;
 	kay_ctx->create_receive_sa = wpas_create_receive_sa;
+	kay_ctx->delete_receive_sa = wpas_delete_receive_sa;
 	kay_ctx->enable_receive_sa = wpas_enable_receive_sa;
 	kay_ctx->disable_receive_sa = wpas_disable_receive_sa;
 	kay_ctx->create_transmit_sc = wpas_create_transmit_sc;
 	kay_ctx->delete_transmit_sc = wpas_delete_transmit_sc;
 	kay_ctx->create_transmit_sa = wpas_create_transmit_sa;
+	kay_ctx->delete_transmit_sa = wpas_delete_transmit_sa;
 	kay_ctx->enable_transmit_sa = wpas_enable_transmit_sa;
 	kay_ctx->disable_transmit_sa = wpas_disable_transmit_sa;
 

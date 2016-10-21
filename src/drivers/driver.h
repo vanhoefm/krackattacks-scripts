@@ -3419,6 +3419,14 @@ struct wpa_driver_ops {
 	int (*create_receive_sa)(void *priv, struct receive_sa *sa);
 
 	/**
+	 * delete_receive_sa - Delete secure association for receive
+	 * @priv: Private driver interface data from init()
+	 * @sa: Secure association
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*delete_receive_sa)(void *priv, struct receive_sa *sa);
+
+	/**
 	 * enable_receive_sa - enable the SA for receive
 	 * @priv: private driver interface data from init()
 	 * @sa: secure association
@@ -3459,6 +3467,14 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*create_transmit_sa)(void *priv, struct transmit_sa *sa);
+
+	/**
+	 * delete_transmit_sa - Delete secure association for transmit
+	 * @priv: Private driver interface data from init()
+	 * @sa: Secure association
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*delete_transmit_sa)(void *priv, struct transmit_sa *sa);
 
 	/**
 	 * enable_transmit_sa - enable SA for transmit

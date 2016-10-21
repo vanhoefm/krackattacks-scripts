@@ -56,6 +56,10 @@
 static const u8 pae_group_addr[ETH_ALEN] =
 { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
 
+struct channel_map {
+	struct ieee802_1x_mka_sci sci;
+};
+
 struct macsec_qca_data {
 	char ifname[IFNAMSIZ + 1];
 	u32 secy_id;
@@ -72,6 +76,9 @@ struct macsec_qca_data {
 	Boolean protect_frames;
 	Boolean replay_protect;
 	u32 replay_window;
+
+	struct channel_map receive_channel_map[MAXSC];
+	struct channel_map transmit_channel_map[MAXSC];
 };
 
 
@@ -526,6 +533,68 @@ static int macsec_qca_enable_controlled_port(void *priv, Boolean enabled)
 }
 
 
+static int macsec_qca_lookup_channel(struct channel_map *map,
+				     struct ieee802_1x_mka_sci *sci,
+				     u32 *channel)
+{
+	u32 i;
+
+	for (i = 0; i < MAXSC; i++) {
+		if (os_memcmp(&map[i].sci, sci,
+			      sizeof(struct ieee802_1x_mka_sci)) == 0) {
+			*channel = i;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+
+static void macsec_qca_register_channel(struct channel_map *map,
+					struct ieee802_1x_mka_sci *sci,
+					u32 channel)
+{
+	os_memcpy(&map[channel].sci, sci, sizeof(struct ieee802_1x_mka_sci));
+}
+
+
+static int macsec_qca_lookup_receive_channel(struct macsec_qca_data *drv,
+					     struct receive_sc *sc,
+					     u32 *channel)
+{
+	return macsec_qca_lookup_channel(drv->receive_channel_map, &sc->sci,
+					 channel);
+}
+
+
+static void macsec_qca_register_receive_channel(struct macsec_qca_data *drv,
+						struct receive_sc *sc,
+						u32 channel)
+{
+	macsec_qca_register_channel(drv->receive_channel_map, &sc->sci,
+				    channel);
+}
+
+
+static int macsec_qca_lookup_transmit_channel(struct macsec_qca_data *drv,
+					      struct transmit_sc *sc,
+					      u32 *channel)
+{
+	return macsec_qca_lookup_channel(drv->transmit_channel_map, &sc->sci,
+					 channel);
+}
+
+
+static void macsec_qca_register_transmit_channel(struct macsec_qca_data *drv,
+						 struct transmit_sc *sc,
+						 u32 channel)
+{
+	macsec_qca_register_channel(drv->transmit_channel_map, &sc->sci,
+				    channel);
+}
+
+
 static int macsec_qca_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
@@ -533,7 +602,11 @@ static int macsec_qca_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 	u32 next_pn = 0;
 	bool enabled = FALSE;
 	u32 win;
-	u32 channel = sa->sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_receive_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	ret += nss_macsec_secy_rx_sa_next_pn_get(drv->secy_id, channel, sa->an,
 						 &next_pn);
@@ -557,7 +630,11 @@ static int macsec_qca_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
-	u32 channel = sa->sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_transmit_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	ret += nss_macsec_secy_tx_sa_next_pn_get(drv->secy_id, channel, sa->an,
 						 &sa->next_pn);
@@ -572,8 +649,11 @@ int macsec_qca_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
 	int ret = 0;
-	u32 channel = sa->sc->channel;
+	u32 channel;
 
+	ret = macsec_qca_lookup_transmit_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	ret += nss_macsec_secy_tx_sa_next_pn_set(drv->secy_id, channel, sa->an,
 						 sa->next_pn);
@@ -620,9 +700,13 @@ static int macsec_qca_create_receive_sc(void *priv, struct receive_sc *sc,
 	fal_rx_prc_lut_t entry;
 	fal_rx_sc_validate_frame_e vf;
 	enum validate_frames validate_frames = validation;
-	u32 channel = sc->channel;
+	u32 channel;
 	const u8 *sci_addr = sc->sci.addr;
 	u16 sci_port = be_to_host16(sc->sci.port);
+
+	ret = macsec_qca_get_available_receive_sc(priv, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -657,6 +741,8 @@ static int macsec_qca_create_receive_sc(void *priv, struct receive_sc *sc,
 							    channel,
 							    drv->replay_window);
 
+	macsec_qca_register_receive_channel(drv, sc, channel);
+
 	return ret;
 }
 
@@ -664,9 +750,13 @@ static int macsec_qca_create_receive_sc(void *priv, struct receive_sc *sc,
 static int macsec_qca_delete_receive_sc(void *priv, struct receive_sc *sc)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
+	int ret;
 	fal_rx_prc_lut_t entry;
-	u32 channel = sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_receive_channel(priv, sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -683,10 +773,14 @@ static int macsec_qca_delete_receive_sc(void *priv, struct receive_sc *sc)
 static int macsec_qca_create_receive_sa(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
+	int ret;
 	fal_rx_sak_t rx_sak;
 	int i = 0;
-	u32 channel = sa->sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_receive_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s, channel=%d, an=%d, lpn=0x%x",
 		   __func__, channel, sa->an, sa->lowest_pn);
@@ -706,9 +800,12 @@ static int macsec_qca_create_receive_sa(void *priv, struct receive_sa *sa)
 static int macsec_qca_enable_receive_sa(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-	u32 channel = sa->sc->channel;
+	int ret;
+	u32 channel;
 
+	ret = macsec_qca_lookup_receive_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
 		   sa->an);
@@ -723,8 +820,12 @@ static int macsec_qca_enable_receive_sa(void *priv, struct receive_sa *sa)
 static int macsec_qca_disable_receive_sa(void *priv, struct receive_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-	u32 channel = sa->sc->channel;
+	int ret;
+	u32 channel;
+
+	ret = macsec_qca_lookup_receive_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
 		   sa->an);
@@ -739,14 +840,12 @@ static int macsec_qca_disable_receive_sa(void *priv, struct receive_sa *sa)
 static int macsec_qca_get_available_transmit_sc(void *priv, u32 *channel)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
 	u32 sc_ch = 0;
 	bool in_use = FALSE;
 
 	for (sc_ch = 0; sc_ch < MAXSC; sc_ch++) {
-		ret = nss_macsec_secy_tx_sc_in_used_get(drv->secy_id, sc_ch,
-							&in_use);
-		if (ret)
+		if (nss_macsec_secy_tx_sc_in_used_get(drv->secy_id, sc_ch,
+						      &in_use))
 			continue;
 
 		if (!in_use) {
@@ -767,10 +866,14 @@ static int macsec_qca_create_transmit_sc(void *priv, struct transmit_sc *sc,
 					 unsigned int conf_offset)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
+	int ret;
 	fal_tx_class_lut_t entry;
 	u8 psci[ETH_ALEN + 2];
-	u32 channel = sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_get_available_transmit_sc(priv, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -793,6 +896,8 @@ static int macsec_qca_create_transmit_sc(void *priv, struct transmit_sc *sc,
 								channel,
 								conf_offset);
 
+	macsec_qca_register_transmit_channel(drv, sc, channel);
+
 	return ret;
 }
 
@@ -800,9 +905,13 @@ static int macsec_qca_create_transmit_sc(void *priv, struct transmit_sc *sc,
 static int macsec_qca_delete_transmit_sc(void *priv, struct transmit_sc *sc)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
+	int ret;
 	fal_tx_class_lut_t entry;
-	u32 channel = sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_transmit_channel(priv, sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d", __func__, channel);
 
@@ -819,11 +928,15 @@ static int macsec_qca_delete_transmit_sc(void *priv, struct transmit_sc *sc)
 static int macsec_qca_create_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
+	int ret;
 	u8 tci = 0;
 	fal_tx_sak_t tx_sak;
 	int i;
-	u32 channel = sa->sc->channel;
+	u32 channel;
+
+	ret = macsec_qca_lookup_transmit_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG,
 		   "%s: channel=%d, an=%d, next_pn=0x%x, confidentiality=%d",
@@ -858,9 +971,12 @@ static int macsec_qca_create_transmit_sa(void *priv, struct transmit_sa *sa)
 static int macsec_qca_enable_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-	u32 channel = sa->sc->channel;
+	int ret;
+	u32 channel;
 
+	ret = macsec_qca_lookup_transmit_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
 		   sa->an);
@@ -875,8 +991,12 @@ static int macsec_qca_enable_transmit_sa(void *priv, struct transmit_sa *sa)
 static int macsec_qca_disable_transmit_sa(void *priv, struct transmit_sa *sa)
 {
 	struct macsec_qca_data *drv = priv;
-	int ret = 0;
-	u32 channel = sa->sc->channel;
+	int ret;
+	u32 channel;
+
+	ret = macsec_qca_lookup_transmit_channel(priv, sa->sc, &channel);
+	if (ret != 0)
+		return ret;
 
 	wpa_printf(MSG_DEBUG, "%s: channel=%d, an=%d", __func__, channel,
 		   sa->an);
@@ -907,13 +1027,11 @@ const struct wpa_driver_ops wpa_driver_macsec_qca_ops = {
 	.get_receive_lowest_pn = macsec_qca_get_receive_lowest_pn,
 	.get_transmit_next_pn = macsec_qca_get_transmit_next_pn,
 	.set_transmit_next_pn = macsec_qca_set_transmit_next_pn,
-	.get_available_receive_sc = macsec_qca_get_available_receive_sc,
 	.create_receive_sc = macsec_qca_create_receive_sc,
 	.delete_receive_sc = macsec_qca_delete_receive_sc,
 	.create_receive_sa = macsec_qca_create_receive_sa,
 	.enable_receive_sa = macsec_qca_enable_receive_sa,
 	.disable_receive_sa = macsec_qca_disable_receive_sa,
-	.get_available_transmit_sc = macsec_qca_get_available_transmit_sc,
 	.create_transmit_sc = macsec_qca_create_transmit_sc,
 	.delete_transmit_sc = macsec_qca_delete_transmit_sc,
 	.create_transmit_sa = macsec_qca_create_transmit_sa,

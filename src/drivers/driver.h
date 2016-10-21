@@ -3390,14 +3390,6 @@ struct wpa_driver_ops {
 	int (*set_transmit_next_pn)(void *priv, struct transmit_sa *sa);
 
 	/**
-	 * get_available_receive_sc - get available receive channel
-	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * Returns: 0 on success, -1 on failure (or if not supported)
-	 */
-	int (*get_available_receive_sc)(void *priv, u32 *channel);
-
-	/**
 	 * create_receive_sc - create secure channel for receiving
 	 * @priv: Private driver interface data
 	 * @sc: secure channel
@@ -3441,14 +3433,6 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*disable_receive_sa)(void *priv, struct receive_sa *sa);
-
-	/**
-	 * get_available_transmit_sc - get available transmit channel
-	 * @priv: Private driver interface data
-	 * @channel: secure channel
-	 * Returns: 0 on success, -1 on failure (or if not supported)
-	 */
-	int (*get_available_transmit_sc)(void *priv, u32 *channel);
 
 	/**
 	 * create_transmit_sc - create secure connection for transmit

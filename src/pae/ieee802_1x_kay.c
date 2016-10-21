@@ -440,8 +440,8 @@ ieee802_1x_kay_init_receive_sa(struct receive_sc *psc, u8 an, u32 lowest_pn,
 
 	dl_list_add(&psc->sa_list, &psa->list);
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Create receive SA(AN: %hhu lowest_pn: %u of SC(channel: %d)",
-		   an, lowest_pn, psc->channel);
+		   "KaY: Create receive SA(AN: %hhu lowest_pn: %u of SC",
+		   an, lowest_pn);
 
 	return psa;
 }
@@ -465,8 +465,7 @@ static void ieee802_1x_kay_deinit_receive_sa(struct receive_sa *psa)
  * ieee802_1x_kay_init_receive_sc -
  */
 static struct receive_sc *
-ieee802_1x_kay_init_receive_sc(const struct ieee802_1x_mka_sci *psci,
-			       int channel)
+ieee802_1x_kay_init_receive_sc(const struct ieee802_1x_mka_sci *psci)
 {
 	struct receive_sc *psc;
 
@@ -480,13 +479,12 @@ ieee802_1x_kay_init_receive_sc(const struct ieee802_1x_mka_sci *psci,
 	}
 
 	os_memcpy(&psc->sci, psci, sizeof(psc->sci));
-	psc->channel = channel;
 
 	os_get_time(&psc->created_time);
 	psc->receiving = FALSE;
 
 	dl_list_init(&psc->sa_list);
-	wpa_printf(MSG_DEBUG, "KaY: Create receive SC(channel: %d)", channel);
+	wpa_printf(MSG_DEBUG, "KaY: Create receive SC");
 	wpa_hexdump(MSG_DEBUG, "SCI: ", (u8 *)psci, sizeof(*psci));
 
 	return psc;
@@ -502,8 +500,7 @@ ieee802_1x_kay_deinit_receive_sc(
 {
 	struct receive_sa *psa, *pre_sa;
 
-	wpa_printf(MSG_DEBUG, "KaY: Delete receive SC(channel: %d)",
-		   psc->channel);
+	wpa_printf(MSG_DEBUG, "KaY: Delete receive SC");
 	dl_list_for_each_safe(psa, pre_sa, &psc->sa_list, struct receive_sa,
 			      list)  {
 		secy_disable_receive_sa(participant->kay, psa);
@@ -552,7 +549,6 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 {
 	struct ieee802_1x_kay_peer *peer;
 	struct receive_sc *rxsc;
-	u32 sc_ch = 0;
 
 	peer = ieee802_1x_kay_create_peer(mi, mn);
 	if (!peer)
@@ -561,9 +557,7 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 	os_memcpy(&peer->sci, &participant->current_peer_sci,
 		  sizeof(peer->sci));
 
-	secy_get_available_receive_sc(participant->kay, &sc_ch);
-
-	rxsc = ieee802_1x_kay_init_receive_sc(&peer->sci, sc_ch);
+	rxsc = ieee802_1x_kay_init_receive_sc(&peer->sci);
 	if (!rxsc) {
 		os_free(peer);
 		return NULL;
@@ -611,12 +605,10 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 {
 	struct ieee802_1x_kay_peer *peer;
 	struct receive_sc *rxsc;
-	u32 sc_ch = 0;
 
 	peer = ieee802_1x_kay_get_potential_peer(participant, mi);
 
-	rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci,
-					      sc_ch);
+	rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci);
 	if (!rxsc)
 		return NULL;
 
@@ -630,8 +622,6 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 
 	dl_list_del(&peer->list);
 	dl_list_add_tail(&participant->live_peers, &peer->list);
-
-	secy_get_available_receive_sc(participant->kay, &sc_ch);
 
 	dl_list_add(&participant->rxsc_list, &rxsc->list);
 	secy_create_receive_sc(participant->kay, rxsc);
@@ -2438,8 +2428,8 @@ ieee802_1x_kay_init_transmit_sa(struct transmit_sc *psc, u8 an, u32 next_PN,
 
 	dl_list_add(&psc->sa_list, &psa->list);
 	wpa_printf(MSG_DEBUG,
-		   "KaY: Create transmit SA(an: %hhu, next_PN: %u) of SC(channel: %d)",
-		   an, next_PN, psc->channel);
+		   "KaY: Create transmit SA(an: %hhu, next_PN: %u) of SC",
+		   an, next_PN);
 
 	return psa;
 }
@@ -2463,8 +2453,7 @@ static void ieee802_1x_kay_deinit_transmit_sa(struct transmit_sa *psa)
  * init_transmit_sc -
  */
 static struct transmit_sc *
-ieee802_1x_kay_init_transmit_sc(const struct ieee802_1x_mka_sci *sci,
-				int channel)
+ieee802_1x_kay_init_transmit_sc(const struct ieee802_1x_mka_sci *sci)
 {
 	struct transmit_sc *psc;
 
@@ -2474,7 +2463,6 @@ ieee802_1x_kay_init_transmit_sc(const struct ieee802_1x_mka_sci *sci,
 		return NULL;
 	}
 	os_memcpy(&psc->sci, sci, sizeof(psc->sci));
-	psc->channel = channel;
 
 	os_get_time(&psc->created_time);
 	psc->transmitting = FALSE;
@@ -2482,7 +2470,7 @@ ieee802_1x_kay_init_transmit_sc(const struct ieee802_1x_mka_sci *sci,
 	psc->enciphering_sa = FALSE;
 
 	dl_list_init(&psc->sa_list);
-	wpa_printf(MSG_DEBUG, "KaY: Create transmit SC(channel: %d)", channel);
+	wpa_printf(MSG_DEBUG, "KaY: Create transmit SC");
 	wpa_hexdump(MSG_DEBUG, "SCI: ", (u8 *)sci , sizeof(*sci));
 
 	return psc;
@@ -2498,8 +2486,7 @@ ieee802_1x_kay_deinit_transmit_sc(
 {
 	struct transmit_sa *psa, *tmp;
 
-	wpa_printf(MSG_DEBUG, "KaY: Delete transmit SC(channel: %d)",
-		   psc->channel);
+	wpa_printf(MSG_DEBUG, "KaY: Delete transmit SC");
 	dl_list_for_each_safe(psa, tmp, &psc->sa_list, struct transmit_sa,
 			      list) {
 		secy_disable_transmit_sa(participant->kay, psa);
@@ -3089,7 +3076,6 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 
 	/* Initialize the SecY must be prio to CP, as CP will control SecY */
 	secy_init_macsec(kay);
-	secy_get_available_transmit_sc(kay, &kay->sc_ch);
 
 	wpa_printf(MSG_DEBUG, "KaY: secy init macsec done");
 
@@ -3250,8 +3236,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 	dl_list_init(&participant->sak_list);
 	participant->new_key = NULL;
 	dl_list_init(&participant->rxsc_list);
-	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci,
-							    kay->sc_ch);
+	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci);
 	secy_cp_control_protect_frames(kay, kay->macsec_protect);
 	secy_cp_control_replay(kay, kay->macsec_replay_protect,
 			       kay->macsec_replay_window);

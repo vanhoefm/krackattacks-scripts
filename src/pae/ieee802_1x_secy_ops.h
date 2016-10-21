@@ -35,7 +35,6 @@ int secy_get_transmit_next_pn(struct ieee802_1x_kay *kay,
 			      struct transmit_sa *txsa);
 int secy_set_transmit_next_pn(struct ieee802_1x_kay *kay,
 			      struct transmit_sa *txsa);
-int secy_get_available_receive_sc(struct ieee802_1x_kay *kay, u32 *channel);
 int secy_create_receive_sc(struct ieee802_1x_kay *kay, struct receive_sc *rxsc);
 int secy_delete_receive_sc(struct ieee802_1x_kay *kay, struct receive_sc *rxsc);
 int secy_create_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa);
@@ -43,7 +42,6 @@ int secy_enable_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa);
 int secy_disable_receive_sa(struct ieee802_1x_kay *kay,
 			    struct receive_sa *rxsa);
 
-int secy_get_available_transmit_sc(struct ieee802_1x_kay *kay, u32 *channel);
 int secy_create_transmit_sc(struct ieee802_1x_kay *kay,
 			    struct transmit_sc *txsc);
 int secy_delete_transmit_sc(struct ieee802_1x_kay *kay,

@@ -196,26 +196,6 @@ int secy_set_transmit_next_pn(struct ieee802_1x_kay *kay,
 }
 
 
-int secy_get_available_receive_sc(struct ieee802_1x_kay *kay, u32 *channel)
-{
-	struct ieee802_1x_kay_ctx *ops;
-
-	if (!kay) {
-		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
-		return -1;
-	}
-
-	ops = kay->ctx;
-	if (!ops || !ops->get_available_receive_sc) {
-		wpa_printf(MSG_ERROR,
-			   "KaY: secy get_available_receive_sc operation not supported");
-		return -1;
-	}
-
-	return ops->get_available_receive_sc(ops->ctx, channel);
-}
-
-
 int secy_create_receive_sc(struct ieee802_1x_kay *kay, struct receive_sc *rxsc)
 {
 	struct ieee802_1x_kay_ctx *ops;
@@ -317,26 +297,6 @@ int secy_disable_receive_sa(struct ieee802_1x_kay *kay, struct receive_sa *rxsa)
 	rxsa->enable_receive = FALSE;
 
 	return ops->disable_receive_sa(ops->ctx, rxsa);
-}
-
-
-int secy_get_available_transmit_sc(struct ieee802_1x_kay *kay, u32 *channel)
-{
-	struct ieee802_1x_kay_ctx *ops;
-
-	if (!kay) {
-		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
-		return -1;
-	}
-
-	ops = kay->ctx;
-	if (!ops || !ops->get_available_transmit_sc) {
-		wpa_printf(MSG_ERROR,
-			   "KaY: secy get_available_transmit_sc operation not supported");
-		return -1;
-	}
-
-	return ops->get_available_transmit_sc(ops->ctx, channel);
 }
 
 

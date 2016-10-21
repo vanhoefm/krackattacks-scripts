@@ -780,15 +780,6 @@ static inline int wpa_drv_set_transmit_next_pn(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->set_transmit_next_pn(wpa_s->drv_priv, sa);
 }
 
-static inline int wpa_drv_get_available_receive_sc(struct wpa_supplicant *wpa_s,
-						   u32 *channel)
-{
-	if (!wpa_s->driver->get_available_receive_sc)
-		return -1;
-	return wpa_s->driver->get_available_receive_sc(wpa_s->drv_priv,
-						       channel);
-}
-
 static inline int
 wpa_drv_create_receive_sc(struct wpa_supplicant *wpa_s, struct receive_sc *sc,
 			  unsigned int conf_offset, int validation)
@@ -829,15 +820,6 @@ static inline int wpa_drv_disable_receive_sa(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->driver->disable_receive_sa)
 		return -1;
 	return wpa_s->driver->disable_receive_sa(wpa_s->drv_priv, sa);
-}
-
-static inline int
-wpa_drv_get_available_transmit_sc(struct wpa_supplicant *wpa_s, u32 *channel)
-{
-	if (!wpa_s->driver->get_available_transmit_sc)
-		return -1;
-	return wpa_s->driver->get_available_transmit_sc(wpa_s->drv_priv,
-							channel);
 }
 
 static inline int

@@ -80,8 +80,6 @@ struct transmit_sc {
 	u8 enciphering_sa; /* AN encipheringSA (read only) */
 
 	/* not defined data */
-	unsigned int channel;
-
 	struct dl_list list;
 	struct dl_list sa_list;
 };
@@ -108,8 +106,6 @@ struct receive_sc {
 	Boolean receiving; /* bool receiving (read only) */
 
 	struct os_time created_time; /* Time createdTime */
-
-	unsigned int channel;
 
 	struct dl_list list;
 	struct dl_list sa_list;
@@ -146,7 +142,6 @@ struct ieee802_1x_kay_ctx {
 	int (*get_receive_lowest_pn)(void *ctx, struct receive_sa *sa);
 	int (*get_transmit_next_pn)(void *ctx, struct transmit_sa *sa);
 	int (*set_transmit_next_pn)(void *ctx, struct transmit_sa *sa);
-	int (*get_available_receive_sc)(void *ctx, u32 *channel);
 	int (*create_receive_sc)(void *ctx, struct receive_sc *sc,
 				 enum validate_frames vf,
 				 enum confidentiality_offset co);
@@ -154,7 +149,6 @@ struct ieee802_1x_kay_ctx {
 	int (*create_receive_sa)(void *ctx, struct receive_sa *sa);
 	int (*enable_receive_sa)(void *ctx, struct receive_sa *sa);
 	int (*disable_receive_sa)(void *ctx, struct receive_sa *sa);
-	int (*get_available_transmit_sc)(void *ctx, u32 *channel);
 	int (*create_transmit_sc)(void *ctx, struct transmit_sc *sc,
 				  enum confidentiality_offset co);
 	int (*delete_transmit_sc)(void *ctx, struct transmit_sc *sc);
@@ -209,7 +203,6 @@ struct ieee802_1x_kay {
 
 	u8 mka_version;
 	u8 algo_agility[4];
-	u32 sc_ch;
 
 	u32 pn_exhaustion;
 	Boolean port_enable;

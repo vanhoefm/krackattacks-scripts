@@ -3506,8 +3506,6 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 		}
 	}
 
-	dl_list_init(&interface->global_ctrl_dst);
-	interface->global_ctrl_sock = -1;
 	os_get_random(gcookie, COOKIE_LEN);
 
 #ifdef CONFIG_CTRL_IFACE_UDP_REMOTE

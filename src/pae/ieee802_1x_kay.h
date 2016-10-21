@@ -15,7 +15,7 @@
 
 struct macsec_init_params;
 
-#define MI_LEN			12
+#define MI_LEN			12  /* 96-bit Member Identifier */
 #define MAX_KEY_LEN		32  /* 32 bytes, 256 bits */
 #define MAX_CKN_LEN		32  /* 32 bytes, 256 bits */
 
@@ -24,6 +24,12 @@ struct macsec_init_params;
 #define MKA_LIFE_TIME		6000
 #define MKA_SAK_RETIRE_TIME	3000
 
+/**
+ * struct ieee802_1x_mka_ki - Key Identifier (KI)
+ * @mi: Key Server's Member Identifier
+ * @kn: Key Number, assigned by the Key Server
+ * IEEE 802.1X-2010 9.8 SAK generation, distribution, and selection
+ */
 struct ieee802_1x_mka_ki {
 	u8 mi[MI_LEN];
 	u32 kn;

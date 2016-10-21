@@ -168,6 +168,22 @@ struct ieee802_1x_mka_hdr {
 
 #define MKA_HDR_LEN sizeof(struct ieee802_1x_mka_hdr)
 
+/**
+ * struct ieee802_1x_mka_basic_body - Basic Parameter Set (Figure 11-8)
+ * @version: MKA Version Identifier
+ * @priority: Key Server Priority
+ * @length: Parameter set body length
+ * @macsec_capability: MACsec capability, as defined in ieee802_1x_defs.h
+ * @macsec_desired: the participant wants MACsec to be used to protect frames
+ *	(9.6.1)
+ * @key_server: the participant has not decided that another participant is or
+ *	will be the key server (9.5.1)
+ * @length1: Parameter set body length (cont)
+ * @actor_mi: Actor's Member Identifier
+ * @actor_mn: Actor's Message Number
+ * @algo_agility: Algorithm Agility parameter
+ * @ckn: CAK Name
+ */
 struct ieee802_1x_mka_basic_body {
 	/* octet 1 */
 	u8 version;
@@ -197,6 +213,14 @@ struct ieee802_1x_mka_basic_body {
 	u8 ckn[0];
 };
 
+/**
+ * struct ieee802_1x_mka_peer_body - Live Peer List and Potential Peer List
+ *	parameter sets (Figure 11-9)
+ * @type: Parameter set type (1 or 2)
+ * @length: Parameter set body length
+ * @length1: Parameter set body length (cont)
+ * @peer: array of (MI, MN) pairs
+ */
 struct ieee802_1x_mka_peer_body {
 	/* octet 1 */
 	u8 type;
@@ -217,6 +241,28 @@ struct ieee802_1x_mka_peer_body {
 	/* followed by Peers */
 };
 
+/**
+ * struct ieee802_1x_mka_sak_use_body - MACsec SAK Use parameter set (Figure
+ *	11-10)
+ * @type: MKA message type
+ * @lan: latest key AN
+ * @ltx: latest key TX
+ * @lrx: latest key RX
+ * @oan: old key AN
+ * @otx: old key TX
+ * @orx: old key RX
+ * @ptx: plain TX, ie protectFrames is False
+ * @prx: plain RX, ie validateFrames is not Strict
+ * @delay_protect: True if LPNs are being reported sufficiently frequently to
+ *	allow the recipient to provide data delay protection. If False, the LPN
+ *	can be reported as zero.
+ * @lsrv_mi: latest key server MI
+ * @lkn: latest key number (together with MI, form the KI)
+ * @llpn: latest lowest acceptable PN (LPN)
+ * @osrv_mi: old key server MI
+ * @okn: old key number (together with MI, form the KI)
+ * @olpn: old lowest acceptable PN (LPN)
+ */
 struct ieee802_1x_mka_sak_use_body {
 	/* octet 1 */
 	u8 type;
@@ -270,7 +316,21 @@ struct ieee802_1x_mka_sak_use_body {
 	be32 olpn;
 };
 
-
+/**
+ * struct ieee802_1x_mka_dist_sak_body - Distributed SAK parameter set
+ *	(GCM-AES-128, Figure 11-11)
+ * @type: Parameter set type (4)
+ * @length: Parameter set body length
+ * @length1: Parameter set body length (cont)
+ *           Total parameter body length values:
+ *            -  0 for plain text
+ *            - 28 for GCM-AES-128
+ *            - 36 or more for other cipher suites
+ * @confid_offset: confidentiality offset, as defined in ieee802_1x_defs.h
+ * @dan: distributed AN (0 for plain text)
+ * @kn: Key Number
+ * @sak: AES Key Wrap of SAK (see 9.8)
+ */
 struct ieee802_1x_mka_dist_sak_body {
 	/* octet 1 */
 	u8 type;
@@ -303,6 +363,41 @@ struct ieee802_1x_mka_dist_sak_body {
 	u8 sak[0];
 };
 
+/**
+ * struct ieee802_1x_mka_dist_cak_body - Distributed CAK parameter set (Figure
+ *	11-13)
+ * @type: Parameter set type (5)
+ * @length: Parameter set body length
+ * @length1: Parameter set body length (cont)
+ *           Total parameter body length values:
+ *            -  0 for plain text
+ *            - 28 for GCM-AES-128
+ *            - 36 or more for other cipher suites
+ * @cak: AES Key Wrap of CAK (see 9.8)
+ * @ckn: CAK Name
+ */
+struct ieee802_1x_mka_dist_cak_body {
+	/* octet 1 */
+	u8 type;
+	/* octet 2 */
+	u8 reserve;
+	/* octet 3 */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	u8 length:4;
+	u8 reserve1:4;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+	u8 reserve1:4;
+	u8 length:4;
+#endif
+	/* octet 4 */
+	u8 length1;
+
+	/* octet 5 - 28 */
+	u8 cak[24];
+
+	/* followed by CAK Name, 29- */
+	u8 ckn[0];
+};
 
 struct ieee802_1x_mka_icv_body {
 	/* octet 1 */

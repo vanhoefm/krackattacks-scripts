@@ -70,7 +70,7 @@ struct data_key {
 	Boolean rx_latest;
 	Boolean tx_latest;
 
-	int user;  /* FIXME: to indicate if it can be delete safely */
+	int user;
 
 	struct dl_list list;
 };

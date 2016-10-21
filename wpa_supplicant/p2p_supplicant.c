@@ -5236,8 +5236,10 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 		if (!res && max_pref_freq > 0) {
 			*num_pref_freq = max_pref_freq;
 			i = 0;
-			while (wpas_p2p_disallowed_freq(wpa_s->global,
-							pref_freq_list[i]) &&
+			while ((!p2p_supported_freq(wpa_s->global->p2p,
+						    pref_freq_list[i]) ||
+				wpas_p2p_disallowed_freq(wpa_s->global,
+							pref_freq_list[i])) &&
 			       i < *num_pref_freq) {
 				wpa_printf(MSG_DEBUG,
 					   "P2P: preferred_freq_list[%d]=%d is disallowed",

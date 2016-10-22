@@ -2867,6 +2867,10 @@ int wpa_sm_set_assoc_wpa_ie_default(struct wpa_sm *sm, u8 *wpa_ie,
 
 		os_memcpy(sm->assoc_wpa_ie, wpa_ie, *wpa_ie_len);
 		sm->assoc_wpa_ie_len = *wpa_ie_len;
+	} else {
+		wpa_hexdump(MSG_DEBUG,
+			    "WPA: Leave previously set WPA IE default",
+			    sm->assoc_wpa_ie, sm->assoc_wpa_ie_len);
 	}
 
 	return 0;

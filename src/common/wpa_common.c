@@ -1483,7 +1483,7 @@ int wpa_compare_rsn_ie(int ft_initial_assoc,
 }
 
 
-#ifdef CONFIG_IEEE80211R
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_FILS)
 int wpa_insert_pmkid(u8 *ies, size_t *ies_len, const u8 *pmkid)
 {
 	u8 *start, *end, *rpos, *rend;
@@ -1582,7 +1582,7 @@ int wpa_insert_pmkid(u8 *ies, size_t *ies_len, const u8 *pmkid)
 
 	return 0;
 }
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R || CONFIG_FILS */
 
 
 int wpa_cipher_key_len(int cipher)

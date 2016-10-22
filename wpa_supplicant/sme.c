@@ -650,6 +650,10 @@ static void sme_auth_start_cb(struct wpa_radio_work *work, int deinit)
 		return;
 	}
 
+	/* Starting new connection, so clear the possibly used WPA IE from the
+	 * previous association. */
+	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
+
 	sme_send_authentication(wpa_s, cwork->bss, cwork->ssid, 1);
 }
 

@@ -543,8 +543,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			wpas_connection_failed(wpa_s, bss->bssid);
 			return;
 		}
-		params.sae_data = wpabuf_head(resp);
-		params.sae_data_len = wpabuf_len(resp);
+		params.auth_data = wpabuf_head(resp);
+		params.auth_data_len = wpabuf_len(resp);
 		wpa_s->sme.sae.state = start ? SAE_COMMITTED : SAE_CONFIRMED;
 	}
 #endif /* CONFIG_SAE */

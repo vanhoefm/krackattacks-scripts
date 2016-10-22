@@ -234,7 +234,7 @@ static int wpa_driver_privsep_authenticate(
 		   __func__, priv, params->freq, MAC2STR(params->bssid),
 		   params->auth_alg, params->local_state_change, params->p2p);
 
-	buflen = sizeof(*data) + params->ie_len + params->sae_data_len;
+	buflen = sizeof(*data) + params->ie_len + params->auth_data_len;
 	data = os_zalloc(buflen);
 	if (data == NULL)
 		return -1;
@@ -259,8 +259,8 @@ static int wpa_driver_privsep_authenticate(
 		os_memcpy(pos, params->ie, params->ie_len);
 		pos += params->ie_len;
 	}
-	if (params->sae_data_len)
-		os_memcpy(pos, params->sae_data, params->sae_data_len);
+	if (params->auth_data_len)
+		os_memcpy(pos, params->auth_data, params->auth_data_len);
 
 	res = wpa_priv_cmd(drv, PRIVSEP_CMD_AUTHENTICATE, data, buflen,
 			   NULL, NULL);

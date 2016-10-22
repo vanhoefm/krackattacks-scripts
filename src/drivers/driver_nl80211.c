@@ -3095,11 +3095,11 @@ retry:
 	if (params->ie &&
 	    nla_put(msg, NL80211_ATTR_IE, params->ie_len, params->ie))
 		goto fail;
-	if (params->sae_data) {
-		wpa_hexdump(MSG_DEBUG, "  * SAE data", params->sae_data,
-			    params->sae_data_len);
-		if (nla_put(msg, NL80211_ATTR_SAE_DATA, params->sae_data_len,
-			    params->sae_data))
+	if (params->auth_data) {
+		wpa_hexdump(MSG_DEBUG, "  * auth_data", params->auth_data,
+			    params->auth_data_len);
+		if (nla_put(msg, NL80211_ATTR_SAE_DATA, params->auth_data_len,
+			    params->auth_data))
 			goto fail;
 	}
 	if (params->auth_alg & WPA_AUTH_ALG_OPEN)

@@ -488,17 +488,18 @@ struct wpa_driver_auth_params {
 	int p2p;
 
 	/**
-	 * sae_data - SAE elements for Authentication frame
+	 * auth_data - Additional elements for Authentication frame
 	 *
 	 * This buffer starts with the Authentication transaction sequence
-	 * number field. If SAE is not used, this pointer is %NULL.
+	 * number field. If no special handling of such elements is needed, this
+	 * pointer is %NULL. This is used with SAE and FILS.
 	 */
-	const u8 *sae_data;
+	const u8 *auth_data;
 
 	/**
-	 * sae_data_len - Length of sae_data buffer in octets
+	 * auth_data_len - Length of auth_data buffer in octets
 	 */
-	size_t sae_data_len;
+	size_t auth_data_len;
 };
 
 /**

@@ -42,9 +42,9 @@ struct privsep_cmd_authenticate
 	int wep_tx_keyidx;
 	int local_state_change;
 	int p2p;
-	size_t sae_data_len;
+	size_t auth_data_len;
 	/* followed by ie_len bytes of ie */
-	/* followed by sae_data_len bytes of sae_data */
+	/* followed by auth_data_len bytes of auth_data */
 };
 
 struct privsep_cmd_associate

@@ -218,7 +218,7 @@ static void wpa_priv_cmd_authenticate(struct wpa_priv_interface *iface,
 	}
 
 	auth = buf;
-	if (sizeof(*auth) + auth->ie_len + auth->sae_data_len > len) {
+	if (sizeof(*auth) + auth->ie_len + auth->auth_data_len > len) {
 		wpa_printf(MSG_DEBUG, "Authentication request overflow");
 		return;
 	}
@@ -244,9 +244,9 @@ static void wpa_priv_cmd_authenticate(struct wpa_priv_interface *iface,
 		params.ie = (u8 *) (auth + 1);
 		params.ie_len = auth->ie_len;
 	}
-	if (auth->sae_data_len) {
-		params.sae_data = ((u8 *) (auth + 1)) + auth->ie_len;
-		params.sae_data_len = auth->sae_data_len;
+	if (auth->auth_data_len) {
+		params.auth_data = ((u8 *) (auth + 1)) + auth->ie_len;
+		params.auth_data_len = auth->auth_data_len;
 	}
 
 	res = iface->driver->authenticate(iface->drv_priv, &params);

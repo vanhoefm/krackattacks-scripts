@@ -5154,6 +5154,22 @@ static int wpa_driver_nl80211_associate(
 	if (ret)
 		goto fail;
 
+	if (params->fils_kek) {
+		wpa_printf(MSG_DEBUG, "  * FILS KEK (len=%u)",
+			   (unsigned int) params->fils_kek_len);
+		if (nla_put(msg, NL80211_ATTR_FILS_KEK, params->fils_kek_len,
+			    params->fils_kek))
+			goto fail;
+	}
+	if (params->fils_nonces) {
+		wpa_hexdump(MSG_DEBUG, "  * FILS nonces (for AAD)",
+			    params->fils_nonces,
+			    params->fils_nonces_len);
+		if (nla_put(msg, NL80211_ATTR_FILS_NONCES,
+			    params->fils_nonces_len, params->fils_nonces))
+			goto fail;
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {

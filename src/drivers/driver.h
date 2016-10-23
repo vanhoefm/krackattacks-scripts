@@ -886,6 +886,27 @@ struct wpa_driver_associate_params {
 	 * AP as usual. Valid for DMG network only.
 	 */
 	int pbss;
+
+	/**
+	 * fils_kek - KEK for FILS association frame protection (AES-SIV)
+	 */
+	const u8 *fils_kek;
+
+	/**
+	 * fils_kek_len: Length of fils_kek in bytes
+	 */
+	size_t fils_kek_len;
+
+	/**
+	 * fils_nonces - Nonces for FILS association frame protection
+	 * (AES-SIV AAD)
+	 */
+	const u8 *fils_nonces;
+
+	/**
+	 * fils_nonces_len: Length of fils_nonce in bytes
+	 */
+	size_t fils_nonces_len;
 };
 
 enum hide_ssid {

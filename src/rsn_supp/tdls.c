@@ -2878,14 +2878,14 @@ void wpa_tdls_disassoc(struct wpa_sm *sm)
 static int wpa_tdls_prohibited(struct ieee802_11_elems *elems)
 {
 	/* bit 38 - TDLS Prohibited */
-	return !!(elems->ext_capab[2 + 4] & 0x40);
+	return !!(elems->ext_capab[4] & 0x40);
 }
 
 
 static int wpa_tdls_chan_switch_prohibited(struct ieee802_11_elems *elems)
 {
 	/* bit 39 - TDLS Channel Switch Prohibited */
-	return !!(elems->ext_capab[2 + 4] & 0x80);
+	return !!(elems->ext_capab[4] & 0x80);
 }
 
 
@@ -2898,7 +2898,7 @@ void wpa_tdls_ap_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
 
 	if (ies == NULL ||
 	    ieee802_11_parse_elems(ies, len, &elems, 0) == ParseFailed ||
-	    elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
+	    elems.ext_capab == NULL || elems.ext_capab_len < 5)
 		return;
 
 	sm->tdls_prohibited = wpa_tdls_prohibited(&elems);
@@ -2917,7 +2917,7 @@ void wpa_tdls_assoc_resp_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
 
 	if (ies == NULL ||
 	    ieee802_11_parse_elems(ies, len, &elems, 0) == ParseFailed ||
-	    elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
+	    elems.ext_capab == NULL || elems.ext_capab_len < 5)
 		return;
 
 	if (!sm->tdls_prohibited && wpa_tdls_prohibited(&elems)) {

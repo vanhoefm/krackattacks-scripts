@@ -221,7 +221,7 @@ static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd)
 }
 
 
-static int hostapd_cli_cmd(struct wpa_ctrl *ctrl, const const char *cmd,
+static int hostapd_cli_cmd(struct wpa_ctrl *ctrl, const char *cmd,
 			   int min_args, int argc, char *argv[])
 {
 	char buf[4096];

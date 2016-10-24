@@ -228,6 +228,7 @@ int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 			 void *arg, int use_existing);
 void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx);
 unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv);
+int nl80211_get_assoc_ssid(struct wpa_driver_nl80211_data *drv, u8 *ssid);
 enum chan_width convert2width(int width);
 void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv);
 struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,

@@ -1186,6 +1186,8 @@ struct nl80211_get_assoc_freq_arg {
 	unsigned int assoc_freq;
 	unsigned int ibss_freq;
 	u8 assoc_bssid[ETH_ALEN];
+	u8 assoc_ssid[SSID_MAX_LEN];
+	u8 assoc_ssid_len;
 };
 
 static int nl80211_get_assoc_freq_handler(struct nl_msg *msg, void *arg)
@@ -1196,6 +1198,7 @@ static int nl80211_get_assoc_freq_handler(struct nl_msg *msg, void *arg)
 	static struct nla_policy bss_policy[NL80211_BSS_MAX + 1] = {
 		[NL80211_BSS_BSSID] = { .type = NLA_UNSPEC },
 		[NL80211_BSS_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_BSS_INFORMATION_ELEMENTS] = { .type = NLA_UNSPEC },
 		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
 	};
 	struct nl80211_get_assoc_freq_arg *ctx = arg;
@@ -1230,7 +1233,42 @@ static int nl80211_get_assoc_freq_handler(struct nl_msg *msg, void *arg)
 			   MACSTR, MAC2STR(ctx->assoc_bssid));
 	}
 
+	if (status == NL80211_BSS_STATUS_ASSOCIATED &&
+	    bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
+		const u8 *ie, *ssid;
+		size_t ie_len;
+
+		ie = nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
+		ie_len = nla_len(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
+		ssid = get_ie(ie, ie_len, WLAN_EID_SSID);
+		if (ssid && ssid[1] > 0 && ssid[1] <= SSID_MAX_LEN) {
+			ctx->assoc_ssid_len = ssid[1];
+			os_memcpy(ctx->assoc_ssid, ssid + 2, ssid[1]);
+		}
+	}
+
 	return NL_SKIP;
+}
+
+
+int nl80211_get_assoc_ssid(struct wpa_driver_nl80211_data *drv, u8 *ssid)
+{
+	struct nl_msg *msg;
+	int ret;
+	struct nl80211_get_assoc_freq_arg arg;
+
+	msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_GET_SCAN);
+	os_memset(&arg, 0, sizeof(arg));
+	arg.drv = drv;
+	ret = send_and_recv_msgs(drv, msg, nl80211_get_assoc_freq_handler,
+				 &arg);
+	if (ret == 0) {
+		os_memcpy(ssid, arg.assoc_ssid, arg.assoc_ssid_len);
+		return arg.assoc_ssid_len;
+	}
+	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d (%s)",
+		   ret, strerror(-ret));
+	return ret;
 }
 
 

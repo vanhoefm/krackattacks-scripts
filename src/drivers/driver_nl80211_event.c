@@ -206,6 +206,7 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
 	u16 status;
+	int ssid_len;
 
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME) &&
 	    drv->force_connect_cmd) {
@@ -257,6 +258,16 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 
 	event.assoc_info.freq = drv->assoc_freq;
 
+	/* When this association was initiated outside of wpa_supplicant,
+	 * drv->ssid needs to be set here to satisfy later checking. */
+	ssid_len = nl80211_get_assoc_ssid(drv, drv->ssid);
+	if (ssid_len > 0) {
+		drv->ssid_len = ssid_len;
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Set drv->ssid based on scan res info to '%s'",
+			   wpa_ssid_txt(drv->ssid, drv->ssid_len));
+	}
+
 	nl80211_parse_wmm_params(wmm, &event.assoc_info.wmm_params);
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
@@ -275,8 +286,9 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       struct nlattr *subnet_status)
 {
 	union wpa_event_data event;
-	const u8 *ssid;
+	const u8 *ssid = NULL;
 	u16 status_code;
+	int ssid_len;
 
 	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
 		/*
@@ -347,6 +359,10 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			if (ssid && ssid[1] > 0 && ssid[1] <= 32) {
 				drv->ssid_len = ssid[1];
 				os_memcpy(drv->ssid, ssid + 2, ssid[1]);
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Set drv->ssid based on req_ie to '%s'",
+					   wpa_ssid_txt(drv->ssid,
+							drv->ssid_len));
 			}
 		}
 	}
@@ -356,6 +372,16 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 	}
 
 	event.assoc_info.freq = nl80211_get_assoc_freq(drv);
+
+	if ((!ssid || ssid[1] == 0 || ssid[1] > 32) &&
+	    (ssid_len = nl80211_get_assoc_ssid(drv, drv->ssid)) > 0) {
+		/* When this connection was initiated outside of wpa_supplicant,
+		 * drv->ssid needs to be set here to satisfy later checking. */
+		drv->ssid_len = ssid_len;
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Set drv->ssid based on scan res info to '%s'",
+			   wpa_ssid_txt(drv->ssid, drv->ssid_len));
+	}
 
 	if (authorized && nla_get_u8(authorized)) {
 		event.assoc_info.authorized = 1;

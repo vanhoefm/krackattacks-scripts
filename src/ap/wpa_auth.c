@@ -1673,7 +1673,10 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 {
 	sm->PTK_valid = FALSE;
 	os_memset(&sm->PTK, 0, sizeof(sm->PTK));
-	wpa_auth_set_key(sm->wpa_auth, 0, WPA_ALG_NONE, sm->addr, 0, NULL, 0);
+	if (wpa_auth_set_key(sm->wpa_auth, 0, WPA_ALG_NONE, sm->addr, 0, NULL,
+			     0))
+		wpa_printf(MSG_DEBUG,
+			   "RSN: PTK removal from the driver failed");
 	sm->pairwise_set = FALSE;
 	eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
 }

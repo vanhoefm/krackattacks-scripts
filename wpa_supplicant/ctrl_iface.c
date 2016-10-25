@@ -4048,7 +4048,8 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 #endif /* CONFIG_ACS */
 
 #ifdef CONFIG_FILS
-	if (os_strcmp(field, "fils") == 0) {
+	if (os_strcmp(field, "fils") == 0 &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_FILS)) {
 		res = os_snprintf(buf, buflen, "FILS");
 		if (os_snprintf_error(buflen, res))
 			return -1;

@@ -532,6 +532,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_MBO */
 	} else if (os_strcasecmp(cmd, "lci") == 0) {
 		ret = wpas_ctrl_iface_set_lci(wpa_s, value);
+	} else if (os_strcasecmp(cmd, "tdls_trigger_control") == 0) {
+		ret = wpa_drv_set_tdls_mode(wpa_s, atoi(value));
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

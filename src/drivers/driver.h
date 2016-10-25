@@ -3632,6 +3632,16 @@ struct wpa_driver_ops {
 	 */
 	int (*set_default_scan_ies)(void *priv, const u8 *ies, size_t ies_len);
 
+	/**
+	 * set_tdls_mode - Set TDLS trigger mode to the host driver
+	 * @priv: Private driver interface data
+	 * @tdls_external_control: Represents if TDLS external trigger control
+	 *  mode is enabled/disabled.
+	 *
+	 * This optional callback can be used to configure the TDLS external
+	 * trigger control mode to the host driver.
+	 */
+	int (*set_tdls_mode)(void *priv, int tdls_external_control);
 };
 
 

@@ -968,4 +968,13 @@ static inline int wpa_drv_set_default_scan_ies(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->set_default_scan_ies(wpa_s->drv_priv, ies, len);
 }
 
+static inline int wpa_drv_set_tdls_mode(struct wpa_supplicant *wpa_s,
+					int tdls_external_control)
+{
+	if (!wpa_s->driver->set_tdls_mode)
+		return -1;
+	return wpa_s->driver->set_tdls_mode(wpa_s->drv_priv,
+					    tdls_external_control);
+}
+
 #endif /* DRIVER_I_H */

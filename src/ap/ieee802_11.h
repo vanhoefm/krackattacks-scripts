@@ -55,6 +55,8 @@ u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_vendor_vht(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_wb_chsw_wrapper(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_txpower_envelope(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_vendor_he_capab(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_vendor_he_operation(struct hostapd_data *hapd, u8 *eid);
 
 int hostapd_ht_operation_update(struct hostapd_iface *iface);
 void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,

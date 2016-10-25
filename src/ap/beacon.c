@@ -392,6 +392,13 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 			2 + sizeof(struct ieee80211_vht_operation);
 	}
 
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		buflen += 4 + sizeof (struct ieee80211_he_capabilities) +
+			4 + sizeof (struct ieee80211_he_operation);
+	}
+#endif
+
 	buflen += hostapd_mbo_ie_len(hapd);
 
 	resp = os_zalloc(buflen);
@@ -499,6 +506,13 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	if (hapd->conf->vendor_vht)
 		pos = hostapd_eid_vendor_vht(hapd, pos);
 #endif /* CONFIG_IEEE80211AC */
+
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		pos = hostapd_eid_vendor_he_capab(hapd, pos);
+		pos = hostapd_eid_vendor_he_operation(hapd, pos);
+	}
+#endif /* CONFIG_IEEE80211AX */
 
 	/* Wi-Fi Alliance WMM */
 	pos = hostapd_eid_wmm(hapd, pos);
@@ -1040,6 +1054,13 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_IEEE80211AC */
 
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		tail_len += 4 + sizeof (struct ieee80211_he_capabilities) +
+			4 + sizeof (struct ieee80211_he_operation);
+	}
+#endif
+
 	tail_len += hostapd_mbo_ie_len(hapd);
 
 	tailpos = tail = os_malloc(tail_len);
@@ -1170,6 +1191,13 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	if (hapd->conf->vendor_vht)
 		tailpos = hostapd_eid_vendor_vht(hapd, tailpos);
 #endif /* CONFIG_IEEE80211AC */
+
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		tailpos = hostapd_eid_vendor_he_capab(hapd, tailpos);
+		tailpos = hostapd_eid_vendor_he_operation(hapd, tailpos);
+	}
+#endif /* CONFIG_IEEE80211AX */
 
 	/* Wi-Fi Alliance WMM */
 	tailpos = hostapd_eid_wmm(hapd, tailpos);

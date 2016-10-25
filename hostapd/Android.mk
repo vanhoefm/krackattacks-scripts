@@ -917,6 +917,10 @@ ifdef CONFIG_IEEE80211AC
 OBJS += src/ap/ieee802_11_vht.c
 endif
 
+ifdef CONFIG_IEEE80211AX
+OBJS += src/ap/ieee802_11_he.c
+endif
+
 ifdef CONFIG_P2P_MANAGER
 L_CFLAGS += -DCONFIG_P2P_MANAGER
 OBJS += src/ap/p2p_hostapd.c

@@ -827,6 +827,9 @@ OBJS += src/ap/ieee802_11_ht.c
 ifdef CONFIG_IEEE80211AC
 OBJS += src/ap/ieee802_11_vht.c
 endif
+ifdef CONFIG_IEEE80211AX
+OBJS += src/ap/ieee802_11_he.c
+endif
 endif
 ifdef CONFIG_WNM
 OBJS += src/ap/wnm_ap.c

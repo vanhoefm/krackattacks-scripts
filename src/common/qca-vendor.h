@@ -228,6 +228,10 @@ enum qca_radiotap_vendor_ids {
  *	moves around). To unlock the selected sector for a station
  *	pass the special value 0xFFFF in the sector index. To unlock
  *	all connected stations also pass a broadcast MAC address.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_CONFIGURE_TDLS: Configure the TDLS behavior
+ *	in the host driver. The different TDLS configurations are defined
+ *	by the attributes in enum qca_wlan_vendor_attr_tdls_configuration.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -333,6 +337,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SECTOR_CFG = 140,
 	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SELECTED_SECTOR = 141,
 	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SELECTED_SECTOR = 142,
+	QCA_NL80211_VENDOR_SUBCMD_CONFIGURE_TDLS = 143,
 };
 
 
@@ -2112,6 +2117,94 @@ enum qca_wlan_vendor_attr_ll_stats_type
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_AFTER_LAST,
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_MAX =
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_tdls_configuration - Attributes for
+ * TDLS configuration to the host driver.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TRIGGER_MODE: Configure the TDLS trigger
+ *	mode in the host driver. enum qca_wlan_vendor_tdls_trigger_mode
+ *	represents the different TDLS trigger modes.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_STATS_PERIOD: Duration (u32) within
+ *      which QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_THRESHOLD number
+ *      of packets shall meet the criteria for implicit TDLS setup.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_THRESHOLD: Number (u32) of Tx/Rx packets
+ *      within a duration QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_STATS_PERIOD
+ *      to initiate a TDLS setup.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_DISCOVERY_PERIOD: Time (u32) to initiate
+ *      a TDLS Discovery to the peer.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_MAX_DISCOVERY_ATTEMPT: Max number (u32) of
+ *      discovery attempts to know the TDLS capability of the peer. A peer is
+ *      marked as TDLS not capable if there is no response for all the attempts.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_TIMEOUT: Represents a duration (u32)
+ *      within which QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_PACKET_THRESHOLD
+ *      number of TX / RX frames meet the criteria for TDLS teardown.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_PACKET_THRESHOLD: Minimum number (u32)
+ *      of Tx/Rx packets within a duration
+ *      QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_TIMEOUT to tear down a TDLS link.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_SETUP_RSSI_THRESHOLD: Threshold
+ *	corresponding to the RSSI of the peer below which a TDLS setup is
+ *	triggered.
+ * @QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TEARDOWN_RSSI_THRESHOLD: Threshold
+ *	corresponding to the RSSI of the peer above which a TDLS teardown is
+ *	triggered.
+ */
+enum qca_wlan_vendor_attr_tdls_configuration {
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TRIGGER_MODE = 1,
+
+	/* Attributes configuring the TDLS Implicit Trigger */
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_STATS_PERIOD = 2,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TX_THRESHOLD = 3,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_DISCOVERY_PERIOD = 4,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_MAX_DISCOVERY_ATTEMPT = 5,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_TIMEOUT = 6,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IDLE_PACKET_THRESHOLD = 7,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_SETUP_RSSI_THRESHOLD = 8,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TEARDOWN_RSSI_THRESHOLD = 9,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_MAX =
+	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_tdls_trigger_mode: Represents the TDLS trigger mode in
+ *	the driver
+ *
+ * The following are the different values for
+ *	QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_TRIGGER_MODE.
+ *
+ * @QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_EXPLICIT: The trigger to initiate/teardown
+ *	the TDLS connection to a respective peer comes from the user space.
+ *	wpa_supplicant provides the commands TDLS_SETUP, TDLS_TEARDOWN,
+ *	TDLS_DISCOVER to do this.
+ * @QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_IMPLICIT: Host driver triggers this TDLS
+ *	setup/teardown to the eligible peer once the configured criteria
+ *	(such as TX/RX threshold, RSSI) is met. The attributes
+ *	in QCA_WLAN_VENDOR_ATTR_TDLS_CONFIG_IMPLICIT_PARAMS correspond to
+ *	the different configuration criteria for the TDLS trigger from the
+ *	host driver.
+ * @QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_EXTERNAL: Enables the driver to trigger
+ *	the TDLS setup / teardown through the implicit mode only to the
+ *	configured MAC addresses (wpa_supplicant, with tdls_external_control=1,
+ *	configures the MAC address through TDLS_SETUP / TDLS_TEARDOWN commands).
+ *	External mode works on top of the implicit mode. Thus the host driver
+ *	is expected to configure in TDLS Implicit mode too to operate in
+ *	External mode.
+ *	Configuring External mode alone without	Implicit mode is invalid.
+ *
+ * All the above implementations work as expected only when the host driver
+ * advertises the capability WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP - representing
+ * that the TDLS message exchange is not internal to the host driver, but
+ * depends on wpa_supplicant to do the message exchange.
+ */
+enum qca_wlan_vendor_tdls_trigger_mode {
+	QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_EXPLICIT = 1 << 0,
+	QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_IMPLICIT = 1 << 1,
+	QCA_WLAN_VENDOR_TDLS_TRIGGER_MODE_EXTERNAL = 1 << 2,
 };
 
 #endif /* QCA_VENDOR_H */

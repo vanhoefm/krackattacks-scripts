@@ -362,6 +362,9 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 
 	if (ext_feature_isset(ext_features, len, NL80211_EXT_FEATURE_RRM))
 		capa->rrm_flags |= WPA_DRIVER_FLAGS_SUPPORT_RRM;
+
+	if (ext_feature_isset(ext_features, len, NL80211_EXT_FEATURE_FILS_STA))
+		capa->flags |= WPA_DRIVER_FLAGS_SUPPORT_FILS;
 }
 
 

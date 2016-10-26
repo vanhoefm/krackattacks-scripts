@@ -237,7 +237,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY = 10,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY =  11,
 	QCA_NL80211_VENDOR_SUBCMD_NAN =  12,
-	QCA_NL80211_VENDOR_SUBMCD_STATS_EXT = 13,
+	QCA_NL80211_VENDOR_SUBCMD_STATS_EXT = 13,
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_SET = 14,
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_GET = 15,
 	QCA_NL80211_VENDOR_SUBCMD_LL_STATS_CLR = 16,
@@ -470,6 +470,12 @@ enum qca_wlan_vendor_attr {
 	 * and returned by QCA_NL80211_VENDOR_SUBCMD_DMG_RF_GET_SECTOR_CFG.
 	 */
 	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_CFG = 33,
+	/* Used in QCA_NL80211_VENDOR_SUBCMD_STATS_EXT command
+	 * to report frame aggregation statistics to userspace.
+	 */
+	QCA_WLAN_VENDOR_ATTR_RX_AGGREGATION_STATS_HOLES_NUM = 34,
+	QCA_WLAN_VENDOR_ATTR_RX_AGGREGATION_STATS_HOLES_INFO = 35,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -982,6 +988,18 @@ enum qca_wlan_vendor_attr_config {
 	/* 32-bit unsigned to configure the cycle time of selftest
 	 * the unit is micro-second */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SELFTEST_INTVL = 30,
+	/* 32-bit unsigned value to set reorder timeout for AC_VO */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_REORDER_TIMEOUT_VOICE = 31,
+	/* 32-bit unsigned value to set reorder timeout for AC_VI */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_REORDER_TIMEOUT_VIDEO = 32,
+	/* 32-bit unsigned value to set reorder timeout for AC_BE */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_REORDER_TIMEOUT_BESTEFFORT = 33,
+	/* 32-bit unsigned value to set reorder timeout for AC_BK */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_REORDER_TIMEOUT_BACKGROUND = 34,
+	/* 6-byte MAC address to point out the specific peer */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_BLOCKSIZE_PEER_MAC = 35,
+	/* 32-bit unsigned value to set window size for specific peer */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_BLOCKSIZE_WINLIMIT = 36,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

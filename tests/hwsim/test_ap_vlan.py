@@ -492,7 +492,10 @@ def test_ap_vlan_without_station(dev, apdev, p):
         if out is not None:
             lines = out.splitlines()
             if len(lines) < 1:
-                raise Exception("first frame not observed")
+                # Newer kernel versions filter out frames when there are no
+                # authorized stations on an AP/AP_VLAN interface, so do not
+                # trigger an error here.
+                logger.info("first frame not observed")
             state = 1
             for l in lines:
                 is_protected = int(l, 16)

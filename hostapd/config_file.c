@@ -3493,9 +3493,17 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "lci") == 0) {
 		wpabuf_free(conf->lci);
 		conf->lci = wpabuf_parse_bin(pos);
+		if (conf->lci && wpabuf_len(conf->lci) == 0) {
+			wpabuf_free(conf->lci);
+			conf->lci = NULL;
+		}
 	} else if (os_strcmp(buf, "civic") == 0) {
 		wpabuf_free(conf->civic);
 		conf->civic = wpabuf_parse_bin(pos);
+		if (conf->civic && wpabuf_len(conf->civic) == 0) {
+			wpabuf_free(conf->civic);
+			conf->civic = NULL;
+		}
 	} else if (os_strcmp(buf, "rrm_neighbor_report") == 0) {
 		if (atoi(pos))
 			bss->radio_measurements[0] |=

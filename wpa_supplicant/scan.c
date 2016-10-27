@@ -1618,7 +1618,13 @@ static int wpa_scan_get_max_rate(const struct wpa_scan_res *res)
  */
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
 {
-	return get_ie((const u8 *) (res + 1), res->ie_len, ie);
+	size_t ie_len = res->ie_len;
+
+	/* Use the Beacon frame IEs if res->ie_len is not available */
+	if (!ie_len)
+		ie_len = res->beacon_ie_len;
+
+	return get_ie((const u8 *) (res + 1), ie_len, ie);
 }
 
 

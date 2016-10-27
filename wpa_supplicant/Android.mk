@@ -841,11 +841,6 @@ L_CFLAGS += -DCONFIG_IEEE80211AC
 endif
 endif
 
-ifdef CONFIG_MBO
-OBJS += mbo.c
-L_CFLAGS += -DCONFIG_MBO
-endif
-
 ifdef NEED_AP_MLME
 OBJS += src/ap/wmm.c
 OBJS += src/ap/ap_list.c
@@ -865,6 +860,11 @@ endif
 ifdef CONFIG_HS20
 OBJS += src/ap/hs20.c
 endif
+endif
+
+ifdef CONFIG_MBO
+OBJS += mbo.c
+L_CFLAGS += -DCONFIG_MBO
 endif
 
 ifdef NEED_RSN_AUTHENTICATOR

@@ -33,12 +33,12 @@ struct wpa_eapol_ie_parse {
 	const u8 *igtk;
 	size_t igtk_len;
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	const u8 *mdie;
 	size_t mdie_len;
 	const u8 *ftie;
 	size_t ftie_len;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 #ifdef CONFIG_P2P
 	const u8 *ip_addr_req;
 	const u8 *ip_addr_alloc;

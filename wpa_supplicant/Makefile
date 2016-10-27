@@ -243,6 +243,10 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_IEEE80211R_AP
+CONFIG_IEEE80211R=y
+endif
+
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
 OBJS += ../src/rsn_supp/wpa_ft.o
@@ -914,7 +918,8 @@ NEED_AES_WRAP=y
 OBJS += ../src/ap/wpa_auth.o
 OBJS += ../src/ap/wpa_auth_ie.o
 OBJS += ../src/ap/pmksa_cache_auth.o
-ifdef CONFIG_IEEE80211R
+ifdef CONFIG_IEEE80211R_AP
+CFLAGS += -DCONFIG_IEEE80211R_AP
 OBJS += ../src/ap/wpa_auth_ft.o
 endif
 ifdef CONFIG_PEERKEY

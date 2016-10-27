@@ -475,7 +475,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		}
 	}
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (hapd->conf->wpa && wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) &&
 	    sta->wpa_sm &&
 	    (wpa_key_mgmt_ft(wpa_auth_sta_key_mgmt(sta->wpa_sm)) ||
@@ -488,7 +488,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		wpa_printf(MSG_ERROR, "Could not add Mobility-Domain-Id");
 		return -1;
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	if ((hapd->conf->wpa || hapd->conf->osen) && sta->wpa_sm &&
 	    add_common_radius_sta_attr_rsn(hapd, req_attr, sta, msg) < 0)
@@ -1157,7 +1157,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 
 	sta->eapol_sm->eap_if->portEnabled = TRUE;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (sta->auth_alg == WLAN_AUTH_FT) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG,
@@ -1176,7 +1176,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		/* TODO: get vlan_id from R0KH using RRB message */
 		return;
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_FILS
 	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||

@@ -956,10 +956,10 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	if (conf->wmm_enabled < 0)
 		conf->wmm_enabled = hapd->iconf->ieee80211n;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (is_zero_ether_addr(conf->r1_key_holder))
 		os_memcpy(conf->r1_key_holder, hapd->own_addr, ETH_ALEN);
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_MESH
 	if (hapd->iface->mconf == NULL)

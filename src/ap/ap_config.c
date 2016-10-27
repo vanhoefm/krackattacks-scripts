@@ -88,9 +88,9 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	/* Set to -1 as defaults depends on HT in setup */
 	bss->wmm_enabled = -1;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	bss->ft_over_ds = 1;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	bss->radius_das_time_window = 300;
 
@@ -477,7 +477,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	hostapd_config_free_vlan(conf);
 	os_free(conf->time_zone);
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	{
 		struct ft_remote_r0kh *r0kh, *r0kh_prev;
 		struct ft_remote_r1kh *r1kh, *r1kh_prev;
@@ -498,7 +498,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 			os_free(r1kh_prev);
 		}
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_WPS
 	os_free(conf->wps_pin_requests);
@@ -802,7 +802,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		}
 	}
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (full_config && wpa_key_mgmt_ft(bss->wpa_key_mgmt) &&
 	    (bss->nas_identifier == NULL ||
 	     os_strlen(bss->nas_identifier) < 1 ||
@@ -812,7 +812,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 			   "string");
 		return -1;
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_IEEE80211N
 	if (full_config && conf->ieee80211n &&

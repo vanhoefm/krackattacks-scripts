@@ -53,7 +53,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->ieee80211w = conf->ieee80211w;
 	wconf->group_mgmt_cipher = conf->group_mgmt_cipher;
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	wconf->ssid_len = conf->ssid.ssid_len;
 	if (wconf->ssid_len > SSID_MAX_LEN)
 		wconf->ssid_len = SSID_MAX_LEN;
@@ -74,7 +74,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->pmk_r1_push = conf->pmk_r1_push;
 	wconf->ft_over_ds = conf->ft_over_ds;
 	wconf->ft_psk_generate_local = conf->ft_psk_generate_local;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 #ifdef CONFIG_HS20
 	wconf->disable_gtk = conf->disable_dgaf;
 	if (conf->osen) {
@@ -402,7 +402,7 @@ static int hostapd_wpa_auth_for_each_auth(
 }
 
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 
 struct wpa_auth_ft_iface_iter_data {
 	struct hostapd_data *src_hapd;
@@ -441,7 +441,7 @@ static int hostapd_wpa_auth_ft_iter(struct hostapd_iface *iface, void *ctx)
 	return 0;
 }
 
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 
 static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
@@ -466,7 +466,7 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (proto == ETH_P_RRB && hapd->iface->interfaces &&
 	    hapd->iface->interfaces->for_each_interface) {
 		int res;
@@ -481,7 +481,7 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 		if (res == 1)
 			return data_len;
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	if (hapd->driver && hapd->driver->send_ether)
 		return hapd->driver->send_ether(hapd->drv_priv, dst,
@@ -504,7 +504,7 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 }
 
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 
 static int hostapd_wpa_auth_send_ft_action(void *ctx, const u8 *dst,
 					   const u8 *data, size_t data_len)
@@ -589,7 +589,7 @@ static int hostapd_wpa_auth_add_tspec(void *ctx, const u8 *sta_addr,
 	return hostapd_add_tspec(hapd, sta_addr, tspec_ie, tspec_ielen);
 }
 
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 
 int hostapd_setup_wpa(struct hostapd_data *hapd)
@@ -620,11 +620,11 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	cb.for_each_sta = hostapd_wpa_auth_for_each_sta;
 	cb.for_each_auth = hostapd_wpa_auth_for_each_auth;
 	cb.send_ether = hostapd_wpa_auth_send_ether;
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	cb.send_ft_action = hostapd_wpa_auth_send_ft_action;
 	cb.add_sta = hostapd_wpa_auth_add_sta;
 	cb.add_tspec = hostapd_wpa_auth_add_tspec;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb);
 	if (hapd->wpa_auth == NULL) {
 		wpa_printf(MSG_ERROR, "WPA initialization failed.");
@@ -650,7 +650,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		return -1;
 	}
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (!hostapd_drv_none(hapd) &&
 	    wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt)) {
 		hapd->l2 = l2_packet_init(hapd->conf->bridge[0] ?
@@ -665,7 +665,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 			return -1;
 		}
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	return 0;
 
@@ -703,8 +703,8 @@ void hostapd_deinit_wpa(struct hostapd_data *hapd)
 	}
 	ieee802_1x_deinit(hapd);
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	l2_packet_deinit(hapd->l2);
 	hapd->l2 = NULL;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 }

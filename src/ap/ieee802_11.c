@@ -303,7 +303,7 @@ static int send_auth_reply(struct hostapd_data *hapd,
 }
 
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 				  u16 auth_transaction, u16 status,
 				  const u8 *ies, size_t ies_len)
@@ -334,7 +334,7 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 	sta->flags |= WLAN_STA_AUTH;
 	mlme_authenticate_indication(hapd, sta);
 }
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 
 #ifdef CONFIG_SAE
@@ -1365,10 +1365,10 @@ static void handle_auth(struct hostapd_data *hapd,
 
 	if (!(((hapd->conf->auth_algs & WPA_AUTH_ALG_OPEN) &&
 	       auth_alg == WLAN_AUTH_OPEN) ||
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	      (hapd->conf->wpa && wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) &&
 	       auth_alg == WLAN_AUTH_FT) ||
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 #ifdef CONFIG_SAE
 	      (hapd->conf->wpa && wpa_key_mgmt_sae(hapd->conf->wpa_key_mgmt) &&
 	       auth_alg == WLAN_AUTH_SAE) ||
@@ -1633,7 +1633,7 @@ static void handle_auth(struct hostapd_data *hapd,
 		}
 		break;
 #endif /* CONFIG_NO_RC4 */
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	case WLAN_AUTH_FT:
 		sta->auth_alg = WLAN_AUTH_FT;
 		if (sta->wpa_sm == NULL)
@@ -1652,7 +1652,7 @@ static void handle_auth(struct hostapd_data *hapd,
 				    handle_auth_ft_finish, hapd);
 		/* handle_auth_ft_finish() callback will complete auth. */
 		return;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 #ifdef CONFIG_SAE
 	case WLAN_AUTH_SAE:
 #ifdef CONFIG_MESH
@@ -1996,7 +1996,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			sta->flags &= ~WLAN_STA_MFP;
 #endif /* CONFIG_IEEE80211W */
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 		if (sta->auth_alg == WLAN_AUTH_FT) {
 			if (!reassoc) {
 				wpa_printf(MSG_DEBUG, "FT: " MACSTR " tried "
@@ -2011,7 +2011,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			if (resp != WLAN_STATUS_SUCCESS)
 				return resp;
 		}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_SAE
 		if (wpa_auth_uses_sae(sta->wpa_sm) &&
@@ -2229,7 +2229,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	/* Extended supported rates */
 	p = hostapd_eid_ext_supp_rates(hapd, p);
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (status_code == WLAN_STATUS_SUCCESS) {
 		/* IEEE 802.11r: Mobility Domain Information, Fast BSS
 		 * Transition Information, RSN, [RIC Response] */
@@ -2237,7 +2237,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 						buf + sizeof(buf) - p,
 						sta->auth_alg, ies, ies_len);
 	}
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_IEEE80211W
 	if (status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY)
@@ -2449,7 +2449,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	}
 
 	sta = ap_get_sta(hapd, mgmt->sa);
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	if (sta && sta->auth_alg == WLAN_AUTH_FT &&
 	    (sta->flags & WLAN_STA_AUTH) == 0) {
 		wpa_printf(MSG_DEBUG, "FT: Allow STA " MACSTR " to associate "
@@ -2462,7 +2462,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		 */
 		sta->flags |= WLAN_STA_AUTH;
 	} else
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 	if (sta == NULL || (sta->flags & WLAN_STA_AUTH) == 0) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "Station tried to "
@@ -2863,14 +2863,14 @@ static int handle_action(struct hostapd_data *hapd,
 	}
 
 	switch (mgmt->u.action.category) {
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	case WLAN_ACTION_FT:
 		if (!sta ||
 		    wpa_ft_action_rx(sta->wpa_sm, (u8 *) &mgmt->u.action,
 				     len - IEEE80211_HDRLEN))
 			break;
 		return 1;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 	case WLAN_ACTION_WMM:
 		hostapd_wmm_action(hapd, mgmt, len);
 		return 1;

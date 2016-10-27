@@ -88,10 +88,10 @@ struct wpa_state_machine {
 	unsigned int rx_eapol_key_secure:1;
 	unsigned int update_snonce:1;
 	unsigned int alt_snonce_valid:1;
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	unsigned int ft_completed:1;
 	unsigned int pmk_r1_name_valid:1;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 	unsigned int is_wnmsleep:1;
 
 	u8 req_replay_counter[WPA_REPLAY_COUNTER_LEN];
@@ -112,7 +112,7 @@ struct wpa_state_machine {
 	u32 dot11RSNAStatsTKIPLocalMICFailures;
 	u32 dot11RSNAStatsTKIPRemoteMICFailures;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	u8 xxkey[PMK_LEN]; /* PSK or the second 256 bits of MSK */
 	size_t xxkey_len;
 	u8 pmk_r1_name[WPA_PMK_NAME_LEN]; /* PMKR1Name derived from FT Auth
@@ -131,7 +131,7 @@ struct wpa_state_machine {
 	u8 ft_pending_pull_nonce[FT_R0KH_R1KH_PULL_NONCE_LEN];
 	u8 ft_pending_auth_transaction;
 	u8 ft_pending_current_ap[ETH_ALEN];
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	int pending_1_of_4_timeout;
 
@@ -251,7 +251,7 @@ void wpa_smk_m3(struct wpa_authenticator *wpa_auth,
 		const u8 *key_data, size_t key_data_len);
 #endif /* CONFIG_PEERKEY */
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 int wpa_write_mdie(struct wpa_auth_config *conf, u8 *buf, size_t len);
 int wpa_write_ftie(struct wpa_auth_config *conf, const u8 *r0kh_id,
 		   size_t r0kh_id_len,
@@ -263,6 +263,6 @@ int wpa_auth_derive_ptk_ft(struct wpa_state_machine *sm, const u8 *pmk,
 struct wpa_ft_pmk_cache * wpa_ft_pmk_cache_init(void);
 void wpa_ft_pmk_cache_deinit(struct wpa_ft_pmk_cache *cache);
 void wpa_ft_install_ptk(struct wpa_state_machine *sm);
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 #endif /* WPA_AUTH_I_H */

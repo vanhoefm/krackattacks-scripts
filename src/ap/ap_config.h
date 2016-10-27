@@ -329,7 +329,7 @@ struct hostapd_bss_config {
 	char *rsn_preauth_interfaces;
 	int peerkey;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	/* IEEE 802.11r - Fast BSS Transition */
 	u8 mobility_domain[MOBILITY_DOMAIN_ID_LEN];
 	u8 r1_key_holder[FT_R1KH_ID_LEN];
@@ -340,7 +340,7 @@ struct hostapd_bss_config {
 	int pmk_r1_push;
 	int ft_over_ds;
 	int ft_psk_generate_local;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R_AP */
 
 	char *ctrl_interface; /* directory for UNIX domain sockets */
 #ifndef CONFIG_NATIVE_WINDOWS

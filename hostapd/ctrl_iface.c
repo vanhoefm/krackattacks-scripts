@@ -2174,6 +2174,7 @@ static int hostapd_ctrl_iface_set_neighbor(struct hostapd_data *hapd, char *buf)
 	struct wpa_ssid_value ssid;
 	u8 bssid[ETH_ALEN];
 	struct wpabuf *nr, *lci = NULL, *civic = NULL;
+	int stationary = 0;
 	char *tmp;
 	int ret;
 
@@ -2252,8 +2253,15 @@ static int hostapd_ctrl_iface_set_neighbor(struct hostapd_data *hapd, char *buf)
 		}
 	}
 
+	if (!buf)
+		goto set;
+
+	if (os_strstr(buf, "stat"))
+		stationary = 1;
+
 set:
-	ret = hostapd_neighbor_set(hapd, bssid, &ssid, nr, lci, civic);
+	ret = hostapd_neighbor_set(hapd, bssid, &ssid, nr, lci, civic,
+				   stationary);
 
 	wpabuf_free(nr);
 	wpabuf_free(lci);

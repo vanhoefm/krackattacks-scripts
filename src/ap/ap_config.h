@@ -713,6 +713,7 @@ struct hostapd_config {
 
 	struct wpabuf *lci;
 	struct wpabuf *civic;
+	int stationary_ap;
 };
 
 

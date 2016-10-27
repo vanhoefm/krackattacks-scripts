@@ -1255,14 +1255,14 @@ static int hostapd_cli_cmd_set_neighbor(struct wpa_ctrl *ctrl, int argc,
 	char cmd[2048];
 	int res;
 
-	if (argc < 3 || argc > 5) {
-		printf("Invalid set_neighbor command: needs 3-5 arguments\n");
+	if (argc < 3 || argc > 6) {
+		printf("Invalid set_neighbor command: needs 3-6 arguments\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "SET_NEIGHBOR %s %s %s %s %s",
+	res = os_snprintf(cmd, sizeof(cmd), "SET_NEIGHBOR %s %s %s %s %s %s",
 			  argv[0], argv[1], argv[2], argc >= 4 ? argv[3] : "",
-			  argc == 5 ? argv[4] : "");
+			  argc >= 5 ? argv[4] : "", argc == 6 ? argv[5] : "");
 	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long SET_NEIGHBOR command.\n");
 		return -1;

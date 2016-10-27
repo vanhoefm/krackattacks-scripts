@@ -109,6 +109,7 @@ struct hostapd_neighbor_entry {
 	struct wpabuf *civic;
 	/* LCI update time */
 	struct os_time lci_date;
+	int stationary;
 };
 
 /**

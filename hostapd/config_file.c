@@ -3510,6 +3510,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				WLAN_RRM_CAPS_NEIGHBOR_REPORT;
 	} else if (os_strcmp(buf, "gas_address3") == 0) {
 		bss->gas_address3 = atoi(pos);
+	} else if (os_strcmp(buf, "stationary_ap") == 0) {
+		conf->stationary_ap = atoi(pos);
 	} else if (os_strcmp(buf, "ftm_responder") == 0) {
 		bss->ftm_responder = atoi(pos);
 	} else if (os_strcmp(buf, "ftm_initiator") == 0) {

@@ -1645,7 +1645,7 @@ static void hostapd_set_own_neighbor_report(struct hostapd_data *hapd)
 	wpabuf_put_u8(nr, center_freq2);
 
 	hostapd_neighbor_set(hapd, hapd->own_addr, &ssid, nr, hapd->iconf->lci,
-			     hapd->iconf->civic);
+			     hapd->iconf->civic, hapd->iconf->stationary_ap);
 
 	wpabuf_free(nr);
 #endif /* NEED_AP_MLME */

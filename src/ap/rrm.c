@@ -129,11 +129,11 @@ static int hostapd_check_lci_age(struct hostapd_neighbor_entry *nr, u16 max_age)
 	struct os_time curr, diff;
 	unsigned long diff_l;
 
+	if (nr->stationary || max_age == 0xffff)
+		return 1;
+
 	if (!max_age)
 		return 0;
-
-	if (max_age == 0xffff)
-		return 1;
 
 	if (os_get_time(&curr))
 		return 0;

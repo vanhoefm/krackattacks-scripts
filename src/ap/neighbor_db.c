@@ -83,13 +83,13 @@ int hostapd_neighbor_set(struct hostapd_data *hapd, const u8 *bssid,
 	if (!entry->nr)
 		goto fail;
 
-	if (lci) {
+	if (lci && wpabuf_len(lci)) {
 		entry->lci = wpabuf_dup(lci);
 		if (!entry->lci || os_get_time(&entry->lci_date))
 			goto fail;
 	}
 
-	if (civic) {
+	if (civic && wpabuf_len(civic)) {
 		entry->civic = wpabuf_dup(civic);
 		if (!entry->civic)
 			goto fail;

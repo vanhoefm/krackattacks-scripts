@@ -1716,6 +1716,13 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_IBSS_RSN
 	ibss_rsn_deinit(wpa_s->ibss_rsn);
 	wpa_s->ibss_rsn = NULL;
+#else /* CONFIG_IBSS_RSN */
+	if (ssid->mode == WPAS_MODE_IBSS &&
+	    !(ssid->key_mgmt & (WPA_KEY_MGMT_NONE | WPA_KEY_MGMT_WPA_NONE))) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"IBSS RSN not supported in the build");
+		return;
+	}
 #endif /* CONFIG_IBSS_RSN */
 
 	if (ssid->mode == WPAS_MODE_AP || ssid->mode == WPAS_MODE_P2P_GO ||

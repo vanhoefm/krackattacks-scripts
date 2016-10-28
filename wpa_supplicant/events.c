@@ -1047,6 +1047,16 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
+#ifndef CONFIG_IBSS_RSN
+		if (ssid->mode == WPAS_MODE_IBSS &&
+		    !(ssid->key_mgmt & (WPA_KEY_MGMT_NONE |
+					WPA_KEY_MGMT_WPA_NONE))) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"   skip - IBSS RSN not supported in the build");
+			continue;
+		}
+#endif /* !CONFIG_IBSS_RSN */
+
 #ifdef CONFIG_P2P
 		if (ssid->p2p_group &&
 		    !wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE) &&
@@ -1332,6 +1342,17 @@ wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
 		{
 			if (wpas_network_disabled(wpa_s, ssid))
 				continue;
+#ifndef CONFIG_IBSS_RSN
+			if (ssid->mode == WPAS_MODE_IBSS &&
+			    !(ssid->key_mgmt & (WPA_KEY_MGMT_NONE |
+						WPA_KEY_MGMT_WPA_NONE))) {
+				wpa_msg(wpa_s, MSG_INFO,
+					"IBSS RSN not supported in the build - cannot use the profile for SSID '%s'",
+					wpa_ssid_txt(ssid->ssid,
+						     ssid->ssid_len));
+				continue;
+			}
+#endif /* !CONFIG_IBSS_RSN */
 			if (ssid->mode == IEEE80211_MODE_IBSS ||
 			    ssid->mode == IEEE80211_MODE_AP ||
 			    ssid->mode == IEEE80211_MODE_MESH)

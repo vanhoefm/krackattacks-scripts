@@ -553,3 +553,19 @@ def test_ap_tdls_link_status(dev, apdev):
     check_tdls_link(dev[0], dev[1], connected=False)
     if "FAIL" not in dev[0].request("TDLS_LINK_STATUS foo"):
         raise Exception("Unexpected TDLS_LINK_STATUS response for invalid argument")
+
+def test_ap_tdls_prohibit(dev, apdev):
+    """Open AP and TDLS prohibited"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open",
+                                      "tdls_prohibit": "1" })
+    connect_2sta_open(dev, hapd)
+    if "FAIL" not in dev[0].request("TDLS_SETUP " + dev[1].own_addr()):
+        raise Exception("TDLS_SETUP accepted unexpectedly")
+
+def test_ap_tdls_chan_switch_prohibit(dev, apdev):
+    """Open AP and TDLS channel switch prohibited"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open",
+                                      "tdls_prohibit_chan_switch": "1" })
+    wlantest_setup(hapd)
+    connect_2sta_open(dev, hapd)
+    setup_tdls(dev[0], dev[1], hapd)

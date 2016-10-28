@@ -553,3 +553,8 @@ CONFIG_PEERKEY=y
 # Note: This is an experimental and not yet complete implementation. This
 # should not be enabled for production use.
 #CONFIG_FILS=y
+
+# Support RSN on IBSS networks
+# This is needed to be able to use mode=1 network profile with proto=RSN and
+# key_mgmt=WPA-PSK (i.e., full key management instead of WPA-None).
+#CONFIG_IBSS_RSN=y

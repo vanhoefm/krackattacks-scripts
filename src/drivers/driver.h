@@ -4062,7 +4062,7 @@ enum wpa_event_type {
 	 * EVENT_DFS_CAC_ABORTED - Notify that channel availability check has been aborted
 	 *
 	 * The CAC was not successful, and the channel remains in the previous
-	 * state. This may happen due to a radar beeing detected or other
+	 * state. This may happen due to a radar being detected or other
 	 * external influences.
 	 */
 	EVENT_DFS_CAC_ABORTED,

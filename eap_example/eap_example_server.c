@@ -277,7 +277,7 @@ int eap_example_server_step(void)
 	}
 
 	if (process && eap_ctx.eap_if->eapReqData) {
-		/* Send EAP response to the server */
+		/* Send EAP request to the peer */
 		eap_example_peer_rx(wpabuf_head(eap_ctx.eap_if->eapReqData),
 				    wpabuf_len(eap_ctx.eap_if->eapReqData));
 	}

@@ -114,6 +114,13 @@ def test_rrm_neighbor_db(dev, apdev):
     if "FAIL" not in hapd.request("REMOVE_NEIGHBOR 00:11:22:33:44:55 ssid=\"test1\""):
         raise Exception("Remove neighbor succeeded unexpectedly")
 
+    # Stationary AP
+    if "OK" not in hapd.request("SET_NEIGHBOR 00:11:22:33:44:55 ssid=\"test3\" nr=" + nr + " lci=" + lci + " civic=" + civic + " stat"):
+        raise Exception("Set neighbor failed")
+
+    if "OK" not in hapd.request("REMOVE_NEIGHBOR 00:11:22:33:44:55 ssid=\"test3\""):
+        raise Exception("Remove neighbor failed")
+
 def test_rrm_neighbor_rep_req(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
     nr1="00112233445500000000510107"
@@ -255,6 +262,24 @@ def test_rrm_lci_req(dev, apdev):
     # station connected with LCI
     if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
         raise Exception("REQ_LCI failed unexpectedly")
+
+def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
+    """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST and hostapd config"""
+    params = { "ssid": "test2", "rrm_neighbor_report": "1",
+               "stationary_ap": "1", "lci": lci, "civic": civic }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
+
+    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request failed")
+    check_nr_results(dev[0], [bssid])
 
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""

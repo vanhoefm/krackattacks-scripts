@@ -403,6 +403,13 @@ def _test_ap_interworking_scan_filtering(dev, apdev):
     wt = Wlantest()
     wt.flush()
 
+    # Make sure wlantest has seen both BSSs to avoid issues in trying to clear
+    # counters for non-existing BSS.
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+
     logger.info("Check probe request filtering based on HESSID")
 
     dev[0].request("SET hessid " + bssid2)

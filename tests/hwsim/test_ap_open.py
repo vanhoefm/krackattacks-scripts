@@ -608,3 +608,26 @@ def test_ap_open_drv_fail(dev, apdev):
                        wait_connect=False)
         wait_fail_trigger(dev[0], "GET_FAIL")
         dev[0].request("REMOVE_NETWORK all")
+
+def run_multicast_to_unicast(dev, apdev, convert):
+    params = { "ssid": "open" }
+    params["multicast_to_unicast"] = "1" if convert else "0"
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].scan_for_bss(hapd.own_addr(), freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
+    hwsim_utils.test_connectivity(dev[0], hapd, multicast_to_unicast=convert)
+    dev[0].request("DISCONNECT")
+    ev = hapd.wait_event([ "AP-STA-DISCONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No disconnection event received from hostapd")
+
+def test_ap_open_multicast_to_unicast(dev, apdev):
+    """Multicast-to-unicast conversion enabled"""
+    run_multicast_to_unicast(dev, apdev, True)
+
+def test_ap_open_multicast_to_unicast_disabled(dev, apdev):
+    """Multicast-to-unicast conversion disabled"""
+    run_multicast_to_unicast(dev, apdev, False)

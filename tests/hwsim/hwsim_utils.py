@@ -12,7 +12,8 @@ logger = logging.getLogger()
 from wpasupplicant import WpaSupplicant
 
 def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
-                          ifname1=None, ifname2=None, config=True, timeout=5):
+                          ifname1=None, ifname2=None, config=True, timeout=5,
+                          multicast_to_unicast=False):
     addr1 = dev1.own_addr()
     if not dev1group and isinstance(dev1, WpaSupplicant):
         addr1 = dev1.get_driver_status_field('addr')
@@ -114,8 +115,14 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
                     ev = dev1.wait_event(["DATA-TEST-RX"], timeout=timeout)
                 if ev is None:
                     raise Exception("dev2->dev1 broadcast data delivery failed")
-                if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
-                    raise Exception("Unexpected dev2->dev1 broadcast data result")
+                if multicast_to_unicast:
+                   if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) in ev:
+                        raise Exception("Unexpected dev2->dev1 broadcast data result: multicast to unicast conversion missing")
+                   if "DATA-TEST-RX {} {}".format(addr1, addr2) not in ev:
+                        raise Exception("Unexpected dev2->dev1 broadcast data result (multicast to unicast enabled)")
+                else:
+                   if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
+                        raise Exception("Unexpected dev2->dev1 broadcast data result")
                 break
             except Exception as e:
                 if i == broadcast_retry_c - 1:
@@ -133,7 +140,8 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
 
 def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
                       dev1group=False, dev2group=False,
-                      ifname1=None, ifname2=None, config=True, timeout=5):
+                      ifname1=None, ifname2=None, config=True, timeout=5,
+                      multicast_to_unicast=False):
     if dscp:
         tos = dscp << 2
     if not tos:
@@ -145,7 +153,8 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
         try:
             run_connectivity_test(dev1, dev2, tos, dev1group, dev2group,
                                   ifname1, ifname2, config=config,
-                                  timeout=timeout)
+                                  timeout=timeout,
+                                  multicast_to_unicast=multicast_to_unicast)
             success = True
             break
         except Exception, e:

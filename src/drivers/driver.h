@@ -1170,6 +1170,27 @@ struct wpa_driver_ap_params {
 	 * infrastructure BSS. Valid only for DMG network.
 	 */
 	int pbss;
+
+	/**
+	 * multicast_to_unicast - Whether to use multicast_to_unicast
+	 *
+	 * If this is non-zero, the AP is requested to perform multicast to
+	 * unicast conversion for ARP, IPv4, and IPv6 frames (possibly within
+	 * 802.1Q). If enabled, such frames are to be sent to each station
+	 * separately, with the DA replaced by their own MAC address rather
+	 * than the group address.
+	 *
+	 * Note that this may break certain expectations of the receiver, such
+	 * as the ability to drop unicast IP packets received within multicast
+	 * L2 frames, or the ability to not send ICMP destination unreachable
+	 * messages for packets received in L2 multicast (which is required,
+	 * but the receiver can't tell the difference if this new option is
+	 * enabled.)
+	 *
+	 * This also doesn't implement the 802.11 DMS (directed multicast
+	 * service).
+	 */
+	int multicast_to_unicast;
 };
 
 struct wpa_driver_mesh_bss_params {

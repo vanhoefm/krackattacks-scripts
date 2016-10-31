@@ -3666,6 +3666,52 @@ static int nl80211_put_beacon_rate(struct nl_msg *msg, const u64 flags,
 }
 
 
+static int nl80211_set_multicast_to_unicast(struct i802_bss *bss,
+					    int multicast_to_unicast)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_MULTICAST_TO_UNICAST);
+	if (!msg ||
+	    (multicast_to_unicast &&
+	     nla_put_flag(msg, NL80211_ATTR_MULTICAST_TO_UNICAST_ENABLED))) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Failed to build NL80211_CMD_SET_MULTICAST_TO_UNICAST msg for %s",
+			   bss->ifname);
+		nlmsg_free(msg);
+		return -ENOBUFS;
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+
+	switch (ret) {
+	case 0:
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: multicast to unicast %s on interface %s",
+			   multicast_to_unicast ? "enabled" : "disabled",
+			   bss->ifname);
+		break;
+	case -EOPNOTSUPP:
+		if (!multicast_to_unicast)
+			break;
+		wpa_printf(MSG_INFO,
+			   "nl80211: multicast to unicast not supported on interface %s",
+			   bss->ifname);
+		break;
+	default:
+		wpa_printf(MSG_ERROR,
+			   "nl80211: %s multicast to unicast failed with %d (%s) on interface %s",
+			   multicast_to_unicast ? "enabling" : "disabling",
+			   ret, strerror(-ret), bss->ifname);
+		break;
+	}
+
+	return ret;
+}
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -3885,6 +3931,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		nl80211_set_bss(bss, params->cts_protect, params->preamble,
 				params->short_slot_time, params->ht_opmode,
 				params->isolate, params->basic_rates);
+		nl80211_set_multicast_to_unicast(bss,
+						 params->multicast_to_unicast);
 		if (beacon_set && params->freq &&
 		    params->freq->bandwidth != bss->bandwidth) {
 			wpa_printf(MSG_DEBUG,

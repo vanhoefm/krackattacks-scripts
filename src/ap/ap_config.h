@@ -601,6 +601,8 @@ struct hostapd_bss_config {
 	u8 fils_cache_id[FILS_CACHE_ID_LEN];
 	int fils_cache_id_set;
 #endif /* CONFIG_FILS */
+
+	int multicast_to_unicast;
 };
 
 

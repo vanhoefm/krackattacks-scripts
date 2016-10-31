@@ -3560,6 +3560,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 		bss->fils_cache_id_set = 1;
 #endif /* CONFIG_FILS */
+	} else if (os_strcmp(buf, "multicast_to_unicast") == 0) {
+		bss->multicast_to_unicast = atoi(pos);
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

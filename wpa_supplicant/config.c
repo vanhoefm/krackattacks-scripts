@@ -1828,6 +1828,69 @@ static char * wpa_config_write_mesh_basic_rates(const struct parse_data *data,
 #endif /* CONFIG_MESH */
 
 
+#ifdef CONFIG_MACSEC
+
+static int wpa_config_parse_mka_cak(const struct parse_data *data,
+				    struct wpa_ssid *ssid, int line,
+				    const char *value)
+{
+	if (hexstr2bin(value, ssid->mka_cak, MACSEC_CAK_LEN) ||
+	    value[MACSEC_CAK_LEN * 2] != '\0') {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid MKA-CAK '%s'.",
+			   line, value);
+		return -1;
+	}
+
+	ssid->mka_psk_set |= MKA_PSK_SET_CAK;
+
+	wpa_hexdump_key(MSG_MSGDUMP, "MKA-CAK", ssid->mka_cak, MACSEC_CAK_LEN);
+	return 0;
+}
+
+
+static int wpa_config_parse_mka_ckn(const struct parse_data *data,
+				    struct wpa_ssid *ssid, int line,
+				    const char *value)
+{
+	if (hexstr2bin(value, ssid->mka_ckn, MACSEC_CKN_LEN) ||
+	    value[MACSEC_CKN_LEN * 2] != '\0') {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid MKA-CKN '%s'.",
+			   line, value);
+		return -1;
+	}
+
+	ssid->mka_psk_set |= MKA_PSK_SET_CKN;
+
+	wpa_hexdump_key(MSG_MSGDUMP, "MKA-CKN", ssid->mka_ckn, MACSEC_CKN_LEN);
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+
+static char * wpa_config_write_mka_cak(const struct parse_data *data,
+				       struct wpa_ssid *ssid)
+{
+	if (!(ssid->mka_psk_set & MKA_PSK_SET_CAK))
+		return NULL;
+
+	return wpa_config_write_string_hex(ssid->mka_cak, MACSEC_CAK_LEN);
+}
+
+
+static char * wpa_config_write_mka_ckn(const struct parse_data *data,
+				       struct wpa_ssid *ssid)
+{
+	if (!(ssid->mka_psk_set & MKA_PSK_SET_CKN))
+		return NULL;
+	return wpa_config_write_string_hex(ssid->mka_ckn, MACSEC_CKN_LEN);
+}
+
+#endif /* NO_CONFIG_WRITE */
+
+#endif /* CONFIG_MACSEC */
+
+
 /* Helper macros for network block parser */
 
 #ifdef OFFSET
@@ -2062,6 +2125,8 @@ static const struct parse_data ssid_fields[] = {
 	{ INT(beacon_int) },
 #ifdef CONFIG_MACSEC
 	{ INT_RANGE(macsec_policy, 0, 1) },
+	{ FUNC_KEY(mka_cak) },
+	{ FUNC_KEY(mka_ckn) },
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	{ INT(update_identifier) },

@@ -371,3 +371,51 @@ fail:
 
 	return res;
 }
+
+
+void * ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
+				       struct wpa_ssid *ssid)
+{
+	struct mka_key *cak;
+	struct mka_key_name *ckn;
+	void *res;
+
+	if ((ssid->mka_psk_set & MKA_PSK_SET) != MKA_PSK_SET)
+		return NULL;
+
+	if (ieee802_1x_alloc_kay_sm(wpa_s, ssid) < 0)
+		return NULL;
+
+	if (!wpa_s->kay || wpa_s->kay->policy == DO_NOT_SECURE)
+		return NULL;
+
+	ckn = os_zalloc(sizeof(*ckn));
+	if (!ckn)
+		goto dealloc;
+
+	cak = os_zalloc(sizeof(*cak));
+	if (!cak)
+		goto free_ckn;
+
+	cak->len = MACSEC_CAK_LEN;
+	os_memcpy(cak->key, ssid->mka_cak, cak->len);
+
+	ckn->len = MACSEC_CKN_LEN;
+	os_memcpy(ckn->name, ssid->mka_ckn, ckn->len);
+
+	res = ieee802_1x_kay_create_mka(wpa_s->kay, ckn, cak, 0, PSK, FALSE);
+	if (res)
+		return res;
+
+	/* Failed to create MKA */
+	os_free(cak);
+
+	/* fallthrough */
+
+free_ckn:
+	os_free(ckn);
+dealloc:
+	ieee802_1x_dealloc_kay_sm(wpa_s);
+
+	return NULL;
+}

@@ -662,6 +662,40 @@ static void write_psk_list(FILE *f, struct wpa_ssid *ssid)
 #endif /* CONFIG_P2P */
 
 
+#ifdef CONFIG_MACSEC
+
+static void write_mka_cak(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value;
+
+	if (!(ssid->mka_psk_set & MKA_PSK_SET_CAK))
+		return;
+
+	value = wpa_config_get(ssid, "mka_cak");
+	if (!value)
+		return;
+	fprintf(f, "\tmka_cak=%s\n", value);
+	os_free(value);
+}
+
+
+static void write_mka_ckn(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value;
+
+	if (!(ssid->mka_psk_set & MKA_PSK_SET_CKN))
+		return;
+
+	value = wpa_config_get(ssid, "mka_ckn");
+	if (!value)
+		return;
+	fprintf(f, "\tmka_ckn=%s\n", value);
+	os_free(value);
+}
+
+#endif /* CONFIG_MACSEC */
+
+
 static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 {
 	int i;
@@ -772,6 +806,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(beacon_int);
 #ifdef CONFIG_MACSEC
 	INT(macsec_policy);
+	write_mka_cak(f, ssid);
+	write_mka_ckn(f, ssid);
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	INT(update_identifier);

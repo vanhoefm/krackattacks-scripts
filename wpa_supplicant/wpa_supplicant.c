@@ -329,7 +329,12 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 
-	ieee802_1x_alloc_kay_sm(wpa_s, ssid);
+#ifdef CONFIG_MACSEC
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE && ssid->mka_psk_set)
+		ieee802_1x_create_preshared_mka(wpa_s, ssid);
+	else
+		ieee802_1x_alloc_kay_sm(wpa_s, ssid);
+#endif /* CONFIG_MACSEC */
 #endif /* IEEE8021X_EAPOL */
 }
 

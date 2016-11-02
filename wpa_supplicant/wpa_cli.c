@@ -1390,6 +1390,7 @@ static const char *network_fields[] = {
 	"ap_max_inactivity", "dtim_period", "beacon_int",
 #ifdef CONFIG_MACSEC
 	"macsec_policy",
+	"macsec_integ_only",
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	"update_identifier",

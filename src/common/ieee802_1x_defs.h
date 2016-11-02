@@ -25,6 +25,12 @@ enum macsec_policy {
 	 * Disabled MACsec - do not secure sessions.
 	 */
 	DO_NOT_SECURE,
+
+	/**
+	 * Should secure sessions, and try to use encryption.
+	 * Like @SHOULD_SECURE, this follows the key server's decision.
+	 */
+	SHOULD_ENCRYPT,
 };
 
 

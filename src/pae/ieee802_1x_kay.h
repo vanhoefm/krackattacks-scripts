@@ -181,6 +181,7 @@ struct ieee802_1x_kay {
 	enum macsec_cap macsec_capable;
 	Boolean macsec_desired;
 	Boolean macsec_protect;
+	Boolean macsec_encrypt;
 	Boolean macsec_replay_protect;
 	u32 macsec_replay_window;
 	enum validate_frames macsec_validate;

@@ -730,6 +730,18 @@ struct wpa_ssid {
 	int macsec_policy;
 
 	/**
+	 * macsec_integ_only - Determines how MACsec are transmitted
+	 *
+	 * This setting applies only when MACsec is in use, i.e.,
+	 *  - macsec_policy is enabled
+	 *  - the key server has decided to enable MACsec
+	 *
+	 * 0: Encrypt traffic (default)
+	 * 1: Integrity only
+	 */
+	int macsec_integ_only;
+
+	/**
 	 * mka_ckn - MKA pre-shared CKN
 	 */
 #define MACSEC_CKN_LEN 32

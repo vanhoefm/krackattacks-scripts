@@ -187,7 +187,14 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	if (!ssid || ssid->macsec_policy == 0)
 		return 0;
 
-	policy = ssid->macsec_policy == 1 ? SHOULD_SECURE : DO_NOT_SECURE;
+	if (ssid->macsec_policy == 1) {
+		if (ssid->macsec_integ_only == 1)
+			policy = SHOULD_SECURE;
+		else
+			policy = SHOULD_ENCRYPT;
+	} else {
+		policy = DO_NOT_SECURE;
+	}
 
 	kay_ctx = os_zalloc(sizeof(*kay_ctx));
 	if (!kay_ctx)

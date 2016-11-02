@@ -1383,7 +1383,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	}
 
 	if (!client) {
-		wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 0);
+		wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 0, NULL);
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 	}
 }
@@ -1801,7 +1801,8 @@ static void p2p_go_configured(void *ctx, void *data)
 		}
 
 		wpas_notify_p2p_group_started(wpa_s, ssid,
-					      params->persistent_group, 0);
+					      params->persistent_group, 0,
+					      NULL);
 		wpas_p2p_cross_connect_setup(wpa_s);
 		wpas_p2p_set_group_idle_timeout(wpa_s);
 
@@ -7007,7 +7008,7 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 		wpas_p2p_store_persistent_group(wpa_s->p2pdev,
 						ssid, go_dev_addr);
 
-	wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 1);
+	wpas_notify_p2p_group_started(wpa_s, ssid, persistent, 1, ip);
 }
 
 

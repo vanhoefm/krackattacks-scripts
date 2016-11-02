@@ -669,12 +669,12 @@ void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 
 void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 				   struct wpa_ssid *ssid, int persistent,
-				   int client)
+				   int client, const u8 *ip)
 {
 	/* Notify a group has been started */
 	wpas_dbus_register_p2p_group(wpa_s, ssid);
 
-	wpas_dbus_signal_p2p_group_started(wpa_s, client, persistent);
+	wpas_dbus_signal_p2p_group_started(wpa_s, client, persistent, ip);
 }
 
 

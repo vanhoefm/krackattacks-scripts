@@ -1256,9 +1256,12 @@ static void peer_groups_changed(struct wpa_supplicant *wpa_s)
  * @wpa_s: %wpa_supplicant network interface data
  * @client: this device is P2P client
  * @persistent: 0 - non persistent group, 1 - persistent group
+ * @ip: When group role is client, it contains local IP address, netmask, and
+ *	GO's IP address, if assigned; otherwise, NULL
  */
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-					int client, int persistent)
+					int client, int persistent,
+					const u8 *ip)
 {
 	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
@@ -1300,6 +1303,13 @@ void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 	    !wpa_dbus_dict_append_bool(&dict_iter, "persistent", persistent) ||
 	    !wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
 					      wpa_s->dbus_groupobj_path) ||
+	    (ip &&
+	     (!wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddr",
+					       (char *) ip, 4) ||
+	      !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrMask",
+					       (char *) ip + 4, 4) ||
+	      !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrGo",
+					       (char *) ip + 8, 4))) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	} else {

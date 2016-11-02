@@ -3339,6 +3339,15 @@ struct wpa_driver_ops {
 	int (*enable_protect_frames)(void *priv, Boolean enabled);
 
 	/**
+	 * enable_encrypt - Set encryption status
+	 * @priv: Private driver interface data
+	 * @enabled: TRUE = encrypt outgoing traffic
+	 *           FALSE = integrity-only protection on outgoing traffic
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*enable_encrypt)(void *priv, Boolean enabled);
+
+	/**
 	 * set_replay_protect - Set replay protect status and window size
 	 * @priv: Private driver interface data
 	 * @enabled: TRUE = replay protect enabled

@@ -142,6 +142,7 @@ struct ieee802_1x_kay_ctx {
 	int (*macsec_deinit)(void *ctx);
 	int (*macsec_get_capability)(void *priv, enum macsec_cap *cap);
 	int (*enable_protect_frames)(void *ctx, Boolean enabled);
+	int (*enable_encrypt)(void *ctx, Boolean enabled);
 	int (*set_replay_protect)(void *ctx, Boolean enabled, u32 window);
 	int (*set_current_cipher_suite)(void *ctx, u64 cs);
 	int (*enable_controlled_port)(void *ctx, Boolean enabled);

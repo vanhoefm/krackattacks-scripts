@@ -731,6 +731,14 @@ static inline int wpa_drv_enable_protect_frames(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->enable_protect_frames(wpa_s->drv_priv, enabled);
 }
 
+static inline int wpa_drv_enable_encrypt(struct wpa_supplicant *wpa_s,
+						Boolean enabled)
+{
+	if (!wpa_s->driver->enable_encrypt)
+		return -1;
+	return wpa_s->driver->enable_encrypt(wpa_s->drv_priv, enabled);
+}
+
 static inline int wpa_drv_set_replay_protect(struct wpa_supplicant *wpa_s,
 					     Boolean enabled, u32 window)
 {

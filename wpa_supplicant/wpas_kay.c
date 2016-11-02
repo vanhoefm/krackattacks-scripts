@@ -50,6 +50,12 @@ static int wpas_enable_protect_frames(void *wpa_s, Boolean enabled)
 }
 
 
+static int wpas_enable_encrypt(void *wpa_s, Boolean enabled)
+{
+	return wpa_drv_enable_encrypt(wpa_s, enabled);
+}
+
+
 static int wpas_set_replay_protect(void *wpa_s, Boolean enabled, u32 window)
 {
 	return wpa_drv_set_replay_protect(wpa_s, enabled, window);
@@ -206,6 +212,7 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	kay_ctx->macsec_deinit = wpas_macsec_deinit;
 	kay_ctx->macsec_get_capability = wpas_macsec_get_capability;
 	kay_ctx->enable_protect_frames = wpas_enable_protect_frames;
+	kay_ctx->enable_encrypt = wpas_enable_encrypt;
 	kay_ctx->set_replay_protect = wpas_set_replay_protect;
 	kay_ctx->set_current_cipher_suite = wpas_set_current_cipher_suite;
 	kay_ctx->enable_controlled_port = wpas_enable_controlled_port;

@@ -45,6 +45,26 @@ int secy_cp_control_protect_frames(struct ieee802_1x_kay *kay, Boolean enabled)
 }
 
 
+int secy_cp_control_encrypt(struct ieee802_1x_kay *kay, Boolean enabled)
+{
+	struct ieee802_1x_kay_ctx *ops;
+
+	if (!kay) {
+		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
+		return -1;
+	}
+
+	ops = kay->ctx;
+	if (!ops || !ops->enable_encrypt) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: secy enable_encrypt operation not supported");
+		return -1;
+	}
+
+	return ops->enable_encrypt(ops->ctx, enabled);
+}
+
+
 int secy_cp_control_replay(struct ieee802_1x_kay *kay, Boolean enabled, u32 win)
 {
 	struct ieee802_1x_kay_ctx *ops;

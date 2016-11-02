@@ -232,8 +232,8 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	kay_ctx->enable_transmit_sa = wpas_enable_transmit_sa;
 	kay_ctx->disable_transmit_sa = wpas_disable_transmit_sa;
 
-	res = ieee802_1x_kay_init(kay_ctx, policy, wpa_s->ifname,
-				  wpa_s->own_addr);
+	res = ieee802_1x_kay_init(kay_ctx, policy, ssid->macsec_port,
+				  wpa_s->ifname, wpa_s->own_addr);
 	if (res == NULL) {
 		os_free(kay_ctx);
 		return -1;

@@ -742,6 +742,15 @@ struct wpa_ssid {
 	int macsec_integ_only;
 
 	/**
+	 * macsec_port - MACsec port (in SCI)
+	 *
+	 * Port component of the SCI.
+	 *
+	 * Range: 1-65534 (default: 1)
+	 */
+	int macsec_port;
+
+	/**
 	 * mka_ckn - MKA pre-shared CKN
 	 */
 #define MACSEC_CKN_LEN 32

@@ -3071,7 +3071,7 @@ static void kay_l2_receive(void *ctx, const u8 *src_addr, const u8 *buf,
  */
 struct ieee802_1x_kay *
 ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
-		    const char *ifname, const u8 *addr)
+		    u16 port, const char *ifname, const u8 *addr)
 {
 	struct ieee802_1x_kay *kay;
 
@@ -3093,7 +3093,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 
 	os_strlcpy(kay->if_name, ifname, IFNAMSIZ);
 	os_memcpy(kay->actor_sci.addr, addr, ETH_ALEN);
-	kay->actor_sci.port = host_to_be16(0x0001);
+	kay->actor_sci.port = host_to_be16(port ? port : 0x0001);
 	kay->actor_priority = DEFAULT_PRIO_NOT_KEY_SERVER;
 
 	/* While actor acts as a key server, shall distribute sakey */

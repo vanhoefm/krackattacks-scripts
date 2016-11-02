@@ -3339,8 +3339,16 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 	usecs = os_random() % (MKA_HELLO_TIME * 1000);
 	eloop_register_timeout(0, usecs, ieee802_1x_participant_timer,
 			       participant, NULL);
-	participant->mka_life = MKA_LIFE_TIME / 1000 + time(NULL) +
-		usecs / 1000000;
+
+	/* Disable MKA lifetime for PSK mode.
+	 * The peer(s) can take a long time to come up, because we
+	 * create a "standby" MKA, and we need it to remain live until
+	 * some peer appears.
+	 */
+	if (mode != PSK) {
+		participant->mka_life = MKA_LIFE_TIME / 1000 + time(NULL) +
+			usecs / 1000000;
+	}
 
 	return participant;
 

@@ -28,6 +28,18 @@
 #include "../p2p_supplicant.h"
 #include "../wifi_display.h"
 
+
+static int wpas_dbus_validate_dbus_ipaddr(struct wpa_dbus_dict_entry entry)
+{
+	if (entry.type != DBUS_TYPE_ARRAY ||
+	    entry.array_type != DBUS_TYPE_BYTE ||
+	    entry.array_len != 4)
+		return 0;
+
+	return 1;
+}
+
+
 /**
  * Parses out the mac address from the peer object path.
  * @peer_path - object path of the form
@@ -867,6 +879,35 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(
 			goto err_no_mem;
 	}
 
+	/* GO IP address */
+	if (WPA_GET_BE32(wpa_s->conf->ip_addr_go) &&
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrGo",
+					     (char *) wpa_s->conf->ip_addr_go,
+					     4))
+		goto err_no_mem;
+
+	/* IP address mask */
+	if (WPA_GET_BE32(wpa_s->conf->ip_addr_mask) &&
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrMask",
+					     (char *) wpa_s->conf->ip_addr_mask,
+					     4))
+		goto err_no_mem;
+
+	/* IP address start */
+	if (WPA_GET_BE32(wpa_s->conf->ip_addr_start) &&
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrStart",
+					     (char *)
+					     wpa_s->conf->ip_addr_start,
+					     4))
+		goto err_no_mem;
+
+	/* IP address end */
+	if (WPA_GET_BE32(wpa_s->conf->ip_addr_end) &&
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrEnd",
+					     (char *) wpa_s->conf->ip_addr_end,
+					     4))
+		goto err_no_mem;
+
 	/* Vendor Extensions */
 	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		if (wpa_s->conf->wps_vendor_ext[i] == NULL)
@@ -1051,6 +1092,26 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(
 			wpa_s->conf->p2p_intra_bss = entry.bool_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_INTRA_BSS;
+		} else if (os_strcmp(entry.key, "IpAddrGo") == 0) {
+			if (!wpas_dbus_validate_dbus_ipaddr(entry))
+				goto error;
+			os_memcpy(wpa_s->conf->ip_addr_go,
+				  entry.bytearray_value, 4);
+		} else if (os_strcmp(entry.key, "IpAddrMask") == 0) {
+			if (!wpas_dbus_validate_dbus_ipaddr(entry))
+				goto error;
+			os_memcpy(wpa_s->conf->ip_addr_mask,
+				  entry.bytearray_value, 4);
+		} else if (os_strcmp(entry.key, "IpAddrStart") == 0) {
+			if (!wpas_dbus_validate_dbus_ipaddr(entry))
+				goto error;
+			os_memcpy(wpa_s->conf->ip_addr_start,
+				  entry.bytearray_value, 4);
+		} else if (os_strcmp(entry.key, "IpAddrEnd") == 0) {
+			if (!wpas_dbus_validate_dbus_ipaddr(entry))
+				goto error;
+			os_memcpy(wpa_s->conf->ip_addr_end,
+				  entry.bytearray_value, 4);
 		} else if (os_strcmp(entry.key, "GroupIdle") == 0 &&
 			   entry.type == DBUS_TYPE_UINT32)
 			wpa_s->conf->p2p_group_idle = entry.uint32_value;

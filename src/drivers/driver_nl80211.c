@@ -5647,8 +5647,6 @@ static int i802_read_sta_data(struct i802_bss *bss,
 {
 	struct nl_msg *msg;
 
-	os_memset(data, 0, sizeof(*data));
-
 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_GET_STATION)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) {
 		nlmsg_free(msg);
@@ -5754,6 +5752,7 @@ static int i802_get_inact_sec(void *priv, const u8 *addr)
 	struct hostap_sta_driver_data data;
 	int ret;
 
+	os_memset(&data, 0, sizeof(data));
 	data.inactive_msec = (unsigned long) -1;
 	ret = i802_read_sta_data(priv, &data, addr);
 	if (ret == -ENOENT)
@@ -7756,6 +7755,8 @@ static int driver_nl80211_read_sta_data(void *priv,
 					const u8 *addr)
 {
 	struct i802_bss *bss = priv;
+
+	os_memset(data, 0, sizeof(*data));
 	return i802_read_sta_data(bss, data, addr);
 }
 

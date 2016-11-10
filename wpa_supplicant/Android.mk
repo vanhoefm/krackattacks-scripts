@@ -1596,9 +1596,7 @@ endif
 
 # With BoringSSL we need libkeystore-engine in order to provide access to
 # keystore keys.
-ifneq (,$(wildcard external/boringssl/flavor.mk))
 LOCAL_SHARED_LIBRARIES += libkeystore-engine
-endif
 
 ifdef CONFIG_DRIVER_NL80211
 ifneq ($(wildcard external/libnl),)

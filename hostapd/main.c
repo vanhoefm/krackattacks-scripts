@@ -549,14 +549,14 @@ static int hostapd_get_ctrl_iface_group(struct hapd_interfaces *interfaces,
 
 static int hostapd_get_interface_names(char ***if_names,
 				       size_t *if_names_size,
-				       char *optarg)
+				       char *arg)
 {
 	char *if_name, *tmp, **nnames;
 	size_t i;
 
-	if (!optarg)
+	if (!arg)
 		return -1;
-	if_name = strtok_r(optarg, ",", &tmp);
+	if_name = strtok_r(arg, ",", &tmp);
 
 	while (if_name) {
 		nnames = os_realloc_array(*if_names, 1 + *if_names_size,

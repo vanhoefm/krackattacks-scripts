@@ -1296,6 +1296,6 @@ int wpa_is_bss_tmp_disallowed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 				     int i, struct wpa_bss *bss,
 				     struct wpa_ssid *group,
-				     int only_first_ssid);
+				     int only_first_ssid, int debug_print);
 
 #endif /* WPA_SUPPLICANT_I_H */

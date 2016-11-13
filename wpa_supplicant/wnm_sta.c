@@ -562,7 +562,7 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
 
 		if (wpa_s->current_ssid &&
 		    !wpa_scan_res_match(wpa_s, 0, target, wpa_s->current_ssid,
-					1)) {
+					1, 0)) {
 			wpa_printf(MSG_DEBUG, "Candidate BSS " MACSTR
 				   " (pref %d) does not match the current network profile",
 				   MAC2STR(nei->bssid),
@@ -756,7 +756,7 @@ static int wnm_add_cand_list(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 		struct wpa_bss *bss = wpa_s->last_scan_res[i];
 		int res;
 
-		if (wpa_scan_res_match(wpa_s, i, bss, ssid, 1)) {
+		if (wpa_scan_res_match(wpa_s, i, bss, ssid, 1, 0)) {
 			res = wnm_nei_rep_add_bss(wpa_s, bss, pos, len, pref--);
 			if (res == -2)
 				continue; /* could not build entry for BSS */

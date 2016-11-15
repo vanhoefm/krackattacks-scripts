@@ -3111,7 +3111,14 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 
 	dl_list_init(&kay->participant_list);
 
-	if (policy == DO_NOT_SECURE) {
+	if (policy != DO_NOT_SECURE &&
+	    secy_get_capability(kay, &kay->macsec_capable) < 0) {
+		os_free(kay);
+		return NULL;
+	}
+
+	if (policy == DO_NOT_SECURE ||
+	    kay->macsec_capable == MACSEC_CAP_NOT_IMPLEMENTED) {
 		kay->macsec_capable = MACSEC_CAP_NOT_IMPLEMENTED;
 		kay->macsec_desired = FALSE;
 		kay->macsec_protect = FALSE;
@@ -3120,11 +3127,6 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		kay->macsec_replay_window = 0;
 		kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
 	} else {
-		if (secy_get_capability(kay, &kay->macsec_capable) < 0) {
-			os_free(kay);
-			return NULL;
-		}
-
 		kay->macsec_desired = TRUE;
 		kay->macsec_protect = TRUE;
 		kay->macsec_validate = Strict;
@@ -3133,7 +3135,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		if (kay->macsec_capable >= MACSEC_CAP_INTEG_AND_CONF)
 			kay->macsec_confidentiality = CONFIDENTIALITY_OFFSET_0;
 		else
-			kay->macsec_confidentiality = MACSEC_CAP_INTEGRITY;
+			kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
 	}
 
 	wpa_printf(MSG_DEBUG, "KaY: state machine created");

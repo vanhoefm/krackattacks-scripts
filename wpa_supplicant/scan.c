@@ -1249,6 +1249,26 @@ int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
 }
 
 
+static void
+wpa_scan_set_relative_rssi_params(struct wpa_supplicant *wpa_s,
+				  struct wpa_driver_scan_params *params)
+{
+	if (wpa_s->wpa_state != WPA_COMPLETED ||
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SCHED_SCAN_RELATIVE_RSSI) ||
+	    wpa_s->srp.relative_rssi_set == 0)
+		return;
+
+	params->relative_rssi_set = 1;
+	params->relative_rssi = wpa_s->srp.relative_rssi;
+
+	if (wpa_s->srp.relative_adjust_rssi == 0)
+		return;
+
+	params->relative_adjust_band = wpa_s->srp.relative_adjust_band;
+	params->relative_adjust_rssi = wpa_s->srp.relative_adjust_rssi;
+}
+
+
 /**
  * wpa_supplicant_req_sched_scan - Start a periodic scheduled scan
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1502,6 +1522,8 @@ scan:
 				ETH_ALEN;
 		}
 	}
+
+	wpa_scan_set_relative_rssi_params(wpa_s, scan_params);
 
 	ret = wpa_supplicant_start_sched_scan(wpa_s, scan_params);
 	wpabuf_free(extra_ie);
@@ -2392,6 +2414,10 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 		params->bssid = bssid;
 	}
 
+	params->relative_rssi_set = src->relative_rssi_set;
+	params->relative_rssi = src->relative_rssi;
+	params->relative_adjust_band = src->relative_adjust_band;
+	params->relative_adjust_rssi = src->relative_adjust_rssi;
 	return params;
 
 failed:
@@ -2569,6 +2595,8 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 			params.mac_addr_mask = wpa_s->mac_addr_pno + ETH_ALEN;
 		}
 	}
+
+	wpa_scan_set_relative_rssi_params(wpa_s, &params);
 
 	ret = wpa_supplicant_start_sched_scan(wpa_s, &params);
 	os_free(params.filter_ssids);

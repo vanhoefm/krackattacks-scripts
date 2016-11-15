@@ -492,6 +492,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 #ifdef CONFIG_TESTING_OPTIONS
 		"ignore_auth_resp",
 #endif /* CONFIG_TESTING_OPTIONS */
+		"relative_rssi", "relative_band_adjust",
 	};
 	int i, num_fields = ARRAY_SIZE(fields);
 

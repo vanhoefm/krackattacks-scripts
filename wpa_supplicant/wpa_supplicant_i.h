@@ -1112,6 +1112,39 @@ struct wpa_supplicant {
 
 	/* FILS HLP requests (struct fils_hlp_req) */
 	struct dl_list fils_hlp_req;
+
+	struct sched_scan_relative_params {
+		/**
+		 * relative_rssi_set - Enable relatively preferred BSS reporting
+		 *
+		 * 0 = Disable reporting relatively preferred BSSs
+		 * 1 = Enable reporting relatively preferred BSSs
+		 */
+		int relative_rssi_set;
+
+		/**
+		 * relative_rssi - Relative RSSI for reporting better BSSs
+		 *
+		 * Amount of RSSI by which a BSS should be better than the
+		 * current connected BSS so that the new BSS can be reported
+		 * to user space. This applies to sched_scan operations.
+		 */
+		int relative_rssi;
+
+		/**
+		 * relative_adjust_band - Band in which RSSI is to be adjusted
+		 */
+		enum set_band relative_adjust_band;
+
+		/**
+		 * relative_adjust_rssi - RSSI adjustment
+		 *
+		 * An amount of relative_adjust_rssi should be added to the
+		 * BSSs that belong to the relative_adjust_band while comparing
+		 * with other bands for BSS reporting.
+		 */
+		int relative_adjust_rssi;
+	} srp;
 };
 
 

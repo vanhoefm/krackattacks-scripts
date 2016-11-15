@@ -339,6 +339,53 @@ static int wpas_ctrl_iface_set_lci(struct wpa_supplicant *wpa_s,
 }
 
 
+static int
+wpas_ctrl_set_relative_rssi(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	int relative_rssi;
+
+	if (os_strcmp(cmd, "disable") == 0) {
+		wpa_s->srp.relative_rssi_set = 0;
+		return 0;
+	}
+
+	relative_rssi = atoi(cmd);
+	if (relative_rssi < 0 || relative_rssi > 100)
+		return -1;
+	wpa_s->srp.relative_rssi = relative_rssi;
+	wpa_s->srp.relative_rssi_set = 1;
+	return 0;
+}
+
+
+static int wpas_ctrl_set_relative_band_adjust(struct wpa_supplicant *wpa_s,
+					      const char *cmd)
+{
+	char *pos;
+	int adjust_rssi;
+
+	/* <band>:adjust_value */
+	pos = os_strchr(cmd, ':');
+	if (!pos)
+		return -1;
+	pos++;
+	adjust_rssi = atoi(pos);
+	if (adjust_rssi < -100 || adjust_rssi > 100)
+		return -1;
+
+	if (os_strncmp(cmd, "2G", 2) == 0)
+		wpa_s->srp.relative_adjust_band = WPA_SETBAND_2G;
+	else if (os_strncmp(cmd, "5G", 2) == 0)
+		wpa_s->srp.relative_adjust_band = WPA_SETBAND_5G;
+	else
+		return -1;
+
+	wpa_s->srp.relative_adjust_rssi = adjust_rssi;
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -551,6 +598,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = wpas_ctrl_iface_set_lci(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "tdls_trigger_control") == 0) {
 		ret = wpa_drv_set_tdls_mode(wpa_s, atoi(value));
+	} else if (os_strcasecmp(cmd, "relative_rssi") == 0) {
+		ret = wpas_ctrl_set_relative_rssi(wpa_s, value);
+	} else if (os_strcasecmp(cmd, "relative_band_adjust") == 0) {
+		ret = wpas_ctrl_set_relative_band_adjust(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

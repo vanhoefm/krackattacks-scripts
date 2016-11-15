@@ -562,6 +562,39 @@ int wpa_driver_nl80211_sched_scan(void *priv,
 		nla_nest_end(msg, match_sets);
 	}
 
+	if (params->relative_rssi_set) {
+		struct nl80211_bss_select_rssi_adjust rssi_adjust;
+
+		os_memset(&rssi_adjust, 0, sizeof(rssi_adjust));
+		wpa_printf(MSG_DEBUG, "nl80211: Relative RSSI: %d",
+			   params->relative_rssi);
+		if (nla_put_u32(msg, NL80211_ATTR_SCHED_SCAN_RELATIVE_RSSI,
+				params->relative_rssi))
+			goto fail;
+
+		if (params->relative_adjust_rssi) {
+			int pref_band_set = 1;
+
+			switch (params->relative_adjust_band) {
+			case WPA_SETBAND_5G:
+				rssi_adjust.band = NL80211_BAND_5GHZ;
+				break;
+			case WPA_SETBAND_2G:
+				rssi_adjust.band = NL80211_BAND_2GHZ;
+				break;
+			default:
+				pref_band_set = 0;
+				break;
+			}
+			rssi_adjust.delta = params->relative_adjust_rssi;
+
+			if (pref_band_set &&
+			    nla_put(msg, NL80211_ATTR_SCHED_SCAN_RSSI_ADJUST,
+				    sizeof(rssi_adjust), &rssi_adjust))
+				goto fail;
+		}
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 
 	/* TODO: if we get an error here, we should fall back to normal scan */

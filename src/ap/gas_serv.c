@@ -255,6 +255,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
 	if (get_anqp_elem(hapd, ANQP_EMERGENCY_ALERT_URI))
 		wpabuf_put_le16(buf, ANQP_EMERGENCY_ALERT_URI);
+	if (get_anqp_elem(hapd, ANQP_TDLS_CAPABILITY))
+		wpabuf_put_le16(buf, ANQP_TDLS_CAPABILITY);
 	if (get_anqp_elem(hapd, ANQP_EMERGENCY_NAI))
 		wpabuf_put_le16(buf, ANQP_EMERGENCY_NAI);
 	if (get_anqp_elem(hapd, ANQP_NEIGHBOR_REPORT))
@@ -269,6 +271,10 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_ADVICE_OF_CHARGE);
 	if (get_anqp_elem(hapd, ANQP_LOCAL_CONTENT))
 		wpabuf_put_le16(buf, ANQP_LOCAL_CONTENT);
+	for (id = 280; id < 300; id++) {
+		if (get_anqp_elem(hapd, id))
+			wpabuf_put_le16(buf, id);
+	}
 #ifdef CONFIG_HS20
 	anqp_add_hs_capab_list(hapd, buf);
 #endif /* CONFIG_HS20 */

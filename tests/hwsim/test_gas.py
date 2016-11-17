@@ -1518,3 +1518,41 @@ def test_gas_anqp_venue_url(dev, apdev):
     ids = struct.pack('<HHH', 257, 258, 277)
     if not bss['anqp_capability_list'].startswith(binascii.hexlify(ids)):
         raise Exception("Unexpected Capability List ANQP-element value: " + bss['anqp_capability_list'])
+
+def test_gas_anqp_capab_list(dev, apdev):
+    """GAS/ANQP and Capability List ANQP-element"""
+    params = { "ssid": "gas/anqp",
+               "interworking": "1" }
+    params["anqp_elem"] = []
+    for i in range(0, 400):
+        if i not in [ 257 ]:
+            params["anqp_elem"] += [ "%d:010203" % i ]
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 257"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    bss = dev[0].get_bss(bssid)
+
+    if 'anqp_capability_list' not in bss:
+        raise Exception("Capability List ANQP-element not seen")
+    val = bss['anqp_capability_list']
+    logger.info("anqp_capability_list: " + val)
+    ids = []
+    while len(val) >= 4:
+        id_bin = binascii.unhexlify(val[0:4])
+        id = struct.unpack('<H', id_bin)[0]
+        if id == 0xdddd:
+            break
+        ids.append(id)
+        val = val[4:]
+    logger.info("InfoIDs: " + str(ids))
+    for i in range(257, 300):
+        if i not in ids:
+            raise Exception("Unexpected Capability List ANQP-element value (missing %d): %s" % (i, bss['anqp_capability_list']))

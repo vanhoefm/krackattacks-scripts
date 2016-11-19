@@ -480,7 +480,7 @@ static void usage(void)
 		"   -f   log output to debug file instead of stdout\n"
 #endif /* CONFIG_DEBUG_FILE */
 #ifdef CONFIG_DEBUG_LINUX_TRACING
-		"   -T = record to Linux tracing in addition to logging\n"
+		"   -T   record to Linux tracing in addition to logging\n"
 		"        (records all messages regardless of debug verbosity)\n"
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
 		"   -i   list of interface names to use\n"

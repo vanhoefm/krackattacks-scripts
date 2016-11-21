@@ -23,6 +23,7 @@ from utils import HwsimSkip, alloc_fail, fail_test
 from p2p_utils import *
 from test_ap_tdls import connect_2sta_open
 from test_ap_eap import check_altsubject_match_support
+from test_nfc_p2p import set_ip_addr_info
 
 WPAS_DBUS_SERVICE = "fi.w1.wpa_supplicant1"
 WPAS_DBUS_PATH = "/fi/w1/wpa_supplicant1"
@@ -4844,6 +4845,78 @@ def test_dbus_p2p_cancel(dev, apdev):
         def run_test(self, *args):
             logger.debug("run_test")
             p2p.Find(dbus.Dictionary({'DiscoveryType': 'social'}))
+            return False
+
+        def success(self):
+            return self.done
+
+    with TestDbusP2p(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
+def test_dbus_p2p_ip_addr(dev, apdev):
+    """D-Bus P2P and IP address parameters"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
+
+    vals = [ ("IpAddrGo", "192.168.43.1"),
+             ("IpAddrMask", "255.255.255.0"),
+             ("IpAddrStart", "192.168.43.100"),
+             ("IpAddrEnd", "192.168.43.199") ]
+    for field, value in vals:
+        if_obj.Set(WPAS_DBUS_IFACE, field, value,
+                   dbus_interface=dbus.PROPERTIES_IFACE)
+        val = if_obj.Get(WPAS_DBUS_IFACE, field,
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if val != value:
+            raise Exception("Unexpected %s value: %s" % (field, val))
+
+    set_ip_addr_info(dev[1])
+
+    dev[0].global_request("SET p2p_go_intent 0")
+
+    req = dev[0].global_request("NFC_GET_HANDOVER_REQ NDEF P2P-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = dev[1].global_request("NFC_GET_HANDOVER_SEL NDEF P2P-CR").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    res = dev[1].global_request("NFC_REPORT_HANDOVER RESP P2P " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to wpa_supplicant(resp)")
+    res = dev[0].global_request("NFC_REPORT_HANDOVER INIT P2P " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to wpa_supplicant(init)")
+
+    class TestDbusP2p(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.done = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_test)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.groupStarted, WPAS_DBUS_IFACE_P2PDEVICE,
+                            "GroupStarted")
+            self.loop.run()
+            return self
+
+        def groupStarted(self, properties):
+            logger.debug("groupStarted: " + str(properties))
+            self.loop.quit()
+
+            if 'IpAddrGo' not in properties:
+                logger.info("IpAddrGo missing from GroupStarted")
+            ip_addr_go = properties['IpAddrGo']
+            addr = "%d.%d.%d.%d" % (ip_addr_go[0], ip_addr_go[1], ip_addr_go[2], ip_addr_go[3])
+            if addr != "192.168.42.1":
+                logger.info("Unexpected IpAddrGo value: " + addr)
+            self.done = True
+
+        def run_test(self, *args):
+            logger.debug("run_test")
             return False
 
         def success(self):

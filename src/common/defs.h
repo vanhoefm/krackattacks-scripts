@@ -370,4 +370,10 @@ enum wpa_radio_work_band {
 	BAND_60_GHZ = BIT(2),
 };
 
+enum beacon_rate_type {
+	BEACON_RATE_LEGACY,
+	BEACON_RATE_HT,
+	BEACON_RATE_VHT
+};
+
 #endif /* DEFS_H */

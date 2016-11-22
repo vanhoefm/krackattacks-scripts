@@ -232,6 +232,11 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_CONFIGURE_TDLS: Configure the TDLS behavior
  *	in the host driver. The different TDLS configurations are defined
  *	by the attributes in enum qca_wlan_vendor_attr_tdls_configuration.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN: Abort an ongoing vendor scan that was
+ *	started with QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN. This command
+ *	carries the scan cookie of the corresponding scan request. The scan
+ *	cookie is represented by QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -339,6 +344,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_DMG_RF_SET_SELECTED_SECTOR = 142,
 	QCA_NL80211_VENDOR_SUBCMD_CONFIGURE_TDLS = 143,
 	/* 144 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN = 145,
 };
 
 

@@ -1053,9 +1053,12 @@ class WpaSupplicant:
             raise Exception("Failed to trigger scan")
         if no_wait:
             return
-        ev = self.wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+        ev = self.wait_event(["CTRL-EVENT-SCAN-RESULTS",
+                              "CTRL-EVENT-SCAN-FAILED"], 15)
         if ev is None:
             raise Exception("Scan timed out")
+        if "CTRL-EVENT-SCAN-FAILED" in ev:
+            raise Exception("Scan failed: " + ev)
 
     def scan_for_bss(self, bssid, freq=None, force_scan=False, only_new=False):
         if not force_scan and self.get_bss(bssid) is not None:

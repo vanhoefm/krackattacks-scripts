@@ -790,6 +790,29 @@ def _test_scan_random_mac(dev, apdev, params):
         if not found:
             raise Exception("Fixed OUI random address not seen")
 
+def test_scan_random_mac_connected(dev, apdev, params):
+    """Random MAC address in scans while connected"""
+    try:
+        _test_scan_random_mac_connected(dev, apdev, params)
+    finally:
+        dev[0].request("MAC_RAND_SCAN all enable=0")
+
+def _test_scan_random_mac_connected(dev, apdev, params):
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+    if dev[0].get_driver_status_field('capa.mac_addr_rand_scan_supported') != '1':
+        raise HwsimSkip("Driver does not support random MAC address for scanning")
+
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412")
+
+    hostapd.add_ap(apdev[1], { "ssid": "test-scan-2", "channel": "11" })
+    bssid1 = apdev[1]['bssid']
+
+    # Verify that scanning can be completed while connected even if that means
+    # disabling use of random MAC address.
+    dev[0].request("MAC_RAND_SCAN all enable=1")
+    dev[0].scan_for_bss(bssid1, freq=2462, force_scan=True)
+
 @remote_compatible
 def test_scan_trigger_failure(dev, apdev):
     """Scan trigger to the driver failing"""

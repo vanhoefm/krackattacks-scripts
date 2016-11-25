@@ -8,11 +8,12 @@ from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
+import subprocess
 
 import hwsim_utils
 import hostapd
 from tshark import run_tshark
-from utils import alloc_fail
+from utils import alloc_fail, HwsimSkip
 
 @remote_compatible
 def test_ap_fragmentation_rts_set_high(dev, apdev):
@@ -334,3 +335,106 @@ def test_ap_tx_queue_params(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_beacon_rate_legacy(dev, apdev):
+    """Open AP with Beacon frame TX rate 5.5 Mbps"""
+    hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })
+    res = hapd.get_driver_status_field('capa.flags')
+    if (int(res, 0) & 0x0000080000000000) == 0:
+        raise HwsimSkip("Setting Beacon frame TX rate not supported")
+    hapd.disable()
+    hapd.set('beacon_rate', '55')
+    hapd.enable()
+    dev[0].connect('beacon-rate', key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_beacon_rate_legacy2(dev, apdev):
+    """Open AP with Beacon frame TX rate 12 Mbps in VHT BSS"""
+    hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })
+    res = hapd.get_driver_status_field('capa.flags')
+    if (int(res, 0) & 0x0000080000000000) == 0:
+        raise HwsimSkip("Setting Beacon frame TX rate not supported")
+    hapd.disable()
+    hapd.set('beacon_rate', '120')
+    hapd.set("country_code", "DE")
+    hapd.set("hw_mode", "a")
+    hapd.set("channel", "36")
+    hapd.set("ieee80211n", "1")
+    hapd.set("ieee80211ac", "1")
+    hapd.set("ht_capab", "[HT40+]")
+    hapd.set("vht_capab", "")
+    hapd.set("vht_oper_chwidth", "0")
+    hapd.set("vht_oper_centr_freq_seg0_idx", "0")
+    try:
+        hapd.enable()
+        dev[0].scan_for_bss(hapd.own_addr(), freq="5180")
+        dev[0].connect('beacon-rate', key_mgmt="NONE", scan_freq="5180")
+    finally:
+        dev[0].request("DISCONNECT")
+        hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
+def test_ap_beacon_rate_ht(dev, apdev):
+    """Open AP with Beacon frame TX rate HT-MCS 0"""
+    hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })
+    res = hapd.get_driver_status_field('capa.flags')
+    if (int(res, 0) & 0x0000100000000000) == 0:
+        raise HwsimSkip("Setting Beacon frame TX rate not supported")
+    hapd.disable()
+    hapd.set('beacon_rate', 'ht:0')
+    hapd.enable()
+    dev[0].connect('beacon-rate', key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_beacon_rate_ht2(dev, apdev):
+    """Open AP with Beacon frame TX rate HT-MCS 1 in VHT BSS"""
+    hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })
+    res = hapd.get_driver_status_field('capa.flags')
+    if (int(res, 0) & 0x0000100000000000) == 0:
+        raise HwsimSkip("Setting Beacon frame TX rate not supported")
+    hapd.disable()
+    hapd.set('beacon_rate', 'ht:1')
+    hapd.set("country_code", "DE")
+    hapd.set("hw_mode", "a")
+    hapd.set("channel", "36")
+    hapd.set("ieee80211n", "1")
+    hapd.set("ieee80211ac", "1")
+    hapd.set("ht_capab", "[HT40+]")
+    hapd.set("vht_capab", "")
+    hapd.set("vht_oper_chwidth", "0")
+    hapd.set("vht_oper_centr_freq_seg0_idx", "0")
+    try:
+        hapd.enable()
+        dev[0].scan_for_bss(hapd.own_addr(), freq="5180")
+        dev[0].connect('beacon-rate', key_mgmt="NONE", scan_freq="5180")
+    finally:
+        dev[0].request("DISCONNECT")
+        hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
+def test_ap_beacon_rate_vht(dev, apdev):
+    """Open AP with Beacon frame TX rate VHT-MCS 0"""
+    hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })
+    res = hapd.get_driver_status_field('capa.flags')
+    if (int(res, 0) & 0x0000200000000000) == 0:
+        raise HwsimSkip("Setting Beacon frame TX rate not supported")
+    hapd.disable()
+    hapd.set('beacon_rate', 'vht:0')
+    hapd.set("country_code", "DE")
+    hapd.set("hw_mode", "a")
+    hapd.set("channel", "36")
+    hapd.set("ieee80211n", "1")
+    hapd.set("ieee80211ac", "1")
+    hapd.set("ht_capab", "[HT40+]")
+    hapd.set("vht_capab", "")
+    hapd.set("vht_oper_chwidth", "0")
+    hapd.set("vht_oper_centr_freq_seg0_idx", "0")
+    try:
+        hapd.enable()
+        dev[0].scan_for_bss(hapd.own_addr(), freq="5180")
+        dev[0].connect('beacon-rate', key_mgmt="NONE", scan_freq="5180")
+    finally:
+        dev[0].request("DISCONNECT")
+        hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

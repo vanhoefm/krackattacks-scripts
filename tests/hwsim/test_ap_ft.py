@@ -1237,3 +1237,32 @@ def test_ap_ft_internal_rrb_check(dev, apdev):
     # Try over_ds roaming to non-WPA-enabled AP.
     # If hostapd does not check hapd->wpa_auth internally, it will crash now.
     dev[0].roam_over_ds(apdev[1]['bssid'], fail_test=True)
+
+def test_ap_ft_extra_ie(dev, apdev):
+    """WPA2-PSK-FT AP with WPA2-PSK enabled and unexpected MDE"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["wpa_key_mgmt"] = "WPA-PSK FT-PSK"
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    dev[1].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    dev[2].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK", proto="WPA2",
+                   scan_freq="2412")
+    try:
+        # Add Mobility Domain element to test AP validation code.
+        dev[0].request("VENDOR_ELEM_ADD 13 3603a1b201")
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK", proto="WPA2",
+                       scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+        if ev is None:
+            raise Exception("No connection result")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Non-FT association accepted with MDE")
+        if "status_code=43" not in ev:
+            raise Exception("Unexpected status code: " + ev)
+        dev[0].request("DISCONNECT")
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 13 *")

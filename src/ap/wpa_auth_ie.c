@@ -716,6 +716,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 				    "MDIE", mdie, MOBILITY_DOMAIN_ID_LEN);
 			return WPA_INVALID_MDIE;
 		}
+	} else if (mdie != NULL) {
+		wpa_printf(MSG_DEBUG,
+			   "RSN: Trying to use non-FT AKM suite, but MDIE included");
+		return WPA_INVALID_AKMP;
 	}
 #endif /* CONFIG_IEEE80211R_AP */
 

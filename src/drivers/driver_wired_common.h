@@ -26,6 +26,7 @@ int driver_wired_get_ifflags(const char *ifname, int *flags);
 int driver_wired_set_ifflags(const char *ifname, int flags);
 int driver_wired_multi(const char *ifname, const u8 *addr, int add);
 int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add);
+int driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa);
 int driver_wired_get_ifstatus(const char *ifname, int *status);
 
 int driver_wired_init_common(struct driver_wired_common_data *common,

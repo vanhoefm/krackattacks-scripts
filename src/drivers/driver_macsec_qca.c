@@ -91,14 +91,6 @@ static int macsec_qca_get_bssid(void *priv, u8 *bssid)
 }
 
 
-static int macsec_qca_get_capa(void *priv, struct wpa_driver_capa *capa)
-{
-	os_memset(capa, 0, sizeof(*capa));
-	capa->flags = WPA_DRIVER_FLAGS_WIRED;
-	return 0;
-}
-
-
 static void __macsec_drv_init(struct macsec_qca_data *drv)
 {
 	int ret = 0;
@@ -758,7 +750,7 @@ const struct wpa_driver_ops wpa_driver_macsec_qca_ops = {
 	.desc = "QCA MACsec Ethernet driver",
 	.get_ssid = macsec_qca_get_ssid,
 	.get_bssid = macsec_qca_get_bssid,
-	.get_capa = macsec_qca_get_capa,
+	.get_capa = driver_wired_get_capa,
 	.init = macsec_qca_init,
 	.deinit = macsec_qca_deinit,
 

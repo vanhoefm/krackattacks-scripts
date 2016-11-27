@@ -382,14 +382,6 @@ static int wpa_driver_wired_get_bssid(void *priv, u8 *bssid)
 }
 
 
-static int wpa_driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
-{
-	os_memset(capa, 0, sizeof(*capa));
-	capa->flags = WPA_DRIVER_FLAGS_WIRED;
-	return 0;
-}
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -424,7 +416,7 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.hapd_send_eapol = wired_send_eapol,
 	.get_ssid = wpa_driver_wired_get_ssid,
 	.get_bssid = wpa_driver_wired_get_bssid,
-	.get_capa = wpa_driver_wired_get_capa,
+	.get_capa = driver_wired_get_capa,
 	.init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,
 };

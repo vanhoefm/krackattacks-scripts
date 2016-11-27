@@ -164,6 +164,14 @@ int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add)
 }
 
 
+int driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
+{
+	os_memset(capa, 0, sizeof(*capa));
+	capa->flags = WPA_DRIVER_FLAGS_WIRED;
+	return 0;
+}
+
+
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 int driver_wired_get_ifstatus(const char *ifname, int *status)
 {

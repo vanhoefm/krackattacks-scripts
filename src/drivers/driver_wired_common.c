@@ -191,3 +191,68 @@ int driver_wired_get_ifstatus(const char *ifname, int *status)
 	return 0;
 }
 #endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */
+
+
+int driver_wired_init_common(struct driver_wired_common_data *common,
+			     const char *ifname, void *ctx)
+{
+	int flags;
+
+	os_strlcpy(common->ifname, ifname, sizeof(common->ifname));
+	common->ctx = ctx;
+
+#ifdef __linux__
+	common->pf_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
+	if (common->pf_sock < 0)
+		wpa_printf(MSG_ERROR, "socket(PF_PACKET): %s", strerror(errno));
+#else /* __linux__ */
+	common->pf_sock = -1;
+#endif /* __linux__ */
+
+	if (driver_wired_get_ifflags(ifname, &flags) == 0 &&
+	    !(flags & IFF_UP) &&
+	    driver_wired_set_ifflags(ifname, flags | IFF_UP) == 0)
+		common->iff_up = 1;
+
+	if (wired_multicast_membership(common->pf_sock,
+				       if_nametoindex(common->ifname),
+				       pae_group_addr, 1) == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: Added multicast membership with packet socket",
+			   __func__);
+		common->membership = 1;
+	} else if (driver_wired_multi(ifname, pae_group_addr, 1) == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: Added multicast membership with SIOCADDMULTI",
+			   __func__);
+		common->multi = 1;
+	} else if (driver_wired_get_ifflags(ifname, &flags) < 0) {
+		wpa_printf(MSG_INFO, "%s: Could not get interface flags",
+			   __func__);
+		return -1;
+	} else if (flags & IFF_ALLMULTI) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: Interface is already configured for multicast",
+			   __func__);
+	} else if (driver_wired_set_ifflags(ifname,
+						flags | IFF_ALLMULTI) < 0) {
+		wpa_printf(MSG_INFO, "%s: Failed to enable allmulti", __func__);
+		return -1;
+	} else {
+		wpa_printf(MSG_DEBUG, "%s: Enabled allmulti mode", __func__);
+		common->iff_allmulti = 1;
+	}
+#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
+	{
+		int status;
+
+		wpa_printf(MSG_DEBUG, "%s: waiting for link to become active",
+			   __func__);
+		while (driver_wired_get_ifstatus(ifname, &status) == 0 &&
+		       status == 0)
+			sleep(1);
+	}
+#endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */
+
+	return 0;
+}

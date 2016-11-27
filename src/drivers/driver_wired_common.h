@@ -28,4 +28,7 @@ int driver_wired_multi(const char *ifname, const u8 *addr, int add);
 int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add);
 int driver_wired_get_ifstatus(const char *ifname, int *status);
 
+int driver_wired_init_common(struct driver_wired_common_data *common,
+			     const char *ifname, void *ctx);
+
 #endif /* DRIVER_WIRED_COMMON_H */

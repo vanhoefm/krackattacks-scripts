@@ -76,34 +76,6 @@ struct macsec_qca_data {
 };
 
 
-static int macsec_qca_multicast_membership(int sock, int ifindex,
-					   const u8 *addr, int add)
-{
-#ifdef __linux__
-	struct packet_mreq mreq;
-
-	if (sock < 0)
-		return -1;
-
-	os_memset(&mreq, 0, sizeof(mreq));
-	mreq.mr_ifindex = ifindex;
-	mreq.mr_type = PACKET_MR_MULTICAST;
-	mreq.mr_alen = ETH_ALEN;
-	os_memcpy(mreq.mr_address, addr, ETH_ALEN);
-
-	if (setsockopt(sock, SOL_PACKET,
-		       add ? PACKET_ADD_MEMBERSHIP : PACKET_DROP_MEMBERSHIP,
-		       &mreq, sizeof(mreq)) < 0) {
-		wpa_printf(MSG_ERROR, "setsockopt: %s", strerror(errno));
-		return -1;
-	}
-	return 0;
-#else /* __linux__ */
-	return -1;
-#endif /* __linux__ */
-}
-
-
 static int macsec_qca_get_ssid(void *priv, u8 *ssid)
 {
 	ssid[0] = 0;
@@ -341,9 +313,9 @@ static void * macsec_qca_init(void *ctx, const char *ifname)
 		drv->common.iff_up = 1;
 	}
 
-	if (macsec_qca_multicast_membership(drv->common.pf_sock,
-					    if_nametoindex(drv->common.ifname),
-					    pae_group_addr, 1) == 0) {
+	if (wired_multicast_membership(drv->common.pf_sock,
+				       if_nametoindex(drv->common.ifname),
+				       pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Added multicast membership with packet socket",
 			   __func__);
@@ -392,9 +364,9 @@ static void macsec_qca_deinit(void *priv)
 	int flags;
 
 	if (drv->common.membership &&
-	    macsec_qca_multicast_membership(drv->common.pf_sock,
-					    if_nametoindex(drv->common.ifname),
-					    pae_group_addr, 0) < 0) {
+	    wired_multicast_membership(drv->common.pf_sock,
+				       if_nametoindex(drv->common.ifname),
+				       pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Failed to remove PAE multicast group (PACKET)",
 			   __func__);

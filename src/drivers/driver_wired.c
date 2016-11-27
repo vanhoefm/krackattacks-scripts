@@ -76,34 +76,6 @@ struct dhcp_message {
 };
 
 
-static int wired_multicast_membership(int sock, int ifindex,
-				      const u8 *addr, int add)
-{
-#ifdef __linux__
-	struct packet_mreq mreq;
-
-	if (sock < 0)
-		return -1;
-
-	os_memset(&mreq, 0, sizeof(mreq));
-	mreq.mr_ifindex = ifindex;
-	mreq.mr_type = PACKET_MR_MULTICAST;
-	mreq.mr_alen = ETH_ALEN;
-	os_memcpy(mreq.mr_address, addr, ETH_ALEN);
-
-	if (setsockopt(sock, SOL_PACKET,
-		       add ? PACKET_ADD_MEMBERSHIP : PACKET_DROP_MEMBERSHIP,
-		       &mreq, sizeof(mreq)) < 0) {
-		wpa_printf(MSG_ERROR, "setsockopt: %s", strerror(errno));
-		return -1;
-	}
-	return 0;
-#else /* __linux__ */
-	return -1;
-#endif /* __linux__ */
-}
-
-
 #ifdef __linux__
 static void handle_data(void *ctx, unsigned char *buf, size_t len)
 {

@@ -12,6 +12,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "driver.h"
+#include "driver_wired_common.h"
 
 #include <sys/ioctl.h>
 #undef IFNAMSIZ
@@ -42,20 +43,12 @@ struct ieee8023_hdr {
 #pragma pack(pop)
 #endif /* _MSC_VER */
 
-static const u8 pae_group_addr[ETH_ALEN] =
-{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
-
 
 struct wpa_driver_wired_data {
-	char ifname[IFNAMSIZ + 1];
-	void *ctx;
+	struct driver_wired_common_data common;
 
-	int sock; /* raw packet socket for driver access */
 	int dhcp_sock; /* socket for dhcp packets */
 	int use_pae_group_addr;
-
-	int pf_sock;
-	int membership, multi, iff_allmulti, iff_up;
 };
 
 
@@ -208,21 +201,22 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	struct sockaddr_in addr2;
 	int n = 1;
 
-	drv->sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_PAE));
-	if (drv->sock < 0) {
+	drv->common.sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_PAE));
+	if (drv->common.sock < 0) {
 		wpa_printf(MSG_ERROR, "socket[PF_PACKET,SOCK_RAW]: %s",
 			   strerror(errno));
 		return -1;
 	}
 
-	if (eloop_register_read_sock(drv->sock, handle_read, drv->ctx, NULL)) {
+	if (eloop_register_read_sock(drv->common.sock, handle_read,
+				     drv->common.ctx, NULL)) {
 		wpa_printf(MSG_INFO, "Could not register read socket");
 		return -1;
 	}
 
 	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	if (ioctl(drv->sock, SIOCGIFINDEX, &ifr) != 0) {
+	os_strlcpy(ifr.ifr_name, drv->common.ifname, sizeof(ifr.ifr_name));
+	if (ioctl(drv->common.sock, SIOCGIFINDEX, &ifr) != 0) {
 		wpa_printf(MSG_ERROR, "ioctl(SIOCGIFINDEX): %s",
 			   strerror(errno));
 		return -1;
@@ -234,13 +228,14 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	wpa_printf(MSG_DEBUG, "Opening raw packet socket for ifindex %d",
 		   addr.sll_ifindex);
 
-	if (bind(drv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(drv->common.sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+	{
 		wpa_printf(MSG_ERROR, "bind: %s", strerror(errno));
 		return -1;
 	}
 
 	/* filter multicast address */
-	if (wired_multicast_membership(drv->sock, ifr.ifr_ifindex,
+	if (wired_multicast_membership(drv->common.sock, ifr.ifr_ifindex,
 				       pae_group_addr, 1) < 0) {
 		wpa_printf(MSG_ERROR, "wired: Failed to add multicast group "
 			   "membership");
@@ -248,8 +243,8 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	if (ioctl(drv->sock, SIOCGIFHWADDR, &ifr) != 0) {
+	os_strlcpy(ifr.ifr_name, drv->common.ifname, sizeof(ifr.ifr_name));
+	if (ioctl(drv->common.sock, SIOCGIFHWADDR, &ifr) != 0) {
 		wpa_printf(MSG_ERROR, "ioctl(SIOCGIFHWADDR): %s",
 			   strerror(errno));
 		return -1;
@@ -269,8 +264,8 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	if (eloop_register_read_sock(drv->dhcp_sock, handle_dhcp, drv->ctx,
-				     NULL)) {
+	if (eloop_register_read_sock(drv->dhcp_sock, handle_dhcp,
+				     drv->common.ctx, NULL)) {
 		wpa_printf(MSG_INFO, "Could not register read socket");
 		return -1;
 	}
@@ -294,7 +289,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->ifname, IFNAMSIZ);
+	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->common.ifname, IFNAMSIZ);
 	if (setsockopt(drv->dhcp_sock, SOL_SOCKET, SO_BINDTODEVICE,
 		       (char *) &ifr, sizeof(ifr)) < 0) {
 		wpa_printf(MSG_ERROR,
@@ -343,7 +338,7 @@ static int wired_send_eapol(void *priv, const u8 *addr,
 	pos = (u8 *) (hdr + 1);
 	os_memcpy(pos, data, data_len);
 
-	res = send(drv->sock, (u8 *) hdr, len, 0);
+	res = send(drv->common.sock, (u8 *) hdr, len, 0);
 	os_free(hdr);
 
 	if (res < 0) {
@@ -368,8 +363,9 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	drv->ctx = hapd;
-	os_strlcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
+	drv->common.ctx = hapd;
+	os_strlcpy(drv->common.ifname, params->ifname,
+		   sizeof(drv->common.ifname));
 	drv->use_pae_group_addr = params->use_pae_group_addr;
 
 	if (wired_init_sockets(drv, params->own_addr)) {
@@ -385,9 +381,9 @@ static void wired_driver_hapd_deinit(void *priv)
 {
 	struct wpa_driver_wired_data *drv = priv;
 
-	if (drv->sock >= 0) {
-		eloop_unregister_read_sock(drv->sock);
-		close(drv->sock);
+	if (drv->common.sock >= 0) {
+		eloop_unregister_read_sock(drv->common.sock);
+		close(drv->common.sock);
 	}
 
 	if (drv->dhcp_sock >= 0) {
@@ -564,33 +560,33 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
-	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
-	drv->ctx = ctx;
+	os_strlcpy(drv->common.ifname, ifname, sizeof(drv->common.ifname));
+	drv->common.ctx = ctx;
 
 #ifdef __linux__
-	drv->pf_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
-	if (drv->pf_sock < 0)
+	drv->common.pf_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
+	if (drv->common.pf_sock < 0)
 		wpa_printf(MSG_ERROR, "socket(PF_PACKET): %s", strerror(errno));
 #else /* __linux__ */
-	drv->pf_sock = -1;
+	drv->common.pf_sock = -1;
 #endif /* __linux__ */
 
 	if (wpa_driver_wired_get_ifflags(ifname, &flags) == 0 &&
 	    !(flags & IFF_UP) &&
 	    wpa_driver_wired_set_ifflags(ifname, flags | IFF_UP) == 0) {
-		drv->iff_up = 1;
+		drv->common.iff_up = 1;
 	}
 
-	if (wired_multicast_membership(drv->pf_sock,
-				       if_nametoindex(drv->ifname),
+	if (wired_multicast_membership(drv->common.pf_sock,
+				       if_nametoindex(drv->common.ifname),
 				       pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "packet socket", __func__);
-		drv->membership = 1;
+		drv->common.membership = 1;
 	} else if (wpa_driver_wired_multi(ifname, pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "SIOCADDMULTI", __func__);
-		drv->multi = 1;
+		drv->common.multi = 1;
 	} else if (wpa_driver_wired_get_ifflags(ifname, &flags) < 0) {
 		wpa_printf(MSG_INFO, "%s: Could not get interface "
 			   "flags", __func__);
@@ -608,7 +604,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 	} else {
 		wpa_printf(MSG_DEBUG, "%s: Enabled allmulti mode",
 			   __func__);
-		drv->iff_allmulti = 1;
+		drv->common.iff_allmulti = 1;
 	}
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 	{
@@ -630,38 +626,39 @@ static void wpa_driver_wired_deinit(void *priv)
 	struct wpa_driver_wired_data *drv = priv;
 	int flags;
 
-	if (drv->membership &&
-	    wired_multicast_membership(drv->pf_sock,
-				       if_nametoindex(drv->ifname),
+	if (drv->common.membership &&
+	    wired_multicast_membership(drv->common.pf_sock,
+				       if_nametoindex(drv->common.ifname),
 				       pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
 			   "group (PACKET)", __func__);
 	}
 
-	if (drv->multi &&
-	    wpa_driver_wired_multi(drv->ifname, pae_group_addr, 0) < 0) {
+	if (drv->common.multi &&
+	    wpa_driver_wired_multi(drv->common.ifname, pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
 			   "group (SIOCDELMULTI)", __func__);
 	}
 
-	if (drv->iff_allmulti &&
-	    (wpa_driver_wired_get_ifflags(drv->ifname, &flags) < 0 ||
-	     wpa_driver_wired_set_ifflags(drv->ifname,
+	if (drv->common.iff_allmulti &&
+	    (wpa_driver_wired_get_ifflags(drv->common.ifname, &flags) < 0 ||
+	     wpa_driver_wired_set_ifflags(drv->common.ifname,
 					  flags & ~IFF_ALLMULTI) < 0)) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to disable allmulti mode",
 			   __func__);
 	}
 
-	if (drv->iff_up &&
-	    wpa_driver_wired_get_ifflags(drv->ifname, &flags) == 0 &&
+	if (drv->common.iff_up &&
+	    wpa_driver_wired_get_ifflags(drv->common.ifname, &flags) == 0 &&
 	    (flags & IFF_UP) &&
-	    wpa_driver_wired_set_ifflags(drv->ifname, flags & ~IFF_UP) < 0) {
+	    wpa_driver_wired_set_ifflags(drv->common.ifname,
+					 flags & ~IFF_UP) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to set the interface down",
 			   __func__);
 	}
 
-	if (drv->pf_sock != -1)
-		close(drv->pf_sock);
+	if (drv->common.pf_sock != -1)
+		close(drv->common.pf_sock);
 
 	os_free(drv);
 }

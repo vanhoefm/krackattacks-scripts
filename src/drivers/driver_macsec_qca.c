@@ -31,6 +31,7 @@
 #include "common/ieee802_1x_defs.h"
 #include "pae/ieee802_1x_kay.h"
 #include "driver.h"
+#include "driver_wired_common.h"
 
 #include "nss_macsec_secy.h"
 #include "nss_macsec_secy_rx.h"
@@ -53,21 +54,14 @@
 #pragma pack(pop)
 #endif /* _MSC_VER */
 
-static const u8 pae_group_addr[ETH_ALEN] =
-{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
-
 struct channel_map {
 	struct ieee802_1x_mka_sci sci;
 };
 
 struct macsec_qca_data {
-	char ifname[IFNAMSIZ + 1];
-	u32 secy_id;
-	void *ctx;
+	struct driver_wired_common_data common;
 
-	int sock; /* raw packet socket for driver access */
-	int pf_sock;
-	int membership, multi, iff_allmulti, iff_up;
+	u32 secy_id;
 
 	/* shadow */
 	Boolean always_include_sci;
@@ -322,43 +316,43 @@ static void * macsec_qca_init(void *ctx, const char *ifname)
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
-	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
-	drv->ctx = ctx;
+	os_strlcpy(drv->common.ifname, ifname, sizeof(drv->common.ifname));
+	drv->common.ctx = ctx;
 
 	/* Board specific settings */
-	if (os_memcmp("eth2", drv->ifname, 4) == 0)
+	if (os_memcmp("eth2", drv->common.ifname, 4) == 0)
 		drv->secy_id = 1;
-	else if (os_memcmp("eth3", drv->ifname, 4) == 0)
+	else if (os_memcmp("eth3", drv->common.ifname, 4) == 0)
 		drv->secy_id = 2;
 	else
 		drv->secy_id = -1;
 
 #ifdef __linux__
-	drv->pf_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
-	if (drv->pf_sock < 0)
+	drv->common.pf_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
+	if (drv->common.pf_sock < 0)
 		wpa_printf(MSG_ERROR, "socket(PF_PACKET): %s", strerror(errno));
 #else /* __linux__ */
-	drv->pf_sock = -1;
+	drv->common.pf_sock = -1;
 #endif /* __linux__ */
 
 	if (macsec_qca_get_ifflags(ifname, &flags) == 0 &&
 	    !(flags & IFF_UP) &&
 	    macsec_qca_set_ifflags(ifname, flags | IFF_UP) == 0) {
-		drv->iff_up = 1;
+		drv->common.iff_up = 1;
 	}
 
-	if (macsec_qca_multicast_membership(drv->pf_sock,
-					    if_nametoindex(drv->ifname),
+	if (macsec_qca_multicast_membership(drv->common.pf_sock,
+					    if_nametoindex(drv->common.ifname),
 					    pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Added multicast membership with packet socket",
 			   __func__);
-		drv->membership = 1;
+		drv->common.membership = 1;
 	} else if (macsec_qca_multi(ifname, pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Added multicast membership with SIOCADDMULTI",
 			   __func__);
-		drv->multi = 1;
+		drv->common.multi = 1;
 	} else if (macsec_qca_get_ifflags(ifname, &flags) < 0) {
 		wpa_printf(MSG_INFO, "%s: Could not get interface flags",
 			   __func__);
@@ -375,7 +369,7 @@ static void * macsec_qca_init(void *ctx, const char *ifname)
 		return NULL;
 	} else {
 		wpa_printf(MSG_DEBUG, "%s: Enabled allmulti mode", __func__);
-		drv->iff_allmulti = 1;
+		drv->common.iff_allmulti = 1;
 	}
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 	{
@@ -397,39 +391,40 @@ static void macsec_qca_deinit(void *priv)
 	struct macsec_qca_data *drv = priv;
 	int flags;
 
-	if (drv->membership &&
-	    macsec_qca_multicast_membership(drv->pf_sock,
-					    if_nametoindex(drv->ifname),
+	if (drv->common.membership &&
+	    macsec_qca_multicast_membership(drv->common.pf_sock,
+					    if_nametoindex(drv->common.ifname),
 					    pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Failed to remove PAE multicast group (PACKET)",
 			   __func__);
 	}
 
-	if (drv->multi &&
-	    macsec_qca_multi(drv->ifname, pae_group_addr, 0) < 0) {
+	if (drv->common.multi &&
+	    macsec_qca_multi(drv->common.ifname, pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "%s: Failed to remove PAE multicast group (SIOCDELMULTI)",
 			   __func__);
 	}
 
-	if (drv->iff_allmulti &&
-	    (macsec_qca_get_ifflags(drv->ifname, &flags) < 0 ||
-	     macsec_qca_set_ifflags(drv->ifname, flags & ~IFF_ALLMULTI) < 0)) {
+	if (drv->common.iff_allmulti &&
+	    (macsec_qca_get_ifflags(drv->common.ifname, &flags) < 0 ||
+	     macsec_qca_set_ifflags(drv->common.ifname,
+				    flags & ~IFF_ALLMULTI) < 0)) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to disable allmulti mode",
 			   __func__);
 	}
 
-	if (drv->iff_up &&
-	    macsec_qca_get_ifflags(drv->ifname, &flags) == 0 &&
+	if (drv->common.iff_up &&
+	    macsec_qca_get_ifflags(drv->common.ifname, &flags) == 0 &&
 	    (flags & IFF_UP) &&
-	    macsec_qca_set_ifflags(drv->ifname, flags & ~IFF_UP) < 0) {
+	    macsec_qca_set_ifflags(drv->common.ifname, flags & ~IFF_UP) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to set the interface down",
 			   __func__);
 	}
 
-	if (drv->pf_sock != -1)
-		close(drv->pf_sock);
+	if (drv->common.pf_sock != -1)
+		close(drv->common.pf_sock);
 
 	os_free(drv);
 }

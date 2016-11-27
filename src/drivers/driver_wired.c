@@ -367,13 +367,6 @@ static void wired_driver_hapd_deinit(void *priv)
 }
 
 
-static int wpa_driver_wired_get_ssid(void *priv, u8 *ssid)
-{
-	ssid[0] = 0;
-	return 0;
-}
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -406,7 +399,7 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.hapd_init = wired_driver_hapd_init,
 	.hapd_deinit = wired_driver_hapd_deinit,
 	.hapd_send_eapol = wired_send_eapol,
-	.get_ssid = wpa_driver_wired_get_ssid,
+	.get_ssid = driver_wired_get_ssid,
 	.get_bssid = driver_wired_get_bssid,
 	.get_capa = driver_wired_get_capa,
 	.init = wpa_driver_wired_init,

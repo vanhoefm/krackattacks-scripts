@@ -164,6 +164,13 @@ int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add)
 }
 
 
+int driver_wired_get_ssid(void *priv, u8 *ssid)
+{
+	ssid[0] = 0;
+	return 0;
+}
+
+
 int driver_wired_get_bssid(void *priv, u8 *bssid)
 {
 	/* Report PAE group address as the "BSSID" for wired connection. */

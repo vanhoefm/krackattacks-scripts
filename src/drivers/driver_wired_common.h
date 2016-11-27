@@ -23,6 +23,7 @@ static const u8 pae_group_addr[ETH_ALEN] =
 { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
 
 int driver_wired_get_ifflags(const char *ifname, int *flags);
+int driver_wired_set_ifflags(const char *ifname, int flags);
 int driver_wired_multi(const char *ifname, const u8 *addr, int add);
 int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add);
 

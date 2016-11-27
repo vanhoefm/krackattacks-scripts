@@ -55,6 +55,31 @@ int driver_wired_get_ifflags(const char *ifname, int *flags)
 }
 
 
+int driver_wired_set_ifflags(const char *ifname, int flags)
+{
+	struct ifreq ifr;
+	int s;
+
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
+		return -1;
+	}
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_flags = flags & 0xffff;
+	if (ioctl(s, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIFFLAGS]: %s",
+			   strerror(errno));
+		close(s);
+		return -1;
+	}
+	close(s);
+	return 0;
+}
+
+
 int driver_wired_multi(const char *ifname, const u8 *addr, int add)
 {
 	struct ifreq ifr;

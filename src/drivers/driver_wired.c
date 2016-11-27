@@ -390,31 +390,6 @@ static int wpa_driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
 }
 
 
-static int wpa_driver_wired_set_ifflags(const char *ifname, int flags)
-{
-	struct ifreq ifr;
-	int s;
-
-	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s < 0) {
-		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
-		return -1;
-	}
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	ifr.ifr_flags = flags & 0xffff;
-	if (ioctl(s, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
-		wpa_printf(MSG_ERROR, "ioctl[SIOCSIFFLAGS]: %s",
-			   strerror(errno));
-		close(s);
-		return -1;
-	}
-	close(s);
-	return 0;
-}
-
-
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 static int wpa_driver_wired_get_ifstatus(const char *ifname, int *status)
 {
@@ -465,7 +440,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 
 	if (driver_wired_get_ifflags(ifname, &flags) == 0 &&
 	    !(flags & IFF_UP) &&
-	    wpa_driver_wired_set_ifflags(ifname, flags | IFF_UP) == 0) {
+	    driver_wired_set_ifflags(ifname, flags | IFF_UP) == 0) {
 		drv->common.iff_up = 1;
 	}
 
@@ -487,8 +462,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 	} else if (flags & IFF_ALLMULTI) {
 		wpa_printf(MSG_DEBUG, "%s: Interface is already configured "
 			   "for multicast", __func__);
-	} else if (wpa_driver_wired_set_ifflags(ifname,
-						flags | IFF_ALLMULTI) < 0) {
+	} else if (driver_wired_set_ifflags(ifname, flags | IFF_ALLMULTI) < 0) {
 		wpa_printf(MSG_INFO, "%s: Failed to enable allmulti",
 			   __func__);
 		os_free(drv);
@@ -534,8 +508,8 @@ static void wpa_driver_wired_deinit(void *priv)
 
 	if (drv->common.iff_allmulti &&
 	    (driver_wired_get_ifflags(drv->common.ifname, &flags) < 0 ||
-	     wpa_driver_wired_set_ifflags(drv->common.ifname,
-					  flags & ~IFF_ALLMULTI) < 0)) {
+	     driver_wired_set_ifflags(drv->common.ifname,
+				      flags & ~IFF_ALLMULTI) < 0)) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to disable allmulti mode",
 			   __func__);
 	}
@@ -543,8 +517,7 @@ static void wpa_driver_wired_deinit(void *priv)
 	if (drv->common.iff_up &&
 	    driver_wired_get_ifflags(drv->common.ifname, &flags) == 0 &&
 	    (flags & IFF_UP) &&
-	    wpa_driver_wired_set_ifflags(drv->common.ifname,
-					 flags & ~IFF_UP) < 0) {
+	    driver_wired_set_ifflags(drv->common.ifname, flags & ~IFF_UP) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to set the interface down",
 			   __func__);
 	}

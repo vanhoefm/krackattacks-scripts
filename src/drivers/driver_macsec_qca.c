@@ -83,14 +83,6 @@ static int macsec_qca_get_ssid(void *priv, u8 *ssid)
 }
 
 
-static int macsec_qca_get_bssid(void *priv, u8 *bssid)
-{
-	/* Report PAE group address as the "BSSID" for macsec connection. */
-	os_memcpy(bssid, pae_group_addr, ETH_ALEN);
-	return 0;
-}
-
-
 static void __macsec_drv_init(struct macsec_qca_data *drv)
 {
 	int ret = 0;
@@ -749,7 +741,7 @@ const struct wpa_driver_ops wpa_driver_macsec_qca_ops = {
 	.name = "macsec_qca",
 	.desc = "QCA MACsec Ethernet driver",
 	.get_ssid = macsec_qca_get_ssid,
-	.get_bssid = macsec_qca_get_bssid,
+	.get_bssid = driver_wired_get_bssid,
 	.get_capa = driver_wired_get_capa,
 	.init = macsec_qca_init,
 	.deinit = macsec_qca_deinit,

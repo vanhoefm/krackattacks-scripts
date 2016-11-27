@@ -374,14 +374,6 @@ static int wpa_driver_wired_get_ssid(void *priv, u8 *ssid)
 }
 
 
-static int wpa_driver_wired_get_bssid(void *priv, u8 *bssid)
-{
-	/* Report PAE group address as the "BSSID" for wired connection. */
-	os_memcpy(bssid, pae_group_addr, ETH_ALEN);
-	return 0;
-}
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -415,7 +407,7 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.hapd_deinit = wired_driver_hapd_deinit,
 	.hapd_send_eapol = wired_send_eapol,
 	.get_ssid = wpa_driver_wired_get_ssid,
-	.get_bssid = wpa_driver_wired_get_bssid,
+	.get_bssid = driver_wired_get_bssid,
 	.get_capa = driver_wired_get_capa,
 	.init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,

@@ -164,6 +164,14 @@ int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add)
 }
 
 
+int driver_wired_get_bssid(void *priv, u8 *bssid)
+{
+	/* Report PAE group address as the "BSSID" for wired connection. */
+	os_memcpy(bssid, pae_group_addr, ETH_ALEN);
+	return 0;
+}
+
+
 int driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
 {
 	os_memset(capa, 0, sizeof(*capa));

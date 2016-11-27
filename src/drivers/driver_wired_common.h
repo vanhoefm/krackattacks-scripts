@@ -30,5 +30,6 @@ int driver_wired_get_ifstatus(const char *ifname, int *status);
 
 int driver_wired_init_common(struct driver_wired_common_data *common,
 			     const char *ifname, void *ctx);
+void driver_wired_deinit_common(struct driver_wired_common_data *common);
 
 #endif /* DRIVER_WIRED_COMMON_H */

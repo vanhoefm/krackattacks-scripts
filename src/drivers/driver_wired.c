@@ -410,41 +410,8 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 static void wpa_driver_wired_deinit(void *priv)
 {
 	struct wpa_driver_wired_data *drv = priv;
-	int flags;
 
-	if (drv->common.membership &&
-	    wired_multicast_membership(drv->common.pf_sock,
-				       if_nametoindex(drv->common.ifname),
-				       pae_group_addr, 0) < 0) {
-		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
-			   "group (PACKET)", __func__);
-	}
-
-	if (drv->common.multi &&
-	    driver_wired_multi(drv->common.ifname, pae_group_addr, 0) < 0) {
-		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
-			   "group (SIOCDELMULTI)", __func__);
-	}
-
-	if (drv->common.iff_allmulti &&
-	    (driver_wired_get_ifflags(drv->common.ifname, &flags) < 0 ||
-	     driver_wired_set_ifflags(drv->common.ifname,
-				      flags & ~IFF_ALLMULTI) < 0)) {
-		wpa_printf(MSG_DEBUG, "%s: Failed to disable allmulti mode",
-			   __func__);
-	}
-
-	if (drv->common.iff_up &&
-	    driver_wired_get_ifflags(drv->common.ifname, &flags) == 0 &&
-	    (flags & IFF_UP) &&
-	    driver_wired_set_ifflags(drv->common.ifname, flags & ~IFF_UP) < 0) {
-		wpa_printf(MSG_DEBUG, "%s: Failed to set the interface down",
-			   __func__);
-	}
-
-	if (drv->common.pf_sock != -1)
-		close(drv->common.pf_sock);
-
+	driver_wired_deinit_common(&drv->common);
 	os_free(drv);
 }
 

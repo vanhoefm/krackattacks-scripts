@@ -18,6 +18,13 @@ DRV_OBJS += src/drivers/driver_wired.c
 NEED_DRV_WIRED_COMMON=1
 endif
 
+ifdef CONFIG_DRIVER_MACSEC_LINUX
+DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_LINUX
+DRV_OBJS += src/drivers/driver_macsec_linux.c
+NEED_DRV_WIRED_COMMON=1
+CONFIG_LIBNL3_ROUTE=y
+endif
+
 ifdef NEED_DRV_WIRED_COMMON
 DRV_OBJS += src/drivers/driver_wired_common.c
 endif

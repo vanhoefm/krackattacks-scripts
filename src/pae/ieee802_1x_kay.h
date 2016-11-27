@@ -231,6 +231,8 @@ struct ieee802_1x_kay {
 };
 
 
+u64 mka_sci_u64(struct ieee802_1x_mka_sci *sci);
+
 struct ieee802_1x_kay *
 ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		    u16 port, const char *ifname, const u8 *addr);

@@ -379,6 +379,17 @@ ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
 }
 
 
+u64 mka_sci_u64(struct ieee802_1x_mka_sci *sci)
+{
+	struct ieee802_1x_mka_sci tmp;
+
+	os_memcpy(tmp.addr, sci->addr, ETH_ALEN);
+	tmp.port = sci->port;
+
+	return *((u64 *) &tmp);
+}
+
+
 static Boolean sci_equal(const struct ieee802_1x_mka_sci *a,
 			 const struct ieee802_1x_mka_sci *b)
 {

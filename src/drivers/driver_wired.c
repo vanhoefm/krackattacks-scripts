@@ -390,31 +390,6 @@ static int wpa_driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
 }
 
 
-static int wpa_driver_wired_get_ifflags(const char *ifname, int *flags)
-{
-	struct ifreq ifr;
-	int s;
-
-	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s < 0) {
-		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
-		return -1;
-	}
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(s, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
-		wpa_printf(MSG_ERROR, "ioctl[SIOCGIFFLAGS]: %s",
-			   strerror(errno));
-		close(s);
-		return -1;
-	}
-	close(s);
-	*flags = ifr.ifr_flags & 0xffff;
-	return 0;
-}
-
-
 static int wpa_driver_wired_set_ifflags(const char *ifname, int flags)
 {
 	struct ifreq ifr;
@@ -488,7 +463,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 	drv->common.pf_sock = -1;
 #endif /* __linux__ */
 
-	if (wpa_driver_wired_get_ifflags(ifname, &flags) == 0 &&
+	if (driver_wired_get_ifflags(ifname, &flags) == 0 &&
 	    !(flags & IFF_UP) &&
 	    wpa_driver_wired_set_ifflags(ifname, flags | IFF_UP) == 0) {
 		drv->common.iff_up = 1;
@@ -504,7 +479,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "SIOCADDMULTI", __func__);
 		drv->common.multi = 1;
-	} else if (wpa_driver_wired_get_ifflags(ifname, &flags) < 0) {
+	} else if (driver_wired_get_ifflags(ifname, &flags) < 0) {
 		wpa_printf(MSG_INFO, "%s: Could not get interface "
 			   "flags", __func__);
 		os_free(drv);
@@ -558,7 +533,7 @@ static void wpa_driver_wired_deinit(void *priv)
 	}
 
 	if (drv->common.iff_allmulti &&
-	    (wpa_driver_wired_get_ifflags(drv->common.ifname, &flags) < 0 ||
+	    (driver_wired_get_ifflags(drv->common.ifname, &flags) < 0 ||
 	     wpa_driver_wired_set_ifflags(drv->common.ifname,
 					  flags & ~IFF_ALLMULTI) < 0)) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to disable allmulti mode",
@@ -566,7 +541,7 @@ static void wpa_driver_wired_deinit(void *priv)
 	}
 
 	if (drv->common.iff_up &&
-	    wpa_driver_wired_get_ifflags(drv->common.ifname, &flags) == 0 &&
+	    driver_wired_get_ifflags(drv->common.ifname, &flags) == 0 &&
 	    (flags & IFF_UP) &&
 	    wpa_driver_wired_set_ifflags(drv->common.ifname,
 					 flags & ~IFF_UP) < 0) {

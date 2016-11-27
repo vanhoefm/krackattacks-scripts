@@ -469,61 +469,6 @@ static int wpa_driver_wired_get_ifstatus(const char *ifname, int *status)
 #endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */
 
 
-static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
-{
-	struct ifreq ifr;
-	int s;
-
-#ifdef __sun__
-	return -1;
-#endif /* __sun__ */
-
-	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s < 0) {
-		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
-		return -1;
-	}
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-#ifdef __linux__
-	ifr.ifr_hwaddr.sa_family = AF_UNSPEC;
-	os_memcpy(ifr.ifr_hwaddr.sa_data, addr, ETH_ALEN);
-#endif /* __linux__ */
-#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
-	{
-		struct sockaddr_dl *dlp;
-		dlp = (struct sockaddr_dl *) &ifr.ifr_addr;
-		dlp->sdl_len = sizeof(struct sockaddr_dl);
-		dlp->sdl_family = AF_LINK;
-		dlp->sdl_index = 0;
-		dlp->sdl_nlen = 0;
-		dlp->sdl_alen = ETH_ALEN;
-		dlp->sdl_slen = 0;
-		os_memcpy(LLADDR(dlp), addr, ETH_ALEN);
-	}
-#endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
-	{
-		struct sockaddr *sap;
-		sap = (struct sockaddr *) &ifr.ifr_addr;
-		sap->sa_len = sizeof(struct sockaddr);
-		sap->sa_family = AF_UNSPEC;
-		os_memcpy(sap->sa_data, addr, ETH_ALEN);
-	}
-#endif /* defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__) */
-
-	if (ioctl(s, add ? SIOCADDMULTI : SIOCDELMULTI, (caddr_t) &ifr) < 0) {
-		wpa_printf(MSG_ERROR, "ioctl[SIOC{ADD/DEL}MULTI]: %s",
-			   strerror(errno));
-		close(s);
-		return -1;
-	}
-	close(s);
-	return 0;
-}
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -555,7 +500,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "packet socket", __func__);
 		drv->common.membership = 1;
-	} else if (wpa_driver_wired_multi(ifname, pae_group_addr, 1) == 0) {
+	} else if (driver_wired_multi(ifname, pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "SIOCADDMULTI", __func__);
 		drv->common.multi = 1;
@@ -607,7 +552,7 @@ static void wpa_driver_wired_deinit(void *priv)
 	}
 
 	if (drv->common.multi &&
-	    wpa_driver_wired_multi(drv->common.ifname, pae_group_addr, 0) < 0) {
+	    driver_wired_multi(drv->common.ifname, pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
 			   "group (SIOCDELMULTI)", __func__);
 	}

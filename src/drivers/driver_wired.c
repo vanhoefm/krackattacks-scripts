@@ -390,35 +390,6 @@ static int wpa_driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
 }
 
 
-#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
-static int wpa_driver_wired_get_ifstatus(const char *ifname, int *status)
-{
-	struct ifmediareq ifmr;
-	int s;
-
-	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s < 0) {
-		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
-		return -1;
-	}
-
-	os_memset(&ifmr, 0, sizeof(ifmr));
-	os_strlcpy(ifmr.ifm_name, ifname, IFNAMSIZ);
-	if (ioctl(s, SIOCGIFMEDIA, (caddr_t) &ifmr) < 0) {
-		wpa_printf(MSG_ERROR, "ioctl[SIOCGIFMEDIA]: %s",
-			   strerror(errno));
-		close(s);
-		return -1;
-	}
-	close(s);
-	*status = (ifmr.ifm_status & (IFM_ACTIVE | IFM_AVALID)) ==
-		(IFM_ACTIVE | IFM_AVALID);
-
-	return 0;
-}
-#endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -477,7 +448,7 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 		int status;
 		wpa_printf(MSG_DEBUG, "%s: waiting for link to become active",
 			   __func__);
-		while (wpa_driver_wired_get_ifstatus(ifname, &status) == 0 &&
+		while (driver_wired_get_ifstatus(ifname, &status) == 0 &&
 		       status == 0)
 			sleep(1);
 	}

@@ -162,3 +162,32 @@ int wired_multicast_membership(int sock, int ifindex, const u8 *addr, int add)
 	return -1;
 #endif /* __linux__ */
 }
+
+
+#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
+int driver_wired_get_ifstatus(const char *ifname, int *status)
+{
+	struct ifmediareq ifmr;
+	int s;
+
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
+		return -1;
+	}
+
+	os_memset(&ifmr, 0, sizeof(ifmr));
+	os_strlcpy(ifmr.ifm_name, ifname, IFNAMSIZ);
+	if (ioctl(s, SIOCGIFMEDIA, (caddr_t) &ifmr) < 0) {
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIFMEDIA]: %s",
+			   strerror(errno));
+		close(s);
+		return -1;
+	}
+	close(s);
+	*status = (ifmr.ifm_status & (IFM_ACTIVE | IFM_AVALID)) ==
+		(IFM_ACTIVE | IFM_AVALID);
+
+	return 0;
+}
+#endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(FreeBSD_kernel__) */

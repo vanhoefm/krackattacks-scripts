@@ -1580,8 +1580,15 @@ static void handle_auth(struct hostapd_data *hapd,
 	 *
 	 * In mesh mode, the station was already added to the driver when the
 	 * NEW_PEER_CANDIDATE event is received.
+	 *
+	 * If PMF was negotiated for the existing association, skip this to
+	 * avoid dropping the STA entry and the associated keys. This is needed
+	 * to allow the original connection work until the attempt can complete
+	 * (re)association, so that unprotected Authentication frame cannot be
+	 * used to bypass PMF protection.
 	 */
 	if (FULL_AP_CLIENT_STATE_SUPP(hapd->iface->drv_flags) &&
+	    (!(sta->flags & WLAN_STA_MFP) || !ap_sta_is_authorized(sta)) &&
 	    !(hapd->conf->mesh & MESH_ENABLED) &&
 	    !(sta->added_unassoc)) {
 		/*

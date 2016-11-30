@@ -176,6 +176,17 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 		params->only_new_results = 1;
 	}
 	ret = wpa_drv_scan(wpa_s, params);
+	/*
+	 * Store the obtained vendor scan cookie (if any) in wpa_s context.
+	 * The current design is to allow only one scan request on each
+	 * interface, hence having this scan cookie stored in wpa_s context is
+	 * fine for now.
+	 *
+	 * Revisit this logic if concurrent scan operations per interface
+	 * is supported.
+	 */
+	if (ret == 0)
+		wpa_s->curr_scan_cookie = params->scan_cookie;
 	wpa_scan_free_params(params);
 	work->ctx = NULL;
 	if (ret) {
@@ -2625,18 +2636,20 @@ int wpas_mac_addr_rand_scan_set(struct wpa_supplicant *wpa_s,
 
 int wpas_abort_ongoing_scan(struct wpa_supplicant *wpa_s)
 {
-	int scan_work = !!wpa_s->scan_work;
+	struct wpa_radio_work *work;
+	struct wpa_radio *radio = wpa_s->radio;
 
-#ifdef CONFIG_P2P
-	scan_work |= !!wpa_s->p2p_scan_work;
-#endif /* CONFIG_P2P */
-
-	if (scan_work && wpa_s->own_scan_running) {
+	dl_list_for_each(work, &radio->work, struct wpa_radio_work, list) {
+		if (work->wpa_s != wpa_s || !work->started ||
+		    (os_strcmp(work->type, "scan") != 0 &&
+		     os_strcmp(work->type, "p2p-scan") != 0))
+			continue;
 		wpa_dbg(wpa_s, MSG_DEBUG, "Abort an ongoing scan");
-		return wpa_drv_abort_scan(wpa_s, 0);
+		return wpa_drv_abort_scan(wpa_s, wpa_s->curr_scan_cookie);
 	}
 
-	return 0;
+	wpa_dbg(wpa_s, MSG_DEBUG, "No ongoing scan/p2p-scan found to abort");
+	return -1;
 }
 
 

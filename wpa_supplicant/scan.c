@@ -2633,7 +2633,7 @@ int wpas_abort_ongoing_scan(struct wpa_supplicant *wpa_s)
 
 	if (scan_work && wpa_s->own_scan_running) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Abort an ongoing scan");
-		return wpa_drv_abort_scan(wpa_s);
+		return wpa_drv_abort_scan(wpa_s, 0);
 	}
 
 	return 0;

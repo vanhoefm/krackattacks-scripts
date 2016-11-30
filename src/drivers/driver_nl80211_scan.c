@@ -85,6 +85,62 @@ static int nl80211_get_noise_for_scan_results(
 }
 
 
+static int nl80211_abort_scan(struct i802_bss *bss)
+{
+	int ret;
+	struct nl_msg *msg;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Abort scan");
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_ABORT_SCAN);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Abort scan failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+	}
+	return ret;
+}
+
+
+#ifdef CONFIG_DRIVER_NL80211_QCA
+static int nl80211_abort_vendor_scan(struct wpa_driver_nl80211_data *drv,
+				     u64 scan_cookie)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Abort vendor scan with cookie 0x%llx",
+		   (long long unsigned int) scan_cookie);
+
+	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR);
+	if (!msg ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u64(msg, QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE, scan_cookie))
+		goto fail;
+
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_INFO,
+			   "nl80211: Aborting vendor scan with cookie 0x%llx failed: ret=%d (%s)",
+			   (long long unsigned int) scan_cookie, ret,
+			   strerror(-ret));
+		goto fail;
+	}
+	return 0;
+fail:
+	nlmsg_free(msg);
+	return -1;
+}
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+
+
 /**
  * wpa_driver_nl80211_scan_timeout - Scan timeout to report scan completion
  * @eloop_ctx: Driver private data
@@ -98,7 +154,15 @@ void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_driver_nl80211_data *drv = eloop_ctx;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Scan timeout - try to abort it");
-	if (!wpa_driver_nl80211_abort_scan(drv->first_bss))
+#ifdef CONFIG_DRIVER_NL80211_QCA
+	if (drv->vendor_scan_cookie &&
+	    nl80211_abort_vendor_scan(drv, drv->vendor_scan_cookie) == 0) {
+		drv->vendor_scan_cookie = 0;
+		return;
+	}
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+	if (!drv->vendor_scan_cookie &&
+	    nl80211_abort_scan(drv->first_bss) == 0)
 		return;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Failed to abort scan");
@@ -863,22 +927,21 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 }
 
 
-int wpa_driver_nl80211_abort_scan(void *priv)
+int wpa_driver_nl80211_abort_scan(void *priv, u64 scan_cookie)
 {
 	struct i802_bss *bss = priv;
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	int ret;
-	struct nl_msg *msg;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Abort scan");
-	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_ABORT_SCAN);
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret) {
-		wpa_printf(MSG_DEBUG, "nl80211: Abort scan failed: ret=%d (%s)",
-			   ret, strerror(-ret));
-	}
-
-	return ret;
+	/*
+	 * If scan_cookie is zero, a normal scan through kernel (cfg80211)
+	 * was triggered, hence abort the cfg80211 scan instead of the vendor
+	 * scan.
+	 */
+	if (drv->scan_vendor_cmd_avail && scan_cookie)
+		return nl80211_abort_vendor_scan(drv, scan_cookie);
+#endif /* CONFIG_DRIVER_NL80211_QCA */
+	return nl80211_abort_scan(bss);
 }
 
 
@@ -1056,6 +1119,8 @@ int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
 
 	drv->vendor_scan_cookie = cookie;
 	drv->scan_state = SCAN_REQUESTED;
+	/* Pass the cookie to the caller to help distinguish the scans. */
+	params->scan_cookie = cookie;
 
 	wpa_printf(MSG_DEBUG,
 		   "nl80211: Vendor scan requested (ret=%d) - scan timeout 30 seconds, scan cookie:0x%llx",

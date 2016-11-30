@@ -458,6 +458,20 @@ struct wpa_driver_scan_params {
 	 */
 	const u8 *bssid;
 
+	/**
+	 * scan_cookie - Unique identification representing the scan request
+	 *
+	 * This scan_cookie carries a unique identification representing the
+	 * scan request if the host driver/kernel supports concurrent scan
+	 * requests. This cookie is returned from the corresponding driver
+	 * interface.
+	 *
+	 * Note: Unlike other parameters in this structure, scan_cookie is used
+	 * only to return information instead of setting parameters for the
+	 * scan.
+	 */
+	u64 scan_cookie;
+
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure
 	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with
@@ -3595,9 +3609,12 @@ struct wpa_driver_ops {
 	/**
 	 * abort_scan - Request the driver to abort an ongoing scan
 	 * @priv: Private driver interface data
+	 * @scan_cookie: Cookie identifying the scan request. This is used only
+	 *	when the vendor interface QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN
+	 *	was used to trigger scan. Otherwise, 0 is used.
 	 * Returns 0 on success, -1 on failure
 	 */
-	int (*abort_scan)(void *priv);
+	int (*abort_scan)(void *priv, u64 scan_cookie);
 
 	/**
 	 * configure_data_frame_filters - Request to configure frame filters

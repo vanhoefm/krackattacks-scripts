@@ -30,7 +30,7 @@
 #endif /* __sun__ */
 
 
-int driver_wired_get_ifflags(const char *ifname, int *flags)
+static int driver_wired_get_ifflags(const char *ifname, int *flags)
 {
 	struct ifreq ifr;
 	int s;
@@ -55,7 +55,7 @@ int driver_wired_get_ifflags(const char *ifname, int *flags)
 }
 
 
-int driver_wired_set_ifflags(const char *ifname, int flags)
+static int driver_wired_set_ifflags(const char *ifname, int flags)
 {
 	struct ifreq ifr;
 	int s;
@@ -80,7 +80,7 @@ int driver_wired_set_ifflags(const char *ifname, int flags)
 }
 
 
-int driver_wired_multi(const char *ifname, const u8 *addr, int add)
+static int driver_wired_multi(const char *ifname, const u8 *addr, int add)
 {
 	struct ifreq ifr;
 	int s;
@@ -188,7 +188,7 @@ int driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
 
 
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
-int driver_wired_get_ifstatus(const char *ifname, int *status)
+static int driver_wired_get_ifstatus(const char *ifname, int *status)
 {
 	struct ifmediareq ifmr;
 	int s;

@@ -156,9 +156,9 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
         raise Exception(last_err)
 
 def test_connectivity_iface(dev1, dev2, ifname, dscp=None, tos=None,
-                            max_tries=1):
+                            max_tries=1, timeout=5):
     test_connectivity(dev1, dev2, dscp, tos, ifname2=ifname,
-                      max_tries=max_tries)
+                      max_tries=max_tries, timeout=timeout)
 
 def test_connectivity_p2p(dev1, dev2, dscp=None, tos=None):
     test_connectivity(dev1, dev2, dscp, tos, dev1group=True, dev2group=True)

@@ -174,7 +174,83 @@ def test_ap_wds_sta(dev, apdev):
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
                                             max_tries=15)
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
+        dev[0].request("SET reassoc_same_bss_optim 1")
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=5, timeout=1)
     finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'off'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
+        dev[0].cmd_execute(['brctl', 'delbr', 'wds-br0'])
+
+def test_ap_wds_sta_open(dev, apdev):
+    """Open AP with STA using 4addr mode"""
+    ssid = "test-wds-open"
+    params = {}
+    params['ssid'] = ssid
+    params['wds_sta'] = "1"
+    params['wds_bridge'] = "wds-br0"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    try:
+        dev[0].cmd_execute(['brctl', 'addbr', 'wds-br0'])
+        dev[0].cmd_execute(['brctl', 'setfd', 'wds-br0', '0'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'on'])
+        dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
+        dev[0].request("SET reassoc_same_bss_optim 1")
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=5, timeout=1)
+    finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'off'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
+        dev[0].cmd_execute(['brctl', 'delbr', 'wds-br0'])
+
+def test_ap_wds_sta_wep(dev, apdev):
+    """WEP AP with STA using 4addr mode"""
+    ssid = "test-wds-wep"
+    params = {}
+    params['ssid'] = ssid
+    params['wep_key0'] = '"hello"'
+    params['wds_sta'] = "1"
+    params['wds_bridge'] = "wds-br0"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    try:
+        dev[0].cmd_execute(['brctl', 'addbr', 'wds-br0'])
+        dev[0].cmd_execute(['brctl', 'setfd', 'wds-br0', '0'])
+        dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
+        dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'on'])
+        dev[0].connect(ssid, key_mgmt="NONE", wep_key0='"hello"',
+                       scan_freq="2412")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
+        dev[0].request("SET reassoc_same_bss_optim 1")
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=5, timeout=1)
+    finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")
         dev[0].cmd_execute(['iw', dev[0].ifname, 'set', '4addr', 'off'])
         dev[0].cmd_execute(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
         dev[0].cmd_execute(['brctl', 'delbr', 'wds-br0'])

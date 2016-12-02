@@ -819,37 +819,37 @@ static void clear_state_mismatch(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_check_bss_status(struct wpa_driver_nl80211_data *drv,
+				     struct wpa_scan_res *r)
+{
+	if (!(r->flags & WPA_SCAN_ASSOCIATED))
+		return;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Scan results indicate BSS status with "
+		   MACSTR " as associated", MAC2STR(r->bssid));
+	if (is_sta_interface(drv->nlmode) && !drv->associated) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Local state (not associated) does not match with BSS state");
+		clear_state_mismatch(drv, r->bssid);
+	} else if (is_sta_interface(drv->nlmode) &&
+		   os_memcmp(drv->bssid, r->bssid, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Local state (associated with " MACSTR
+			   ") does not match with BSS state",
+			   MAC2STR(drv->bssid));
+		clear_state_mismatch(drv, r->bssid);
+		clear_state_mismatch(drv, drv->bssid);
+	}
+}
+
+
 static void wpa_driver_nl80211_check_bss_status(
 	struct wpa_driver_nl80211_data *drv, struct wpa_scan_results *res)
 {
 	size_t i;
 
-	for (i = 0; i < res->num; i++) {
-		struct wpa_scan_res *r = res->res[i];
-
-		if (r->flags & WPA_SCAN_ASSOCIATED) {
-			wpa_printf(MSG_DEBUG, "nl80211: Scan results "
-				   "indicate BSS status with " MACSTR
-				   " as associated",
-				   MAC2STR(r->bssid));
-			if (is_sta_interface(drv->nlmode) &&
-			    !drv->associated) {
-				wpa_printf(MSG_DEBUG, "nl80211: Local state "
-					   "(not associated) does not match "
-					   "with BSS state");
-				clear_state_mismatch(drv, r->bssid);
-			} else if (is_sta_interface(drv->nlmode) &&
-				   os_memcmp(drv->bssid, r->bssid, ETH_ALEN) !=
-				   0) {
-				wpa_printf(MSG_DEBUG, "nl80211: Local state "
-					   "(associated with " MACSTR ") does "
-					   "not match with BSS state",
-					   MAC2STR(drv->bssid));
-				clear_state_mismatch(drv, r->bssid);
-				clear_state_mismatch(drv, drv->bssid);
-			}
-		}
-	}
+	for (i = 0; i < res->num; i++)
+		nl80211_check_bss_status(drv, res->res[i]);
 }
 
 

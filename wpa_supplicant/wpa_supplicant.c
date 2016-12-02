@@ -2147,9 +2147,6 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
        struct ieee80211_vht_capabilities vhtcaps;
        struct ieee80211_vht_capabilities vhtcaps_mask;
 #endif /* CONFIG_VHT_OVERRIDES */
-#ifdef CONFIG_MBO
-	const u8 *mbo = NULL;
-#endif /* CONFIG_MBO */
 
 	if (deinit) {
 		if (work->started) {
@@ -2338,21 +2335,12 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	os_memset(wpa_s->p2p_ip_addr_info, 0, sizeof(wpa_s->p2p_ip_addr_info));
 #endif /* CONFIG_P2P */
 
-#ifdef CONFIG_MBO
 	if (bss) {
-		mbo = wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE);
-		if (mbo) {
-			int len;
-
-			len = wpas_mbo_supp_op_class_ie(wpa_s, bss->freq,
-							wpa_ie + wpa_ie_len,
-							sizeof(wpa_ie) -
-							wpa_ie_len);
-			if (len > 0)
-				wpa_ie_len += len;
-		}
+		wpa_ie_len += wpas_supp_op_class_ie(wpa_s, bss->freq,
+						    wpa_ie + wpa_ie_len,
+						    sizeof(wpa_ie) -
+						    wpa_ie_len);
 	}
-#endif /* CONFIG_MBO */
 
 	/*
 	 * Workaround: Add Extended Capabilities element only if the AP
@@ -2431,7 +2419,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 #endif /* CONFIG_FST */
 
 #ifdef CONFIG_MBO
-	if (mbo) {
+	if (bss && wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
 		int len;
 
 		len = wpas_mbo_ie(wpa_s, wpa_ie + wpa_ie_len,

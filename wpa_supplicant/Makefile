@@ -103,6 +103,7 @@ OBJS += eap_register.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
+OBJS += op_classes.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o

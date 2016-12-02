@@ -20,6 +20,14 @@
 #include "driver_nl80211.h"
 
 
+#define MAX_NL80211_NOISE_FREQS 50
+
+struct nl80211_noise_info {
+	u32 freq[MAX_NL80211_NOISE_FREQS];
+	s8 noise[MAX_NL80211_NOISE_FREQS];
+	unsigned int count;
+};
+
 static int get_noise_for_scan_results(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -29,9 +37,10 @@ static int get_noise_for_scan_results(struct nl_msg *msg, void *arg)
 		[NL80211_SURVEY_INFO_FREQUENCY] = { .type = NLA_U32 },
 		[NL80211_SURVEY_INFO_NOISE] = { .type = NLA_U8 },
 	};
-	struct wpa_scan_results *scan_results = arg;
-	struct wpa_scan_res *scan_res;
-	size_t i;
+	struct nl80211_noise_info *info = arg;
+
+	if (info->count >= MAX_NL80211_NOISE_FREQS)
+		return NL_STOP;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -55,33 +64,24 @@ static int get_noise_for_scan_results(struct nl_msg *msg, void *arg)
 	if (!sinfo[NL80211_SURVEY_INFO_FREQUENCY])
 		return NL_SKIP;
 
-	for (i = 0; i < scan_results->num; ++i) {
-		scan_res = scan_results->res[i];
-		if (!scan_res)
-			continue;
-		if ((int) nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]) !=
-		    scan_res->freq)
-			continue;
-		if (!(scan_res->flags & WPA_SCAN_NOISE_INVALID))
-			continue;
-		scan_res->noise = (s8)
-			nla_get_u8(sinfo[NL80211_SURVEY_INFO_NOISE]);
-		scan_res->flags &= ~WPA_SCAN_NOISE_INVALID;
-	}
+	info->freq[info->count] =
+		nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]);
+	info->noise[info->count] =
+		(s8) nla_get_u8(sinfo[NL80211_SURVEY_INFO_NOISE]);
+	info->count++;
 
 	return NL_SKIP;
 }
 
 
 static int nl80211_get_noise_for_scan_results(
-	struct wpa_driver_nl80211_data *drv,
-	struct wpa_scan_results *scan_res)
+	struct wpa_driver_nl80211_data *drv, struct nl80211_noise_info *info)
 {
 	struct nl_msg *msg;
 
+	os_memset(info, 0, sizeof(*info));
 	msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
-	return send_and_recv_msgs(drv, msg, get_noise_for_scan_results,
-				  scan_res);
+	return send_and_recv_msgs(drv, msg, get_noise_for_scan_results, info);
 }
 
 
@@ -853,6 +853,21 @@ static void wpa_driver_nl80211_check_bss_status(
 }
 
 
+static void nl80211_update_scan_res_noise(struct wpa_scan_res *res,
+					  struct nl80211_noise_info *info)
+{
+	unsigned int i;
+
+	for (i = 0; res && i < info->count; i++) {
+		if ((int) info->freq[i] != res->freq ||
+		    !(res->flags & WPA_SCAN_NOISE_INVALID))
+			continue;
+		res->noise = info->noise[i];
+		res->flags &= ~WPA_SCAN_NOISE_INVALID;
+	}
+}
+
+
 static struct wpa_scan_results *
 nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 {
@@ -874,9 +889,17 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	arg.res = res;
 	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
 	if (ret == 0) {
+		struct nl80211_noise_info info;
+
 		wpa_printf(MSG_DEBUG, "nl80211: Received scan results (%lu "
 			   "BSSes)", (unsigned long) res->num);
-		nl80211_get_noise_for_scan_results(drv, res);
+		if (nl80211_get_noise_for_scan_results(drv, &info) == 0) {
+			size_t i;
+
+			for (i = 0; i < res->num; ++i)
+				nl80211_update_scan_res_noise(res->res[i],
+							      &info);
+		}
 		return res;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "

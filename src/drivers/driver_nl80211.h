@@ -282,15 +282,6 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 
 /* driver_nl80211_scan.c */
 
-struct nl80211_bss_info_arg {
-	struct wpa_driver_nl80211_data *drv;
-	struct wpa_scan_results *res;
-	unsigned int assoc_freq;
-	unsigned int ibss_freq;
-	u8 assoc_bssid[ETH_ALEN];
-};
-
-int bss_info_handler(struct nl_msg *msg, void *arg);
 void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 int wpa_driver_nl80211_scan(struct i802_bss *bss,
 			    struct wpa_driver_scan_params *params);

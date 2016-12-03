@@ -1181,16 +1181,70 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 }
 
 
+struct nl80211_get_assoc_freq_arg {
+	struct wpa_driver_nl80211_data *drv;
+	unsigned int assoc_freq;
+	unsigned int ibss_freq;
+	u8 assoc_bssid[ETH_ALEN];
+};
+
+static int nl80211_get_assoc_freq_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *bss[NL80211_BSS_MAX + 1];
+	static struct nla_policy bss_policy[NL80211_BSS_MAX + 1] = {
+		[NL80211_BSS_BSSID] = { .type = NLA_UNSPEC },
+		[NL80211_BSS_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
+	};
+	struct nl80211_get_assoc_freq_arg *ctx = arg;
+	enum nl80211_bss_status status;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb[NL80211_ATTR_BSS] ||
+	    nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS],
+			     bss_policy) ||
+	    !bss[NL80211_BSS_STATUS])
+		return NL_SKIP;
+
+	status = nla_get_u32(bss[NL80211_BSS_STATUS]);
+	if (status == NL80211_BSS_STATUS_ASSOCIATED &&
+	    bss[NL80211_BSS_FREQUENCY]) {
+		ctx->assoc_freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+		wpa_printf(MSG_DEBUG, "nl80211: Associated on %u MHz",
+			   ctx->assoc_freq);
+	}
+	if (status == NL80211_BSS_STATUS_IBSS_JOINED &&
+	    bss[NL80211_BSS_FREQUENCY]) {
+		ctx->ibss_freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+		wpa_printf(MSG_DEBUG, "nl80211: IBSS-joined on %u MHz",
+			   ctx->ibss_freq);
+	}
+	if (status == NL80211_BSS_STATUS_ASSOCIATED &&
+	    bss[NL80211_BSS_BSSID]) {
+		os_memcpy(ctx->assoc_bssid,
+			  nla_data(bss[NL80211_BSS_BSSID]), ETH_ALEN);
+		wpa_printf(MSG_DEBUG, "nl80211: Associated with "
+			   MACSTR, MAC2STR(ctx->assoc_bssid));
+	}
+
+	return NL_SKIP;
+}
+
+
 unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
 {
 	struct nl_msg *msg;
 	int ret;
-	struct nl80211_bss_info_arg arg;
+	struct nl80211_get_assoc_freq_arg arg;
 
 	msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_GET_SCAN);
 	os_memset(&arg, 0, sizeof(arg));
 	arg.drv = drv;
-	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
+	ret = send_and_recv_msgs(drv, msg, nl80211_get_assoc_freq_handler,
+				 &arg);
 	if (ret == 0) {
 		unsigned int freq = drv->nlmode == NL80211_IFTYPE_ADHOC ?
 			arg.ibss_freq : arg.assoc_freq;

@@ -628,7 +628,7 @@ static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
 
 static struct wpa_scan_res *
 nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
-		       struct nl_msg *msg, struct nl80211_bss_info_arg *_arg)
+		       struct nl_msg *msg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
@@ -657,33 +657,6 @@ nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
 		return NULL;
 	if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS],
 			     bss_policy))
-		return NULL;
-	if (bss[NL80211_BSS_STATUS] && _arg) {
-		enum nl80211_bss_status status;
-		status = nla_get_u32(bss[NL80211_BSS_STATUS]);
-		if (status == NL80211_BSS_STATUS_ASSOCIATED &&
-		    bss[NL80211_BSS_FREQUENCY]) {
-			_arg->assoc_freq =
-				nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
-			wpa_printf(MSG_DEBUG, "nl80211: Associated on %u MHz",
-				   _arg->assoc_freq);
-		}
-		if (status == NL80211_BSS_STATUS_IBSS_JOINED &&
-		    bss[NL80211_BSS_FREQUENCY]) {
-			_arg->ibss_freq =
-				nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
-			wpa_printf(MSG_DEBUG, "nl80211: IBSS-joined on %u MHz",
-				   _arg->ibss_freq);
-		}
-		if (status == NL80211_BSS_STATUS_ASSOCIATED &&
-		    bss[NL80211_BSS_BSSID]) {
-			os_memcpy(_arg->assoc_bssid,
-				  nla_data(bss[NL80211_BSS_BSSID]), ETH_ALEN);
-			wpa_printf(MSG_DEBUG, "nl80211: Associated with "
-				   MACSTR, MAC2STR(_arg->assoc_bssid));
-		}
-	}
-	if (_arg && !_arg->res)
 		return NULL;
 	if (bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
 		ie = nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
@@ -761,14 +734,19 @@ nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
 }
 
 
-int bss_info_handler(struct nl_msg *msg, void *arg)
+struct nl80211_bss_info_arg {
+	struct wpa_driver_nl80211_data *drv;
+	struct wpa_scan_results *res;
+};
+
+static int bss_info_handler(struct nl_msg *msg, void *arg)
 {
 	struct nl80211_bss_info_arg *_arg = arg;
 	struct wpa_scan_results *res = _arg->res;
 	struct wpa_scan_res **tmp;
 	struct wpa_scan_res *r;
 
-	r = nl80211_parse_bss_info(_arg->drv, msg, _arg);
+	r = nl80211_parse_bss_info(_arg->drv, msg);
 	if (!r)
 		return NL_SKIP;
 
@@ -920,7 +898,7 @@ static int nl80211_dump_scan_handler(struct nl_msg *msg, void *arg)
 	struct nl80211_dump_scan_ctx *ctx = arg;
 	struct wpa_scan_res *r;
 
-	r = nl80211_parse_bss_info(ctx->drv, msg, NULL);
+	r = nl80211_parse_bss_info(ctx->drv, msg);
 	if (!r)
 		return NL_SKIP;
 	wpa_printf(MSG_DEBUG, "nl80211: %d " MACSTR " %d%s",

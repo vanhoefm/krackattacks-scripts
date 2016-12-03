@@ -780,8 +780,14 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 			continue;
 
 		/* Same BSSID,SSID was already included in scan results */
-		wpa_printf(MSG_DEBUG, "nl80211: Remove duplicated scan result "
-			   "for " MACSTR, MAC2STR(r->bssid));
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Remove duplicated scan result for " MACSTR
+			   " (assoc/age/freq prev=%d/%d/%d new=%d/%d/%d)",
+			   MAC2STR(r->bssid),
+			   !!(res->res[i]->flags & WPA_SCAN_ASSOCIATED),
+			   res->res[i]->age, res->res[i]->freq,
+			   !!(r->flags & WPA_SCAN_ASSOCIATED),
+			   r->age, r->freq);
 
 		if (((r->flags & WPA_SCAN_ASSOCIATED) &&
 		     !(res->res[i]->flags & WPA_SCAN_ASSOCIATED)) ||

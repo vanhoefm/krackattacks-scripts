@@ -1,5 +1,5 @@
 # Scanning tests
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -15,6 +15,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger
 from tshark import run_tshark
+from test_ap_csa import switch_channel, wait_channel_switch, csa_supported
 
 def check_scan(dev, params, other_started=False, test_busy=False):
     if not other_started:
@@ -1177,3 +1178,53 @@ def _test_scan_bss_limit(dev, apdev):
     hapd2 = hostapd.add_ap(apdev[1], { "ssid": "test-scan-2",
                                        "channel": "6" })
     dev[0].scan_for_bss(apdev[1]['bssid'], freq=2437, force_scan=True)
+
+def run_scan(dev, bssid, exp_freq):
+    for i in range(5):
+        dev.request("SCAN freq=2412,2437,2462")
+        ev = dev.wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+        if ev is None:
+            raise Exception("Scan did not complete")
+        bss = dev.get_bss(bssid)
+        freq = int(bss['freq']) if bss else 0
+        if freq == exp_freq:
+            break
+    if freq != exp_freq:
+        raise Exception("BSS entry shows incorrect frequency: %d != %d" % (freq, exp_freq))
+
+def test_scan_chan_switch(dev, apdev):
+    """Scanning and AP changing channels"""
+
+    # This test verifies that wpa_supplicant updates its local BSS table based
+    # on the correct cfg80211 scan entry in cases where the cfg80211 BSS table
+    # has multiple (one for each frequency) BSS entries for the same BSS.
+
+    csa_supported(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan", "channel": "1" })
+    csa_supported(hapd)
+    bssid = hapd.own_addr()
+
+    logger.info("AP channel switch while not connected")
+    run_scan(dev[0], bssid, 2412)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 1, 2437)
+    run_scan(dev[0], bssid, 2437)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 1, 2462)
+    run_scan(dev[0], bssid, 2462)
+    dev[0].dump_monitor()
+
+    logger.info("AP channel switch while connected")
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412 2437 2462")
+    run_scan(dev[0], bssid, 2462)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 2, 2437)
+    wait_channel_switch(dev[0], 2437)
+    dev[0].dump_monitor()
+    run_scan(dev[0], bssid, 2437)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 2, 2412)
+    wait_channel_switch(dev[0], 2412)
+    dev[0].dump_monitor()
+    run_scan(dev[0], bssid, 2412)
+    dev[0].dump_monitor()

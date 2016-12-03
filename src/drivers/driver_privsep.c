@@ -173,7 +173,11 @@ wpa_driver_privsep_get_scan_results2(void *priv)
 			break;
 		os_memcpy(r, pos, len);
 		pos += len;
-		if (sizeof(*r) + r->ie_len > (size_t) len) {
+		if (sizeof(*r) + r->ie_len + r->beacon_ie_len > (size_t) len) {
+			wpa_printf(MSG_ERROR,
+				   "privsep: Invalid scan result len (%d + %d + %d > %d)",
+				   (int) sizeof(*r), (int) r->ie_len,
+				   (int) r->beacon_ie_len, len);
 			os_free(r);
 			break;
 		}

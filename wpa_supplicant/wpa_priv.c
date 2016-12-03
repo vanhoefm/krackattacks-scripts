@@ -177,7 +177,7 @@ static void wpa_priv_get_scan_results2(struct wpa_priv_interface *iface,
 
 	for (i = 0; i < res->num; i++) {
 		struct wpa_scan_res *r = res->res[i];
-		val = sizeof(*r) + r->ie_len;
+		val = sizeof(*r) + r->ie_len + r->beacon_ie_len;
 		if (end - pos < (int) sizeof(int) + val)
 			break;
 		os_memcpy(pos, &val, sizeof(int));

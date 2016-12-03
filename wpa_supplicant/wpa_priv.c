@@ -685,8 +685,12 @@ static void wpa_priv_interface_deinit(struct wpa_priv_interface *iface)
 {
 	int i;
 
-	if (iface->drv_priv && iface->driver->deinit)
-		iface->driver->deinit(iface->drv_priv);
+	if (iface->drv_priv) {
+		if (iface->driver->deinit)
+			iface->driver->deinit(iface->drv_priv);
+		if (iface->drv_global_priv)
+			iface->driver->global_deinit(iface->drv_global_priv);
+	}
 
 	if (iface->fd >= 0) {
 		eloop_unregister_read_sock(iface->fd);

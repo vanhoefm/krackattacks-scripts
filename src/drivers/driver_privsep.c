@@ -116,6 +116,11 @@ static int wpa_driver_privsep_scan(void *priv,
 			  scan.ssid_lens[i]);
 	}
 
+	for (i = 0; i < PRIVSEP_MAX_SCAN_FREQS &&
+		     params->freqs && params->freqs[i]; i++)
+		scan.freqs[i] = params->freqs[i];
+	scan.num_freqs = i;
+
 	return wpa_priv_cmd(drv, PRIVSEP_CMD_SCAN, &scan, sizeof(scan),
 			    NULL, NULL);
 }

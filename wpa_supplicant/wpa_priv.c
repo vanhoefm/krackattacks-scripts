@@ -139,6 +139,7 @@ static void wpa_priv_cmd_scan(struct wpa_priv_interface *iface,
 	struct wpa_driver_scan_params params;
 	struct privsep_cmd_scan *scan;
 	unsigned int i;
+	int freqs[PRIVSEP_MAX_SCAN_FREQS + 1];
 
 	if (iface->drv_priv == NULL)
 		return;
@@ -159,6 +160,17 @@ static void wpa_priv_cmd_scan(struct wpa_priv_interface *iface,
 	for (i = 0; i < scan->num_ssids; i++) {
 		params.ssids[i].ssid = scan->ssids[i];
 		params.ssids[i].ssid_len = scan->ssid_lens[i];
+	}
+
+	if (scan->num_freqs > PRIVSEP_MAX_SCAN_FREQS) {
+		wpa_printf(MSG_DEBUG, "Invalid scan request (num_freqs)");
+		return;
+	}
+	if (scan->num_freqs) {
+		for (i = 0; i < scan->num_freqs; i++)
+			freqs[i] = scan->freqs[i];
+		freqs[i] = 0;
+		params.freqs = freqs;
 	}
 
 	if (iface->driver->scan2)

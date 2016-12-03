@@ -30,10 +30,14 @@ enum privsep_cmd {
 	PRIVSEP_CMD_AUTHENTICATE,
 };
 
+#define PRIVSEP_MAX_SCAN_FREQS 50
+
 struct privsep_cmd_scan {
 	unsigned int num_ssids;
 	u8 ssids[WPAS_MAX_SCAN_SSIDS][32];
 	u8 ssid_lens[WPAS_MAX_SCAN_SSIDS];
+	unsigned int num_freqs;
+	u16 freqs[PRIVSEP_MAX_SCAN_FREQS];
 };
 
 struct privsep_cmd_authenticate {

@@ -21,6 +21,7 @@
 #include "common/privsep_commands.h"
 #include "common/ieee802_11_defs.h"
 
+#define WPA_PRIV_MAX_L2 3
 
 struct wpa_priv_interface {
 	struct wpa_priv_interface *next;
@@ -37,9 +38,12 @@ struct wpa_priv_interface {
 	struct sockaddr_un drv_addr;
 	int wpas_registered;
 
-	/* TODO: add support for multiple l2 connections */
-	struct l2_packet_data *l2;
-	struct sockaddr_un l2_addr;
+	struct l2_packet_data *l2[WPA_PRIV_MAX_L2];
+	struct sockaddr_un l2_addr[WPA_PRIV_MAX_L2];
+	struct wpa_priv_l2 {
+		struct wpa_priv_interface *parent;
+		int idx;
+	} l2_ctx[WPA_PRIV_MAX_L2];
 };
 
 struct wpa_priv_global {
@@ -50,6 +54,8 @@ struct wpa_priv_global {
 static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 				  struct sockaddr_un *from)
 {
+	int i;
+
 	if (iface->drv_priv) {
 		wpa_printf(MSG_DEBUG, "Cleaning up forgotten driver instance");
 		if (iface->driver->deinit)
@@ -62,11 +68,13 @@ static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 		iface->wpas_registered = 0;
 	}
 
-	if (iface->l2) {
-		wpa_printf(MSG_DEBUG, "Cleaning up forgotten l2_packet "
-			   "instance");
-		l2_packet_deinit(iface->l2);
-		iface->l2 = NULL;
+	for (i = 0; i < WPA_PRIV_MAX_L2; i++) {
+		if (iface->l2[i]) {
+			wpa_printf(MSG_DEBUG,
+				   "Cleaning up forgotten l2_packet instance");
+			l2_packet_deinit(iface->l2[i]);
+			iface->l2[i] = NULL;
+		}
 	}
 
 	if (iface->driver->init2) {
@@ -405,7 +413,8 @@ fail:
 static void wpa_priv_l2_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 			   size_t len)
 {
-	struct wpa_priv_interface *iface = ctx;
+	struct wpa_priv_l2 *l2_ctx = ctx;
+	struct wpa_priv_interface *iface = l2_ctx->parent;
 	struct msghdr msg;
 	struct iovec io[2];
 
@@ -417,12 +426,19 @@ static void wpa_priv_l2_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 	os_memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = io;
 	msg.msg_iovlen = 2;
-	msg.msg_name = &iface->l2_addr;
-	msg.msg_namelen = sizeof(iface->l2_addr);
+	msg.msg_name = &iface->l2_addr[l2_ctx->idx];
+	msg.msg_namelen = sizeof(iface->l2_addr[l2_ctx->idx]);
 
 	if (sendmsg(iface->fd, &msg, 0) < 0) {
 		wpa_printf(MSG_ERROR, "sendmsg(l2 rx): %s", strerror(errno));
 	}
+}
+
+
+static int wpa_priv_allowed_l2_proto(u16 proto)
+{
+	return proto == ETH_P_EAPOL || proto == ETH_P_RSN_PREAUTH ||
+		proto == ETH_P_80211_ENCAP;
 }
 
 
@@ -434,6 +450,7 @@ static void wpa_priv_cmd_l2_register(struct wpa_priv_interface *iface,
 	u8 own_addr[ETH_ALEN];
 	int res;
 	u16 proto;
+	int idx;
 
 	if (len != 2 * sizeof(int)) {
 		wpa_printf(MSG_DEBUG, "Invalid l2_register length %lu",
@@ -442,50 +459,67 @@ static void wpa_priv_cmd_l2_register(struct wpa_priv_interface *iface,
 	}
 
 	proto = reg_cmd[0];
-	if (proto != ETH_P_EAPOL && proto != ETH_P_RSN_PREAUTH &&
-	    proto != ETH_P_80211_ENCAP) {
+	if (!wpa_priv_allowed_l2_proto(proto)) {
 		wpa_printf(MSG_DEBUG, "Refused l2_packet connection for "
 			   "ethertype 0x%x", proto);
 		return;
 	}
 
-	if (iface->l2) {
-		wpa_printf(MSG_DEBUG, "Cleaning up forgotten l2_packet "
-			   "instance");
-		l2_packet_deinit(iface->l2);
-		iface->l2 = NULL;
+	for (idx = 0; idx < WPA_PRIV_MAX_L2; idx++) {
+		if (!iface->l2[idx])
+			break;
+	}
+	if (idx == WPA_PRIV_MAX_L2) {
+		wpa_printf(MSG_DEBUG, "No free l2_packet connection found");
+		return;
 	}
 
-	os_memcpy(&iface->l2_addr, from, sizeof(iface->l2_addr));
+	os_memcpy(&iface->l2_addr[idx], from, sizeof(iface->l2_addr[idx]));
 
-	iface->l2 = l2_packet_init(iface->ifname, NULL, proto,
-				   wpa_priv_l2_rx, iface, reg_cmd[1]);
-	if (iface->l2 == NULL) {
+	iface->l2_ctx[idx].idx = idx;
+	iface->l2_ctx[idx].parent = iface;
+	iface->l2[idx] = l2_packet_init(iface->ifname, NULL, proto,
+					wpa_priv_l2_rx, &iface->l2_ctx[idx],
+					reg_cmd[1]);
+	if (!iface->l2[idx]) {
 		wpa_printf(MSG_DEBUG, "Failed to initialize l2_packet "
 			   "instance for protocol %d", proto);
 		return;
 	}
 
-	if (l2_packet_get_own_addr(iface->l2, own_addr) < 0) {
+	if (l2_packet_get_own_addr(iface->l2[idx], own_addr) < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to get own address from "
 			   "l2_packet");
-		l2_packet_deinit(iface->l2);
-		iface->l2 = NULL;
+		l2_packet_deinit(iface->l2[idx]);
+		iface->l2[idx] = NULL;
 		return;
 	}
 
 	res = sendto(iface->fd, own_addr, ETH_ALEN, 0,
 		     (struct sockaddr *) from, sizeof(*from));
-	wpa_printf(MSG_DEBUG, "L2 registration: res=%d", res);
+	wpa_printf(MSG_DEBUG, "L2 registration[idx=%d]: res=%d", idx, res);
 }
 
 
 static void wpa_priv_cmd_l2_unregister(struct wpa_priv_interface *iface,
 				       struct sockaddr_un *from)
 {
-	if (iface->l2) {
-		l2_packet_deinit(iface->l2);
-		iface->l2 = NULL;
+	int idx;
+
+	for (idx = 0; idx < WPA_PRIV_MAX_L2; idx++) {
+		if (os_memcmp(&iface->l2_addr[idx], from,
+			      sizeof(struct sockaddr_un)) == 0)
+			break;
+	}
+	if (idx == WPA_PRIV_MAX_L2) {
+		wpa_printf(MSG_DEBUG,
+			   "No registered l2_packet socket found for unregister request");
+		return;
+	}
+
+	if (iface->l2[idx]) {
+		l2_packet_deinit(iface->l2[idx]);
+		iface->l2[idx] = NULL;
 	}
 }
 
@@ -493,8 +527,12 @@ static void wpa_priv_cmd_l2_unregister(struct wpa_priv_interface *iface,
 static void wpa_priv_cmd_l2_notify_auth_start(struct wpa_priv_interface *iface,
 					      struct sockaddr_un *from)
 {
-	if (iface->l2)
-		l2_packet_notify_auth_start(iface->l2);
+	int idx;
+
+	for (idx = 0; idx < WPA_PRIV_MAX_L2; idx++) {
+		if (iface->l2[idx])
+			l2_packet_notify_auth_start(iface->l2[idx]);
+	}
 }
 
 
@@ -505,8 +543,20 @@ static void wpa_priv_cmd_l2_send(struct wpa_priv_interface *iface,
 	u8 *dst_addr;
 	u16 proto;
 	int res;
+	int idx;
 
-	if (iface->l2 == NULL)
+	for (idx = 0; idx < WPA_PRIV_MAX_L2; idx++) {
+		if (os_memcmp(&iface->l2_addr[idx], from,
+			      sizeof(struct sockaddr_un)) == 0)
+			break;
+	}
+	if (idx == WPA_PRIV_MAX_L2) {
+		wpa_printf(MSG_DEBUG,
+			   "No registered l2_packet socket found for send request");
+		return;
+	}
+
+	if (iface->l2[idx] == NULL)
 		return;
 
 	if (len < ETH_ALEN + 2) {
@@ -518,15 +568,15 @@ static void wpa_priv_cmd_l2_send(struct wpa_priv_interface *iface,
 	dst_addr = buf;
 	os_memcpy(&proto, buf + ETH_ALEN, 2);
 
-	if (proto != ETH_P_EAPOL && proto != ETH_P_RSN_PREAUTH) {
+	if (!wpa_priv_allowed_l2_proto(proto)) {
 		wpa_printf(MSG_DEBUG, "Refused l2_packet send for ethertype "
 			   "0x%x", proto);
 		return;
 	}
 
-	res = l2_packet_send(iface->l2, dst_addr, proto, buf + ETH_ALEN + 2,
-			     len - ETH_ALEN - 2);
-	wpa_printf(MSG_DEBUG, "L2 send: res=%d", res);
+	res = l2_packet_send(iface->l2[idx], dst_addr, proto,
+			     buf + ETH_ALEN + 2, len - ETH_ALEN - 2);
+	wpa_printf(MSG_DEBUG, "L2 send[idx=%d]: res=%d", idx, res);
 }
 
 
@@ -625,6 +675,8 @@ static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 
 static void wpa_priv_interface_deinit(struct wpa_priv_interface *iface)
 {
+	int i;
+
 	if (iface->drv_priv && iface->driver->deinit)
 		iface->driver->deinit(iface->drv_priv);
 
@@ -634,8 +686,10 @@ static void wpa_priv_interface_deinit(struct wpa_priv_interface *iface)
 		unlink(iface->sock_name);
 	}
 
-	if (iface->l2)
-		l2_packet_deinit(iface->l2);
+	for (i = 0; i < WPA_PRIV_MAX_L2; i++) {
+		if (iface->l2[i])
+			l2_packet_deinit(iface->l2[i]);
+	}
 
 	os_free(iface->ifname);
 	os_free(iface->driver_name);

@@ -13,6 +13,8 @@ import time
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from p2p_utils import *
+from hwsim import HWSimRadio
+from tshark import run_tshark
 from test_gas import start_ap
 from test_cfg80211 import nl80211_remain_on_channel
 
@@ -621,3 +623,82 @@ def test_discovery_long_listen(dev):
 
     dev[1].p2p_stop_find()
     wpas.p2p_stop_find()
+
+def pd_test(dev, addr):
+    if not dev.discover_peer(addr, freq=2412):
+        raise Exception("Device discovery timed out")
+    dev.global_request("P2P_PROV_DISC " + addr + " display")
+    ev0 = dev.wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
+    if ev0 is None:
+        raise Exception("Provision discovery timed out (display)")
+    dev.p2p_stop_find()
+
+def run_discovery_while_go(wpas, dev, params):
+    wpas.request("P2P_SET listen_channel 1")
+    wpas.p2p_start_go(freq="2412")
+    addr = wpas.p2p_dev_addr()
+    pin = dev[0].wps_read_pin()
+    wpas.p2p_go_authorize_client(pin)
+    dev[1].p2p_connect_group(addr, pin, freq=2412, timeout=30)
+
+    pd_test(dev[0], addr)
+    wpas.p2p_listen()
+    pd_test(dev[2], addr)
+
+    wpas.p2p_stop_find()
+    terminate_group(wpas, dev[1])
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wifi_p2p.public_action.subtype == 8", [ "wlan.da" ])
+    da = out.splitlines()
+    logger.info("PD Response DAs: " + str(da))
+    if len(da) != 3:
+        raise Exception("Unexpected DA count for PD Response")
+
+def test_discovery_while_go(dev, apdev, params):
+    """P2P provision discovery from GO"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    run_discovery_while_go(wpas, dev, params)
+
+def test_discovery_while_go_p2p_dev(dev, apdev, params):
+    """P2P provision discovery from GO (using P2P Device interface)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        run_discovery_while_go(wpas, dev, params)
+
+def run_discovery_while_cli(wpas, dev, params):
+    wpas.request("P2P_SET listen_channel 1")
+    dev[1].p2p_start_go(freq="2412")
+    addr = wpas.p2p_dev_addr()
+    pin = wpas.wps_read_pin()
+    dev[1].p2p_go_authorize_client(pin)
+    wpas.p2p_connect_group(dev[1].p2p_dev_addr(), pin, freq=2412, timeout=30)
+
+    pd_test(dev[0], addr)
+    wpas.p2p_listen()
+    pd_test(dev[2], addr)
+
+    wpas.p2p_stop_find()
+    terminate_group(dev[1], wpas)
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wifi_p2p.public_action.subtype == 8", [ "wlan.da" ])
+    da = out.splitlines()
+    logger.info("PD Response DAs: " + str(da))
+    if len(da) != 3:
+        raise Exception("Unexpected DA count for PD Response")
+
+def test_discovery_while_cli(dev, apdev, params):
+    """P2P provision discovery from CLI"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    run_discovery_while_cli(wpas, dev, params)
+
+def test_discovery_while_cli_p2p_dev(dev, apdev, params):
+    """P2P provision discovery from CLI (using P2P Device interface)"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        run_discovery_while_cli(wpas, dev, params)

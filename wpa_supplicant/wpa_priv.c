@@ -346,6 +346,7 @@ static void wpa_priv_cmd_get_ssid(struct wpa_priv_interface *iface,
 	if (iface->driver->get_ssid == NULL)
 		goto fail;
 
+	os_memset(ssid, 0, sizeof(ssid));
 	res = iface->driver->get_ssid(iface->drv_priv, &ssid[sizeof(int)]);
 	if (res < 0 || res > SSID_MAX_LEN)
 		goto fail;
@@ -857,7 +858,7 @@ static void wpa_priv_send_auth(struct wpa_priv_interface *iface,
 	struct privsep_event_auth *auth;
 	u8 *buf, *pos;
 
-	buf = os_malloc(buflen);
+	buf = os_zalloc(buflen);
 	if (buf == NULL)
 		return;
 

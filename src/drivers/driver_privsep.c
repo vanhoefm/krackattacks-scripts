@@ -102,10 +102,21 @@ static int wpa_driver_privsep_scan(void *priv,
 				   struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_privsep_data *drv = priv;
-	const u8 *ssid = params->ssids[0].ssid;
-	size_t ssid_len = params->ssids[0].ssid_len;
+	struct privsep_cmd_scan scan;
+	size_t i;
+
 	wpa_printf(MSG_DEBUG, "%s: priv=%p", __func__, priv);
-	return wpa_priv_cmd(drv, PRIVSEP_CMD_SCAN, ssid, ssid_len,
+	os_memset(&scan, 0, sizeof(scan));
+	scan.num_ssids = params->num_ssids;
+	for (i = 0; i < params->num_ssids; i++) {
+		if (!params->ssids[i].ssid)
+			continue;
+		scan.ssid_lens[i] = params->ssids[i].ssid_len;
+		os_memcpy(scan.ssids[i], params->ssids[i].ssid,
+			  scan.ssid_lens[i]);
+	}
+
+	return wpa_priv_cmd(drv, PRIVSEP_CMD_SCAN, &scan, sizeof(scan),
 			    NULL, NULL);
 }
 

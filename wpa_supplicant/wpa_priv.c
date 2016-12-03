@@ -134,18 +134,31 @@ static void wpa_priv_cmd_unregister(struct wpa_priv_interface *iface,
 
 
 static void wpa_priv_cmd_scan(struct wpa_priv_interface *iface,
-			      char *buf, size_t len)
+			      void *buf, size_t len)
 {
 	struct wpa_driver_scan_params params;
+	struct privsep_cmd_scan *scan;
+	unsigned int i;
 
 	if (iface->drv_priv == NULL)
 		return;
 
+	if (len < sizeof(*scan)) {
+		wpa_printf(MSG_DEBUG, "Invalid scan request");
+		return;
+	}
+
+	scan = buf;
+
 	os_memset(&params, 0, sizeof(params));
-	if (len) {
-		params.ssids[0].ssid = (u8 *) buf;
-		params.ssids[0].ssid_len = len;
-		params.num_ssids = 1;
+	if (scan->num_ssids > WPAS_MAX_SCAN_SSIDS) {
+		wpa_printf(MSG_DEBUG, "Invalid scan request (num_ssids)");
+		return;
+	}
+	params.num_ssids = scan->num_ssids;
+	for (i = 0; i < scan->num_ssids; i++) {
+		params.ssids[i].ssid = scan->ssids[i];
+		params.ssids[i].ssid_len = scan->ssid_lens[i];
 	}
 
 	if (iface->driver->scan2)

@@ -9,6 +9,7 @@
 #ifndef PRIVSEP_COMMANDS_H
 #define PRIVSEP_COMMANDS_H
 
+#include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 
 enum privsep_cmd {
@@ -27,6 +28,12 @@ enum privsep_cmd {
 	PRIVSEP_CMD_L2_SEND,
 	PRIVSEP_CMD_SET_COUNTRY,
 	PRIVSEP_CMD_AUTHENTICATE,
+};
+
+struct privsep_cmd_scan {
+	unsigned int num_ssids;
+	u8 ssids[WPAS_MAX_SCAN_SSIDS][32];
+	u8 ssid_lens[WPAS_MAX_SCAN_SSIDS];
 };
 
 struct privsep_cmd_authenticate {

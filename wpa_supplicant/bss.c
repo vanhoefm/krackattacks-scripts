@@ -595,6 +595,42 @@ wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 {
 	u32 changes;
 
+	if (bss->last_update_idx == wpa_s->bss_update_idx) {
+		struct os_reltime update_time;
+
+		/*
+		 * Some drivers (e.g., cfg80211) include multiple BSS entries
+		 * for the same BSS if that BSS's channel changes. The BSS list
+		 * implementation in wpa_supplicant does not do that and we need
+		 * to filter out the obsolete results here to make sure only the
+		 * most current BSS information remains in the table.
+		 */
+		wpa_printf(MSG_DEBUG, "BSS: " MACSTR
+			   " has multiple entries in the scan results - select the most current one",
+			   MAC2STR(bss->bssid));
+		calculate_update_time(fetch_time, res->age, &update_time);
+		wpa_printf(MSG_DEBUG,
+			   "Previous last_update: %u.%06u (freq %d%s)",
+			   (unsigned int) bss->last_update.sec,
+			   (unsigned int) bss->last_update.usec,
+			   bss->freq,
+			   (bss->flags & WPA_BSS_ASSOCIATED) ? " assoc" : "");
+		wpa_printf(MSG_DEBUG, "New last_update: %u.%06u (freq %d%s)",
+			   (unsigned int) update_time.sec,
+			   (unsigned int) update_time.usec,
+			   res->freq,
+			   (res->flags & WPA_SCAN_ASSOCIATED) ? " assoc" : "");
+		if ((bss->flags & WPA_BSS_ASSOCIATED) ||
+		    (!(res->flags & WPA_SCAN_ASSOCIATED) &&
+		     !os_reltime_before(&bss->last_update, &update_time))) {
+			wpa_printf(MSG_DEBUG,
+				   "Ignore this BSS entry since the previous update looks more current");
+			return bss;
+		}
+		wpa_printf(MSG_DEBUG,
+			   "Accept this BSS entry since it looks more current than the previous update");
+	}
+
 	changes = wpa_bss_compare_res(bss, res);
 	if (changes & WPA_BSS_FREQ_CHANGED_FLAG)
 		wpa_printf(MSG_DEBUG, "BSS: " MACSTR " changed freq %d --> %d",

@@ -626,7 +626,8 @@ static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
 }
 
 
-int bss_info_handler(struct nl_msg *msg, void *arg)
+static struct wpa_scan_res * nl80211_parse_bss_info(
+	struct nl_msg *msg, struct nl80211_bss_info_arg *_arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
@@ -644,9 +645,6 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
 		[NL80211_BSS_BEACON_IES] = { .type = NLA_UNSPEC },
 	};
-	struct nl80211_bss_info_arg *_arg = arg;
-	struct wpa_scan_results *res = _arg->res;
-	struct wpa_scan_res **tmp;
 	struct wpa_scan_res *r;
 	const u8 *ie, *beacon_ie;
 	size_t ie_len, beacon_ie_len;
@@ -655,10 +653,10 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 	if (!tb[NL80211_ATTR_BSS])
-		return NL_SKIP;
+		return NULL;
 	if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS],
 			     bss_policy))
-		return NL_SKIP;
+		return NULL;
 	if (bss[NL80211_BSS_STATUS]) {
 		enum nl80211_bss_status status;
 		status = nla_get_u32(bss[NL80211_BSS_STATUS]);
@@ -684,8 +682,8 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 				   MACSTR, MAC2STR(_arg->assoc_bssid));
 		}
 	}
-	if (!res)
-		return NL_SKIP;
+	if (!_arg->res)
+		return NULL;
 	if (bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
 		ie = nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
 		ie_len = nla_len(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
@@ -703,11 +701,11 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 
 	if (nl80211_scan_filtered(_arg->drv, ie ? ie : beacon_ie,
 				  ie ? ie_len : beacon_ie_len))
-		return NL_SKIP;
+		return NULL;
 
 	r = os_zalloc(sizeof(*r) + ie_len + beacon_ie_len);
 	if (r == NULL)
-		return NL_SKIP;
+		return NULL;
 	if (bss[NL80211_BSS_BSSID])
 		os_memcpy(r->bssid, nla_data(bss[NL80211_BSS_BSSID]),
 			  ETH_ALEN);
@@ -758,6 +756,25 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 		}
 	}
 
+	return r;
+}
+
+
+int bss_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nl80211_bss_info_arg *_arg = arg;
+	struct wpa_scan_results *res = _arg->res;
+	struct wpa_scan_res **tmp;
+	struct wpa_scan_res *r;
+
+	r = nl80211_parse_bss_info(msg, _arg);
+	if (!r)
+		return NL_SKIP;
+
+	if (!res) {
+		os_free(r);
+		return NL_SKIP;
+	}
 	tmp = os_realloc_array(res->res, res->num + 1,
 			       sizeof(struct wpa_scan_res *));
 	if (tmp == NULL) {

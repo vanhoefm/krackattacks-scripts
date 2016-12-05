@@ -514,3 +514,26 @@ def test_ap_beacon_rate_vht(dev, apdev):
         hapd.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_ap_wep_to_wpa(dev, apdev):
+    """WEP to WPA2-PSK configuration change in hostapd"""
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": "wep-to-wpa",
+                            "wep_key0": '"hello"' })
+    dev[0].flush_scan_cache()
+    dev[0].connect("wep-to-wpa", key_mgmt="NONE", wep_key0='"hello"',
+                   scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    hapd.disable()
+    hapd.set("wep_key0", "")
+    hapd.set("wpa_passphrase", "12345678")
+    hapd.set("wpa", "2")
+    hapd.set("wpa_key_mgmt", "WPA-PSK")
+    hapd.set("rsn_pairwise", "CCMP")
+    hapd.enable()
+
+    dev[0].connect("wep-to-wpa", psk="12345678", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)

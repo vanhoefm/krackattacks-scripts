@@ -1078,6 +1078,30 @@ def test_p2p_delay_go_csa(dev, apdev, params):
         finally:
             wpas.global_request("SET p2p_go_freq_change_policy 2")
 
+def test_p2p_channel_vht80(dev):
+    """P2P group formation with VHT 80 MHz"""
+    try:
+        set_country("FI", dev[0])
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               i_freq=5180,
+                                               i_max_oper_chwidth=80,
+                                               i_ht40=True, i_vht=True,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        freq = int(i_res['freq'])
+        if freq < 5000:
+            raise Exception("Unexpected channel %d MHz - did not follow 5 GHz preference" % freq)
+        sig = dev[1].group_request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        remove_group(dev[0], dev[1])
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()
+
 def test_p2p_channel_vht80p80(dev):
     """P2P group formation and VHT 80+80 MHz channel"""
     try:

@@ -2116,9 +2116,10 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	case NL80211_CMD_NEW_SCAN_RESULTS:
 		wpa_dbg(drv->ctx, MSG_DEBUG,
 			"nl80211: New scan results available");
+		if (drv->last_scan_cmd != NL80211_CMD_VENDOR)
+			drv->scan_state = SCAN_COMPLETED;
 		drv->scan_complete_events = 1;
 		if (drv->last_scan_cmd == NL80211_CMD_TRIGGER_SCAN) {
-			drv->scan_state = SCAN_COMPLETED;
 			eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout,
 					     drv, drv->ctx);
 			drv->last_scan_cmd = 0;
@@ -2135,8 +2136,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_SCAN_ABORTED:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan aborted");
-		if (drv->last_scan_cmd == NL80211_CMD_TRIGGER_SCAN) {
+		if (drv->last_scan_cmd != NL80211_CMD_VENDOR)
 			drv->scan_state = SCAN_ABORTED;
+		if (drv->last_scan_cmd == NL80211_CMD_TRIGGER_SCAN) {
 			/*
 			 * Need to indicate that scan results are available in
 			 * order not to make wpa_supplicant stop its scanning.

@@ -1392,6 +1392,7 @@ static const char *network_fields[] = {
 	"macsec_policy",
 	"macsec_integ_only",
 	"macsec_port",
+	"mka_priority",
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	"update_identifier",

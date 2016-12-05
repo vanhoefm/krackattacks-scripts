@@ -19,6 +19,7 @@
 #include "config.h"
 #include "base64.h"
 #include "uuid.h"
+#include "common/ieee802_1x_defs.h"
 #include "p2p/p2p.h"
 #include "eap_peer/eap_methods.h"
 #include "eap_peer/eap.h"
@@ -813,6 +814,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_mka_ckn(f, ssid);
 	INT(macsec_integ_only);
 	INT(macsec_port);
+	INT_DEF(mka_priority, DEFAULT_PRIO_NOT_KEY_SERVER);
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	INT(update_identifier);

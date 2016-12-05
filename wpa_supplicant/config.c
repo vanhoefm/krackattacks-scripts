@@ -11,6 +11,7 @@
 #include "common.h"
 #include "utils/uuid.h"
 #include "utils/ip_addr.h"
+#include "common/ieee802_1x_defs.h"
 #include "crypto/sha1.h"
 #include "rsn_supp/wpa.h"
 #include "eap_peer/eap.h"
@@ -2127,6 +2128,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(macsec_policy, 0, 1) },
 	{ INT_RANGE(macsec_integ_only, 0, 1) },
 	{ INT_RANGE(macsec_port, 1, 65534) },
+	{ INT_RANGE(mka_priority, 0, 255) },
 	{ FUNC_KEY(mka_cak) },
 	{ FUNC_KEY(mka_ckn) },
 #endif /* CONFIG_MACSEC */
@@ -2617,6 +2619,9 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 #ifdef CONFIG_IEEE80211W
 	ssid->ieee80211w = MGMT_FRAME_PROTECTION_DEFAULT;
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_MACSEC
+	ssid->mka_priority = DEFAULT_PRIO_NOT_KEY_SERVER;
+#endif /* CONFIG_MACSEC */
 	ssid->mac_addr = -1;
 }
 

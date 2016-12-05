@@ -181,6 +181,30 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
                         apdev[0]['bssid']])
     dev[0].wait_disconnected(timeout=15)
 
+def test_ap_open_external_assoc(dev, apdev):
+    """AP with open mode and external association"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open-ext-assoc" })
+    try:
+        dev[0].request("STA_AUTOCONNECT 0")
+        id = dev[0].connect("open-ext-assoc", key_mgmt="NONE", scan_freq="2412",
+                            only_add_network=True)
+        dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+        dev[0].dump_monitor()
+        # This will be accepted due to matching network
+        dev[0].cmd_execute(['iw', 'dev', dev[0].ifname, 'connect',
+                            'open-ext-assoc', "2412", apdev[0]['bssid']])
+        ev = dev[0].wait_event([ "CTRL-EVENT-DISCONNECTED",
+                                 "CTRL-EVENT-CONNECTED" ], timeout=10)
+        if ev is None:
+            raise Exception("Connection timed out")
+        if "CTRL-EVENT-DISCONNECTED" in ev:
+            raise Exception("Unexpected disconnection event")
+        dev[0].dump_monitor()
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=5)
+    finally:
+        dev[0].request("STA_AUTOCONNECT 1")
+
 @remote_compatible
 def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""

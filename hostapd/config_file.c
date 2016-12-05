@@ -768,7 +768,25 @@ static int hostapd_config_read_wep(struct hostapd_wep_keys *wep, int keyidx,
 {
 	size_t len = os_strlen(val);
 
-	if (keyidx < 0 || keyidx > 3 || wep->key[keyidx] != NULL)
+	if (keyidx < 0 || keyidx > 3)
+		return -1;
+
+	if (len == 0) {
+		int i, set = 0;
+
+		bin_clear_free(wep->key[keyidx], wep->len[keyidx]);
+		wep->key[keyidx] = NULL;
+		wep->len[keyidx] = 0;
+		for (i = 0; i < NUM_WEP_KEYS; i++) {
+			if (wep->key[i])
+				set++;
+		}
+		if (!set)
+			wep->keys_set = 0;
+		return 0;
+	}
+
+	if (wep->key[keyidx] != NULL)
 		return -1;
 
 	if (val[0] == '"') {

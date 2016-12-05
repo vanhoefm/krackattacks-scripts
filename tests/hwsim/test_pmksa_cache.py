@@ -282,7 +282,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
 def test_pmksa_cache_expiration(dev, apdev):
     """PMKSA cache entry expiration"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].request("SET dot11RSNAConfigPMKLifetime 10")
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
@@ -302,6 +302,7 @@ def test_pmksa_cache_expiration(dev, apdev):
     pmksa2 = dev[0].get_pmksa(bssid)
     if pmksa['pmkid'] == pmksa2['pmkid']:
         raise Exception("PMKID did not change")
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_pmksa_cache_expiration_disconnect(dev, apdev):
     """PMKSA cache entry expiration (disconnect)"""

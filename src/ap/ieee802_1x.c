@@ -2364,6 +2364,16 @@ int ieee802_1x_eapol_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 		   MAC2STR(sta->addr), xhdr->version, xhdr->type,
 		   be_to_host16(xhdr->length), ack);
 
+#ifdef CONFIG_WPS
+	if (xhdr->type == IEEE802_1X_TYPE_EAP_PACKET && ack &&
+	    (sta->flags & WLAN_STA_WPS) &&
+	    ap_sta_pending_delayed_1x_auth_fail_disconnect(hapd, sta)) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS: Indicate EAP completion on ACK for EAP-Failure");
+		hostapd_wps_eap_completed(hapd);
+	}
+#endif /* CONFIG_WPS */
+
 	if (xhdr->type != IEEE802_1X_TYPE_EAPOL_KEY)
 		return 0;
 
@@ -2737,15 +2747,6 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		 * EAP-FAST with anonymous provisioning, may require another
 		 * EAPOL authentication to be started to complete connection.
 		 */
-		wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "IEEE 802.1X: Force "
-			"disconnection after EAP-Failure");
-		/* Add a small sleep to increase likelihood of previously
-		 * requested EAP-Failure TX getting out before this should the
-		 * driver reorder operations.
-		 */
-		os_sleep(0, 10000);
-		ap_sta_disconnect(hapd, sta, sta->addr,
-				  WLAN_REASON_IEEE_802_1X_AUTH_FAILED);
-		hostapd_wps_eap_completed(hapd);
+		ap_sta_delayed_1x_auth_fail_disconnect(hapd, sta);
 	}
 }

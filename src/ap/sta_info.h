@@ -296,5 +296,9 @@ void ap_sta_clear_disconnect_timeouts(struct hostapd_data *hapd,
 				      struct sta_info *sta);
 
 int ap_sta_flags_txt(u32 flags, char *buf, size_t buflen);
+void ap_sta_delayed_1x_auth_fail_disconnect(struct hostapd_data *hapd,
+					    struct sta_info *sta);
+int ap_sta_pending_delayed_1x_auth_fail_disconnect(struct hostapd_data *hapd,
+						   struct sta_info *sta);
 
 #endif /* STA_INFO_H */

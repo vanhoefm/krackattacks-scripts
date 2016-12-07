@@ -711,6 +711,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
 	int wfd_changed;
+	int dev_name_changed;
 	int i;
 	struct os_reltime time_now;
 
@@ -821,6 +822,9 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	}
 	dev->info.level = level;
 
+	dev_name_changed = msg.device_name &&
+		os_strcmp(dev->info.device_name, msg.device_name) != 0;
+
 	p2p_copy_wps_info(p2p, dev, 0, &msg);
 
 	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
@@ -858,6 +862,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	p2p_update_peer_vendor_elems(dev, ies, ies_len);
 
 	if (dev->flags & P2P_DEV_REPORTED && !wfd_changed &&
+	    !dev_name_changed &&
 	    (!msg.adv_service_instance ||
 	     (dev->flags & P2P_DEV_P2PS_REPORTED)))
 		return 0;

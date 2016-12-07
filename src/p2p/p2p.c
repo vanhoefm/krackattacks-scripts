@@ -839,9 +839,12 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	wfd_changed = p2p_compare_wfd_info(dev, &msg);
 
-	if (msg.wfd_subelems) {
+	if (wfd_changed) {
 		wpabuf_free(dev->info.wfd_subelems);
-		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
+		if (msg.wfd_subelems)
+			dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
+		else
+			dev->info.wfd_subelems = NULL;
 	}
 
 	if (scan_res) {

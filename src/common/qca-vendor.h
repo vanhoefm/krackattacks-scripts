@@ -294,7 +294,19 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_ABORTED = 58,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_NOP_FINISHED = 59,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED = 60,
-	/* 61-73 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO = 61,
+	QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START = 62,
+	QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP = 63,
+	QCA_NL80211_VENDOR_SUBCMD_ROAM = 64,
+	QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SSID_HOTLIST = 65,
+	QCA_NL80211_VENDOR_SUBCMD_GSCAN_RESET_SSID_HOTLIST = 66,
+	QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_FOUND = 67,
+	QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_LOST = 68,
+	QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST = 69,
+	QCA_NL80211_VENDOR_SUBCMD_PNO_SET_PASSPOINT_LIST = 70,
+	QCA_NL80211_VENDOR_SUBCMD_PNO_RESET_PASSPOINT_LIST = 71,
+	QCA_NL80211_VENDOR_SUBCMD_PNO_NETWORK_FOUND = 72,
+	QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND = 73,
 	/* Wi-Fi configuration subcommands */
 	QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION = 74,
 	QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION = 75,
@@ -2341,6 +2353,560 @@ enum qca_vendor_attr_sar_limits {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_MAX =
 		QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_wifi_info: Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO sub command.
+ */
+enum qca_wlan_vendor_attr_get_wifi_info {
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_DRIVER_VERSION = 1,
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_FIRMWARE_VERSION = 2,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_MAX =
+	QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_AFTER_LAST - 1,
+};
+
+/*
+ * enum qca_wlan_vendor_attr_wifi_logger_start: Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START sub command.
+ */
+enum qca_wlan_vendor_attr_wifi_logger_start {
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID = 1,
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_VERBOSE_LEVEL = 2,
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FLAGS = 3,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_GET_MAX =
+	QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_logger_results {
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_INVALID = 0,
+
+	/* Unsigned 32-bit value; must match the request Id supplied by
+	 * Wi-Fi HAL in the corresponding subcmd NL msg.
+	 */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID = 1,
+
+	/* Unsigned 32-bit value; used to indicate the size of memory
+	 * dump to be allocated.
+	*/
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE = 2,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX =
+	QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_roaming_config_params {
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_INVALID = 0,
+
+	QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD = 1,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID = 2,
+
+	/* Attributes for wifi_set_ssid_white_list */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS = 3,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST = 4,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID = 5,
+
+	/* Attributes for set_roam_params */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_THRESHOLD = 6,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_THRESHOLD = 7,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_FACTOR = 8,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_FACTOR = 9,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_MAX_BOOST = 10,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_LAZY_ROAM_HISTERESYS = 11,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_ALERT_ROAM_RSSI_TRIGGER = 12,
+
+	/* Attribute for set_lazy_roam */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE = 13,
+
+	/* Attribute for set_lazy_roam with preferences */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS = 14,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_NUM_BSSID = 15,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_BSSID = 16,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_RSSI_MODIFIER = 17,
+
+	/* Attribute for set_blacklist bssid params */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS = 18,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID = 19,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_BSSID = 20,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_MAX =
+	QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_AFTER_LAST - 1,
+};
+
+/*
+ * enum qca_wlan_vendor_attr_roam_subcmd: Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_ROAM sub command.
+ */
+enum qca_wlan_vendor_attr_roam_subcmd {
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SSID_WHITE_LIST = 1,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_GSCAN_ROAM_PARAMS = 2,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_LAZY_ROAM = 3,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BSSID_PREFS = 4,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BSSID_PARAMS = 5,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BLACKLIST_BSSID = 6,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_MAX =
+	QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_gscan_config_params {
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_INVALID = 0,
+
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID = 1,
+
+	/* Attributes for data used by
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_VALID_CHANNELS sub command.
+	 */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_GET_VALID_CHANNELS_CONFIG_PARAM_WIFI_BAND
+	= 2,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_GET_VALID_CHANNELS_CONFIG_PARAM_MAX_CHANNELS
+	= 3,
+
+	/* Attributes for input params used by
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_START sub command.
+	 */
+
+	/* Unsigned 32-bit value; channel frequency */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_CHANNEL = 4,
+	/* Unsigned 32-bit value; dwell time in ms. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_DWELL_TIME = 5,
+	/* Unsigned 8-bit value; 0: active; 1: passive; N/A for DFS */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_PASSIVE = 6,
+	/* Unsigned 8-bit value; channel class */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_CLASS = 7,
+
+	/* Unsigned 8-bit value; bucket index, 0 based */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_INDEX = 8,
+	/* Unsigned 8-bit value; band. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_BAND = 9,
+	/* Unsigned 32-bit value; desired period, in ms. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_PERIOD = 10,
+	/* Unsigned 8-bit value; report events semantics. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_REPORT_EVENTS = 11,
+	/* Unsigned 32-bit value. Followed by a nested array of
+	 * GSCAN_CHANNEL_SPEC_* attributes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_NUM_CHANNEL_SPECS = 12,
+
+	/* Array of QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_* attributes.
+	 * Array size: QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_NUM_CHANNEL_SPECS
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC = 13,
+
+	/* Unsigned 32-bit value; base timer period in ms. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_BASE_PERIOD = 14,
+	/* Unsigned 32-bit value; number of APs to store in each scan in the
+	 * BSSID/RSSI history buffer (keep the highest RSSI APs).
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_MAX_AP_PER_SCAN = 15,
+	/* Unsigned 8-bit value; in %, when scan buffer is this much full, wake
+	 * up AP.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_REPORT_THRESHOLD_PERCENT
+	= 16,
+
+	/* Unsigned 8-bit value; number of scan bucket specs; followed by a
+	 * nested array of_GSCAN_BUCKET_SPEC_* attributes and values. The size
+	 * of the array is determined by NUM_BUCKETS.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_NUM_BUCKETS = 17,
+
+	/* Array of QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_* attributes.
+	 * Array size: QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_NUM_BUCKETS
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC = 18,
+
+	/* Unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_GET_CACHED_SCAN_RESULTS_CONFIG_PARAM_FLUSH
+	= 19,
+	/* Unsigned 32-bit value; maximum number of results to be returned. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_GET_CACHED_SCAN_RESULTS_CONFIG_PARAM_MAX
+	= 20,
+
+	/* An array of 6 x unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_BSSID = 21,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_LOW = 22,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH = 23,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_CHANNEL = 24,
+
+	/* Number of hotlist APs as unsigned 32-bit value, followed by a nested
+	 * array of AP_THRESHOLD_PARAM attributes and values. The size of the
+	 * array is determined by NUM_AP.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_NUM_AP = 25,
+
+	/* Array of QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_* attributes.
+	 * Array size: QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_NUM_CHANNEL_SPECS
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM = 26,
+
+	/* Unsigned 32-bit value; number of samples for averaging RSSI. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_RSSI_SAMPLE_SIZE
+	= 27,
+	/* Unsigned 32-bit value; number of samples to confirm AP loss. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_LOST_AP_SAMPLE_SIZE
+	= 28,
+	/* Unsigned 32-bit value; number of APs breaching threshold. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_MIN_BREACHING = 29,
+	/* Unsigned 32-bit value; number of APs. Followed by an array of
+	 * AP_THRESHOLD_PARAM attributes. Size of the array is NUM_AP.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_NUM_AP = 30,
+	/* Unsigned 32-bit value; number of samples to confirm AP loss. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_LOST_AP_SAMPLE_SIZE
+	= 31,
+	/* Unsigned 32-bit value. If max_period is non zero or different than
+	 * period, then this bucket is an exponential backoff bucket.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_MAX_PERIOD = 32,
+	/* Unsigned 32-bit value. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_BASE = 33,
+	/* Unsigned 32-bit value. For exponential back off bucket, number of
+	 * scans to perform for a given period.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_STEP_COUNT = 34,
+	/* Unsigned 8-bit value; in number of scans, wake up AP after these
+	 * many scans.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_REPORT_THRESHOLD_NUM_SCANS
+	= 35,
+
+	/* Attributes for data used by
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SSID_HOTLIST sub command.
+	 */
+	/* Unsigned 3-2bit value; number of samples to confirm SSID loss. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_HOTLIST_PARAMS_LOST_SSID_SAMPLE_SIZE
+	= 36,
+	/* Number of hotlist SSIDs as unsigned 32-bit value, followed by a
+	 * nested array of SSID_THRESHOLD_PARAM_* attributes and values. The
+	 * size of the array is determined by NUM_SSID.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_HOTLIST_PARAMS_NUM_SSID = 37,
+	/* Array of QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_*
+	 * attributes.
+	 * Array size: QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_HOTLIST_PARAMS_NUM_SSID
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM = 38,
+
+	/* An array of 33 x unsigned 8-bit value; NULL terminated SSID */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_SSID = 39,
+	/* Unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_BAND = 40,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_LOW = 41,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_HIGH = 42,
+	/* Unsigned 32-bit value; a bitmask with additional gscan config flag.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CONFIGURATION_FLAGS = 43,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_MAX =
+	QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_gscan_results {
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_INVALID = 0,
+
+	/* Unsigned 32-bit value; must match the request Id supplied by
+	 * Wi-Fi HAL in the corresponding subcmd NL msg.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID = 1,
+
+	/* Unsigned 32-bit value; used to indicate the status response from
+	 * firmware/driver for the vendor sub-command.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_STATUS = 2,
+
+	/* GSCAN Valid Channels attributes */
+	/* Unsigned 32bit value; followed by a nested array of CHANNELS. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_CHANNELS = 3,
+	/* An array of NUM_CHANNELS x unsigned 32-bit value integers
+	 * representing channel numbers.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CHANNELS = 4,
+
+	/* GSCAN Capabilities attributes */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_SCAN_CACHE_SIZE = 5,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_SCAN_BUCKETS = 6,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_AP_CACHE_PER_SCAN
+	= 7,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_RSSI_SAMPLE_SIZE
+	= 8,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_SCAN_REPORTING_THRESHOLD
+	= 9,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_HOTLIST_BSSIDS = 10,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_SIGNIFICANT_WIFI_CHANGE_APS
+	= 11,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_BSSID_HISTORY_ENTRIES
+	= 12,
+
+	/* GSCAN Attributes used with
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE sub-command.
+	 */
+
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE = 13,
+
+	/* GSCAN attributes used with
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT sub-command.
+	 */
+
+	/* An array of NUM_RESULTS_AVAILABLE x
+	 * QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_*
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST = 14,
+
+	/* Unsigned 64-bit value; age of sample at the time of retrieval */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_TIME_STAMP = 15,
+	/* 33 x unsigned 8-bit value; NULL terminated SSID */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_SSID = 16,
+	/* An array of 6 x unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BSSID = 17,
+	/* Unsigned 32-bit value; channel frequency in MHz */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CHANNEL = 18,
+	/* Signed 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI = 19,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT = 20,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD = 21,
+	/* Unsigned 16-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BEACON_PERIOD = 22,
+	/* Unsigned 16-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY = 23,
+	/* Unsigned 32-bit value; size of the IE DATA blob */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH = 24,
+	/* An array of IE_LENGTH x unsigned 8-bit value; blob of all the
+	 * information elements found in the beacon; this data should be a
+	 * packed list of wifi_information_element objects, one after the
+	 * other.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA = 25,
+
+	/* Unsigned 8-bit value; set by driver to indicate more scan results are
+	 * available.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA = 26,
+
+	/* GSCAN attributes for
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT sub-command.
+	 */
+	/* Unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_TYPE = 27,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_STATUS = 28,
+
+	/* GSCAN attributes for
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND sub-command.
+	 */
+	/* Use attr QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE
+	 * to indicate number of results.
+	 * Also, use QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST to indicate the
+	 * list of results.
+	 */
+
+	/* GSCAN attributes for
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE sub-command.
+	 */
+	/* An array of 6 x unsigned 8-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_BSSID = 29,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_CHANNEL
+	= 30,
+	/* Unsigned 32-bit value. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_NUM_RSSI
+	= 31,
+	/* A nested array of signed 32-bit RSSI values. Size of the array is
+	 * determined by (NUM_RSSI of SIGNIFICANT_CHANGE_RESULT_NUM_RSSI.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_RSSI_LIST
+	= 32,
+
+	/* GSCAN attributes used with
+	 * QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CACHED_RESULTS sub-command.
+	 */
+	/* Use attr QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE
+	 * to indicate number of gscan cached results returned.
+	 * Also, use QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_LIST to indicate
+	 *  the list of gscan cached results.
+	 */
+
+	/* An array of NUM_RESULTS_AVAILABLE x
+	 * QCA_NL80211_VENDOR_ATTR_GSCAN_CACHED_RESULTS_*
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_LIST = 33,
+	/* Unsigned 32-bit value; a unique identifier for the scan unit. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_SCAN_ID = 34,
+	/* Unsigned 32-bit value; a bitmask w/additional information about scan.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_FLAGS = 35,
+	/* Use attr QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE
+	 * to indicate number of wifi scan results/bssids retrieved by the scan.
+	 * Also, use QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST to indicate the
+	 * list of wifi scan results returned for each cached result block.
+	 */
+
+	/* GSCAN attributes for
+	 * QCA_NL80211_VENDOR_SUBCMD_PNO_NETWORK_FOUND sub-command.
+	 */
+	/* Use QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE for
+	 * number of results.
+	 * Use QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST to indicate the nested
+	 * list of wifi scan results returned for each
+	 * wifi_passpoint_match_result block.
+	 * Array size: QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE.
+	 */
+
+	/* GSCAN attributes for
+	 * QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND sub-command.
+	 */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_NETWORK_FOUND_NUM_MATCHES
+	= 36,
+	/* A nested array of
+	 * QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_*
+	 * attributes. Array size =
+	 * *_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_NETWORK_FOUND_NUM_MATCHES.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_RESULT_LIST = 37,
+
+	/* Unsigned 32-bit value; network block id for the matched network */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ID = 38,
+	/* Use QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST to indicate the nested
+	 * list of wifi scan results returned for each
+	 * wifi_passpoint_match_result block.
+	 */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN = 39,
+	/* An array size of PASSPOINT_MATCH_ANQP_LEN of unsigned 8-bit values;
+	 * ANQP data in the information_element format.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP = 40,
+
+	/* Unsigned 32-bit value; a GSCAN Capabilities attribute. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_HOTLIST_SSIDS = 41,
+	/* Unsigned 32-bit value; a GSCAN Capabilities attribute. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_NUM_EPNO_NETS = 42,
+	/* Unsigned 32-bit value; a GSCAN Capabilities attribute. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_NUM_EPNO_NETS_BY_SSID
+	= 43,
+	/* Unsigned 32-bit value; a GSCAN Capabilities attribute. */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_NUM_WHITELISTED_SSID
+	= 44,
+
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED = 45,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX =
+	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_pno_config_params {
+	QCA_WLAN_VENDOR_ATTR_PNO_INVALID = 0,
+	/* Attributes for data used by
+	 * QCA_NL80211_VENDOR_SUBCMD_PNO_SET_PASSPOINT_LIST sub command.
+	 */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NUM = 1,
+	/* Array of nested QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_*
+	 * attributes. Array size =
+	 * QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NUM.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NETWORK_ARRAY = 2,
+
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ID = 3,
+	/* An array of 256 x unsigned 8-bit value; NULL terminated UTF-8 encoded
+	 * realm, 0 if unspecified.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_REALM = 4,
+	/* An array of 16 x unsigned 32-bit value; roaming consortium ids to
+	 * match, 0 if unspecified.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_CNSRTM_ID = 5,
+	/* An array of 6 x unsigned 8-bit value; MCC/MNC combination, 0s if
+	 * unspecified.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_PLMN = 6,
+
+	/* Attributes for data used by
+	 * QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST sub command.
+	 */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS = 7,
+	/* Array of nested
+	 * QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_*
+	 * attributes. Array size =
+	 * QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORKS_LIST = 8,
+	/* An array of 33 x unsigned 8-bit value; NULL terminated SSID */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_SSID = 9,
+	/* Signed 8-bit value; threshold for considering this SSID as found,
+	 * required granularity for this threshold is 4 dBm to 8 dBm.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_RSSI_THRESHOLD
+	= 10,
+	/* Unsigned 8-bit value; WIFI_PNO_FLAG_XXX */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_FLAGS = 11,
+	/* Unsigned 8-bit value; auth bit field for matching WPA IE */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_AUTH_BIT = 12,
+	/* Unsigned 8-bit to indicate ePNO type;
+	 * It takes values from qca_wlan_epno_type
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_TYPE = 13,
+
+	/* Nested attribute to send the channel list */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_CHANNEL_LIST = 14,
+
+	/* Unsigned 32-bit value; indicates the interval between PNO scan
+	 * cycles in msec.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_SCAN_INTERVAL = 15,
+	QCA_WLAN_VENDOR_ATTR_EPNO_MIN5GHZ_RSSI = 16,
+	QCA_WLAN_VENDOR_ATTR_EPNO_MIN24GHZ_RSSI = 17,
+	QCA_WLAN_VENDOR_ATTR_EPNO_INITIAL_SCORE_MAX = 18,
+	QCA_WLAN_VENDOR_ATTR_EPNO_CURRENT_CONNECTION_BONUS = 19,
+	QCA_WLAN_VENDOR_ATTR_EPNO_SAME_NETWORK_BONUS = 20,
+	QCA_WLAN_VENDOR_ATTR_EPNO_SECURE_BONUS = 21,
+	QCA_WLAN_VENDOR_ATTR_EPNO_BAND5GHZ_BONUS = 22,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_PNO_MAX =
+	QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

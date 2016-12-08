@@ -1328,6 +1328,21 @@ struct wpa_config {
 	 * wpa_supplicant.
 	 */
 	int ftm_initiator;
+
+	/**
+	 * gas_rand_addr_lifetime - Lifetime of random MAC address for ANQP in
+	 *	seconds
+	 */
+	unsigned int gas_rand_addr_lifetime;
+
+	/**
+	 * gas_rand_mac_addr - GAS MAC address policy
+	 *
+	 * 0 = use permanent MAC address
+	 * 1 = use random MAC address
+	 * 2 = like 1, but maintain OUI (with local admin bit set)
+	 */
+	int gas_rand_mac_addr;
 };
 
 

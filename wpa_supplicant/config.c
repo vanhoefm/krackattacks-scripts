@@ -3748,6 +3748,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 		config->ctrl_interface = os_strdup(ctrl_interface);
 	if (driver_param)
 		config->driver_param = os_strdup(driver_param);
+	config->gas_rand_addr_lifetime = DEFAULT_RAND_ADDR_LIFETIME;
 
 	return config;
 }
@@ -4456,6 +4457,8 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(gas_address3), 0 },
 	{ INT_RANGE(ftm_responder, 0, 1), 0 },
 	{ INT_RANGE(ftm_initiator, 0, 1), 0 },
+	{ INT(gas_rand_addr_lifetime), 0 },
+	{ INT_RANGE(gas_rand_mac_addr, 0, 2), 0 },
 };
 
 #undef FUNC

@@ -1413,6 +1413,13 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "fst_priority=%d\n", config->fst_priority);
 	if (config->fst_llt)
 		fprintf(f, "fst_llt=%d\n", config->fst_llt);
+
+	if (config->gas_rand_addr_lifetime != DEFAULT_RAND_ADDR_LIFETIME)
+		fprintf(f, "gas_rand_addr_lifetime=%u\n",
+			config->gas_rand_addr_lifetime);
+	if (config->gas_rand_mac_addr)
+		fprintf(f, "gas_rand_mac_addr=%d\n", config->gas_rand_mac_addr);
+
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

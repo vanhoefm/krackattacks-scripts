@@ -860,6 +860,8 @@ static void mlme_event(struct i802_bss *bss,
 		   MAC2STR(data + 4 + ETH_ALEN));
 	if (cmd != NL80211_CMD_FRAME_TX_STATUS && !(data[4] & 0x01) &&
 	    os_memcmp(bss->addr, data + 4, ETH_ALEN) != 0 &&
+	    (is_zero_ether_addr(bss->rand_addr) ||
+	     os_memcmp(bss->rand_addr, data + 4, ETH_ALEN) != 0) &&
 	    os_memcmp(bss->addr, data + 4 + ETH_ALEN, ETH_ALEN) != 0) {
 		wpa_printf(MSG_MSGDUMP, "nl80211: %s: Ignore MLME frame event "
 			   "for foreign address", bss->ifname);

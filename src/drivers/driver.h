@@ -1393,6 +1393,10 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_BEACON_RATE_HT		0x0000100000000000ULL
 /** Driver supports Beacon frame TX rate configuration (VHT rates) */
 #define WPA_DRIVER_FLAGS_BEACON_RATE_VHT	0x0000200000000000ULL
+/** Driver supports mgmt_tx with random TX address in non-connected state */
+#define WPA_DRIVER_FLAGS_MGMT_TX_RANDOM_TA	0x0000400000000000ULL
+/** Driver supports mgmt_tx with random TX addr in connected state */
+#define WPA_DRIVER_FLAGS_MGMT_TX_RANDOM_TA_CONNECTED	0x0000800000000000ULL
 	u64 flags;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \
@@ -2785,6 +2789,9 @@ struct wpa_driver_ops {
 	 * transmitted on that channel; alternatively the frame may be sent on
 	 * the current operational channel (if in associated state in station
 	 * mode or while operating as an AP.)
+	 *
+	 * If @src differs from the device MAC address, use of a random
+	 * transmitter address is requested for this message exchange.
 	 */
 	int (*send_action)(void *priv, unsigned int freq, unsigned int wait,
 			   const u8 *dst, const u8 *src, const u8 *bssid,

@@ -389,6 +389,12 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 	    ext_feature_isset(ext_features, len,
 			      NL80211_EXT_FEATURE_SET_SCAN_DWELL))
 		capa->rrm_flags |= WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT;
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA))
+		capa->flags |= WPA_DRIVER_FLAGS_MGMT_TX_RANDOM_TA;
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_MGMT_TX_RANDOM_TA_CONNECTED))
+		capa->flags |= WPA_DRIVER_FLAGS_MGMT_TX_RANDOM_TA_CONNECTED;
 }
 
 

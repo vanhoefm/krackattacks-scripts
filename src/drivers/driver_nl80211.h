@@ -78,6 +78,7 @@ struct i802_bss {
 
 	struct nl80211_wiphy_data *wiphy_data;
 	struct dl_list wiphy_list;
+	u8 rand_addr[ETH_ALEN];
 };
 
 struct wpa_driver_nl80211_data {

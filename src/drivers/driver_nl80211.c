@@ -6881,6 +6881,14 @@ static int wpa_driver_nl80211_send_action(struct i802_bss *bss,
 	os_memcpy(hdr->addr2, src, ETH_ALEN);
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
+	if (os_memcmp(bss->addr, src, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Use random TA " MACSTR,
+			   MAC2STR(src));
+		os_memcpy(bss->rand_addr, src, ETH_ALEN);
+	} else {
+		os_memset(bss->rand_addr, 0, ETH_ALEN);
+	}
+
 	if (is_ap_interface(drv->nlmode) &&
 	    (!(drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) ||
 	     (int) freq == bss->freq || drv->device_ap_sme ||

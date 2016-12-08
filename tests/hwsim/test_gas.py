@@ -17,7 +17,7 @@ import struct
 import hostapd
 from wpasupplicant import WpaSupplicant
 from tshark import run_tshark
-from utils import alloc_fail, wait_fail_trigger, skip_with_fips
+from utils import alloc_fail, wait_fail_trigger, skip_with_fips, HwsimSkip
 from hwsim import HWSimRadio
 
 def hs20_ap_params():
@@ -137,6 +137,51 @@ def test_gas_generic(dev, apdev):
 
     if "FAIL" not in dev[0].request("GAS_RESPONSE_GET ff"):
         raise Exception("Invalid GAS_RESPONSE_GET accepted")
+
+def test_gas_rand_ta(dev, apdev, params):
+    """Generic GAS query with random TA"""
+    flags = int(dev[0].get_driver_status_field('capa.flags'), 16)
+    if flags & 0x0000400000000000 == 0:
+        raise HwsimSkip("Driver does not support random GAS TA")
+
+    try:
+        _test_gas_rand_ta(dev, apdev, params['logdir'])
+    finally:
+        dev[0].request("SET gas_rand_mac_addr 0")
+
+def _test_gas_rand_ta(dev, apdev, logdir):
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    req = dev[0].request("SET gas_rand_mac_addr 1")
+    if "FAIL" in req:
+        raise Exception("Failed to set gas_rand_mac_addr")
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
+    if "FAIL" in req:
+        raise Exception("GAS query request rejected")
+    ev = dev[0].wait_event(["GAS-RESPONSE-INFO"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+    get_gas_response(dev[0], bssid, ev, extra_test=True)
+
+    out = run_tshark(os.path.join(logdir, "hwsim0.pcapng"),
+                     "wlan_mgt.fixed.category_code == 4 && (wlan_mgt.fixed.publicact == 0x0a || wlan_mgt.fixed.publicact == 0x0b)",
+                     display=["wlan.ta", "wlan.ra"])
+    res = out.splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected number of GAS frames")
+    req_ta = res[0].split('\t')[0]
+    resp_ra = res[1].split('\t')[1]
+    logger.info("Request TA: %s, Response RA: %s" % (req_ta, resp_ra))
+    if req_ta != resp_ra:
+        raise Exception("Request TA does not match response RA")
+    if req_ta == dev[0].own_addr():
+        raise Exception("Request TA was own permanent MAC address, not random")
 
 def test_gas_concurrent_scan(dev, apdev):
     """Generic GAS queries with concurrent scan operation"""

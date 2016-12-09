@@ -1833,6 +1833,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	p2p_clear_timeout(p2p);
 	p2p->ssid_set = 0;
 	peer->go_neg_req_sent = 0;
+	peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
 	peer->wps_method = WPS_NOT_READY;
 	peer->oob_pw_id = 0;
 	wpabuf_free(peer->go_neg_conf);

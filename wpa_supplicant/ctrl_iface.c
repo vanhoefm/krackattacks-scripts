@@ -7188,7 +7188,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Flush all wpa_supplicant state");
 
-	wpas_abort_ongoing_scan(wpa_s);
+	if (wpas_abort_ongoing_scan(wpa_s) == 0)
+		wpa_s->ignore_post_flush_scan_res = 1;
 
 	if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
 		/*

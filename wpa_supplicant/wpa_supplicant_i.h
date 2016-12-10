@@ -987,6 +987,7 @@ struct wpa_supplicant {
 	unsigned int wmm_ac_supported:1;
 	unsigned int ext_work_in_progress:1;
 	unsigned int own_disconnect_req:1;
+	unsigned int ignore_post_flush_scan_res:1;
 
 #define MAC_ADDR_RAND_SCAN       BIT(0)
 #define MAC_ADDR_RAND_SCHED_SCAN BIT(1)

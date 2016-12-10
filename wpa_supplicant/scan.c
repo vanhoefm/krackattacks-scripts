@@ -714,6 +714,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	size_t max_ssids;
 	int connect_without_scan = 0;
 
+	wpa_s->ignore_post_flush_scan_res = 0;
+
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip scan - interface disabled");
 		return;
@@ -2211,6 +2213,16 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		      sizeof(struct wpa_scan_res *), compar);
 	}
 	dump_scan_res(scan_res);
+
+	if (wpa_s->ignore_post_flush_scan_res) {
+		/* FLUSH command aborted an ongoing scan and these are the
+		 * results from the aborted scan. Do not process the results to
+		 * maintain flushed state. */
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Do not update BSS table based on pending post-FLUSH scan results");
+		wpa_s->ignore_post_flush_scan_res = 0;
+		return scan_res;
+	}
 
 	wpa_bss_update_start(wpa_s);
 	for (i = 0; i < scan_res->num; i++)

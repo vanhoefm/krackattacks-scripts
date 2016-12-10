@@ -1966,6 +1966,8 @@ int wpa_supplicant_fast_associate(struct wpa_supplicant *wpa_s)
 #else /* CONFIG_NO_SCAN_PROCESSING */
 	struct os_reltime now;
 
+	wpa_s->ignore_post_flush_scan_res = 0;
+
 	if (wpa_s->last_scan_res_used == 0)
 		return -1;
 

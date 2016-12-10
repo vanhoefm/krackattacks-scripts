@@ -358,3 +358,34 @@ def _test_wifi_display_parsing(dev):
 
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_wifi_display_disable(dev):
+    """Peer disabling Wi-Fi Display advertisement"""
+    try:
+        enable_wifi_display(dev[1])
+        dev[1].p2p_listen()
+        dev[0].p2p_find(social=True)
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+        if ev is None:
+            raise Exception("Peer not found")
+        if "wfd_dev_info" not in ev:
+            raise Exception("Missing wfd_dev_info")
+
+        dev[1].request("SET wifi_display 0")
+
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+        if ev is None:
+            raise Exception("Peer update not indicated")
+        if "new=0" not in ev:
+            raise Exception("Incorrect update event: " + ev)
+        if "wfd_dev_info" in ev:
+            raise Exception("Unexpected wfd_dev_info")
+
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=0.75)
+        if ev is not None:
+            raise Exception("Unexpected peer found event: " + ev)
+        dev[0].p2p_stop_find()
+        dev[1].p2p_stop_find()
+
+    finally:
+        dev[1].request("SET wifi_display 0")

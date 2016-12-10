@@ -1228,3 +1228,37 @@ def test_scan_chan_switch(dev, apdev):
     dev[0].dump_monitor()
     run_scan(dev[0], bssid, 2412)
     dev[0].dump_monitor()
+
+def test_scan_new_only(dev, apdev):
+    """Scan and only_new=1 multiple times"""
+    try:
+        _test_scan_new_only(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+def _test_scan_new_only(dev, apdev):
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].set("ignore_old_scan_res", "1")
+    # Get the BSS added to cfg80211 BSS list
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq=2412)
+    bss = dev[0].get_bss(bssid)
+    idx1 = bss['update_idx']
+    dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+    dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+    bss = dev[0].get_bss(bssid)
+    idx2 = bss['update_idx']
+    if int(idx2) <= int(idx1):
+        raise Exception("Scan result update_idx did not increase")
+    # Disable AP to ensure there are no new scan results after this.
+    hapd.disable()
+
+    # Try to scan multiple times to verify that old scan results do not get
+    # accepted as new.
+    for i in range(10):
+        dev[0].scan(freq=2412)
+        bss = dev[0].get_bss(bssid)
+        if bss:
+            idx = bss['update_idx']
+            if int(idx) > int(idx2):
+                raise Exception("Unexpected update_idx increase")

@@ -1262,3 +1262,22 @@ def _test_scan_new_only(dev, apdev):
             idx = bss['update_idx']
             if int(idx) > int(idx2):
                 raise Exception("Unexpected update_idx increase")
+
+def test_scan_flush(dev, apdev):
+    """Ongoing scan and FLUSH"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].dump_monitor()
+    dev[0].request("SCAN TYPE=ONLY freq=2412-2472 passive=1")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not start")
+    time.sleep(0.1)
+    dev[0].request("FLUSH")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS",
+                            "CTRL-EVENT-SCAN-FAILED",
+                            "CTRL-EVENT-BSS-ADDED"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+    if "CTRL-EVENT-BSS-ADDED" in ev:
+        raise Exception("Unexpected BSS entry addition after FLUSH")

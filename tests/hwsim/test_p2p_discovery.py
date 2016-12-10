@@ -702,3 +702,31 @@ def test_discovery_while_cli_p2p_dev(dev, apdev, params):
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         wpas.interface_add(iface)
         run_discovery_while_cli(wpas, dev, params)
+
+def test_discovery_device_name_change(dev):
+    """P2P device discovery and peer changing device name"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.set("device_name", "test-a")
+    wpas.p2p_listen()
+    dev[0].p2p_find(social=True)
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+    if ev is None:
+        raise Exception("Peer not found")
+    if "new=1" not in ev:
+        raise Exception("Incorrect new event: " + ev)
+    if "name='test-a'" not in ev:
+        raise Exception("Unexpected device name(1): " + ev)
+
+    # Verify that new P2P-DEVICE-FOUND event is indicated when the peer changes
+    # its device name.
+    wpas.set("device_name", "test-b")
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+    if ev is None:
+        raise Exception("Peer update not seen")
+    if "new=0" not in ev:
+        raise Exception("Incorrect update event: " + ev)
+    if "name='test-b'" not in ev:
+        raise Exception("Unexpected device name(2): " + ev)
+    wpas.p2p_stop_find()
+    dev[0].p2p_stop_find()

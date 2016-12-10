@@ -4442,6 +4442,14 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 #endif /* CONFIG_FST */
 
+	if (mask & WPA_BSS_MASK_UPDATE_IDX) {
+		ret = os_snprintf(pos, end - pos, "update_idx=%u\n",
+				  bss->last_update_idx);
+		if (os_snprintf_error(end - pos, ret))
+			return 0;
+		pos += ret;
+	}
+
 	if (mask & WPA_BSS_MASK_DELIM) {
 		ret = os_snprintf(pos, end - pos, "====\n");
 		if (os_snprintf_error(end - pos, ret))

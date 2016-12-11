@@ -387,6 +387,19 @@ def test_wpas_ap_acs(dev):
     if res is None or "ACS" not in res:
         raise HwsimSkip("ACS not supported")
 
+    # For now, make sure the last operating channel was on 2.4 GHz band to get
+    # sufficient survey data from mac80211_hwsim.
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "2")
     dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")

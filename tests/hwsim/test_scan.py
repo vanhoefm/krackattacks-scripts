@@ -817,6 +817,9 @@ def _test_scan_random_mac_connected(dev, apdev, params):
 @remote_compatible
 def test_scan_trigger_failure(dev, apdev):
     """Scan trigger to the driver failing"""
+    if dev[0].get_status_field('wpa_state') == "SCANNING":
+        raise Exception("wpa_state was already SCANNING")
+
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 

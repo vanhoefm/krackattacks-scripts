@@ -2530,7 +2530,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_SELECTED MACSTR,
 			MAC2STR(selected->bssid));
 		interworking_connect(wpa_s, selected, 0);
-	}
+	} else if (wpa_s->wpa_state == WPA_SCANNING)
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 }
 
 

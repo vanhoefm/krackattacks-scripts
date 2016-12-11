@@ -186,6 +186,9 @@ def test_ap_anqp_sharing(dev, apdev):
     dev[0].scan_for_bss(bssid2, freq="2412")
     interworking_select(dev[0], None, "home", freq="2412")
     dev[0].dump_monitor()
+    state = dev[0].get_status_field('wpa_state')
+    if state != "DISCONNECTED":
+        raise Exception("Unexpected wpa_state after INTERWORKING_SELECT: " + state)
 
     logger.debug("BSS entries:\n" + dev[0].request("BSS RANGE=ALL"))
     res1 = dev[0].get_bss(bssid)

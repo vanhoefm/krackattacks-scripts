@@ -1798,6 +1798,13 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+#ifdef CONFIG_SME
+	if (ssid->mode == WPAS_MODE_IBSS || ssid->mode == WPAS_MODE_MESH) {
+		/* Clear possibly set auth_alg, if any, from last attempt. */
+		wpa_s->sme.auth_alg = WPA_AUTH_ALG_OPEN;
+	}
+#endif /* CONFIG_SME */
+
 	wpas_abort_ongoing_scan(wpa_s);
 
 	cwork = os_zalloc(sizeof(*cwork));

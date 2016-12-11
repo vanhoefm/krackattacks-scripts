@@ -2223,9 +2223,6 @@ enum qca_wlan_vendor_tdls_trigger_mode {
 
 /**
  * enum qca_vendor_attr_sar_limits_selections - Source of SAR power limits
- * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE: Do not select any
- *	source of SAR power limits, thereby disabling the SAR power
- *	limit feature.
  * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0: Select SAR profile #0
  *	that is hard-coded in the Board Data File (BDF).
  * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF1: Select SAR profile #1
@@ -2236,6 +2233,9 @@ enum qca_wlan_vendor_tdls_trigger_mode {
  *	that is hard-coded in the Board Data File (BDF).
  * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF4: Select SAR profile #4
  *	that is hard-coded in the Board Data File (BDF).
+ * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE: Do not select any
+ *	source of SAR power limits, thereby disabling the SAR power
+ *	limit feature.
  * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_USER: Select the SAR power
  *	limits configured by %QCA_NL80211_VENDOR_SUBCMD_SET_SAR.
  *
@@ -2244,12 +2244,12 @@ enum qca_wlan_vendor_tdls_trigger_mode {
  * the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
  */
 enum qca_vendor_attr_sar_limits_selections {
-	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE = 0,
+	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0 = 0,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF1 = 1,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF2 = 2,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF3 = 3,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF4 = 4,
-	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF5 = 5,
+	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE = 5,
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_USER = 6,
 };
 

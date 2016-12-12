@@ -38,8 +38,10 @@ struct wpa_sm_ctx {
 	void (*cancel_auth_timeout)(void *ctx);
 	u8 * (*alloc_eapol)(void *ctx, u8 type, const void *data, u16 data_len,
 			    size_t *msg_len, void **data_pos);
-	int (*add_pmkid)(void *ctx, const u8 *bssid, const u8 *pmkid);
-	int (*remove_pmkid)(void *ctx, const u8 *bssid, const u8 *pmkid);
+	int (*add_pmkid)(void *ctx, void *network_ctx, const u8 *bssid,
+			 const u8 *pmkid);
+	int (*remove_pmkid)(void *ctx, void *network_ctx, const u8 *bssid,
+			    const u8 *pmkid);
 	void (*set_config_blob)(void *ctx, struct wpa_config_blob *blob);
 	const struct wpa_config_blob * (*get_config_blob)(void *ctx,
 							  const char *name);

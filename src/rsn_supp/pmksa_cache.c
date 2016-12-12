@@ -43,7 +43,8 @@ static void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 				   struct rsn_pmksa_cache_entry *entry,
 				   enum pmksa_free_reason reason)
 {
-	wpa_sm_remove_pmkid(pmksa->sm, entry->aa, entry->pmkid);
+	wpa_sm_remove_pmkid(pmksa->sm, entry->network_ctx, entry->aa,
+			    entry->pmkid);
 	pmksa->pmksa_count--;
 	pmksa->free_cb(entry, pmksa->ctx, reason);
 	_pmksa_cache_free_entry(entry);
@@ -245,7 +246,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	pmksa->pmksa_count++;
 	wpa_printf(MSG_DEBUG, "RSN: Added PMKSA cache entry for " MACSTR
 		   " network_ctx=%p", MAC2STR(entry->aa), network_ctx);
-	wpa_sm_add_pmkid(pmksa->sm, entry->aa, entry->pmkid);
+	wpa_sm_add_pmkid(pmksa->sm, network_ctx, entry->aa, entry->pmkid);
 
 	return entry;
 }

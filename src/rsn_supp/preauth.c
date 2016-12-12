@@ -342,7 +342,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 		/* Some drivers (e.g., NDIS) expect to get notified about the
 		 * PMKIDs again, so report the existing data now. */
 		if (p) {
-			wpa_sm_add_pmkid(sm, candidate->bssid, p->pmkid);
+			wpa_sm_add_pmkid(sm, NULL, candidate->bssid, p->pmkid);
 		}
 
 		dl_list_del(&candidate->list);

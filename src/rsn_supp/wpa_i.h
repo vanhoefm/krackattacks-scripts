@@ -219,18 +219,18 @@ static inline u8 * wpa_sm_alloc_eapol(struct wpa_sm *sm, u8 type,
 				    msg_len, data_pos);
 }
 
-static inline int wpa_sm_add_pmkid(struct wpa_sm *sm, const u8 *bssid,
-				   const u8 *pmkid)
+static inline int wpa_sm_add_pmkid(struct wpa_sm *sm, void *network_ctx,
+				   const u8 *bssid, const u8 *pmkid)
 {
 	WPA_ASSERT(sm->ctx->add_pmkid);
-	return sm->ctx->add_pmkid(sm->ctx->ctx, bssid, pmkid);
+	return sm->ctx->add_pmkid(sm->ctx->ctx, network_ctx, bssid, pmkid);
 }
 
-static inline int wpa_sm_remove_pmkid(struct wpa_sm *sm, const u8 *bssid,
-				      const u8 *pmkid)
+static inline int wpa_sm_remove_pmkid(struct wpa_sm *sm, void *network_ctx,
+				      const u8 *bssid, const u8 *pmkid)
 {
 	WPA_ASSERT(sm->ctx->remove_pmkid);
-	return sm->ctx->remove_pmkid(sm->ctx->ctx, bssid, pmkid);
+	return sm->ctx->remove_pmkid(sm->ctx->ctx, network_ctx, bssid, pmkid);
 }
 
 static inline int wpa_sm_mlme_setprotection(struct wpa_sm *sm, const u8 *addr,

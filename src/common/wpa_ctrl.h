@@ -288,6 +288,11 @@ extern "C" {
 /* BSS Transition Management Request received with MBO transition reason */
 #define MBO_TRANSITION_REASON "MBO-TRANSITION-REASON "
 
+/* PMKSA cache entry added; parameters: <BSSID> <network_id> */
+#define PMKSA_CACHE_ADDED "PMKSA-CACHE-ADDED "
+/* PMKSA cache entry removed; parameters: <BSSID> <network_id> */
+#define PMKSA_CACHE_REMOVED "PMKSA-CACHE-REMOVED "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

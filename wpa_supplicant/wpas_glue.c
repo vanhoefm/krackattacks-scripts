@@ -513,16 +513,44 @@ static int wpa_supplicant_mlme_setprotection(void *wpa_s, const u8 *addr,
 }
 
 
-static int wpa_supplicant_add_pmkid(void *wpa_s,
+static struct wpa_ssid * wpas_get_network_ctx(struct wpa_supplicant *wpa_s,
+					      void *network_ctx)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (network_ctx == ssid)
+			return ssid;
+	}
+
+	return NULL;
+}
+
+
+static int wpa_supplicant_add_pmkid(void *_wpa_s, void *network_ctx,
 				    const u8 *bssid, const u8 *pmkid)
 {
+	struct wpa_supplicant *wpa_s = _wpa_s;
+	struct wpa_ssid *ssid;
+
+	ssid = wpas_get_network_ctx(wpa_s, network_ctx);
+	if (ssid)
+		wpa_msg(wpa_s, MSG_INFO, PMKSA_CACHE_ADDED MACSTR " %d",
+			MAC2STR(bssid), ssid->id);
 	return wpa_drv_add_pmkid(wpa_s, bssid, pmkid);
 }
 
 
-static int wpa_supplicant_remove_pmkid(void *wpa_s,
+static int wpa_supplicant_remove_pmkid(void *_wpa_s, void *network_ctx,
 				       const u8 *bssid, const u8 *pmkid)
 {
+	struct wpa_supplicant *wpa_s = _wpa_s;
+	struct wpa_ssid *ssid;
+
+	ssid = wpas_get_network_ctx(wpa_s, network_ctx);
+	if (ssid)
+		wpa_msg(wpa_s, MSG_INFO, PMKSA_CACHE_REMOVED MACSTR " %d",
+			MAC2STR(bssid), ssid->id);
 	return wpa_drv_remove_pmkid(wpa_s, bssid, pmkid);
 }
 

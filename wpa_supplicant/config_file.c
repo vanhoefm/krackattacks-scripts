@@ -136,6 +136,9 @@ static int wpa_config_validate_network(struct wpa_ssid *ssid, int line)
 		wpa_config_update_psk(ssid);
 	}
 
+	if (ssid->disabled == 2)
+		ssid->p2p_persistent_group = 1;
+
 	if ((ssid->group_cipher & WPA_CIPHER_CCMP) &&
 	    !(ssid->pairwise_cipher & WPA_CIPHER_CCMP) &&
 	    !(ssid->pairwise_cipher & WPA_CIPHER_NONE)) {

@@ -921,3 +921,59 @@ def test_pmksa_cache_ctrl_events(dev, apdev):
         raise Exception("BSSID mismatch: " + ev)
     if int(items[2]) != id:
         raise Exception("network_id mismatch: " + ev)
+
+def test_pmksa_cache_ctrl_ext(dev, apdev):
+    """PMKSA cache control interface for external management"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412")
+
+    res1 = dev[0].request("PMKSA_GET %d" % id)
+    logger.info("PMKSA_GET: " + res1)
+    if bssid not in res1:
+        raise Exception("PMKSA cache entry missing")
+
+    hostapd.add_ap(apdev[1], params)
+    bssid2 = apdev[1]['bssid']
+    dev[0].scan_for_bss(bssid2, freq=2412, force_scan=True)
+    dev[0].request("ROAM " + bssid2)
+    dev[0].wait_connected()
+
+    res2 = dev[0].request("PMKSA_GET %d" % id)
+    logger.info("PMKSA_GET: " + res2)
+    if bssid not in res2:
+        raise Exception("PMKSA cache entry 1 missing")
+    if bssid2 not in res2:
+        raise Exception("PMKSA cache entry 2 missing")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].request("PMKSA_FLUSH")
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412", only_add_network=True)
+    res3 = dev[0].request("PMKSA_GET %d" % id)
+    if res3 != '':
+        raise Exception("Unexpected PMKSA cache entry remains: " + res3)
+    res4 = dev[0].request("PMKSA_GET %d" % (id + 1234))
+    if not res4.startswith('FAIL'):
+        raise Exception("Unexpected PMKSA cache entry for unknown network: " + res4)
+
+    for entry in res2.splitlines():
+        if "OK" not in dev[0].request("PMKSA_ADD %d %s" % (id, entry)):
+            raise Exception("Failed to add PMKSA entry")
+
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange after external PMKSA cache restore")

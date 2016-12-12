@@ -888,3 +888,36 @@ def test_pmksa_cache_ctrl(dev, apdev):
         raise Exception("PMKID mismatch in PMKSA cache entries after reconnect")
     if pmksa_sta2['pmkid'] == pmksa_sta['pmkid']:
         raise Exception("PMKID did not change after reconnect")
+
+def test_pmksa_cache_ctrl_events(dev, apdev):
+    """PMKSA cache control interface events"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412", wait_connect=False)
+
+    ev = dev[0].wait_event(["PMKSA-CACHE-ADDED"], timeout=15)
+    if ev is None:
+        raise Exception("No PMKSA-CACHE-ADDED event")
+    dev[0].wait_connected()
+    items = ev.split(' ')
+    if items[1] != bssid:
+        raise Exception("BSSID mismatch: " + ev)
+    if int(items[2]) != id:
+        raise Exception("network_id mismatch: " + ev)
+
+    dev[0].request("PMKSA_FLUSH")
+    ev = dev[0].wait_event(["PMKSA-CACHE-REMOVED"], timeout=15)
+    if ev is None:
+        raise Exception("No PMKSA-CACHE-REMOVED event")
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    items = ev.split(' ')
+    if items[1] != bssid:
+        raise Exception("BSSID mismatch: " + ev)
+    if int(items[2]) != id:
+        raise Exception("network_id mismatch: " + ev)

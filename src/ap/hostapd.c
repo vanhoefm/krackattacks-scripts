@@ -357,8 +357,10 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s))", __func__, hapd,
 		   hapd->conf->iface);
 	if (hapd->iface->interfaces &&
-	    hapd->iface->interfaces->ctrl_iface_deinit)
+	    hapd->iface->interfaces->ctrl_iface_deinit) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPA_EVENT_TERMINATING);
 		hapd->iface->interfaces->ctrl_iface_deinit(hapd);
+	}
 	hostapd_free_hapd_data(hapd);
 }
 

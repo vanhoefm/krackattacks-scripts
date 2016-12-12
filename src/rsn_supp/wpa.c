@@ -3028,6 +3028,20 @@ int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 }
 
 
+struct rsn_pmksa_cache_entry * wpa_sm_pmksa_cache_head(struct wpa_sm *sm)
+{
+	return pmksa_cache_head(sm->pmksa);
+}
+
+
+struct rsn_pmksa_cache_entry *
+wpa_sm_pmksa_cache_add_entry(struct wpa_sm *sm,
+			     struct rsn_pmksa_cache_entry * entry)
+{
+	return pmksa_cache_add_entry(sm->pmksa, entry);
+}
+
+
 void wpa_sm_drop_sa(struct wpa_sm *sm)
 {
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PMK and PTK");

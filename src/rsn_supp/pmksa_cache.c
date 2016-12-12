@@ -129,7 +129,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *pmkid, const u8 *kck, size_t kck_len,
 		const u8 *aa, const u8 *spa, void *network_ctx, int akmp)
 {
-	struct rsn_pmksa_cache_entry *entry, *pos, *prev;
+	struct rsn_pmksa_cache_entry *entry;
 	struct os_reltime now;
 
 	if (pmk_len > PMK_LEN_MAX)
@@ -160,14 +160,25 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	os_memcpy(entry->aa, aa, ETH_ALEN);
 	entry->network_ctx = network_ctx;
 
+	return pmksa_cache_add_entry(pmksa, entry);
+}
+
+
+struct rsn_pmksa_cache_entry *
+pmksa_cache_add_entry(struct rsn_pmksa_cache *pmksa,
+		      struct rsn_pmksa_cache_entry *entry)
+{
+	struct rsn_pmksa_cache_entry *pos, *prev;
+
 	/* Replace an old entry for the same Authenticator (if found) with the
 	 * new entry */
 	pos = pmksa->pmksa;
 	prev = NULL;
 	while (pos) {
-		if (os_memcmp(aa, pos->aa, ETH_ALEN) == 0) {
-			if (pos->pmk_len == pmk_len &&
-			    os_memcmp_const(pos->pmk, pmk, pmk_len) == 0 &&
+		if (os_memcmp(entry->aa, pos->aa, ETH_ALEN) == 0) {
+			if (pos->pmk_len == entry->pmk_len &&
+			    os_memcmp_const(pos->pmk, entry->pmk,
+					    entry->pmk_len) == 0 &&
 			    os_memcmp_const(pos->pmkid, entry->pmkid,
 					    PMKID_LEN) == 0) {
 				wpa_printf(MSG_DEBUG, "WPA: reusing previous "
@@ -193,8 +204,8 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 				   "the current AP and any PMKSA cache entry "
 				   "that was based on the old PMK");
 			if (!pos->opportunistic)
-				pmksa_cache_flush(pmksa, network_ctx, pos->pmk,
-						  pos->pmk_len);
+				pmksa_cache_flush(pmksa, entry->network_ctx,
+						  pos->pmk, pos->pmk_len);
 			pmksa_cache_free_entry(pmksa, pos, PMKSA_REPLACE);
 			break;
 		}
@@ -245,8 +256,9 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	}
 	pmksa->pmksa_count++;
 	wpa_printf(MSG_DEBUG, "RSN: Added PMKSA cache entry for " MACSTR
-		   " network_ctx=%p", MAC2STR(entry->aa), network_ctx);
-	wpa_sm_add_pmkid(pmksa->sm, network_ctx, entry->aa, entry->pmkid);
+		   " network_ctx=%p", MAC2STR(entry->aa), entry->network_ctx);
+	wpa_sm_add_pmkid(pmksa->sm, entry->network_ctx, entry->aa,
+			 entry->pmkid);
 
 	return entry;
 }
@@ -511,6 +523,12 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 		entry = entry->next;
 	}
 	return pos - buf;
+}
+
+
+struct rsn_pmksa_cache_entry * pmksa_cache_head(struct rsn_pmksa_cache *pmksa)
+{
+	return pmksa->pmksa;
 }
 
 

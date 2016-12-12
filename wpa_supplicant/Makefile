@@ -303,6 +303,10 @@ ifdef CONFIG_PEERKEY
 CFLAGS += -DCONFIG_PEERKEY
 endif
 
+ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+CFLAGS += -DCONFIG_PMKSA_CACHE_EXTERNAL
+endif
+
 ifndef CONFIG_NO_WPA
 OBJS += ../src/rsn_supp/wpa.o
 OBJS += ../src/rsn_supp/preauth.o

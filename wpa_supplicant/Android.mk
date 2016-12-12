@@ -270,6 +270,10 @@ ifdef CONFIG_PEERKEY
 L_CFLAGS += -DCONFIG_PEERKEY
 endif
 
+ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+L_CFLAGS += -DCONFIG_PMKSA_CACHE_EXTERNAL
+endif
+
 ifndef CONFIG_NO_WPA
 OBJS += src/rsn_supp/wpa.c
 OBJS += src/rsn_supp/preauth.c

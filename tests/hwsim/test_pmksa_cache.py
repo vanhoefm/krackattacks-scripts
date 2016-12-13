@@ -12,7 +12,7 @@ import time
 import hostapd
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail
+from utils import alloc_fail, HwsimSkip
 from test_ap_eap import eap_connect
 
 def test_pmksa_cache_on_roam_back(dev, apdev):
@@ -935,6 +935,8 @@ def test_pmksa_cache_ctrl_ext(dev, apdev):
 
     res1 = dev[0].request("PMKSA_GET %d" % id)
     logger.info("PMKSA_GET: " + res1)
+    if "UNKNOWN COMMAND" in res1:
+        raise HwsimSkip("PMKSA_GET not supported in the build")
     if bssid not in res1:
         raise Exception("PMKSA cache entry missing")
 

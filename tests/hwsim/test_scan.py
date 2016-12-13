@@ -620,7 +620,7 @@ def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
 
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
     if ev is None:
-        print "Scan did not complete"
+        raise Exception("Scan did not complete")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.2)
     if ev is not None:
         raise Exception("Unexpected scan started")

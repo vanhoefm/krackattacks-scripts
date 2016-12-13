@@ -13,7 +13,7 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger, parse_ie
 from tshark import run_tshark
 from test_ap_csa import switch_channel, wait_channel_switch, csa_supported
 
@@ -1284,3 +1284,35 @@ def test_scan_flush(dev, apdev):
         raise Exception("Scan did not complete")
     if "CTRL-EVENT-BSS-ADDED" in ev:
         raise Exception("Unexpected BSS entry addition after FLUSH")
+
+def test_scan_ies(dev, apdev):
+    """Scan and both Beacon and Probe Response frame IEs"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "beacon_int": "20" })
+    bssid = hapd.own_addr()
+    dev[0].dump_monitor()
+
+    for i in range(10):
+        dev[0].request("SCAN TYPE=ONLY freq=2412 passive=1")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=15)
+        if ev is None:
+            raise Exception("Scan did not complete")
+        if dev[0].get_bss(bssid):
+            break
+
+    for i in range(10):
+        dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+        bss = dev[0].get_bss(bssid)
+        if 'beacon_ie' in bss:
+            if bss['ie'] != bss['beacon_ie']:
+                break
+
+    if not bss or 'beacon_ie' not in bss:
+        raise Exception("beacon_ie not present")
+    ie = parse_ie(bss['ie'])
+    logger.info("ie: " + str(ie.keys()))
+    beacon_ie = parse_ie(bss['beacon_ie'])
+    logger.info("beacon_ie: " + str(ie.keys()))
+    if bss['ie'] == bss['beacon_ie']:
+        raise Exception("Both ie and beacon_ie show same data")

@@ -785,6 +785,8 @@ static int hostapd_is_usable_chan(struct hostapd_iface *iface,
 			   chan->flag & HOSTAPD_CHAN_RADAR ? " RADAR" : "");
 	}
 
+	wpa_printf(MSG_INFO, "Channel %d (%s) not allowed for AP mode",
+		   channel, primary ? "primary" : "secondary");
 	return 0;
 }
 

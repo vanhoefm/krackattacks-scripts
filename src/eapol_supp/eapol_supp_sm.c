@@ -1999,6 +1999,7 @@ static void eapol_sm_notify_status(void *ctx, const char *status,
 
 
 #ifdef CONFIG_EAP_PROXY
+
 static void eapol_sm_eap_proxy_cb(void *ctx)
 {
 	struct eapol_sm *sm = ctx;
@@ -2006,6 +2007,18 @@ static void eapol_sm_eap_proxy_cb(void *ctx)
 	if (sm->ctx->eap_proxy_cb)
 		sm->ctx->eap_proxy_cb(sm->ctx->ctx);
 }
+
+
+static void
+eapol_sm_eap_proxy_notify_sim_status(void *ctx,
+				     enum eap_proxy_sim_state sim_state)
+{
+	struct eapol_sm *sm = ctx;
+
+	if (sm->ctx->eap_proxy_notify_sim_status)
+		sm->ctx->eap_proxy_notify_sim_status(sm->ctx->ctx, sim_state);
+}
+
 #endif /* CONFIG_EAP_PROXY */
 
 
@@ -2034,6 +2047,7 @@ static const struct eapol_callbacks eapol_cb =
 	eapol_sm_notify_status,
 #ifdef CONFIG_EAP_PROXY
 	eapol_sm_eap_proxy_cb,
+	eapol_sm_eap_proxy_notify_sim_status,
 #endif /* CONFIG_EAP_PROXY */
 	eapol_sm_set_anon_id
 };

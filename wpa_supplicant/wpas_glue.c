@@ -893,6 +893,7 @@ static void wpa_supplicant_eap_param_needed(void *ctx,
 
 
 #ifdef CONFIG_EAP_PROXY
+
 static void wpa_supplicant_eap_proxy_cb(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -908,6 +909,25 @@ static void wpa_supplicant_eap_proxy_cb(void *ctx)
 		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI not available");
 	}
 }
+
+
+static void
+wpa_supplicant_eap_proxy_notify_sim_status(void *ctx,
+					   enum eap_proxy_sim_state sim_state)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpa_printf(MSG_DEBUG, "eap_proxy: SIM card status %u", sim_state);
+	switch (sim_state) {
+	case SIM_STATE_ERROR:
+		wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "eap_proxy: SIM card status unknown");
+		break;
+	}
+}
+
 #endif /* CONFIG_EAP_PROXY */
 
 
@@ -1018,6 +1038,8 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
 #ifdef CONFIG_EAP_PROXY
 	ctx->eap_proxy_cb = wpa_supplicant_eap_proxy_cb;
+	ctx->eap_proxy_notify_sim_status =
+		wpa_supplicant_eap_proxy_notify_sim_status;
 #endif /* CONFIG_EAP_PROXY */
 	ctx->port_cb = wpa_supplicant_port_cb;
 	ctx->cb = wpa_supplicant_eapol_cb;

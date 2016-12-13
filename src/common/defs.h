@@ -376,4 +376,8 @@ enum beacon_rate_type {
 	BEACON_RATE_VHT
 };
 
+enum eap_proxy_sim_state {
+	SIM_STATE_ERROR,
+};
+
 #endif /* DEFS_H */

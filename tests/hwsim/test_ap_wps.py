@@ -2189,6 +2189,7 @@ def test_ap_wps_per_station_psk_failure(dev, apdev):
     except:
         pass
 
+    hapd = None
     try:
         with open(pskfile, "w") as f:
             f.write("# WPA PSKs\n")
@@ -2222,6 +2223,12 @@ def test_ap_wps_per_station_psk_failure(dev, apdev):
         if len(psks) > 0:
             raise Exception("PSK recorded unexpectedly")
     finally:
+        if hapd:
+            for i in range(3):
+                dev[i].request("DISCONNECT")
+            hapd.disable()
+            for i in range(3):
+                dev[i].flush_scan_cache()
         os.remove(pskfile)
 
 def test_ap_wps_pin_request_file(dev, apdev):

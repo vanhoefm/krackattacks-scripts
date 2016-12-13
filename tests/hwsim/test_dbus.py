@@ -4333,6 +4333,11 @@ def test_dbus_p2p_go_neg_init(dev, apdev):
             if len(changed_properties["Groups"]) > 0:
                 self.peer_group_added = True
             if len(changed_properties["Groups"]) == 0:
+                if not self.peer_group_added:
+                    # This is likely a leftover event from an earlier test case,
+                    # ignore it to allow this test case to go through its steps.
+                    logger.info("Ignore propertiesChanged indicating group removal before group has been added")
+                    return
                 self.peer_group_removed = True
                 self.loop.quit()
 

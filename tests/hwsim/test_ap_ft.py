@@ -177,9 +177,11 @@ def test_ap_ft_local_key_gen(dev, apdev):
 
     params = ft_params1a(ssid=ssid, passphrase=passphrase)
     params['ft_psk_generate_local'] = "1";
+    del params['pmk_r1_push']
     hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
     params = ft_params2a(ssid=ssid, passphrase=passphrase)
     params['ft_psk_generate_local'] = "1";
+    del params['pmk_r1_push']
     hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase)

@@ -16,6 +16,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from tshark import run_tshark
+from test_ap_ht import set_world_reg
 
 def check_mesh_support(dev, secure=False):
     if "MESH" not in dev.get_capability("modes"):
@@ -770,6 +771,52 @@ def _test_wpas_mesh_open_5ghz(dev, apdev):
 
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_wpas_mesh_open_5ghz_coex(dev, apdev):
+    """Mesh network on 5 GHz band and 20/40 coex change"""
+    try:
+        _test_wpas_mesh_open_5ghz_coex(dev, apdev)
+    finally:
+        set_world_reg(apdev0=apdev[0], dev0=dev[0])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_wpas_mesh_open_5ghz_coex(dev, apdev):
+    check_mesh_support(dev[0])
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+
+    # Start a 20 MHz BSS on channel 40 that would be the secondary channel of
+    # HT40+ mesh on channel 36.
+    params = { "ssid": "test-ht40",
+               "hw_mode": "a",
+               "channel": "40",
+               "country_code": "US" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    for i in range(2):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        dev[i].scan_for_bss(bssid, freq=5200)
+        add_open_mesh_network(dev[i], freq="5180")
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    freq = dev[0].get_status_field("freq")
+    if freq != "5200":
+        raise Exception("Unexpected STATUS freq=" + freq)
+    sig = dev[0].request("SIGNAL_POLL").splitlines()
+    if "FREQUENCY=5200" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL output: " + str(sig))
+
+    hapd.disable()
 
 def test_wpas_mesh_open_vht_80p80(dev, apdev):
     """wpa_supplicant open MESH network on VHT 80+80 MHz channel"""

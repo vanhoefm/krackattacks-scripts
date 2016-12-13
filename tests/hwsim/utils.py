@@ -4,7 +4,9 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import os
+import struct
 import time
 import remotehost
 
@@ -102,3 +104,15 @@ def get_phy(ap, ifname=None):
             phy = "phy" + words[1]
             break
     return phy
+
+def parse_ie(buf):
+    ret = {}
+    data = binascii.unhexlify(buf)
+    while len(data) >= 2:
+        ie,elen = struct.unpack('BB', data[0:2])
+        data = data[2:]
+        if elen > len(data):
+            break
+        ret[ie] = data[0:elen]
+        data = data[elen:]
+    return ret

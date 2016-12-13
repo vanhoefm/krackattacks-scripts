@@ -11,6 +11,7 @@ import time
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import parse_ie
 
 def test_ap_track_sta(dev, apdev):
     """Dualband AP tracking unconnected stations"""
@@ -110,8 +111,15 @@ def _test_ap_track_sta_no_probe_resp(dev, apdev):
     dev[0].scan(freq=2437, type="ONLY")
     dev[0].scan(freq=2437, type="ONLY")
 
-    if dev[0].get_bss(bssid):
-        raise Exception("2.4 GHz AP found unexpectedly")
+    bss = dev[0].get_bss(bssid)
+    if bss:
+        ie = parse_ie(bss['ie'])
+        # Check whether this is from a Beacon frame (TIM element included) since
+        # it is possible that a Beacon frame was received during the active
+        # scan. This test should fail only if a Probe Response frame was
+        # received.
+        if 5 not in ie:
+            raise Exception("2.4 GHz AP found unexpectedly")
 
 def test_ap_track_sta_no_auth(dev, apdev):
     """Dualband AP rejecting authentication from dualband STA on 2.4 GHz"""

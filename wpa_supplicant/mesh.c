@@ -146,7 +146,8 @@ static void wpas_mesh_copy_groups(struct hostapd_data *bss,
 
 
 static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
-				    struct wpa_ssid *ssid)
+				    struct wpa_ssid *ssid,
+				    struct hostapd_freq_params *freq)
 {
 	struct hostapd_iface *ifmsh;
 	struct hostapd_data *bss;
@@ -156,6 +157,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	static int default_groups[] = { 19, 20, 21, 25, 26, -1 };
 	size_t len;
 	int rate_len;
+	int frequency;
 
 	if (!wpa_s->conf->user_mpm) {
 		/* not much for us to do here */
@@ -185,7 +187,13 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	bss->drv_priv = wpa_s->drv_priv;
 	bss->iface = ifmsh;
 	bss->mesh_sta_free_cb = mesh_mpm_free_sta;
-	wpa_s->assoc_freq = ssid->frequency;
+	frequency = ssid->frequency;
+	if (frequency != freq->freq &&
+	    frequency == freq->freq + freq->sec_channel_offset * 20) {
+		wpa_printf(MSG_DEBUG, "mesh: pri/sec channels switched");
+		frequency = freq->freq;
+	}
+	wpa_s->assoc_freq = frequency;
 	wpa_s->current_ssid = ssid;
 
 	/* setup an AP config for auth processing */
@@ -211,10 +219,10 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	ifmsh->mconf = mconf;
 
 	/* need conf->hw_mode for supported rates. */
-	conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency, &conf->channel);
+	conf->hw_mode = ieee80211_freq_to_chan(frequency, &conf->channel);
 	if (conf->hw_mode == NUM_HOSTAPD_MODES) {
 		wpa_printf(MSG_ERROR, "Unsupported mesh mode frequency: %d MHz",
-			   ssid->frequency);
+			   frequency);
 		goto out_free;
 	}
 	if (ssid->ht40)
@@ -225,13 +233,13 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 		case VHT_CHANWIDTH_80MHZ:
 		case VHT_CHANWIDTH_80P80MHZ:
 			ieee80211_freq_to_chan(
-				ssid->frequency,
+				frequency,
 				&conf->vht_oper_centr_freq_seg0_idx);
 			conf->vht_oper_centr_freq_seg0_idx += ssid->ht40 * 2;
 			break;
 		case VHT_CHANWIDTH_160MHZ:
 			ieee80211_freq_to_chan(
-				ssid->frequency,
+				frequency,
 				&conf->vht_oper_centr_freq_seg0_idx);
 			conf->vht_oper_centr_freq_seg0_idx += ssid->ht40 * 2;
 			conf->vht_oper_centr_freq_seg0_idx += 40 / 5;
@@ -422,7 +430,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	}
 	params.conf.peer_link_timeout = wpa_s->conf->mesh_max_inactivity;
 
-	if (wpa_supplicant_mesh_init(wpa_s, ssid)) {
+	if (wpa_supplicant_mesh_init(wpa_s, ssid, &params.freq)) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to init mesh");
 		wpa_drv_leave_mesh(wpa_s);
 		ret = -1;

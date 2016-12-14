@@ -54,7 +54,7 @@ def reset_devs(dev, apdev):
 
     wpas = None
     try:
-        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5', monitor=False)
         ifaces = wpas.global_request("INTERFACES").splitlines()
         for iface in ifaces:
             if iface.startswith("wlan"):

@@ -19,7 +19,8 @@ wpas_ctrl = '/var/run/wpa_supplicant'
 
 class WpaSupplicant:
     def __init__(self, ifname=None, global_iface=None, hostname=None,
-                 port=9877, global_port=9878):
+                 port=9877, global_port=9878, monitor=True):
+        self.monitor = monitor
         self.hostname = hostname
         self.group_ifname = None
         self.gctrl_mon = None
@@ -37,15 +38,19 @@ class WpaSupplicant:
 
         self.global_iface = global_iface
         if global_iface:
+            self.global_mon = None
             if hostname != None:
                 self.global_ctrl = wpaspy.Ctrl(hostname, global_port)
-                self.global_mon = wpaspy.Ctrl(hostname, global_port)
+                if self.monitor:
+                    self.global_mon = wpaspy.Ctrl(hostname, global_port)
                 self.global_dbg = hostname + "/" + str(global_port) + "/"
             else:
                 self.global_ctrl = wpaspy.Ctrl(global_iface)
-                self.global_mon = wpaspy.Ctrl(global_iface)
+                if self.monitor:
+                    self.global_mon = wpaspy.Ctrl(global_iface)
                 self.global_dbg = ""
-            self.global_mon.attach()
+            if self.monitor:
+                self.global_mon.attach()
         else:
             self.global_mon = None
 
@@ -81,14 +86,17 @@ class WpaSupplicant:
         self.ifname = ifname
         if hostname != None:
             self.ctrl = wpaspy.Ctrl(hostname, port)
-            self.mon = wpaspy.Ctrl(hostname, port)
+            if self.monitor:
+                self.mon = wpaspy.Ctrl(hostname, port)
             self.host = remotehost.Host(hostname, ifname)
             self.dbg = hostname + "/" + ifname
         else:
             self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
-            self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+            if self.monitor:
+                self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
             self.dbg = ifname
-        self.mon.attach()
+        if self.monitor:
+            self.mon.attach()
 
     def remove_ifname(self):
         if self.ifname:

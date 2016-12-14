@@ -682,7 +682,9 @@ class WpaSupplicant:
             return None
         raise Exception("P2P_CONNECT (auth) failed")
 
-    def p2p_go_neg_auth_result(self, timeout=1, expect_failure=False):
+    def p2p_go_neg_auth_result(self, timeout=None, expect_failure=False):
+        if timeout is None:
+            timeout = 1 if expect_failure else 5
         go_neg_res = None
         ev = self.wait_global_event(["P2P-GO-NEG-SUCCESS",
                                      "P2P-GO-NEG-FAILURE"], timeout)

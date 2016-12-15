@@ -1641,6 +1641,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 	ieee802_1x_cp_signal_newsak(kay->cp);
 	ieee802_1x_cp_sm_step(kay->cp);
 
+	kay->rcvd_keys++;
 	participant->to_use_sak = TRUE;
 
 	return 0;
@@ -3519,3 +3520,51 @@ ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
 
 	return 0;
 }
+
+
+#ifdef CONFIG_CTRL_IFACE
+/**
+ * ieee802_1x_kay_get_status - Get IEEE 802.1X KaY status details
+ * @sm: Pointer to KaY allocated with ieee802_1x_kay_init()
+ * @buf: Buffer for status information
+ * @buflen: Maximum buffer length
+ * @verbose: Whether to include verbose status information
+ * Returns: Number of bytes written to buf.
+ *
+ * Query KAY status information. This function fills in a text area with current
+ * status information. If the buffer (buf) is not large enough, status
+ * information will be truncated to fit the buffer.
+ */
+int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
+			      size_t buflen)
+{
+	int len;
+
+	if (!kay)
+		return 0;
+
+	len = os_snprintf(buf, buflen,
+			  "PAE KaY status=%s\n"
+			  "Authenticated=%s\n"
+			  "Secured=%s\n"
+			  "Failed=%s\n"
+			  "Actor Priority=%u\n"
+			  "Key Server Priority=%u\n"
+			  "Is Key Server=%s\n"
+			  "Number of Keys Distributed=%u\n"
+			  "Number of Keys Received=%u\n",
+			  kay->active ? "Active" : "Not-Active",
+			  kay->authenticated ? "Yes" : "No",
+			  kay->secured ? "Yes" : "No",
+			  kay->failed ? "Yes" : "No",
+			  kay->actor_priority,
+			  kay->key_server_priority,
+			  kay->is_key_server ? "Yes" : "No",
+			  kay->dist_kn - 1,
+			  kay->rcvd_keys);
+	if (os_snprintf_error(buflen, len))
+		return 0;
+
+	return len;
+}
+#endif /* CONFIG_CTRL_IFACE */

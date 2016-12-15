@@ -2050,6 +2050,12 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 			pos += res;
 	}
 
+#ifdef CONFIG_MACSEC
+	res = ieee802_1x_kay_get_status(wpa_s->kay, pos, end - pos);
+	if (res > 0)
+		pos += res;
+#endif /* CONFIG_MACSEC */
+
 	sess_id = eapol_sm_get_session_id(wpa_s->eapol, &sess_id_len);
 	if (sess_id) {
 		char *start = pos;

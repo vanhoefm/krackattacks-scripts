@@ -208,6 +208,7 @@ struct ieee802_1x_kay {
 	int mka_algindex;  /* MKA alg table index */
 
 	u32 dist_kn;
+	u32 rcvd_keys;
 	u8 dist_an;
 	time_t dist_time;
 
@@ -267,5 +268,7 @@ int ieee802_1x_kay_enable_tx_sas(struct ieee802_1x_kay *kay,
 int ieee802_1x_kay_enable_rx_sas(struct ieee802_1x_kay *kay,
 				 struct ieee802_1x_mka_ki *lki);
 int ieee802_1x_kay_enable_new_info(struct ieee802_1x_kay *kay);
+int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
+			      size_t buflen);
 
 #endif /* IEEE802_1X_KAY_H */

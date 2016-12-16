@@ -4185,7 +4185,7 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	size_t i;
 	int ret;
 	char *pos, *end;
-	const u8 *ie, *ie2, *osen_ie;
+	const u8 *ie, *ie2, *osen_ie, *mesh;
 
 	pos = buf;
 	end = buf + buflen;
@@ -4294,13 +4294,16 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			return 0;
 		pos += ret;
 
+		mesh = wpa_bss_get_ie(bss, WLAN_EID_MESH_ID);
+
 		ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 		if (ie)
 			pos = wpa_supplicant_ie_txt(pos, end, "WPA", ie,
 						    2 + ie[1]);
 		ie2 = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		if (ie2)
-			pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2,
+			pos = wpa_supplicant_ie_txt(pos, end,
+						    mesh ? "RSN" : "WPA2", ie2,
 						    2 + ie2[1]);
 		osen_ie = wpa_bss_get_vendor_ie(bss, OSEN_IE_VENDOR_TYPE);
 		if (osen_ie)
@@ -4314,6 +4317,14 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 				return 0;
 			pos += ret;
 		}
+
+		if (mesh) {
+			ret = os_snprintf(pos, end - pos, "[MESH]");
+			if (os_snprintf_error(end - pos, ret))
+				return 0;
+			pos += ret;
+		}
+
 		if (bss_is_dmg(bss)) {
 			const char *s;
 			ret = os_snprintf(pos, end - pos, "[DMG]");

@@ -32,6 +32,7 @@ def test_fils_sk_full_auth(dev, apdev):
     params['auth_server_port'] = "18128"
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
     params['wpa_group_rekey'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
@@ -75,6 +76,7 @@ def test_fils_sk_sha384_full_auth(dev, apdev):
     params['auth_server_port'] = "18128"
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
     params['wpa_group_rekey'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
@@ -117,6 +119,7 @@ def test_fils_sk_pmksa_caching(dev, apdev):
     params['wpa_key_mgmt'] = "FILS-SHA256"
     params['auth_server_port'] = "18128"
     params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].scan_for_bss(bssid, freq=2412)
@@ -170,6 +173,7 @@ def test_fils_sk_erp(dev, apdev):
     params['wpa_key_mgmt'] = "FILS-SHA256"
     params['auth_server_port'] = "18128"
     params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
     params['disable_pmksa_caching'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 

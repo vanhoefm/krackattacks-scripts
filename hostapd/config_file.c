@@ -2017,6 +2017,29 @@ static int parse_wpabuf_hex(int line, const char *name, struct wpabuf **buf,
 }
 
 
+#ifdef CONFIG_FILS
+static int parse_fils_realm(struct hostapd_bss_config *bss, const char *val)
+{
+	struct fils_realm *realm;
+	size_t len;
+
+	len = os_strlen(val);
+	realm = os_zalloc(sizeof(*realm) + len + 1);
+	if (!realm)
+		return -1;
+
+	os_memcpy(realm->realm, val, len);
+	if (fils_domain_name_hash(val, realm->hash) < 0) {
+		os_free(realm);
+		return -1;
+	}
+	dl_list_add_tail(&bss->fils_realms, &realm->list);
+
+	return 0;
+}
+#endif /* CONFIG_FILS */
+
+
 static int hostapd_config_fill(struct hostapd_config *conf,
 			       struct hostapd_bss_config *bss,
 			       const char *buf, char *pos, int line)
@@ -3577,6 +3600,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 		bss->fils_cache_id_set = 1;
+	} else if (os_strcmp(buf, "fils_realm") == 0) {
+		if (parse_fils_realm(bss, pos) < 0)
+			return 1;
 #endif /* CONFIG_FILS */
 	} else if (os_strcmp(buf, "multicast_to_unicast") == 0) {
 		bss->multicast_to_unicast = atoi(pos);

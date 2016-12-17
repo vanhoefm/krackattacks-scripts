@@ -95,6 +95,10 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->radius_das_time_window = 300;
 
 	bss->sae_anti_clogging_threshold = 5;
+
+#ifdef CONFIG_FILS
+	dl_list_init(&bss->fils_realms);
+#endif /* CONFIG_FILS */
 }
 
 
@@ -420,6 +424,20 @@ static void hostapd_config_free_anqp_elem(struct hostapd_bss_config *conf)
 }
 
 
+static void hostapd_config_free_fils_realms(struct hostapd_bss_config *conf)
+{
+#ifdef CONFIG_FILS
+	struct fils_realm *realm;
+
+	while ((realm = dl_list_first(&conf->fils_realms, struct fils_realm,
+				      list))) {
+		dl_list_del(&realm->list);
+		os_free(realm);
+	}
+#endif /* CONFIG_FILS */
+}
+
+
 void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 {
 	struct hostapd_eap_user *user, *prev_user;
@@ -581,6 +599,8 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 
 	os_free(conf->no_probe_resp_if_seen_on);
 	os_free(conf->no_auth_if_seen_on);
+
+	hostapd_config_free_fils_realms(conf);
 
 	os_free(conf);
 }

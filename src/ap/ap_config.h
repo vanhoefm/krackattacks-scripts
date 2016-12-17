@@ -224,6 +224,12 @@ struct anqp_element {
 	struct wpabuf *payload;
 };
 
+struct fils_realm {
+	struct dl_list list;
+	u8 hash[2];
+	char realm[];
+};
+
 
 /**
  * struct hostapd_bss_config - Per-BSS configuration
@@ -600,6 +606,7 @@ struct hostapd_bss_config {
 #ifdef CONFIG_FILS
 	u8 fils_cache_id[FILS_CACHE_ID_LEN];
 	int fils_cache_id_set;
+	struct dl_list fils_realms; /* list of struct fils_realm */
 #endif /* CONFIG_FILS */
 
 	int multicast_to_unicast;

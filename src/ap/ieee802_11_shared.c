@@ -605,18 +605,23 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 #ifdef CONFIG_FILS
 	u8 *len;
 	u16 fils_info = 0;
+	size_t realms;
+	struct fils_realm *realm;
 
 	if (!(hapd->conf->wpa & WPA_PROTO_RSN) ||
 	    !wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt))
 		return pos;
 
+	realms = dl_list_len(&hapd->conf->fils_realms);
+	if (realms > 7)
+		realms = 7; /* 3 bit count field limits this to max 7 */
+
 	*pos++ = WLAN_EID_FILS_INDICATION;
 	len = pos++;
 	/* TODO: B0..B2: Number of Public Key Identifiers */
 	if (hapd->conf->erp_domain) {
-		/* TODO: Support for setting multiple domain identifiers */
 		/* B3..B5: Number of Realm Identifiers */
-		fils_info |= BIT(3);
+		fils_info |= realms << 3;
 	}
 	/* TODO: B6: FILS IP Address Configuration */
 	if (hapd->conf->fils_cache_id_set)
@@ -638,8 +643,13 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 		os_memcpy(pos, hapd->conf->hessid, ETH_ALEN);
 		pos += ETH_ALEN;
 	}
-	if (hapd->conf->erp_domain) {
-		fils_domain_name_hash(hapd->conf->erp_domain, pos);
+
+	dl_list_for_each(realm, &hapd->conf->fils_realms, struct fils_realm,
+			 list) {
+		if (realms == 0)
+			break;
+		realms--;
+		os_memcpy(pos, realm->hash, 2);
 		pos += 2;
 	}
 	*len = pos - len - 1;

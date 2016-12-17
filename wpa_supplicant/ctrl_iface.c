@@ -4381,6 +4381,8 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		pos = anqp_add_hex(pos, end, "anqp_3gpp", anqp->anqp_3gpp);
 		pos = anqp_add_hex(pos, end, "anqp_domain_name",
 				   anqp->domain_name);
+		pos = anqp_add_hex(pos, end, "anqp_fils_realm_info",
+				   anqp->fils_realm_info);
 #ifdef CONFIG_HS20
 		pos = anqp_add_hex(pos, end, "hs20_capability_list",
 				   anqp->hs20_capability_list);

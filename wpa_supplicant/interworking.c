@@ -2893,6 +2893,18 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			anqp->domain_name = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
+#ifdef CONFIG_FILS
+	case ANQP_FILS_REALM_INFO:
+		wpa_msg(wpa_s, MSG_INFO, RX_ANQP MACSTR
+			" FILS Realm Information", MAC2STR(sa));
+		wpa_hexdump_ascii(MSG_MSGDUMP, "ANQP: FILS Realm Information",
+			pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->fils_realm_info);
+			anqp->fils_realm_info = wpabuf_alloc_copy(pos, slen);
+		}
+		break;
+#endif /* CONFIG_FILS */
 	case ANQP_VENDOR_SPECIFIC:
 		if (slen < 3)
 			return;

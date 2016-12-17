@@ -40,6 +40,7 @@ struct wpa_bss_anqp {
 	struct wpabuf *nai_realm;
 	struct wpabuf *anqp_3gpp;
 	struct wpabuf *domain_name;
+	struct wpabuf *fils_realm_info;
 	struct dl_list anqp_elems; /* list of struct wpa_bss_anqp_elem */
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20

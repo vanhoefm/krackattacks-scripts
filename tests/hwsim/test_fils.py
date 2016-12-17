@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import hashlib
 import logging
 logger = logging.getLogger()
 import time
@@ -178,6 +180,94 @@ def test_fils_sk_erp(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_fils_sk_multiple_realms(dev, apdev):
+    """FILS SK and multiple realms"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    fils_realms = [ 'r1.example.org', 'r2.EXAMPLE.org', 'r3.example.org',
+                    'r4.example.org', 'r5.example.org', 'r6.example.org',
+                    'r7.example.org', 'r8.example.org',
+                    'example.com',
+                    'r9.example.org', 'r10.example.org', 'r11.example.org',
+                    'r12.example.org', 'r13.example.org', 'r14.example.org',
+                    'r15.example.org', 'r16.example.org' ]
+    params['fils_realm'] = fils_realms
+    params['fils_cache_id'] = "1234"
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 275"):
+        raise Exception("ANQP_GET command failed")
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+    bss = dev[0].get_bss(bssid)
+
+    if 'fils_info' not in bss:
+        raise Exception("FILS Indication element information missing")
+    if bss['fils_info'] != '02b8':
+        raise Exception("Unexpected FILS Information: " + bss['fils_info'])
+
+    if 'fils_cache_id' not in bss:
+        raise Exception("FILS Cache Identifier missing")
+    if bss['fils_cache_id'] != '1234':
+        raise Exception("Unexpected FILS Cache Identifier: " + bss['fils_cache_id'])
+
+    if 'fils_realms' not in bss:
+        raise Exception("FILS Realm Identifiers missing")
+    expected = ''
+    count = 0
+    for realm in fils_realms:
+        hash = hashlib.sha256(realm.lower()).digest()
+        expected += binascii.hexlify(hash[0:2])
+        count += 1
+        if count == 7:
+            break
+    if bss['fils_realms'] != expected:
+        raise Exception("Unexpected FILS Realm Identifiers: " + bss['fils_realms'])
+
+    if 'anqp_fils_realm_info' not in bss:
+        raise Exception("FILS Realm Information ANQP-element not seen")
+    info = bss['anqp_fils_realm_info'];
+    expected = ''
+    for realm in fils_realms:
+        hash = hashlib.sha256(realm.lower()).digest()
+        expected += binascii.hexlify(hash[0:2])
+    if info != expected:
+        raise Exception("Unexpected FILS Realm Info ANQP-element: " + info)
+
     dev[0].request("ERP_FLUSH")
     id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
                         eap="PSK", identity="psk.user@example.com",

@@ -639,10 +639,7 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 		pos += ETH_ALEN;
 	}
 	if (hapd->conf->erp_domain) {
-		u16 hash;
-
-		hash = fils_domain_name_hash(hapd->conf->erp_domain);
-		WPA_PUT_LE16(pos, hash);
+		fils_domain_name_hash(hapd->conf->erp_domain, pos);
 		pos += 2;
 	}
 	*len = pos - len - 1;

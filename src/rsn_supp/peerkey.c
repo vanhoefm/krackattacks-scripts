@@ -715,7 +715,8 @@ static void wpa_supplicant_process_stk_1_of_4(struct wpa_sm *sm,
 
 	if (wpa_supplicant_send_2_of_4(sm, peerkey->addr, key, ver,
 				       peerkey->pnonce, kde_buf, kde_buf_len,
-				       stk)) {
+				       stk) < 0) {
+		wpa_printf(MSG_INFO, "RSN: Failed to send STK message 2/4");
 		os_free(kde_buf);
 		return;
 	}
@@ -854,8 +855,10 @@ static void wpa_supplicant_process_stk_3_of_4(struct wpa_sm *sm,
 
 	if (wpa_supplicant_send_4_of_4(sm, peerkey->addr, key, ver,
 				       WPA_GET_BE16(key->key_info),
-				       &peerkey->stk))
+				       &peerkey->stk) < 0) {
+		wpa_printf(MSG_INFO, "RSN: Failed to send STK message 4/4");
 		return;
+	}
 
 	_key = peerkey->stk.tk;
 	if (peerkey->cipher == WPA_CIPHER_TKIP) {

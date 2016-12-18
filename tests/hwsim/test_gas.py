@@ -1125,7 +1125,7 @@ def test_gas_anqp_extra_elements(dev, apdev):
                               "266:" + civic_loc,
                               "262:1122334455",
                               "267:" + public_id,
-                              "275:01020304",
+                              "279:01020304",
                               "60000:01",
                               "299:0102" ] }
     hapd = hostapd.add_ap(apdev[0], params)
@@ -1174,10 +1174,10 @@ def test_gas_anqp_extra_elements(dev, apdev):
     if bss['anqp[267]'] != public_id:
         raise Exception("Unexpected AP Location Public Identifier ANQP-element value: " + bss['anqp[267]'])
 
-    if 'anqp[275]' not in bss:
-        raise Exception("ANQP-element Info ID 275 not seen")
-    if bss['anqp[275]'] != "01020304":
-        raise Exception("Unexpected AP ANQP-element Info ID 299 value: " + bss['anqp[299]'])
+    if 'anqp[279]' not in bss:
+        raise Exception("ANQP-element Info ID 279 not seen")
+    if bss['anqp[279]'] != "01020304":
+        raise Exception("Unexpected AP ANQP-element Info ID 279 value: " + bss['anqp[279]'])
 
     if 'anqp[299]' not in bss:
         raise Exception("ANQP-element Info ID 299 not seen")
@@ -1554,5 +1554,7 @@ def test_gas_anqp_capab_list(dev, apdev):
         val = val[4:]
     logger.info("InfoIDs: " + str(ids))
     for i in range(257, 300):
+        if i in [ 273, 274 ]:
+            continue
         if i not in ids:
             raise Exception("Unexpected Capability List ANQP-element value (missing %d): %s" % (i, bss['anqp_capability_list']))

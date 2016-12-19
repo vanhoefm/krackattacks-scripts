@@ -2634,6 +2634,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	taxonomy_sta_info_assoc_req(hapd, sta, pos, left);
 #endif /* CONFIG_TAXONOMY */
 
+	sta->pending_wds_enable = 0;
+
  fail:
 	/*
 	 * In case of a successful response, add the station to the driver.
@@ -3248,6 +3250,14 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 
 	hostapd_set_sta_flags(hapd, sta);
 
+	if (!(sta->flags & WLAN_STA_WDS) && sta->pending_wds_enable) {
+		wpa_printf(MSG_DEBUG, "Enable 4-address WDS mode for STA "
+			   MACSTR " based on pending request",
+			   MAC2STR(sta->addr));
+		sta->pending_wds_enable = 0;
+		sta->flags |= WLAN_STA_WDS;
+	}
+
 	if (sta->flags & WLAN_STA_WDS) {
 		int ret;
 		char ifname_wds[IFNAMSIZ + 1];
@@ -3512,9 +3522,21 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 	struct sta_info *sta;
 
 	sta = ap_get_sta(hapd, src);
-	if (sta && (sta->flags & WLAN_STA_ASSOC)) {
+	if (sta &&
+	    ((sta->flags & WLAN_STA_ASSOC) ||
+	     ((sta->flags & WLAN_STA_ASSOC_REQ_OK) && wds))) {
 		if (!hapd->conf->wds_sta)
 			return;
+
+		if ((sta->flags & (WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK)) ==
+		    WLAN_STA_ASSOC_REQ_OK) {
+			wpa_printf(MSG_DEBUG,
+				   "Postpone 4-address WDS mode enabling for STA "
+				   MACSTR " since TX status for AssocResp is not yet known",
+				   MAC2STR(sta->addr));
+			sta->pending_wds_enable = 1;
+			return;
+		}
 
 		if (wds && !(sta->flags & WLAN_STA_WDS)) {
 			int ret;

@@ -4650,6 +4650,8 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 				bss = dl_list_entry(next, struct wpa_bss,
 						    list_id);
 		}
+	} else if (os_strncmp(cmd, "CURRENT", 7) == 0) {
+		bss = wpa_s->current_bss;
 #ifdef CONFIG_P2P
 	} else if (os_strncmp(cmd, "p2p_dev_addr=", 13) == 0) {
 		if (hwaddr_aton(cmd + 13, bssid) == 0)

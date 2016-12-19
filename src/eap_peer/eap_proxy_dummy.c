@@ -12,7 +12,7 @@
 #include "eap_proxy.h"
 
 struct eap_proxy_sm *
-eap_proxy_init(void *eapol_ctx, struct eapol_callbacks *eapol_cb,
+eap_proxy_init(void *eapol_ctx, const struct eapol_callbacks *eapol_cb,
 	       void *msg_ctx)
 {
 	return NULL;

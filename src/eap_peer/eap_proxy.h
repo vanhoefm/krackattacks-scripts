@@ -20,7 +20,7 @@ enum eap_proxy_status {
 };
 
 struct eap_proxy_sm *
-eap_proxy_init(void *eapol_ctx, struct eapol_callbacks *eapol_cb,
+eap_proxy_init(void *eapol_ctx, const struct eapol_callbacks *eapol_cb,
 	       void *msg_ctx);
 
 void eap_proxy_deinit(struct eap_proxy_sm *eap_proxy);

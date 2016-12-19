@@ -226,6 +226,7 @@ def test_ap_wds_sta_wep(dev, apdev):
     ssid = "test-wds-wep"
     params = {}
     params['ssid'] = ssid
+    params["ieee80211n"] = "0"
     params['wep_key0'] = '"hello"'
     params['wds_sta'] = "1"
     params['wds_bridge'] = "wds-br0"

@@ -2876,6 +2876,47 @@ def test_dbus_p2p_discovery(dev, apdev):
     p2p.ExtendedListen(dbus.Dictionary({}))
     dev[0].global_request("P2P_EXT_LISTEN")
 
+def test_dbus_p2p_discovery_freq(dev, apdev):
+    """D-Bus P2P discovery on a specific non-social channel"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
+
+    addr1 = dev[1].p2p_dev_addr()
+    autogo(dev[1], freq=2422)
+
+    class TestDbusP2p(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.found = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_test)
+            gobject.timeout_add(5000, self.timeout)
+            self.add_signal(self.deviceFound, WPAS_DBUS_IFACE_P2PDEVICE,
+                            "DeviceFound")
+            self.loop.run()
+            return self
+
+        def deviceFound(self, path):
+            logger.debug("deviceFound: path=%s" % path)
+            self.found = True
+            self.loop.quit()
+
+        def run_test(self, *args):
+            logger.debug("run_test")
+            p2p.Find(dbus.Dictionary({'freq': 2422}))
+            return False
+
+        def success(self):
+            return self.found
+
+    with TestDbusP2p(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
+    dev[1].remove_group()
+    p2p.StopFind()
+
 def test_dbus_p2p_service_discovery(dev, apdev):
     """D-Bus P2P service discovery"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

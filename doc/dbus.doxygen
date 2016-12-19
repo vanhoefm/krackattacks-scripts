@@ -1297,6 +1297,7 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
 	<tr><td>Timeout</td><td>i</td><td>Timeout for operating in seconds</td><td>no</td></tr>
 	<tr><td>RequestedDeviceTypes</td><td>aay</td><td>WPS Device Types to search for</td><td>no</td></tr>
 	<tr><td>DiscoveryType</td><td>s</td><td>"start_with_full" (default, if not specified), "social", "progressive"</td><td>no</td></tr>
+	<tr><td>freq</td><td>i</td><td>Initial scan channel (frequency in MHz) for the start_with_full case to limit the initial scan to the specified channel</td><td>no</td></tr>
 	</table>
       </dd>
     </dl>

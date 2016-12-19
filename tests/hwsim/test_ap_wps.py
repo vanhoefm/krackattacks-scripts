@@ -9662,3 +9662,119 @@ def test_ap_wps_pbc_2ap(dev, apdev):
     hapd.request("DISABLE")
     hapd2.request("DISABLE")
     wpas.flush_scan_cache()
+
+def test_ap_wps_er_enrollee_to_conf_ap(dev, apdev):
+    """WPS ER enrolling a new device to a configured AP"""
+    try:
+        _test_ap_wps_er_enrollee_to_conf_ap(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_enrollee_to_conf_ap(dev, apdev):
+    ssid = "wps-er-enrollee-to-conf-ap"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"}
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    id = dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+    dev[0].dump_monitor()
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    pin = dev[2].wps_read_pin()
+    addr2 = dev[2].own_addr()
+    dev[0].dump_monitor()
+    dev[2].scan_for_bss(bssid, freq=2412)
+    dev[2].dump_monitor()
+    dev[2].request("WPS_PIN %s %s" % (bssid, pin))
+
+    for i in range(3):
+        ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=10)
+        if ev is None:
+            raise Exception("Enrollee not seen")
+        if addr2 in ev:
+            break
+    if addr2 not in ev:
+        raise Exception("Unexpected Enrollee MAC address")
+    dev[0].dump_monitor()
+
+    dev[0].request("WPS_ER_SET_CONFIG " + ap_uuid + " " + str(id))
+    dev[0].request("WPS_ER_PIN " + addr2 + " " + pin + " " + addr2)
+    dev[2].wait_connected(timeout=30)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
+def test_ap_wps_er_enrollee_to_conf_ap2(dev, apdev):
+    """WPS ER enrolling a new device to a configured AP (2)"""
+    try:
+        _test_ap_wps_er_enrollee_to_conf_ap2(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_enrollee_to_conf_ap2(dev, apdev):
+    ssid = "wps-er-enrollee-to-conf-ap"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "Wireless AP", "manufacturer": "Company",
+               "model_name": "WAP", "model_number": "123",
+               "serial_number": "12345", "device_type": "6-0050F204-1",
+               "os_version": "01020300",
+               "config_methods": "label push_button",
+               "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"}
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    id = dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+    dev[0].dump_monitor()
+
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    dev[0].request("WPS_ER_LEARN " + ap_uuid + " " + ap_pin)
+    ev = dev[0].wait_event(["WPS-ER-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("AP learn timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not in settings")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL after AP learn timed out")
+    time.sleep(0.1)
+
+    pin = dev[1].wps_read_pin()
+    addr1 = dev[1].own_addr()
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_PIN any " + pin)
+    time.sleep(0.1)
+    dev[1].scan_for_bss(bssid, freq=2412)
+    dev[1].request("WPS_PIN any %s" % pin)
+    ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=30)
+    if ev is None:
+        raise Exception("Enrollee did not report success")
+    dev[1].wait_connected(timeout=15)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")

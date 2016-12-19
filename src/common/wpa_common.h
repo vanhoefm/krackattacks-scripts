@@ -437,7 +437,7 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len, struct wpa_ft_ies *parse);
 
 int wpa_cipher_key_len(int cipher);
 int wpa_cipher_rsc_len(int cipher);
-int wpa_cipher_to_alg(int cipher);
+enum wpa_alg wpa_cipher_to_alg(int cipher);
 int wpa_cipher_valid_group(int cipher);
 int wpa_cipher_valid_pairwise(int cipher);
 int wpa_cipher_valid_mgmt_group(int cipher);

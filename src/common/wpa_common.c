@@ -1620,7 +1620,7 @@ int wpa_cipher_rsc_len(int cipher)
 }
 
 
-int wpa_cipher_to_alg(int cipher)
+enum wpa_alg wpa_cipher_to_alg(int cipher)
 {
 	switch (cipher) {
 	case WPA_CIPHER_CCMP_256:

@@ -1789,6 +1789,11 @@ static u16 check_wmm(struct hostapd_data *hapd, struct sta_info *sta,
 static u16 copy_supp_rates(struct hostapd_data *hapd, struct sta_info *sta,
 			   struct ieee802_11_elems *elems)
 {
+	/* Supported rates not used in IEEE 802.11ad/DMG */
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211AD)
+		return WLAN_STATUS_SUCCESS;
+
 	if (!elems->supp_rates) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,

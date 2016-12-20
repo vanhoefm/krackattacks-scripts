@@ -7,6 +7,7 @@
 from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
+import os
 import time
 import uuid
 
@@ -527,3 +528,59 @@ def test_p2p_service_discovery_peer_not_listening2(dev):
     p2p_state = get_p2p_state(dev[1])
     if p2p_state != "IDLE":
         raise Exception("Unexpected p2p_state after P2P_FIND timeout: " + p2p_state)
+
+def test_p2p_service_discovery_restart(dev):
+    """P2P service discovery restarted immediately"""
+    try:
+        _test_p2p_service_discovery_restart(dev)
+    finally:
+        dev[1].global_request("P2P_SET disc_int 1 3 -1")
+
+def _test_p2p_service_discovery_restart(dev):
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    # Use shorter listen interval to keep P2P_FIND loop shorter.
+    dev[1].global_request("P2P_SET disc_int 1 1 10")
+
+    add_bonjour_services(dev[0])
+    #add_upnp_services(dev[0])
+    dev[0].p2p_listen()
+
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    if not dev[1].discover_peer(addr0, social=True, force_find=True):
+        raise Exception("Peer " + addr0 + " not found")
+
+    ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
+    if ev is None:
+        raise Exception("Service discovery timed out")
+
+    # The following P2P_LISTEN operation used to get delayed due to the last
+    # Action frame TX operation in SD Response using wait_time of 200 ms. It is
+    # somewhat difficult to test for this automatically, but the debug log can
+    # be verified to see that the remain-on-channel event for operation arrives
+    # immediately instead of getting delayed 200 ms. We can use a maximum
+    # acceptable time for the SD Response, but need to keep the limit somewhat
+    # high to avoid making this fail under heavy load. Still, it is apparently
+    # possible for this to take about the same amount of time with fixed
+    # implementation every now and then, so run this multiple time and pass the
+    # test if any attempt is fast enough.
+
+    for i in range(10):
+        dev[0].p2p_stop_find()
+        time.sleep(0.01)
+        dev[0].p2p_listen()
+
+        dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+        start = os.times()[4]
+        ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
+        if ev is None:
+            raise Exception("Service discovery timed out")
+        end = os.times()[4]
+        logger.info("Second SD Response in " + str(end - start) + " seconds")
+        if end - start < 0.8:
+            break
+
+    if end - start > 0.8:
+        raise Exception("Unexpectedly slow second SD Response: " + str(end - start) + " seconds")

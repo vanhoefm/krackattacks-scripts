@@ -426,6 +426,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 {
 	struct wpabuf *resp;
 	size_t max_len;
+	unsigned int wait_time = 200;
 
 	/*
 	 * In the 60 GHz, we have a smaller maximum frame length for management
@@ -460,6 +461,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 					     1, p2p->srv_update_indic, NULL);
 	} else {
 		p2p_dbg(p2p, "SD response fits in initial response");
+		wait_time = 0; /* no more SD frames in the sequence */
 		resp = p2p_build_sd_response(dialog_token,
 					     WLAN_STATUS_SUCCESS, 0,
 					     p2p->srv_update_indic, resp_tlvs);
@@ -470,7 +472,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	if (p2p_send_action(p2p, freq, dst, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
-			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0)
+			    wpabuf_head(resp), wpabuf_len(resp), wait_time) < 0)
 		p2p_dbg(p2p, "Failed to send Action frame");
 
 	wpabuf_free(resp);

@@ -454,3 +454,62 @@ dbus_bool_t wpas_dbus_setter_config_methods(
 
 	return TRUE;
 }
+
+
+/**
+ * wpas_dbus_getter_wps_device_name - Get current WPS device name
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "DeviceName" property.
+ */
+dbus_bool_t wpas_dbus_getter_wps_device_name(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *methods = wpa_s->conf->device_name;
+
+	if (!methods)
+		methods = "";
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&methods, error);
+}
+
+
+/**
+ * wpas_dbus_setter_wps_device_name - Set current WPS device name
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter for "DeviceName" property.
+ */
+dbus_bool_t wpas_dbus_setter_wps_device_name(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *methods, *devname;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_STRING,
+					      &methods))
+		return FALSE;
+
+	if (os_strlen(methods) > WPS_DEV_NAME_MAX_LEN)
+		return FALSE;
+
+	devname = os_strdup(methods);
+	if (!devname)
+		return FALSE;
+
+	os_free(wpa_s->conf->device_name);
+	wpa_s->conf->device_name = devname;
+	wpa_s->conf->changed_parameters |= CFG_CHANGED_DEVICE_NAME;
+	wpa_supplicant_update_config(wpa_s);
+
+	return TRUE;
+}

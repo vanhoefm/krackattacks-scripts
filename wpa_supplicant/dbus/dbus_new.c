@@ -3234,6 +3234,12 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  wpas_dbus_setter_config_methods,
 	  NULL
 	},
+	{
+	  "DeviceName", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_device_name,
+	  wpas_dbus_setter_wps_device_name,
+	  NULL
+	},
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ "P2PDeviceConfig", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "a{sv}",

@@ -192,6 +192,8 @@ DECLARE_ACCESSOR(wpas_dbus_getter_wps_manufacturer);
 DECLARE_ACCESSOR(wpas_dbus_setter_wps_manufacturer);
 DECLARE_ACCESSOR(wpas_dbus_getter_wps_device_model_name);
 DECLARE_ACCESSOR(wpas_dbus_setter_wps_device_model_name);
+DECLARE_ACCESSOR(wpas_dbus_getter_wps_device_model_number);
+DECLARE_ACCESSOR(wpas_dbus_setter_wps_device_model_number);
 
 DBusMessage * wpas_dbus_handler_tdls_discover(DBusMessage *message,
 					      struct wpa_supplicant *wpa_s);

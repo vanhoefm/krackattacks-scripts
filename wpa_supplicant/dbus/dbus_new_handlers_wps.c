@@ -513,3 +513,62 @@ dbus_bool_t wpas_dbus_setter_wps_device_name(
 
 	return TRUE;
 }
+
+
+/**
+ * wpas_dbus_getter_wps_manufacturer - Get current manufacturer name
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "Manufacturer" property.
+ */
+dbus_bool_t wpas_dbus_getter_wps_manufacturer(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *manufacturer = wpa_s->conf->manufacturer;
+
+	if (!manufacturer)
+		manufacturer = "";
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&manufacturer, error);
+}
+
+
+/**
+ * wpas_dbus_setter_wps_manufacturer - Set current manufacturer name
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter for "Manufacturer" property.
+ */
+dbus_bool_t wpas_dbus_setter_wps_manufacturer(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *methods, *manufacturer;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_STRING,
+					      &methods))
+		return FALSE;
+
+	if (os_strlen(methods) > WPS_MANUFACTURER_MAX_LEN)
+		return FALSE;
+
+	manufacturer = os_strdup(methods);
+	if (!manufacturer)
+		return FALSE;
+
+	os_free(wpa_s->conf->manufacturer);
+	wpa_s->conf->manufacturer = manufacturer;
+	wpa_s->conf->changed_parameters |= CFG_CHANGED_WPS_STRING;
+	wpa_supplicant_update_config(wpa_s);
+
+	return TRUE;
+}

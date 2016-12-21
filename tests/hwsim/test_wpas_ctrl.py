@@ -1975,3 +1975,15 @@ def test_wpas_ctrl_driver_flags(dev, apdev):
     flags = hapd_flags.split('\n')
     if 'AP' not in flags:
         raise Exception("AP flag missing from DRIVER_FLAGS")
+
+def test_wpas_ctrl_bss_current(dev, apdev):
+    """wpa_supplicant BSS CURRENT command"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    bssid = hapd.own_addr()
+    res = dev[0].request("BSS CURRENT")
+    if res != '':
+        raise Exception("Unexpected BSS CURRENT response in disconnected state")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    res = dev[0].request("BSS CURRENT")
+    if bssid not in res:
+        raise Exception("Unexpected BSS CURRENT response in connected state")

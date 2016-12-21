@@ -1042,6 +1042,44 @@ static int hostapd_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** hostapd_complete_set(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	const char *fields[] = {
+#ifdef CONFIG_WPS_TESTING
+		"wps_version_number", "wps_testing_dummy_cred",
+		"wps_corrupt_pkhash",
+#endif /* CONFIG_WPS_TESTING */
+#ifdef CONFIG_INTERWORKING
+		"gas_frag_limit",
+#endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_TESTING_OPTIONS
+		"ext_mgmt_frame_handling", "ext_eapol_frame_io",
+#endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_MBO
+		"mbo_assoc_disallow",
+#endif /* CONFIG_MBO */
+		"deny_mac_file", "accept_mac_file",
+	};
+	int i, num_fields = ARRAY_SIZE(fields);
+
+	if (arg == 1) {
+		char **res;
+
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (!res)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(fields[i]);
+			if (!res[i])
+				return res;
+		}
+		return res;
+	}
+	return NULL;
+}
+
+
 static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1389,7 +1427,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "= show full hostapd_cli license" },
 	{ "quit", hostapd_cli_cmd_quit, NULL,
 	  "= exit hostapd_cli" },
-	{ "set", hostapd_cli_cmd_set, NULL,
+	{ "set", hostapd_cli_cmd_set, hostapd_complete_set,
 	  "<name> <value> = set runtime variables" },
 	{ "get", hostapd_cli_cmd_get, NULL,
 	  "<name> = get runtime info" },

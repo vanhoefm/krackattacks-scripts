@@ -747,3 +747,70 @@ dbus_bool_t wpas_dbus_setter_wps_device_serial_number(
 
 	return TRUE;
 }
+
+
+/**
+ * wpas_dbus_getter_wps_device_device_type - Get current device type
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "DeviceType" property.
+ */
+dbus_bool_t wpas_dbus_getter_wps_device_device_type(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+
+	if (!wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+						    (char *)
+						    wpa_s->conf->device_type,
+						    WPS_DEV_TYPE_LEN, error)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "%s: error constructing reply", __func__);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+/**
+ * wpas_dbus_setter_wps_device_device_type - Set current device type
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter for "DeviceType" property.
+ */
+dbus_bool_t wpas_dbus_setter_wps_device_device_type(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	u8 *dev_type;
+	int dev_len;
+	DBusMessageIter variant, array_iter;
+
+	if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_VARIANT)
+		return FALSE;
+
+	dbus_message_iter_recurse(iter, &variant);
+	if (dbus_message_iter_get_arg_type(&variant) != DBUS_TYPE_ARRAY)
+		return FALSE;
+
+	dbus_message_iter_recurse(&variant, &array_iter);
+	dbus_message_iter_get_fixed_array(&array_iter, &dev_type, &dev_len);
+
+	if (dev_len != WPS_DEV_TYPE_LEN)
+		return FALSE;
+
+	os_memcpy(wpa_s->conf->device_type, dev_type, WPS_DEV_TYPE_LEN);
+	wpa_s->conf->changed_parameters |= CFG_CHANGED_DEVICE_TYPE;
+	wpa_supplicant_update_config(wpa_s);
+
+	return TRUE;
+}

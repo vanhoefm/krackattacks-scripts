@@ -1332,11 +1332,11 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  hostapd_complete_stations,
 	  "<addr> = disassociate a station" },
 #ifdef CONFIG_TAXONOMY
-	{ "signature", hostapd_cli_cmd_signature, NULL,
+	{ "signature", hostapd_cli_cmd_signature, hostapd_complete_stations,
 	  "<addr> = get taxonomy signature for a station" },
 #endif /* CONFIG_TAXONOMY */
 #ifdef CONFIG_IEEE80211W
-	{ "sa_query", hostapd_cli_cmd_sa_query, NULL,
+	{ "sa_query", hostapd_cli_cmd_sa_query, hostapd_complete_stations,
 	  "<addr> = send SA Query to a station" },
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
@@ -1395,7 +1395,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "<name> = get runtime info" },
 	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set, NULL,
 	  "<arg,arg,...> = set QoS Map set element" },
-	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf, NULL,
+	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf,
+	  hostapd_complete_stations,
 	  "<addr> = send QoS Map Configure frame" },
 	{ "chan_switch", hostapd_cli_cmd_chan_switch, NULL,
 	  "<cs_count> <freq> [sec_channel_offset=] [center_freq1=]\n"
@@ -1429,7 +1430,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "  = add AP to neighbor database" },
 	{ "remove_neighbor", hostapd_cli_cmd_remove_neighbor, NULL,
 	  "<addr> <ssid=> = remove AP from neighbor database" },
-	{ "req_lci", hostapd_cli_cmd_req_lci, NULL,
+	{ "req_lci", hostapd_cli_cmd_req_lci, hostapd_complete_stations,
 	  "<addr> = send LCI request to a station"},
 	{ "req_range", hostapd_cli_cmd_req_range, NULL,
 	  " = send FTM range request"},

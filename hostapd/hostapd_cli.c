@@ -1100,6 +1100,31 @@ static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** hostapd_complete_get(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	const char *fields[] = {
+		"version", "tls_library",
+	};
+	int i, num_fields = ARRAY_SIZE(fields);
+
+	if (arg == 1) {
+		char **res;
+
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (!res)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(fields[i]);
+			if (!res[i])
+				return res;
+		}
+		return res;
+	}
+	return NULL;
+}
+
+
 #ifdef CONFIG_FST
 static int hostapd_cli_cmd_fst(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -1429,7 +1454,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "= exit hostapd_cli" },
 	{ "set", hostapd_cli_cmd_set, hostapd_complete_set,
 	  "<name> <value> = set runtime variables" },
-	{ "get", hostapd_cli_cmd_get, NULL,
+	{ "get", hostapd_cli_cmd_get, hostapd_complete_get,
 	  "<name> = get runtime info" },
 	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set, NULL,
 	  "<arg,arg,...> = set QoS Map set element" },

@@ -80,6 +80,11 @@ def check_ocsp_support(dev):
     #if "BoringSSL" in tls:
     #    raise HwsimSkip("OCSP not supported with this TLS library: " + tls)
 
+def check_pkcs5_v15_support(dev):
+    tls = dev.request("GET tls_library")
+    if "BoringSSL" in tls:
+        raise HwsimSkip("PKCS#5 v1.5 not supported with this TLS library: " + tls)
+
 def check_ocsp_multi_support(dev):
     tls = dev.request("GET tls_library")
     if not tls.startswith("internal"):
@@ -1848,6 +1853,7 @@ def test_eap_tls_pkcs8_pkcs5_v2_des3(dev, apdev):
 
 def test_eap_tls_pkcs8_pkcs5_v15(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS #8, PKCS #5 v1.5 key"""
+    check_pkcs5_v15_support(dev[0])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0], params)
     eap_connect(dev[0], hapd, "TLS", "tls user", ca_cert="auth_serv/ca.pem",

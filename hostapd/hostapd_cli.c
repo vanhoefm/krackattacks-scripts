@@ -320,7 +320,7 @@ static int hostapd_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
-static char ** hostapd_complete_sta(const char *str, int pos)
+static char ** hostapd_complete_stations(const char *str, int pos)
 {
 	int arg = get_cmd_arg_num(str, pos);
 	char **res = NULL;
@@ -367,21 +367,6 @@ static int hostapd_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
 }
 
 
-static char ** hostapd_complete_deauthenticate(const char *str, int pos)
-{
-	int arg = get_cmd_arg_num(str, pos);
-	char **res = NULL;
-
-	switch (arg) {
-	case 1:
-		res = cli_txt_list_array(&stations);
-		break;
-	}
-
-	return res;
-}
-
-
 static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -397,21 +382,6 @@ static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 	else
 		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
-}
-
-
-static char ** hostapd_complete_disassociate(const char *str, int pos)
-{
-	int arg = get_cmd_arg_num(str, pos);
-	char **res = NULL;
-
-	switch (arg) {
-	case 1:
-		res = cli_txt_list_array(&stations);
-		break;
-	}
-
-	return res;
 }
 
 
@@ -1347,7 +1317,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "= reload/truncate debug log output file" },
 	{ "status", hostapd_cli_cmd_status, NULL,
 	  "= show interface status info" },
-	{ "sta", hostapd_cli_cmd_sta, hostapd_complete_sta,
+	{ "sta", hostapd_cli_cmd_sta, hostapd_complete_stations,
 	  "<addr> = get MIB variables for one station" },
 	{ "all_sta", hostapd_cli_cmd_all_sta, NULL,
 	   "= get MIB variables for all stations" },
@@ -1356,10 +1326,10 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "new_sta", hostapd_cli_cmd_new_sta, NULL,
 	  "<addr> = add a new station" },
 	{ "deauthenticate", hostapd_cli_cmd_deauthenticate,
-	  hostapd_complete_deauthenticate,
+	  hostapd_complete_stations,
 	  "<addr> = deauthenticate a station" },
 	{ "disassociate", hostapd_cli_cmd_disassociate,
-	  hostapd_complete_disassociate,
+	  hostapd_complete_stations,
 	  "<addr> = disassociate a station" },
 #ifdef CONFIG_TAXONOMY
 	{ "signature", hostapd_cli_cmd_signature, NULL,

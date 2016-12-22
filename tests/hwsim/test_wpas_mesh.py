@@ -74,6 +74,8 @@ def check_mesh_scan(dev, params, other_started=False, beacon_int=0):
             raise Exception("beacon_int missing from BSS entry")
         if str(beacon_int) != bss['beacon_int']:
             raise Exception("Unexpected beacon_int in BSS entry: " + bss['beacon_int'])
+    if '[MESH]' not in bss['flags']:
+        raise Exception("BSS output did not include MESH flag")
 
 def check_mesh_group_added(dev):
     ev = dev.wait_event(["MESH-GROUP-STARTED"])
@@ -190,7 +192,7 @@ def test_wpas_mesh_mode_scan(dev):
     check_mesh_group_added(dev[1])
 
     # Check for Mesh scan
-    check_mesh_scan(dev[0], "use_id=1", beacon_int=175)
+    check_mesh_scan(dev[0], "use_id=1 freq=2412", beacon_int=175)
 
 def test_wpas_mesh_open(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""

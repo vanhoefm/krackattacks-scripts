@@ -367,6 +367,12 @@ def test_dbus_get_set_wps(dev, apdev):
     finally:
         dev[0].request("SET wps_cred_processing 0")
         dev[0].request("SET config_methods display keypad virtual_display nfc_interface p2ps")
+        dev[0].set("device_name", "Device A")
+        dev[0].set("manufacturer", "")
+        dev[0].set("model_name", "")
+        dev[0].set("model_number", "")
+        dev[0].set("serial_number", "")
+        dev[0].set("device_type", "0-00000000-0")
 
 def _test_dbus_get_set_wps(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -399,6 +405,48 @@ def _test_dbus_get_set_wps(dev, apdev):
         expected_val = False if i == 1 else True
         if val != expected_val:
             raise Exception("Unexpected Get(ProcessCredentials) result({}): {}".format(i, val))
+
+    tests = [ ("device_name", "DeviceName"),
+              ("manufacturer", "Manufacturer"),
+              ("model_name", "ModelName"),
+              ("model_number", "ModelNumber"),
+              ("serial_number", "SerialNumber") ]
+
+    for f1,f2 in tests:
+        val2 = "test-value-test"
+        dev[0].set(f1, val2)
+        val = if_obj.Get(WPAS_DBUS_IFACE_WPS, f2,
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if val != val2:
+            raise Exception("Get(%s) returned unexpected value" % f2)
+        val2 = "TEST-value"
+        if_obj.Set(WPAS_DBUS_IFACE_WPS, f2, val2,
+                   dbus_interface=dbus.PROPERTIES_IFACE)
+        val = if_obj.Get(WPAS_DBUS_IFACE_WPS, f2,
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if val != val2:
+            raise Exception("Get(%s) returned unexpected value after Set" % f2)
+
+    dev[0].set("device_type", "5-0050F204-1")
+    val = if_obj.Get(WPAS_DBUS_IFACE_WPS, "DeviceType",
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+    if val[0] != 0x00 or val[1] != 0x05 != val[2] != 0x00 or val[3] != 0x50 or val[4] != 0xf2 or val[5] != 0x04 or val[6] != 0x00 or val[7] != 0x01:
+        raise Exception("DeviceType mismatch")
+    if_obj.Set(WPAS_DBUS_IFACE_WPS, "DeviceType", val,
+               dbus_interface=dbus.PROPERTIES_IFACE)
+    val = if_obj.Get(WPAS_DBUS_IFACE_WPS, "DeviceType",
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+    if val[0] != 0x00 or val[1] != 0x05 != val[2] != 0x00 or val[3] != 0x50 or val[4] != 0xf2 or val[5] != 0x04 or val[6] != 0x00 or val[7] != 0x01:
+        raise Exception("DeviceType mismatch after Set")
+
+    val2 = '\x01\x02\x03\x04\x05\x06\x07\x08'
+    if_obj.Set(WPAS_DBUS_IFACE_WPS, "DeviceType", dbus.ByteArray(val2),
+               dbus_interface=dbus.PROPERTIES_IFACE)
+    val = if_obj.Get(WPAS_DBUS_IFACE_WPS, "DeviceType",
+                     dbus_interface=dbus.PROPERTIES_IFACE,
+                     byte_arrays=True)
+    if val != val2:
+        raise Exception("DeviceType mismatch after Set (2)")
 
     class TestDbusGetSet(TestDbus):
         def __init__(self, bus):

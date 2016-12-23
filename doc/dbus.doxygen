@@ -1220,6 +1220,30 @@ Interface for performing WPS (Wi-Fi Simple Config) operations.
 	<h3>ConfigMethods - s - (read/write)</h3>
 	<p>The currently advertised WPS configuration methods. Available methods: usba ethernet label display ext_nfc_token int_nfc_token nfc_interface push_button keypad virtual_display physical_display virtual_push_button physical_push_button.</p>
       </li>
+      <li>
+	<h3>DeviceName - s - (read/write)</h3>
+	<p>User-friendly description of device; up to 32 octets encoded in UTF-8.</p>
+      </li>
+      <li>
+	<h3>Manufacturer - s - (read/write)</h3>
+	<p>The manufacturer of the device (up to 64 ASCII characters).</p>
+      </li>
+      <li>
+	<h3>ModelName - s - (read/write)</h3>
+	<p>Model of the device (up to 32 ASCII characters).</p>
+      </li>
+      <li>
+	<h3>ModelNumber - s - (read/write)</h3>
+	<p>Additional device description (up to 32 ASCII characters).</p>
+      </li>
+      <li>
+	<h3>SerialNumber - s - (read/write)</h3>
+	<p>Serial number of the device (up to 32 characters).</p>
+      </li>
+      <li>
+	<h3>DeviceType - ay - (read/write)</h3>
+	<p>Device Type (8 octet value with 2 octet category, 4 octet OUI, 2 octet subcategory.</p>
+      </li>
     </ul>
 
 \subsection dbus_wps_signals Signals

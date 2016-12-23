@@ -43,6 +43,10 @@ dbus_bool_t wpas_dbus_simple_array_array_property_getter(DBusMessageIter *iter,
 							 size_t array_len,
 							 DBusError *error);
 
+dbus_bool_t wpas_dbus_string_property_getter(DBusMessageIter *iter,
+					     const void *val,
+					     DBusError *error);
+
 DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 						 struct wpa_global *global);
 

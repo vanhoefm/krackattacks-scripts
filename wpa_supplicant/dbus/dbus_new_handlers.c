@@ -517,6 +517,27 @@ dbus_bool_t wpas_dbus_simple_array_array_property_getter(DBusMessageIter *iter,
 
 
 /**
+ * wpas_dbus_string_property_getter - Get string type property
+ * @iter: Message iter to use when appending arguments
+ * @val: Pointer to place holding property value, can be %NULL
+ * @error: On failure an error describing the failure
+ * Returns: TRUE if the request was successful, FALSE if it failed
+ *
+ * Generic getter for string type properties. %NULL is converted to an empty
+ * string.
+ */
+dbus_bool_t wpas_dbus_string_property_getter(DBusMessageIter *iter,
+					     const void *val,
+					     DBusError *error)
+{
+	if (!val)
+		val = "";
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&val, error);
+}
+
+
+/**
  * wpas_dbus_handler_create_interface - Request registration of a network iface
  * @message: Pointer to incoming dbus message
  * @global: %wpa_supplicant global data structure
@@ -3086,10 +3107,8 @@ dbus_bool_t wpas_dbus_getter_ifname(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *ifname = wpa_s->ifname;
 
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&ifname, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->ifname, error);
 }
 
 
@@ -3107,7 +3126,6 @@ dbus_bool_t wpas_dbus_getter_driver(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *driver;
 
 	if (wpa_s->driver == NULL || wpa_s->driver->name == NULL) {
 		wpa_printf(MSG_DEBUG, "%s[dbus]: wpa_s has no driver set",
@@ -3117,9 +3135,8 @@ dbus_bool_t wpas_dbus_getter_driver(
 		return FALSE;
 	}
 
-	driver = wpa_s->driver->name;
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&driver, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->driver->name,
+						error);
 }
 
 
@@ -3232,10 +3249,9 @@ dbus_bool_t wpas_dbus_getter_bridge_ifname(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *bridge_ifname = wpa_s->bridge_ifname;
 
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&bridge_ifname, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->bridge_ifname,
+						error);
 }
 
 
@@ -3253,13 +3269,8 @@ dbus_bool_t wpas_dbus_getter_config_file(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *confname = "";
 
-	if (wpa_s->confname)
-		confname = wpa_s->confname;
-
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&confname, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->confname, error);
 }
 
 
@@ -3399,14 +3410,10 @@ dbus_bool_t wpas_dbus_getter_pkcs11_engine_path(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *pkcs11_engine_path;
 
-	if (wpa_s->conf->pkcs11_engine_path == NULL)
-		pkcs11_engine_path = "";
-	else
-		pkcs11_engine_path = wpa_s->conf->pkcs11_engine_path;
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&pkcs11_engine_path, error);
+	return wpas_dbus_string_property_getter(iter,
+						wpa_s->conf->pkcs11_engine_path,
+						error);
 }
 
 
@@ -3424,14 +3431,10 @@ dbus_bool_t wpas_dbus_getter_pkcs11_module_path(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *pkcs11_module_path;
 
-	if (wpa_s->conf->pkcs11_module_path == NULL)
-		pkcs11_module_path = "";
-	else
-		pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&pkcs11_module_path, error);
+	return wpas_dbus_string_property_getter(iter,
+						wpa_s->conf->pkcs11_module_path,
+						error);
 }
 
 

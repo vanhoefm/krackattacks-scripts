@@ -412,12 +412,10 @@ dbus_bool_t wpas_dbus_getter_config_methods(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *methods = wpa_s->conf->config_methods;
 
-	if (methods == NULL)
-		methods = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&methods, error);
+	return wpas_dbus_string_property_getter(iter,
+						wpa_s->conf->config_methods,
+						error);
 }
 
 
@@ -470,12 +468,9 @@ dbus_bool_t wpas_dbus_getter_wps_device_name(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *methods = wpa_s->conf->device_name;
 
-	if (!methods)
-		methods = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&methods, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->conf->device_name,
+						error);
 }
 
 
@@ -529,12 +524,9 @@ dbus_bool_t wpas_dbus_getter_wps_manufacturer(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *manufacturer = wpa_s->conf->manufacturer;
 
-	if (!manufacturer)
-		manufacturer = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&manufacturer, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->conf->manufacturer,
+						error);
 }
 
 
@@ -588,12 +580,9 @@ dbus_bool_t wpas_dbus_getter_wps_device_model_name(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *model_name = wpa_s->conf->model_name;
 
-	if (!model_name)
-		model_name = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&model_name, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->conf->model_name,
+						error);
 }
 
 
@@ -646,12 +635,9 @@ dbus_bool_t wpas_dbus_getter_wps_device_model_number(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *model_number = wpa_s->conf->model_number;
 
-	if (!model_number)
-		model_number = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&model_number, error);
+	return wpas_dbus_string_property_getter(iter, wpa_s->conf->model_number,
+						error);
 }
 
 
@@ -705,12 +691,10 @@ dbus_bool_t wpas_dbus_getter_wps_device_serial_number(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *model_number = wpa_s->conf->serial_number;
 
-	if (!model_number)
-		model_number = "";
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&model_number, error);
+	return wpas_dbus_string_property_getter(iter,
+						wpa_s->conf->serial_number,
+						error);
 }
 
 

@@ -2352,19 +2352,12 @@ dbus_bool_t wpas_dbus_getter_p2p_group_passphrase(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	char *p_pass;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
 	if (ssid == NULL)
 		return FALSE;
 
-	p_pass = ssid->passphrase;
-	if (!p_pass)
-		p_pass = "";
-
-	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
-						&p_pass, error);
-
+	return wpas_dbus_string_property_getter(iter, ssid->passphrase, error);
 }
 
 

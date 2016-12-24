@@ -1628,6 +1628,7 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     dev[1].p2p_listen()
     dev[0].discover_peer(addr1)
     dev[0].p2p_stop_find()
+    dev[0].dump_monitor()
 
     peer = dev[0].get_peer(addr1)
 
@@ -1646,6 +1647,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
 
     dev[0].p2p_listen()
     dev[1].discover_peer(addr0)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("Unexpected GO Neg Resp while waiting for new GO Neg session")
     if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
@@ -1655,6 +1658,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
         raise Exception("Timeout on GO Neg Req")
     dev[0].p2p_stop_find()
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("Invalid attribute in GO Neg Response")
     msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=197)
@@ -1664,6 +1669,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     frame = dev[0].mgmt_rx(timeout=0.1)
     if frame is not None:
         raise Exception("Unexpected GO Neg Confirm")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp with unexpected dialog token")
     dev[1].p2p_stop_find()
@@ -1690,6 +1697,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without Status")
     dev[1].p2p_stop_find()
@@ -1712,6 +1721,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without Intended Address")
     dev[1].p2p_stop_find()
@@ -1734,6 +1745,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without GO Intent")
     dev[1].p2p_stop_find()
@@ -1756,6 +1769,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp with invalid GO Intent")
     dev[1].p2p_stop_find()
@@ -1778,6 +1793,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp with incompatible GO Intent")
     dev[1].p2p_stop_find()
@@ -1800,6 +1817,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INCOMPATIBLE_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INCOMPATIBLE_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without P2P Group ID")
     dev[1].p2p_stop_find()
@@ -1823,6 +1842,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without Operating Channel")
     dev[1].p2p_stop_find()
@@ -1846,6 +1867,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without Channel List")
     dev[1].p2p_stop_find()
@@ -1869,6 +1892,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     logger.debug("GO Neg Resp without common channels")
     dev[1].p2p_stop_find()
@@ -1894,6 +1919,8 @@ def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
     mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
     check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_NO_COMMON_CHANNELS)
     rx_go_neg_conf(dev[0], P2P_SC_FAIL_NO_COMMON_CHANNELS, dialog_token)
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
 def test_p2p_msg_group_info(dev):
     """P2P protocol tests for Group Info parsing"""

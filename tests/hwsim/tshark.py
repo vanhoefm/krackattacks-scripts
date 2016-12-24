@@ -34,15 +34,18 @@ def run_tshark(filename, filter, display=None, wait=True):
         else:
             arg.append('-V')
         cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                               stderr=open('/dev/null', 'w'))
+                               stderr=subprocess.PIPE)
     except Exception, e:
         logger.info("Could run run tshark check: " + str(e))
         cmd = None
         return None
 
-    out = cmd.communicate()[0]
+    output = cmd.communicate()
+    out = output[0]
     res = cmd.wait()
     if res == 1:
+        if "Some fields aren't valid" in output[1]:
+            raise Exception("Unknown tshark field")
         # remember this for efficiency
         _tshark_filter_arg = '-R'
         arg[3] = '-R'

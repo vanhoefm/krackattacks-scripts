@@ -65,9 +65,26 @@ def test_peerkey_sniffer_check(dev, apdev, params):
     addr0 = dev[0].own_addr()
     addr1 = dev[1].own_addr()
 
-    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
-                     "eapol.type == 3",
-                     display=["wlan.sa", "wlan.da", "eapol.keydes.key_info"])
+    # Wireshark renamed the EAPOL-Key key_info field, so need to try both the
+    # new and the old name to work with both versions.
+    try_other = False
+    try:
+        out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                         "eapol.type == 3",
+                         display=["wlan.sa", "wlan.da",
+                                  "wlan_rsna_eapol.keydes.key_info"])
+    except Exception, e:
+        if "Unknown tshark field" in str(e):
+            try_other = True
+            pass
+        else:
+            raise
+    if try_other:
+        out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                         "eapol.type == 3",
+                         display=["wlan.sa", "wlan.da",
+                                  "eapol.keydes.key_info"],
+                         wait=False)
 
     smk = [ False, False, False, False, False ]
     stk = [ False, False, False, False ]

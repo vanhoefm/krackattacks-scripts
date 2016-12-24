@@ -8037,31 +8037,43 @@ def run_eap_fast_phase2(dev, test_payload, test_failure=True):
         ctx['sslctx'].set_cipher_list("ADH-AES128-SHA")
         ctx['conn'] = OpenSSL.SSL.Connection(ctx['sslctx'], None)
         ctx['conn'].set_accept_state()
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         ctx['conn'].bio_write(payload)
         try:
             ctx['conn'].do_handshake()
         except OpenSSL.SSL.WantReadError:
             pass
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         data = ctx['conn'].bio_read(4096)
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
                            4 + 1 + 1 + len(data),
                            EAP_TYPE_FAST, 0x01) + data
 
     def process_clientkeyexchange(ctx, payload, appl_data):
         logger.info("Process ClientKeyExchange")
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         ctx['conn'].bio_write(payload)
         try:
             ctx['conn'].do_handshake()
         except OpenSSL.SSL.WantReadError:
             pass
         ctx['conn'].send(appl_data)
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         data = ctx['conn'].bio_read(4096)
-        logger.info("State: " + ctx['conn'].state_string())
+        state = ctx['conn'].state_string()
+        if state:
+            logger.info("State: " + state)
         return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
                            4 + 1 + 1 + len(data),
                            EAP_TYPE_FAST, 0x01) + data

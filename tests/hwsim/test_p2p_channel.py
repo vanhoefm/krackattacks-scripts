@@ -538,7 +538,7 @@ def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
             raise Exception("Unexpected number of network blocks: " + str(netw))
         id = netw[0]['id']
 
-        set_country("DE", dev[0])
+        set_country("SE", dev[0])
         res = autogo(dev[0], persistent=id)
         if res['freq'] == "5745":
             raise Exception("Unexpected channel selected(2): " + res['freq'])

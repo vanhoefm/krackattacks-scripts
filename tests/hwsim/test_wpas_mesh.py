@@ -890,8 +890,13 @@ def _test_mesh_open_vht_160(dev, apdev):
 
         cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
         reg = cmd.stdout.read()
-        if "@ 160)" not in reg:
-            raise HwsimSkip("160 MHz channel not supported in regulatory information")
+        found = False
+        for entry in reg.splitlines():
+            if "@ 160)" in entry and "DFS" not in entry:
+                found = True
+                break
+        if not found:
+            raise HwsimSkip("160 MHz channel without DFS not supported in regulatory information")
 
         add_open_mesh_network(dev[i], freq="5520", chwidth=2)
 

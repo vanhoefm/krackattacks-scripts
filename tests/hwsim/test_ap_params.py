@@ -538,3 +538,17 @@ def test_ap_wep_to_wpa(dev, apdev):
 
     dev[0].connect("wep-to-wpa", psk="12345678", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_missing_psk(dev, apdev):
+    """WPA2-PSK AP and no PSK configured"""
+    ssid = "test-wpa2-psk"
+    params = hostapd.wpa2_params(ssid=ssid)
+    try:
+        # "WPA-PSK enabled, but PSK or passphrase is not configured."
+        hostapd.add_ap(apdev[0], params)
+        raise Exception("AP setup succeeded unexpectedly")
+    except Exception, e:
+        if "Failed to enable hostapd" in str(e):
+            pass
+        else:
+            raise

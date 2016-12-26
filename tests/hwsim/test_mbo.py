@@ -452,3 +452,19 @@ def test_mbo_wnm_bss_tm_ie_parsing(dev, apdev):
         raise Exception("MGMT_RX_PROCESS failed")
 
     dev[0].request("SET ext_mgmt_frame_handling 0")
+
+def test_mbo_without_pmf(dev, apdev):
+    """MBO and WPA2 without PMF"""
+    ssid = "test-wnm-mbo"
+    params = { 'ssid': ssid, 'mbo': '1', "wpa": '2',
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "wpa_passphrase": "12345678" }
+    try:
+        # "MBO: PMF needs to be enabled whenever using WPA2 with MBO"
+        hostapd.add_ap(apdev[0], params)
+        raise Exception("AP setup succeeded unexpectedly")
+    except Exception, e:
+        if "Failed to enable hostapd" in str(e):
+            pass
+        else:
+            raise

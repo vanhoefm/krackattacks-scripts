@@ -789,6 +789,12 @@ def test_radius_macacl(dev, apdev):
     hostapd.add_ap(apdev[0], params)
     dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")
 
+    # Invalid VLAN ID from RADIUS server
+    dev[2].connect("radius", key_mgmt="NONE", scan_freq="2412")
+    dev[2].request("REMOVE_NETWORK all")
+    dev[2].wait_disconnected()
+    dev[2].connect("radius", key_mgmt="NONE", scan_freq="2412")
+
 def test_radius_macacl_acct(dev, apdev):
     """RADIUS MAC ACL and accounting enabled"""
     params = hostapd.radius_params()

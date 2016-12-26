@@ -9778,3 +9778,32 @@ def _test_ap_wps_er_enrollee_to_conf_ap2(dev, apdev):
     ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
     if ev is None:
         raise Exception("WPS ER did not report success")
+
+def test_ap_wps_ignore_broadcast_ssid(dev, apdev):
+    """WPS AP trying to ignore broadcast SSID"""
+    ssid = "test-wps"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1",
+                            "ignore_broadcast_ssid": "1" })
+    if "FAIL" not in hapd.request("WPS_PBC"):
+        raise Exception("WPS unexpectedly enabled")
+
+def test_ap_wps_wep(dev, apdev):
+    """WPS AP trying to enable WEP"""
+    ssid = "test-wps"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1",
+                            "ieee80211n": "0", "wep_key0": '"hello"' })
+    if "FAIL" not in hapd.request("WPS_PBC"):
+        raise Exception("WPS unexpectedly enabled")
+
+def test_ap_wps_tkip(dev, apdev):
+    """WPS AP trying to enable TKIP"""
+    ssid = "test-wps"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "1",
+                            "ieee80211n": "0", "wpa": '1',
+                            "wpa_key_mgmt": "WPA-PSK",
+                            "wpa_passphrase": "12345678" })
+    if "FAIL" not in hapd.request("WPS_PBC"):
+        raise Exception("WPS unexpectedly enabled")

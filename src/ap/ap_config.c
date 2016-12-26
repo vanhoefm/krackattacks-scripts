@@ -333,13 +333,7 @@ int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 		ssid->wpa_psk->group = 1;
 	}
 
-	if (ssid->wpa_psk_file) {
-		if (hostapd_config_read_wpa_psk(ssid->wpa_psk_file,
-						&conf->ssid))
-			return -1;
-	}
-
-	return 0;
+	return hostapd_config_read_wpa_psk(ssid->wpa_psk_file, &conf->ssid);
 }
 
 

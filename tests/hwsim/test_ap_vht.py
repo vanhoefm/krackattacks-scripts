@@ -820,3 +820,50 @@ def test_ap_vht_use_sta_nsts(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_ap_vht_tkip(dev, apdev):
+    """VHT and TKIP"""
+    try:
+        hapd = None
+        params = { "ssid": "vht",
+                   "wpa": "1",
+                   "wpa_key_mgmt": "WPA-PSK",
+                   "wpa_pairwise": "TKIP",
+                   "wpa_passphrase": "12345678",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "1",
+                   "vht_oper_centr_freq_seg0_idx": "42" }
+        hapd = hostapd.add_ap(apdev[0], params)
+        bssid = apdev[0]['bssid']
+
+        dev[0].connect("vht", psk="12345678", scan_freq="5180")
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=20 MHz (no HT)" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        status = hapd.get_status()
+        logger.info("hostapd STATUS: " + str(status))
+        if status["ieee80211n"] != "0":
+            raise Exception("Unexpected STATUS ieee80211n value")
+        if status["ieee80211ac"] != "0":
+            raise Exception("Unexpected STATUS ieee80211ac value")
+        if status["secondary_channel"] != "0":
+            raise Exception("Unexpected STATUS secondary_channel value")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

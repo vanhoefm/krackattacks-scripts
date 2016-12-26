@@ -414,15 +414,46 @@ def test_ap_vht160(dev, apdev):
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 
+def test_ap_vht160_no_dfs_100_plus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (100 plus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "100", "[HT40+]")
+
 def test_ap_vht160_no_dfs(dev, apdev):
-    """VHT with 160 MHz channel width and no DFS"""
+    """VHT with 160 MHz channel width and no DFS (104 minus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "104", "[HT40-]")
+
+def test_ap_vht160_no_dfs_108_plus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (108 plus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "108", "[HT40+]")
+
+def test_ap_vht160_no_dfs_112_minus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (112 minus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "112", "[HT40-]")
+
+def test_ap_vht160_no_dfs_116_plus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (116 plus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "116", "[HT40+]")
+
+def test_ap_vht160_no_dfs_120_minus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (120 minus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "120", "[HT40-]")
+
+def test_ap_vht160_no_dfs_124_plus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (124 plus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "124", "[HT40+]")
+
+def test_ap_vht160_no_dfs_128_minus(dev, apdev):
+    """VHT with 160 MHz channel width and no DFS (128 minus)"""
+    run_ap_vht160_no_dfs(dev, apdev, "128", "[HT40-]")
+
+def run_ap_vht160_no_dfs(dev, apdev, channel, ht_capab):
     try:
         hapd = None
         params = { "ssid": "vht",
                    "country_code": "ZA",
                    "hw_mode": "a",
-                   "channel": "104",
-                   "ht_capab": "[HT40-]",
+                   "channel": channel,
+                   "ht_capab": ht_capab,
                    "ieee80211n": "1",
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "2",
@@ -439,10 +470,11 @@ def test_ap_vht160_no_dfs(dev, apdev):
                     raise HwsimSkip("ZA regulatory rule did not have DFS requirement removed")
             raise Exception("AP setup timed out")
 
-        dev[0].connect("vht", key_mgmt="NONE", scan_freq="5520")
+        freq = str(int(channel) * 5 + 5000)
+        dev[0].connect("vht", key_mgmt="NONE", scan_freq=freq)
         hwsim_utils.test_connectivity(dev[0], hapd)
         sig = dev[0].request("SIGNAL_POLL").splitlines()
-        if "FREQUENCY=5520" not in sig:
+        if "FREQUENCY=" + freq not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
         if "WIDTH=160 MHz" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))

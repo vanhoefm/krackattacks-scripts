@@ -617,6 +617,30 @@ def test_sae_proto_ffc(dev, apdev):
         hapd.set("ext_mgmt_frame_handling", "0")
         hapd.dump_monitor()
 
+def test_sae_proto_hostapd(dev, apdev):
+    """SAE protocol testing with hostapd"""
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_groups'] = "19 65535"
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.set("ext_mgmt_frame_handling", "1")
+    bssid = hapd.own_addr().replace(':', '')
+    addr = "020000000000"
+    addr2 = "020000000001"
+    hdr = "b0003a01" + bssid + addr + bssid + "1000"
+    hdr2 = "b0003a01" + bssid + addr2 + bssid + "1000"
+    group = "1300"
+    scalar = "f7df19f4a7fef1d3b895ea1de150b7c5a7a705c8ebb31a52b623e0057908bd93"
+    element_x = "21931572027f2e953e2a49fab3d992944102cc95aa19515fc068b394fb25ae3c"
+    element_y = "cb4eeb94d7b0b789abfdb73a67ab9d6d5efa94dd553e0e724a6289821cbce530"
+    hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "030001000000" + group + scalar + element_x + element_y)
+    # "SAE: Not enough data for scalar"
+    hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "030001000000" + group + scalar[:-2])
+    # "SAE: Do not allow group to be changed"
+    hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "030001000000" + "ffff" + scalar[:-2])
+    # "SAE: Unsupported Finite Cyclic Group 65535"
+    hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr2 + "030001000000" + "ffff" + scalar[:-2])
+
 @remote_compatible
 def test_sae_no_ffc_by_default(dev, apdev):
     """SAE and default groups rejecting FFC"""

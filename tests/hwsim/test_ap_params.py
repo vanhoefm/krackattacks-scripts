@@ -413,6 +413,29 @@ def test_ap_tx_queue_params(dev, apdev):
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ap_tx_queue_params_invalid(dev, apdev):
+    """Invalid TX queue params set (cwmin/cwmax)"""
+    ssid = "tx"
+    params = {}
+    params['ssid'] = ssid
+    params['tx_queue_data2_aifs'] = "4"
+    params['tx_queue_data2_cwmin'] = "7"
+    params['tx_queue_data2_cwmax'] = "1023"
+    params['tx_queue_data2_burst'] = "4.2"
+    params['wmm_ac_bk_cwmin'] = "4"
+    params['wmm_ac_bk_cwmax'] = "10"
+    params['wmm_ac_bk_aifs'] = "7"
+    params['wmm_ac_bk_txop_limit'] = "0"
+    params['wmm_ac_bk_acm'] = "0"
+
+    hapd = hostapd.add_ap(apdev[0], params)
+    # "Invalid TX queue cwMin/cwMax values. cwMin(7) greater than cwMax(3)"
+    if "FAIL" not in hapd.request('SET tx_queue_data2_cwmax 3'):
+        raise Exception("TX cwMax < cwMin accepted")
+    # "Invalid WMM AC cwMin/cwMax values. cwMin(4) greater than cwMax(3)"
+    if "FAIL" not in hapd.request('SET wmm_ac_bk_cwmax 3'):
+        raise Exception("AC cwMax < cwMin accepted")
+
 def test_ap_beacon_rate_legacy(dev, apdev):
     """Open AP with Beacon frame TX rate 5.5 Mbps"""
     hapd = hostapd.add_ap(apdev[0], { 'ssid': 'beacon-rate' })

@@ -504,3 +504,32 @@ def _test_ap_iapp(dev, apdev):
 
     hapd.disable()
     hapd2.disable()
+
+def test_ap_duplicate_bssid(dev, apdev):
+    """Duplicate BSSID"""
+    params = { "ssid": "test" }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+    hapd.enable()
+    ifname2 = apdev[0]['ifname'] + '-2'
+    ifname3 = apdev[0]['ifname'] + '-3'
+    # "BSS 'wlan3-2' may not have BSSID set to the MAC address of the radio"
+    try:
+        hostapd.add_bss(apdev[0], ifname2, 'bss-2-dup.conf')
+        raise Exception("BSS add succeeded unexpectedly")
+    except Exception, e:
+        if "Could not add hostapd BSS" in str(e):
+            pass
+        else:
+            raise
+
+    hostapd.add_bss(apdev[0], ifname3, 'bss-3.conf')
+
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    hapd.set("bssid", "02:00:00:00:03:02")
+    hapd.disable()
+    # "Duplicate BSSID 02:00:00:00:03:02 on interface 'wlan3-3' and 'wlan3'."
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("ENABLE with duplicate BSSID succeeded unexpectedly")

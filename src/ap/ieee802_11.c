@@ -2212,8 +2212,8 @@ static int add_associated_sta(struct hostapd_data *hapd,
 
 
 static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
-			   u16 status_code, int reassoc, const u8 *ies,
-			   size_t ies_len)
+			   const u8 *addr, u16 status_code, int reassoc,
+			   const u8 *ies, size_t ies_len)
 {
 	int send_len;
 	u8 buf[sizeof(struct ieee80211_mgmt) + 1024];
@@ -2226,7 +2226,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 			     (reassoc ? WLAN_FC_STYPE_REASSOC_RESP :
 			      WLAN_FC_STYPE_ASSOC_RESP));
-	os_memcpy(reply->da, sta->addr, ETH_ALEN);
+	os_memcpy(reply->da, addr, ETH_ALEN);
 	os_memcpy(reply->sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(reply->bssid, hapd->own_addr, ETH_ALEN);
 
@@ -2235,14 +2235,16 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	reply->u.assoc_resp.capab_info =
 		host_to_le16(hostapd_own_capab_info(hapd));
 	reply->u.assoc_resp.status_code = host_to_le16(status_code);
-	reply->u.assoc_resp.aid = host_to_le16(sta->aid | BIT(14) | BIT(15));
+
+	reply->u.assoc_resp.aid = host_to_le16((sta ? sta->aid : 0) |
+					       BIT(14) | BIT(15));
 	/* Supported rates */
 	p = hostapd_eid_supp_rates(hapd, reply->u.assoc_resp.variable);
 	/* Extended supported rates */
 	p = hostapd_eid_ext_supp_rates(hapd, p);
 
 #ifdef CONFIG_IEEE80211R_AP
-	if (status_code == WLAN_STATUS_SUCCESS) {
+	if (sta && status_code == WLAN_STATUS_SUCCESS) {
 		/* IEEE 802.11r: Mobility Domain Information, Fast BSS
 		 * Transition Information, RSN, [RIC Response] */
 		p = wpa_sm_write_assoc_resp_ies(sta->wpa_sm, p,
@@ -2252,7 +2254,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_IEEE80211W
-	if (status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY)
+	if (sta && status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY)
 		p = hostapd_eid_assoc_comeback_time(hapd, sta, p);
 #endif /* CONFIG_IEEE80211W */
 
@@ -2265,7 +2267,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) {
 		u32 nsts = 0, sta_nsts;
 
-		if (hapd->conf->use_sta_nsts && sta->vht_capabilities) {
+		if (sta && hapd->conf->use_sta_nsts && sta->vht_capabilities) {
 			struct ieee80211_vht_capabilities *capa;
 
 			nsts = (hapd->iface->conf->vht_capab >>
@@ -2286,7 +2288,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	p = hostapd_eid_ext_capab(hapd, p);
 	p = hostapd_eid_bss_max_idle_period(hapd, p);
-	if (sta->qos_map_enabled)
+	if (sta && sta->qos_map_enabled)
 		p = hostapd_eid_qos_map_set(hapd, p);
 
 #ifdef CONFIG_FST
@@ -2298,16 +2300,17 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_FST */
 
 #ifdef CONFIG_IEEE80211AC
-	if (hapd->conf->vendor_vht && (sta->flags & WLAN_STA_VENDOR_VHT))
+	if (sta && hapd->conf->vendor_vht && (sta->flags & WLAN_STA_VENDOR_VHT))
 		p = hostapd_eid_vendor_vht(hapd, p);
 #endif /* CONFIG_IEEE80211AC */
 
-	if (sta->flags & WLAN_STA_WMM)
+	if (sta && (sta->flags & WLAN_STA_WMM))
 		p = hostapd_eid_wmm(hapd, p);
 
 #ifdef CONFIG_WPS
-	if ((sta->flags & WLAN_STA_WPS) ||
-	    ((sta->flags & WLAN_STA_MAYBE_WPS) && hapd->conf->wpa)) {
+	if (sta &&
+	    ((sta->flags & WLAN_STA_WPS) ||
+	     ((sta->flags & WLAN_STA_MAYBE_WPS) && hapd->conf->wpa))) {
 		struct wpabuf *wps = wps_build_assoc_resp_ie();
 		if (wps) {
 			os_memcpy(p, wpabuf_head(wps), wpabuf_len(wps));
@@ -2318,7 +2321,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_WPS */
 
 #ifdef CONFIG_P2P
-	if (sta->p2p_ie && hapd->p2p_group) {
+	if (sta && sta->p2p_ie && hapd->p2p_group) {
 		struct wpabuf *p2p_resp_ie;
 		enum p2p_status_code status;
 		switch (status_code) {
@@ -2360,7 +2363,8 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	send_len += p - reply->u.assoc_resp.variable;
 
 #ifdef CONFIG_FILS
-	if ((sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	if (sta &&
+	    (sta->auth_alg == WLAN_AUTH_FILS_SK ||
 	     sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
 	     sta->auth_alg == WLAN_AUTH_FILS_PK) &&
 	    status_code == WLAN_STATUS_SUCCESS) {
@@ -2476,15 +2480,39 @@ static void handle_assoc(struct hostapd_data *hapd,
 	} else
 #endif /* CONFIG_IEEE80211R_AP */
 	if (sta == NULL || (sta->flags & WLAN_STA_AUTH) == 0) {
-		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_INFO, "Station tried to "
-			       "associate before authentication "
-			       "(aid=%d flags=0x%x)",
-			       sta ? sta->aid : -1,
-			       sta ? sta->flags : 0);
-		send_deauth(hapd, mgmt->sa,
-			    WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA);
-		return;
+		if (hapd->iface->current_mode &&
+		    hapd->iface->current_mode->mode ==
+			HOSTAPD_MODE_IEEE80211AD) {
+			/* DMG/IEEE 802.11ad does not use authentication.
+			 * Allocate sta entry upon association. */
+			sta = ap_sta_add(hapd, mgmt->sa);
+			if (!sta) {
+				hostapd_logger(hapd, mgmt->sa,
+					       HOSTAPD_MODULE_IEEE80211,
+					       HOSTAPD_LEVEL_INFO,
+					       "Failed to add STA");
+				resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+				goto fail;
+			}
+
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "Skip authentication for DMG/IEEE 802.11ad");
+			sta->flags |= WLAN_STA_AUTH;
+			wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
+			sta->auth_alg = WLAN_AUTH_OPEN;
+		} else {
+			hostapd_logger(hapd, mgmt->sa,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_INFO,
+				       "Station tried to associate before authentication (aid=%d flags=0x%x)",
+				       sta ? sta->aid : -1,
+				       sta ? sta->flags : 0);
+			send_deauth(hapd, mgmt->sa,
+				    WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA);
+			return;
+		}
 	}
 
 	if ((fc & WLAN_FC_RETRY) &&
@@ -2660,10 +2688,11 @@ static void handle_assoc(struct hostapd_data *hapd,
 	 *    issues with processing other non-Data Class 3 frames during this
 	 *    window.
 	 */
-	if (resp == WLAN_STATUS_SUCCESS && add_associated_sta(hapd, sta))
+	if (resp == WLAN_STATUS_SUCCESS && sta && add_associated_sta(hapd, sta))
 		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
 
-	reply_res = send_assoc_resp(hapd, sta, resp, reassoc, pos, left);
+	reply_res = send_assoc_resp(hapd, sta, mgmt->sa, resp, reassoc, pos,
+				    left);
 	os_free(tmp);
 
 	/*
@@ -2671,8 +2700,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	 * (the STA was added associated to the driver) or if the station was
 	 * previously added unassociated.
 	 */
-	if ((reply_res != WLAN_STATUS_SUCCESS &&
-	     resp == WLAN_STATUS_SUCCESS) || sta->added_unassoc) {
+	if (sta && ((reply_res != WLAN_STATUS_SUCCESS &&
+		     resp == WLAN_STATUS_SUCCESS) || sta->added_unassoc)) {
 		hostapd_drv_sta_remove(hapd, sta->addr);
 		sta->added_unassoc = 0;
 	}
@@ -2729,6 +2758,17 @@ static void handle_disassoc(struct hostapd_data *hapd,
 
 	mlme_disassociate_indication(
 		hapd, sta, le_to_host16(mgmt->u.disassoc.reason_code));
+
+	/* DMG/IEEE 802.11ad does not use deauthication. Deallocate sta upon
+	 * disassociation. */
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211AD) {
+		sta->flags &= ~WLAN_STA_AUTH;
+		wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG, "deauthenticated");
+		ap_free_sta(hapd, sta);
+	}
 }
 
 

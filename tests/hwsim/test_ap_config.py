@@ -4,6 +4,10 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import os
+import signal
+import time
+
 from remotehost import remote_compatible
 import hostapd
 
@@ -78,3 +82,40 @@ def test_ap_config_errors(dev, apdev):
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success (HS 2.0 without WPA2/CCMP)")
     hostapd.remove_bss(apdev[0])
+
+def test_ap_config_reload(dev, apdev, params):
+    """hostapd configuration reload"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "foo" })
+    hapd.set("ssid", "foobar")
+    with open(os.path.join(params['logdir'], 'hostapd-test.pid'), "r") as f:
+        pid = int(f.read())
+    os.kill(pid, signal.SIGHUP)
+    time.sleep(0.1)
+    dev[0].connect("foobar", key_mgmt="NONE", scan_freq="2412")
+    hapd.set("ssid", "foo")
+    os.kill(pid, signal.SIGHUP)
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
+def test_ap_config_reload_file(dev, apdev, params):
+    """hostapd configuration reload from file"""
+    hapd = hostapd.add_iface(apdev[0], "bss-1.conf")
+    hapd.enable()
+    hapd.set("ssid", "foobar")
+    with open(os.path.join(params['logdir'], 'hostapd-test.pid'), "r") as f:
+        pid = int(f.read())
+    os.kill(pid, signal.SIGHUP)
+    time.sleep(0.1)
+    dev[0].connect("foobar", key_mgmt="NONE", scan_freq="2412")
+    hapd.set("ssid", "foo")
+    os.kill(pid, signal.SIGHUP)
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
+def test_ap_config_reload_before_enable(dev, apdev, params):
+    """hostapd configuration reload before enable"""
+    hapd = hostapd.add_iface(apdev[0], "bss-1.conf")
+    with open(os.path.join(params['logdir'], 'hostapd-test.pid'), "r") as f:
+        pid = int(f.read())
+    os.kill(pid, signal.SIGHUP)
+    hapd.ping()

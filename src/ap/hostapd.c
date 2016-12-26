@@ -75,6 +75,9 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
 	struct hostapd_ssid *ssid;
 
+	if (!hapd->started)
+		return;
+
 #ifndef CONFIG_NO_RADIUS
 	radius_client_reconfig(hapd->radius, hapd->conf->radius);
 #endif /* CONFIG_NO_RADIUS */
@@ -210,7 +213,7 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 {
 	int i;
 
-	if (!ifname)
+	if (!ifname || !hapd->drv_priv)
 		return;
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,

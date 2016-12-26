@@ -490,6 +490,43 @@ def run_ap_vht160_no_dfs(dev, apdev, channel, ht_capab):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_ap_vht160_no_ht40(dev, apdev):
+    """VHT with 160 MHz channel width and HT40 disabled"""
+    try:
+        hapd = None
+        params = { "ssid": "vht",
+                   "country_code": "ZA",
+                   "hw_mode": "a",
+                   "channel": "108",
+                   "ht_capab": "",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "2",
+                   "vht_oper_centr_freq_seg0_idx": "114",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=2)
+        if not ev:
+            cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
+            reg = cmd.stdout.readlines()
+            for r in reg:
+                if "5490" in r and "DFS" in r:
+                    raise HwsimSkip("ZA regulatory rule did not have DFS requirement removed")
+            raise Exception("AP setup timed out")
+        if "AP-ENABLED" in ev:
+            # This was supposed to fail due to sec_channel_offset == 0
+            raise Exception("Unexpected AP-ENABLED")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
 def test_ap_vht80plus80(dev, apdev):
     """VHT with 80+80 MHz channel width"""
     try:

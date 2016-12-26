@@ -165,6 +165,13 @@ def test_fils_sk_pmksa_caching(dev, apdev):
 
 def test_fils_sk_erp(dev, apdev):
     """FILS SK using ERP"""
+    run_fils_sk_erp(dev, apdev, "FILS-SHA256")
+
+def test_fils_sk_erp_sha384(dev, apdev):
+    """FILS SK using ERP and SHA384"""
+    run_fils_sk_erp(dev, apdev, "FILS-SHA384")
+
+def run_fils_sk_erp(dev, apdev, key_mgmt):
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
@@ -172,7 +179,7 @@ def test_fils_sk_erp(dev, apdev):
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
-    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['wpa_key_mgmt'] = key_mgmt
     params['auth_server_port'] = "18128"
     params['erp_domain'] = 'example.com'
     params['fils_realm'] = 'example.com'
@@ -181,7 +188,7 @@ def test_fils_sk_erp(dev, apdev):
 
     dev[0].scan_for_bss(bssid, freq=2412)
     dev[0].request("ERP_FLUSH")
-    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+    id = dev[0].connect("fils", key_mgmt=key_mgmt,
                         eap="PSK", identity="psk.user@example.com",
                         password_hex="0123456789abcdef0123456789abcdef",
                         erp="1", scan_freq="2412")

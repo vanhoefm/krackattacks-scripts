@@ -77,16 +77,23 @@ def test_ieee8021x_open(dev, apdev):
 
 def test_ieee8021x_static_wep40(dev, apdev):
     """IEEE 802.1X connection using static WEP40"""
+    run_static_wep(dev, apdev, '"hello"')
+
+def test_ieee8021x_static_wep104(dev, apdev):
+    """IEEE 802.1X connection using static WEP104"""
+    run_static_wep(dev, apdev, '"hello-there-/"')
+
+def run_static_wep(dev, apdev, key):
     params = hostapd.radius_params()
     params["ssid"] = "ieee8021x-wep"
     params["ieee8021x"] = "1"
-    params["wep_key0"] = '"hello"'
+    params["wep_key0"] = key
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eap="PSK",
                    identity="psk.user@example.com",
                    password_hex="0123456789abcdef0123456789abcdef",
-                   wep_key0='"hello"', eapol_flags="0",
+                   wep_key0=key, eapol_flags="0",
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 

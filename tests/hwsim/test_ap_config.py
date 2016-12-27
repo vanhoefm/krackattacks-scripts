@@ -119,3 +119,50 @@ def test_ap_config_reload_before_enable(dev, apdev, params):
         pid = int(f.read())
     os.kill(pid, signal.SIGHUP)
     hapd.ping()
+
+def test_ap_config_invalid_value(dev, apdev, params):
+    """Ignoring invalid hostapd configuration parameter updates"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test" }, no_enable=True)
+    not_exist = "/tmp/hostapd-test/does-not-exist"
+    tests = [ ("driver", "foobar"),
+              ("ssid2", "Q"),
+              ("macaddr_acl", "255"),
+              ("accept_mac_file", not_exist),
+              ("deny_mac_file", not_exist),
+              ("eapol_version", "255"),
+              ("eap_user_file", not_exist),
+              ("wep_key_len_broadcast", "-1"),
+              ("wep_key_len_unicast", "-1"),
+              ("wep_rekey_period", "-1"),
+              ("eap_rekey_period", "-1"),
+              ("radius_client_addr", "foo"),
+              ("acs_chan_bias", "-1:0.8"),
+              ("acs_chan_bias", "1"),
+              ("acs_chan_bias", "1:p"),
+              ("acs_chan_bias", "1:-0.8"),
+              ("acs_chan_bias", "1:0.8p"),
+              ("dtim_period", "0"),
+              ("bss_load_update_period", "-1"),
+              ("send_probe_response", "255"),
+              ("beacon_rate", "ht:-1"),
+              ("beacon_rate", "ht:32"),
+              ("beacon_rate", "vht:-1"),
+              ("beacon_rate", "vht:10"),
+              ("beacon_rate", "9"),
+              ("beacon_rate", "10001"),
+              ("vlan_file", not_exist),
+              ("bss", ""),
+              ("bssid", "foo"),
+              ("extra_cred", not_exist),
+              ("anqp_elem", "265"),
+              ("anqp_elem", "265"),
+              ("anqp_elem", "265:1"),
+              ("anqp_elem", "265:1q"),
+              ("fst_priority", ""),
+              ("fils_cache_id", "q"),
+              ("unknown-item", "foo") ]
+    for field, val in tests:
+        if "FAIL" not in hapd.request("SET %s %s" % (field, val)):
+            raise Exception("Invalid %s accepted" % field)
+    hapd.enable()
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")

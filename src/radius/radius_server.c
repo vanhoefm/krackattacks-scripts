@@ -1062,7 +1062,7 @@ static int radius_server_request(struct radius_server_data *data,
 			     "message");
 		return -1;
 	}
-		      
+
 	eap = radius_msg_get_eap(msg);
 	if (eap == NULL && sess->macacl) {
 		reply = radius_server_macacl(data, client, sess, msg);

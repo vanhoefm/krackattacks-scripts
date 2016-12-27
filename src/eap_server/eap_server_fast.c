@@ -561,7 +561,7 @@ static int eap_fast_phase1_done(struct eap_sm *sm, struct eap_fast_data *data)
 		return -1;
 	}
 	data->anon_provisioning = os_strstr(cipher, "ADH") != NULL;
-		    
+
 	if (data->anon_provisioning) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Anonymous provisioning");
 		eap_fast_derive_key_provisioning(sm, data);
@@ -789,7 +789,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 
 	/* A-ID (inside PAC-Info) */
 	eap_fast_put_tlv(buf, PAC_TYPE_A_ID, data->srv_id, data->srv_id_len);
-	
+
 	/* Note: headers may be misaligned after A-ID */
 
 	if (sm->identity) {

@@ -1537,7 +1537,7 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 }
 
 
-static void eap_ttls_check_auth_status(struct eap_sm *sm, 
+static void eap_ttls_check_auth_status(struct eap_sm *sm,
 				       struct eap_ttls_data *data,
 				       struct eap_method_ret *ret)
 {

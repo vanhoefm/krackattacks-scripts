@@ -402,7 +402,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-	/* TODO: gnutls_certificate_set_verify_flags(xcred, flags); 
+	/* TODO: gnutls_certificate_set_verify_flags(xcred, flags);
 	 * to force peer validation(?) */
 
 	if (params->ca_cert) {

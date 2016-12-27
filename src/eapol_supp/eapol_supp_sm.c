@@ -95,7 +95,7 @@ struct eapol_sm {
 		SUPP_BE_RECEIVE = 4,
 		SUPP_BE_RESPONSE = 5,
 		SUPP_BE_FAIL = 6,
-		SUPP_BE_TIMEOUT = 7, 
+		SUPP_BE_TIMEOUT = 7,
 		SUPP_BE_SUCCESS = 8
 	} SUPP_BE_state; /* dot1xSuppBackendPaeState */
 	/* Variables */

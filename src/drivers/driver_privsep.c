@@ -97,7 +97,7 @@ static int wpa_priv_cmd(struct wpa_driver_privsep_data *drv, int cmd,
 	return 0;
 }
 
-			     
+
 static int wpa_driver_privsep_scan(void *priv,
 				   struct wpa_driver_scan_params *params)
 {

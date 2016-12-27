@@ -21,7 +21,7 @@
  * RFC 2246 Section 9: Mandatory to implement TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA
  * Add support for commonly used cipher suites; don't bother with exportable
  * suites.
- */ 
+ */
 
 static const struct tls_cipher_suite tls_cipher_suites[] = {
 	{ TLS_NULL_WITH_NULL_NULL, TLS_KEY_X_NULL, TLS_CIPHER_NULL,

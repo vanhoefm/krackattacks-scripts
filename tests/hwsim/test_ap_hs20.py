@@ -2456,6 +2456,9 @@ def test_ap_hs20_deauth_req_without_pmf(dev, apdev):
     ev = dev[0].wait_event(["HS20-DEAUTH-IMMINENT-NOTICE"], timeout=0.2)
     if ev is not None:
         raise Exception("Deauth imminent notice without PMF accepted")
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_ctrl_iface_hs20_deauth_req"):
+        if "FAIL" not in hapd.request("HS20_DEAUTH_REQ " + addr + " 1 120 http://example.com/"):
+            raise Exception("HS20_DEAUTH_REQ accepted during OOM")
 
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""

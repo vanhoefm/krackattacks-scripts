@@ -905,3 +905,13 @@ def test_hapd_ctrl_update_beacon(dev, apdev):
         if "FAIL" not in hapd.request("UPDATE_BEACON"):
             raise Exception("UPDATE_BEACON succeeded unexpectedly")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+def test_hapd_ctrl_test_fail(dev, apdev):
+    """hostapd and TEST_ALLOC_FAIL/TEST_FAIL"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    if "OK" not in hapd.request("TEST_ALLOC_FAIL "):
+        raise Exception("TEST_ALLOC_FAIL clearing failed")
+    if "OK" not in hapd.request("TEST_FAIL "):
+        raise Exception("TEST_FAIL clearing failed")

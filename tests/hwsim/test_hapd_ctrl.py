@@ -494,7 +494,7 @@ def dup_network(hapd_global, src, dst, param):
                                                                   dst))
 
 def test_hapd_dup_network_global_wpa2(dev, apdev):
-    """hostapd and DUP_NETWORK command (WPA2"""
+    """hostapd and DUP_NETWORK command (WPA2)"""
     passphrase="12345678"
     src_ssid = "hapd-ctrl-src"
     dst_ssid = "hapd-ctrl-dst"
@@ -519,6 +519,18 @@ def test_hapd_dup_network_global_wpa2(dev, apdev):
     addr = dev[0].own_addr()
     if "FAIL" in dst_hapd.request("STA " + addr):
             raise Exception("Could not connect using duplicated wpa params")
+
+    tests = [ "a",
+              "no-such-ifname no-such-ifname",
+              src_ifname + " no-such-ifname",
+              src_ifname + " no-such-ifname no-such-param",
+              src_ifname + " " + dst_ifname + " no-such-param" ]
+    for t in tests:
+        if "FAIL" not in hapd_global.request("DUP_NETWORK " + t):
+            raise Exception("Invalid DUP_NETWORK accepted: " + t)
+    with alloc_fail(src_hapd, 1, "hostapd_ctrl_iface_dup_param"):
+        if "FAIL" not in hapd_global.request("DUP_NETWORK %s %s wpa" % (src_ifname, dst_ifname)):
+            raise Exception("DUP_NETWORK accepted during OOM")
 
 def test_hapd_dup_network_global_wpa(dev, apdev):
     """hostapd and DUP_NETWORK command (WPA)"""

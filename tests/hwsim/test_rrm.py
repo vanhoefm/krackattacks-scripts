@@ -312,12 +312,22 @@ def test_rrm_ftm_range_req(dev, apdev):
         raise Exception("REQ_RANGE succeeded unexpectedly (bad responder address 2)")
 
     # Bad min_ap value
-    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 20 10 00:11:22:33:44:55"):
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 300 00:11:22:33:44:55"):
         raise Exception("REQ_RANGE succeeded unexpectedly (invalid min_ap value)")
 
     # Bad rand value
-    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 300 00:11:22:33:44:55"):
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " -1 10 00:11:22:33:44:55"):
         raise Exception("REQ_RANGE succeeded unexpectedly (invalid rand value)")
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 65536 10 00:11:22:33:44:55"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (invalid rand value)")
+
+    # Missing min_ap value
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (missing min_ap value)")
+
+    # Too many responders
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 10" + 20*" 00:11:22:33:44:55"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (too many responders)")
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
 

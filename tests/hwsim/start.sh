@@ -36,6 +36,7 @@ else
 	$HAPD -gfoo > /dev/null 2>&1
 	$HAPD -Gfoo-not-exists > /dev/null 2>&1
 	$HAPD -z > /dev/null 2>&1
+	$HAPD -i foo1,foo2,foo3 > /dev/null 2>&1
     fi
     if [ -e $LOGDIR/alt-hostapd-as/hostapd/hostapd ]; then
 	HAPD_AS=$LOGDIR/alt-hostapd-as/hostapd/hostapd

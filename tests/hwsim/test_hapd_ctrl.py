@@ -834,3 +834,11 @@ def test_hapd_ctrl_eapol_reauth_errors(dev, apdev):
     for t in tests:
         if "FAIL" not in hapd.request("EAPOL_REAUTH " + t):
             raise Exception("Invalid EAPOL_REAUTH command accepted: " + t)
+
+def test_hapd_ctrl_eapol_relog(dev, apdev):
+    """hostapd and RELOG"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    if "OK" not in hapd.request("RELOG"):
+        raise Exception("RELOG failed")

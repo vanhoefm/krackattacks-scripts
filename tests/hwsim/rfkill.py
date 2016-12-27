@@ -84,7 +84,7 @@ class RFKill(object):
     @property
     def soft_blocked(self):
         return self.blocked[0]
-        
+
     @soft_blocked.setter
     def soft_blocked(self, block):
         if block:

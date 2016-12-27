@@ -2975,7 +2975,7 @@ def test_dbus_p2p_service_discovery(dev, apdev):
 
     bonjour_query = dbus.ByteArray(binascii.unhexlify('0b5f6166706f766572746370c00c000c01'))
     bonjour_response = dbus.ByteArray(binascii.unhexlify('074578616d706c65c027'))
-                                   
+
     args = { 'service_type': 'bonjour',
              'query': bonjour_query,
              'response': bonjour_response }

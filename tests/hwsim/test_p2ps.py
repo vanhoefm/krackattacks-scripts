@@ -767,7 +767,7 @@ def p2ps_connect_p2ps_method(dev, keep_group=False, join_extra="", flush=True):
         res = dev[1].group_form_result(go_ev)
         if join_extra == "":
             join_extra = " freq=" + res['freq']
-        
+
     ifnames = get_ifnames()
     p2ps_connect_pd(dev[0], dev[1], ev0, ev1, join_extra=join_extra,
                     go_ev=go_ev)

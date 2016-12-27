@@ -53,7 +53,7 @@ def _test_ap_track_sta(dev, apdev):
         raise Exception("Station missing from 2.4 GHz tracking")
     if addr2 in track:
         raise Exception("Unexpected station included in 2.4 GHz tracking")
-    
+
     track = hapd2.request("TRACK_STA_LIST")
     if addr0 not in track or addr2 not in track:
         raise Exception("Station missing from 5 GHz tracking")

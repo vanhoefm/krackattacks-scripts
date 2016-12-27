@@ -6271,7 +6271,7 @@ def decrypt_attr_encr_settings(authkey, keywrapkey, data):
     for i in range(-pad_len, -1):
         if decrypted[i] != decrypted[-1]:
             raise Exception("Invalid PS value in Encrypted Settings")
-    
+
     decrypted = decrypted[0:len(decrypted) - pad_len]
     if len(decrypted) < 12:
         raise Exception("Truncated Encrypted Settings plaintext")

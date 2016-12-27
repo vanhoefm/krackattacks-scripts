@@ -5585,7 +5585,7 @@ def test_eap_proto_mschapv2(dev, apdev):
 
             auth_challenge = binascii.unhexlify("00112233445566778899aabbccddeeff")
             logger.info("auth_challenge: " + auth_challenge.encode("hex"))
- 
+
             auth_resp = GenerateAuthenticatorResponse("new-pw", nt_response,
                                                       peer_challenge,
                                                       auth_challenge, "user")
@@ -5633,7 +5633,7 @@ def test_eap_proto_mschapv2(dev, apdev):
 
             auth_challenge = binascii.unhexlify("00112233445566778899aabbccddeeff")
             logger.info("auth_challenge: " + auth_challenge.encode("hex"))
- 
+
             auth_resp = GenerateAuthenticatorResponse("new-pw", nt_response,
                                                       peer_challenge,
                                                       auth_challenge, "user")

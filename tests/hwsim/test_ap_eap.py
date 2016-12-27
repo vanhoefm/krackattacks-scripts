@@ -2039,7 +2039,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
-    
+
     ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")
@@ -2066,7 +2066,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust2(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
-    
+
     ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")
@@ -2089,7 +2089,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust3(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
-    
+
     ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")

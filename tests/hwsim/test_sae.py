@@ -40,6 +40,10 @@ def test_sae(dev, apdev):
     if "[WPA2-SAE-CCMP]" not in bss['flags']:
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
+    res = hapd.request("STA-FIRST")
+    if "sae_group=19" not in res.splitlines():
+        raise Exception("hostapd STA output did not specify SAE group")
+
 @remote_compatible
 def test_sae_password_ecc(dev, apdev):
     """SAE with number of different passwords (ECC)"""

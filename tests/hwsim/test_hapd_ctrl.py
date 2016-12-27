@@ -823,3 +823,14 @@ def test_hapd_ctrl_vendor_errors(dev, apdev):
     with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_ctrl_iface_vendor"):
         if "FAIL" not in hapd.request("VENDOR 10 10"):
             raise Exception("VENDOR accepted during OOM")
+
+def test_hapd_ctrl_eapol_reauth_errors(dev, apdev):
+    """hostapd and EAPOL_REAUTH errors"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    tests = [ "foo",
+              "11:22:33:44:55:66" ]
+    for t in tests:
+        if "FAIL" not in hapd.request("EAPOL_REAUTH " + t):
+            raise Exception("Invalid EAPOL_REAUTH command accepted: " + t)

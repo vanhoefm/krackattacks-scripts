@@ -595,6 +595,62 @@ def test_wnm_bss_tm(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_wnm_bss_tm_errors(dev, apdev):
+    """WNM BSS Transition Management errors"""
+    params = { "ssid": "test-wnm",
+               "hw_mode": "g",
+               "channel": "1",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    id = dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    tests = [ "BSS_TM_REQ q",
+              "BSS_TM_REQ 22:22:22:22:22:22",
+              "BSS_TM_REQ %s disassoc_timer=-1" % addr,
+              "BSS_TM_REQ %s disassoc_timer=65536" % addr,
+              "BSS_TM_REQ %s bss_term=foo" % addr,
+              "BSS_TM_REQ %s neighbor=q" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0,0,q" % addr,
+              "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0,0,0q" % addr,
+              "BSS_TM_REQ %s url=foo mbo=1:2" % addr,
+              "BSS_TM_REQ %s url=foo mbo=100000:0:0" % addr,
+              "BSS_TM_REQ %s url=foo mbo=0:0:254" % addr,
+              "BSS_TM_REQ %s url=foo mbo=0:100000:0" % addr ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: %s" % t)
+
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_bss_tm_req"):
+        if "FAIL" not in hapd.request("BSS_TM_REQ %s url=http://foo" % addr):
+            raise Exception("BSS_TM_REQ accepted during OOM")
+
+def test_wnm_bss_tm_termination(dev, apdev):
+    """WNM BSS Transition Management and BSS termination"""
+    params = { "ssid": "test-wnm",
+               "hw_mode": "g",
+               "channel": "1",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    id = dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    if "OK" not in hapd.request("BSS_TM_REQ %s bss_term=0,1" % addr):
+        raise Exception("BSS_TM_REQ failed")
+    ev = hapd.wait_event(["BSS-TM-RESP"], timeout=5)
+    if ev is None:
+        raise Exception("No BSS-TM-RESP event seen")
+
+    if "OK" not in hapd.request("BSS_TM_REQ %s url=http://example.com/" % addr):
+        raise Exception("BSS_TM_REQ failed")
+    ev = hapd.wait_event(["BSS-TM-RESP"], timeout=5)
+    if ev is None:
+        raise Exception("No BSS-TM-RESP event seen")
+
 def test_wnm_bss_tm_scan_not_needed(dev, apdev):
     """WNM BSS Transition Management and scan not needed"""
     run_wnm_bss_tm_scan_not_needed(dev, apdev)

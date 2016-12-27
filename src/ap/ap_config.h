@@ -293,7 +293,7 @@ struct hostapd_bss_config {
 	char iapp_iface[IFNAMSIZ + 1]; /* interface used with IAPP broadcast
 					* frames */
 
-	enum {
+	enum macaddr_acl {
 		ACCEPT_UNLESS_DENIED = 0,
 		DENY_UNLESS_ACCEPTED = 1,
 		USE_EXTERNAL_RADIUS_AUTH = 2

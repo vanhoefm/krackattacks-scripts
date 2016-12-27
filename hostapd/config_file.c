@@ -2113,13 +2113,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "utf8_ssid") == 0) {
 		bss->ssid.utf8_ssid = atoi(pos) > 0;
 	} else if (os_strcmp(buf, "macaddr_acl") == 0) {
-		bss->macaddr_acl = atoi(pos);
-		if (bss->macaddr_acl != ACCEPT_UNLESS_DENIED &&
-		    bss->macaddr_acl != DENY_UNLESS_ACCEPTED &&
-		    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
+		enum macaddr_acl acl = atoi(pos);
+
+		if (acl != ACCEPT_UNLESS_DENIED &&
+		    acl != DENY_UNLESS_ACCEPTED &&
+		    acl != USE_EXTERNAL_RADIUS_AUTH) {
 			wpa_printf(MSG_ERROR, "Line %d: unknown macaddr_acl %d",
-				   line, bss->macaddr_acl);
+				   line, acl);
+			return 1;
 		}
+		bss->macaddr_acl = acl;
 	} else if (os_strcmp(buf, "accept_mac_file") == 0) {
 		if (hostapd_config_read_maclist(pos, &bss->accept_mac,
 						&bss->num_accept_mac)) {

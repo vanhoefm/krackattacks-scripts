@@ -503,6 +503,9 @@ def test_hapd_ctrl_global(dev, apdev):
     if apdev[0]['ifname'] + " ctrl_iface=" not in res:
         raise Exception("AP interface missing from INTERFACES ctrl")
 
+    if "FAIL" not in hapd_global.request("DETACH"):
+        raise Exception("DETACH succeeded unexpectedly")
+
 def dup_network(hapd_global, src, dst, param):
     res = hapd_global.request("DUP_NETWORK %s %s %s" % (src, dst, param))
     if "OK" not in res:

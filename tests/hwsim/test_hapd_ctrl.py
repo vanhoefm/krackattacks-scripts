@@ -713,3 +713,16 @@ def test_hapd_ctrl_not_yet_fully_enabled(dev, apdev):
              "STOP_AP" ]
     for cmd in cmds:
         hapd.request(cmd)
+
+def test_hapd_ctrl_set(dev, apdev):
+    """hostapd and SET ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    tests = [ "foo",
+              "wps_version_number 300",
+              "gas_frag_limit 0",
+              "mbo_assoc_disallow 0" ]
+    for t in tests:
+        if "FAIL" not in hapd.request("SET " + t):
+            raise Exception("Invalid SET command accepted: " + t)

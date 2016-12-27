@@ -65,6 +65,10 @@ def test_fils_sk_full_auth(dev, apdev):
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+    conf = hapd.get_config()
+    if conf['key_mgmt'] != 'FILS-SHA256':
+        raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
+
 def test_fils_sk_sha384_full_auth(dev, apdev):
     """FILS SK full authentication (SHA384)"""
     check_fils_capa(dev[0])
@@ -108,6 +112,10 @@ def test_fils_sk_sha384_full_auth(dev, apdev):
     if ev is None:
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+    conf = hapd.get_config()
+    if conf['key_mgmt'] != 'FILS-SHA384':
+        raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
 
 def test_fils_sk_pmksa_caching(dev, apdev):
     """FILS SK and PMKSA caching"""

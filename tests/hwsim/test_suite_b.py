@@ -84,6 +84,10 @@ def test_suite_b(dev, apdev):
     if "CTRL-EVENT-EAP-STARTED" in ev:
         raise Exception("Unexpected EAP exchange")
 
+    conf = hapd.get_config()
+    if conf['key_mgmt'] != 'WPA-EAP-SUITE-B':
+        raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
+
 def suite_b_as_params():
     params = {}
     params['ssid'] = 'as'
@@ -186,6 +190,10 @@ def test_suite_b_192(dev, apdev):
         raise Exception("Roaming with the AP timed out")
     if "CTRL-EVENT-EAP-STARTED" in ev:
         raise Exception("Unexpected EAP exchange")
+
+    conf = hapd.get_config()
+    if conf['key_mgmt'] != 'WPA-EAP-SUITE-B-192':
+        raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
 
 def test_suite_b_192_radius(dev, apdev):
     """WPA2/GCMP-256 (RADIUS) connection at Suite B 192-bit level"""

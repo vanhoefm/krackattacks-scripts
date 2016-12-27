@@ -476,6 +476,16 @@ def test_hapd_ctrl_global(dev, apdev):
     res = hapd_global.request("IFNAME=" + ifname + " GET version")
     if "FAIL" in res:
            raise Exception("Could not get hostapd version for " + ifname + " via global control interface")
+    res = hapd_global.request("INTERFACES")
+    if "FAIL" in res:
+        raise Exception("INTERFACES command failed")
+    if apdev[0]['ifname'] not in res.splitlines():
+        raise Exception("AP interface missing from INTERFACES")
+    res = hapd_global.request("INTERFACES ctrl")
+    if "FAIL" in res:
+        raise Exception("INTERFACES ctrl command failed")
+    if apdev[0]['ifname'] + " ctrl_iface=" not in res:
+        raise Exception("AP interface missing from INTERFACES ctrl")
 
 def dup_network(hapd_global, src, dst, param):
     res = hapd_global.request("DUP_NETWORK %s %s %s" % (src, dst, param))

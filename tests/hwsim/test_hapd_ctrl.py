@@ -264,6 +264,19 @@ def test_hapd_ctrl_set_accept_mac_file(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
+def test_hapd_ctrl_set_accept_mac_file_vlan(dev, apdev):
+    """hostapd and SET accept_mac_file ctrl_iface command (VLAN ID)"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    hapd.request("SET macaddr_acl 1")
+    if "OK" not in hapd.request("SET accept_mac_file hostapd.accept"):
+        raise Exception("Unexpected SET failure")
+    dev[1].wait_disconnected(timeout=15)
+    dev[0].wait_disconnected(timeout=15)
+
 @remote_compatible
 def test_hapd_ctrl_set_error_cases(dev, apdev):
     """hostapd and SET error cases"""

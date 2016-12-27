@@ -67,6 +67,8 @@ def test_hapd_ctrl_sta(dev, apdev):
         raise Exception("Unexpected STA failure")
     if "FAIL" not in hapd.request("STA " + addr + " eapol"):
         raise Exception("Unexpected STA-eapol success")
+    if "FAIL" not in hapd.request("STA " + addr + " foo"):
+        raise Exception("Unexpected STA-foo success")
     if "FAIL" not in hapd.request("STA 00:11:22:33:44"):
         raise Exception("Unexpected STA success")
     if "FAIL" not in hapd.request("STA 00:11:22:33:44:55"):

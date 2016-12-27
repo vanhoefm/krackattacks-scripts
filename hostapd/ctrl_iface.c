@@ -1017,14 +1017,16 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 		if (ret != 3) {
 			wpa_printf(MSG_DEBUG,
 				   "MBO requires three arguments: mbo=<reason>:<reassoc_delay>:<cell_pref>");
-			return -1;
+			ret = -1;
+			goto fail;
 		}
 
 		if (mbo_reason > MBO_TRANSITION_REASON_PREMIUM_AP) {
 			wpa_printf(MSG_DEBUG,
 				   "Invalid MBO transition reason code %u",
 				   mbo_reason);
-			return -1;
+			ret = -1;
+			goto fail;
 		}
 
 		/* Valid values for Cellular preference are: 0, 1, 255 */
@@ -1032,7 +1034,8 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 			wpa_printf(MSG_DEBUG,
 				   "Invalid MBO cellular capability %u",
 				   cell_pref);
-			return -1;
+			ret = -1;
+			goto fail;
 		}
 
 		if (reassoc_delay > 65535 ||
@@ -1040,7 +1043,8 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 		     !(req_mode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT))) {
 			wpa_printf(MSG_DEBUG,
 				   "MBO: Assoc retry delay is only valid in disassoc imminent mode");
-			return -1;
+			ret = -1;
+			goto fail;
 		}
 
 		*mbo_pos++ = MBO_ATTR_ID_TRANSITION_REASON;
@@ -1066,6 +1070,7 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 				  nei_pos > nei_rep ? nei_rep : NULL,
 				  nei_pos - nei_rep, mbo_len ? mbo : NULL,
 				  mbo_len);
+fail:
 	os_free(url);
 	return ret;
 }

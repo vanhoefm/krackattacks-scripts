@@ -7,7 +7,7 @@
 from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
-from utils import skip_with_fips, alloc_fail
+from utils import skip_with_fips, alloc_fail, fail_test
 
 @remote_compatible
 def test_hapd_ctrl_status(dev, apdev):
@@ -855,3 +855,15 @@ def test_hapd_ctrl_poll_sta_errors(dev, apdev):
     for t in tests:
         if "FAIL" not in hapd.request("POLL_STA " + t):
             raise Exception("Invalid POLL_STA command accepted: " + t)
+
+def test_hapd_ctrl_update_beacon(dev, apdev):
+    """hostapd and UPDATE_BEACON"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    with fail_test(hapd, 1, "ieee802_11_set_beacon"):
+        if "FAIL" not in hapd.request("UPDATE_BEACON"):
+            raise Exception("UPDATE_BEACON succeeded unexpectedly")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")

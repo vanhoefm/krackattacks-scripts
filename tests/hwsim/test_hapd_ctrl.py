@@ -476,6 +476,9 @@ def test_hapd_ctrl_global(dev, apdev):
     res = hapd_global.request("IFNAME=" + ifname + " GET version")
     if "FAIL" in res:
            raise Exception("Could not get hostapd version for " + ifname + " via global control interface")
+    res = hapd_global.request("IFNAME=no-such-ifname GET version")
+    if "FAIL-NO-IFNAME-MATCH" not in res:
+           raise Exception("Invalid ifname not reported")
     res = hapd_global.request("INTERFACES")
     if "FAIL" in res:
         raise Exception("INTERFACES command failed")

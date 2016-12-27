@@ -7,7 +7,7 @@
 from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
-from utils import skip_with_fips
+from utils import skip_with_fips, alloc_fail
 
 @remote_compatible
 def test_hapd_ctrl_status(dev, apdev):
@@ -139,6 +139,11 @@ def test_hapd_ctrl_new_sta(dev, apdev):
         raise Exception("Unexpected NEW_STA failure")
     if "AUTHORIZED" not in hapd.request("STA 00:11:22:33:44:55"):
         raise Exception("Unexpected NEW_STA STA status")
+    if "OK" not in hapd.request("NEW_STA 00:11:22:33:44:55"):
+        raise Exception("Unexpected NEW_STA failure")
+    with alloc_fail(hapd, 1, "ap_sta_add;hostapd_ctrl_iface_new_sta"):
+        if "FAIL" not in hapd.request("NEW_STA 00:11:22:33:44:66"):
+            raise Exception("Unexpected NEW_STA success during OOM")
 
 @remote_compatible
 def test_hapd_ctrl_get(dev, apdev):

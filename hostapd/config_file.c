@@ -2750,12 +2750,14 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 #endif /* CONFIG_ACS */
 	} else if (os_strcmp(buf, "dtim_period") == 0) {
-		bss->dtim_period = atoi(pos);
-		if (bss->dtim_period < 1 || bss->dtim_period > 255) {
+		int val = atoi(pos);
+
+		if (val < 1 || val > 255) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid dtim_period %d",
-				   line, bss->dtim_period);
+				   line, val);
 			return 1;
 		}
+		bss->dtim_period = val;
 	} else if (os_strcmp(buf, "bss_load_update_period") == 0) {
 		bss->bss_load_update_period = atoi(pos);
 		if (bss->bss_load_update_period < 0 ||

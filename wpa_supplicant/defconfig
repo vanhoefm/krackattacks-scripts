@@ -567,3 +567,6 @@ CONFIG_PEERKEY=y
 # This can be used to enable control interface commands that allow the current
 # PMKSA cache entries to be fetched and new entries to be added.
 #CONFIG_PMKSA_CACHE_EXTERNAL=y
+
+# Mesh Networking (IEEE 802.11s)
+#CONFIG_MESH=y

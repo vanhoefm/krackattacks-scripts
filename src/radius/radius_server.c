@@ -26,9 +26,14 @@
 #define RADIUS_SESSION_TIMEOUT 60
 
 /**
+ * RADIUS_SESSION_MAINTAIN - Completed session expiration timeout in seconds
+ */
+#define RADIUS_SESSION_MAINTAIN 5
+
+/**
  * RADIUS_MAX_SESSION - Maximum number of active sessions
  */
-#define RADIUS_MAX_SESSION 100
+#define RADIUS_MAX_SESSION 1000
 
 /**
  * RADIUS_MAX_MSG_LEN - Maximum message length for incoming RADIUS messages
@@ -1172,7 +1177,7 @@ send_reply:
 			     sess->sess_id);
 		eloop_cancel_timeout(radius_server_session_remove_timeout,
 				     data, sess);
-		eloop_register_timeout(10, 0,
+		eloop_register_timeout(RADIUS_SESSION_MAINTAIN, 0,
 				       radius_server_session_remove_timeout,
 				       data, sess);
 	}

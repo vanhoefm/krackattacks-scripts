@@ -120,6 +120,15 @@ def test_ap_config_reload_before_enable(dev, apdev, params):
     os.kill(pid, signal.SIGHUP)
     hapd.ping()
 
+def test_ap_config_sigusr1(dev, apdev, params):
+    """hostapd SIGUSR1"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "foobar" })
+    with open(os.path.join(params['logdir'], 'hostapd-test.pid'), "r") as f:
+        pid = int(f.read())
+    os.kill(pid, signal.SIGUSR1)
+    dev[0].connect("foobar", key_mgmt="NONE", scan_freq="2412")
+    os.kill(pid, signal.SIGUSR1)
+
 def test_ap_config_invalid_value(dev, apdev, params):
     """Ignoring invalid hostapd configuration parameter updates"""
     hapd = hostapd.add_ap(apdev[0], { "ssid": "test" }, no_enable=True)

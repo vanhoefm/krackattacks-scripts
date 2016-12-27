@@ -2158,13 +2158,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "ieee8021x") == 0) {
 		bss->ieee802_1x = atoi(pos);
 	} else if (os_strcmp(buf, "eapol_version") == 0) {
-		bss->eapol_version = atoi(pos);
-		if (bss->eapol_version < 1 || bss->eapol_version > 2) {
+		int eapol_version = atoi(pos);
+
+		if (eapol_version < 1 || eapol_version > 2) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid EAPOL version (%d): '%s'.",
-				   line, bss->eapol_version, pos);
+				   line, eapol_version, pos);
 			return 1;
 		}
+		bss->eapol_version = eapol_version;
 		wpa_printf(MSG_DEBUG, "eapol_version=%d", bss->eapol_version);
 #ifdef EAP_SERVER
 	} else if (os_strcmp(buf, "eap_authenticator") == 0) {

@@ -129,9 +129,6 @@ static int hostapd_config_read_maclist(const char *fname,
 	struct mac_acl_entry *newacl;
 	int vlan_id;
 
-	if (!fname)
-		return 0;
-
 	f = fopen(fname, "r");
 	if (!f) {
 		wpa_printf(MSG_ERROR, "MAC list file '%s' not found.", fname);
@@ -223,9 +220,6 @@ static int hostapd_config_read_eap_user(const char *fname,
 	char buf[512], *pos, *start, *pos2;
 	int line = 0, ret = 0, num_methods;
 	struct hostapd_eap_user *user = NULL, *tail = NULL, *new_user = NULL;
-
-	if (!fname)
-		return 0;
 
 	if (os_strncmp(fname, "sqlite:", 7) == 0) {
 #ifdef CONFIG_SQLITE

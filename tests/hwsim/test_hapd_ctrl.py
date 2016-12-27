@@ -726,3 +726,21 @@ def test_hapd_ctrl_set(dev, apdev):
     for t in tests:
         if "FAIL" not in hapd.request("SET " + t):
             raise Exception("Invalid SET command accepted: " + t)
+
+def test_hapd_ctrl_radar(dev, apdev):
+    """hostapd and RADAR ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    tests = [ "foo", "foo bar" ]
+    for t in tests:
+        if "FAIL" not in hapd.request("RADAR " + t):
+            raise Exception("Invalid RADAR command accepted: " + t)
+
+    tests = [ "DETECTED freq=2412 chan_offset=12 cf1=1234 cf2=2345",
+              "CAC-FINISHED freq=2412",
+              "CAC-ABORTED freq=2412",
+              "NOP-FINISHED freq=2412" ]
+    for t in tests:
+        hapd.request("RADAR " + t)

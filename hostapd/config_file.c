@@ -2294,15 +2294,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_free(bss->erp_domain);
 		bss->erp_domain = os_strdup(pos);
 	} else if (os_strcmp(buf, "wep_key_len_broadcast") == 0) {
-		bss->default_wep_key_len = atoi(pos);
-		if (bss->default_wep_key_len > 13) {
-			wpa_printf(MSG_ERROR, "Line %d: invalid WEP key len %lu (= %lu bits)",
-				   line,
-				   (unsigned long) bss->default_wep_key_len,
-				   (unsigned long)
-				   bss->default_wep_key_len * 8);
+		int val = atoi(pos);
+
+		if (val < 0 || val > 13) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid WEP key len %d (= %d bits)",
+				   line, val, val * 8);
 			return 1;
 		}
+		bss->default_wep_key_len = val;
 	} else if (os_strcmp(buf, "wep_key_len_unicast") == 0) {
 		bss->individual_wep_key_len = atoi(pos);
 		if (bss->individual_wep_key_len < 0 ||

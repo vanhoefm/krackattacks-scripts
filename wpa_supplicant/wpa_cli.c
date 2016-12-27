@@ -335,6 +335,22 @@ static int wpa_cli_cmd_pmksa_flush(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+
+static int wpa_cli_cmd_pmksa_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "PMKSA_GET", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_pmksa_add(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "PMKSA_ADD", 8, argc, argv);
+}
+
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
+
+
 static int wpa_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	print_help(argc > 0 ? argv[0] : NULL);
@@ -2869,6 +2885,14 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "pmksa_flush", wpa_cli_cmd_pmksa_flush, NULL,
 	  cli_cmd_flag_none,
 	  "= flush PMKSA cache entries" },
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+	{ "pmksa_get", wpa_cli_cmd_pmksa_get, NULL,
+	  cli_cmd_flag_none,
+	  "<network_id> = fetch all stored PMKSA cache entries" },
+	{ "pmksa_add", wpa_cli_cmd_pmksa_add, NULL,
+	  cli_cmd_flag_sensitive,
+	  "<network_id> <BSSID> <PMKID> <PMK> <reauth_time in seconds> <expiration in seconds> <akmp> <opportunistic> = store PMKSA cache entry from external storage" },
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 	{ "reassociate", wpa_cli_cmd_reassociate, NULL,
 	  cli_cmd_flag_none,
 	  "= force reassociation" },

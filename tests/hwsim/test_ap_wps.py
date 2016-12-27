@@ -180,6 +180,9 @@ def test_ap_wps_init_through_wps_config(dev, apdev):
     dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
                    pairwise="CCMP", group="CCMP")
 
+    if "FAIL" not in hapd.request("WPS_CONFIG foo"):
+        raise Exception("Invalid WPS_CONFIG accepted")
+
 @remote_compatible
 def test_ap_wps_init_through_wps_config_2(dev, apdev):
     """AP configuration using wps_config and wps_cred_processing=2"""
@@ -675,6 +678,11 @@ def test_ap_wps_random_ap_pin(dev, apdev):
     with alloc_fail(hapd, 1, "upnp_wps_set_ap_pin"):
         hapd.request("WPS_AP_PIN set 12345670")
         hapd.request("WPS_AP_PIN disable")
+
+    if "FAIL" not in hapd.request("WPS_AP_PIN set"):
+        raise Exception("Invalid WPS_AP_PIN accepted")
+    if "FAIL" not in hapd.request("WPS_AP_PIN foo"):
+        raise Exception("Invalid WPS_AP_PIN accepted")
 
 def test_ap_wps_reg_config(dev, apdev):
     """WPS registrar configuring an AP using AP PIN"""

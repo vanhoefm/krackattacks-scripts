@@ -9815,3 +9815,24 @@ def test_ap_wps_tkip(dev, apdev):
                             "wpa_passphrase": "12345678" })
     if "FAIL" not in hapd.request("WPS_PBC"):
         raise Exception("WPS unexpectedly enabled")
+
+def test_ap_wps_conf_dummy_cred(dev, apdev):
+    """WPS PIN provisioning with configured AP using dummy cred"""
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                          "wpa_passphrase": "12345678", "wpa": "2",
+                          "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd.request("WPS_PIN any 12345670")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    try:
+        hapd.set("wps_testing_dummy_cred", "1")
+        dev[0].request("WPS_PIN " + apdev[0]['bssid'] + " 12345670")
+        for i in range(1, 3):
+            ev = dev[0].wait_event(["WPS-CRED-RECEIVED"], timeout=15)
+            if ev is None:
+                raise Exception("WPS credential %d not received" % i)
+        dev[0].wait_connected(timeout=30)
+    finally:
+        hapd.set("wps_testing_dummy_cred", "0")

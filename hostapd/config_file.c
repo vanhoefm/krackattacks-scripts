@@ -2055,20 +2055,21 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_strlcpy(bss->wds_bridge, pos, sizeof(bss->wds_bridge));
 	} else if (os_strcmp(buf, "driver") == 0) {
 		int j;
-		/* clear to get error below if setting is invalid */
-		conf->driver = NULL;
+		const struct wpa_driver_ops *driver = NULL;
+
 		for (j = 0; wpa_drivers[j]; j++) {
 			if (os_strcmp(pos, wpa_drivers[j]->name) == 0) {
-				conf->driver = wpa_drivers[j];
+				driver = wpa_drivers[j];
 				break;
 			}
 		}
-		if (conf->driver == NULL) {
+		if (!driver) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid/unknown driver '%s'",
 				   line, pos);
 			return 1;
 		}
+		conf->driver = driver;
 	} else if (os_strcmp(buf, "driver_params") == 0) {
 		os_free(conf->driver_params);
 		conf->driver_params = os_strdup(pos);

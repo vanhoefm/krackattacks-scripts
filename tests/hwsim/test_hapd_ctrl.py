@@ -744,3 +744,62 @@ def test_hapd_ctrl_radar(dev, apdev):
               "NOP-FINISHED freq=2412" ]
     for t in tests:
         hapd.request("RADAR " + t)
+
+def test_hapd_ctrl_ext_io_errors(dev, apdev):
+    """hostapd and external I/O errors"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    tests = [ "MGMT_TX 1",
+              "MGMT_TX 1q",
+              "MGMT_RX_PROCESS freq=2412",
+              "EAPOL_RX foo",
+              "EAPOL_RX 00:11:22:33:44:55 1",
+              "EAPOL_RX 00:11:22:33:44:55 1q" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: " + t)
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_mgmt_tx"):
+        if "FAIL" not in hapd.request("MGMT_TX 12"):
+            raise Exception("MGMT_TX accepted during OOM")
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_eapol_rx"):
+        if "FAIL" not in hapd.request("EAPOL_RX 00:11:22:33:44:55 11"):
+            raise Exception("EAPOL_RX accepted during OOM")
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    tests = [ "MGMT_RX_PROCESS freq=2412",
+              "MGMT_RX_PROCESS freq=2412 ssi_signal=0",
+              "MGMT_RX_PROCESS freq=2412 frame=1",
+              "MGMT_RX_PROCESS freq=2412 frame=1q" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: " + t)
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_mgmt_rx_process"):
+        if "FAIL" not in hapd.request("MGMT_RX_PROCESS freq=2412 frame=11"):
+            raise Exception("MGMT_RX_PROCESS accepted during OOM")
+    hapd.set("ext_mgmt_frame_handling", "0")
+
+    if "OK" not in hapd.request("DATA_TEST_CONFIG 1"):
+        raise Exception("Failed to enable l2_test")
+    if "OK" not in hapd.request("DATA_TEST_CONFIG 1"):
+        raise Exception("Failed to enable l2_test(2)")
+    tests = [ "DATA_TEST_TX foo",
+              "DATA_TEST_TX 00:11:22:33:44:55 foo",
+              "DATA_TEST_TX 00:11:22:33:44:55 00:11:22:33:44:55 -1",
+              "DATA_TEST_TX 00:11:22:33:44:55 00:11:22:33:44:55 256" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: " + t)
+    if "OK" not in hapd.request("DATA_TEST_CONFIG 0"):
+        raise Exception("Failed to disable l2_test")
+    tests = [ "DATA_TEST_TX 00:11:22:33:44:55 00:11:22:33:44:55 0",
+              "DATA_TEST_FRAME ifname=foo",
+              "DATA_TEST_FRAME 1",
+              "DATA_TEST_FRAME 11",
+              "DATA_TEST_FRAME 112233445566778899aabbccddeefq" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: " + t)
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_data_test_frame"):
+        if "FAIL" not in hapd.request("DATA_TEST_FRAME 112233445566778899aabbccddeeff"):
+            raise Exception("DATA_TEST_FRAME accepted during OOM")

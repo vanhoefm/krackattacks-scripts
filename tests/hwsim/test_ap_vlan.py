@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Test cases for AP VLAN
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -20,7 +20,7 @@ except ImportError:
 
 import hwsim_utils
 import hostapd
-from utils import iface_is_in_bridge, HwsimSkip
+from utils import iface_is_in_bridge, HwsimSkip, alloc_fail
 import os
 from tshark import run_tshark
 
@@ -52,6 +52,44 @@ def test_ap_vlan_file_open(dev, apdev):
     hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
     hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
+
+def test_ap_vlan_file_parsing(dev, apdev, params):
+    """hostapd vlan_file/mac_file parsing"""
+    tmp = os.path.join(params['logdir'], 'ap_vlan_file_parsing.tmp')
+    params = { "ssid": "test-vlan-open", "dynamic_vlan": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    tests = [ "#\n\n0\t11\n",
+              "* ",
+              "1 netdev12345678901234567890" ]
+    for t in tests:
+        with open(tmp, "w") as f:
+            f.write(t)
+        if "FAIL" not in hapd.request("SET vlan_file " + tmp):
+            raise Exception("Invalid vlan_file accepted")
+
+    with open(tmp, "w") as f:
+        f.write("1\tvlan\n")
+    with alloc_fail(hapd, 1, "=hostapd_config_read_vlan_file"):
+        if "FAIL" not in hapd.request("SET vlan_file " + tmp):
+            raise Exception("vlan_file accepted during OOM")
+
+    tests = [ "#\n\n0\tvlan\n",
+              "4095\tvlan\n",
+              "vlan\n",
+              "1\t1234567890abcdef1234567890\n",
+              "1\n" ]
+    for t in tests:
+        with open(tmp, "w") as f:
+            f.write(t)
+        if "FAIL" not in hapd.request("SET accept_mac_file " + tmp):
+            raise Exception("Invalid accept_mac_file accepted")
+
+    with open(tmp, "w") as f:
+        f.write("00:11:22:33:44:55\n")
+    with alloc_fail(hapd, 1, "hostapd_config_read_maclist"):
+        if "FAIL" not in hapd.request("SET accept_mac_file " + tmp):
+            raise Exception("accept_mac_file accepted during OOM")
 
 def test_ap_vlan_wpa2(dev, apdev):
     """AP VLAN with WPA2-PSK"""

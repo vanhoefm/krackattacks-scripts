@@ -1,5 +1,5 @@
 # QoS Mapping tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -11,7 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail, fail_test
 from wlantest import Wlantest
 
 def check_qos_map(ap, hapd, dev, sta, dscp, tid, ap_tid=None):
@@ -157,3 +157,13 @@ def test_ap_qosmap_invalid(dev, apdev):
         raise Exception("Unexpected SEND_QOS_MAP_CONF success")
     if "FAIL" not in hapd.request("SEND_QOS_MAP_CONF 00:11:22:33:44"):
         raise Exception("Unexpected SEND_QOS_MAP_CONF success")
+
+    with fail_test(hapd, 1, "hostapd_ctrl_iface_set_qos_map_set"):
+        if "FAIL" not in hapd.request("SET_QOS_MAP_SET 22,6,8,15,0,7,255,255,16,31,32,39,255,255,40,47,48,55"):
+            raise Exception("SET_QOS_MAP_SET accepted during forced driver failure")
+
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    with alloc_fail(hapd, 1,
+                    "wpabuf_alloc;hostapd_ctrl_iface_send_qos_map_conf"):
+        if "FAIL" not in hapd.request("SEND_QOS_MAP_CONF " + dev[0].own_addr()):
+            raise Exception("SEND_QOS_MAP_CONF accepted during OOM")

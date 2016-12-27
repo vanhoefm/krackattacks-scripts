@@ -2525,6 +2525,8 @@ def _test_ap_hs20_remediation_required_ctrl(dev, apdev):
         raise Exception("Unexpected HS20_WNM_NOTIF success")
     if "FAIL" not in hapd.request("HS20_WNM_NOTIF " + addr + " https://12345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678927.very.long.example.com/"):
         raise Exception("Unexpected HS20_WNM_NOTIF success")
+    if "OK" not in hapd.request("HS20_WNM_NOTIF " + addr + " "):
+        raise Exception("HS20_WNM_NOTIF failed with empty URL")
 
 def test_ap_hs20_session_info(dev, apdev):
     """Hotspot 2.0 connection and session information from RADIUS"""

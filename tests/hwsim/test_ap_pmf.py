@@ -40,8 +40,12 @@ def test_ap_pmf_required(dev, apdev):
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[1], hapd)
-    hapd.request("SA_QUERY " + dev[0].p2p_interface_addr())
-    hapd.request("SA_QUERY " + dev[1].p2p_interface_addr())
+    if "OK" not in hapd.request("SA_QUERY " + dev[0].own_addr()):
+        raise Exception("SA_QUERY failed")
+    if "OK" not in hapd.request("SA_QUERY " + dev[1].own_addr()):
+        raise Exception("SA_QUERY failed")
+    if "FAIL" not in hapd.request("SA_QUERY foo"):
+        raise Exception("Invalid SA_QUERY accepted")
     wt.require_ap_pmf_mandatory(apdev[0]['bssid'])
     wt.require_sta_pmf(apdev[0]['bssid'], dev[0].p2p_interface_addr())
     wt.require_sta_pmf_mandatory(apdev[0]['bssid'], dev[1].p2p_interface_addr())

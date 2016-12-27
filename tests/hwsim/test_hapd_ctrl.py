@@ -844,3 +844,14 @@ def test_hapd_ctrl_eapol_relog(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     if "OK" not in hapd.request("RELOG"):
         raise Exception("RELOG failed")
+
+def test_hapd_ctrl_poll_sta_errors(dev, apdev):
+    """hostapd and POLL_STA errors"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    tests = [ "foo",
+              "11:22:33:44:55:66" ]
+    for t in tests:
+        if "FAIL" not in hapd.request("POLL_STA " + t):
+            raise Exception("Invalid POLL_STA command accepted: " + t)

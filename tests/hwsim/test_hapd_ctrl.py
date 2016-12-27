@@ -803,3 +803,23 @@ def test_hapd_ctrl_ext_io_errors(dev, apdev):
     with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_data_test_frame"):
         if "FAIL" not in hapd.request("DATA_TEST_FRAME 112233445566778899aabbccddeeff"):
             raise Exception("DATA_TEST_FRAME accepted during OOM")
+
+def test_hapd_ctrl_vendor_errors(dev, apdev):
+    """hostapd and VENDOR errors"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0], params)
+    tests = [ "q",
+              "10q",
+              "10 10q",
+              "10 10 123q",
+              "10 10" ]
+    for t in tests:
+        if "FAIL" not in hapd.request("VENDOR " + t):
+            raise Exception("Invalid VENDOR command accepted: " + t)
+    with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_vendor"):
+        if "FAIL" not in hapd.request("VENDOR 10 10 10"):
+            raise Exception("VENDOR accepted during OOM")
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_ctrl_iface_vendor"):
+        if "FAIL" not in hapd.request("VENDOR 10 10"):
+            raise Exception("VENDOR accepted during OOM")

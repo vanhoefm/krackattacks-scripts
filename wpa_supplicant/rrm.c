@@ -339,6 +339,55 @@ static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_rrm_send_msr_report_mpdu(struct wpa_supplicant *wpa_s,
+					  const u8 *data, size_t len)
+{
+	struct wpabuf *report = wpabuf_alloc(len + 3);
+
+	if (!report)
+		return;
+
+	wpabuf_put_u8(report, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(report, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
+	wpabuf_put_u8(report, wpa_s->rrm.token);
+
+	wpabuf_put_data(report, data, len);
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(report), wpabuf_len(report), 0)) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Radio measurement report failed: Sending Action frame failed");
+	}
+
+	wpabuf_free(report);
+}
+
+
+static void wpas_rrm_send_msr_report(struct wpa_supplicant *wpa_s,
+				     struct wpabuf *buf)
+{
+	int len = wpabuf_len(buf);
+	const u8 *pos = wpabuf_head_u8(buf), *next = pos;
+
+#define MPDU_REPORT_LEN (int) (IEEE80211_MAX_MMPDU_SIZE - IEEE80211_HDRLEN - 3)
+
+	while (len) {
+		int send_len = (len > MPDU_REPORT_LEN) ? next - pos : len;
+
+		if (send_len == len ||
+		    (send_len + next[1] + 2) > MPDU_REPORT_LEN) {
+			wpas_rrm_send_msr_report_mpdu(wpa_s, pos, send_len);
+			len -= send_len;
+			pos = next;
+		}
+
+		next += next[1] + 2;
+	}
+#undef MPDU_REPORT_LEN
+}
+
+
 static int
 wpas_rrm_handle_msr_req_element(
 	struct wpa_supplicant *wpa_s,
@@ -417,8 +466,7 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 					       const u8 *src,
 					       const u8 *frame, size_t len)
 {
-	struct wpabuf *buf, *report;
-	u8 token;
+	struct wpabuf *report;
 
 	if (wpa_s->wpa_state != WPA_COMPLETED) {
 		wpa_printf(MSG_INFO,
@@ -438,7 +486,7 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	token = *frame;
+	wpa_s->rrm.token = *frame;
 
 	/* Number of repetitions is not supported */
 
@@ -446,25 +494,7 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 	if (!report)
 		return;
 
-	buf = wpabuf_alloc(3 + wpabuf_len(report));
-	if (!buf) {
-		wpabuf_free(report);
-		return;
-	}
-
-	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
-	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
-	wpabuf_put_u8(buf, token);
-
-	wpabuf_put_buf(buf, report);
-
-	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
-				wpa_s->own_addr, wpa_s->bssid,
-				wpabuf_head(buf), wpabuf_len(buf), 0)) {
-		wpa_printf(MSG_ERROR,
-			   "RRM: Radio measurement report failed: Sending Action frame failed");
-	}
-	wpabuf_free(buf);
+	wpas_rrm_send_msr_report(wpa_s, report);
 	wpabuf_free(report);
 }
 

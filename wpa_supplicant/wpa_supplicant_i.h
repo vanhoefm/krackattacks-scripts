@@ -424,6 +424,9 @@ struct rrm_data {
 
 	/* next_neighbor_rep_token - Next request's dialog token */
 	u8 next_neighbor_rep_token;
+
+	/* token - Dialog token of the current radio measurement */
+	u8 token;
 };
 
 enum wpa_supplicant_test_failure {

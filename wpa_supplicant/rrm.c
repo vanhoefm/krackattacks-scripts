@@ -345,7 +345,7 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 {
 	struct wpabuf *buf, *report;
 	u8 token;
-	const u8 *ie, *end;
+	const u8 *end;
 
 	if (wpa_s->wpa_state != WPA_COMPLETED) {
 		wpa_printf(MSG_INFO,
@@ -373,43 +373,62 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 	frame += 2;
 
 	report = NULL;
-	while ((ie = get_ie(frame, end - frame, WLAN_EID_MEASURE_REQUEST)) &&
-	       ie[1] >= 3) {
-		u8 msmt_type;
+	while (end - frame) {
+		const struct rrm_measurement_request_element *req;
 
-		msmt_type = ie[4];
-		wpa_printf(MSG_DEBUG, "RRM request %d", msmt_type);
+		if (end - frame < 2) {
+			wpa_printf(MSG_DEBUG, "RRM: Truncated element");
+			goto out;
+		}
 
-		switch (msmt_type) {
+		req = (const struct rrm_measurement_request_element *) frame;
+		if (req->eid != WLAN_EID_MEASURE_REQUEST) {
+			wpa_printf(MSG_DEBUG,
+				   "RRM: Expected Measurement Request element, but EID is %u",
+				   req->eid);
+			goto out;
+		}
+
+		if (req->len < 3) {
+			wpa_printf(MSG_DEBUG, "RRM: Element length too short");
+			goto out;
+		}
+		frame += 2;
+
+		if (req->len > end - frame) {
+			wpa_printf(MSG_DEBUG, "RRM: Element length too long");
+			goto out;
+		}
+
+		wpa_printf(MSG_DEBUG, "RRM request type: %u", req->type);
+
+		switch (req->type) {
 		case MEASURE_TYPE_LCI:
-			report = wpas_rrm_build_lci_report(wpa_s, ie + 2, ie[1],
-							   report);
+			report = wpas_rrm_build_lci_report(wpa_s, frame,
+							   req->len, report);
 			break;
 		default:
 			wpa_printf(MSG_INFO,
 				   "RRM: Unsupported radio measurement request %d",
-				   msmt_type);
+				   req->type);
 			break;
 		}
 
-		frame = ie + ie[1] + 2;
+		frame += req->len;
 	}
 
 	if (!report)
 		return;
 
 	buf = wpabuf_alloc(3 + wpabuf_len(report));
-	if (!buf) {
-		wpabuf_free(report);
-		return;
-	}
+	if (!buf)
+		goto out;
 
 	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
 	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
 	wpabuf_put_u8(buf, token);
 
 	wpabuf_put_buf(buf, report);
-	wpabuf_free(report);
 
 	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
 				wpa_s->own_addr, wpa_s->bssid,
@@ -418,6 +437,9 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 			   "RRM: Radio measurement report failed: Sending Action frame failed");
 	}
 	wpabuf_free(buf);
+
+out:
+	wpabuf_free(report);
 }
 
 

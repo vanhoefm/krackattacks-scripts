@@ -279,6 +279,25 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_rrm_report_elem(struct wpabuf *buf, u8 token, u8 mode, u8 type,
+				const u8 *data, size_t data_len)
+{
+	if (wpabuf_tailroom(buf) < 5 + data_len)
+		return -1;
+
+	wpabuf_put_u8(buf, WLAN_EID_MEASURE_REPORT);
+	wpabuf_put_u8(buf, 3 + data_len);
+	wpabuf_put_u8(buf, token);
+	wpabuf_put_u8(buf, mode);
+	wpabuf_put_u8(buf, type);
+
+	if (data_len)
+		wpabuf_put_data(buf, data, data_len);
+
+	return 0;
+}
+
+
 static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 						 const u8 *request, size_t len,
 						 struct wpabuf *report)
@@ -397,16 +416,43 @@ wpas_rrm_handle_msr_req_element(
 	wpa_printf(MSG_DEBUG, "Measurement request type %d token %d",
 		   req->type, req->token);
 
+	if (req->mode & MEASUREMENT_REQUEST_MODE_ENABLE) {
+		/* Enable bit is not supported for now */
+		wpa_printf(MSG_DEBUG, "RRM: Enable bit not supported, ignore");
+		return 0;
+	}
+
+	if ((req->mode & MEASUREMENT_REQUEST_MODE_PARALLEL) &&
+	    req->type > MEASURE_TYPE_RPI_HIST) {
+		/* Parallel measurements are not supported for now */
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Parallel measurements are not supported, reject");
+		goto reject;
+	}
+
 	switch (req->type) {
 	case MEASURE_TYPE_LCI:
 		*buf = wpas_rrm_build_lci_report(wpa_s, &req->token, req->len,
 						 *buf);
-		break;
+		return 0;
 	default:
 		wpa_printf(MSG_INFO,
 			   "RRM: Unsupported radio measurement type %u",
 			   req->type);
 		break;
+	}
+
+reject:
+	if (wpabuf_resize(buf, sizeof(struct rrm_measurement_report_element))) {
+		wpa_printf(MSG_DEBUG, "RRM: Memory allocation failed");
+		return -1;
+	}
+
+	if (wpas_rrm_report_elem(*buf, req->token,
+				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
+				 req->type, NULL, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
+		return -1;
 	}
 
 	return 0;

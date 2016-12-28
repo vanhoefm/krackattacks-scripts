@@ -1293,6 +1293,11 @@ int wpa_ft_action_rx(struct wpa_state_machine *sm, const u8 *data, size_t len)
 
 	wpa_hexdump(MSG_MSGDUMP, "FT: Action frame body", ies, ies_len);
 
+	if (!sm->wpa_auth->conf.ft_over_ds) {
+		wpa_printf(MSG_DEBUG, "FT: Over-DS option disabled - reject");
+		return -1;
+	}
+
 	/* RRB - Forward action frame to the target AP */
 	frame = os_malloc(sizeof(*frame) + len);
 	if (frame == NULL)

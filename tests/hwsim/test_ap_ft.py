@@ -244,6 +244,21 @@ def test_ap_ft_over_ds(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-4"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-4") ])
 
+def test_ap_ft_over_ds_disabled(dev, apdev):
+    """WPA2-PSK-FT AP over DS disabled"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['ft_over_ds'] = '0'
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['ft_over_ds'] = '0'
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
+              fail_test=True)
+
 def test_ap_ft_over_ds_many(dev, apdev):
     """WPA2-PSK-FT AP over DS multiple times"""
     ssid = "test-ft"

@@ -1783,6 +1783,7 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 				os_free(result.modes[i].rates);
 			}
 			os_free(result.modes);
+			*num_modes = 0;
 			return NULL;
 		}
 		return wpa_driver_nl80211_postprocess_modes(result.modes,

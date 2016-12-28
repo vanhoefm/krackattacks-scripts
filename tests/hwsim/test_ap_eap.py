@@ -4572,6 +4572,34 @@ def test_ap_wpa2_eap_sim_aka_result_ind(dev, apdev):
     eap_connect(dev[1], hapd, "AKA'", "6555444333222111",
                 password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
 
+def test_ap_wpa2_eap_sim_zero_db_timeout(dev, apdev):
+    """WPA2-Enterprise using EAP-SIM with zero database timeout"""
+    check_hlr_auc_gw_support()
+    params = int_eap_server_params()
+    params['eap_sim_db'] = "unix:/tmp/hlr_auc_gw.sock"
+    params['eap_sim_db_timeout'] = "0"
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    # Run multiple iterations to make it more likely to hit the case where the
+    # DB request times out and response is lost.
+    for i in range(20):
+        print i
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
+                       identity="1232010000000000",
+                       password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                       wait_connect=False, scan_freq="2412")
+        ev = dev[0].wait_event([ "CTRL-EVENT-CONNECTED",
+                                 "CTRL-EVENT-DISCONNECTED" ],
+                               timeout=15)
+        if ev is None:
+            raise Exception("No connection result")
+        dev[0].request("REMOVE_NETWORK all")
+        if "CTRL-EVENT-DISCONNECTED" in ev:
+            break
+        dev[0].wait_disconnected()
+        hapd.ping()
+
 def test_ap_wpa2_eap_too_many_roundtrips(dev, apdev):
     """WPA2-Enterprise connection resulting in too many EAP roundtrips"""
     skip_with_fips(dev[0])

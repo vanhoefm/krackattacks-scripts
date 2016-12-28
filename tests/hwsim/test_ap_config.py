@@ -1,5 +1,5 @@
 # hostapd configuration tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,6 +10,7 @@ import time
 
 from remotehost import remote_compatible
 import hostapd
+from utils import alloc_fail
 
 @remote_compatible
 def test_ap_config_errors(dev, apdev):
@@ -175,3 +176,56 @@ def test_ap_config_invalid_value(dev, apdev, params):
             raise Exception("Invalid %s accepted" % field)
     hapd.enable()
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_config_eap_user_file_parsing(dev, apdev, params):
+    """hostapd eap_user_file parsing"""
+    tmp = os.path.join(params['logdir'], 'ap_vlan_file_parsing.tmp')
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "foobar" })
+
+    for i in range(2):
+        if "OK" not in hapd.request("SET eap_user_file auth_serv/eap_user.conf"):
+            raise Exception("eap_user_file rejected")
+
+    tests = [ "#\n\n*\tTLS\nradius_accept_attr=:",
+              "foo\n",
+              "\"foo\n",
+              "\"foo\"\n",
+              "\"foo\" FOOBAR\n",
+              "\"foo\" " + 10*"TLS," + "TLS \"\n",
+              "\"foo\" TLS \nfoo\n",
+              "\"foo\" PEAP hash:foo\n",
+              "\"foo\" PEAP hash:8846f7eaee8fb117ad06bdd830b7586q\n",
+              "\"foo\" PEAP 01020\n",
+              "\"foo\" PEAP 010q\n",
+              "\"foo\" TLS\nradius_accept_attr=123:x:012\n",
+              "\"foo\" TLS\nradius_accept_attr=123:x:012q\n",
+              "\"foo\" TLS\nradius_accept_attr=123:Q:01\n",
+              "\"foo\" TLS\nradius_accept_attr=123\nfoo\n" ]
+    for t in tests:
+        with open(tmp, "w") as f:
+            f.write(t)
+        if "FAIL" not in hapd.request("SET eap_user_file " + tmp):
+            raise Exception("Invalid eap_user_file accepted")
+
+    tests = [ ("\"foo\" TLS\n", 2, "hostapd_config_read_eap_user"),
+              ("\"foo\" PEAP \"foo\"\n", 3, "hostapd_config_read_eap_user"),
+              ("\"foo\" PEAP hash:8846f7eaee8fb117ad06bdd830b75861\n", 3,
+               "hostapd_config_read_eap_user"),
+              ("\"foo\" PEAP 0102\n", 3, "hostapd_config_read_eap_user"),
+              ("\"foo\" TLS\nradius_accept_attr=123\n", 1,
+               "=hostapd_parse_radius_attr"),
+              ("\"foo\" TLS\nradius_accept_attr=123\n", 1,
+               "wpabuf_alloc;hostapd_parse_radius_attr"),
+              ("\"foo\" TLS\nradius_accept_attr=123:s:foo\n", 2,
+               "hostapd_parse_radius_attr"),
+              ("\"foo\" TLS\nradius_accept_attr=123:x:0102\n", 2,
+               "hostapd_parse_radius_attr"),
+              ("\"foo\" TLS\nradius_accept_attr=123:d:1\n", 2,
+               "hostapd_parse_radius_attr"),
+              ("* TLS\n", 1, "hostapd_config_read_eap_user") ]
+    for t, count, func in tests:
+        with alloc_fail(hapd, count, func):
+            with open(tmp, "w") as f:
+                f.write(t)
+            if "FAIL" not in hapd.request("SET eap_user_file " + tmp):
+                raise Exception("eap_user_file accepted during OOM")

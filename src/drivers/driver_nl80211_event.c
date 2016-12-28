@@ -1110,6 +1110,16 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 		wpa_printf(MSG_DEBUG, "nl80211: Scan included frequencies:%s",
 			   msg);
 	}
+
+	if (tb[NL80211_ATTR_SCAN_START_TIME_TSF] &&
+	    tb[NL80211_ATTR_SCAN_START_TIME_TSF_BSSID]) {
+		info->scan_start_tsf =
+			nla_get_u64(tb[NL80211_ATTR_SCAN_START_TIME_TSF]);
+		os_memcpy(info->scan_start_tsf_bssid,
+			  nla_data(tb[NL80211_ATTR_SCAN_START_TIME_TSF_BSSID]),
+			  ETH_ALEN);
+	}
+
 	wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, &event);
 }
 

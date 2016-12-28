@@ -377,6 +377,18 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 	if (ext_feature_isset(ext_features, len,
 			      NL80211_EXT_FEATURE_BEACON_RATE_VHT))
 		capa->flags |= WPA_DRIVER_FLAGS_BEACON_RATE_VHT;
+
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_SET_SCAN_DWELL))
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_SUPPORT_SET_SCAN_DWELL;
+
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_SCAN_START_TIME) &&
+	    ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_BSS_PARENT_TSF) &&
+	    ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_SET_SCAN_DWELL))
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT;
 }
 
 

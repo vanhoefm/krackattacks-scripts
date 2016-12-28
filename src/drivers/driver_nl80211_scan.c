@@ -270,6 +270,19 @@ nl80211_scan_common(struct i802_bss *bss, u8 cmd,
 		}
 	}
 
+	if (params->duration) {
+		if (!(drv->capa.rrm_flags &
+		      WPA_DRIVER_FLAGS_SUPPORT_SET_SCAN_DWELL) ||
+		    nla_put_u16(msg, NL80211_ATTR_MEASUREMENT_DURATION,
+				params->duration))
+			goto fail;
+
+		if (params->duration_mandatory &&
+		    nla_put_flag(msg,
+				 NL80211_ATTR_MEASUREMENT_DURATION_MANDATORY))
+			goto fail;
+	}
+
 	if (scan_flags &&
 	    nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, scan_flags))
 		goto fail;
@@ -645,6 +658,8 @@ nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
 		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
 		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
 		[NL80211_BSS_BEACON_IES] = { .type = NLA_UNSPEC },
+		[NL80211_BSS_PARENT_TSF] = { .type = NLA_U64 },
+		[NL80211_BSS_PARENT_BSSID] = { .type = NLA_UNSPEC },
 	};
 	struct wpa_scan_res *r;
 	const u8 *ie, *beacon_ie;
@@ -728,6 +743,12 @@ nl80211_parse_bss_info(struct wpa_driver_nl80211_data *drv,
 		default:
 			break;
 		}
+	}
+
+	if (bss[NL80211_BSS_PARENT_TSF] && bss[NL80211_BSS_PARENT_BSSID]) {
+		r->parent_tsf = nla_get_u64(bss[NL80211_BSS_PARENT_TSF]);
+		os_memcpy(r->tsf_bssid, nla_data(bss[NL80211_BSS_PARENT_BSSID]),
+			  ETH_ALEN);
 	}
 
 	return r;

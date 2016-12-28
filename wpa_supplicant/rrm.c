@@ -298,35 +298,35 @@ static int wpas_rrm_report_elem(struct wpabuf *buf, u8 token, u8 mode, u8 type,
 }
 
 
-static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
-						 const u8 *request, size_t len,
-						 struct wpabuf *report)
+static int
+wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
+			  const struct rrm_measurement_request_element *req,
+			  struct wpabuf **buf)
 {
-	u8 token, type, subject;
+	u8 subject;
 	u16 max_age = 0;
 	struct os_reltime t, diff;
 	unsigned long diff_l;
-	u8 *ptoken;
 	const u8 *subelem;
+	const u8 *request = req->variable;
+	size_t len = req->len - 3;
 
-	if (!wpa_s->lci || len < 3 + 4)
-		return report;
+	if (len < 4)
+		return -1;
 
-	token = *request++;
-	/* Measurement request mode isn't used */
-	request++;
-	type = *request++;
+	if (!wpa_s->lci)
+		goto reject;
+
 	subject = *request++;
-	len -= 4;
+	len--;
 
-	wpa_printf(MSG_DEBUG,
-		   "Measurement request token %u type %u location subject %u",
-		   token, type, subject);
+	wpa_printf(MSG_DEBUG, "Measurement request location subject=%u",
+		   subject);
 
-	if (type != MEASURE_TYPE_LCI || subject != LOCATION_SUBJECT_REMOTE) {
+	if (subject != LOCATION_SUBJECT_REMOTE) {
 		wpa_printf(MSG_INFO,
-			   "Not building LCI report - bad type or location subject");
-		return report;
+			   "Not building LCI report - bad location subject");
+		return 0;
 	}
 
 	/* Subelements are formatted exactly like elements */
@@ -335,26 +335,42 @@ static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 		max_age = WPA_GET_LE16(subelem + 2);
 
 	if (os_get_reltime(&t))
-		return report;
+		goto reject;
 
 	os_reltime_sub(&t, &wpa_s->lci_time, &diff);
 	/* LCI age is calculated in 10th of a second units. */
 	diff_l = diff.sec * 10 + diff.usec / 100000;
 
 	if (max_age != 0xffff && max_age < diff_l)
-		return report;
+		goto reject;
 
-	if (wpabuf_resize(&report, 2 + wpabuf_len(wpa_s->lci)))
-		return report;
+	if (wpabuf_resize(buf, 5 + wpabuf_len(wpa_s->lci)))
+		return -1;
 
-	wpabuf_put_u8(report, WLAN_EID_MEASURE_REPORT);
-	wpabuf_put_u8(report, wpabuf_len(wpa_s->lci));
-	/* We'll override user's measurement token */
-	ptoken = wpabuf_put(report, 0);
-	wpabuf_put_buf(report, wpa_s->lci);
-	*ptoken = token;
+	if (wpas_rrm_report_elem(*buf, req->token,
+				 MEASUREMENT_REPORT_MODE_ACCEPT, req->type,
+				 wpabuf_head_u8(wpa_s->lci),
+				 wpabuf_len(wpa_s->lci)) < 0) {
+		wpa_printf(MSG_DEBUG, "Failed to add LCI report element");
+		return -1;
+	}
 
-	return report;
+	return 0;
+
+reject:
+	if (wpabuf_resize(buf, sizeof(struct rrm_measurement_report_element))) {
+		wpa_printf(MSG_DEBUG, "RRM: Memory allocation failed");
+		return -1;
+	}
+
+	if (wpas_rrm_report_elem(*buf, req->token,
+				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
+				 req->type, NULL, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
+		return -1;
+	}
+
+	return 0;
 }
 
 
@@ -432,9 +448,7 @@ wpas_rrm_handle_msr_req_element(
 
 	switch (req->type) {
 	case MEASURE_TYPE_LCI:
-		*buf = wpas_rrm_build_lci_report(wpa_s, &req->token, req->len,
-						 *buf);
-		return 0;
+		return wpas_rrm_build_lci_report(wpa_s, req, buf);
 	default:
 		wpa_printf(MSG_INFO,
 			   "RRM: Unsupported radio measurement type %u",

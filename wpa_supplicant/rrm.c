@@ -598,21 +598,7 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 	report.tpc.len = 2;
 	report.rsni = 255; /* 255 indicates that RSNI is not available */
 	report.dialog_token = req->dialog_token;
-
-	/*
-	 * It's possible to estimate RCPI based on RSSI in dBm. This
-	 * calculation will not reflect the correct value for high rates,
-	 * but it's good enough for Action frames which are transmitted
-	 * with up to 24 Mbps rates.
-	 */
-	if (!rssi)
-		report.rcpi = 255; /* not available */
-	else if (rssi < -110)
-		report.rcpi = 0;
-	else if (rssi > 0)
-		report.rcpi = 220;
-	else
-		report.rcpi = (rssi + 110) * 2;
+	report.rcpi = rssi_to_rcpi(rssi);
 
 	/* action_category + action_code */
 	buf = wpabuf_alloc(2 + sizeof(report));

@@ -177,4 +177,11 @@ const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
 
 size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len);
 
+struct country_op_class {
+	u8 country_op_class;
+	u8 global_op_class;
+};
+
+u8 country_to_global_op_class(const char *country, u8 op_class);
+
 #endif /* IEEE802_11_COMMON_H */

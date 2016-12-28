@@ -1449,3 +1449,130 @@ size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len)
 
 	return 6 + attr_len;
 }
+
+
+static const struct country_op_class us_op_class[] = {
+	{ 1, 115 },
+	{ 2, 118 },
+	{ 3, 124 },
+	{ 4, 121 },
+	{ 5, 125 },
+	{ 12, 81 },
+	{ 22, 116 },
+	{ 23, 119 },
+	{ 24, 122 },
+	{ 25, 126 },
+	{ 26, 126 },
+	{ 27, 117 },
+	{ 28, 120 },
+	{ 29, 123 },
+	{ 30, 127 },
+	{ 31, 127 },
+	{ 32, 83 },
+	{ 33, 84 },
+	{ 34, 180 },
+};
+
+static const struct country_op_class eu_op_class[] = {
+	{ 1, 115 },
+	{ 2, 118 },
+	{ 3, 121 },
+	{ 4, 81 },
+	{ 5, 116 },
+	{ 6, 119 },
+	{ 7, 122 },
+	{ 8, 117 },
+	{ 9, 120 },
+	{ 10, 123 },
+	{ 11, 83 },
+	{ 12, 84 },
+	{ 17, 125 },
+	{ 18, 180 },
+};
+
+static const struct country_op_class jp_op_class[] = {
+	{ 1, 115 },
+	{ 30, 81 },
+	{ 31, 82 },
+	{ 32, 118 },
+	{ 33, 118 },
+	{ 34, 121 },
+	{ 35, 121 },
+	{ 36, 116 },
+	{ 37, 119 },
+	{ 38, 119 },
+	{ 39, 122 },
+	{ 40, 122 },
+	{ 41, 117 },
+	{ 42, 120 },
+	{ 43, 120 },
+	{ 44, 123 },
+	{ 45, 123 },
+	{ 56, 83 },
+	{ 57, 84 },
+	{ 58, 121 },
+	{ 59, 180 },
+};
+
+static const struct country_op_class cn_op_class[] = {
+	{ 1, 115 },
+	{ 2, 118 },
+	{ 3, 125 },
+	{ 4, 116 },
+	{ 5, 119 },
+	{ 6, 126 },
+	{ 7, 81 },
+	{ 8, 83 },
+	{ 9, 84 },
+};
+
+static u8
+global_op_class_from_country_array(u8 op_class, size_t array_size,
+				   const struct country_op_class *country_array)
+{
+	size_t i;
+
+	for (i = 0; i < array_size; i++) {
+		if (country_array[i].country_op_class == op_class)
+			return country_array[i].global_op_class;
+	}
+
+	return 0;
+}
+
+
+u8 country_to_global_op_class(const char *country, u8 op_class)
+{
+	const struct country_op_class *country_array;
+	size_t size;
+	u8 g_op_class;
+
+	if (country_match(us_op_class_cc, country)) {
+		country_array = us_op_class;
+		size = ARRAY_SIZE(us_op_class);
+	} else if (country_match(eu_op_class_cc, country)) {
+		country_array = eu_op_class;
+		size = ARRAY_SIZE(eu_op_class);
+	} else if (country_match(jp_op_class_cc, country)) {
+		country_array = jp_op_class;
+		size = ARRAY_SIZE(jp_op_class);
+	} else if (country_match(cn_op_class_cc, country)) {
+		country_array = cn_op_class;
+		size = ARRAY_SIZE(cn_op_class);
+	} else {
+		/*
+		 * Countries that do not match any of the above countries use
+		 * global operating classes
+		 */
+		return op_class;
+	}
+
+	g_op_class = global_op_class_from_country_array(op_class, size,
+							country_array);
+
+	/*
+	 * If the given operating class did not match any of the country's
+	 * operating classes, assume that global operating class is used.
+	 */
+	return g_op_class ? g_op_class : op_class;
+}

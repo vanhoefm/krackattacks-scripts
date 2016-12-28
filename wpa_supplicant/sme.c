@@ -187,6 +187,11 @@ static void sme_auth_handle_rrm(struct wpa_supplicant *wpa_s,
 	if (wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_TX_POWER_INSERTION)
 		*pos |= WLAN_RRM_CAPS_LINK_MEASUREMENT;
 
+	if (wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT)
+		*pos |= WLAN_RRM_CAPS_BEACON_REPORT_PASSIVE |
+			WLAN_RRM_CAPS_BEACON_REPORT_ACTIVE |
+			WLAN_RRM_CAPS_BEACON_REPORT_TABLE;
+
 	if (wpa_s->lci)
 		pos[1] |= WLAN_RRM_CAPS_LCI_MEASUREMENT;
 

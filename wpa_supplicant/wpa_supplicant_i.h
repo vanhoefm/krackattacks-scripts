@@ -9,6 +9,7 @@
 #ifndef WPA_SUPPLICANT_I_H
 #define WPA_SUPPLICANT_I_H
 
+#include "utils/bitfield.h"
 #include "utils/list.h"
 #include "common/defs.h"
 #include "common/sae.h"
@@ -448,6 +449,17 @@ struct wpa_bss_tmp_disallowed {
 	u8 bssid[ETH_ALEN];
 	struct os_reltime disallowed_until;
 };
+
+struct beacon_rep_data {
+	u8 token;
+	struct wpa_driver_scan_params scan_params;
+	u8 ssid[SSID_MAX_LEN];
+	size_t ssid_len;
+	u8 bssid[ETH_ALEN];
+	enum beacon_report_detail report_detail;
+	struct bitfield *eids;
+};
+
 
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
@@ -1048,6 +1060,7 @@ struct wpa_supplicant {
 	u8 last_tspecs_count;
 
 	struct rrm_data rrm;
+	struct beacon_rep_data beacon_rep_data;
 
 #ifdef CONFIG_FST
 	struct fst_iface *fst;
@@ -1199,6 +1212,10 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 					      const u8 *src,
 					      const u8 *frame, size_t len,
 					      int rssi);
+int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
+				 struct wpa_scan_results *scan_res,
+				 struct scan_info *info);
+void wpas_clear_beacon_rep_data(struct wpa_supplicant *wpa_s);
 
 
 /* MBO functions */

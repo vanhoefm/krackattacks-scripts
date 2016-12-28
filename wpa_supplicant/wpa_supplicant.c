@@ -585,6 +585,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpabuf_free(wpa_s->lci);
 	wpa_s->lci = NULL;
+	wpas_clear_beacon_rep_data(wpa_s);
 }
 
 

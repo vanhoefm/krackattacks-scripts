@@ -1736,6 +1736,10 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	if (sme_proc_obss_scan(wpa_s) > 0)
 		goto scan_work_done;
 
+	if (own_request &&
+	    wpas_beacon_rep_scan_process(wpa_s, scan_res, &data->scan_info) > 0)
+		goto scan_work_done;
+
 	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s)))
 		goto scan_work_done;
 

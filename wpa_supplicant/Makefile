@@ -103,6 +103,7 @@ OBJS += eap_register.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
+OBJS += ../src/utils/bitfield.o
 OBJS += op_classes.o
 OBJS += rrm.o
 OBJS_p = wpa_passphrase.o
@@ -352,7 +353,6 @@ OBJS += ../src/p2p/p2p_invitation.o
 OBJS += ../src/p2p/p2p_dev_disc.o
 OBJS += ../src/p2p/p2p_group.o
 OBJS += ../src/ap/p2p_hostapd.o
-OBJS += ../src/utils/bitfield.o
 CFLAGS += -DCONFIG_P2P
 NEED_GAS=y
 NEED_OFFCHANNEL=y
@@ -1603,9 +1603,6 @@ OBJS += ../src/common/common_module_tests.o
 OBJS += ../src/crypto/crypto_module_tests.o
 ifdef CONFIG_WPS
 OBJS += ../src/wps/wps_module_tests.o
-endif
-ifndef CONFIG_P2P
-OBJS += ../src/utils/bitfield.o
 endif
 endif
 

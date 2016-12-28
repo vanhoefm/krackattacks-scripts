@@ -822,8 +822,8 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	}
 	dev->info.level = level;
 
-	dev_name_changed = msg.device_name &&
-		os_strcmp(dev->info.device_name, msg.device_name) != 0;
+	dev_name_changed = os_strncmp(dev->info.device_name, msg.device_name,
+				      WPS_DEV_NAME_MAX_LEN) != 0;
 
 	p2p_copy_wps_info(p2p, dev, 0, &msg);
 

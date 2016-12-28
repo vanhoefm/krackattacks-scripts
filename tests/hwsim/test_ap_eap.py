@@ -3504,6 +3504,131 @@ def test_ap_wpa2_eap_fast_cipher_suites(dev, apdev):
         if res != cipher:
             raise Exception("Unexpected TLS cipher info (configured %s): %s" % (cipher, res))
 
+def test_ap_wpa2_eap_fast_prov(dev, apdev):
+    """EAP-FAST and provisioning options"""
+    check_eap_capa(dev[0], "FAST")
+    if "OK" not in dev[0].request("SET blob fast_pac_prov "):
+        raise Exception("Could not set blob")
+
+    i = 100
+    params = int_eap_server_params()
+    params['disable_pmksa_caching'] = '1'
+    params['pac_opaque_encr_key'] = "000102030405060708090a0b0c0dff%02x" % i
+    params['eap_fast_a_id'] = "101112131415161718191a1b1c1dff%02x" % i
+    params['eap_fast_a_id_info'] = "test server %d" % i
+    params['eap_fast_prov'] = "0"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    logger.info("Provisioning attempt while server has provisioning disabled")
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                        identity="user", anonymous_identity="FAST",
+                        password="password",
+                        ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                        phase1="fast_provisioning=2",
+                        pac_file="blob://fast_pac_prov",
+                        scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='failure'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    dev[0].dump_monitor()
+
+    hapd.disable()
+    logger.info("Authenticated provisioning")
+    hapd.set("eap_fast_prov", "2")
+    hapd.enable()
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='success'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    hapd.disable()
+    logger.info("Provisioning disabled - using previously provisioned PAC")
+    hapd.set("eap_fast_prov", "0")
+    hapd.enable()
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='success'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    logger.info("Drop PAC and verify connection failure")
+    if "OK" not in dev[0].request("SET blob fast_pac_prov "):
+        raise Exception("Could not set blob")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='failure'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    dev[0].dump_monitor()
+
+    hapd.disable()
+    logger.info("Anonymous provisioning")
+    hapd.set("eap_fast_prov", "1")
+    hapd.enable()
+    dev[0].set_network_quoted(id, "phase1", "fast_provisioning=1")
+    dev[0].select_network(id, freq="2412")
+    # Anonymous provisioning results in EAP-Failure first
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='failure'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_disconnected()
+    # And then the actual data connection
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='success'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    hapd.disable()
+    logger.info("Provisioning disabled - using previously provisioned PAC")
+    hapd.set("eap_fast_prov", "0")
+    hapd.enable()
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='completion'"],
+                           timeout=15)
+    if ev is None:
+        raise Exception("EAP result not reported")
+    if "parameter='success'" not in ev:
+        raise Exception("Unexpected EAP result: " + ev)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
     check_ocsp_support(dev[0])

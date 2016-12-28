@@ -575,3 +575,38 @@ def test_ap_missing_psk(dev, apdev):
             pass
         else:
             raise
+
+def test_ap_eapol_version(dev, apdev):
+    """hostapd eapol_version configuration"""
+    passphrase = "asdfghjkl"
+    params = hostapd.wpa2_params(ssid="test1", passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    params = hostapd.wpa2_params(ssid="test2", passphrase=passphrase)
+    params['eapol_version'] = '1'
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].connect("test1", psk=passphrase, scan_freq="2412",
+                   wait_connect=False)
+    ev1 = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev1 is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    hapd.request("SET ext_eapol_frame_io 0")
+
+    hapd2.request("SET ext_eapol_frame_io 1")
+    dev[1].connect("test2", psk=passphrase, scan_freq="2412",
+                   wait_connect=False)
+    ev2 = hapd2.wait_event(["EAPOL-TX"], timeout=15)
+    if ev2 is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    hapd2.request("SET ext_eapol_frame_io 0")
+
+    dev[0].wait_connected()
+    dev[1].wait_connected()
+
+    ver1 = ev1.split(' ')[2][0:2]
+    ver2 = ev2.split(' ')[2][0:2]
+    if ver1 != "02":
+        raise Exception("Unexpected default eapol_version: " + ver1)
+    if ver2 != "01":
+        raise Exception("eapol_version did not match configuration: " + ver2)

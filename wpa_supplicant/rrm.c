@@ -339,13 +339,86 @@ static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 }
 
 
+static int
+wpas_rrm_handle_msr_req_element(
+	struct wpa_supplicant *wpa_s,
+	const struct rrm_measurement_request_element *req,
+	struct wpabuf **buf)
+{
+	wpa_printf(MSG_DEBUG, "Measurement request type %d token %d",
+		   req->type, req->token);
+
+	switch (req->type) {
+	case MEASURE_TYPE_LCI:
+		*buf = wpas_rrm_build_lci_report(wpa_s, &req->token, req->len,
+						 *buf);
+		break;
+	default:
+		wpa_printf(MSG_INFO,
+			   "RRM: Unsupported radio measurement type %u",
+			   req->type);
+		break;
+	}
+
+	return 0;
+}
+
+
+static struct wpabuf *
+wpas_rrm_process_msr_req_elems(struct wpa_supplicant *wpa_s, const u8 *pos,
+			       size_t len)
+{
+	struct wpabuf *buf = NULL;
+
+	while (len) {
+		const struct rrm_measurement_request_element *req;
+		int res;
+
+		if (len < 2) {
+			wpa_printf(MSG_DEBUG, "RRM: Truncated element");
+			goto out;
+		}
+
+		req = (const struct rrm_measurement_request_element *) pos;
+		if (req->eid != WLAN_EID_MEASURE_REQUEST) {
+			wpa_printf(MSG_DEBUG,
+				   "RRM: Expected Measurement Request element, but EID is %u",
+				   req->eid);
+			goto out;
+		}
+
+		if (req->len < 3) {
+			wpa_printf(MSG_DEBUG, "RRM: Element length too short");
+			goto out;
+		}
+
+		if (req->len > len - 2) {
+			wpa_printf(MSG_DEBUG, "RRM: Element length too long");
+			goto out;
+		}
+
+		res = wpas_rrm_handle_msr_req_element(wpa_s, req, &buf);
+		if (res < 0)
+			goto out;
+
+		pos += req->len + 2;
+		len -= req->len + 2;
+	}
+
+	return buf;
+
+out:
+	wpabuf_free(buf);
+	return NULL;
+}
+
+
 void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 					       const u8 *src,
 					       const u8 *frame, size_t len)
 {
 	struct wpabuf *buf, *report;
 	u8 token;
-	const u8 *end;
 
 	if (wpa_s->wpa_state != WPA_COMPLETED) {
 		wpa_printf(MSG_INFO,
@@ -365,64 +438,19 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	end = frame + len;
+	token = *frame;
 
-	token = *frame++;
+	/* Number of repetitions is not supported */
 
-	/* Ignore number of repetitions because it's not used in LCI request */
-	frame += 2;
-
-	report = NULL;
-	while (end - frame) {
-		const struct rrm_measurement_request_element *req;
-
-		if (end - frame < 2) {
-			wpa_printf(MSG_DEBUG, "RRM: Truncated element");
-			goto out;
-		}
-
-		req = (const struct rrm_measurement_request_element *) frame;
-		if (req->eid != WLAN_EID_MEASURE_REQUEST) {
-			wpa_printf(MSG_DEBUG,
-				   "RRM: Expected Measurement Request element, but EID is %u",
-				   req->eid);
-			goto out;
-		}
-
-		if (req->len < 3) {
-			wpa_printf(MSG_DEBUG, "RRM: Element length too short");
-			goto out;
-		}
-		frame += 2;
-
-		if (req->len > end - frame) {
-			wpa_printf(MSG_DEBUG, "RRM: Element length too long");
-			goto out;
-		}
-
-		wpa_printf(MSG_DEBUG, "RRM request type: %u", req->type);
-
-		switch (req->type) {
-		case MEASURE_TYPE_LCI:
-			report = wpas_rrm_build_lci_report(wpa_s, frame,
-							   req->len, report);
-			break;
-		default:
-			wpa_printf(MSG_INFO,
-				   "RRM: Unsupported radio measurement request %d",
-				   req->type);
-			break;
-		}
-
-		frame += req->len;
-	}
-
+	report = wpas_rrm_process_msr_req_elems(wpa_s, frame + 3, len - 3);
 	if (!report)
 		return;
 
 	buf = wpabuf_alloc(3 + wpabuf_len(report));
-	if (!buf)
-		goto out;
+	if (!buf) {
+		wpabuf_free(report);
+		return;
+	}
 
 	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
 	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
@@ -437,8 +465,6 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 			   "RRM: Radio measurement report failed: Sending Action frame failed");
 	}
 	wpabuf_free(buf);
-
-out:
 	wpabuf_free(report);
 }
 

@@ -7,10 +7,12 @@
 import os
 import signal
 import time
+import logging
+logger = logging.getLogger(__name__)
 
 from remotehost import remote_compatible
 import hostapd
-from utils import alloc_fail
+from utils import alloc_fail, fail_test
 
 @remote_compatible
 def test_ap_config_errors(dev, apdev):
@@ -229,3 +231,141 @@ def test_ap_config_eap_user_file_parsing(dev, apdev, params):
                 f.write(t)
             if "FAIL" not in hapd.request("SET eap_user_file " + tmp):
                 raise Exception("eap_user_file accepted during OOM")
+
+def test_ap_config_set_oom(dev, apdev):
+    """hostapd configuration parsing OOM"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "foobar" })
+
+    tests = [ (1, "hostapd_parse_das_client",
+               "SET radius_das_client 192.168.1.123 pw"),
+              (1, "hostapd_config_read_wep", "SET wep_key0 \"hello\""),
+              (1, "hostapd_config_read_wep", "SET wep_key0 0102030405"),
+              (1, "hostapd_parse_chanlist", "SET chanlist 1 6 11-13"),
+              (1, "hostapd_config_bss", "SET bss foo"),
+              (2, "hostapd_config_bss", "SET bss foo"),
+              (3, "hostapd_config_bss", "SET bss foo"),
+              (1, "add_r0kh",
+               "SET r0kh 02:01:02:03:04:05 r0kh-1.example.com 000102030405060708090a0b0c0d0e0f"),
+              (1, "add_r1kh",
+               "SET r1kh 02:01:02:03:04:05 02:11:22:33:44:55 000102030405060708090a0b0c0d0e0f"),
+              (1, "parse_roaming_consortium", "SET roaming_consortium 021122"),
+              (1, "parse_lang_string", "SET venue_name eng:Example venue"),
+              (1, "parse_3gpp_cell_net",
+               "SET anqp_3gpp_cell_net 244,91;310,026;234,56"),
+              (1, "parse_nai_realm", "SET nai_realm 0,example.com;example.net"),
+              (2, "parse_nai_realm", "SET nai_realm 0,example.com;example.net"),
+              (1, "parse_anqp_elem", "SET anqp_elem 265:0000"),
+              (2, "parse_anqp_elem", "SET anqp_elem 266:000000"),
+              (1, "hs20_parse_conn_capab", "SET hs20_conn_capab 1:0:2"),
+              (1, "hs20_parse_wan_metrics",
+               "SET hs20_wan_metrics 01:8000:1000:80:240:3000"),
+              (1, "hs20_parse_icon",
+               "SET hs20_icon 32:32:eng:image/png:icon32:/tmp/icon32.png"),
+              (1, "hs20_parse_osu_server_uri",
+               "SET osu_server_uri https://example.com/osu/"),
+              (1, "hostapd_config_parse_acs_chan_bias",
+               "SET acs_chan_bias 1:0.8 6:0.8 11:0.8"),
+              (2, "hostapd_config_parse_acs_chan_bias",
+               "SET acs_chan_bias 1:0.8 6:0.8 11:0.8"),
+              (1, "parse_wpabuf_hex", "SET vendor_elements 01020304"),
+              (1, "parse_fils_realm", "SET fils_realm example.com"),
+              (1, "hostapd_config_fill",
+               "SET pac_opaque_encr_key 000102030405060708090a0b0c0d0e0f"),
+              (1, "hostapd_config_fill", "SET eap_message hello"),
+              (1, "hostapd_config_fill",
+               "SET wpa_psk 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+              (1, "hostapd_config_fill", "SET time_zone EST5"),
+              (1, "hostapd_config_fill",
+               "SET network_auth_type 02http://www.example.com/redirect/"),
+              (1, "hostapd_config_fill", "SET domain_name example.com"),
+              (1, "hostapd_config_fill", "SET hs20_operating_class 5173"),
+              (1, "hostapd_config_fill", "SET own_ie_override 11223344"),
+              (1, "hostapd_parse_intlist", "SET sae_groups 19 25"),
+              (1, "hostapd_parse_intlist", "SET basic_rates 10 20 55 110"),
+              (1, "hostapd_parse_intlist", "SET supported_rates 10 20 55 110") ]
+    for count, func, cmd in tests:
+        with alloc_fail(hapd, count, func):
+            if "FAIL" not in hapd.request(cmd):
+                raise Exception("Command accepted during OOM: " + cmd)
+
+    hapd.set("hs20_icon", "32:32:eng:image/png:icon32:/tmp/icon32.png")
+    hapd.set("hs20_conn_capab", "1:0:2")
+    hapd.set("nai_realm", "0,example.com;example.net")
+    hapd.set("venue_name", "eng:Example venue")
+    hapd.set("roaming_consortium", "021122")
+    hapd.set("osu_server_uri", "https://example.com/osu/")
+    hapd.set("vendor_elements", "01020304")
+    hapd.set("vendor_elements", "01020304")
+    hapd.set("vendor_elements", "")
+    hapd.set("lci", "11223344")
+    hapd.set("civic", "11223344")
+    hapd.set("lci", "")
+    hapd.set("civic", "")
+
+    tests = [ (1, "hs20_parse_icon",
+               "SET hs20_icon 32:32:eng:image/png:icon32:/tmp/icon32.png"),
+              (1, "parse_roaming_consortium", "SET roaming_consortium 021122"),
+              (2, "parse_nai_realm", "SET nai_realm 0,example.com;example.net"),
+              (1, "parse_lang_string", "SET venue_name eng:Example venue"),
+              (1, "hs20_parse_osu_server_uri",
+               "SET osu_server_uri https://example.com/osu/"),
+              (1, "hs20_parse_osu_nai", "SET osu_nai anonymous@example.com"),
+              (1, "hostapd_parse_intlist", "SET osu_method_list 1 0"),
+              (1, "hs20_parse_osu_icon", "SET osu_icon icon32"),
+              (2, "hs20_parse_osu_icon", "SET osu_icon icon32"),
+              (2, "hs20_parse_osu_icon", "SET osu_icon icon32"),
+              (1, "hs20_parse_conn_capab", "SET hs20_conn_capab 1:0:2") ]
+    for count, func, cmd in tests:
+        with alloc_fail(hapd, count, func):
+            if "FAIL" not in hapd.request(cmd):
+                raise Exception("Command accepted during OOM (2): " + cmd)
+
+    tests = [ (1, "parse_fils_realm", "SET fils_realm example.com") ]
+    for count, func, cmd in tests:
+        with fail_test(hapd, count, func):
+            if "FAIL" not in hapd.request(cmd):
+                raise Exception("Command accepted during FAIL_TEST: " + cmd)
+
+def test_ap_config_set_errors(dev, apdev):
+    """hostapd configuration parsing errors"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "foobar" })
+    hapd.set("wep_key0", '"hello"')
+    hapd.set("wep_key1", '"hello"')
+    hapd.set("wep_key0", '')
+    hapd.set("wep_key0", '"hello"')
+    if "FAIL" not in hapd.request("SET wep_key1 \"hello\""):
+        raise Exception("SET wep_key1 allowed to override existing key")
+    hapd.set("wep_key1", '')
+    hapd.set("wep_key1", '"hello"')
+
+    hapd.set("auth_server_addr", "127.0.0.1")
+    hapd.set("acct_server_addr", "127.0.0.1")
+
+    tests = [ "SET eap_reauth_period -1",
+              "SET fst_llt ",
+              "SET auth_server_addr_replace foo",
+              "SET acct_server_addr_replace foo" ]
+    for t in tests:
+        if "FAIL" not in hapd.request(t):
+            raise Exception("Invalid command accepted: " + t)
+
+    # Deprecated entries
+    hapd.set("tx_queue_after_beacon_aifs", '2')
+    hapd.set("tx_queue_beacon_aifs", '2')
+    hapd.set("tx_queue_data9_aifs", '2')
+    hapd.set("debug", '1')
+    hapd.set("dump_file", '/tmp/hostapd-test-dump')
+    hapd.set("eap_authenticator", '0')
+    hapd.set("radio_measurements", '0')
+    hapd.set("radio_measurements", '1')
+
+    # Various extra coverage (not really errors)
+    hapd.set("logger_syslog_level", '1')
+    hapd.set("logger_syslog", '0')
+
+    for i in range(50000):
+        if "OK" not in hapd.request("SET hs20_conn_capab 17:5060:0"):
+            logger.info("hs20_conn_capab limit at %d" % i)
+            break
+    if i < 1000 or i >= 49999:
+        raise Exception("hs20_conn_capab limit not seen")

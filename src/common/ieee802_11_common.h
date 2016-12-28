@@ -184,4 +184,6 @@ struct country_op_class {
 
 u8 country_to_global_op_class(const char *country, u8 op_class);
 
+const struct oper_class_map * get_oper_class(const char *country, u8 op_class);
+
 #endif /* IEEE802_11_COMMON_H */

@@ -1576,3 +1576,21 @@ u8 country_to_global_op_class(const char *country, u8 op_class)
 	 */
 	return g_op_class ? g_op_class : op_class;
 }
+
+
+const struct oper_class_map * get_oper_class(const char *country, u8 op_class)
+{
+	const struct oper_class_map *op;
+
+	if (country)
+		op_class = country_to_global_op_class(country, op_class);
+
+	op = &global_op_class[0];
+	while (op->op_class && op->op_class != op_class)
+		op++;
+
+	if (!op->op_class)
+		return NULL;
+
+	return op;
+}

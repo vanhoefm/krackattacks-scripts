@@ -1,0 +1,500 @@
+/*
+ * wpa_supplicant - Radio Measurements
+ * Copyright (c) 2003-2016, Jouni Malinen <j@w1.fi>
+ *
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
+ */
+
+#include "includes.h"
+
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "common/ieee802_11_common.h"
+#include "wpa_supplicant_i.h"
+#include "driver_i.h"
+#include "bss.h"
+
+
+static void wpas_rrm_neighbor_rep_timeout_handler(void *data, void *user_ctx)
+{
+	struct rrm_data *rrm = data;
+
+	if (!rrm->notify_neighbor_rep) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Unexpected neighbor report timeout");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "RRM: Notifying neighbor report - NONE");
+	rrm->notify_neighbor_rep(rrm->neighbor_rep_cb_ctx, NULL);
+
+	rrm->notify_neighbor_rep = NULL;
+	rrm->neighbor_rep_cb_ctx = NULL;
+}
+
+
+/*
+ * wpas_rrm_reset - Clear and reset all RRM data in wpa_supplicant
+ * @wpa_s: Pointer to wpa_supplicant
+ */
+void wpas_rrm_reset(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->rrm.rrm_used = 0;
+
+	eloop_cancel_timeout(wpas_rrm_neighbor_rep_timeout_handler, &wpa_s->rrm,
+			     NULL);
+	if (wpa_s->rrm.notify_neighbor_rep)
+		wpas_rrm_neighbor_rep_timeout_handler(&wpa_s->rrm, NULL);
+	wpa_s->rrm.next_neighbor_rep_token = 1;
+}
+
+
+/*
+ * wpas_rrm_process_neighbor_rep - Handle incoming neighbor report
+ * @wpa_s: Pointer to wpa_supplicant
+ * @report: Neighbor report buffer, prefixed by a 1-byte dialog token
+ * @report_len: Length of neighbor report buffer
+ */
+void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
+				   const u8 *report, size_t report_len)
+{
+	struct wpabuf *neighbor_rep;
+
+	wpa_hexdump(MSG_DEBUG, "RRM: New Neighbor Report", report, report_len);
+	if (report_len < 1)
+		return;
+
+	if (report[0] != wpa_s->rrm.next_neighbor_rep_token - 1) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Discarding neighbor report with token %d (expected %d)",
+			   report[0], wpa_s->rrm.next_neighbor_rep_token - 1);
+		return;
+	}
+
+	eloop_cancel_timeout(wpas_rrm_neighbor_rep_timeout_handler, &wpa_s->rrm,
+			     NULL);
+
+	if (!wpa_s->rrm.notify_neighbor_rep) {
+		wpa_printf(MSG_ERROR, "RRM: Unexpected neighbor report");
+		return;
+	}
+
+	/* skipping the first byte, which is only an id (dialog token) */
+	neighbor_rep = wpabuf_alloc(report_len - 1);
+	if (neighbor_rep == NULL)
+		return;
+	wpabuf_put_data(neighbor_rep, report + 1, report_len - 1);
+	wpa_printf(MSG_DEBUG, "RRM: Notifying neighbor report (token = %d)",
+		   report[0]);
+	wpa_s->rrm.notify_neighbor_rep(wpa_s->rrm.neighbor_rep_cb_ctx,
+				       neighbor_rep);
+	wpa_s->rrm.notify_neighbor_rep = NULL;
+	wpa_s->rrm.neighbor_rep_cb_ctx = NULL;
+}
+
+
+#if defined(__CYGWIN__) || defined(CONFIG_NATIVE_WINDOWS)
+/* Workaround different, undefined for Windows, error codes used here */
+#define ENOTCONN -1
+#define EOPNOTSUPP -1
+#define ECANCELED -1
+#endif
+
+/* Measurement Request element + Location Subject + Maximum Age subelement */
+#define MEASURE_REQUEST_LCI_LEN (3 + 1 + 4)
+/* Measurement Request element + Location Civic Request */
+#define MEASURE_REQUEST_CIVIC_LEN (3 + 5)
+
+
+/**
+ * wpas_rrm_send_neighbor_rep_request - Request a neighbor report from our AP
+ * @wpa_s: Pointer to wpa_supplicant
+ * @ssid: if not null, this is sent in the request. Otherwise, no SSID IE
+ *	  is sent in the request.
+ * @lci: if set, neighbor request will include LCI request
+ * @civic: if set, neighbor request will include civic location request
+ * @cb: Callback function to be called once the requested report arrives, or
+ *	timed out after RRM_NEIGHBOR_REPORT_TIMEOUT seconds.
+ *	In the former case, 'neighbor_rep' is a newly allocated wpabuf, and it's
+ *	the requester's responsibility to free it.
+ *	In the latter case NULL will be sent in 'neighbor_rep'.
+ * @cb_ctx: Context value to send the callback function
+ * Returns: 0 in case of success, negative error code otherwise
+ *
+ * In case there is a previous request which has not been answered yet, the
+ * new request fails. The caller may retry after RRM_NEIGHBOR_REPORT_TIMEOUT.
+ * Request must contain a callback function.
+ */
+int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
+				       const struct wpa_ssid_value *ssid,
+				       int lci, int civic,
+				       void (*cb)(void *ctx,
+						  struct wpabuf *neighbor_rep),
+				       void *cb_ctx)
+{
+	struct wpabuf *buf;
+	const u8 *rrm_ie;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED || wpa_s->current_ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "RRM: No connection, no RRM.");
+		return -ENOTCONN;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_DEBUG, "RRM: No RRM in current connection.");
+		return -EOPNOTSUPP;
+	}
+
+	rrm_ie = wpa_bss_get_ie(wpa_s->current_bss,
+				WLAN_EID_RRM_ENABLED_CAPABILITIES);
+	if (!rrm_ie || !(wpa_s->current_bss->caps & IEEE80211_CAP_RRM) ||
+	    !(rrm_ie[2] & WLAN_RRM_CAPS_NEIGHBOR_REPORT)) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: No network support for Neighbor Report.");
+		return -EOPNOTSUPP;
+	}
+
+	if (!cb) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Neighbor Report request must provide a callback.");
+		return -EINVAL;
+	}
+
+	/* Refuse if there's a live request */
+	if (wpa_s->rrm.notify_neighbor_rep) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Currently handling previous Neighbor Report.");
+		return -EBUSY;
+	}
+
+	/* 3 = action category + action code + dialog token */
+	buf = wpabuf_alloc(3 + (ssid ? 2 + ssid->ssid_len : 0) +
+			   (lci ? 2 + MEASURE_REQUEST_LCI_LEN : 0) +
+			   (civic ? 2 + MEASURE_REQUEST_CIVIC_LEN : 0));
+	if (buf == NULL) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Failed to allocate Neighbor Report Request");
+		return -ENOMEM;
+	}
+
+	wpa_printf(MSG_DEBUG, "RRM: Neighbor report request (for %s), token=%d",
+		   (ssid ? wpa_ssid_txt(ssid->ssid, ssid->ssid_len) : ""),
+		   wpa_s->rrm.next_neighbor_rep_token);
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_NEIGHBOR_REPORT_REQUEST);
+	wpabuf_put_u8(buf, wpa_s->rrm.next_neighbor_rep_token);
+	if (ssid) {
+		wpabuf_put_u8(buf, WLAN_EID_SSID);
+		wpabuf_put_u8(buf, ssid->ssid_len);
+		wpabuf_put_data(buf, ssid->ssid, ssid->ssid_len);
+	}
+
+	if (lci) {
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21 */
+		wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+		wpabuf_put_u8(buf, MEASURE_REQUEST_LCI_LEN);
+
+		/*
+		 * Measurement token; nonzero number that is unique among the
+		 * Measurement Request elements in a particular frame.
+		 */
+		wpabuf_put_u8(buf, 1); /* Measurement Token */
+
+		/*
+		 * Parallel, Enable, Request, and Report bits are 0, Duration is
+		 * reserved.
+		 */
+		wpabuf_put_u8(buf, 0); /* Measurement Request Mode */
+		wpabuf_put_u8(buf, MEASURE_TYPE_LCI); /* Measurement Type */
+
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21.10 - LCI request */
+		/* Location Subject */
+		wpabuf_put_u8(buf, LOCATION_SUBJECT_REMOTE);
+
+		/* Optional Subelements */
+		/*
+		 * IEEE P802.11-REVmc/D5.0 Figure 9-170
+		 * The Maximum Age subelement is required, otherwise the AP can
+		 * send only data that was determined after receiving the
+		 * request. Setting it here to unlimited age.
+		 */
+		wpabuf_put_u8(buf, LCI_REQ_SUBELEM_MAX_AGE);
+		wpabuf_put_u8(buf, 2);
+		wpabuf_put_le16(buf, 0xffff);
+	}
+
+	if (civic) {
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21 */
+		wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+		wpabuf_put_u8(buf, MEASURE_REQUEST_CIVIC_LEN);
+
+		/*
+		 * Measurement token; nonzero number that is unique among the
+		 * Measurement Request elements in a particular frame.
+		 */
+		wpabuf_put_u8(buf, 2); /* Measurement Token */
+
+		/*
+		 * Parallel, Enable, Request, and Report bits are 0, Duration is
+		 * reserved.
+		 */
+		wpabuf_put_u8(buf, 0); /* Measurement Request Mode */
+		/* Measurement Type */
+		wpabuf_put_u8(buf, MEASURE_TYPE_LOCATION_CIVIC);
+
+		/* IEEE P802.11-REVmc/D5.0 9.4.2.21.14:
+		 * Location Civic request */
+		/* Location Subject */
+		wpabuf_put_u8(buf, LOCATION_SUBJECT_REMOTE);
+		wpabuf_put_u8(buf, 0); /* Civic Location Type: IETF RFC 4776 */
+		/* Location Service Interval Units: Seconds */
+		wpabuf_put_u8(buf, 0);
+		/* Location Service Interval: 0 - Only one report is requested
+		 */
+		wpabuf_put_le16(buf, 0);
+		/* No optional subelements */
+	}
+
+	wpa_s->rrm.next_neighbor_rep_token++;
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Failed to send Neighbor Report Request");
+		wpabuf_free(buf);
+		return -ECANCELED;
+	}
+
+	wpa_s->rrm.neighbor_rep_cb_ctx = cb_ctx;
+	wpa_s->rrm.notify_neighbor_rep = cb;
+	eloop_register_timeout(RRM_NEIGHBOR_REPORT_TIMEOUT, 0,
+			       wpas_rrm_neighbor_rep_timeout_handler,
+			       &wpa_s->rrm, NULL);
+
+	wpabuf_free(buf);
+	return 0;
+}
+
+
+static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
+						 const u8 *request, size_t len,
+						 struct wpabuf *report)
+{
+	u8 token, type, subject;
+	u16 max_age = 0;
+	struct os_reltime t, diff;
+	unsigned long diff_l;
+	u8 *ptoken;
+	const u8 *subelem;
+
+	if (!wpa_s->lci || len < 3 + 4)
+		return report;
+
+	token = *request++;
+	/* Measurement request mode isn't used */
+	request++;
+	type = *request++;
+	subject = *request++;
+	len -= 4;
+
+	wpa_printf(MSG_DEBUG,
+		   "Measurement request token %u type %u location subject %u",
+		   token, type, subject);
+
+	if (type != MEASURE_TYPE_LCI || subject != LOCATION_SUBJECT_REMOTE) {
+		wpa_printf(MSG_INFO,
+			   "Not building LCI report - bad type or location subject");
+		return report;
+	}
+
+	/* Subelements are formatted exactly like elements */
+	subelem = get_ie(request, len, LCI_REQ_SUBELEM_MAX_AGE);
+	if (subelem && subelem[1] == 2)
+		max_age = WPA_GET_LE16(subelem + 2);
+
+	if (os_get_reltime(&t))
+		return report;
+
+	os_reltime_sub(&t, &wpa_s->lci_time, &diff);
+	/* LCI age is calculated in 10th of a second units. */
+	diff_l = diff.sec * 10 + diff.usec / 100000;
+
+	if (max_age != 0xffff && max_age < diff_l)
+		return report;
+
+	if (wpabuf_resize(&report, 2 + wpabuf_len(wpa_s->lci)))
+		return report;
+
+	wpabuf_put_u8(report, WLAN_EID_MEASURE_REPORT);
+	wpabuf_put_u8(report, wpabuf_len(wpa_s->lci));
+	/* We'll override user's measurement token */
+	ptoken = wpabuf_put(report, 0);
+	wpabuf_put_buf(report, wpa_s->lci);
+	*ptoken = token;
+
+	return report;
+}
+
+
+void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
+					       const u8 *src,
+					       const u8 *frame, size_t len)
+{
+	struct wpabuf *buf, *report;
+	u8 token;
+	const u8 *ie, *end;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring radio measurement request: Not associated");
+		return;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring radio measurement request: Not RRM network");
+		return;
+	}
+
+	if (len < 3) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring too short radio measurement request");
+		return;
+	}
+
+	end = frame + len;
+
+	token = *frame++;
+
+	/* Ignore number of repetitions because it's not used in LCI request */
+	frame += 2;
+
+	report = NULL;
+	while ((ie = get_ie(frame, end - frame, WLAN_EID_MEASURE_REQUEST)) &&
+	       ie[1] >= 3) {
+		u8 msmt_type;
+
+		msmt_type = ie[4];
+		wpa_printf(MSG_DEBUG, "RRM request %d", msmt_type);
+
+		switch (msmt_type) {
+		case MEASURE_TYPE_LCI:
+			report = wpas_rrm_build_lci_report(wpa_s, ie + 2, ie[1],
+							   report);
+			break;
+		default:
+			wpa_printf(MSG_INFO,
+				   "RRM: Unsupported radio measurement request %d",
+				   msmt_type);
+			break;
+		}
+
+		frame = ie + ie[1] + 2;
+	}
+
+	if (!report)
+		return;
+
+	buf = wpabuf_alloc(3 + wpabuf_len(report));
+	if (!buf) {
+		wpabuf_free(report);
+		return;
+	}
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REPORT);
+	wpabuf_put_u8(buf, token);
+
+	wpabuf_put_buf(buf, report);
+	wpabuf_free(report);
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0)) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Radio measurement report failed: Sending Action frame failed");
+	}
+	wpabuf_free(buf);
+}
+
+
+void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
+					      const u8 *src,
+					      const u8 *frame, size_t len,
+					      int rssi)
+{
+	struct wpabuf *buf;
+	const struct rrm_link_measurement_request *req;
+	struct rrm_link_measurement_report report;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring link measurement request. Not associated");
+		return;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring link measurement request. Not RRM network");
+		return;
+	}
+
+	if (!(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_TX_POWER_INSERTION)) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Measurement report failed. TX power insertion not supported");
+		return;
+	}
+
+	req = (const struct rrm_link_measurement_request *) frame;
+	if (len < sizeof(*req)) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Link measurement report failed. Request too short");
+		return;
+	}
+
+	os_memset(&report, 0, sizeof(report));
+	report.tpc.eid = WLAN_EID_TPC_REPORT;
+	report.tpc.len = 2;
+	report.rsni = 255; /* 255 indicates that RSNI is not available */
+	report.dialog_token = req->dialog_token;
+
+	/*
+	 * It's possible to estimate RCPI based on RSSI in dBm. This
+	 * calculation will not reflect the correct value for high rates,
+	 * but it's good enough for Action frames which are transmitted
+	 * with up to 24 Mbps rates.
+	 */
+	if (!rssi)
+		report.rcpi = 255; /* not available */
+	else if (rssi < -110)
+		report.rcpi = 0;
+	else if (rssi > 0)
+		report.rcpi = 220;
+	else
+		report.rcpi = (rssi + 110) * 2;
+
+	/* action_category + action_code */
+	buf = wpabuf_alloc(2 + sizeof(report));
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Link measurement report failed. Buffer allocation failed");
+		return;
+	}
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_LINK_MEASUREMENT_REPORT);
+	wpabuf_put_data(buf, &report, sizeof(report));
+	wpa_hexdump(MSG_DEBUG, "RRM: Link measurement report:",
+		    wpabuf_head(buf), wpabuf_len(buf));
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0)) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Link measurement report failed. Send action failed");
+	}
+	wpabuf_free(buf);
+}

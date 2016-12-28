@@ -167,8 +167,10 @@ def test_radius_acct(dev, apdev):
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
-    params['radius_auth_req_attr'] = [ "126:s:Operator", "77:s:testing" ]
-    params['radius_acct_req_attr'] = [ "126:s:Operator", "77:s:testing" ]
+    params['radius_auth_req_attr'] = [ "126:s:Operator", "77:s:testing",
+                                       "62:d:1" ]
+    params['radius_acct_req_attr'] = [ "126:s:Operator", "62:d:1",
+                                       "77:s:testing" ]
     hapd = hostapd.add_ap(apdev[0], params)
     connect(dev[0], "radius-acct")
     dev[1].connect("radius-acct", key_mgmt="WPA-EAP", scan_freq="2412",

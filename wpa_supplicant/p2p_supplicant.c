@@ -3334,10 +3334,6 @@ static int wpas_p2p_default_channels(struct wpa_supplicant *wpa_s,
 }
 
 
-enum chan_allowed {
-	NOT_ALLOWED, NO_IR, ALLOWED
-};
-
 static int has_channel(struct wpa_global *global,
 		       struct hostapd_hw_modes *mode, u8 chan, int *flags)
 {

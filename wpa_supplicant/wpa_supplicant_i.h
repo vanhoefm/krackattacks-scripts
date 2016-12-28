@@ -1217,6 +1217,12 @@ struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
 				   struct wpa_bss *bss);
 
 /* op_classes.c */
+enum chan_allowed {
+	NOT_ALLOWED, NO_IR, ALLOWED
+};
+
+enum chan_allowed verify_channel(struct hostapd_hw_modes *mode, u8 channel,
+				 u8 bw);
 size_t wpas_supp_op_class_ie(struct wpa_supplicant *wpa_s, int freq, u8 *pos,
 			      size_t len);
 

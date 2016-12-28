@@ -517,15 +517,10 @@ static int hostapd_config_read_eap_user(const char *fname,
 	fclose(f);
 
 	if (ret == 0) {
-		user = conf->eap_user;
-		while (user) {
-			struct hostapd_eap_user *prev;
-
-			prev = user;
-			user = user->next;
-			hostapd_config_free_eap_user(prev);
-		}
+		hostapd_config_free_eap_users(conf->eap_user);
 		conf->eap_user = new_user;
+	} else {
+		hostapd_config_free_eap_users(new_user);
 	}
 
 	return ret;

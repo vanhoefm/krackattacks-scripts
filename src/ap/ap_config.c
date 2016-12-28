@@ -382,6 +382,18 @@ void hostapd_config_free_eap_user(struct hostapd_eap_user *user)
 }
 
 
+void hostapd_config_free_eap_users(struct hostapd_eap_user *user)
+{
+	struct hostapd_eap_user *prev_user;
+
+	while (user) {
+		prev_user = user;
+		user = user->next;
+		hostapd_config_free_eap_user(prev_user);
+	}
+}
+
+
 static void hostapd_config_free_wep(struct hostapd_wep_keys *keys)
 {
 	int i;
@@ -434,8 +446,6 @@ static void hostapd_config_free_fils_realms(struct hostapd_bss_config *conf)
 
 void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 {
-	struct hostapd_eap_user *user, *prev_user;
-
 	if (conf == NULL)
 		return;
 
@@ -448,12 +458,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->ssid.vlan_tagged_interface);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
-	user = conf->eap_user;
-	while (user) {
-		prev_user = user;
-		user = user->next;
-		hostapd_config_free_eap_user(prev_user);
-	}
+	hostapd_config_free_eap_users(conf->eap_user);
 	os_free(conf->eap_user_sqlite);
 
 	os_free(conf->eap_req_id_text);

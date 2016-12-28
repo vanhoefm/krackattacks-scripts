@@ -732,6 +732,7 @@ int hostapd_mac_comp(const void *a, const void *b);
 struct hostapd_config * hostapd_config_defaults(void);
 void hostapd_config_defaults_bss(struct hostapd_bss_config *bss);
 void hostapd_config_free_eap_user(struct hostapd_eap_user *user);
+void hostapd_config_free_eap_users(struct hostapd_eap_user *user);
 void hostapd_config_clear_wpa_psk(struct hostapd_wpa_psk **p);
 void hostapd_config_free_bss(struct hostapd_bss_config *conf);
 void hostapd_config_free(struct hostapd_config *conf);

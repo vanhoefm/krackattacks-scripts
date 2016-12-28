@@ -585,10 +585,14 @@
 #define WLAN_RRM_NEIGHBOR_REPORT_REQUEST 4
 #define WLAN_RRM_NEIGHBOR_REPORT_RESPONSE 5
 
-/* Radio Measurement capabilities (from RRM Capabilities IE) */
+/* Radio Measurement capabilities (from RM Enabled Capabilities element)
+ * IEEE Std 802.11-2016, 9.4.2.45, Table 9-157 */
 /* byte 1 (out of 5) */
 #define WLAN_RRM_CAPS_LINK_MEASUREMENT BIT(0)
 #define WLAN_RRM_CAPS_NEIGHBOR_REPORT BIT(1)
+#define WLAN_RRM_CAPS_BEACON_REPORT_PASSIVE BIT(4)
+#define WLAN_RRM_CAPS_BEACON_REPORT_ACTIVE BIT(5)
+#define WLAN_RRM_CAPS_BEACON_REPORT_TABLE BIT(6)
 /* byte 2 (out of 5) */
 #define WLAN_RRM_CAPS_LCI_MEASUREMENT BIT(4)
 /* byte 5 (out of 5) */
@@ -1797,6 +1801,102 @@ struct rrm_link_measurement_report {
 	u8 rsni;
 	u8 variable[0];
 } STRUCT_PACKED;
+
+/* IEEE Std 802.11-2016, 9.4.2.21 - Measurement Request element */
+struct rrm_measurement_request_element {
+	u8 eid; /* Element ID */
+	u8 len; /* Length */
+	u8 token; /* Measurement Token */
+	u8 mode; /* Measurement Request Mode */
+	u8 type; /* Measurement Type */
+	u8 variable[0]; /* Measurement Request */
+} STRUCT_PACKED;
+
+/* IEEE Std 802.11-2016, Figure 9-148 - Measurement Request Mode field */
+#define MEASUREMENT_REQUEST_MODE_PARALLEL BIT(0)
+#define MEASUREMENT_REQUEST_MODE_ENABLE BIT(1)
+#define MEASUREMENT_REQUEST_MODE_REQUEST BIT(2)
+#define MEASUREMENT_REQUEST_MODE_REPORT BIT(3)
+#define MEASUREMENT_REQUEST_MODE_DURATION_MANDATORY BIT(4)
+
+/* IEEE Std 802.11-2016, 9.4.2.21.7 - Beacon request */
+struct rrm_measurement_beacon_request {
+	u8 oper_class; /* Operating Class */
+	u8 channel; /* Channel Number */
+	le16 rand_interval; /* Randomization Interval (in TUs) */
+	le16 duration; /* Measurement Duration (in TUs) */
+	u8 mode; /* Measurement Mode */
+	u8 bssid[ETH_ALEN]; /* BSSID */
+	u8 variable[0]; /* Optional Subelements */
+} STRUCT_PACKED;
+
+/*
+ * IEEE Std 802.11-2016, Table 9-87 - Measurement Mode definitions for Beacon
+ * request
+ */
+enum beacon_report_mode {
+	BEACON_REPORT_MODE_PASSIVE = 0,
+	BEACON_REPORT_MODE_ACTIVE = 1,
+	BEACON_REPORT_MODE_TABLE = 2,
+};
+
+/* IEEE Std 802.11-2016, Table 9-88 - Beacon Request subelement IDs */
+#define WLAN_BEACON_REQUEST_SUBELEM_SSID	0
+#define WLAN_BEACON_REQUEST_SUBELEM_INFO	1 /* Beacon Reporting */
+#define WLAN_BEACON_REQUEST_SUBELEM_DETAIL	2 /* Reporting Detail */
+#define WLAN_BEACON_REQUEST_SUBELEM_REQUEST	10
+#define WLAN_BEACON_REQUEST_SUBELEM_AP_CHANNEL	51 /* AP Channel Report */
+#define WLAN_BEACON_REQUEST_SUBELEM_VENDOR	221
+
+/*
+ * IEEE Std 802.11-2016, Table 9-90 - Reporting Detail values
+ */
+enum beacon_report_detail {
+	/* No fixed-length fields or elements */
+	BEACON_REPORT_DETAIL_NONE = 0,
+	/* All fixed-length fields and any requested elements in the Request
+	 * element if present */
+	BEACON_REPORT_DETAIL_REQUESTED_ONLY = 1,
+	/* All fixed-length fields and elements (default, used when Reporting
+	 * Detail subelement is not included in a Beacon request) */
+	BEACON_REPORT_DETAIL_ALL_FIELDS_AND_ELEMENTS = 2,
+};
+
+/* IEEE Std 802.11-2016, 9.4.2.22 - Measurement Report element */
+struct rrm_measurement_report_element {
+	u8 eid; /* Element ID */
+	u8 len; /* Length */
+	u8 token; /* Measurement Token */
+	u8 mode; /* Measurement Report Mode */
+	u8 type; /* Measurement Type */
+	u8 variable[0]; /* Measurement Report */
+} STRUCT_PACKED;
+
+/* IEEE Std 802.11-2016, Figure 9-192 - Measurement Report Mode field */
+#define MEASUREMENT_REPORT_MODE_ACCEPT 0
+#define MEASUREMENT_REPORT_MODE_REJECT_LATE BIT(0)
+#define MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE BIT(1)
+#define MEASUREMENT_REPORT_MODE_REJECT_REFUSED BIT(2)
+
+/* IEEE Std 802.11-2016, 9.4.2.22.7 - Beacon report */
+struct rrm_measurement_beacon_report {
+	u8 op_class; /* Operating Class */
+	u8 channel; /* Channel Number */
+	le64 start_time; /* Actual Measurement Start Time
+			  * (in TSF of the BSS requesting the measurement) */
+	le16 duration; /* in TUs */
+	u8 report_info; /* Reported Frame Information */
+	u8 rcpi; /* RCPI */
+	u8 rsni; /* RSNI */
+	u8 bssid[ETH_ALEN]; /* BSSID */
+	u8 antenna_id; /* Antenna ID */
+	le32 parent_tsf; /* Parent TSF */
+	u8 variable[0]; /* Optional Subelements */
+} STRUCT_PACKED;
+
+/* IEEE Std 802.11-2016, Table 9-112 - Beacon report Subelement IDs */
+#define WLAN_BEACON_REPORT_SUBELEM_FRAME_BODY	1
+#define WLAN_BEACON_REPORT_SUBELEM_VENDOR	221
 
 /* IEEE Std 802.11ad-2012 - Multi-band element */
 struct multi_band_ie {

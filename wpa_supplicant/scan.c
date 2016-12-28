@@ -2348,6 +2348,8 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	params->p2p_probe = src->p2p_probe;
 	params->only_new_results = src->only_new_results;
 	params->low_priority = src->low_priority;
+	params->duration = src->duration;
+	params->duration_mandatory = src->duration_mandatory;
 
 	if (src->sched_scan_plans_num > 0) {
 		params->sched_scan_plans =

@@ -236,6 +236,9 @@ struct hostapd_hw_modes {
  * @est_throughput: Estimated throughput in kbps (this is calculated during
  * scan result processing if left zero by the driver wrapper)
  * @snr: Signal-to-noise ratio in dB (calculated during scan result processing)
+ * @parent_tsf: Time when the Beacon/Probe Response frame was received in terms
+ * of TSF of the BSS specified by %tsf_bssid.
+ * @tsf_bssid: The BSS that %parent_tsf TSF time refers to.
  * @ie_len: length of the following IE field in octets
  * @beacon_ie_len: length of the following Beacon IE field in octets
  *
@@ -266,6 +269,8 @@ struct wpa_scan_res {
 	unsigned int age;
 	unsigned int est_throughput;
 	int snr;
+	u64 parent_tsf;
+	u8 tsf_bssid[ETH_ALEN];
 	size_t ie_len;
 	size_t beacon_ie_len;
 	/* Followed by ie_len + beacon_ie_len octets of IE data */
@@ -471,6 +476,24 @@ struct wpa_driver_scan_params {
 	 * scan.
 	 */
 	u64 scan_cookie;
+
+	 /**
+	  * duration - Dwell time on each channel
+	  *
+	  * This optional parameter can be used to set the dwell time on each
+	  * channel. In TUs.
+	  */
+	 u16 duration;
+
+	 /**
+	  * duration_mandatory - Whether the specified duration is mandatory
+	  *
+	  * If this is set, the duration specified by the %duration field is
+	  * mandatory (and the driver should reject the scan request if it is
+	  * unable to comply with the specified duration), otherwise it is the
+	  * maximum duration and the actual duration may be shorter.
+	  */
+	 unsigned int duration_mandatory:1;
 
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure
@@ -1469,6 +1492,11 @@ struct wpa_driver_capa {
  * (Re)Association Request frames, without supporting quiet period.
  */
 #define WPA_DRIVER_FLAGS_SUPPORT_RRM			0x00000010
+
+/** Driver supports setting the scan dwell time */
+#define WPA_DRIVER_FLAGS_SUPPORT_SET_SCAN_DWELL		0x00000020
+/** Driver supports Beacon Report Measurement */
+#define WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT		0x00000040
 
 	u32 rrm_flags;
 
@@ -4684,6 +4712,11 @@ union wpa_event_data {
 	 * @external_scan: Whether the scan info is for an external scan
 	 * @nl_scan_event: 1 if the source of this scan event is a normal scan,
 	 * 	0 if the source of the scan event is a vendor scan
+	 * @scan_start_tsf: Time when the scan started in terms of TSF of the
+	 *	BSS that the interface that requested the scan is connected to
+	 *	(if available).
+	 * @scan_start_tsf_bssid: The BSSID according to which %scan_start_tsf
+	 *	is set.
 	 */
 	struct scan_info {
 		int aborted;
@@ -4693,6 +4726,8 @@ union wpa_event_data {
 		size_t num_ssids;
 		int external_scan;
 		int nl_scan_event;
+		u64 scan_start_tsf;
+		u8 scan_start_tsf_bssid[ETH_ALEN];
 	} scan_info;
 
 	/**

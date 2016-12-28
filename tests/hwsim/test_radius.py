@@ -723,6 +723,78 @@ def test_radius_das_disconnect(dev, apdev):
                                       Event_Timestamp=int(time.time()))
     send_and_check_reply(srv, req, pyrad.packet.DisconnectNAK, error_cause=503)
 
+def add_message_auth_req(req):
+    req.authenticator = req.CreateAuthenticator()
+    hmac_obj = hmac.new(req.secret)
+    hmac_obj.update(struct.pack("B", req.code))
+    hmac_obj.update(struct.pack("B", req.id))
+
+    # request attributes
+    req.AddAttribute("Message-Authenticator", 16*"\x00")
+    attrs = req._PktEncodeAttributes()
+
+    # Length
+    flen = 4 + 16 + len(attrs)
+    hmac_obj.update(struct.pack(">H", flen))
+    hmac_obj.update(16*"\x00") # all zeros Authenticator in calculation
+    hmac_obj.update(attrs)
+    del req[80]
+    req.AddAttribute("Message-Authenticator", hmac_obj.digest())
+
+def test_radius_das_disconnect_time_window(dev, apdev):
+    """RADIUS Dynamic Authorization Extensions - Disconnect - time window"""
+    try:
+        import pyrad.client
+        import pyrad.packet
+        import pyrad.dictionary
+        import radius_das
+    except ImportError:
+        raise HwsimSkip("No pyrad modules available")
+
+    params = hostapd.wpa2_eap_params(ssid="radius-das")
+    params['radius_das_port'] = "3799"
+    params['radius_das_client'] = "127.0.0.1 secret"
+    params['radius_das_require_event_timestamp'] = "1"
+    params['radius_das_require_message_authenticator'] = "1"
+    params['radius_das_time_window'] = "10"
+    params['own_ip_addr'] = "127.0.0.1"
+    params['nas_identifier'] = "nas.example.com"
+    hapd = hostapd.add_ap(apdev[0], params)
+    connect(dev[0], "radius-das")
+    addr = dev[0].own_addr()
+    sta = hapd.get_sta(addr)
+    id = sta['dot1xAuthSessionId']
+
+    dict = pyrad.dictionary.Dictionary("dictionary.radius")
+
+    srv = pyrad.client.Client(server="127.0.0.1", acctport=3799,
+                              secret="secret", dict=dict)
+    srv.retries = 1
+    srv.timeout = 1
+
+    logger.info("Disconnect-Request with unsupported attribute")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Calling_Station_Id=addr,
+                                      Event_Timestamp=int(time.time()) - 50)
+    add_message_auth_req(req)
+    logger.debug(req)
+    try:
+        reply = srv.SendPacket(req)
+        raise Exception("Unexpected response to Disconnect-Request")
+    except pyrad.client.Timeout:
+        logger.info("Disconnect-Request with non-matching Event-Timestamp properly ignored")
+
+    logger.info("Disconnect-Request with unsupported attribute")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Calling_Station_Id=addr,
+                                      Event_Timestamp=int(time.time()))
+    add_message_auth_req(req)
+    send_and_check_reply(srv, req, pyrad.packet.DisconnectACK)
+
 def test_radius_das_coa(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - CoA"""
     try:

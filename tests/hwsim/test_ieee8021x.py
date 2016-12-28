@@ -50,6 +50,22 @@ def test_ieee8021x_wep40(dev, apdev):
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ieee8021x_wep_index_workaround(dev, apdev):
+    """IEEE 802.1X and EAPOL-Key index workaround"""
+    skip_with_fips(dev[0])
+    params = hostapd.radius_params()
+    params["ssid"] = "ieee8021x-wep"
+    params["ieee8021x"] = "1"
+    params["wep_key_len_broadcast"] = "5"
+    params["eapol_key_index_workaround"] = "1"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("ieee8021x-wep", key_mgmt="IEEE8021X", eapol_flags="1",
+                   eap="PSK",
+                   identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+
 def test_ieee8021x_open(dev, apdev):
     """IEEE 802.1X connection using open network"""
     params = hostapd.radius_params()

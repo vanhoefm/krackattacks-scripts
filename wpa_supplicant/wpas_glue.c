@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "eap_peer/eap.h"
 #include "rsn_supp/wpa.h"
 #include "eloop.h"
 #include "config.h"
@@ -911,6 +912,33 @@ static void wpa_supplicant_eap_proxy_cb(void *ctx)
 }
 
 
+static void wpa_sm_sim_state_error_handler(struct wpa_supplicant *wpa_s)
+{
+	int i;
+	struct wpa_ssid *ssid;
+	const struct eap_method_type *eap_methods;
+
+	if (!wpa_s->conf)
+		return;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)	{
+		eap_methods = ssid->eap.eap_methods;
+		if (!eap_methods)
+			continue;
+
+		for (i = 0; eap_methods[i].method != EAP_TYPE_NONE; i++) {
+			if (eap_methods[i].vendor == EAP_VENDOR_IETF &&
+			    (eap_methods[i].method == EAP_TYPE_SIM ||
+			     eap_methods[i].method == EAP_TYPE_AKA ||
+			     eap_methods[i].method == EAP_TYPE_AKA_PRIME)) {
+				wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
+				break;
+			}
+		}
+	}
+}
+
+
 static void
 wpa_supplicant_eap_proxy_notify_sim_status(void *ctx,
 					   enum eap_proxy_sim_state sim_state)
@@ -920,7 +948,7 @@ wpa_supplicant_eap_proxy_notify_sim_status(void *ctx,
 	wpa_printf(MSG_DEBUG, "eap_proxy: SIM card status %u", sim_state);
 	switch (sim_state) {
 	case SIM_STATE_ERROR:
-		wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
+		wpa_sm_sim_state_error_handler(wpa_s);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "eap_proxy: SIM card status unknown");

@@ -8,12 +8,14 @@ from remotehost import remote_compatible
 import logging
 logger = logging.getLogger()
 import os
+import struct
 import subprocess
+import time
 
 import hwsim_utils
 import hostapd
 from tshark import run_tshark
-from utils import alloc_fail, HwsimSkip
+from utils import alloc_fail, HwsimSkip, parse_ie
 
 @remote_compatible
 def test_ap_fragmentation_rts_set_high(dev, apdev):
@@ -610,3 +612,29 @@ def test_ap_eapol_version(dev, apdev):
         raise Exception("Unexpected default eapol_version: " + ver1)
     if ver2 != "01":
         raise Exception("eapol_version did not match configuration: " + ver2)
+
+def test_ap_dtim_period(dev, apdev):
+    """DTIM period configuration"""
+    ssid = "dtim-period"
+    params = { 'ssid': ssid, 'dtim_period': "10" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    for i in range(10):
+        dev[0].scan(freq="2412")
+        bss = dev[0].get_bss(bssid)
+        if 'beacon_ie' in bss:
+            break
+        time.sleep(0.2)
+    if 'beacon_ie' not in bss:
+        raise Exception("Did not find Beacon IEs")
+
+    ie = parse_ie(bss['beacon_ie'])
+    if 5 not in ie:
+        raise Exception("TIM element missing")
+    count, period = struct.unpack('BB', ie[5][0:2])
+    logger.info("DTIM count %d  DTIM period %d" % (count, period))
+    if period != 10:
+        raise Exception("Unexpected DTIM period: %d" % period)
+    if count >= period:
+        raise Exception("Unexpected DTIM count: %d" % count)

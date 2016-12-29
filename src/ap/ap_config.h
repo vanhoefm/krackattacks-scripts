@@ -515,7 +515,7 @@ struct hostapd_bss_config {
 	struct dl_list anqp_elem; /* list of struct anqp_element */
 
 	u16 gas_comeback_delay;
-	int gas_frag_limit;
+	size_t gas_frag_limit;
 	int gas_address3;
 
 	u8 qos_map_set[16 + 2 * 21];

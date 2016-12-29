@@ -3298,7 +3298,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		if (parse_anqp_elem(bss, pos, line) < 0)
 			return 1;
 	} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
-		bss->gas_frag_limit = atoi(pos);
+		int val = atoi(pos);
+
+		if (val <= 0) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid gas_frag_limit '%s'",
+				   line, pos);
+			return 1;
+		}
+		bss->gas_frag_limit = val;
 	} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {
 		bss->gas_comeback_delay = atoi(pos);
 	} else if (os_strcmp(buf, "qos_map_set") == 0) {

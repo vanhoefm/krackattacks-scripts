@@ -260,9 +260,6 @@ struct hostapd_data {
 	int noa_start;
 	int noa_duration;
 #endif /* CONFIG_P2P */
-#ifdef CONFIG_INTERWORKING
-	size_t gas_frag_limit;
-#endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_PROXYARP
 	struct l2_packet_data *sock_dhcp;
 	struct l2_packet_data *sock_ndisc;

@@ -1352,14 +1352,6 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		wpa_printf(MSG_DEBUG, "WPS: Testing - wps_corrupt_pkhash=%d",
 			   wps_corrupt_pkhash);
 #endif /* CONFIG_WPS_TESTING */
-#ifdef CONFIG_INTERWORKING
-	} else if (os_strcasecmp(cmd, "gas_frag_limit") == 0) {
-		int val = atoi(value);
-		if (val <= 0)
-			ret = -1;
-		else
-			hapd->gas_frag_limit = val;
-#endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
 		hapd->ext_mgmt_frame_handling = atoi(value);

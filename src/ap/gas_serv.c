@@ -1245,7 +1245,7 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P */
 
-	if (wpabuf_len(buf) > hapd->gas_frag_limit ||
+	if (wpabuf_len(buf) > hapd->conf->gas_frag_limit ||
 	    hapd->conf->gas_comeback_delay) {
 		struct gas_dialog_info *di;
 		u16 comeback_delay = 1;
@@ -1449,8 +1449,8 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 	}
 
 	frag_len = wpabuf_len(dialog->sd_resp) - dialog->sd_resp_pos;
-	if (frag_len > hapd->gas_frag_limit) {
-		frag_len = hapd->gas_frag_limit;
+	if (frag_len > hapd->conf->gas_frag_limit) {
+		frag_len = hapd->conf->gas_frag_limit;
 		more = 1;
 	}
 	wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: resp frag_len %u",
@@ -1551,9 +1551,6 @@ int gas_serv_init(struct hostapd_data *hapd)
 {
 	hapd->public_action_cb2 = gas_serv_rx_public_action;
 	hapd->public_action_cb2_ctx = hapd;
-	hapd->gas_frag_limit = 1400;
-	if (hapd->conf->gas_frag_limit > 0)
-		hapd->gas_frag_limit = hapd->conf->gas_frag_limit;
 	return 0;
 }
 

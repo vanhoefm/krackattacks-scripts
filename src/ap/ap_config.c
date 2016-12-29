@@ -96,6 +96,8 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 
 	bss->sae_anti_clogging_threshold = 5;
 
+	bss->gas_frag_limit = 1400;
+
 #ifdef CONFIG_FILS
 	dl_list_init(&bss->fils_realms);
 #endif /* CONFIG_FILS */

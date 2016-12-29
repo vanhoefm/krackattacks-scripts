@@ -652,3 +652,15 @@ def test_ap_no_probe_resp(dev, apdev):
     if 'ie' in bss and 'beacon_ie' in bss and \
        len(bss['ie']) != len(bss['beacon_ie']):
         raise Exception("Probe Response frames seen")
+
+def test_ap_long_preamble(dev, apdev):
+    """AP with long preamble"""
+    ssid = "long-preamble"
+    params = { 'ssid': ssid, 'preamble': "0",
+               'hw_mode': 'b', 'ieee80211n': '0',
+               'supported_rates': '10', 'basic_rates': '10' }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)

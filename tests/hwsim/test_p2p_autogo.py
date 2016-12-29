@@ -326,12 +326,12 @@ def test_autogo_chan_switch(dev):
     """P2P autonomous GO switching channels"""
     autogo(dev[0], freq=2417)
     connect_cli(dev[0], dev[1])
-    res = dev[0].request("CHAN_SWITCH 5 2422")
+    res = dev[0].group_request("CHAN_SWITCH 5 2422")
     if "FAIL" in res:
         # for now, skip test since mac80211_hwsim support is not yet widely
         # deployed
         raise HwsimSkip("Assume mac80211_hwsim did not support channel switching")
-    ev = dev[0].wait_event(["AP-CSA-FINISHED"], timeout=10)
+    ev = dev[0].wait_group_event(["AP-CSA-FINISHED"], timeout=10)
     if ev is None:
         raise Exception("CSA finished event timed out")
     if "freq=2422" not in ev:

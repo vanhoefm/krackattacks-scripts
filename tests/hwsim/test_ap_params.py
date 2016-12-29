@@ -664,3 +664,13 @@ def test_ap_long_preamble(dev, apdev):
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wmm_uapsd(dev, apdev):
+    """AP with U-APSD advertisement"""
+    ssid = "uapsd"
+    params = { 'ssid': ssid, 'uapsd_advertisement_enabled': "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)

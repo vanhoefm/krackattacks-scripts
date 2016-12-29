@@ -1052,7 +1052,8 @@ class WpaSupplicant:
             self.select_network(id)
         return id
 
-    def scan(self, type=None, freq=None, no_wait=False, only_new=False):
+    def scan(self, type=None, freq=None, no_wait=False, only_new=False,
+             passive=False):
         if type:
             cmd = "SCAN TYPE=" + type
         else:
@@ -1061,6 +1062,8 @@ class WpaSupplicant:
             cmd = cmd + " freq=" + str(freq)
         if only_new:
             cmd += " only_new=1"
+        if passive:
+            cmd += " passive=1"
         if not no_wait:
             self.dump_monitor()
         if not "OK" in self.request(cmd):
@@ -1074,11 +1077,13 @@ class WpaSupplicant:
         if "CTRL-EVENT-SCAN-FAILED" in ev:
             raise Exception("Scan failed: " + ev)
 
-    def scan_for_bss(self, bssid, freq=None, force_scan=False, only_new=False):
+    def scan_for_bss(self, bssid, freq=None, force_scan=False, only_new=False,
+                     passive=False):
         if not force_scan and self.get_bss(bssid) is not None:
             return
         for i in range(0, 10):
-            self.scan(freq=freq, type="ONLY", only_new=only_new)
+            self.scan(freq=freq, type="ONLY", only_new=only_new,
+                      passive=passive)
             if self.get_bss(bssid) is not None:
                 return
         raise Exception("Could not find BSS " + bssid + " in scan")

@@ -638,3 +638,17 @@ def test_ap_dtim_period(dev, apdev):
         raise Exception("Unexpected DTIM period: %d" % period)
     if count >= period:
         raise Exception("Unexpected DTIM count: %d" % count)
+
+def test_ap_no_probe_resp(dev, apdev):
+    """AP with Probe Response frame sending from hostapd disabled"""
+    ssid = "no-probe-resp"
+    params = { 'ssid': ssid, 'send_probe_response': "0" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq="2412", passive=True)
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    bss = dev[0].get_bss(bssid)
+    if 'ie' in bss and 'beacon_ie' in bss and \
+       len(bss['ie']) != len(bss['beacon_ie']):
+        raise Exception("Probe Response frames seen")

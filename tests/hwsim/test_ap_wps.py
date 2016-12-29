@@ -9836,3 +9836,33 @@ def test_ap_wps_conf_dummy_cred(dev, apdev):
         dev[0].wait_connected(timeout=30)
     finally:
         hapd.set("wps_testing_dummy_cred", "0")
+
+def test_ap_wps_rf_bands(dev, apdev):
+    """WPS and wps_rf_bands configuration"""
+    ssid = "test-wps-conf"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "wps_rf_bands": "ag" }
+
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    hapd.request("WPS_PBC")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC " + bssid)
+    dev[0].wait_connected(timeout=30)
+    bss = dev[0].get_bss(bssid)
+    logger.info("BSS: " + str(bss))
+    if "103c000103" not in bss['ie']:
+        raise Exception("RF Bands attribute with expected values not found")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.set("wps_rf_bands", "ad")
+    hapd.set("wps_rf_bands", "a")
+    hapd.set("wps_rf_bands", "g")
+    hapd.set("wps_rf_bands", "b")
+    hapd.set("wps_rf_bands", "ga")
+    hapd.disable()
+    dev[0].dump_monitor()
+    dev[0].flush_scan_cache()

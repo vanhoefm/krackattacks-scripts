@@ -220,3 +220,18 @@ def test_ap_acs_bias(dev, apdev):
         raise Exception("Unexpected frequency")
 
     dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+
+def test_ap_acs_survey(dev, apdev):
+    """Automatic channel selection using acs_survey parameter"""
+    force_prev_ap_on_24g(apdev[0])
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['channel'] = 'acs_survey'
+    params['acs_num_scans'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+    wait_acs(hapd)
+
+    freq = hapd.get_status_field("freq")
+    if int(freq) < 2400:
+        raise Exception("Unexpected frequency")
+
+    dev[0].connect("test-acs", psk="12345678", scan_freq=freq)

@@ -9866,3 +9866,25 @@ def test_ap_wps_rf_bands(dev, apdev):
     hapd.disable()
     dev[0].dump_monitor()
     dev[0].flush_scan_cache()
+
+def test_ap_wps_pbc_in_m1(dev, apdev):
+    """WPS and pbc_in_m1"""
+    ssid = "test-wps-conf"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "config_methods": "virtual_push_button virtual_display",
+               "pbc_in_m1": "1" }
+
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    hapd.request("WPS_PBC")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC " + bssid)
+    dev[0].wait_connected(timeout=30)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.disable()
+    dev[0].dump_monitor()
+    dev[0].flush_scan_cache()

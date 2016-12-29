@@ -216,6 +216,31 @@ def test_ap_anqp_sharing(dev, apdev):
     if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
         raise Exception("ANQP results were not unshared")
 
+def test_ap_anqp_domain_id(dev, apdev):
+    """ANQP Domain ID"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].flush_scan_cache()
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_domain_id'] = '1234'
+    hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_domain_id'] = '1234'
+    hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    interworking_select(dev[0], None, "home", freq="2412")
+
 def test_ap_anqp_no_sharing_diff_ess(dev, apdev):
     """ANQP no sharing between ESSs"""
     check_eap_capa(dev[0], "MSCHAPV2")

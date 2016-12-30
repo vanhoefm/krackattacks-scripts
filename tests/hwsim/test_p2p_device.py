@@ -504,3 +504,26 @@ def test_p2p_device_conf(dev, apdev):
         p2p_device_group_conf(wpas, dev[0])
         wpas.global_request("SET p2p_no_group_iface 0")
         p2p_device_group_conf(wpas, dev[0])
+
+def test_p2p_device_autogo_chan_switch(dev):
+    """P2P autonomous GO switching channels with cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.global_request("SET p2p_no_group_iface 1")
+        autogo(wpas, freq=2417)
+        connect_cli(wpas, dev[1])
+        res = wpas.group_request("CHAN_SWITCH 5 2422")
+        if "FAIL" in res:
+            # for now, skip test since mac80211_hwsim support is not yet widely
+            # deployed
+            raise HwsimSkip("Assume mac80211_hwsim did not support channel switching")
+        ev = wpas.wait_group_event(["AP-CSA-FINISHED"], timeout=10)
+        if ev is None:
+            raise Exception("CSA finished event timed out")
+        if "freq=2422" not in ev:
+            raise Exception("Unexpected cahnnel in CSA finished event")
+        wpas.dump_monitor()
+        dev[1].dump_monitor()
+        time.sleep(0.1)
+        hwsim_utils.test_connectivity_p2p(wpas, dev[1])

@@ -1030,11 +1030,13 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 	u32 _rand;
 	int ret = 0, res;
 
-	if (!(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT))
-		return 0;
-
 	if (len < sizeof(*req))
 		return -1;
+
+	if (req->mode != BEACON_REPORT_MODE_TABLE &&
+	    !(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT))
+		return 0;
+
 	subelems = req->variable;
 	elems_len = len - sizeof(*req);
 	rand_interval = le_to_host16(req->rand_interval);

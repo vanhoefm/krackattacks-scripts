@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -3359,6 +3359,29 @@ static void handle_disassoc_cb(struct hostapd_data *hapd,
 }
 
 
+static void handle_action_cb(struct hostapd_data *hapd,
+			     const struct ieee80211_mgmt *mgmt,
+			     size_t len, int ok)
+{
+	struct sta_info *sta;
+
+	if (is_multicast_ether_addr(mgmt->da))
+		return;
+	sta = ap_get_sta(hapd, mgmt->da);
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "handle_action_cb: STA " MACSTR
+			   " not found", MAC2STR(mgmt->da));
+		return;
+	}
+
+	if (len < 24 + 2)
+		return;
+	if (mgmt->u.action.category == WLAN_ACTION_RADIO_MEASUREMENT &&
+	    mgmt->u.action.u.rrm.action == WLAN_RRM_RADIO_MEASUREMENT_REQUEST)
+		hostapd_rrm_beacon_req_tx_status(hapd, mgmt, len, ok);
+}
+
+
 /**
  * ieee802_11_mgmt_cb - Process management frame TX status callback
  * @hapd: hostapd BSS data structure (the BSS from which the management frame
@@ -3408,6 +3431,7 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		break;
 	case WLAN_FC_STYPE_ACTION:
 		wpa_printf(MSG_DEBUG, "mgmt::action cb ok=%d", ok);
+		handle_action_cb(hapd, mgmt, len, ok);
 		break;
 	default:
 		wpa_printf(MSG_INFO, "unknown mgmt cb frame subtype %d", stype);

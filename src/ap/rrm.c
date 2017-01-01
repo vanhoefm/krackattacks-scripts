@@ -2,6 +2,7 @@
  * hostapd / Radio Measurement (RRM)
  * Copyright(c) 2013 - 2016 Intel Mobile Communications GmbH.
  * Copyright(c) 2011 - 2016 Intel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +11,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/wpa_ctrl.h"
 #include "hostapd.h"
 #include "ap_drv_ops.h"
 #include "sta_info.h"
@@ -637,4 +639,16 @@ int hostapd_send_beacon_req(struct hostapd_data *hapd, const u8 *addr,
 		return ret;
 
 	return hapd->beacon_req_token;
+}
+
+
+void hostapd_rrm_beacon_req_tx_status(struct hostapd_data *hapd,
+				      const struct ieee80211_mgmt *mgmt,
+				      size_t len, int ok)
+{
+	if (len < 24 + 3)
+		return;
+	wpa_msg(hapd->msg_ctx, MSG_INFO, BEACON_REQ_TX_STATUS MACSTR
+		" %u ack=%d", MAC2STR(mgmt->da),
+		mgmt->u.action.u.rrm.dialog_token, ok);
 }

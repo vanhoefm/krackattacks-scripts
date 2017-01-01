@@ -542,3 +542,99 @@ void hostapd_clean_rrm(struct hostapd_data *hapd)
 	eloop_cancel_timeout(hostapd_range_rep_timeout_handler, hapd, NULL);
 	hapd->range_req_active = 0;
 }
+
+
+int hostapd_send_beacon_req(struct hostapd_data *hapd, const u8 *addr,
+			    u8 req_mode, const struct wpabuf *req)
+{
+	struct wpabuf *buf;
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	int ret;
+	enum beacon_report_mode mode;
+	const u8 *pos;
+
+	/* Request data:
+	 * Operating Class (1), Channel Number (1), Randomization Interval (2),
+	 * Measurement Duration (2), Measurement Mode (1), BSSID (6),
+	 * Optional Subelements (variable)
+	 */
+	if (wpabuf_len(req) < 13) {
+		wpa_printf(MSG_INFO, "Beacon request: Too short request data");
+		return -1;
+	}
+	pos = wpabuf_head(req);
+	mode = pos[6];
+
+	if (!sta || !(sta->flags & WLAN_STA_AUTHORIZED)) {
+		wpa_printf(MSG_INFO,
+			   "Beacon request: " MACSTR " is not connected",
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	switch (mode) {
+	case BEACON_REPORT_MODE_PASSIVE:
+		if (!(sta->rrm_enabled_capa[0] &
+		      WLAN_RRM_CAPS_BEACON_REPORT_PASSIVE)) {
+			wpa_printf(MSG_INFO,
+				   "Beacon request: " MACSTR
+				   " does not support passive beacon report",
+				   MAC2STR(addr));
+			return -1;
+		}
+		break;
+	case BEACON_REPORT_MODE_ACTIVE:
+		if (!(sta->rrm_enabled_capa[0] &
+		      WLAN_RRM_CAPS_BEACON_REPORT_ACTIVE)) {
+			wpa_printf(MSG_INFO,
+				   "Beacon request: " MACSTR
+				   " does not support active beacon report",
+				   MAC2STR(addr));
+			return -1;
+		}
+		break;
+	case BEACON_REPORT_MODE_TABLE:
+		if (!(sta->rrm_enabled_capa[0] &
+		      WLAN_RRM_CAPS_BEACON_REPORT_TABLE)) {
+			wpa_printf(MSG_INFO,
+				   "Beacon request: " MACSTR
+				   " does not support table beacon report",
+				   MAC2STR(addr));
+			return -1;
+		}
+		break;
+	default:
+		wpa_printf(MSG_INFO,
+			   "Beacon request: Unknown measurement mode %d", mode);
+		return -1;
+	}
+
+	buf = wpabuf_alloc(5 + 2 + 3 + wpabuf_len(req));
+	if (!buf)
+		return -1;
+
+	hapd->beacon_req_token++;
+	if (!hapd->beacon_req_token)
+		hapd->beacon_req_token++;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_RADIO_MEASUREMENT_REQUEST);
+	wpabuf_put_u8(buf, hapd->beacon_req_token);
+	wpabuf_put_le16(buf, 0); /* Number of repetitions */
+
+	/* Measurement Request element */
+	wpabuf_put_u8(buf, WLAN_EID_MEASURE_REQUEST);
+	wpabuf_put_u8(buf, 3 + wpabuf_len(req));
+	wpabuf_put_u8(buf, 1); /* Measurement Token */
+	wpabuf_put_u8(buf, req_mode); /* Measurement Request Mode */
+	wpabuf_put_u8(buf, MEASURE_TYPE_BEACON); /* Measurement Type */
+	wpabuf_put_buf(buf, req);
+
+	ret = hostapd_drv_send_action(hapd, hapd->iface->freq, 0, addr,
+				      wpabuf_head(buf), wpabuf_len(buf));
+	wpabuf_free(buf);
+	if (ret < 0)
+		return ret;
+
+	return hapd->beacon_req_token;
+}

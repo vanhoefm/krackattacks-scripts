@@ -820,3 +820,218 @@ def test_rrm_beacon_req_table_vht(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_rrm_beacon_req_active(dev, apdev):
+    """Beacon request - active scan mode"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51000000640001ffffffffffff")
+
+    for i in range(1, 3):
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report %d response not received" % i)
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.bssid_str == apdev[0]['bssid']:
+            if report.opclass != 81 or report.channel != 1:
+                raise Exception("Incorrect opclass/channel for AP0")
+        elif report.bssid_str == apdev[1]['bssid']:
+            if report.opclass != 81 or report.channel != 11:
+                raise Exception("Incorrect opclass/channel for AP1")
+
+def test_rrm_beacon_req_active_ap_channels(dev, apdev):
+    """Beacon request - active scan mode with AP Channel Report subelement"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "dd0111" + "330351010b" + "dd0111")
+
+    for i in range(1, 3):
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report %d response not received" % i)
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.bssid_str == apdev[0]['bssid']:
+            if report.opclass != 81 or report.channel != 1:
+                raise Exception("Incorrect opclass/channel for AP0")
+        elif report.bssid_str == apdev[1]['bssid']:
+            if report.opclass != 81 or report.channel != 11:
+                raise Exception("Incorrect opclass/channel for AP1")
+
+def test_rrm_beacon_req_passive_ap_channels(dev, apdev):
+    """Beacon request - passive scan mode with AP Channel Report subelement"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "330351010b" + "3300" + "dd00")
+
+    for i in range(1, 3):
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report %d response not received" % i)
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.bssid_str == apdev[0]['bssid']:
+            if report.opclass != 81 or report.channel != 1:
+                raise Exception("Incorrect opclass/channel for AP0")
+        elif report.bssid_str == apdev[1]['bssid']:
+            if report.opclass != 81 or report.channel != 11:
+                raise Exception("Incorrect opclass/channel for AP1")
+
+def test_rrm_beacon_req_active_single_channel(dev, apdev):
+    """Beacon request - active scan mode with single channel"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "510b0000640001ffffffffffff")
+
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report response not received")
+    fields = ev.split(' ')
+    report = BeaconReport(binascii.unhexlify(fields[4]))
+    logger.info("Received beacon report: " + str(report))
+
+def test_rrm_beacon_req_active_ap_channels_unknown_opclass(dev, apdev):
+    """Beacon request - active scan mode with AP Channel Report subelement and unknown opclass"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "3303ff010b")
+
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected Beacon report")
+
+def test_rrm_beacon_req_active_ap_channel_oom(dev, apdev):
+    """Beacon request - AP Channel Report subelement and OOM"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    with alloc_fail(dev[0], 1, "wpas_add_channels"):
+        token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "330351010b")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected Beacon report during OOM")
+
+def test_rrm_beacon_req_active_scan_fail(dev, apdev):
+    """Beacon request - Active scan failure"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    with alloc_fail(dev[0], 1, "wpa_supplicant_trigger_scan"):
+        token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "330351010b")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("No Beacon report")
+        fields = ev.split(' ')
+        if fields[3] != "04":
+            raise Exception("Unexpected Beacon report contents: " + ev)
+
+def test_rrm_beacon_req_active_zero_duration(dev, apdev):
+    """Beacon request - Action scan and zero duration"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51000000000001ffffffffffff")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected Beacon report")
+
+def test_rrm_beacon_req_passive(dev, apdev):
+    """Beacon request - passive scan mode"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
+                                                 "channel": "11" })
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51000000640000ffffffffffff")
+
+    for i in range(1, 3):
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report %d response not received" % i)
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.bssid_str == apdev[0]['bssid']:
+            if report.opclass != 81 or report.channel != 1:
+                raise Exception("Incorrect opclass/channel for AP0")
+        elif report.bssid_str == apdev[1]['bssid']:
+            if report.opclass != 81 or report.channel != 11:
+                raise Exception("Incorrect opclass/channel for AP1")
+
+def test_rrm_beacon_req_active_duration_mandatory(dev, apdev):
+    """Beacon request - Action scan and duration mandatory"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "req_mode=10 51000000640001ffffffffffff")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("No Beacon report response")
+    fields = ev.split(' ')
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x20 == 0x20:
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+    else:
+        # Driver does not support scan dwell time setting, so wpa_supplicant
+        # rejects the measurement request due to the mandatory duration using
+        # Measurement Report Mode field Incapable=1.
+        if fields[3] != '02':
+            raise Exception("Unexpected Measurement Report Mode: " + fields[3])
+        if len(fields[4]) > 0:
+            raise Exception("Unexpected beacon report received")

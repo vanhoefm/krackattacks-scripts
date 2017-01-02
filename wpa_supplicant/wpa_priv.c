@@ -1190,7 +1190,7 @@ static void wpa_priv_fd_workaround(void)
 static void usage(void)
 {
 	printf("wpa_priv v" VERSION_STR "\n"
-	       "Copyright (c) 2007-2016, Jouni Malinen <j@w1.fi> and "
+	       "Copyright (c) 2007-2017, Jouni Malinen <j@w1.fi> and "
 	       "contributors\n"
 	       "\n"
 	       "usage:\n"

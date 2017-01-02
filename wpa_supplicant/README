@@ -1,7 +1,7 @@
 WPA Supplicant
 ==============
 
-Copyright (c) 2003-2016, Jouni Malinen <j@w1.fi> and contributors
+Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi> and contributors
 All Rights Reserved.
 
 This program is licensed under the BSD license (the one with
@@ -83,7 +83,7 @@ Supported WPA/IEEE 802.11i features:
 	  authentication)
   (following methods are supported, but since they do not generate keying
    material, they cannot be used with WPA or IEEE 802.1X WEP keying)
-  * EAP-MD5-Challenge 
+  * EAP-MD5-Challenge
   * EAP-MSCHAPv2
   * EAP-GTC
   * EAP-OTP

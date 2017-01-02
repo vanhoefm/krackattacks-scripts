@@ -580,6 +580,7 @@ static void anqp_add_fils_realm_info(struct hostapd_data *hapd,
 			if (count == 0)
 				break;
 			wpabuf_put_data(buf, realm->hash, 2);
+			count--;
 		}
 	}
 }

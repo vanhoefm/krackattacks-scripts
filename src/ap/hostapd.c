@@ -1603,10 +1603,12 @@ static void hostapd_set_own_neighbor_report(struct hostapd_data *hapd)
 
 	/* TODO: Set NEI_REP_BSSID_INFO_MOBILITY_DOMAIN if MDE is set */
 
-	ieee80211_freq_to_channel_ext(hapd->iface->freq,
-				      hapd->iconf->secondary_channel,
-				      hapd->iconf->vht_oper_chwidth,
-				      &op_class, &channel);
+	if (ieee80211_freq_to_channel_ext(hapd->iface->freq,
+					  hapd->iconf->secondary_channel,
+					  hapd->iconf->vht_oper_chwidth,
+					  &op_class, &channel) ==
+	    NUM_HOSTAPD_MODES)
+		return;
 	width = hostapd_get_nr_chan_width(hapd, ht, vht);
 	if (vht) {
 		center_freq1_idx = hapd->iconf->vht_oper_centr_freq_seg0_idx;

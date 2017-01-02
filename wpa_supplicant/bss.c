@@ -269,9 +269,9 @@ struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static void calculate_update_time(const struct os_reltime *fetch_time,
-				  unsigned int age_ms,
-				  struct os_reltime *update_time)
+void calculate_update_time(const struct os_reltime *fetch_time,
+			   unsigned int age_ms,
+			   struct os_reltime *update_time)
 {
 	os_time_t usec;
 

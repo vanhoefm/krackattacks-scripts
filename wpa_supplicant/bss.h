@@ -168,4 +168,8 @@ static inline void wpa_bss_update_level(struct wpa_bss *bss, int new_level)
 		bss->level = new_level;
 }
 
+void calculate_update_time(const struct os_reltime *fetch_time,
+			   unsigned int age_ms,
+			   struct os_reltime *update_time);
+
 #endif /* BSS_H */

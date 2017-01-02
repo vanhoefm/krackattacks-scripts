@@ -1092,6 +1092,8 @@ struct wpa_supplicant {
 	 */
 	struct wpabuf *lci;
 	struct os_reltime lci_time;
+
+	struct os_reltime beacon_rep_scan;
 };
 
 

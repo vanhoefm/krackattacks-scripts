@@ -900,13 +900,22 @@ static void wpas_rrm_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_driver_scan_params *params =
 		&wpa_s->beacon_rep_data.scan_params;
+	u16 prev_duration = params->duration;
 
 	if (!wpa_s->current_bss)
 		return;
 
+	if (!(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_SET_SCAN_DWELL) &&
+	    params->duration) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Cannot set scan duration due to missing driver support");
+		params->duration = 0;
+	}
+	os_get_reltime(&wpa_s->beacon_rep_scan);
 	if (wpa_s->scanning || wpas_p2p_in_progress(wpa_s) ||
 	    wpa_supplicant_trigger_scan(wpa_s, params))
 		wpas_rrm_refuse_request(wpa_s);
+	params->duration = prev_duration;
 }
 
 
@@ -1033,8 +1042,9 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 	if (len < sizeof(*req))
 		return -1;
 
-	if (req->mode != BEACON_REPORT_MODE_TABLE &&
-	    !(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT))
+	if (req->mode != BEACON_REPORT_MODE_PASSIVE &&
+	    req->mode != BEACON_REPORT_MODE_ACTIVE &&
+	    req->mode != BEACON_REPORT_MODE_TABLE)
 		return 0;
 
 	subelems = req->variable;
@@ -1142,6 +1152,13 @@ wpas_rrm_handle_msr_req_element(
 	case MEASURE_TYPE_LCI:
 		return wpas_rrm_build_lci_report(wpa_s, req, buf);
 	case MEASURE_TYPE_BEACON:
+		if (duration_mandatory &&
+		    !(wpa_s->drv_rrm_flags &
+		      WPA_DRIVER_FLAGS_SUPPORT_SET_SCAN_DWELL)) {
+			wpa_printf(MSG_DEBUG,
+				   "RRM: Driver does not support dwell time configuration - reject beacon report with mandatory duration");
+			goto reject;
+		}
 		return wpas_rm_handle_beacon_req(wpa_s, req->token,
 						 duration_mandatory,
 						 (const void *) req->variable,
@@ -1341,9 +1358,13 @@ int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG, "RRM: TSF BSSID: " MACSTR " current BSS: " MACSTR,
 		   MAC2STR(info->scan_start_tsf_bssid),
 		   MAC2STR(wpa_s->current_bss->bssid));
-	if (os_memcmp(info->scan_start_tsf_bssid, wpa_s->current_bss->bssid,
-		      ETH_ALEN) != 0)
+	if ((wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT) &&
+	    os_memcmp(info->scan_start_tsf_bssid, wpa_s->current_bss->bssid,
+		      ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Ignore scan results due to mismatching TSF BSSID");
 		goto out;
+	}
 
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_bss *bss =
@@ -1352,9 +1373,45 @@ int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 		if (!bss)
 			continue;
 
-		if (os_memcmp(scan_res->res[i]->tsf_bssid,
-			      wpa_s->current_bss->bssid, ETH_ALEN) != 0)
+		if ((wpa_s->drv_rrm_flags &
+		     WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT) &&
+		    os_memcmp(scan_res->res[i]->tsf_bssid,
+			      wpa_s->current_bss->bssid, ETH_ALEN) != 0) {
+			wpa_printf(MSG_DEBUG,
+				   "RRM: Ignore scan result for " MACSTR
+				   " due to mismatching TSF BSSID" MACSTR,
+				   MAC2STR(scan_res->res[i]->bssid),
+				   MAC2STR(scan_res->res[i]->tsf_bssid));
 			continue;
+		}
+
+		if (!(wpa_s->drv_rrm_flags &
+		      WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT)) {
+			struct os_reltime update_time, diff;
+
+			/* For now, allow 8 ms older results due to some
+			 * unknown issue with cfg80211 BSS table updates during
+			 * a scan with the current BSS.
+			 * TODO: Fix this more properly to avoid having to have
+			 * this type of hacks in place. */
+			calculate_update_time(&scan_res->fetch_time,
+					      scan_res->res[i]->age,
+					      &update_time);
+			os_reltime_sub(&wpa_s->beacon_rep_scan,
+				       &update_time, &diff);
+			if (os_reltime_before(&update_time,
+					      &wpa_s->beacon_rep_scan) &&
+			    (diff.sec || diff.usec >= 8000)) {
+				wpa_printf(MSG_DEBUG,
+					   "RRM: Ignore scan result for " MACSTR
+					   " due to old update (age(ms) %u, calculated age %u.%06u seconds)",
+					   MAC2STR(scan_res->res[i]->bssid),
+					   scan_res->res[i]->age,
+					   (unsigned int) diff.sec,
+					   (unsigned int) diff.usec);
+				continue;
+			}
+		}
 
 		/*
 		 * Don't report results that were not received during the

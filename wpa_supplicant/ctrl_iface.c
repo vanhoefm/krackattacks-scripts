@@ -9114,6 +9114,40 @@ fail:
 	return ret;
 }
 
+
+#ifdef CONFIG_MESH
+
+static int wpas_ctrl_iface_mesh_pmksa_get(struct wpa_supplicant *wpa_s,
+					  const char *cmd, char *buf,
+					  size_t buflen)
+{
+	u8 spa[ETH_ALEN];
+
+	if (!wpa_s->ifmsh)
+		return -1;
+
+	if (os_strcasecmp(cmd, "any") == 0)
+		return wpas_ap_pmksa_cache_list_mesh(wpa_s, NULL, buf, buflen);
+
+	if (hwaddr_aton(cmd, spa))
+		return -1;
+
+	return wpas_ap_pmksa_cache_list_mesh(wpa_s, spa, buf, buflen);
+}
+
+
+static int wpas_ctrl_iface_mesh_pmksa_add(struct wpa_supplicant *wpa_s,
+					  char *cmd)
+{
+	/*
+	 * We do not check mesh interface existance because PMKSA should be
+	 * stored before wpa_s->ifmsh creation to suppress commit message
+	 * creation.
+	 */
+	return wpas_ap_pmksa_cache_add_external(wpa_s, cmd);
+}
+
+#endif /* CONFIG_MESH */
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 
 
@@ -9198,6 +9232,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "PMKSA_ADD ", 10) == 0) {
 		if (wpas_ctrl_iface_pmksa_add(wpa_s, buf + 10) < 0)
 			reply_len = -1;
+#ifdef CONFIG_MESH
+	} else if (os_strncmp(buf, "MESH_PMKSA_GET ", 15) == 0) {
+		reply_len = wpas_ctrl_iface_mesh_pmksa_get(wpa_s, buf + 15,
+							   reply, reply_size);
+	} else if (os_strncmp(buf, "MESH_PMKSA_ADD ", 15) == 0) {
+		if (wpas_ctrl_iface_mesh_pmksa_add(wpa_s, buf + 15) < 0)
+			reply_len = -1;
+#endif /* CONFIG_MESH */
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))

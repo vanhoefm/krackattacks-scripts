@@ -461,6 +461,11 @@ struct beacon_rep_data {
 };
 
 
+struct external_pmksa_cache {
+	struct dl_list list;
+	void *pmksa_cache;
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -791,6 +796,10 @@ struct wpa_supplicant {
 	unsigned int mesh_if_created:1;
 	unsigned int mesh_ht_enabled:1;
 	unsigned int mesh_vht_enabled:1;
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+	/* struct external_pmksa_cache::list */
+	struct dl_list mesh_external_pmksa_cache;
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 #endif /* CONFIG_MESH */
 
 	unsigned int off_channel_freq;

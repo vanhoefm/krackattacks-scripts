@@ -1437,6 +1437,43 @@ void wpas_ap_pmksa_cache_flush(struct wpa_supplicant *wpa_s)
 	if (wpa_s->ifmsh)
 		hostapd_ctrl_iface_pmksa_flush(wpa_s->ifmsh->bss[0]);
 }
+
+
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+#ifdef CONFIG_MESH
+
+int wpas_ap_pmksa_cache_list_mesh(struct wpa_supplicant *wpa_s, const u8 *addr,
+				  char *buf, size_t len)
+{
+	return hostapd_ctrl_iface_pmksa_list_mesh(wpa_s->ifmsh->bss[0], addr,
+						  &buf[0], len);
+}
+
+
+int wpas_ap_pmksa_cache_add_external(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	struct external_pmksa_cache *entry;
+	void *pmksa_cache;
+
+	pmksa_cache = hostapd_ctrl_iface_pmksa_create_entry(wpa_s->own_addr,
+							    cmd);
+	if (!pmksa_cache)
+		return -1;
+
+	entry = os_zalloc(sizeof(struct external_pmksa_cache));
+	if (!entry)
+		return -1;
+
+	entry->pmksa_cache = pmksa_cache;
+
+	dl_list_add(&wpa_s->mesh_external_pmksa_cache, &entry->list);
+
+	return 0;
+}
+
+#endif /* CONFIG_MESH */
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
+
 #endif /* CONFIG_CTRL_IFACE */
 
 

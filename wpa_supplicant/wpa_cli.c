@@ -348,6 +348,23 @@ static int wpa_cli_cmd_pmksa_add(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	return wpa_cli_cmd(ctrl, "PMKSA_ADD", 8, argc, argv);
 }
 
+
+#ifdef CONFIG_MESH
+
+static int wpa_cli_mesh_cmd_pmksa_get(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MESH_PMKSA_GET", 1, argc, argv);
+}
+
+
+static int wpa_cli_mesh_cmd_pmksa_add(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MESH_PMKSA_ADD", 4, argc, argv);
+}
+
+#endif /* CONFIG_MESH */
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 
 
@@ -2892,6 +2909,14 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "pmksa_add", wpa_cli_cmd_pmksa_add, NULL,
 	  cli_cmd_flag_sensitive,
 	  "<network_id> <BSSID> <PMKID> <PMK> <reauth_time in seconds> <expiration in seconds> <akmp> <opportunistic> = store PMKSA cache entry from external storage" },
+#ifdef CONFIG_MESH
+	{ "mesh_pmksa_get", wpa_cli_mesh_cmd_pmksa_get, NULL,
+	  cli_cmd_flag_none,
+	  "<peer MAC address | any> = fetch all stored mesh PMKSA cache entries" },
+	{ "mesh_pmksa_add", wpa_cli_mesh_cmd_pmksa_add, NULL,
+	  cli_cmd_flag_sensitive,
+	  "<BSSID> <PMKID> <PMK> <expiration in seconds> = store mesh PMKSA cache entry from external storage" },
+#endif /* CONFIG_MESH */
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 	{ "reassociate", wpa_cli_cmd_reassociate, NULL,
 	  cli_cmd_flag_none,

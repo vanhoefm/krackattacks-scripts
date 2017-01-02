@@ -3850,6 +3850,58 @@ void wpa_auth_pmksa_flush(struct wpa_authenticator *wpa_auth)
 }
 
 
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+#ifdef CONFIG_MESH
+
+int wpa_auth_pmksa_list_mesh(struct wpa_authenticator *wpa_auth, const u8 *addr,
+			     char *buf, size_t len)
+{
+	if (!wpa_auth || !wpa_auth->pmksa)
+		return 0;
+
+	return pmksa_cache_auth_list_mesh(wpa_auth->pmksa, addr, buf, len);
+}
+
+
+struct rsn_pmksa_cache_entry *
+wpa_auth_pmksa_create_entry(const u8 *aa, const u8 *spa, const u8 *pmk,
+			    const u8 *pmkid, int expiration)
+{
+	struct rsn_pmksa_cache_entry *entry;
+	struct os_reltime now;
+
+	entry = pmksa_cache_auth_create_entry(pmk, PMK_LEN, pmkid, NULL, 0, aa,
+					      spa, 0, NULL, WPA_KEY_MGMT_SAE);
+	if (!entry)
+		return NULL;
+
+	os_get_reltime(&now);
+	entry->expiration = now.sec + expiration;
+	return entry;
+}
+
+
+int wpa_auth_pmksa_add_entry(struct wpa_authenticator *wpa_auth,
+			     struct rsn_pmksa_cache_entry *entry)
+{
+	int ret;
+
+	if (!wpa_auth || !wpa_auth->pmksa)
+		return -1;
+
+	ret = pmksa_cache_auth_add_entry(wpa_auth->pmksa, entry);
+	if (ret < 0)
+		wpa_printf(MSG_DEBUG,
+			   "RSN: Failed to store external PMKSA cache for "
+			   MACSTR, MAC2STR(entry->spa));
+
+	return ret;
+}
+
+#endif /* CONFIG_MESH */
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
+
+
 struct rsn_pmksa_cache_entry *
 wpa_auth_pmksa_get(struct wpa_authenticator *wpa_auth, const u8 *sta_addr,
 		   const u8 *pmkid)

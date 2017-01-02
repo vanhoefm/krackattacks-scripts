@@ -586,6 +586,22 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpabuf_free(wpa_s->lci);
 	wpa_s->lci = NULL;
 	wpas_clear_beacon_rep_data(wpa_s);
+
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+#ifdef CONFIG_MESH
+	{
+		struct external_pmksa_cache *entry;
+
+		while ((entry = dl_list_last(&wpa_s->mesh_external_pmksa_cache,
+					     struct external_pmksa_cache,
+					     list)) != NULL) {
+			dl_list_del(&entry->list);
+			os_free(entry->pmksa_cache);
+			os_free(entry);
+		}
+	}
+#endif /* CONFIG_MESH */
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 }
 
 
@@ -4976,6 +4992,12 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 
 	if (wpa_bss_init(wpa_s) < 0)
 		return -1;
+
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+#ifdef CONFIG_MESH
+	dl_list_init(&wpa_s->mesh_external_pmksa_cache);
+#endif /* CONFIG_MESH */
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 
 	/*
 	 * Set Wake-on-WLAN triggers, if configured.

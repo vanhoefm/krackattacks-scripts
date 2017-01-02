@@ -639,3 +639,60 @@ void hostapd_ctrl_iface_pmksa_flush(struct hostapd_data *hapd)
 {
 	wpa_auth_pmksa_flush(hapd->wpa_auth);
 }
+
+
+#ifdef CONFIG_PMKSA_CACHE_EXTERNAL
+#ifdef CONFIG_MESH
+
+int hostapd_ctrl_iface_pmksa_list_mesh(struct hostapd_data *hapd,
+				       const u8 *addr, char *buf, size_t len)
+{
+	return wpa_auth_pmksa_list_mesh(hapd->wpa_auth, addr, buf, len);
+}
+
+
+void * hostapd_ctrl_iface_pmksa_create_entry(const u8 *aa, char *cmd)
+{
+	u8 spa[ETH_ALEN];
+	u8 pmkid[PMKID_LEN];
+	u8 pmk[PMK_LEN_MAX];
+	char *pos;
+	int expiration;
+
+	/*
+	 * Entry format:
+	 * <BSSID> <PMKID> <PMK> <expiration in seconds>
+	 */
+
+	if (hwaddr_aton(cmd, spa))
+		return NULL;
+
+	pos = os_strchr(cmd, ' ');
+	if (!pos)
+		return NULL;
+	pos++;
+
+	if (hexstr2bin(pos, pmkid, PMKID_LEN) < 0)
+		return NULL;
+
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return NULL;
+	pos++;
+
+	if (hexstr2bin(pos, pmk, PMK_LEN) < 0)
+		return NULL;
+
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return NULL;
+	pos++;
+
+	if (sscanf(pos, "%d", &expiration) != 1)
+		return NULL;
+
+	return wpa_auth_pmksa_create_entry(aa, spa, pmk, pmkid, expiration);
+}
+
+#endif /* CONFIG_MESH */
+#endif /* CONFIG_PMKSA_CACHE_EXTERNAL */

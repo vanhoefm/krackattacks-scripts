@@ -53,6 +53,13 @@ pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
 		     const u8 *aa, const u8 *spa, int session_timeout,
 		     struct eapol_state_machine *eapol, int akmp);
 struct rsn_pmksa_cache_entry *
+pmksa_cache_auth_create_entry(const u8 *pmk, size_t pmk_len, const u8 *pmkid,
+			      const u8 *kck, size_t kck_len, const u8 *aa,
+			      const u8 *spa, int session_timeout,
+			      struct eapol_state_machine *eapol, int akmp);
+int pmksa_cache_auth_add_entry(struct rsn_pmksa_cache *pmksa,
+			       struct rsn_pmksa_cache_entry *entry);
+struct rsn_pmksa_cache_entry *
 pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 		    const struct rsn_pmksa_cache_entry *old_entry,
 		    const u8 *aa, const u8 *pmkid);
@@ -65,5 +72,7 @@ int pmksa_cache_auth_radius_das_disconnect(struct rsn_pmksa_cache *pmksa,
 					   struct radius_das_attrs *attr);
 int pmksa_cache_auth_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len);
 void pmksa_cache_auth_flush(struct rsn_pmksa_cache *pmksa);
+int pmksa_cache_auth_list_mesh(struct rsn_pmksa_cache *pmksa, const u8 *addr,
+			       char *buf, size_t len);
 
 #endif /* PMKSA_CACHE_H */

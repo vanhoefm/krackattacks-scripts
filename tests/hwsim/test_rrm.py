@@ -306,6 +306,29 @@ def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
         raise Exception("Request failed")
     check_nr_results(dev[0], [bssid])
 
+def test_rrm_neighbor_rep_req_timeout(dev, apdev):
+    """wpa_supplicant behavior on NEIGHBOR_REP_REQUEST response timeout"""
+    params = { "ssid": "test2", "rrm_neighbor_report": "1",
+               "stationary_ap": "1", "lci": lci, "civic": civic }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request failed")
+    msg = hapd.mgmt_rx()
+    if msg is None:
+        raise Exception("Neighbor report request not seen")
+    check_nr_results(dev[0])
+
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
 

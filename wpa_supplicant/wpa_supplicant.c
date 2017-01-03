@@ -6565,6 +6565,7 @@ static struct wpabuf * wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	request++;
 	type = *request++;
 	subject = *request++;
+	len -= 4;
 
 	wpa_printf(MSG_DEBUG,
 		   "Measurement request token %u type %u location subject %u",

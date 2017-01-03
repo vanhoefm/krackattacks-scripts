@@ -993,6 +993,33 @@ def test_rrm_beacon_req_active(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+def test_rrm_beacon_req_active_ignore_old_result(dev, apdev):
+    """Beacon request - active scan mode and old scan result"""
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another" })
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2412)
+    hapd2.disable()
+
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51010000640001ffffffffffff")
+
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report response not received")
+    fields = ev.split(' ')
+    report = BeaconReport(binascii.unhexlify(fields[4]))
+    logger.info("Received beacon report: " + str(report))
+    if report.bssid_str == apdev[1]['bssid']:
+        raise Exception("Old BSS reported")
+
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected beacon report response")
+
 def start_ap(dev):
     id = dev.add_network()
     dev.set_network(id, "mode", "2")

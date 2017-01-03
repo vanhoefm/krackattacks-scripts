@@ -14,6 +14,7 @@ import struct
 import subprocess
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_ht import clear_scan_cache
 
@@ -991,6 +992,56 @@ def test_rrm_beacon_req_active(dev, apdev):
         elif report.bssid_str == apdev[1]['bssid']:
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
+
+def start_ap(dev):
+    id = dev.add_network()
+    dev.set_network(id, "mode", "2")
+    dev.set_network_quoted(id, "ssid", 32*'A')
+    dev.set_network_quoted(id, "psk", "1234567890")
+    dev.set_network(id, "frequency", "2412")
+    dev.set_network(id, "scan_freq", "2412")
+    dev.select_network(id)
+    dev.wait_connected()
+
+def test_rrm_beacon_req_active_many(dev, apdev):
+    """Beacon request - active scan mode and many BSSs"""
+    for i in range(1, 7):
+        ifname = apdev[0]['ifname'] if i == 1 else apdev[0]['ifname'] + "-%d" % i
+        hapd1 = hostapd.add_bss(apdev[0], ifname, 'bss-%i.conf' % i)
+        hapd1.set('vendor_elements', "dd50" + 80*'bb')
+        hapd1.request("UPDATE_BEACON")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET device_name " + 20*'a')
+    start_ap(wpas)
+    start_ap(dev[1])
+    start_ap(dev[2])
+
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    params['vendor_elements'] = "dd50" + 80*'aa'
+    hapd = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    ok = False
+    for j in range(3):
+        token = run_req_beacon(hapd, addr, "51010000640001ffffffffffff")
+
+        for i in range(10):
+            ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+            if ev is None:
+                raise Exception("Beacon report %d response not received" % i)
+            fields = ev.split(' ')
+            if len(fields[4]) == 0:
+                break
+            report = BeaconReport(binascii.unhexlify(fields[4]))
+            logger.info("Received beacon report: " + str(report))
+            if i == 9:
+                ok = True
+        if ok:
+            break
 
 def test_rrm_beacon_req_active_ap_channels(dev, apdev):
     """Beacon request - active scan mode with AP Channel Report subelement"""

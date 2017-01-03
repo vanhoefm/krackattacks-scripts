@@ -85,8 +85,10 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
 
 	/* skipping the first byte, which is only an id (dialog token) */
 	neighbor_rep = wpabuf_alloc(report_len - 1);
-	if (neighbor_rep == NULL)
+	if (!neighbor_rep) {
+		wpas_rrm_neighbor_rep_timeout_handler(&wpa_s->rrm, NULL);
 		return;
+	}
 	wpabuf_put_data(neighbor_rep, report + 1, report_len - 1);
 	wpa_printf(MSG_DEBUG, "RRM: Notifying neighbor report (token = %d)",
 		   report[0]);

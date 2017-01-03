@@ -288,6 +288,31 @@ def test_rrm_lci_req(dev, apdev):
     if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
         raise Exception("REQ_LCI failed unexpectedly")
 
+def test_rrm_lci_req_oom(dev, apdev):
+    """LCI report generation OOM"""
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET LCI " + lci)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(dev[0], 1, "wpabuf_resize;wpas_rrm_build_lci_report"):
+        if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
+            raise Exception("REQ_LCI failed unexpectedly")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    dev[0].request("SET LCI ")
+    # This in in wpas_rrm_build_lci_report(), but backtrace may not always work
+    # for the "reject" label there.
+    with alloc_fail(dev[0], 1, "wpabuf_resize;wpas_rrm_handle_msr_req_element"):
+        if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
+            raise Exception("REQ_LCI failed unexpectedly")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
 def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST and hostapd config"""
     params = { "ssid": "test2", "rrm_neighbor_report": "1",

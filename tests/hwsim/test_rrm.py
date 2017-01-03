@@ -329,6 +329,35 @@ def test_rrm_neighbor_rep_req_timeout(dev, apdev):
         raise Exception("Neighbor report request not seen")
     check_nr_results(dev[0])
 
+def test_rrm_neighbor_rep_req_oom(dev, apdev):
+    """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST OOM"""
+    params = { "ssid": "test2", "rrm_neighbor_report": "1",
+               "stationary_ap": "1", "lci": lci, "civic": civic }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;wpas_rrm_process_neighbor_rep"):
+        if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+            raise Exception("Request failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with fail_test(dev[0], 1,
+                    "wpa_driver_nl80211_send_action;wpas_rrm_send_neighbor_rep_request"):
+        if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+            raise Exception("Request succeeded unexpectedly")
+
+    with alloc_fail(dev[0], 1,
+                    "wpabuf_alloc;wpas_rrm_send_neighbor_rep_request"):
+        if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+            raise Exception("Request succeeded unexpectedly")
+
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
 

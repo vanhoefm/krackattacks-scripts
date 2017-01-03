@@ -1035,3 +1035,100 @@ def test_rrm_beacon_req_active_duration_mandatory(dev, apdev):
             raise Exception("Unexpected Measurement Report Mode: " + fields[3])
         if len(fields[4]) > 0:
             raise Exception("Unexpected beacon report received")
+
+def test_rrm_req_proto(dev, apdev):
+    """Radio measurement request - protocol testing"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].request("SET LCI ")
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + addr.replace(':', '') + 2*bssid.replace(':', '') + "1000"
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    tests = []
+    # "RRM: Ignoring too short radio measurement request"
+    tests += [ "0500", "050001", "05000100" ]
+    # No measurement request element at all
+    tests += [ "0500010000" ]
+    # "RRM: Truncated element"
+    tests += [ "050001000026" ]
+    # "RRM: Element length too short"
+    tests += [ "05000100002600", "0500010000260111", "050001000026021122" ]
+    # "RRM: Element length too long"
+    tests += [ "05000100002603", "0500010000260311", "050001000026031122" ]
+    # "RRM: Enable bit not supported, ignore"
+    tests += [ "05000100002603010200" ]
+    # "RRM: Measurement report failed. TX power insertion not supported"
+    #    OR
+    # "RRM: Link measurement report failed. Request too short"
+    tests += [ "0502" ]
+    # Too short LCI request
+    tests += [ "05000100002603010008" ]
+    # Too short neighbor report response
+    tests += [ "0505" ]
+    # Unexpected neighbor report response
+    tests += [ "050500", "050501", "050502", "050503", "050504", "050505" ]
+    # Too short beacon request
+    tests += [ "05000100002603010005",
+               "0500010000260f010005112233445566778899aabbcc" ]
+    # Unknown beacon report mode
+    tests += [ "05000100002610010005112233445566778899aabbccdd" ]
+    # Beacon report info subelement; no valid channels
+    tests += [ "05000100002614010005112233445566008899aabbccdd01020000" ]
+    # "RRM: Expected Measurement Request element, but EID is 0"
+    tests += [ "05000100000000" ]
+    for t in tests:
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected response seen at the AP: " + ev)
+
+    tests = []
+    # "RRM: Parallel measurements are not supported, reject"
+    tests += [ "05000100002603010105" ]
+    # "RRM: Unsupported radio measurement type 254"
+    tests += [ "050001000026030100fe" ]
+    # Reject LCI request
+    tests += [ "0500010000260701000811223344" ]
+    for t in tests:
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+        ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+        if ev is None:
+            raise Exception("No response seen at the AP")
+        hapd.dump_monitor()
+
+    dev[0].request("SET LCI " + lci)
+    tests = []
+    # "Not building LCI report - bad location subject"
+    tests += [ "0500010000260701000811223344" ]
+    for t in tests:
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected response seen at the AP: " + ev)
+
+    tests = []
+    # LCI report or reject
+    tests += [ "0500010000260701000801223344",
+               "05000100002607010008010402ff",
+               "05000100002608010008010402ffff" ]
+    for t in tests:
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+        ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+        if ev is None:
+            raise Exception("No response seen at the AP")
+        hapd.dump_monitor()
+
+    hapd.set("ext_mgmt_frame_handling", "0")
+    dev[0].request("SET ext_mgmt_frame_handling 0")
+    dev[0].request("SET LCI ")

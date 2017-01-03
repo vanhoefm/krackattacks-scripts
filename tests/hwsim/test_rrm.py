@@ -358,6 +358,33 @@ def test_rrm_neighbor_rep_req_oom(dev, apdev):
         if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
             raise Exception("Request succeeded unexpectedly")
 
+def test_rrm_neighbor_rep_req_disconnect(dev, apdev):
+    """wpa_supplicant behavior on disconnection during NEIGHBOR_REP_REQUEST"""
+    params = { "ssid": "test2", "rrm_neighbor_report": "1",
+               "stationary_ap": "1", "lci": lci, "civic": civic }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request accepted while disconnected")
+
+    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request failed")
+    msg = hapd.mgmt_rx()
+    if msg is None:
+        raise Exception("Neighbor report request not seen")
+    dev[0].request("DISCONNECT")
+    check_nr_results(dev[0])
+
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
 

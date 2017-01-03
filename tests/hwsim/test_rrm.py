@@ -1206,6 +1206,46 @@ def test_rrm_beacon_req_passive(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+def test_rrm_beacon_req_passive_no_match(dev, apdev):
+    """Beacon request - passive scan mode and no matching BSS"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    token = run_req_beacon(hapd, addr, "51010000640000021122334455")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report %d response not received" % i)
+    fields = ev.split(' ')
+    if len(fields[4]) > 0:
+        raise Exception("Unexpected beacon report BSS")
+
+def test_rrm_beacon_req_passive_no_match_oom(dev, apdev):
+    """Beacon request - passive scan mode and no matching BSS (OOM)"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    with alloc_fail(dev[0], 1, "wpas_beacon_rep_no_results"):
+        token = run_req_beacon(hapd, addr, "51010000640000021122334455")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
+        if ev is not None:
+            raise Exception("Unexpected Beacon report response during OOM")
+
+    # verify reporting is still functional
+    token = run_req_beacon(hapd, addr, "51010000640000021122334455")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report %d response not received" % i)
+    fields = ev.split(' ')
+    if len(fields[4]) > 0:
+        raise Exception("Unexpected beacon report BSS")
+
 def test_rrm_beacon_req_active_duration_mandatory(dev, apdev):
     """Beacon request - Action scan and duration mandatory"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }

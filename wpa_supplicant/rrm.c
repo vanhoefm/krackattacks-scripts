@@ -314,7 +314,7 @@ wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	const u8 *request = req->variable;
 	size_t len = req->len - 3;
 
-	if (len < 4)
+	if (len < 1)
 		return -1;
 
 	if (!wpa_s->lci)
@@ -333,6 +333,7 @@ wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	}
 
 	/* Subelements are formatted exactly like elements */
+	wpa_hexdump(MSG_DEBUG, "LCI request subelements", request, len);
 	subelem = get_ie(request, len, LCI_REQ_SUBELEM_MAX_AGE);
 	if (subelem && subelem[1] == 2)
 		max_age = WPA_GET_LE16(subelem + 2);

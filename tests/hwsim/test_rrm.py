@@ -385,6 +385,22 @@ def test_rrm_neighbor_rep_req_disconnect(dev, apdev):
     dev[0].request("DISCONNECT")
     check_nr_results(dev[0])
 
+def test_rrm_neighbor_rep_req_not_supported(dev, apdev):
+    """NEIGHBOR_REP_REQUEST for AP not supporting neighbor report"""
+    params = { "ssid": "test2", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+
+    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
+    dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
+
+    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request accepted unexpectedly")
+
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
 

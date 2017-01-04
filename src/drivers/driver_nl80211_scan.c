@@ -1096,7 +1096,7 @@ int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
 	}
 
 	if (scan_flags &&
-	    nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, scan_flags))
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_SCAN_FLAGS, scan_flags))
 		goto fail;
 
 	if (params->p2p_probe) {

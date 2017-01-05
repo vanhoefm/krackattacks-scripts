@@ -324,8 +324,11 @@ def test_autogo_legacy(dev):
 
 def test_autogo_chan_switch(dev):
     """P2P autonomous GO switching channels"""
+    run_autogo_chan_switch(dev)
+
+def run_autogo_chan_switch(dev):
     autogo(dev[0], freq=2417)
-    connect_cli(dev[0], dev[1])
+    connect_cli(dev[0], dev[1], freq=2417)
     res = dev[0].group_request("CHAN_SWITCH 5 2422")
     if "FAIL" in res:
         # for now, skip test since mac80211_hwsim support is not yet widely
@@ -340,6 +343,14 @@ def test_autogo_chan_switch(dev):
     dev[1].dump_monitor()
     time.sleep(0.1)
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+
+def test_autogo_chan_switch_group_iface(dev):
+    """P2P autonomous GO switching channels (separate group interface)"""
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    run_autogo_chan_switch(dev)
 
 @remote_compatible
 def test_autogo_extra_cred(dev):

@@ -56,6 +56,8 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 
 	bss->wpa_group_rekey = 600;
 	bss->wpa_gmk_rekey = 86400;
+	bss->wpa_group_update_count = 4;
+	bss->wpa_pairwise_update_count = 4;
 	bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 	bss->wpa_pairwise = WPA_CIPHER_TKIP;
 	bss->wpa_group = WPA_CIPHER_TKIP;

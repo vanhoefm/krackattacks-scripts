@@ -158,6 +158,8 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 	conf.wpa_group = rsn->group_cipher;
 	conf.eapol_version = 0;
 	conf.wpa_group_rekey = -1;
+	conf.wpa_group_update_count = 4;
+	conf.wpa_pairwise_update_count = 4;
 #ifdef CONFIG_IEEE80211W
 	conf.ieee80211w = ieee80211w;
 	if (ieee80211w != NO_MGMT_FRAME_PROTECTION)

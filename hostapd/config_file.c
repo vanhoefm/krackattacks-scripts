@@ -2489,6 +2489,28 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->wpa_gmk_rekey = atoi(pos);
 	} else if (os_strcmp(buf, "wpa_ptk_rekey") == 0) {
 		bss->wpa_ptk_rekey = atoi(pos);
+	} else if (os_strcmp(buf, "wpa_group_update_count") == 0) {
+		char *endp;
+		unsigned long val = strtoul(pos, &endp, 0);
+
+		if (*endp || val < 1 || val > (u32) -1) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid wpa_group_update_count=%lu; allowed range 1..4294967295",
+				   line, val);
+			return 1;
+		}
+		bss->wpa_group_update_count = (u32) val;
+	} else if (os_strcmp(buf, "wpa_pairwise_update_count") == 0) {
+		char *endp;
+		unsigned long val = strtoul(pos, &endp, 0);
+
+		if (*endp || val < 1 || val > (u32) -1) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid wpa_pairwise_update_count=%lu; allowed range 1..4294967295",
+				   line, val);
+			return 1;
+		}
+		bss->wpa_pairwise_update_count = (u32) val;
 	} else if (os_strcmp(buf, "wpa_passphrase") == 0) {
 		int len = os_strlen(pos);
 		if (len < 8 || len > 63) {

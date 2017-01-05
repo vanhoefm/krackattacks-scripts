@@ -428,6 +428,8 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	conf.wpa_group = WPA_CIPHER_CCMP;
 	conf.eapol_version = 2;
 	conf.wpa_group_rekey = ssid->group_rekey ? ssid->group_rekey : 600;
+	conf.wpa_group_update_count = 4;
+	conf.wpa_pairwise_update_count = 4;
 
 	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb, ibss_rsn);
 	if (ibss_rsn->auth_group == NULL) {

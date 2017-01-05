@@ -330,6 +330,8 @@ struct hostapd_bss_config {
 	int wpa_strict_rekey;
 	int wpa_gmk_rekey;
 	int wpa_ptk_rekey;
+	u32 wpa_group_update_count;
+	u32 wpa_pairwise_update_count;
 	int rsn_pairwise;
 	int rsn_preauth;
 	char *rsn_preauth_interfaces;

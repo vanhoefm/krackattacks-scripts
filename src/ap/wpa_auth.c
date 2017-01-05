@@ -60,8 +60,6 @@ static void wpa_group_put(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
 static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos);
 
-static const u32 dot11RSNAConfigGroupUpdateCount = 4;
-static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
 static const u32 eapol_key_timeout_first = 100; /* ms */
 static const u32 eapol_key_timeout_subseq = 1000; /* ms */
 static const u32 eapol_key_timeout_first_group = 500; /* ms */
@@ -1623,7 +1621,7 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 {
 	int timeout_ms;
 	int pairwise = key_info & WPA_KEY_INFO_KEY_TYPE;
-	int ctr;
+	u32 ctr;
 
 	if (sm == NULL)
 		return;
@@ -1640,7 +1638,7 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	if (pairwise && ctr == 1 && !(key_info & WPA_KEY_INFO_MIC))
 		sm->pending_1_of_4_timeout = 1;
 	wpa_printf(MSG_DEBUG, "WPA: Use EAPOL-Key timeout of %u ms (retry "
-		   "counter %d)", timeout_ms, ctr);
+		   "counter %u)", timeout_ms, ctr);
 	eloop_register_timeout(timeout_ms / 1000, (timeout_ms % 1000) * 1000,
 			       wpa_send_eapol_timeout, wpa_auth, sm);
 }
@@ -2002,7 +2000,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 	sm->alt_snonce_valid = FALSE;
 
 	sm->TimeoutCtr++;
-	if (sm->TimeoutCtr > (int) dot11RSNAConfigPairwiseUpdateCount) {
+	if (sm->TimeoutCtr > sm->wpa_auth->conf.wpa_pairwise_update_count) {
 		/* No point in sending the EAPOL-Key - we will disconnect
 		 * immediately following this. */
 		return;
@@ -2693,7 +2691,7 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	sm->TimeoutEvt = FALSE;
 
 	sm->TimeoutCtr++;
-	if (sm->TimeoutCtr > (int) dot11RSNAConfigPairwiseUpdateCount) {
+	if (sm->TimeoutCtr > sm->wpa_auth->conf.wpa_pairwise_update_count) {
 		/* No point in sending the EAPOL-Key - we will disconnect
 		 * immediately following this. */
 		return;
@@ -2988,11 +2986,12 @@ SM_STEP(WPA_PTK)
 		    sm->EAPOLKeyPairwise)
 			SM_ENTER(WPA_PTK, PTKCALCNEGOTIATING);
 		else if (sm->TimeoutCtr >
-			 (int) dot11RSNAConfigPairwiseUpdateCount) {
+			 sm->wpa_auth->conf.wpa_pairwise_update_count) {
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;
-			wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
-					 "PTKSTART: Retry limit %d reached",
-					 dot11RSNAConfigPairwiseUpdateCount);
+			wpa_auth_vlogger(
+				sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+				"PTKSTART: Retry limit %u reached",
+				sm->wpa_auth->conf.wpa_pairwise_update_count);
 			SM_ENTER(WPA_PTK, DISCONNECT);
 		} else if (sm->TimeoutEvt)
 			SM_ENTER(WPA_PTK, PTKSTART);
@@ -3016,12 +3015,12 @@ SM_STEP(WPA_PTK)
 			 sm->EAPOLKeyPairwise && sm->MICVerified)
 			SM_ENTER(WPA_PTK, PTKINITDONE);
 		else if (sm->TimeoutCtr >
-			 (int) dot11RSNAConfigPairwiseUpdateCount) {
+			 sm->wpa_auth->conf.wpa_pairwise_update_count) {
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;
-			wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
-					 "PTKINITNEGOTIATING: Retry limit %d "
-					 "reached",
-					 dot11RSNAConfigPairwiseUpdateCount);
+			wpa_auth_vlogger(
+				sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+				"PTKINITNEGOTIATING: Retry limit %u reached",
+				sm->wpa_auth->conf.wpa_pairwise_update_count);
 			SM_ENTER(WPA_PTK, DISCONNECT);
 		} else if (sm->TimeoutEvt)
 			SM_ENTER(WPA_PTK, PTKINITNEGOTIATING);
@@ -3056,7 +3055,7 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 	SM_ENTRY_MA(WPA_PTK_GROUP, REKEYNEGOTIATING, wpa_ptk_group);
 
 	sm->GTimeoutCtr++;
-	if (sm->GTimeoutCtr > (int) dot11RSNAConfigGroupUpdateCount) {
+	if (sm->GTimeoutCtr > sm->wpa_auth->conf.wpa_group_update_count) {
 		/* No point in sending the EAPOL-Key - we will disconnect
 		 * immediately following this. */
 		return;
@@ -3154,7 +3153,7 @@ SM_STEP(WPA_PTK_GROUP)
 		    !sm->EAPOLKeyPairwise && sm->MICVerified)
 			SM_ENTER(WPA_PTK_GROUP, REKEYESTABLISHED);
 		else if (sm->GTimeoutCtr >
-			 (int) dot11RSNAConfigGroupUpdateCount)
+			 sm->wpa_auth->conf.wpa_group_update_count)
 			SM_ENTER(WPA_PTK_GROUP, KEYERROR);
 		else if (sm->TimeoutEvt)
 			SM_ENTER(WPA_PTK_GROUP, REKEYNEGOTIATING);
@@ -3614,8 +3613,8 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 		"dot11RSNAConfigNumberOfGTKSAReplayCounters=0\n",
 		RSN_VERSION,
 		!!wpa_auth->conf.wpa_strict_rekey,
-		dot11RSNAConfigGroupUpdateCount,
-		dot11RSNAConfigPairwiseUpdateCount,
+		wpa_auth->conf.wpa_group_update_count,
+		wpa_auth->conf.wpa_pairwise_update_count,
 		wpa_cipher_key_len(wpa_auth->conf.wpa_group) * 8,
 		dot11RSNAConfigPMKLifetime,
 		dot11RSNAConfigPMKReauthThreshold,

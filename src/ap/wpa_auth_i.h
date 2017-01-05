@@ -48,8 +48,8 @@ struct wpa_state_machine {
 	Boolean AuthenticationRequest;
 	Boolean ReAuthenticationRequest;
 	Boolean Disconnect;
-	int TimeoutCtr;
-	int GTimeoutCtr;
+	u32 TimeoutCtr;
+	u32 GTimeoutCtr;
 	Boolean TimeoutEvt;
 	Boolean EAPOLKeyReceived;
 	Boolean EAPOLKeyPairwise;

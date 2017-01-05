@@ -991,6 +991,9 @@ dbus_bool_t wpas_dbus_getter_global_capabilities(
 #ifdef CONFIG_INTERWORKING
 	capabilities[num_items++] = "interworking";
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_IEEE80211W
+	capabilities[num_items++] = "pmf";
+#endif /* CONFIG_IEEE80211W */
 
 	return wpas_dbus_simple_array_property_getter(iter,
 						      DBUS_TYPE_STRING,

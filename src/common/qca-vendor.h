@@ -243,6 +243,18 @@ enum qca_radiotap_vendor_ids {
  *	FCC compliance, OEMs require methods to set SAR limits on TX
  *	power of WLAN/WWAN. enum qca_vendor_attr_sar_limits
  *	attributes are used with this command.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS: This command/event is used by the
+ *	host driver for offloading the implementation of Auto Channel Selection
+ *	(ACS) to an external user space entity. This interface is used as the
+ *	event from the host driver to the user space entity and also as the
+ *	request from the user space entity to the host driver. The event from
+ *	the host driver is used by the user space entity as an indication to
+ *	start the ACS functionality. The attributes used by this event are
+ *	represented by the enum qca_wlan_vendor_attr_external_acs_event.
+ *	User space entity uses the same interface to inform the host driver with
+ *	selected channels after the ACS operation using the attributes defined
+ *	by enum qca_wlan_vendor_attr_external_acs_channels.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -364,6 +376,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* 144 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN = 145,
 	QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS = 146,
+	QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS = 147,
 };
 
 
@@ -2938,6 +2951,254 @@ enum qca_wlan_vendor_attr_pno_config_params {
 	QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_PNO_MAX =
 	QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_acs_select_reason: This represents the different reasons why
+ * the ACS has to be triggered. These values are used by
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_REASON and
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_REASON
+ */
+enum qca_wlan_vendor_acs_select_reason {
+	/* Represents the reason that the ACS triggered during the AP start */
+	QCA_WLAN_VENDOR_ACS_SELECT_REASON_INIT,
+	/* Represents the reason that DFS found with the current channel */
+	QCA_WLAN_VENDOR_ACS_SELECT_REASON_DFS,
+	/* Represents the reason that LTE co-exist in the current band. */
+	QCA_WLAN_VENDOR_ACS_SELECT_REASON_LTE_COEX,
+};
+
+/**
+ * qca_wlan_vendor_channel_prop_flags: This represent the flags for a channel.
+ * This is used by QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAGS.
+ */
+enum qca_wlan_vendor_channel_prop_flags {
+	/* Bits 0, 1, 2, and 3 are reserved */
+
+	/* Turbo channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_TURBO         = 1 << 4,
+	/* CCK channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_CCK           = 1 << 5,
+	/* OFDM channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_OFDM          = 1 << 6,
+	/* 2.4 GHz spectrum channel. */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_2GHZ          = 1 << 7,
+	/* 5 GHz spectrum channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_5GHZ          = 1 << 8,
+	/* Only passive scan allowed */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_PASSIVE       = 1 << 9,
+	/* Dynamic CCK-OFDM channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_DYN           = 1 << 10,
+	/* GFSK channel (FHSS PHY) */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_GFSK          = 1 << 11,
+	/* Radar found on channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_RADAR         = 1 << 12,
+	/* 11a static turbo channel only */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_STURBO        = 1 << 13,
+	/* Half rate channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HALF          = 1 << 14,
+	/* Quarter rate channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_QUARTER       = 1 << 15,
+	/* HT 20 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT20          = 1 << 16,
+	/* HT 40 with extension channel above */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT40PLUS      = 1 << 17,
+	/* HT 40 with extension channel below */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT40MINUS     = 1 << 18,
+	/* HT 40 intolerant */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT40INTOL     = 1 << 19,
+	/* VHT 20 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT20         = 1 << 20,
+	/* VHT 40 with extension channel above */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT40PLUS     = 1 << 21,
+	/* VHT 40 with extension channel below */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT40MINUS    = 1 << 22,
+	/* VHT 80 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT80         = 1 << 23,
+	/* HT 40 intolerant mark bit for ACS use */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT40INTOLMARK = 1 << 24,
+	/* Channel temporarily blocked due to noise */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_BLOCKED       = 1 << 25,
+	/* VHT 160 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT160        = 1 << 26,
+	/* VHT 80+80 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT80_80      = 1 << 27,
+};
+
+/**
+ * qca_wlan_vendor_channel_prop_flags_ext: This represent the extended flags for
+ * each channel. This is used by
+ * QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAG_EXT.
+ */
+enum qca_wlan_vendor_channel_prop_flags_ext {
+	/* Radar found on channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_RADAR_FOUND     = 1 << 0,
+	/* DFS required on channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_DFS             = 1 << 1,
+	/* DFS required on channel for 2nd band of 80+80 */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_DFS_CFREQ2      = 1 << 2,
+	/* If channel has been checked for DFS */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_DFS_CLEAR       = 1 << 3,
+	/* Excluded in 802.11d */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_11D_EXCLUDED    = 1 << 4,
+	/* Channel Switch Announcement received on this channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_CSA_RECEIVED    = 1 << 5,
+	/* Ad-hoc is not allowed */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_DISALLOW_ADHOC  = 1 << 6,
+	/* Station only channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_DISALLOW_HOSTAP = 1 << 7,
+	/* DFS radar history for slave device (STA mode) */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_HISTORY_RADAR   = 1 << 8,
+	/* DFS CAC valid for slave device (STA mode) */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_EXT_CAC_VALID       = 1 << 9,
+};
+
+/**
+ * qca_wlan_vendor_external_acs_event_chan_info_attr: Represents per channel
+ * information. These attributes are sent as part of
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_CHAN_INFO. Each set of the following
+ * attributes correspond to a single channel.
+ */
+enum qca_wlan_vendor_external_acs_event_chan_info_attr {
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_INVALID = 0,
+
+	/* A bitmask (u32) with flags specified in
+	 * enum qca_wlan_vendor_channel_prop_flags.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAGS = 1,
+	/* A bitmask (u32) with flags specified in
+	 * enum qca_wlan_vendor_channel_prop_flags_ext.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAG_EXT = 2,
+	/* frequency in MHz (u32) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FREQ = 3,
+	/* maximum regulatory transmission power (u32) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_MAX_REG_POWER = 4,
+	/* maximum transmission power (u32) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_MAX_POWER = 5,
+	/* minimum transmission power (u32) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_MIN_POWER = 6,
+	/* regulatory class id (u8) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_REG_CLASS_ID = 7,
+	/* maximum antenna gain in (u8) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_ANTENNA_GAIN = 8,
+	/* VHT segment 0 (u8) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_VHT_SEG_0 = 9,
+	/* VHT segment 1 (u8) */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_VHT_SEG_1 = 10,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_LAST,
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_MAX =
+		QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_attr_pcl: Represents attributes for
+ * preferred channel list (PCL). These attributes are sent as part of
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PCL.
+ */
+enum qca_wlan_vendor_attr_pcl {
+	QCA_WLAN_VENDOR_ATTR_PCL_INVALID = 0,
+
+	/* Channel number (u8) */
+	QCA_WLAN_VENDOR_ATTR_PCL_CHANNEL = 1,
+	/* Channel weightage (u8) */
+	QCA_WLAN_VENDOR_ATTR_PCL_WEIGHT = 2,
+};
+
+/**
+ * qca_wlan_vendor_attr_external_acs_event: Attribute to vendor sub-command
+ * QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS. This attribute will be sent by
+ * host driver.
+ */
+enum qca_wlan_vendor_attr_external_acs_event {
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_INVALID = 0,
+
+	/* This reason (u8) refers to enum qca_wlan_vendor_acs_select_reason.
+	 * This helps ACS module to understand why ACS needs to be started.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_REASON = 1,
+	/* Flag attribute to indicate if driver supports spectral scanning */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_IS_SPECTRAL_SUPPORTED = 2,
+	/* Flag attribute to indicate if 11ac is offloaded to firmware */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_IS_OFFLOAD_ENABLED = 3,
+	/* Flag attribute to indicate if driver provides additional channel
+	 * capability as part of scan operation */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_ADD_CHAN_STATS_SUPPORT = 4,
+	/* Flag attribute to indicate interface status is UP */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_AP_UP = 5,
+	/* Operating mode (u8) of interface. Takes one of enum nl80211_iftype
+	 * values. */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_SAP_MODE = 6,
+	/* Channel width (u8). It takes one of enum nl80211_chan_width values.
+	 * This is the upper bound of channel width. ACS logic should try to get
+	 * a channel with the specified width and if not found, look for lower
+	 * values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_CHAN_WIDTH = 7,
+	/* This (u8) will hold values of one of enum nl80211_bands */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_BAND = 8,
+	/* PHY/HW mode (u8). Takes one of enum qca_wlan_vendor_acs_hw_mode
+	 * values */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PHY_MODE = 9,
+	/* Array of (u32) supported frequency list among which ACS should choose
+	 * best frequency.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_FREQ_LIST = 10,
+	/* Preferred channel list by the driver which will have array of nested
+	 * values as per enum qca_wlan_vendor_attr_pcl attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PCL = 11,
+	/* Array of nested attribute for each channel. It takes attr as defined
+	 * in enum qca_wlan_vendor_external_acs_event_chan_info_attr.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_CHAN_INFO = 12,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_LAST,
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_MAX =
+		QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_attr_external_acs_channels: Attributes to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS. This carries a list of channels
+ * in priority order as decided after ACS operation in userspace.
+ */
+enum qca_wlan_vendor_attr_external_acs_channels {
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_INVALID = 0,
+
+	/* One of reason code (u8) from enum qca_wlan_vendor_acs_select_reason
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_REASON = 1,
+
+	/* Array of nested values for each channel with following attributes:
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_BAND,
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_PRIMARY,
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_SECONDARY,
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_CENTER_SEG0,
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_CENTER_SEG1,
+	 * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_WIDTH
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_LIST = 2,
+	/* This (u8) will hold values of one of enum nl80211_bands */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_BAND = 3,
+	/* Primary channel (u8) */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_PRIMARY = 4,
+	/* Secondary channel (u8) used for HT 40 MHz channels */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_SECONDARY = 5,
+	/* VHT seg0 channel (u8) */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_CENTER_SEG0 = 6,
+	/* VHT seg1 channel (u8) */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_CENTER_SEG1 = 7,
+	/* Channel width (u8). Takes one of enum nl80211_chan_width values. */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_WIDTH = 8,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_LAST,
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_MAX =
+		QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

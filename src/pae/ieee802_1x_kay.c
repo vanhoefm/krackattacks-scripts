@@ -1559,7 +1559,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		ieee802_1x_cp_connect_authenticated(kay->cp);
 		ieee802_1x_cp_sm_step(kay->cp);
 		wpa_printf(MSG_WARNING, "KaY:The Key server advise no MACsec");
-		participant->to_use_sak = TRUE;
+		participant->to_use_sak = FALSE;
 		return 0;
 	}
 

@@ -2378,6 +2378,12 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 			participant->advised_capability =
 				MACSEC_CAP_NOT_IMPLEMENTED;
 			participant->to_use_sak = FALSE;
+			participant->ltx = FALSE;
+			participant->lrx = FALSE;
+			participant->otx = FALSE;
+			participant->orx = FALSE;
+			participant->is_key_server = FALSE;
+			participant->is_elected = FALSE;
 			kay->authenticated = TRUE;
 			kay->secured = FALSE;
 			kay->failed = FALSE;

@@ -18,6 +18,11 @@ from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_ht import clear_scan_cache
 
+def check_rrm_support(dev):
+    rrm = int(dev.get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
 nr="00112233445500000000510107"
 lci="01000800101298c0b512926666f6c2f1001c00004104050000c00012"
 civic="01000b0011223344556677889900998877665544332211aabbccddeeff"
@@ -149,6 +154,8 @@ def test_rrm_neighbor_db(dev, apdev):
 
 def test_rrm_neighbor_rep_req(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
+    check_rrm_support(dev[0])
+
     nr1="00112233445500000000510107"
     nr2="00112233445600000000510107"
     nr3="dd112233445500000000510107"
@@ -166,10 +173,6 @@ def test_rrm_neighbor_rep_req(dev, apdev):
     if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=\"abcdef\""):
         raise Exception("Request succeeded unexpectedly (AP without RRM 2)")
     dev[0].request("DISCONNECT")
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -255,10 +258,7 @@ def test_rrm_neighbor_rep_req(dev, apdev):
 
 def test_rrm_lci_req(dev, apdev):
     """hostapd lci request"""
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
+    check_rrm_support(dev[0])
 
     params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
@@ -291,9 +291,7 @@ def test_rrm_lci_req(dev, apdev):
 
 def test_rrm_lci_req_oom(dev, apdev):
     """LCI report generation OOM"""
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
+    check_rrm_support(dev[0])
 
     params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
@@ -316,15 +314,13 @@ def test_rrm_lci_req_oom(dev, apdev):
 
 def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST and hostapd config"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     bssid = apdev[0]['bssid']
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -334,13 +330,11 @@ def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
 
 def test_rrm_neighbor_rep_req_timeout(dev, apdev):
     """wpa_supplicant behavior on NEIGHBOR_REP_REQUEST response timeout"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -355,13 +349,11 @@ def test_rrm_neighbor_rep_req_timeout(dev, apdev):
 
 def test_rrm_neighbor_rep_req_oom(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST OOM"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -382,13 +374,11 @@ def test_rrm_neighbor_rep_req_oom(dev, apdev):
 
 def test_rrm_neighbor_rep_req_disconnect(dev, apdev):
     """wpa_supplicant behavior on disconnection during NEIGHBOR_REP_REQUEST"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
         raise Exception("Request accepted while disconnected")
@@ -407,12 +397,10 @@ def test_rrm_neighbor_rep_req_disconnect(dev, apdev):
 
 def test_rrm_neighbor_rep_req_not_supported(dev, apdev):
     """NEIGHBOR_REP_REQUEST for AP not supporting neighbor report"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_beacon_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -421,13 +409,11 @@ def test_rrm_neighbor_rep_req_not_supported(dev, apdev):
 
 def test_rrm_neighbor_rep_req_busy(dev, apdev):
     """wpa_supplicant and concurrent NEIGHBOR_REP_REQUEST commands"""
+    check_rrm_support(dev[0])
+
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
 
     dev[0].connect("test2", key_mgmt="NONE", scan_freq="2412")
 
@@ -444,10 +430,7 @@ def test_rrm_neighbor_rep_req_busy(dev, apdev):
 
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
-
-    rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
-    if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
-        raise HwsimSkip("Required RRM capabilities are not supported")
+    check_rrm_support(dev[0])
 
     params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)

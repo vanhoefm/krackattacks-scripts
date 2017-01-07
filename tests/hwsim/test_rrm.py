@@ -1387,6 +1387,29 @@ def test_rrm_beacon_req_passive_scan_vht160(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_rrm_req_reject_oom(dev, apdev):
+    """Radio measurement request - OOM while rejecting a request"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + addr.replace(':', '') + 2*bssid.replace(':', '') + "1000"
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    with alloc_fail(dev[0], 1, "wpabuf_resize;wpas_rrm_handle_msr_req_element"):
+        # "RRM: Parallel measurements are not supported, reject"
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "05000100002603010105"):
+            raise Exception("MGMT_RX_PROCESS failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+        ev = hapd.wait_event(["MGMT-RX"], timeout=0.2)
+        if ev is not None:
+            raise Exception("Unexpected beacon report response during OOM")
+
 def test_rrm_req_proto(dev, apdev):
     """Radio measurement request - protocol testing"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }

@@ -527,6 +527,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_MBO
 	} else if (os_strcasecmp(cmd, "non_pref_chan") == 0) {
 		ret = wpas_mbo_update_non_pref_chan(wpa_s, value);
+		if (ret == 0) {
+			value[-1] = '=';
+			wpa_config_process_global(wpa_s->conf, cmd, -1);
+		}
 	} else if (os_strcasecmp(cmd, "mbo_cell_capa") == 0) {
 		wpas_mbo_update_cell_capa(wpa_s, atoi(value));
 #endif /* CONFIG_MBO */

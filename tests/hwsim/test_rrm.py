@@ -1078,7 +1078,7 @@ def test_rrm_beacon_req_passive_ap_channels(dev, apdev):
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
 
-    token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "330351010b" + "3300" + "dd00")
+    token = run_req_beacon(hapd, addr, "51ff0000640000ffffffffffff" + "330351010b" + "3300" + "dd00")
 
     for i in range(1, 3):
         ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)

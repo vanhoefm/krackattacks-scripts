@@ -3409,6 +3409,7 @@ static void handle_action_cb(struct hostapd_data *hapd,
 			     size_t len, int ok)
 {
 	struct sta_info *sta;
+	const struct rrm_measurement_report_element *report;
 
 	if (is_multicast_ether_addr(mgmt->da))
 		return;
@@ -3419,10 +3420,15 @@ static void handle_action_cb(struct hostapd_data *hapd,
 		return;
 	}
 
-	if (len < 24 + 2)
+	if (len < 24 + 5 + sizeof(*report))
 		return;
+	report = (const struct rrm_measurement_report_element *)
+		&mgmt->u.action.u.rrm.variable[2];
 	if (mgmt->u.action.category == WLAN_ACTION_RADIO_MEASUREMENT &&
-	    mgmt->u.action.u.rrm.action == WLAN_RRM_RADIO_MEASUREMENT_REQUEST)
+	    mgmt->u.action.u.rrm.action == WLAN_RRM_RADIO_MEASUREMENT_REQUEST &&
+	    report->eid == WLAN_EID_MEASURE_REQUEST &&
+	    report->len >= 3 &&
+	    report->type == MEASURE_TYPE_BEACON)
 		hostapd_rrm_beacon_req_tx_status(hapd, mgmt, len, ok);
 }
 

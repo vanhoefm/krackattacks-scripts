@@ -338,8 +338,6 @@ def test_rrm_neighbor_rep_req_timeout(dev, apdev):
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
-    bssid = apdev[0]['bssid']
-
     rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
         raise HwsimSkip("Required RRM capabilities are not supported")
@@ -360,8 +358,6 @@ def test_rrm_neighbor_rep_req_oom(dev, apdev):
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    bssid = apdev[0]['bssid']
 
     rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
@@ -390,8 +386,6 @@ def test_rrm_neighbor_rep_req_disconnect(dev, apdev):
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
-    bssid = apdev[0]['bssid']
-
     rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
         raise HwsimSkip("Required RRM capabilities are not supported")
@@ -416,8 +410,6 @@ def test_rrm_neighbor_rep_req_not_supported(dev, apdev):
     params = { "ssid": "test2", "rrm_beacon_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
-    bssid = apdev[0]['bssid']
-
     rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
         raise HwsimSkip("Required RRM capabilities are not supported")
@@ -432,8 +424,6 @@ def test_rrm_neighbor_rep_req_busy(dev, apdev):
     params = { "ssid": "test2", "rrm_neighbor_report": "1",
                "stationary_ap": "1", "lci": lci, "civic": civic }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-
-    bssid = apdev[0]['bssid']
 
     rrm = int(dev[0].get_driver_status_field("capa.rrm_flags"), 16)
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
@@ -921,7 +911,6 @@ def test_rrm_beacon_req_table_vht(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "42",
                    "rrm_beacon_report": "1" }
         hapd = hostapd.add_ap(apdev[0], params)
-        bssid = apdev[0]['bssid']
 
         params = { "ssid": "test-vht40",
                    "country_code": "FI",
@@ -1316,7 +1305,6 @@ def test_rrm_beacon_req_passive_scan_vht(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "42",
                    "rrm_beacon_report": "1" }
         hapd = hostapd.add_ap(apdev[0], params)
-        bssid = apdev[0]['bssid']
 
         dev[0].scan_for_bss(apdev[0]['bssid'], freq=5180)
         dev[0].connect("rrm-vht", key_mgmt="NONE", scan_freq="5180")
@@ -1371,7 +1359,6 @@ def test_rrm_beacon_req_passive_scan_vht160(dev, apdev):
                    "vht_oper_centr_freq_seg0_idx": "114",
                    "rrm_beacon_report": "1" }
         hapd = hostapd.add_ap(apdev[0], params)
-        bssid = apdev[0]['bssid']
 
         dev[0].scan_for_bss(apdev[0]['bssid'], freq=5520)
         dev[0].connect("rrm-vht", key_mgmt="NONE", scan_freq="5520")

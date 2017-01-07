@@ -1410,6 +1410,35 @@ def test_rrm_req_reject_oom(dev, apdev):
         if ev is not None:
             raise Exception("Unexpected beacon report response during OOM")
 
+def test_rrm_req_when_rrm_not_used(dev, apdev):
+    """Radio/link measurement request for non-RRM association"""
+    params = { "ssid": "rrm" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + addr.replace(':', '') + 2*bssid.replace(':', '') + "1000"
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "050001000026030100fe"):
+        raise Exception("MGMT_RX_PROCESS failed")
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected beacon report response when RRM is disabled")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "050001000026030100fe"):
+        raise Exception("MGMT_RX_PROCESS failed")
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+
 def test_rrm_req_proto(dev, apdev):
     """Radio measurement request - protocol testing"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }

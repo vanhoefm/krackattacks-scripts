@@ -1535,3 +1535,51 @@ def test_rrm_req_proto(dev, apdev):
     hapd.set("ext_mgmt_frame_handling", "0")
     dev[0].request("SET ext_mgmt_frame_handling 0")
     dev[0].request("SET LCI ")
+
+def test_rrm_link_measurement(dev, apdev):
+    """Radio measurement request - link measurement"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + addr.replace(':', '') + 2*bssid.replace(':', '') + "1000"
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("No link measurement report seen")
+
+def test_rrm_link_measurement_oom(dev, apdev):
+    """Radio measurement request - link measurement OOM"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + addr.replace(':', '') + 2*bssid.replace(':', '') + "1000"
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("SET ext_mgmt_frame_handling 1")
+
+    with alloc_fail(dev[0], 1, "wpabuf_alloc;wpas_rrm_handle_link_measurement_request"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
+            raise Exception("MGMT_RX_PROCESS failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+    with fail_test(dev[0], 1, "wpas_rrm_handle_link_measurement_request"):
+        if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
+            raise Exception("MGMT_RX_PROCESS failed")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+
+    ev = hapd.wait_event(["MGMT-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected beacon report response during OOM")

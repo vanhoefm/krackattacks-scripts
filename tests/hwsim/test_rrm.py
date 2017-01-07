@@ -1257,7 +1257,7 @@ def test_rrm_beacon_req_passive_no_match_oom(dev, apdev):
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
 
-    with alloc_fail(dev[0], 1, "wpas_beacon_rep_no_results"):
+    with alloc_fail(dev[0], 1, "wpabuf_resize;wpas_beacon_rep_scan_process"):
         token = run_req_beacon(hapd, addr, "51010000640000021122334455")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
         ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)

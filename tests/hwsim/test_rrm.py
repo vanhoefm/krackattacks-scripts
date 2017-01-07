@@ -312,6 +312,21 @@ def test_rrm_lci_req_oom(dev, apdev):
             raise Exception("REQ_LCI failed unexpectedly")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
+def test_rrm_lci_req_get_reltime_failure(dev, apdev):
+    """LCI report generation and os_get_reltime() failure"""
+    check_rrm_support(dev[0])
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET LCI " + lci)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+
+    with fail_test(dev[0], 1, "os_get_reltime;wpas_rrm_build_lci_report"):
+        if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
+            raise Exception("REQ_LCI failed unexpectedly")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+
 def test_rrm_neighbor_rep_req_from_conf(dev, apdev):
     """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST and hostapd config"""
     check_rrm_support(dev[0])

@@ -11,15 +11,117 @@ import os
 from wpasupplicant import WpaSupplicant
 import hostapd
 
+config_checks = [ ("ap_scan", "0"),
+                  ("update_config", "1"),
+                  ("device_name", "name"),
+                  ("eapol_version", "2"),
+                  ("wps_priority", "5"),
+                  ("ip_addr_go", "192.168.1.1"),
+                  ("ip_addr_mask", "255.255.255.0"),
+                  ("ip_addr_start", "192.168.1.10"),
+                  ("ip_addr_end", "192.168.1.20"),
+                  ("disable_scan_offload", "1"),
+                  ("fast_reauth", "0"),
+                  ("uuid", "6aeae5e3-c1fc-4e76-8293-7346e1d1459d"),
+                  ("manufacturer", "MANUF"),
+                  ("model_name", "MODEL"),
+                  ("model_number", "MODEL NUM"),
+                  ("serial_number", "123qwerty"),
+                  ("device_type", "1234-0050F204-4321"),
+                  ("os_version", "01020304"),
+                  ("config_methods", "label push_button"),
+                  ("wps_cred_processing", "1"),
+                  ("wps_vendor_ext_m1", "000137100100020001"),
+                  ("p2p_listen_reg_class", "81"),
+                  ("p2p_listen_channel", "6"),
+                  ("p2p_oper_reg_class", "82"),
+                  ("p2p_oper_channel", "14"),
+                  ("p2p_go_intent", "14"),
+                  ("p2p_ssid_postfix", "foobar"),
+                  ("persistent_reconnect", "1"),
+                  ("p2p_intra_bss", "0"),
+                  ("p2p_group_idle", "2"),
+                  ("p2p_passphrase_len", "63"),
+                  ("p2p_pref_chan", "81:1,82:14,81:11"),
+                  ("p2p_no_go_freq", "2412-2432,2462,5000-6000"),
+                  ("p2p_add_cli_chan", "1"),
+                  ("p2p_optimize_listen_chan", "1"),
+                  ("p2p_go_ht40", "1"),
+                  ("p2p_go_vht", "1"),
+                  ("p2p_go_ctwindow", "1"),
+                  ("p2p_disabled", "1"),
+                  ("p2p_no_group_iface", "1"),
+                  ("p2p_ignore_shared_freq", "1"),
+                  ("p2p_cli_probe", "1"),
+                  ("p2p_go_freq_change_policy", "0"),
+                  ("country", "FI"),
+                  ("bss_max_count", "123"),
+                  ("bss_expiration_age", "45"),
+                  ("bss_expiration_scan_count", "17"),
+                  ("filter_ssids", "1"),
+                  ("filter_rssi", "-10"),
+                  ("max_num_sta", "3"),
+                  ("disassoc_low_ack", "1"),
+                  ("hs20", "1"),
+                  ("interworking", "1"),
+                  ("hessid", "02:03:04:05:06:07"),
+                  ("access_network_type", "7"),
+                  ("pbc_in_m1", "1"),
+                  ("wps_nfc_dev_pw_id", "12345"),
+                  ("wps_nfc_dh_pubkey", "1234567890ABCDEF"),
+                  ("wps_nfc_dh_privkey", "FF1234567890ABCDEFFF"),
+                  ("ext_password_backend", "test"),
+                  ("p2p_go_max_inactivity", "9"),
+                  ("auto_interworking", "1"),
+                  ("okc", "1"),
+                  ("pmf", "1"),
+                  ("dtim_period", "3"),
+                  ("beacon_int", "102"),
+                  ("sae_groups", "5 19"),
+                  ("ap_vendor_elements", "dd0411223301"),
+                  ("ignore_old_scan_res", "1"),
+                  ("freq_list", "2412 2437"),
+                  ("scan_cur_freq", "1"),
+                  ("sched_scan_interval", "13"),
+                  ("external_sim", "1"),
+                  ("tdls_external_control", "1"),
+                  ("wowlan_triggers", "any"),
+                  ("bgscan", '"simple:30:-45:300"'),
+                  ("p2p_search_delay", "123"),
+                  ("mac_addr", "2"),
+                  ("rand_addr_lifetime", "123456789"),
+                  ("preassoc_mac_addr", "1"),
+                  ("key_mgmt_offload", "0"),
+                  ("user_mpm", "0"),
+                  ("max_peer_links", "17"),
+                  ("cert_in_cb", "0"),
+                  ("mesh_max_inactivity", "31"),
+                  ("dot11RSNASAERetransPeriod", "19"),
+                  ("passive_scan", "1"),
+                  ("reassoc_same_bss_optim", "1"),
+                  ("wpa_rsc_relaxation", "0"),
+                  ("sched_scan_plans", "10:100 20:200 30"),
+                  ("non_pref_chan", "81:5:10:2 81:1:0:2 81:9:0:2"),
+                  ("mbo_cell_capa", "1"),
+                  ("gas_address3", "1"),
+                  ("ftm_responder", "1"),
+                  ("ftm_initiator", "1"),
+                  ("pcsc_reader", "foo"),
+                  ("pcsc_pin", "1234"),
+                  ("driver_param", "testing"),
+                  ("dot11RSNAConfigPMKLifetime", "43201"),
+                  ("dot11RSNAConfigPMKReauthThreshold", "71"),
+                  ("dot11RSNAConfigSATimeout", "61"),
+                  ("sec_device_type", "12345-0050F204-54321"),
+                  ("autoscan", "exponential:3:300"),
+                  ("osu_dir", "/tmp/osu"),
+                  ("fst_group_id", "bond0"),
+                  ("fst_priority", "5"),
+                  ("fst_llt", "7"),
+                  ("openssl_ciphers", "DEFAULT") ]
 def check_config(config):
     with open(config, "r") as f:
         data = f.read()
-    if "update_config=1\n" not in data:
-        raise Exception("Missing update_config")
-    if "device_name=name\n" not in data:
-        raise Exception("Missing device_name")
-    if "eapol_version=2\n" not in data:
-        raise Exception("Missing eapol_version")
     if "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=" not in data:
         raise Exception("Missing ctrl_interface")
     if "blob-base64-foo={" not in data:
@@ -28,16 +130,9 @@ def check_config(config):
         raise Exception("Missing cred")
     if "network={" not in data:
         raise Exception("Missing network")
-    if "wps_priority=5\n" not in data:
-        raise Exception("Missing wps_priority")
-    if "ip_addr_go=192.168.1.1\n" not in data:
-        raise Exception("Missing ip_addr_go")
-    if "ip_addr_mask=255.255.255.0\n" not in data:
-        raise Exception("Missing ip_addr_mask")
-    if "ip_addr_start=192.168.1.10\n" not in data:
-        raise Exception("Missing ip_addr_start")
-    if "ip_addr_end=192.168.1.20\n" not in data:
-        raise Exception("Missing ip_addr_end")
+    for field, value in config_checks:
+        if "\n" + field + "=" + value + "\n" not in data:
+            raise Exception("Missing value: " + field)
     return data
 
 def test_wpas_config_file(dev, apdev, params):
@@ -75,8 +170,6 @@ def test_wpas_config_file(dev, apdev, params):
 
         wpas.interface_add("wlan5", config=config)
 
-        wpas.request("SET wps_priority 5")
-
         id = wpas.add_network()
         wpas.set_network_quoted(id, "ssid", "foo")
         wpas.set_network_quoted(id, "psk", "12345678")
@@ -108,10 +201,9 @@ def test_wpas_config_file(dev, apdev, params):
         ev = wpas.wait_event(["CRED-MODIFIED 0 password"])
 
         wpas.request("SET blob foo 12345678")
-        wpas.request("SET ip_addr_go 192.168.1.1")
-        wpas.request("SET ip_addr_mask 255.255.255.0")
-        wpas.request("SET ip_addr_start 192.168.1.10")
-        wpas.request("SET ip_addr_end 192.168.1.20")
+
+        for field, value in config_checks:
+            wpas.set(field, value)
 
         if "OK" not in wpas.request("SAVE_CONFIG"):
             raise Exception("Failed to save configuration file")

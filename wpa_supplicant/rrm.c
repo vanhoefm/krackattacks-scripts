@@ -160,12 +160,6 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 		return -EOPNOTSUPP;
 	}
 
-	if (!cb) {
-		wpa_printf(MSG_DEBUG,
-			   "RRM: Neighbor Report request must provide a callback.");
-		return -EINVAL;
-	}
-
 	/* Refuse if there's a live request */
 	if (wpa_s->rrm.notify_neighbor_rep) {
 		wpa_printf(MSG_DEBUG,

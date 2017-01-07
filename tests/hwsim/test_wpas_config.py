@@ -40,11 +40,18 @@ def check_config(config):
         raise Exception("Missing ip_addr_end")
     return data
 
-def test_wpas_config_file(dev):
+def test_wpas_config_file(dev, apdev, params):
     """wpa_supplicant config file parsing/writing"""
-    config = "/tmp/test_wpas_config_file.conf"
+    config = os.path.join(params['logdir'], 'wpas_config_file.conf')
     if os.path.exists(config):
-        os.remove(config)
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     try:
@@ -147,14 +154,6 @@ def test_wpas_config_file(dev):
             raise Exception("SAVE_CONFIG (global) succeeded unexpectedly")
 
     finally:
-        try:
-            os.remove(config)
-        except:
-            pass
-        try:
-            os.remove(config + ".tmp")
-        except:
-            pass
         try:
             os.rmdir(config)
         except:

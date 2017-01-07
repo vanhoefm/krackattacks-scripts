@@ -1299,6 +1299,108 @@ def test_rrm_beacon_req_active_duration_mandatory(dev, apdev):
         if len(fields[4]) > 0:
             raise Exception("Unexpected beacon report received")
 
+def test_rrm_beacon_req_passive_scan_vht(dev, apdev):
+    """Beacon request - passive scan mode - VHT"""
+    clear_scan_cache(apdev[0])
+    try:
+        hapd = None
+        params = { "ssid": "rrm-vht",
+                   "country_code": "FI",
+                   'ieee80211d': '1',
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "1",
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "rrm_beacon_report": "1" }
+        hapd = hostapd.add_ap(apdev[0], params)
+        bssid = apdev[0]['bssid']
+
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq=5180)
+        dev[0].connect("rrm-vht", key_mgmt="NONE", scan_freq="5180")
+
+        addr = dev[0].own_addr()
+
+        token = run_req_beacon(hapd, addr, "80000000640000ffffffffffff")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report response not received")
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.opclass != 128 or report.channel != 36:
+            raise Exception("Incorrect opclass/channel for AP")
+
+        token = run_req_beacon(hapd, addr, "82000000640000ffffffffffff")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report response not received")
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.opclass != 128 or report.channel != 36:
+            raise Exception("Incorrect opclass/channel for AP")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
+def test_rrm_beacon_req_passive_scan_vht160(dev, apdev):
+    """Beacon request - passive scan mode - VHT160"""
+    clear_scan_cache(apdev[0])
+    try:
+        hapd = None
+        params = { "ssid": "rrm-vht",
+                   "country_code": "ZA",
+                   'ieee80211d': '1',
+                   "hw_mode": "a",
+                   "channel": "104",
+                   "ht_capab": "[HT40-]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "2",
+                   "vht_oper_centr_freq_seg0_idx": "114",
+                   "rrm_beacon_report": "1" }
+        hapd = hostapd.add_ap(apdev[0], params)
+        bssid = apdev[0]['bssid']
+
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq=5520)
+        dev[0].connect("rrm-vht", key_mgmt="NONE", scan_freq="5520")
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "WIDTH=160 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value: " + str(sig))
+
+        addr = dev[0].own_addr()
+
+        token = run_req_beacon(hapd, addr, "81000000640000ffffffffffff")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report response not received")
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+        if report.opclass != 129 or report.channel != 104:
+            raise Exception("Incorrect opclass/channel for AP")
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            raise HwsimSkip("ZA regulatory rule likely did not have DFS requirement removed")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
 def test_rrm_req_proto(dev, apdev):
     """Radio measurement request - protocol testing"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }

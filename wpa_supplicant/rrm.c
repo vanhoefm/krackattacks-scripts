@@ -1284,10 +1284,14 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 	}
 
 	os_memset(&report, 0, sizeof(report));
+	report.dialog_token = req->dialog_token;
 	report.tpc.eid = WLAN_EID_TPC_REPORT;
 	report.tpc.len = 2;
+	/* Note: The driver is expected to update report.tpc.tx_power and
+	 * report.tpc.link_margin subfields when sending out this frame.
+	 * Similarly, the driver would need to update report.rx_ant_id and
+	 * report.tx_ant_id subfields. */
 	report.rsni = 255; /* 255 indicates that RSNI is not available */
-	report.dialog_token = req->dialog_token;
 	report.rcpi = rssi_to_rcpi(rssi);
 
 	/* action_category + action_code */

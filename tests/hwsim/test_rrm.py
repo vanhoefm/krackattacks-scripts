@@ -1179,6 +1179,22 @@ def test_rrm_beacon_req_active_zero_duration(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected Beacon report")
 
+def test_rrm_beacon_req_active_fail_random(dev, apdev):
+    """Beacon request - active scan mode os_get_random failure"""
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    with fail_test(dev[0], 1, "os_get_random;wpas_rm_handle_beacon_req"):
+        token = run_req_beacon(hapd, addr, "51000000640001ffffffffffff")
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        if ev is None:
+            raise Exception("Beacon report response not received")
+        fields = ev.split(' ')
+        report = BeaconReport(binascii.unhexlify(fields[4]))
+        logger.info("Received beacon report: " + str(report))
+
 def test_rrm_beacon_req_passive(dev, apdev):
     """Beacon request - passive scan mode"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }

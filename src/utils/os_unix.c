@@ -80,6 +80,9 @@ int os_get_reltime(struct os_reltime *t)
 	struct timespec ts;
 	int res;
 
+	if (TEST_FAIL())
+		return -1;
+
 	while (1) {
 		res = clock_gettime(clock_id, &ts);
 		if (res == 0) {

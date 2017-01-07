@@ -365,16 +365,29 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 				   -1, -1, -1, atoi(value));
 	} else if (os_strcasecmp(cmd, "dot11RSNAConfigPMKLifetime") == 0) {
 		if (wpa_sm_set_param(wpa_s->wpa, RSNA_PMK_LIFETIME,
-				     atoi(value)))
+				     atoi(value))) {
 			ret = -1;
+		} else {
+			value[-1] = '=';
+			wpa_config_process_global(wpa_s->conf, cmd, -1);
+		}
 	} else if (os_strcasecmp(cmd, "dot11RSNAConfigPMKReauthThreshold") ==
 		   0) {
 		if (wpa_sm_set_param(wpa_s->wpa, RSNA_PMK_REAUTH_THRESHOLD,
-				     atoi(value)))
+				     atoi(value))) {
 			ret = -1;
+		} else {
+			value[-1] = '=';
+			wpa_config_process_global(wpa_s->conf, cmd, -1);
+		}
 	} else if (os_strcasecmp(cmd, "dot11RSNAConfigSATimeout") == 0) {
-		if (wpa_sm_set_param(wpa_s->wpa, RSNA_SA_TIMEOUT, atoi(value)))
+		if (wpa_sm_set_param(wpa_s->wpa, RSNA_SA_TIMEOUT,
+				     atoi(value))) {
 			ret = -1;
+		} else {
+			value[-1] = '=';
+			wpa_config_process_global(wpa_s->conf, cmd, -1);
+		}
 	} else if (os_strcasecmp(cmd, "wps_fragment_size") == 0) {
 		wpa_s->wps_fragment_size = atoi(value);
 #ifdef CONFIG_WPS_TESTING

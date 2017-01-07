@@ -278,20 +278,20 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpas_rrm_report_elem(struct wpabuf *buf, u8 token, u8 mode, u8 type,
+static int wpas_rrm_report_elem(struct wpabuf **buf, u8 token, u8 mode, u8 type,
 				const u8 *data, size_t data_len)
 {
-	if (wpabuf_tailroom(buf) < 5 + data_len)
+	if (wpabuf_resize(buf, 5 + data_len))
 		return -1;
 
-	wpabuf_put_u8(buf, WLAN_EID_MEASURE_REPORT);
-	wpabuf_put_u8(buf, 3 + data_len);
-	wpabuf_put_u8(buf, token);
-	wpabuf_put_u8(buf, mode);
-	wpabuf_put_u8(buf, type);
+	wpabuf_put_u8(*buf, WLAN_EID_MEASURE_REPORT);
+	wpabuf_put_u8(*buf, 3 + data_len);
+	wpabuf_put_u8(*buf, token);
+	wpabuf_put_u8(*buf, mode);
+	wpabuf_put_u8(*buf, type);
 
 	if (data_len)
-		wpabuf_put_data(buf, data, data_len);
+		wpabuf_put_data(*buf, data, data_len);
 
 	return 0;
 }
@@ -344,10 +344,7 @@ wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	if (max_age != 0xffff && max_age < diff_l)
 		goto reject;
 
-	if (wpabuf_resize(buf, 5 + wpabuf_len(wpa_s->lci)))
-		return -1;
-
-	if (wpas_rrm_report_elem(*buf, req->token,
+	if (wpas_rrm_report_elem(buf, req->token,
 				 MEASUREMENT_REPORT_MODE_ACCEPT, req->type,
 				 wpabuf_head_u8(wpa_s->lci),
 				 wpabuf_len(wpa_s->lci)) < 0) {
@@ -358,12 +355,7 @@ wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	return 0;
 
 reject:
-	if (wpabuf_resize(buf, sizeof(struct rrm_measurement_report_element))) {
-		wpa_printf(MSG_DEBUG, "RRM: Memory allocation failed");
-		return -1;
-	}
-
-	if (wpas_rrm_report_elem(*buf, req->token,
+	if (wpas_rrm_report_elem(buf, req->token,
 				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
 				 req->type, NULL, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
@@ -826,14 +818,7 @@ static int wpas_add_beacon_rep(struct wpa_supplicant *wpa_s,
 	if (ret < 0)
 		return -1;
 
-	if (wpabuf_resize(wpa_buf,
-			  sizeof(struct rrm_measurement_report_element) +
-			  sizeof(*rep) + ret)) {
-		wpa_printf(MSG_ERROR, "RRM: Memory allocation failed");
-		return -1;
-	}
-
-	return wpas_rrm_report_elem(*wpa_buf, wpa_s->beacon_rep_data.token,
+	return wpas_rrm_report_elem(wpa_buf, wpa_s->beacon_rep_data.token,
 				    MEASUREMENT_REPORT_MODE_ACCEPT,
 				    MEASURE_TYPE_BEACON, buf,
 				    ret + sizeof(*rep));
@@ -843,12 +828,7 @@ static int wpas_add_beacon_rep(struct wpa_supplicant *wpa_s,
 static int wpas_beacon_rep_no_results(struct wpa_supplicant *wpa_s,
 				      struct wpabuf **buf)
 {
-	if (wpabuf_resize(buf, 5)) {
-		wpa_printf(MSG_DEBUG, "RRM: Memory allocation failed");
-		return -1;
-	}
-
-	return wpas_rrm_report_elem(*buf, wpa_s->beacon_rep_data.token,
+	return wpas_rrm_report_elem(buf, wpa_s->beacon_rep_data.token,
 				    MEASUREMENT_REPORT_MODE_ACCEPT,
 				    MEASURE_TYPE_BEACON, NULL, 0);
 }
@@ -874,11 +854,9 @@ static void wpas_beacon_rep_table(struct wpa_supplicant *wpa_s,
 
 static void wpas_rrm_refuse_request(struct wpa_supplicant *wpa_s)
 {
-	struct wpabuf *buf;
+	struct wpabuf *buf = NULL;
 
-	buf = wpabuf_alloc(sizeof(struct rrm_measurement_beacon_report));
-	if (!buf ||
-	    wpas_rrm_report_elem(buf, wpa_s->beacon_rep_data.token,
+	if (wpas_rrm_report_elem(&buf, wpa_s->beacon_rep_data.token,
 				 MEASUREMENT_REPORT_MODE_REJECT_REFUSED,
 				 MEASURE_TYPE_BEACON, NULL, 0)) {
 		wpa_printf(MSG_ERROR, "RRM: Memory allocation failed");
@@ -1168,12 +1146,7 @@ wpas_rrm_handle_msr_req_element(
 	}
 
 reject:
-	if (wpabuf_resize(buf, sizeof(struct rrm_measurement_report_element))) {
-		wpa_printf(MSG_DEBUG, "RRM: Memory allocation failed");
-		return -1;
-	}
-
-	if (wpas_rrm_report_elem(*buf, req->token,
+	if (wpas_rrm_report_elem(buf, req->token,
 				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
 				 req->type, NULL, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");

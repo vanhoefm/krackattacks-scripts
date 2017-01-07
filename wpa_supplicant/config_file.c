@@ -1403,6 +1403,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "ftm_responder=%d\n", config->ftm_responder);
 	if (config->ftm_initiator)
 		fprintf(f, "ftm_initiator=%d\n", config->ftm_initiator);
+
+	if (config->osu_dir)
+		fprintf(f, "osu_dir=%s\n", config->osu_dir);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

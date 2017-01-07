@@ -1305,8 +1305,7 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
 	wpabuf_put_u8(buf, WLAN_RRM_LINK_MEASUREMENT_REPORT);
 	wpabuf_put_data(buf, &report, sizeof(report));
-	wpa_hexdump(MSG_DEBUG, "RRM: Link measurement report:",
-		    wpabuf_head(buf), wpabuf_len(buf));
+	wpa_hexdump_buf(MSG_DEBUG, "RRM: Link measurement report", buf);
 
 	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
 				wpa_s->own_addr, wpa_s->bssid,

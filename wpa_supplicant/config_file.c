@@ -1119,6 +1119,17 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	}
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
+	{
+		int i;
+		char _buf[WPS_DEV_TYPE_BUFSIZE], *buf;
+
+		for (i = 0; i < config->num_sec_device_types; i++) {
+			buf = wps_dev_type_bin2str(config->sec_device_type[i],
+						   _buf, sizeof(_buf));
+			if (buf)
+				fprintf(f, "sec_device_type=%s\n", buf);
+		}
+	}
 	if (config->p2p_listen_reg_class)
 		fprintf(f, "p2p_listen_reg_class=%d\n",
 			config->p2p_listen_reg_class);

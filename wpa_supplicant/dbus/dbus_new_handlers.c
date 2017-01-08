@@ -3699,6 +3699,9 @@ dbus_bool_t wpas_dbus_getter_bss_mode(
 		case IEEE80211_CAP_DMG_AP:
 			mode = "infrastructure";
 			break;
+		default:
+			mode = "";
+			break;
 		}
 	} else {
 		if (res->caps & IEEE80211_CAP_IBSS)

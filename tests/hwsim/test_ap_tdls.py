@@ -569,3 +569,50 @@ def test_ap_tdls_chan_switch_prohibit(dev, apdev):
     wlantest_setup(hapd)
     connect_2sta_open(dev, hapd)
     setup_tdls(dev[0], dev[1], hapd)
+
+def test_ap_open_tdls_external_control(dev, apdev):
+    """TDLS and tdls_external_control"""
+    try:
+        _test_ap_open_tdls_external_control(dev, apdev)
+    finally:
+        dev[0].set("tdls_external_control", "0")
+
+def _test_ap_open_tdls_external_control(dev, apdev):
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+
+    dev[0].set("tdls_external_control", "1")
+    if "FAIL" in dev[0].request("TDLS_SETUP " + addr1):
+        # tdls_external_control not supported; try without it
+        dev[0].set("tdls_external_control", "0")
+        if "FAIL" in dev[0].request("TDLS_SETUP " + addr1):
+            raise Exception("TDLS_SETUP failed")
+    connected = False
+    for i in range(50):
+        res0 = dev[0].request("TDLS_LINK_STATUS " + addr1)
+        res1 = dev[1].request("TDLS_LINK_STATUS " + addr0)
+        if "TDLS link status: connected" in res0 and "TDLS link status: connected" in res1:
+            connected = True
+            break
+        time.sleep(0.1)
+    if not connected:
+        raise Exception("TDLS setup did not complete")
+
+    dev[0].set("tdls_external_control", "1")
+    if "FAIL" in dev[0].request("TDLS_TEARDOWN " + addr1):
+        # tdls_external_control not supported; try without it
+        dev[0].set("tdls_external_control", "0")
+        if "FAIL" in dev[0].request("TDLS_TEARDOWN " + addr1):
+            raise Exception("TDLS_TEARDOWN failed")
+    for i in range(50):
+        res0 = dev[0].request("TDLS_LINK_STATUS " + addr1)
+        res1 = dev[1].request("TDLS_LINK_STATUS " + addr0)
+        if "TDLS link status: connected" not in res0 and "TDLS link status: connected" not in res1:
+            connected = False
+            break
+        time.sleep(0.1)
+    if connected:
+        raise Exception("TDLS teardown did not complete")

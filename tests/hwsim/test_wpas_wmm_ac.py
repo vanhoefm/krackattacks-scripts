@@ -110,6 +110,10 @@ def test_tspec(dev, apdev):
         if not str(e).startswith("DELTS failed"):
             raise
 
+    # "CTRL: Invalid WMM_AC_ADDTS parameter: 'foo'
+    if "FAIL" not in dev[0].request("WMM_AC_ADDTS foo"):
+        raise Exception("Invalid WMM_AC_ADDTS command accepted")
+
 def test_tspec_protocol(dev, apdev):
     """Protocol tests for addts/delts"""
     # configure ap with VO and VI requiring admission-control

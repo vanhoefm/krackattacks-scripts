@@ -540,6 +540,8 @@ def test_tdls_chan_switch(dev, apdev):
         raise Exception("Could not disable TDLS channel switching")
     if "FAIL" not in dev[0].request("TDLS_CANCEL_CHAN_SWITCH " + dev[1].own_addr()):
         raise Exception("TDLS_CANCEL_CHAN_SWITCH accepted even though channel switching was already disabled")
+    if "FAIL" not in dev[0].request("TDLS_CHAN_SWITCH foo 81 2462"):
+        raise Exception("Invalid TDLS channel switching command accepted")
 
 def test_ap_tdls_link_status(dev, apdev):
     """Check TDLS link status between two stations"""

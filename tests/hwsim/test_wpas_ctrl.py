@@ -619,6 +619,22 @@ def test_wpas_ctrl_get(dev):
     if "FAIL" not in dev[0].request("GET foo"):
         raise Exception("Unexpected success on get command")
 
+    dev[0].set("wifi_display", "0")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value")
+    dev[0].set("wifi_display", "1")
+    if dev[0].request("GET wifi_display") != '1':
+        raise Exception("Unexpected wifi_display value")
+    dev[0].request("P2P_SET disabled 1")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value (P2P disabled)")
+    dev[0].request("P2P_SET disabled 0")
+    if dev[0].request("GET wifi_display") != '1':
+        raise Exception("Unexpected wifi_display value (P2P re-enabled)")
+    dev[0].set("wifi_display", "0")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value")
+
 @remote_compatible
 def test_wpas_ctrl_preauth(dev):
     """wpa_supplicant ctrl_iface preauth"""

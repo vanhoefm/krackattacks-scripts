@@ -1987,3 +1987,12 @@ def test_wpas_ctrl_bss_current(dev, apdev):
     res = dev[0].request("BSS CURRENT")
     if bssid not in res:
         raise Exception("Unexpected BSS CURRENT response in connected state")
+
+def test_wpas_ctrl_set_lci_errors(dev):
+    """wpa_supplicant SET lci error cases"""
+    if "FAIL" not in dev[0].request("SET lci q"):
+        raise Exception("Invalid LCI value accepted")
+
+    with fail_test(dev[0], 1, "os_get_reltime;wpas_ctrl_iface_set_lci"):
+        if "FAIL" not in dev[0].request("SET lci 00"):
+            raise Exception("SET lci accepted with failing os_get_reltime")

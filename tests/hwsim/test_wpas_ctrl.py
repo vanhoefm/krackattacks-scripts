@@ -2003,3 +2003,10 @@ def test_wpas_ctrl_set_radio_disabled(dev):
     # without checking the result for some additional code coverage.
     dev[0].request("SET radio_disabled 1")
     dev[0].request("SET radio_disabled 0")
+
+def test_wpas_ctrl_set_tdls_trigger_control(dev):
+    """wpa_supplicant SET tdls_trigger_control"""
+    # This is not supported with upstream nl80211, but execute the commands
+    # without checking the result for some additional code coverage.
+    dev[0].request("SET tdls_trigger_control 1")
+    dev[0].request("SET tdls_trigger_control 0")

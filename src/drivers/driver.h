@@ -1,6 +1,6 @@
 /*
  * Driver interface definition
- * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -4228,6 +4228,15 @@ enum wpa_event_type {
 	 * EVENT_P2P_LO_STOP - Notify that P2P listen offload is stopped
 	 */
 	EVENT_P2P_LO_STOP,
+
+	/**
+	 * EVENT_BEACON_LOSS - Beacon loss detected
+	 *
+	 * This event indicates that no Beacon frames has been received from
+	 * the current AP. This may indicate that the AP is not anymore in
+	 * range.
+	 */
+	EVENT_BEACON_LOSS,
 };
 
 
@@ -4817,9 +4826,12 @@ union wpa_event_data {
 	/**
 	 * struct low_ack - Data for EVENT_STATION_LOW_ACK events
 	 * @addr: station address
+	 * @num_packets: Number of packets lost (consecutive packets not
+	 * acknowledged)
 	 */
 	struct low_ack {
 		u8 addr[ETH_ALEN];
+		u32 num_packets;
 	} low_ack;
 
 	/**

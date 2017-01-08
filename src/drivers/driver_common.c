@@ -1,6 +1,6 @@
 /*
  * Common driver-related functions
- * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -81,6 +81,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(ACS_CHANNEL_SELECTED);
 	E2S(DFS_CAC_STARTED);
 	E2S(P2P_LO_STOP);
+	E2S(BEACON_LOSS);
 	}
 
 	return "UNKNOWN";

@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211 - Event processing
- * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2017, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
  * Copyright (c) 2009-2010, Atheros Communications
  *
@@ -1132,6 +1132,10 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 		[NL80211_ATTR_CQM_RSSI_HYST] = { .type = NLA_U8 },
 		[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] = { .type = NLA_U32 },
 		[NL80211_ATTR_CQM_PKT_LOSS_EVENT] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_TXE_RATE] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_TXE_PKTS] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_TXE_INTVL] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_BEACON_LOSS_EVENT] = { .type = NLA_FLAG },
 	};
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
@@ -1153,12 +1157,39 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 			return;
 		os_memcpy(ed.low_ack.addr, nla_data(tb[NL80211_ATTR_MAC]),
 			  ETH_ALEN);
+		ed.low_ack.num_packets =
+			nla_get_u32(cqm[NL80211_ATTR_CQM_PKT_LOSS_EVENT]);
+		wpa_printf(MSG_DEBUG, "nl80211: Packet loss event for " MACSTR
+			   " (num_packets %u)",
+			   MAC2STR(ed.low_ack.addr), ed.low_ack.num_packets);
 		wpa_supplicant_event(drv->ctx, EVENT_STATION_LOW_ACK, &ed);
 		return;
 	}
 
-	if (cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] == NULL)
+	if (cqm[NL80211_ATTR_CQM_BEACON_LOSS_EVENT]) {
+		wpa_printf(MSG_DEBUG, "nl80211: Beacon loss event");
+		wpa_supplicant_event(drv->ctx, EVENT_BEACON_LOSS, NULL);
 		return;
+	}
+
+	if (cqm[NL80211_ATTR_CQM_TXE_RATE] &&
+	    cqm[NL80211_ATTR_CQM_TXE_PKTS] &&
+	    cqm[NL80211_ATTR_CQM_TXE_INTVL] &&
+	    cqm[NL80211_ATTR_MAC]) {
+		wpa_printf(MSG_DEBUG, "nl80211: CQM TXE event for " MACSTR
+			   " (rate: %u pkts: %u interval: %u)",
+			   MAC2STR((u8 *) nla_data(cqm[NL80211_ATTR_MAC])),
+			   nla_get_u32(cqm[NL80211_ATTR_CQM_TXE_RATE]),
+			   nla_get_u32(cqm[NL80211_ATTR_CQM_TXE_PKTS]),
+			   nla_get_u32(cqm[NL80211_ATTR_CQM_TXE_INTVL]));
+		return;
+	}
+
+	if (cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] == NULL) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Not a CQM RSSI threshold event");
+		return;
+	}
 	event = nla_get_u32(cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT]);
 
 	if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_HIGH) {
@@ -1169,8 +1200,12 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "
 			   "event: RSSI low");
 		ed.signal_change.above_threshold = 0;
-	} else
+	} else {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Unknown CQM RSSI threshold event: %d",
+			   event);
 		return;
+	}
 
 	res = nl80211_get_link_signal(drv, &sig);
 	if (res == 0) {

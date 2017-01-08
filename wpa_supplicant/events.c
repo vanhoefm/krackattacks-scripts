@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -4333,6 +4333,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			P2P_LISTEN_OFFLOAD_STOP_REASON "reason=%d",
 			data->p2p_lo_stop.reason_code);
 #endif /* CONFIG_P2P */
+		break;
+	case EVENT_BEACON_LOSS:
+		if (!wpa_s->current_bss || !wpa_s->current_ssid)
+			break;
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_BEACON_LOSS);
+		bgscan_notify_beacon_loss(wpa_s);
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

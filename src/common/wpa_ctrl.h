@@ -74,6 +74,8 @@ extern "C" {
 #define WPA_EVENT_NETWORK_NOT_FOUND "CTRL-EVENT-NETWORK-NOT-FOUND "
 /** Change in the signal level was reported by the driver */
 #define WPA_EVENT_SIGNAL_CHANGE "CTRL-EVENT-SIGNAL-CHANGE "
+/** Beacon loss reported by the driver */
+#define WPA_EVENT_BEACON_LOSS "CTRL-EVENT-BEACON-LOSS "
 /** Regulatory domain channel */
 #define WPA_EVENT_REGDOM_CHANGE "CTRL-EVENT-REGDOM-CHANGE "
 /** Channel switch (followed by freq=<MHz> and other channel parameters) */

@@ -8037,6 +8037,119 @@ static int wpas_ctrl_iface_mgmt_rx_process(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
+					   char *param)
+{
+	struct wpa_scan_res *res;
+	struct os_reltime now;
+	char *pos, *end;
+
+	if (!param)
+		return -1;
+
+	if (os_strcmp(param, "START") == 0) {
+		wpa_bss_update_start(wpa_s);
+		return 0;
+	}
+
+	if (os_strcmp(param, "END") == 0) {
+		wpa_bss_update_end(wpa_s, NULL, 1);
+		return 0;
+	}
+
+	if (os_strncmp(param, "BSS ", 4) != 0)
+		return -1;
+	param += 3;
+
+	res = os_zalloc(sizeof(*res) + os_strlen(param) / 2);
+	if (!res)
+		return -1;
+
+	pos = os_strstr(param, " flags=");
+	if (pos)
+		res->flags = strtol(pos + 7, NULL, 16);
+
+	pos = os_strstr(param, " bssid=");
+	if (pos)
+		hwaddr_aton(pos + 7, res->bssid);
+
+	pos = os_strstr(param, " freq=");
+	if (pos)
+		res->freq = atoi(pos + 6);
+
+	pos = os_strstr(param, " beacon_int=");
+	if (pos)
+		res->beacon_int = atoi(pos + 12);
+
+	pos = os_strstr(param, " caps=");
+	if (pos)
+		res->caps = strtol(pos + 6, NULL, 16);
+
+	pos = os_strstr(param, " qual=");
+	if (pos)
+		res->qual = atoi(pos + 6);
+
+	pos = os_strstr(param, " noise=");
+	if (pos)
+		res->noise = atoi(pos + 7);
+
+	pos = os_strstr(param, " level=");
+	if (pos)
+		res->level = atoi(pos + 7);
+
+	pos = os_strstr(param, " tsf=");
+	if (pos)
+		res->tsf = strtoll(pos + 5, NULL, 16);
+
+	pos = os_strstr(param, " age=");
+	if (pos)
+		res->age = atoi(pos + 5);
+
+	pos = os_strstr(param, " est_throughput=");
+	if (pos)
+		res->est_throughput = atoi(pos + 16);
+
+	pos = os_strstr(param, " snr=");
+	if (pos)
+		res->snr = atoi(pos + 5);
+
+	pos = os_strstr(param, " parent_tsf=");
+	if (pos)
+		res->parent_tsf = strtoll(pos + 7, NULL, 16);
+
+	pos = os_strstr(param, " tsf_bssid=");
+	if (pos)
+		hwaddr_aton(pos + 11, res->tsf_bssid);
+
+	pos = os_strstr(param, " ie=");
+	if (pos) {
+		pos += 4;
+		end = os_strchr(pos, ' ');
+		if (!end)
+			end = pos + os_strlen(pos);
+		res->ie_len = (end - pos) / 2;
+		hexstr2bin(pos, (u8 *) (res + 1), res->ie_len);
+	}
+
+	pos = os_strstr(param, " beacon_ie=");
+	if (pos) {
+		pos += 11;
+		end = os_strchr(pos, ' ');
+		if (!end)
+			end = pos + os_strlen(pos);
+		res->beacon_ie_len = (end - pos) / 2;
+		hexstr2bin(pos, ((u8 *) (res + 1)) + res->ie_len,
+			   res->beacon_ie_len);
+	}
+
+	os_get_reltime(&now);
+	wpa_bss_update_scan_res(wpa_s, res, &now);
+	os_free(res);
+
+	return 0;
+}
+
+
 static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	char *pos, *param;
@@ -8067,6 +8180,8 @@ static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
 		wpa_supplicant_event(wpa_s, ev, &event);
 		os_free(event.freq_range.range);
 		return 0;
+	} else if (os_strcmp(cmd, "SCAN_RES") == 0) {
+		return wpas_ctrl_iface_driver_scan_res(wpa_s, param);
 	} else {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Testing - unknown driver event: %s",
 			cmd);

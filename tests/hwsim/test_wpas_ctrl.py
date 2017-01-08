@@ -1996,3 +1996,10 @@ def test_wpas_ctrl_set_lci_errors(dev):
     with fail_test(dev[0], 1, "os_get_reltime;wpas_ctrl_iface_set_lci"):
         if "FAIL" not in dev[0].request("SET lci 00"):
             raise Exception("SET lci accepted with failing os_get_reltime")
+
+def test_wpas_ctrl_set_radio_disabled(dev):
+    """wpa_supplicant SET radio_disabled"""
+    # This is not currently supported with nl80211, but execute the commands
+    # without checking the result for some additional code coverage.
+    dev[0].request("SET radio_disabled 1")
+    dev[0].request("SET radio_disabled 0")

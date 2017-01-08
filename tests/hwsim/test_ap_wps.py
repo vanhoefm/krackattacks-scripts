@@ -9904,3 +9904,25 @@ def test_ap_wps_pin_start_failure(dev, apdev):
     with alloc_fail(dev[0], 1, "wpas_wps_start_dev_pw"):
         if "FAIL" not in dev[0].request("WPS_PIN any"):
             raise Exception("WPS_PIN not rejected during OOM")
+
+def test_ap_wps_ap_pin_failure(dev, apdev):
+    """WPS_AP_PIN failure"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-wps")
+    dev[0].set_network_quoted(id, "psk", "1234567890")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    dev[0].wait_connected()
+
+    with fail_test(dev[0], 1,
+                   "os_get_random;wpa_supplicant_ctrl_iface_wps_ap_pin"):
+        if "FAIL" not in dev[0].request("WPS_AP_PIN random"):
+            raise Exception("WPS_AP_PIN random accepted")
+    with alloc_fail(dev[0], 1, "wpas_wps_ap_pin_set"):
+        if "FAIL" not in dev[0].request("WPS_AP_PIN set 12345670"):
+            raise Exception("WPS_AP_PIN set accepted")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

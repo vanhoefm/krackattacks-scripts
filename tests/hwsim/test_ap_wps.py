@@ -9895,3 +9895,12 @@ def test_ap_wps_pbc_in_m1(dev, apdev):
     hapd.disable()
     dev[0].dump_monitor()
     dev[0].flush_scan_cache()
+
+def test_ap_wps_pin_start_failure(dev, apdev):
+    """WPS_PIN start failure"""
+    with alloc_fail(dev[0], 1, "wpas_wps_start_dev_pw"):
+        if "FAIL" not in dev[0].request("WPS_PIN any 12345670"):
+            raise Exception("WPS_PIN not rejected during OOM")
+    with alloc_fail(dev[0], 1, "wpas_wps_start_dev_pw"):
+        if "FAIL" not in dev[0].request("WPS_PIN any"):
+            raise Exception("WPS_PIN not rejected during OOM")

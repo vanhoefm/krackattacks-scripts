@@ -1316,3 +1316,100 @@ def test_scan_ies(dev, apdev):
     logger.info("beacon_ie: " + str(ie.keys()))
     if bss['ie'] == bss['beacon_ie']:
         raise Exception("Both ie and beacon_ie show same data")
+
+def test_scan_parsing(dev, apdev):
+    """Scan result parsing"""
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES START"):
+        raise Exception("DRIVER_EVENT SCAN_RES START failed")
+
+    if "FAIL" not in dev[0].request("DRIVER_EVENT SCAN_RES foo "):
+        raise Exception("Invalid DRIVER_EVENT SCAN_RES accepted")
+
+    tests = [ "",
+              "flags=ffffffff",
+              "bssid=02:03:04:05:06:07",
+              "freq=1234",
+              "beacon_int=102",
+              "caps=1234",
+              "qual=10",
+              "noise=10",
+              "level=10",
+              "tsf=1122334455667788",
+              "age=123",
+              "est_throughput=100",
+              "snr=10",
+              "parent_tsf=1122334455667788",
+              "tsf_bssid=02:03:04:05:06:07",
+              "ie=00",
+              "beacon_ie=00",
+              # Too long SSID
+              "bssid=02:ff:00:00:00:01 ie=0033" + 33*'FF',
+              # All parameters
+              "flags=ffffffff bssid=02:ff:00:00:00:02 freq=1234 beacon_int=102 caps=1234 qual=10 noise=10 level=10 tsf=1122334455667788 age=123456 est_throughput=100 snr=10 parent_tsf=1122334455667788 tsf_bssid=02:03:04:05:06:07 ie=000474657374 beacon_ie=000474657374",
+              # Beacon IEs truncated
+              "bssid=02:ff:00:00:00:03 ie=0000 beacon_ie=0003ffff",
+              # Probe Response IEs truncated
+              "bssid=02:ff:00:00:00:04 ie=00000101 beacon_ie=0000",
+              # DMG (invalid caps)
+              "bssid=02:ff:00:00:00:05 freq=58320 ie=0003646d67",
+              # DMG (IBSS)
+              "bssid=02:ff:00:00:00:06 freq=60480 caps=0001 ie=0003646d67",
+              # DMG (PBSS)
+              "bssid=02:ff:00:00:00:07 freq=62640 caps=0002 ie=0003646d67",
+              # DMG (AP)
+              "bssid=02:ff:00:00:00:08 freq=64800 caps=0003 ie=0003646d67",
+              # Test BSS for updates
+              "bssid=02:ff:00:00:00:09 freq=2412 caps=0011 level=1 ie=0003757064010182",
+              # Minimal BSS data
+              "bssid=02:ff:00:00:00:00 ie=0000" ]
+    for t in tests:
+        if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES BSS " + t):
+            raise Exception("DRIVER_EVENT SCAN_RES BSS failed")
+
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES END"):
+        raise Exception("DRIVER_EVENT SCAN_RES END failed")
+
+    res = dev[0].request("SCAN_RESULTS")
+    logger.info("SCAN_RESULTS:\n" + res)
+
+    bss = []
+    res = dev[0].request("BSS FIRST")
+    if "FAIL" in res:
+        raise Exception("BSS FIRST failed")
+    while "\nbssid=" in res:
+        logger.info("BSS output:\n" + res)
+        bssid = None
+        id = None
+        for val in res.splitlines():
+            if val.startswith("id="):
+                id = val.split('=')[1]
+            if val.startswith("bssid="):
+                bssid = val.split('=')[1]
+        if bssid is None or id is None:
+            raise Exception("Missing id or bssid line")
+        bss.append(bssid)
+        res = dev[0].request("BSS NEXT-" + id)
+
+    logger.info("Discovered BSSs: " + str(bss))
+    invalid_bss = [ "02:03:04:05:06:07", "02:ff:00:00:00:01" ]
+    valid_bss = [ "02:ff:00:00:00:00", "02:ff:00:00:00:02",
+                  "02:ff:00:00:00:03", "02:ff:00:00:00:04",
+                  "02:ff:00:00:00:05", "02:ff:00:00:00:06",
+                  "02:ff:00:00:00:07", "02:ff:00:00:00:08",
+                  "02:ff:00:00:00:09" ]
+    for bssid in invalid_bss:
+        if bssid in bss:
+            raise Exception("Invalid BSS included: " + bssid)
+    for bssid in valid_bss:
+        if bssid not in bss:
+            raise Exception("Valid BSS missing: " + bssid)
+
+    logger.info("Update BSS parameters")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES START"):
+        raise Exception("DRIVER_EVENT SCAN_RES START failed")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES BSS bssid=02:ff:00:00:00:09 freq=2412 caps=0002 level=2 ie=000375706401028204"):
+        raise Exception("DRIVER_EVENT SCAN_RES BSS failed")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES END"):
+        raise Exception("DRIVER_EVENT SCAN_RES END failed")
+    res = dev[0].request("BSS 02:ff:00:00:00:09")
+    logger.info("Updated BSS:\n" + res)

@@ -1,5 +1,5 @@
 # WPS tests
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2017, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -2026,6 +2026,13 @@ def test_ap_wps_check_pin(dev, apdev):
         rpin = dev[0].request("WPS_CHECK_PIN " + pin).rstrip('\n')
         if pin != rpin:
             raise Exception("Random PIN validation failed for " + pin)
+
+def test_ap_wps_pin_get_failure(dev, apdev):
+    """PIN generation failure"""
+    with fail_test(dev[0], 1,
+                   "os_get_random;wpa_supplicant_ctrl_iface_wps_pin"):
+        if "FAIL" not in dev[0].request("WPS_PIN get"):
+            raise Exception("WPS_PIN did not report failure")
 
 def test_ap_wps_wep_config(dev, apdev):
     """WPS 2.0 AP rejecting WEP configuration"""

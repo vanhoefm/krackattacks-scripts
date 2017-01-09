@@ -794,11 +794,39 @@ enum qca_vendor_attr_wisa_cmd {
  *	vendor specific element is defined by the latest P802.11ax draft.
  *	Please note that the draft is still work in progress and this element
  *	payload is subject to change.
+ *
+ * @QCA_VENDOR_ELEM_RAPS: RAPS element (OFDMA-based Random Access Parameter Set
+ *	element).
+ *	This element can be used for pre-standard publication testing of HE
+ *	before P802.11ax draft assigns the element ID extension. The payload of
+ *	this vendor specific element is defined by the latest P802.11ax draft
+ *	(not including the Element ID Extension field). Please note that the
+ *	draft is still work in progress and this element payload is subject to
+ *	change.
+ *
+ * @QCA_VENDOR_ELEM_MU_EDCA_PARAMS: MU EDCA Parameter Set element.
+ *	This element can be used for pre-standard publication testing of HE
+ *	before P802.11ax draft assigns the element ID extension. The payload of
+ *	this vendor specific element is defined by the latest P802.11ax draft
+ *	(not including the Element ID Extension field). Please note that the
+ *	draft is still work in progress and this element payload is subject to
+ *	change.
+ *
+ * @QCA_VENDOR_ELEM_BSS_COLOR_CHANGE: BSS Color Change Announcement element.
+ *	This element can be used for pre-standard publication testing of HE
+ *	before P802.11ax draft assigns the element ID extension. The payload of
+ *	this vendor specific element is defined by the latest P802.11ax draft
+ *	(not including the Element ID Extension field). Please note that the
+ *	draft is still work in progress and this element payload is subject to
+ *	change.
  */
 enum qca_vendor_element_id {
 	QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST = 0,
 	QCA_VENDOR_ELEM_HE_CAPAB = 1,
 	QCA_VENDOR_ELEM_HE_OPER = 2,
+	QCA_VENDOR_ELEM_RAPS = 3,
+	QCA_VENDOR_ELEM_MU_EDCA_PARAMS = 4,
+	QCA_VENDOR_ELEM_BSS_COLOR_CHANGE = 5,
 };
 
 /**

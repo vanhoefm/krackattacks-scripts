@@ -187,3 +187,11 @@ def set_powersave(dev, val):
     (res, data) = dev.cmd_execute(["echo", data, ">", fname], shell=True)
     if res != 0:
         raise Exception("Failed to set power save for device")
+
+def set_group_map(dev, val):
+    phy = dev.get_driver_status_field("phyname")
+    fname = '/sys/kernel/debug/ieee80211/%s/hwsim/group' % phy
+    data = '%d' % val
+    (res, data) = dev.cmd_execute(["echo", data, ">", fname], shell=True)
+    if res != 0:
+        raise Exception("Failed to set group map for %s" % phy)

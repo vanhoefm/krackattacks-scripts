@@ -17,6 +17,7 @@ from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from tshark import run_tshark
 from test_ap_ht import set_world_reg
+from hwsim_utils import set_group_map
 
 def check_mesh_support(dev, secure=False):
     if "MESH" not in dev.get_capability("modes"):
@@ -2034,3 +2035,25 @@ def test_mesh_select_network(dev):
     check_mesh_peer_connected(dev[0])
     check_mesh_peer_connected(dev[1])
     hwsim_utils.test_connectivity(dev[0], dev[1])
+
+def test_mesh_forwarding(dev):
+    """Mesh with two stations that can't reach each other directly"""
+    try:
+        set_group_map(dev[0], 1)
+        set_group_map(dev[1], 3)
+        set_group_map(dev[2], 2)
+        check_mesh_support(dev[0])
+        for i in range(3):
+            add_open_mesh_network(dev[i])
+            check_mesh_group_added(dev[i])
+        for i in range(3):
+            check_mesh_peer_connected(dev[i])
+
+        hwsim_utils.test_connectivity(dev[0], dev[1])
+        hwsim_utils.test_connectivity(dev[1], dev[2])
+        hwsim_utils.test_connectivity(dev[0], dev[2])
+    finally:
+        # reset groups
+        set_group_map(dev[0], 1)
+        set_group_map(dev[1], 1)
+        set_group_map(dev[2], 1)

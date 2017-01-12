@@ -234,6 +234,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		conf->ieee80211d = 1;
 		conf->country[0] = wpa_s->conf->country[0];
 		conf->country[1] = wpa_s->conf->country[1];
+		conf->country[2] = ' ';
 	}
 
 #ifdef CONFIG_P2P

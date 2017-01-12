@@ -138,6 +138,8 @@ DECLARE_ACCESSOR(wpas_dbus_getter_state);
 DECLARE_ACCESSOR(wpas_dbus_getter_scanning);
 DECLARE_ACCESSOR(wpas_dbus_getter_ap_scan);
 DECLARE_ACCESSOR(wpas_dbus_setter_ap_scan);
+DECLARE_ACCESSOR(wpas_dbus_getter_pmf);
+DECLARE_ACCESSOR(wpas_dbus_setter_pmf);
 DECLARE_ACCESSOR(wpas_dbus_getter_fast_reauth);
 DECLARE_ACCESSOR(wpas_dbus_setter_fast_reauth);
 DECLARE_ACCESSOR(wpas_dbus_getter_disconnect_reason);

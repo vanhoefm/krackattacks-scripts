@@ -2787,6 +2787,61 @@ dbus_bool_t wpas_dbus_setter_ap_scan(
 }
 
 
+#ifdef CONFIG_IEEE80211W
+
+/**
+ * wpas_dbus_getter_pmf - Control PMF default
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter function for "Pmf" property.
+ */
+dbus_bool_t wpas_dbus_getter_pmf(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_uint32_t pmf = wpa_s->conf->pmf;
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_UINT32,
+						&pmf, error);
+}
+
+
+/**
+ * wpas_dbus_setter_pmf - Control PMF default
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter function for "Pmf" property.
+ */
+dbus_bool_t wpas_dbus_setter_pmf(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_uint32_t pmf;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_UINT32,
+					      &pmf))
+		return FALSE;
+
+	if (pmf > 2) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "Pmf must be 0, 1, or 2");
+		return FALSE;
+	}
+	wpa_s->conf->pmf = pmf;
+	return TRUE;
+}
+
+#endif /* CONFIG_IEEE80211W */
+
+
 /**
  * wpas_dbus_getter_fast_reauth - Control fast
  * reauthentication (TLS session resumption)

@@ -655,3 +655,63 @@ def test_ap_open_multicast_to_unicast(dev, apdev):
 def test_ap_open_multicast_to_unicast_disabled(dev, apdev):
     """Multicast-to-unicast conversion disabled"""
     run_multicast_to_unicast(dev, apdev, False)
+
+def test_ap_open_drop_duplicate(dev, apdev, params):
+    """AP dropping duplicate management frames"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "interworking": "1" })
+    hapd.set("ext_mgmt_frame_handling", "1")
+    bssid = hapd.own_addr().replace(':', '')
+    addr = "020304050607"
+    auth = "b0003a01" + bssid + addr + bssid + '1000000001000000'
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % auth):
+        raise Exception("MGMT_RX_PROCESS failed")
+    auth = "b0083a01" + bssid + addr + bssid + '1000000001000000'
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % auth):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    ies = "00046f70656e010802040b160c12182432043048606c2d1a3c101bffff0000000000000000000001000000000000000000007f0a04000a020140004000013b155151525354737475767778797a7b7c7d7e7f808182dd070050f202000100"
+    assoc_req = "00003a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % assoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    assoc_req = "00083a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % assoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    reassoc_req = "20083a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % reassoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % reassoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    action = "d0003a01" + bssid + addr + bssid + "1000" + "040a006c0200000600000102000101"
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % action):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    action = "d0083a01" + bssid + addr + bssid + "1000" + "040a006c0200000600000102000101"
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % action):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan.fc.type == 0", ["wlan.fc.subtype"])
+    num_auth = 0
+    num_assoc = 0
+    num_reassoc = 0
+    num_action = 0
+    for subtype in out.splitlines():
+        val = int(subtype)
+        if val == 11:
+            num_auth += 1
+        elif val == 1:
+            num_assoc += 1
+        elif val == 3:
+            num_reassoc += 1
+        elif val == 13:
+            num_action += 1
+    if num_auth != 1:
+        raise Exception("Unexpected number of Authentication frames: %d" % num_auth)
+    if num_assoc != 1:
+        raise Exception("Unexpected number of association frames: %d" % num_assoc)
+    if num_reassoc != 1:
+        raise Exception("Unexpected number of reassociation frames: %d" % num_reassoc)
+    if num_action != 1:
+        raise Exception("Unexpected number of Action frames: %d" % num_action)

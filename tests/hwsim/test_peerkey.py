@@ -79,6 +79,15 @@ def test_peerkey_sniffer_check(dev, apdev, params):
             pass
         else:
             raise
+    if not try_other:
+        found = False
+        for pkt in out.splitlines():
+            sa, da, key_info = pkt.split('\t')
+            if key_info != '':
+                found = True
+                break
+        if not found:
+            try_other = True
     if try_other:
         out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
                          "eapol.type == 3",

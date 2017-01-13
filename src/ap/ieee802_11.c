@@ -2527,8 +2527,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	if ((fc & WLAN_FC_RETRY) &&
 	    sta->last_seq_ctrl != WLAN_INVALID_MGMT_SEQ &&
 	    sta->last_seq_ctrl == seq_ctrl &&
-	    sta->last_subtype == reassoc ? WLAN_FC_STYPE_REASSOC_REQ :
-	    WLAN_FC_STYPE_ASSOC_REQ) {
+	    sta->last_subtype == (reassoc ? WLAN_FC_STYPE_REASSOC_REQ :
+				  WLAN_FC_STYPE_ASSOC_REQ)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "Drop repeated association frame seq_ctrl=0x%x",

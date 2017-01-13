@@ -109,6 +109,9 @@ static BIGNUM * get_group5_prime(void)
 #ifdef OPENSSL_NO_SHA256
 #define NO_SHA256_WRAPPER
 #endif
+#ifdef OPENSSL_NO_SHA512
+#define NO_SHA384_WRAPPER
+#endif
 
 static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 				 const u8 *addr[], const size_t *len, u8 *mac)
@@ -241,6 +244,14 @@ int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 	return openssl_digest_vector(EVP_sha256(), num_elem, addr, len, mac);
 }
 #endif /* NO_SHA256_WRAPPER */
+
+#ifndef NO_SHA384_WRAPPER
+int sha384_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		  u8 *mac)
+{
+	return openssl_digest_vector(EVP_sha384(), num_elem, addr, len, mac);
+}
+#endif /* NO_SHA384_WRAPPER */
 
 
 static const EVP_CIPHER * aes_get_evp_cipher(size_t keylen)

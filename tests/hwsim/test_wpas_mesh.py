@@ -2057,3 +2057,27 @@ def test_mesh_forwarding(dev):
         set_group_map(dev[0], 1)
         set_group_map(dev[1], 1)
         set_group_map(dev[2], 1)
+
+def test_mesh_forwarding_secure(dev):
+    """Mesh with two stations that can't reach each other directly (RSN)"""
+    check_mesh_support(dev[0], secure=True)
+    try:
+        set_group_map(dev[0], 1)
+        set_group_map(dev[1], 3)
+        set_group_map(dev[2], 2)
+        for i in range(3):
+            dev[i].request("SET sae_groups ")
+            id = add_mesh_secure_net(dev[i])
+            dev[i].mesh_group_add(id)
+            check_mesh_group_added(dev[i])
+        for i in range(3):
+            check_mesh_peer_connected(dev[i])
+
+        hwsim_utils.test_connectivity(dev[0], dev[1])
+        hwsim_utils.test_connectivity(dev[1], dev[2])
+        hwsim_utils.test_connectivity(dev[0], dev[2])
+    finally:
+        # reset groups
+        set_group_map(dev[0], 1)
+        set_group_map(dev[1], 1)
+        set_group_map(dev[2], 1)

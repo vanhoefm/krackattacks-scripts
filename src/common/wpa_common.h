@@ -330,6 +330,11 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 		   const u8 *addr1, const u8 *addr2,
 		   const u8 *nonce1, const u8 *nonce2,
 		   struct wpa_ptk *ptk, int akmp, int cipher);
+int fils_rmsk_to_pmk(int akmp, const u8 *rmsk, size_t rmsk_len,
+		     const u8 *snonce, const u8 *anonce, const u8 *dh_ss,
+		     size_t dh_ss_len, u8 *pmk, size_t *pmk_len);
+int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
+		   u8 *pmkid);
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher);

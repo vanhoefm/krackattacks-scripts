@@ -147,6 +147,8 @@ struct wpa_sm {
 	u8 fils_key_auth_sta[FILS_MAX_KEY_AUTH_LEN];
 	size_t fils_key_auth_len;
 	unsigned int fils_completed:1;
+	unsigned int fils_erp_pmkid_set:1;
+	u8 fils_erp_pmkid[PMKID_LEN];
 #endif /* CONFIG_FILS */
 };
 

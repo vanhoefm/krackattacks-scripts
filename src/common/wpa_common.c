@@ -230,6 +230,78 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 
 #ifdef CONFIG_FILS
 
+int fils_rmsk_to_pmk(int akmp, const u8 *rmsk, size_t rmsk_len,
+		     const u8 *snonce, const u8 *anonce, const u8 *dh_ss,
+		     size_t dh_ss_len, u8 *pmk, size_t *pmk_len)
+{
+	u8 nonces[2 * FILS_NONCE_LEN];
+	const u8 *addr[2];
+	size_t len[2];
+	size_t num_elem;
+	int res;
+
+	/* PMK = HMAC-Hash(SNonce || ANonce, rMSK [ || DHss ]) */
+	wpa_printf(MSG_DEBUG, "FILS: rMSK to PMK derivation");
+
+	if (wpa_key_mgmt_sha384(akmp))
+		*pmk_len = SHA384_MAC_LEN;
+	else if (wpa_key_mgmt_sha256(akmp))
+		*pmk_len = SHA256_MAC_LEN;
+	else
+		return -1;
+
+	wpa_hexdump_key(MSG_DEBUG, "FILS: rMSK", rmsk, rmsk_len);
+	wpa_hexdump(MSG_DEBUG, "FILS: SNonce", snonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", anonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: DHss", dh_ss, dh_ss_len);
+
+	os_memcpy(nonces, snonce, FILS_NONCE_LEN);
+	os_memcpy(&nonces[FILS_NONCE_LEN], anonce, FILS_NONCE_LEN);
+	addr[0] = rmsk;
+	len[0] = rmsk_len;
+	num_elem = 1;
+	if (dh_ss) {
+		addr[1] = dh_ss;
+		len[1] = dh_ss_len;
+		num_elem++;
+	}
+	if (wpa_key_mgmt_sha384(akmp))
+		res = hmac_sha384_vector(nonces, 2 * FILS_NONCE_LEN, num_elem,
+					 addr, len, pmk);
+	else
+		res = hmac_sha256_vector(nonces, 2 * FILS_NONCE_LEN, num_elem,
+					 addr, len, pmk);
+	if (res == 0)
+		wpa_hexdump_key(MSG_DEBUG, "FILS: PMK", pmk, *pmk_len);
+	return res;
+}
+
+
+int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
+		   u8 *pmkid)
+{
+	const u8 *addr[1];
+	size_t len[1];
+	u8 hash[SHA384_MAC_LEN];
+	int res;
+
+	/* PMKID = Truncate-128(Hash(EAP-Initiate/Reauth)) */
+	addr[0] = reauth;
+	len[0] = reauth_len;
+	if (wpa_key_mgmt_sha384(akmp))
+		res = sha384_vector(1, addr, len, hash);
+	else if (wpa_key_mgmt_sha256(akmp))
+		res = sha256_vector(1, addr, len, hash);
+	else
+		return -1;
+	if (res)
+		return res;
+	os_memcpy(pmkid, hash, PMKID_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: PMKID", pmkid, PMKID_LEN);
+	return 0;
+}
+
+
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher)

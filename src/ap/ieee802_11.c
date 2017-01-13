@@ -1166,6 +1166,7 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 	u8 *ie_buf = NULL;
 	const u8 *pmk = NULL;
 	size_t pmk_len = 0;
+	u8 pmk_buf[PMK_LEN_MAX];
 
 	if (resp != WLAN_STATUS_SUCCESS)
 		goto fail;
@@ -1234,8 +1235,16 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 		wpabuf_put_u8(data, WLAN_EID_EXT_FILS_WRAPPED_DATA);
 		wpabuf_put_buf(data, erp_resp);
 
-		pmk = msk;
-		pmk_len = msk_len > PMK_LEN ? PMK_LEN : msk_len;
+		if (fils_rmsk_to_pmk(wpa_auth_sta_key_mgmt(sta->wpa_sm),
+				     msk, msk_len, sta->fils_snonce, fils_nonce,
+				     NULL, 0, pmk_buf, &pmk_len)) {
+			wpa_printf(MSG_DEBUG, "FILS: Failed to derive PMK");
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			wpabuf_free(data);
+			data = NULL;
+			goto fail;
+		}
+		pmk = pmk_buf;
 	} else if (pmksa) {
 		pmk = pmksa->pmk;
 		pmk_len = pmksa->pmk_len;

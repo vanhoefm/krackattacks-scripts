@@ -17,6 +17,7 @@
 #include "crypto/aes_siv.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "eap_common/eap_defs.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa.h"
 #include "eloop.h"
@@ -3302,12 +3303,19 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 	wpabuf_put_data(buf, sm->fils_session, FILS_SESSION_LEN);
 
 	/* FILS Wrapped Data */
+	sm->fils_erp_pmkid_set = 0;
 	if (erp_msg) {
 		wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
 		wpabuf_put_u8(buf, 1 + wpabuf_len(erp_msg)); /* Length */
 		/* Element ID Extension */
 		wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_WRAPPED_DATA);
 		wpabuf_put_buf(buf, erp_msg);
+		/* Calculate pending PMKID here so that we do not need to
+		 * maintain a copy of the EAP-Initiate/Reauth message. */
+		if (fils_pmkid_erp(sm->key_mgmt, wpabuf_head(erp_msg),
+				   wpabuf_len(erp_msg),
+				   sm->fils_erp_pmkid) == 0)
+			sm->fils_erp_pmkid_set = 1;
 	}
 
 	wpa_hexdump_buf(MSG_DEBUG, "RSN: FILS fields for Authentication frame",
@@ -3407,6 +3415,9 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 
 	/* FILS Wrapped Data */
 	if (!sm->cur_pmksa && elems.fils_wrapped_data) {
+		u8 rmsk[ERP_MAX_KEY_LEN];
+		size_t rmsk_len;
+
 		wpa_hexdump(MSG_DEBUG, "FILS: Wrapped Data",
 			    elems.fils_wrapped_data,
 			    elems.fils_wrapped_data_len);
@@ -3415,14 +3426,30 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 		if (eapol_sm_failed(sm->eapol))
 			return -1;
 
-		res = eapol_sm_get_key(sm->eapol, sm->pmk, PMK_LEN);
+		rmsk_len = ERP_MAX_KEY_LEN;
+		res = eapol_sm_get_key(sm->eapol, rmsk, rmsk_len);
+		if (res == PMK_LEN) {
+			rmsk_len = PMK_LEN;
+			res = eapol_sm_get_key(sm->eapol, rmsk, rmsk_len);
+		}
 		if (res)
 			return -1;
 
+		res = fils_rmsk_to_pmk(sm->key_mgmt, rmsk, rmsk_len,
+				       sm->fils_nonce, sm->fils_anonce, NULL, 0,
+				       sm->pmk, &sm->pmk_len);
+		os_memset(rmsk, 0, sizeof(rmsk));
+
+		if (!sm->fils_erp_pmkid_set) {
+			wpa_printf(MSG_DEBUG, "FILS: PMKID not available");
+			return -1;
+		}
+		wpa_hexdump(MSG_DEBUG, "FILS: PMKID", sm->fils_erp_pmkid,
+			    PMKID_LEN);
 		wpa_printf(MSG_DEBUG, "FILS: ERP processing succeeded - add PMKSA cache entry for the result");
-		sm->cur_pmksa = pmksa_cache_add(sm->pmksa, sm->pmk, PMK_LEN,
-						NULL, NULL, 0, sm->bssid,
-						sm->own_addr,
+		sm->cur_pmksa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len,
+						sm->fils_erp_pmkid, NULL, 0,
+						sm->bssid, sm->own_addr,
 						sm->network_ctx, sm->key_mgmt);
 	}
 

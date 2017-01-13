@@ -1042,6 +1042,7 @@ void wpa_driver_wext_deinit(void *priv)
 	wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED, 0);
 
 	eloop_cancel_timeout(wpa_driver_wext_scan_timeout, drv, drv->ctx);
+	eloop_cancel_timeout(wpa_driver_wext_send_rfkill, drv, drv->ctx);
 
 	/*
 	 * Clear possibly configured driver parameters in order to make it

@@ -5057,6 +5057,9 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 				  struct wpa_driver_associate_params *params,
 				  struct nl_msg *msg)
 {
+	if (nla_put_flag(msg, NL80211_ATTR_IFACE_SOCKET_OWNER))
+		return -1;
+
 	if (params->bssid) {
 		wpa_printf(MSG_DEBUG, "  * bssid=" MACSTR,
 			   MAC2STR(params->bssid));

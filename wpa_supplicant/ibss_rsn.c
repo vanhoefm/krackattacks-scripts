@@ -838,6 +838,18 @@ static void ibss_rsn_handle_auth_1_of_2(struct ibss_rsn *ibss_rsn,
 		   MAC2STR(addr));
 
 	if (peer &&
+	    peer->authentication_status & (IBSS_RSN_SET_PTK_SUPP |
+					   IBSS_RSN_SET_PTK_AUTH)) {
+		/* Clear the TK for this pair to allow recovery from the case
+		 * where the peer STA has restarted and lost its key while we
+		 * still have a pairwise key configured. */
+		wpa_printf(MSG_DEBUG, "RSN: Clear pairwise key for peer "
+			   MACSTR, MAC2STR(addr));
+		wpa_drv_set_key(ibss_rsn->wpa_s, WPA_ALG_NONE, addr, 0, 0,
+				NULL, 0, NULL, 0);
+	}
+
+	if (peer &&
 	    peer->authentication_status & IBSS_RSN_AUTH_EAPOL_BY_PEER) {
 		if (peer->own_auth_tx.sec) {
 			struct os_reltime now, diff;

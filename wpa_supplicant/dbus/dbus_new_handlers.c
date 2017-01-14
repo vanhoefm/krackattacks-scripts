@@ -2492,6 +2492,28 @@ dbus_bool_t wpas_dbus_getter_capabilities(
 			goto nomem;
 	}
 
+	if (!wpa_dbus_dict_begin_string_array(&iter_dict, "GroupMgmt",
+					      &iter_dict_entry,
+					      &iter_dict_val,
+					      &iter_array) ||
+	    (res == 0 && (capa.enc & WPA_DRIVER_CAPA_ENC_BIP) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "aes-128-cmac")) ||
+	    (res == 0 && (capa.enc & WPA_DRIVER_CAPA_ENC_BIP_GMAC_128) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "bip-gmac-128")) ||
+	    (res == 0 && (capa.enc & WPA_DRIVER_CAPA_ENC_BIP_GMAC_256) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "bip-gmac-256")) ||
+	    (res == 0 && (capa.enc & WPA_DRIVER_CAPA_ENC_BIP_CMAC_256) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "bip-cmac-256")) ||
+	    !wpa_dbus_dict_end_string_array(&iter_dict,
+					    &iter_dict_entry,
+					    &iter_dict_val,
+					    &iter_array))
+		goto nomem;
+
 	/***** key management */
 	if (res < 0) {
 		const char *args[] = {

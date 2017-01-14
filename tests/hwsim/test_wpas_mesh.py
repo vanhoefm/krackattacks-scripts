@@ -1340,6 +1340,94 @@ def test_mesh_pmksa_caching_oom(dev, apdev):
             raise Exception("MESH_PEER_ADD failed (2)")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
+def test_wpas_mesh_pmksa_caching_ext(dev, apdev):
+    """Secure mesh network and PMKSA caching and external storage"""
+    check_mesh_support(dev[0], secure=True)
+    dev[0].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups ")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    pmksa0 = dev[0].get_pmksa(addr1)
+    pmksa1 = dev[1].get_pmksa(addr0)
+    if pmksa0 is None or pmksa1 is None:
+        raise Exception("No PMKSA cache entry created")
+    if pmksa0['pmkid'] != pmksa1['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries")
+
+    res1 = dev[1].request("MESH_PMKSA_GET any")
+    res2 = dev[1].request("MESH_PMKSA_GET " + addr0)
+    logger.info("MESH_PMKSA_GET: " + res1)
+    if "UNKNOWN COMMAND" in res1:
+        raise HwsimSkip("MESH_PMKSA_GET not supported in the build")
+    logger.info("MESH_PMKSA_GET: " + res2)
+    if pmksa0['pmkid'] not in res1:
+        raise Exception("PMKID not included in PMKSA entry")
+    if res1 != res2:
+        raise Exception("Unexpected difference in MESH_PMKSA_GET output")
+
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    res = dev[1].get_pmksa(addr0)
+    if res is not None:
+        raise Exception("Unexpected PMKSA cache entry remaining")
+
+    if "OK" not in dev[1].request("MESH_PMKSA_ADD " + res2):
+        raise Exception("MESH_PMKSA_ADD failed")
+    dev[1].mesh_group_add(id)
+    check_mesh_group_added(dev[1])
+    check_mesh_peer_connected(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    pmksa1b = dev[1].get_pmksa(addr0)
+    if pmksa1b is None:
+        raise Exception("No PMKSA cache entry created after external storage restore")
+    if pmksa1['pmkid'] != pmksa1b['pmkid']:
+        raise Exception("PMKID mismatch in PMKSA cache entries after external storage restore")
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
+    res = dev[1].request("MESH_PMKSA_GET foo")
+    if "FAIL" not in res:
+        raise Exception("Invalid MESH_PMKSA_GET accepted")
+
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[1].request("REMOVE_NETWORK all")
+    res = dev[1].request("MESH_PMKSA_GET any")
+    if "FAIL" not in res:
+        raise Exception("MESH_PMKSA_GET accepted when not in mesh")
+
+    tests = [ "foo",
+              "02:02:02:02:02:02",
+              "02:02:02:02:02:02 q",
+              "02:02:02:02:02:02 c3d51a7ccfca0c6d5287291a7169d79b",
+              "02:02:02:02:02:02 c3d51a7ccfca0c6d5287291a7169d79b q",
+              "02:02:02:02:02:02 c3d51a7ccfca0c6d5287291a7169d79b 1bed4fa22ece7997ca1bdc8b829019fe63acac91cba3405522c24c91f7cfb49f",
+              "02:02:02:02:02:02 c3d51a7ccfca0c6d5287291a7169d79b 1bed4fa22ece7997ca1bdc8b829019fe63acac91cba3405522c24c91f7cfb49f q" ]
+    for t in tests:
+        if "FAIL" not in dev[1].request("MESH_PMKSA_ADD " + t):
+            raise Exception("Invalid MESH_PMKSA_ADD accepted")
+
 def test_mesh_oom(dev, apdev):
     """Mesh network setup failing due to OOM"""
     check_mesh_support(dev[0], secure=True)

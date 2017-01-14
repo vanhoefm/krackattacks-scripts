@@ -2210,6 +2210,49 @@ def _test_dbus_apscan(dev, apdev):
     if_obj.Set(WPAS_DBUS_IFACE, "ApScan", dbus.UInt32(1),
                dbus_interface=dbus.PROPERTIES_IFACE)
 
+def test_dbus_pmf(dev, apdev):
+    """D-Bus Get/Set Pmf"""
+    try:
+        _test_dbus_pmf(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_dbus_pmf(dev, apdev):
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    dev[0].set("pmf", "0")
+    res = if_obj.Get(WPAS_DBUS_IFACE, "Pmf",
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+    if res != 0:
+        raise Exception("Unexpected initial Pmf value: %d" % res)
+
+    for i in range(3):
+        if_obj.Set(WPAS_DBUS_IFACE, "Pmf", dbus.UInt32(i),
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+        res = if_obj.Get(WPAS_DBUS_IFACE, "Pmf",
+                         dbus_interface=dbus.PROPERTIES_IFACE)
+        if res != i:
+            raise Exception("Unexpected Pmf value %d (expected %d)" % (res, i))
+
+    try:
+        if_obj.Set(WPAS_DBUS_IFACE, "Pmf", dbus.Int16(-1),
+                   dbus_interface=dbus.PROPERTIES_IFACE)
+        raise Exception("Invalid Set(Pmf,-1) accepted")
+    except dbus.exceptions.DBusException, e:
+        if "Error.Failed: wrong property type" not in str(e):
+            raise Exception("Unexpected error message for invalid Set(Pmf,-1): " + str(e))
+
+    try:
+        if_obj.Set(WPAS_DBUS_IFACE, "Pmf", dbus.UInt32(123),
+                   dbus_interface=dbus.PROPERTIES_IFACE)
+        raise Exception("Invalid Set(Pmf,123) accepted")
+    except dbus.exceptions.DBusException, e:
+        if "Error.Failed: Pmf must be 0, 1, or 2" not in str(e):
+            raise Exception("Unexpected error message for invalid Set(Pmf,123): " + str(e))
+
+    if_obj.Set(WPAS_DBUS_IFACE, "Pmf", dbus.UInt32(1),
+               dbus_interface=dbus.PROPERTIES_IFACE)
+
 def test_dbus_fastreauth(dev, apdev):
     """D-Bus Get/Set FastReauth"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

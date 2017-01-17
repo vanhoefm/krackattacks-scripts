@@ -329,6 +329,8 @@ static void ieee80211n_check_scan(struct hostapd_iface *iface)
 	res = ieee80211n_allowed_ht40_channel_pair(iface);
 	if (!res) {
 		iface->conf->secondary_channel = 0;
+		iface->conf->vht_oper_centr_freq_seg0_idx = 0;
+		iface->conf->vht_oper_centr_freq_seg1_idx = 0;
 		res = 1;
 		wpa_printf(MSG_INFO, "Fallback to 20 MHz");
 	}

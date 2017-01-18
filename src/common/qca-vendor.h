@@ -260,6 +260,13 @@ enum qca_radiotap_vendor_ids {
  *	requisite information leading to a power save failure. The information
  *	carried as part of this event is represented by the
  *	enum qca_attr_chip_power_save_failure attributes.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET: Start/Stop the NUD statistics
+ *	collection. Uses attributes defined in enum qca_attr_nud_stats_set.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET: Get the NUD statistics. These
+ *	statistics are represented by the enum qca_attr_nud_stats_get
+ *	attributes.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -383,6 +390,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS = 146,
 	QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS = 147,
 	QCA_NL80211_VENDOR_SUBCMD_CHIP_PWRSAVE_FAILURE = 148,
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET = 149,
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
 };
 
 
@@ -3234,6 +3243,65 @@ enum qca_attr_chip_power_save_failure {
         QCA_ATTR_CHIP_POWER_SAVE_FAILURE_LAST,
         QCA_ATTR_CHIP_POWER_SAVE_FAILURE_MAX =
                 QCA_ATTR_CHIP_POWER_SAVE_FAILURE_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_attr_nud_stats_set: Attributes to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET. This carries the requisite
+ * information to start/stop the NUD statistics collection.
+ */
+enum qca_attr_nud_stats_set {
+	QCA_ATTR_NUD_STATS_SET_INVALID = 0,
+
+	/* Flag to start/stop the NUD statistics collection.
+	 * Start - If included, Stop - If not included
+	 */
+	QCA_ATTR_NUD_STATS_SET_START = 1,
+	/* IPv4 address of the default gateway (in network byte order) */
+	QCA_ATTR_NUD_STATS_GW_IPV4 = 2,
+
+	/* keep last */
+	QCA_ATTR_NUD_STATS_SET_LAST,
+	QCA_ATTR_NUD_STATS_SET_MAX =
+		QCA_ATTR_NUD_STATS_SET_LAST - 1,
+};
+
+/**
+ * qca_attr_nud_stats_get: Attributes to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET. This carries the requisite
+ * NUD statistics collected when queried.
+ */
+enum qca_attr_nud_stats_get {
+	QCA_ATTR_NUD_STATS_GET_INVALID = 0,
+	/* ARP Request count from netdev */
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV = 1,
+	/* ARP Request count sent to lower MAC from upper MAC */
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC = 2,
+	/* ARP Request count received by lower MAC from upper MAC */
+	QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC = 3,
+	/* ARP Request count successfully transmitted by the device */
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS = 4,
+	/* ARP Response count received by lower MAC */
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC = 5,
+	/* ARP Response count received by upper MAC */
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC = 6,
+	/* ARP Response count delivered to netdev */
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV = 7,
+	/* ARP Response count delivered to netdev */
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP = 8,
+	/* Flag indicating if the station's link to the AP is active.
+	 * Active Link - If included, Inactive link - If not included
+	 */
+	QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE= 9,
+	/* Flag indicating if there is any duplicate address detected (DAD).
+	 * Yes - If detected, No - If not detected.
+	 */
+	QCA_ATTR_NUD_STATS_IS_DAD = 9,
+
+	/* keep last */
+	QCA_ATTR_NUD_STATS_GET_LAST,
+	QCA_ATTR_NUD_STATS_GET_MAX =
+		QCA_ATTR_NUD_STATS_GET_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

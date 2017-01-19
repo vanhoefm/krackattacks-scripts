@@ -255,6 +255,11 @@ enum qca_radiotap_vendor_ids {
  *	User space entity uses the same interface to inform the host driver with
  *	selected channels after the ACS operation using the attributes defined
  *	by enum qca_wlan_vendor_attr_external_acs_channels.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_CHIP_PWRSAVE_FAILURE: Vendor event carrying the
+ *	requisite information leading to a power save failure. The information
+ *	carried as part of this event is represented by the
+ *	enum qca_attr_chip_power_save_failure attributes.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -377,6 +382,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN = 145,
 	QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS = 146,
 	QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS = 147,
+	QCA_NL80211_VENDOR_SUBCMD_CHIP_PWRSAVE_FAILURE = 148,
 };
 
 
@@ -3199,6 +3205,35 @@ enum qca_wlan_vendor_attr_external_acs_channels {
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_LAST,
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_MAX =
 		QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_CHANNEL_LAST - 1
+};
+
+enum qca_chip_power_save_failure_reason {
+	/* Indicates if the reason for the failure is due to a protocol
+	 * layer/module.
+	 */
+        QCA_CHIP_POWER_SAVE_FAILURE_REASON_PROTOCOL = 0,
+	/* Indicates if the reason for the failure is due to a hardware issue.
+	 */
+        QCA_CHIP_POWER_SAVE_FAILURE_REASON_HARDWARE = 1,
+};
+
+/**
+ * qca_attr_chip_power_save_failure: Attributes to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_CHIP_PWRSAVE_FAILURE. This carries the requisite
+ * information leading to the power save failure.
+ */
+enum qca_attr_chip_power_save_failure {
+        QCA_ATTR_CHIP_POWER_SAVE_FAILURE_INVALID = 0,
+        /* Reason to cause the power save failure.
+	 * These reasons are represented by
+	 * enum qca_chip_power_save_failure_reason.
+	 */
+        QCA_ATTR_CHIP_POWER_SAVE_FAILURE_REASON = 1,
+
+        /* keep last */
+        QCA_ATTR_CHIP_POWER_SAVE_FAILURE_LAST,
+        QCA_ATTR_CHIP_POWER_SAVE_FAILURE_MAX =
+                QCA_ATTR_CHIP_POWER_SAVE_FAILURE_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

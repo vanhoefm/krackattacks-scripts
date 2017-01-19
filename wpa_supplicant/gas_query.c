@@ -407,6 +407,7 @@ static void gas_query_rx_initial(struct gas_query *gas,
 	}
 
 	if (comeback_delay) {
+		eloop_cancel_timeout(gas_query_timeout, gas, query);
 		query->wait_comeback = 1;
 		gas_query_tx_comeback_req_delay(gas, query, comeback_delay);
 		return;

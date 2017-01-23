@@ -2585,7 +2585,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		struct os_reltime now, age;
 		os_get_reltime(&now);
 		os_reltime_sub(&now, &wpa_s->pending_eapol_rx_time, &age);
-		if (age.sec == 0 && age.usec < 100000 &&
+		if (age.sec == 0 && age.usec < 200000 &&
 		    os_memcmp(wpa_s->pending_eapol_rx_src, bssid, ETH_ALEN) ==
 		    0) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Process pending EAPOL "

@@ -108,6 +108,10 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 			    module_str ? module_str : "",
 			    module_str ? ": " : "", txt);
 
+#ifdef CONFIG_DEBUG_SYSLOG
+	if (wpa_debug_syslog)
+		conf_stdout = 0;
+#endif /* CONFIG_DEBUG_SYSLOG */
 	if ((conf_stdout & module) && level >= conf_stdout_level) {
 		wpa_debug_print_timestamp();
 		wpa_printf(MSG_INFO, "%s", format);
@@ -484,6 +488,9 @@ static void usage(void)
 		"        (records all messages regardless of debug verbosity)\n"
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
 		"   -i   list of interface names to use\n"
+#ifdef CONFIG_DEBUG_SYSLOG
+		"   -s   log output to syslog instead of stdout\n"
+#endif /* CONFIG_DEBUG_SYSLOG */
 		"   -S   start all the interfaces synchronously\n"
 		"   -t   include timestamps in some debug messages\n"
 		"   -v   show hostapd version\n");
@@ -661,7 +668,7 @@ int main(int argc, char *argv[])
 	dl_list_init(&interfaces.global_ctrl_dst);
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bde:f:hi:KP:STtu:vg:G:");
+		c = getopt(argc, argv, "b:Bde:f:hi:KP:sSTtu:vg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -718,6 +725,11 @@ int main(int argc, char *argv[])
 			bss_config = tmp_bss;
 			bss_config[num_bss_configs++] = optarg;
 			break;
+#ifdef CONFIG_DEBUG_SYSLOG
+		case 's':
+			wpa_debug_syslog = 1;
+			break;
+#endif /* CONFIG_DEBUG_SYSLOG */
 		case 'S':
 			start_ifaces_in_sync = 1;
 			break;
@@ -746,6 +758,10 @@ int main(int argc, char *argv[])
 		wpa_debug_open_file(log_file);
 	else
 		wpa_debug_setup_stdout();
+#ifdef CONFIG_DEBUG_SYSLOG
+	if (wpa_debug_syslog)
+		wpa_debug_open_syslog();
+#endif /* CONFIG_DEBUG_SYSLOG */
 #ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (enable_trace_dbg) {
 		int tret = wpa_debug_open_linux_tracing();
@@ -882,6 +898,7 @@ int main(int argc, char *argv[])
 	hostapd_global_deinit(pid_file, interfaces.eloop_initialized);
 	os_free(pid_file);
 
+	wpa_debug_close_syslog();
 	if (log_file)
 		wpa_debug_close_file();
 	wpa_debug_close_linux_tracing();

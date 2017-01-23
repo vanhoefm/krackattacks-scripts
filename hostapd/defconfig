@@ -166,6 +166,9 @@ CONFIG_IPV6=y
 # Disabled by default.
 #CONFIG_DEBUG_FILE=y
 
+# Send debug messages to syslog instead of stdout
+#CONFIG_DEBUG_SYSLOG=y
+
 # Add support for sending all debug messages (regardless of debug verbosity)
 # to the Linux kernel tracing facility. This helps debug the entire stack by
 # making it easy to record everything happening from the driver up into the

@@ -287,8 +287,15 @@ def test_gas_fragment_with_comeback_delay_mcc(dev, apdev):
 
 def test_gas_comeback_delay(dev, apdev):
     """GAS comeback delay"""
+    run_gas_comeback_delay(dev, apdev, 500)
+
+def test_gas_comeback_delay_long(dev, apdev):
+    """GAS long comeback delay"""
+    run_gas_comeback_delay(dev, apdev, 2500)
+
+def run_gas_comeback_delay(dev, apdev, delay):
     hapd = start_ap(apdev[0])
-    hapd.set("gas_comeback_delay", "500")
+    hapd.set("gas_comeback_delay", str(delay))
 
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     dev[0].request("FETCH_ANQP")

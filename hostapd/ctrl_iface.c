@@ -1070,7 +1070,9 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 				  nei_pos > nei_rep ? nei_rep : NULL,
 				  nei_pos - nei_rep, mbo_len ? mbo : NULL,
 				  mbo_len);
+#ifdef CONFIG_MBO
 fail:
+#endif /* CONFIG_MBO */
 	os_free(url);
 	return ret;
 }

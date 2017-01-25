@@ -156,10 +156,8 @@ void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	wpa_printf(MSG_DEBUG, "nl80211: Scan timeout - try to abort it");
 #ifdef CONFIG_DRIVER_NL80211_QCA
 	if (drv->vendor_scan_cookie &&
-	    nl80211_abort_vendor_scan(drv, drv->vendor_scan_cookie) == 0) {
-		drv->vendor_scan_cookie = 0;
+	    nl80211_abort_vendor_scan(drv, drv->vendor_scan_cookie) == 0)
 		return;
-	}
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 	if (!drv->vendor_scan_cookie &&
 	    nl80211_abort_scan(drv->first_bss) == 0)

@@ -2282,6 +2282,8 @@ static void nl80211_mgmt_unsubscribe(struct i802_bss *bss, const char *reason)
 	wpa_printf(MSG_DEBUG, "nl80211: Unsubscribe mgmt frames handle %p "
 		   "(%s)", bss->nl_mgmt, reason);
 	nl80211_destroy_eloop_handle(&bss->nl_mgmt);
+
+	nl80211_put_wiphy_data_ap(bss);
 }
 
 

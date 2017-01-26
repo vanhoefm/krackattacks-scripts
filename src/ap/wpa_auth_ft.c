@@ -33,21 +33,21 @@ static int wpa_ft_send_rrb_auth_resp(struct wpa_state_machine *sm,
 static int wpa_ft_rrb_send(struct wpa_authenticator *wpa_auth, const u8 *dst,
 			   const u8 *data, size_t data_len)
 {
-	if (wpa_auth->cb.send_ether == NULL)
+	if (wpa_auth->cb->send_ether == NULL)
 		return -1;
 	wpa_printf(MSG_DEBUG, "FT: RRB send to " MACSTR, MAC2STR(dst));
-	return wpa_auth->cb.send_ether(wpa_auth->cb.ctx, dst, ETH_P_RRB,
-				       data, data_len);
+	return wpa_auth->cb->send_ether(wpa_auth->cb_ctx, dst, ETH_P_RRB,
+					data, data_len);
 }
 
 
 static int wpa_ft_action_send(struct wpa_authenticator *wpa_auth,
 			      const u8 *dst, const u8 *data, size_t data_len)
 {
-	if (wpa_auth->cb.send_ft_action == NULL)
+	if (wpa_auth->cb->send_ft_action == NULL)
 		return -1;
-	return wpa_auth->cb.send_ft_action(wpa_auth->cb.ctx, dst,
-					   data, data_len);
+	return wpa_auth->cb->send_ft_action(wpa_auth->cb_ctx, dst,
+					    data, data_len);
 }
 
 
@@ -55,19 +55,19 @@ static const u8 * wpa_ft_get_psk(struct wpa_authenticator *wpa_auth,
 				 const u8 *addr, const u8 *p2p_dev_addr,
 				 const u8 *prev_psk)
 {
-	if (wpa_auth->cb.get_psk == NULL)
+	if (wpa_auth->cb->get_psk == NULL)
 		return NULL;
-	return wpa_auth->cb.get_psk(wpa_auth->cb.ctx, addr, p2p_dev_addr,
-				    prev_psk);
+	return wpa_auth->cb->get_psk(wpa_auth->cb_ctx, addr, p2p_dev_addr,
+				     prev_psk);
 }
 
 
 static struct wpa_state_machine *
 wpa_ft_add_sta(struct wpa_authenticator *wpa_auth, const u8 *sta_addr)
 {
-	if (wpa_auth->cb.add_sta == NULL)
+	if (wpa_auth->cb->add_sta == NULL)
 		return NULL;
-	return wpa_auth->cb.add_sta(wpa_auth->cb.ctx, sta_addr);
+	return wpa_auth->cb->add_sta(wpa_auth->cb_ctx, sta_addr);
 }
 
 
@@ -75,12 +75,12 @@ static int wpa_ft_add_tspec(struct wpa_authenticator *wpa_auth,
 			    const u8 *sta_addr,
 			    u8 *tspec_ie, size_t tspec_ielen)
 {
-	if (wpa_auth->cb.add_tspec == NULL) {
+	if (wpa_auth->cb->add_tspec == NULL) {
 		wpa_printf(MSG_DEBUG, "FT: add_tspec is not initialized");
 		return -1;
 	}
-	return wpa_auth->cb.add_tspec(wpa_auth->cb.ctx, sta_addr, tspec_ie,
-				      tspec_ielen);
+	return wpa_auth->cb->add_tspec(wpa_auth->cb_ctx, sta_addr, tspec_ie,
+				       tspec_ielen);
 }
 
 
@@ -418,9 +418,9 @@ int wpa_auth_derive_ptk_ft(struct wpa_state_machine *sm, const u8 *pmk,
 static inline int wpa_auth_get_seqnum(struct wpa_authenticator *wpa_auth,
 				      const u8 *addr, int idx, u8 *seq)
 {
-	if (wpa_auth->cb.get_seqnum == NULL)
+	if (wpa_auth->cb->get_seqnum == NULL)
 		return -1;
-	return wpa_auth->cb.get_seqnum(wpa_auth->cb.ctx, addr, idx, seq);
+	return wpa_auth->cb->get_seqnum(wpa_auth->cb_ctx, addr, idx, seq);
 }
 
 
@@ -773,10 +773,10 @@ static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 				   enum wpa_alg alg, const u8 *addr, int idx,
 				   u8 *key, size_t key_len)
 {
-	if (wpa_auth->cb.set_key == NULL)
+	if (wpa_auth->cb->set_key == NULL)
 		return -1;
-	return wpa_auth->cb.set_key(wpa_auth->cb.ctx, vlan_id, alg, addr, idx,
-				    key, key_len);
+	return wpa_auth->cb->set_key(wpa_auth->cb_ctx, vlan_id, alg, addr, idx,
+				     key, key_len);
 }
 
 

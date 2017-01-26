@@ -408,7 +408,15 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 				    const u8 *own_addr, struct wpa_ssid *ssid)
 {
 	struct wpa_auth_config conf;
-	struct wpa_auth_callbacks cb;
+	static const struct wpa_auth_callbacks cb = {
+		.logger = auth_logger,
+		.set_eapol = auth_set_eapol,
+		.send_eapol = auth_send_eapol,
+		.get_psk = auth_get_psk,
+		.set_key = auth_set_key,
+		.for_each_sta = auth_for_each_sta,
+		.disconnect = ibss_rsn_disconnect,
+	};
 
 	wpa_printf(MSG_DEBUG, "AUTH: Initializing group state machine");
 
@@ -421,17 +429,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	conf.eapol_version = 2;
 	conf.wpa_group_rekey = ssid->group_rekey ? ssid->group_rekey : 600;
 
-	os_memset(&cb, 0, sizeof(cb));
-	cb.ctx = ibss_rsn;
-	cb.logger = auth_logger;
-	cb.set_eapol = auth_set_eapol;
-	cb.send_eapol = auth_send_eapol;
-	cb.get_psk = auth_get_psk;
-	cb.set_key = auth_set_key;
-	cb.for_each_sta = auth_for_each_sta;
-	cb.disconnect = ibss_rsn_disconnect;
-
-	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb);
+	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb, ibss_rsn);
 	if (ibss_rsn->auth_group == NULL) {
 		wpa_printf(MSG_DEBUG, "AUTH: wpa_init() failed");
 		return -1;

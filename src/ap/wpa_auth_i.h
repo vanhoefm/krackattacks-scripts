@@ -203,7 +203,8 @@ struct wpa_authenticator {
 	struct wpa_stsl_negotiation *stsl_negotiations;
 
 	struct wpa_auth_config conf;
-	struct wpa_auth_callbacks cb;
+	const struct wpa_auth_callbacks *cb;
+	void *cb_ctx;
 
 	u8 *wpa_ie;
 	size_t wpa_ie_len;

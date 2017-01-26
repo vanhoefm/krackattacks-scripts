@@ -595,7 +595,27 @@ static int hostapd_wpa_auth_add_tspec(void *ctx, const u8 *sta_addr,
 int hostapd_setup_wpa(struct hostapd_data *hapd)
 {
 	struct wpa_auth_config _conf;
-	struct wpa_auth_callbacks cb;
+	static const struct wpa_auth_callbacks cb = {
+		.logger = hostapd_wpa_auth_logger,
+		.disconnect = hostapd_wpa_auth_disconnect,
+		.mic_failure_report = hostapd_wpa_auth_mic_failure_report,
+		.psk_failure_report = hostapd_wpa_auth_psk_failure_report,
+		.set_eapol = hostapd_wpa_auth_set_eapol,
+		.get_eapol = hostapd_wpa_auth_get_eapol,
+		.get_psk = hostapd_wpa_auth_get_psk,
+		.get_msk = hostapd_wpa_auth_get_msk,
+		.set_key = hostapd_wpa_auth_set_key,
+		.get_seqnum = hostapd_wpa_auth_get_seqnum,
+		.send_eapol = hostapd_wpa_auth_send_eapol,
+		.for_each_sta = hostapd_wpa_auth_for_each_sta,
+		.for_each_auth = hostapd_wpa_auth_for_each_auth,
+		.send_ether = hostapd_wpa_auth_send_ether,
+#ifdef CONFIG_IEEE80211R_AP
+		.send_ft_action = hostapd_wpa_auth_send_ft_action,
+		.add_sta = hostapd_wpa_auth_add_sta,
+		.add_tspec = hostapd_wpa_auth_add_tspec,
+#endif /* CONFIG_IEEE80211R_AP */
+	};
 	const u8 *wpa_ie;
 	size_t wpa_ie_len;
 
@@ -604,28 +624,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		_conf.tx_status = 1;
 	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_MLME)
 		_conf.ap_mlme = 1;
-	os_memset(&cb, 0, sizeof(cb));
-	cb.ctx = hapd;
-	cb.logger = hostapd_wpa_auth_logger;
-	cb.disconnect = hostapd_wpa_auth_disconnect;
-	cb.mic_failure_report = hostapd_wpa_auth_mic_failure_report;
-	cb.psk_failure_report = hostapd_wpa_auth_psk_failure_report;
-	cb.set_eapol = hostapd_wpa_auth_set_eapol;
-	cb.get_eapol = hostapd_wpa_auth_get_eapol;
-	cb.get_psk = hostapd_wpa_auth_get_psk;
-	cb.get_msk = hostapd_wpa_auth_get_msk;
-	cb.set_key = hostapd_wpa_auth_set_key;
-	cb.get_seqnum = hostapd_wpa_auth_get_seqnum;
-	cb.send_eapol = hostapd_wpa_auth_send_eapol;
-	cb.for_each_sta = hostapd_wpa_auth_for_each_sta;
-	cb.for_each_auth = hostapd_wpa_auth_for_each_auth;
-	cb.send_ether = hostapd_wpa_auth_send_ether;
-#ifdef CONFIG_IEEE80211R_AP
-	cb.send_ft_action = hostapd_wpa_auth_send_ft_action;
-	cb.add_sta = hostapd_wpa_auth_add_sta;
-	cb.add_tspec = hostapd_wpa_auth_add_tspec;
-#endif /* CONFIG_IEEE80211R_AP */
-	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb);
+	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb, hapd);
 	if (hapd->wpa_auth == NULL) {
 		wpa_printf(MSG_ERROR, "WPA initialization failed.");
 		return -1;

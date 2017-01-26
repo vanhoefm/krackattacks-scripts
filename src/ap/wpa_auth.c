@@ -75,8 +75,8 @@ static const int dot11RSNAConfigSATimeout = 60;
 static inline int wpa_auth_mic_failure_report(
 	struct wpa_authenticator *wpa_auth, const u8 *addr)
 {
-	if (wpa_auth->cb.mic_failure_report)
-		return wpa_auth->cb.mic_failure_report(wpa_auth->cb.ctx, addr);
+	if (wpa_auth->cb->mic_failure_report)
+		return wpa_auth->cb->mic_failure_report(wpa_auth->cb_ctx, addr);
 	return 0;
 }
 
@@ -84,8 +84,8 @@ static inline int wpa_auth_mic_failure_report(
 static inline void wpa_auth_psk_failure_report(
 	struct wpa_authenticator *wpa_auth, const u8 *addr)
 {
-	if (wpa_auth->cb.psk_failure_report)
-		wpa_auth->cb.psk_failure_report(wpa_auth->cb.ctx, addr);
+	if (wpa_auth->cb->psk_failure_report)
+		wpa_auth->cb->psk_failure_report(wpa_auth->cb_ctx, addr);
 }
 
 
@@ -93,17 +93,17 @@ static inline void wpa_auth_set_eapol(struct wpa_authenticator *wpa_auth,
 				      const u8 *addr, wpa_eapol_variable var,
 				      int value)
 {
-	if (wpa_auth->cb.set_eapol)
-		wpa_auth->cb.set_eapol(wpa_auth->cb.ctx, addr, var, value);
+	if (wpa_auth->cb->set_eapol)
+		wpa_auth->cb->set_eapol(wpa_auth->cb_ctx, addr, var, value);
 }
 
 
 static inline int wpa_auth_get_eapol(struct wpa_authenticator *wpa_auth,
 				     const u8 *addr, wpa_eapol_variable var)
 {
-	if (wpa_auth->cb.get_eapol == NULL)
+	if (wpa_auth->cb->get_eapol == NULL)
 		return -1;
-	return wpa_auth->cb.get_eapol(wpa_auth->cb.ctx, addr, var);
+	return wpa_auth->cb->get_eapol(wpa_auth->cb_ctx, addr, var);
 }
 
 
@@ -112,19 +112,19 @@ static inline const u8 * wpa_auth_get_psk(struct wpa_authenticator *wpa_auth,
 					  const u8 *p2p_dev_addr,
 					  const u8 *prev_psk)
 {
-	if (wpa_auth->cb.get_psk == NULL)
+	if (wpa_auth->cb->get_psk == NULL)
 		return NULL;
-	return wpa_auth->cb.get_psk(wpa_auth->cb.ctx, addr, p2p_dev_addr,
-				    prev_psk);
+	return wpa_auth->cb->get_psk(wpa_auth->cb_ctx, addr, p2p_dev_addr,
+				     prev_psk);
 }
 
 
 static inline int wpa_auth_get_msk(struct wpa_authenticator *wpa_auth,
 				   const u8 *addr, u8 *msk, size_t *len)
 {
-	if (wpa_auth->cb.get_msk == NULL)
+	if (wpa_auth->cb->get_msk == NULL)
 		return -1;
-	return wpa_auth->cb.get_msk(wpa_auth->cb.ctx, addr, msk, len);
+	return wpa_auth->cb->get_msk(wpa_auth->cb_ctx, addr, msk, len);
 }
 
 
@@ -133,19 +133,19 @@ static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 				   enum wpa_alg alg, const u8 *addr, int idx,
 				   u8 *key, size_t key_len)
 {
-	if (wpa_auth->cb.set_key == NULL)
+	if (wpa_auth->cb->set_key == NULL)
 		return -1;
-	return wpa_auth->cb.set_key(wpa_auth->cb.ctx, vlan_id, alg, addr, idx,
-				    key, key_len);
+	return wpa_auth->cb->set_key(wpa_auth->cb_ctx, vlan_id, alg, addr, idx,
+				     key, key_len);
 }
 
 
 static inline int wpa_auth_get_seqnum(struct wpa_authenticator *wpa_auth,
 				      const u8 *addr, int idx, u8 *seq)
 {
-	if (wpa_auth->cb.get_seqnum == NULL)
+	if (wpa_auth->cb->get_seqnum == NULL)
 		return -1;
-	return wpa_auth->cb.get_seqnum(wpa_auth->cb.ctx, addr, idx, seq);
+	return wpa_auth->cb->get_seqnum(wpa_auth->cb_ctx, addr, idx, seq);
 }
 
 
@@ -153,10 +153,10 @@ static inline int
 wpa_auth_send_eapol(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		    const u8 *data, size_t data_len, int encrypt)
 {
-	if (wpa_auth->cb.send_eapol == NULL)
+	if (wpa_auth->cb->send_eapol == NULL)
 		return -1;
-	return wpa_auth->cb.send_eapol(wpa_auth->cb.ctx, addr, data, data_len,
-				       encrypt);
+	return wpa_auth->cb->send_eapol(wpa_auth->cb_ctx, addr, data, data_len,
+					encrypt);
 }
 
 
@@ -164,9 +164,9 @@ wpa_auth_send_eapol(struct wpa_authenticator *wpa_auth, const u8 *addr,
 static inline int wpa_auth_start_ampe(struct wpa_authenticator *wpa_auth,
 				      const u8 *addr)
 {
-	if (wpa_auth->cb.start_ampe == NULL)
+	if (wpa_auth->cb->start_ampe == NULL)
 		return -1;
-	return wpa_auth->cb.start_ampe(wpa_auth->cb.ctx, addr);
+	return wpa_auth->cb->start_ampe(wpa_auth->cb_ctx, addr);
 }
 #endif /* CONFIG_MESH */
 
@@ -175,9 +175,9 @@ int wpa_auth_for_each_sta(struct wpa_authenticator *wpa_auth,
 			  int (*cb)(struct wpa_state_machine *sm, void *ctx),
 			  void *cb_ctx)
 {
-	if (wpa_auth->cb.for_each_sta == NULL)
+	if (wpa_auth->cb->for_each_sta == NULL)
 		return 0;
-	return wpa_auth->cb.for_each_sta(wpa_auth->cb.ctx, cb, cb_ctx);
+	return wpa_auth->cb->for_each_sta(wpa_auth->cb_ctx, cb, cb_ctx);
 }
 
 
@@ -185,18 +185,18 @@ int wpa_auth_for_each_auth(struct wpa_authenticator *wpa_auth,
 			   int (*cb)(struct wpa_authenticator *a, void *ctx),
 			   void *cb_ctx)
 {
-	if (wpa_auth->cb.for_each_auth == NULL)
+	if (wpa_auth->cb->for_each_auth == NULL)
 		return 0;
-	return wpa_auth->cb.for_each_auth(wpa_auth->cb.ctx, cb, cb_ctx);
+	return wpa_auth->cb->for_each_auth(wpa_auth->cb_ctx, cb, cb_ctx);
 }
 
 
 void wpa_auth_logger(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		     logger_level level, const char *txt)
 {
-	if (wpa_auth->cb.logger == NULL)
+	if (wpa_auth->cb->logger == NULL)
 		return;
-	wpa_auth->cb.logger(wpa_auth->cb.ctx, addr, level, txt);
+	wpa_auth->cb->logger(wpa_auth->cb_ctx, addr, level, txt);
 }
 
 
@@ -207,7 +207,7 @@ void wpa_auth_vlogger(struct wpa_authenticator *wpa_auth, const u8 *addr,
 	int maxlen;
 	va_list ap;
 
-	if (wpa_auth->cb.logger == NULL)
+	if (wpa_auth->cb->logger == NULL)
 		return;
 
 	maxlen = os_strlen(fmt) + 100;
@@ -228,11 +228,11 @@ void wpa_auth_vlogger(struct wpa_authenticator *wpa_auth, const u8 *addr,
 static void wpa_sta_disconnect(struct wpa_authenticator *wpa_auth,
 			       const u8 *addr)
 {
-	if (wpa_auth->cb.disconnect == NULL)
+	if (wpa_auth->cb->disconnect == NULL)
 		return;
 	wpa_printf(MSG_DEBUG, "wpa_sta_disconnect STA " MACSTR, MAC2STR(addr));
-	wpa_auth->cb.disconnect(wpa_auth->cb.ctx, addr,
-				WLAN_REASON_PREV_AUTH_NOT_VALID);
+	wpa_auth->cb->disconnect(wpa_auth->cb_ctx, addr,
+				 WLAN_REASON_PREV_AUTH_NOT_VALID);
 }
 
 
@@ -416,7 +416,8 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
  */
 struct wpa_authenticator * wpa_init(const u8 *addr,
 				    struct wpa_auth_config *conf,
-				    struct wpa_auth_callbacks *cb)
+				    const struct wpa_auth_callbacks *cb,
+				    void *cb_ctx)
 {
 	struct wpa_authenticator *wpa_auth;
 
@@ -425,7 +426,8 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 		return NULL;
 	os_memcpy(wpa_auth->addr, addr, ETH_ALEN);
 	os_memcpy(&wpa_auth->conf, conf, sizeof(*conf));
-	os_memcpy(&wpa_auth->cb, cb, sizeof(*cb));
+	wpa_auth->cb = cb;
+	wpa_auth->cb_ctx = cb_ctx;
 
 	if (wpa_auth_gen_wpa_ie(wpa_auth)) {
 		wpa_printf(MSG_ERROR, "Could not generate WPA IE.");
@@ -1949,7 +1951,7 @@ SM_STATE(WPA_PTK, INITPMK)
 #endif /* CONFIG_IEEE80211R_AP */
 	} else {
 		wpa_printf(MSG_DEBUG, "WPA: Could not get PMK, get_msk: %p",
-			   sm->wpa_auth->cb.get_msk);
+			   sm->wpa_auth->cb->get_msk);
 		sm->Disconnect = TRUE;
 		return;
 	}

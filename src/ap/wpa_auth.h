@@ -198,7 +198,6 @@ typedef enum {
 } wpa_eapol_variable;
 
 struct wpa_auth_callbacks {
-	void *ctx;
 	void (*logger)(void *ctx, const u8 *addr, logger_level level,
 		       const char *txt);
 	void (*disconnect)(void *ctx, const u8 *addr, u16 reason);
@@ -235,7 +234,8 @@ struct wpa_auth_callbacks {
 
 struct wpa_authenticator * wpa_init(const u8 *addr,
 				    struct wpa_auth_config *conf,
-				    struct wpa_auth_callbacks *cb);
+				    const struct wpa_auth_callbacks *cb,
+				    void *cb_ctx);
 int wpa_init_keys(struct wpa_authenticator *wpa_auth);
 void wpa_deinit(struct wpa_authenticator *wpa_auth);
 int wpa_reconfig(struct wpa_authenticator *wpa_auth,

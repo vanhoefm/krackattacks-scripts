@@ -140,7 +140,12 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 				enum mfp_options ieee80211w)
 {
 	struct wpa_auth_config conf;
-	struct wpa_auth_callbacks cb;
+	static const struct wpa_auth_callbacks cb = {
+		.logger = auth_logger,
+		.get_psk = auth_get_psk,
+		.set_key = auth_set_key,
+		.start_ampe = auth_start_ampe,
+	};
 	u8 seq[6] = {};
 
 	wpa_printf(MSG_DEBUG, "AUTH: Initializing group state machine");
@@ -159,14 +164,7 @@ static int __mesh_rsn_auth_init(struct mesh_rsn *rsn, const u8 *addr,
 		conf.group_mgmt_cipher = rsn->mgmt_group_cipher;
 #endif /* CONFIG_IEEE80211W */
 
-	os_memset(&cb, 0, sizeof(cb));
-	cb.ctx = rsn;
-	cb.logger = auth_logger;
-	cb.get_psk = auth_get_psk;
-	cb.set_key = auth_set_key;
-	cb.start_ampe = auth_start_ampe;
-
-	rsn->auth = wpa_init(addr, &conf, &cb);
+	rsn->auth = wpa_init(addr, &conf, &cb, rsn);
 	if (rsn->auth == NULL) {
 		wpa_printf(MSG_DEBUG, "AUTH: wpa_init() failed");
 		return -1;

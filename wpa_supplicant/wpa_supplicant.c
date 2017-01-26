@@ -3769,8 +3769,11 @@ static int wpa_set_htcap_mcs(struct wpa_supplicant *wpa_s,
 	wpa_msg(wpa_s, MSG_DEBUG, "set_htcap, ht_mcs -:%s:-", ht_mcs);
 
 	for (i = 0; i < IEEE80211_HT_MCS_MASK_LEN; i++) {
+		long v;
+
 		errno = 0;
-		long v = strtol(tmp, &end, 16);
+		v = strtol(tmp, &end, 16);
+
 		if (errno == 0) {
 			wpa_msg(wpa_s, MSG_DEBUG,
 				"htcap value[%i]: %ld end: %p  tmp: %p",

@@ -1201,9 +1201,10 @@ skip_ies:
 
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
+		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
+
 		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
 			   "Link Identifier");
-		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
 		wpa_tdls_linkid(sm, peer, l);
 		l->bssid[5] ^= 0x01;
 		pos += sizeof(*l);

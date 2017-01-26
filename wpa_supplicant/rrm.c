@@ -633,8 +633,8 @@ static int * wpas_beacon_request_freqs(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_get_op_chan_phy(int freq, const u8 *ies, size_t ies_len,
-			 u8 *op_class, u8 *chan, u8 *phy_type)
+static int wpas_get_op_chan_phy(int freq, const u8 *ies, size_t ies_len,
+				u8 *op_class, u8 *chan, u8 *phy_type)
 {
 	const u8 *ie;
 	int sec_chan = 0, vht = 0;

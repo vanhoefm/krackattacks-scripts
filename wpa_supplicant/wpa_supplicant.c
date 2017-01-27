@@ -3873,18 +3873,10 @@ static int wpa_set_disable_ht40(struct wpa_supplicant *wpa_s,
 				struct ieee80211_ht_capabilities *htcaps_mask,
 				int disabled)
 {
-	/* Masking these out disables HT40 */
-	le16 msk = host_to_le16(HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET |
-				HT_CAP_INFO_SHORT_GI40MHZ);
-
 	wpa_msg(wpa_s, MSG_DEBUG, "set_disable_ht40: %d", disabled);
 
-	if (disabled)
-		htcaps->ht_capabilities_info &= ~msk;
-	else
-		htcaps->ht_capabilities_info |= msk;
-
-	htcaps_mask->ht_capabilities_info |= msk;
+	set_disable_ht40(htcaps, disabled);
+	set_disable_ht40(htcaps_mask, 0);
 
 	return 0;
 }

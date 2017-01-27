@@ -453,3 +453,17 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 
 	return 0;
 }
+
+
+void set_disable_ht40(struct ieee80211_ht_capabilities *htcaps,
+		      int disabled)
+{
+	/* Masking these out disables HT40 */
+	le16 msk = host_to_le16(HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET |
+				HT_CAP_INFO_SHORT_GI40MHZ);
+
+	if (disabled)
+		htcaps->ht_capabilities_info &= ~msk;
+	else
+		htcaps->ht_capabilities_info |= msk;
+}

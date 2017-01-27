@@ -5351,7 +5351,7 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 #ifdef CONFIG_MESH
 	if (mesh_if_created) {
-		wpa_drv_if_remove(global->ifaces, WPA_IF_MESH, ifname);
+		wpa_drv_if_remove(wpa_s->parent, WPA_IF_MESH, ifname);
 		os_free(ifname);
 	}
 #endif /* CONFIG_MESH */

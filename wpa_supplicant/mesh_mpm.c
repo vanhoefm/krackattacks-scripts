@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/hw_features_common.h"
 #include "ap/hostapd.h"
 #include "ap/sta_info.h"
 #include "ap/ieee802_11.h"
@@ -646,6 +647,9 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
 	struct hostapd_data *data = wpa_s->ifmsh->bss[0];
 	struct sta_info *sta;
+#ifdef CONFIG_IEEE80211N
+	struct ieee80211_ht_operation *oper;
+#endif /* CONFIG_IEEE80211N */
 	int ret;
 
 	if (elems->mesh_config_len >= 7 &&
@@ -677,6 +681,16 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211N
 	copy_sta_ht_capab(data, sta, elems->ht_capabilities);
+
+	oper = (struct ieee80211_ht_operation *) elems->ht_operation;
+	if (oper &&
+	    !(oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH)) {
+		wpa_msg(wpa_s, MSG_DEBUG, MACSTR
+			" does not support 40 MHz bandwidth",
+			MAC2STR(sta->addr));
+		set_disable_ht40(sta->ht_capabilities, 1);
+	}
+
 	update_ht_state(data, sta);
 #endif /* CONFIG_IEEE80211N */
 

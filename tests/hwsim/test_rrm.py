@@ -23,6 +23,11 @@ def check_rrm_support(dev):
     if rrm & 0x5 != 0x5 and rrm & 0x10 != 0x10:
         raise HwsimSkip("Required RRM capabilities are not supported")
 
+def check_tx_power_support(dev):
+    rrm = int(dev.get_driver_status_field("capa.rrm_flags"), 16)
+    if rrm & 0x8 != 0x8:
+        raise HwsimSkip("Required RRM capabilities are not supported")
+
 nr="00112233445500000000510107"
 lci="01000800101298c0b512926666f6c2f1001c00004104050000c00012"
 civic="01000b0011223344556677889900998877665544332211aabbccddeeff"
@@ -1553,6 +1558,7 @@ def test_rrm_req_proto(dev, apdev):
 
 def test_rrm_link_measurement(dev, apdev):
     """Radio measurement request - link measurement"""
+    check_tx_power_support(dev[0])
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = hapd.own_addr()
@@ -1573,6 +1579,7 @@ def test_rrm_link_measurement(dev, apdev):
 
 def test_rrm_link_measurement_oom(dev, apdev):
     """Radio measurement request - link measurement OOM"""
+    check_tx_power_support(dev[0])
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = hapd.own_addr()

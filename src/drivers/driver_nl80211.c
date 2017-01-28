@@ -29,6 +29,7 @@
 #include "common/qca-vendor-attr.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/wpa_common.h"
 #include "l2_packet/l2_packet.h"
 #include "netlink.h"
 #include "linux_defines.h"
@@ -3866,9 +3867,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		   params->key_mgmt_suites);
 	num_suites = 0;
 	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X)
-		suites[num_suites++] = WLAN_AKM_SUITE_8021X;
+		suites[num_suites++] = RSN_AUTH_KEY_MGMT_UNSPEC_802_1X;
 	if (params->key_mgmt_suites & WPA_KEY_MGMT_PSK)
-		suites[num_suites++] = WLAN_AKM_SUITE_PSK;
+		suites[num_suites++] = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 	if (num_suites &&
 	    nla_put(msg, NL80211_ATTR_AKM_SUITES, num_suites * sizeof(u32),
 		    suites))
@@ -5169,39 +5170,39 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256 ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
-		int mgmt = WLAN_AKM_SUITE_PSK;
+		int mgmt = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 
 		switch (params->key_mgmt_suite) {
 		case WPA_KEY_MGMT_CCKM:
-			mgmt = WLAN_AKM_SUITE_CCKM;
+			mgmt = RSN_AUTH_KEY_MGMT_CCKM;
 			break;
 		case WPA_KEY_MGMT_IEEE8021X:
-			mgmt = WLAN_AKM_SUITE_8021X;
+			mgmt = RSN_AUTH_KEY_MGMT_UNSPEC_802_1X;
 			break;
 		case WPA_KEY_MGMT_FT_IEEE8021X:
-			mgmt = WLAN_AKM_SUITE_FT_8021X;
+			mgmt = RSN_AUTH_KEY_MGMT_FT_802_1X;
 			break;
 		case WPA_KEY_MGMT_FT_PSK:
-			mgmt = WLAN_AKM_SUITE_FT_PSK;
+			mgmt = RSN_AUTH_KEY_MGMT_FT_PSK;
 			break;
 		case WPA_KEY_MGMT_IEEE8021X_SHA256:
-			mgmt = WLAN_AKM_SUITE_8021X_SHA256;
+			mgmt = RSN_AUTH_KEY_MGMT_802_1X_SHA256;
 			break;
 		case WPA_KEY_MGMT_PSK_SHA256:
-			mgmt = WLAN_AKM_SUITE_PSK_SHA256;
+			mgmt = RSN_AUTH_KEY_MGMT_PSK_SHA256;
 			break;
 		case WPA_KEY_MGMT_OSEN:
-			mgmt = WLAN_AKM_SUITE_OSEN;
+			mgmt = RSN_AUTH_KEY_MGMT_OSEN;
 			break;
 		case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
-			mgmt = WLAN_AKM_SUITE_8021X_SUITE_B;
+			mgmt = RSN_AUTH_KEY_MGMT_802_1X_SUITE_B;
 			break;
 		case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
-			mgmt = WLAN_AKM_SUITE_8021X_SUITE_B_192;
+			mgmt = RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192;
 			break;
 		case WPA_KEY_MGMT_PSK:
 		default:
-			mgmt = WLAN_AKM_SUITE_PSK;
+			mgmt = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 			break;
 		}
 		wpa_printf(MSG_DEBUG, "  * akm=0x%x", mgmt);

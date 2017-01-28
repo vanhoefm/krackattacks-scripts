@@ -1933,6 +1933,7 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AP */
 		pos += wpa_sm_get_status(wpa_s->wpa, pos, end - pos, verbose);
 	}
+#ifdef CONFIG_SME
 #ifdef CONFIG_SAE
 	if (wpa_s->wpa_state >= WPA_ASSOCIATED &&
 #ifdef CONFIG_AP
@@ -1946,6 +1947,7 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		pos += ret;
 	}
 #endif /* CONFIG_SAE */
+#endif /* CONFIG_SME */
 	ret = os_snprintf(pos, end - pos, "wpa_state=%s\n",
 			  wpa_supplicant_state_txt(wpa_s->wpa_state));
 	if (os_snprintf_error(end - pos, ret))

@@ -2633,30 +2633,30 @@ static u32 wpa_alg_to_cipher_suite(enum wpa_alg alg, size_t key_len)
 	switch (alg) {
 	case WPA_ALG_WEP:
 		if (key_len == 5)
-			return WLAN_CIPHER_SUITE_WEP40;
-		return WLAN_CIPHER_SUITE_WEP104;
+			return RSN_CIPHER_SUITE_WEP40;
+		return RSN_CIPHER_SUITE_WEP104;
 	case WPA_ALG_TKIP:
-		return WLAN_CIPHER_SUITE_TKIP;
+		return RSN_CIPHER_SUITE_TKIP;
 	case WPA_ALG_CCMP:
-		return WLAN_CIPHER_SUITE_CCMP;
+		return RSN_CIPHER_SUITE_CCMP;
 	case WPA_ALG_GCMP:
-		return WLAN_CIPHER_SUITE_GCMP;
+		return RSN_CIPHER_SUITE_GCMP;
 	case WPA_ALG_CCMP_256:
-		return WLAN_CIPHER_SUITE_CCMP_256;
+		return RSN_CIPHER_SUITE_CCMP_256;
 	case WPA_ALG_GCMP_256:
-		return WLAN_CIPHER_SUITE_GCMP_256;
+		return RSN_CIPHER_SUITE_GCMP_256;
 	case WPA_ALG_IGTK:
-		return WLAN_CIPHER_SUITE_AES_CMAC;
+		return RSN_CIPHER_SUITE_AES_128_CMAC;
 	case WPA_ALG_BIP_GMAC_128:
-		return WLAN_CIPHER_SUITE_BIP_GMAC_128;
+		return RSN_CIPHER_SUITE_BIP_GMAC_128;
 	case WPA_ALG_BIP_GMAC_256:
-		return WLAN_CIPHER_SUITE_BIP_GMAC_256;
+		return RSN_CIPHER_SUITE_BIP_GMAC_256;
 	case WPA_ALG_BIP_CMAC_256:
-		return WLAN_CIPHER_SUITE_BIP_CMAC_256;
+		return RSN_CIPHER_SUITE_BIP_CMAC_256;
 	case WPA_ALG_SMS4:
-		return WLAN_CIPHER_SUITE_SMS4;
+		return RSN_CIPHER_SUITE_SMS4;
 	case WPA_ALG_KRK:
-		return WLAN_CIPHER_SUITE_KRK;
+		return RSN_CIPHER_SUITE_KRK;
 	case WPA_ALG_NONE:
 	case WPA_ALG_PMK:
 		wpa_printf(MSG_ERROR, "nl80211: Unexpected encryption algorithm %d",
@@ -2674,21 +2674,21 @@ static u32 wpa_cipher_to_cipher_suite(unsigned int cipher)
 {
 	switch (cipher) {
 	case WPA_CIPHER_CCMP_256:
-		return WLAN_CIPHER_SUITE_CCMP_256;
+		return RSN_CIPHER_SUITE_CCMP_256;
 	case WPA_CIPHER_GCMP_256:
-		return WLAN_CIPHER_SUITE_GCMP_256;
+		return RSN_CIPHER_SUITE_GCMP_256;
 	case WPA_CIPHER_CCMP:
-		return WLAN_CIPHER_SUITE_CCMP;
+		return RSN_CIPHER_SUITE_CCMP;
 	case WPA_CIPHER_GCMP:
-		return WLAN_CIPHER_SUITE_GCMP;
+		return RSN_CIPHER_SUITE_GCMP;
 	case WPA_CIPHER_TKIP:
-		return WLAN_CIPHER_SUITE_TKIP;
+		return RSN_CIPHER_SUITE_TKIP;
 	case WPA_CIPHER_WEP104:
-		return WLAN_CIPHER_SUITE_WEP104;
+		return RSN_CIPHER_SUITE_WEP104;
 	case WPA_CIPHER_WEP40:
-		return WLAN_CIPHER_SUITE_WEP40;
+		return RSN_CIPHER_SUITE_WEP40;
 	case WPA_CIPHER_GTK_NOT_USED:
-		return WLAN_CIPHER_SUITE_NO_GROUP_ADDR;
+		return RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED;
 	}
 
 	return 0;
@@ -2701,19 +2701,19 @@ static int wpa_cipher_to_cipher_suites(unsigned int ciphers, u32 suites[],
 	int num_suites = 0;
 
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_CCMP_256)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP_256;
+		suites[num_suites++] = RSN_CIPHER_SUITE_CCMP_256;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_GCMP_256)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP_256;
+		suites[num_suites++] = RSN_CIPHER_SUITE_GCMP_256;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_CCMP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
+		suites[num_suites++] = RSN_CIPHER_SUITE_CCMP;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_GCMP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP;
+		suites[num_suites++] = RSN_CIPHER_SUITE_GCMP;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_TKIP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_TKIP;
+		suites[num_suites++] = RSN_CIPHER_SUITE_TKIP;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_WEP104)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP104;
+		suites[num_suites++] = RSN_CIPHER_SUITE_WEP104;
 	if (num_suites < max_suites && ciphers & WPA_CIPHER_WEP40)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP40;
+		suites[num_suites++] = RSN_CIPHER_SUITE_WEP40;
 
 	return num_suites;
 }
@@ -2971,8 +2971,8 @@ static int nl80211_set_conn_keys(struct wpa_driver_associate_params *params,
 			    params->wep_key[i]) ||
 		    nla_put_u32(msg, NL80211_KEY_CIPHER,
 				params->wep_key_len[i] == 5 ?
-				WLAN_CIPHER_SUITE_WEP40 :
-				WLAN_CIPHER_SUITE_WEP104) ||
+				RSN_CIPHER_SUITE_WEP40 :
+				RSN_CIPHER_SUITE_WEP104) ||
 		    nla_put_u8(msg, NL80211_KEY_IDX, i) ||
 		    (i == params->wep_tx_keyidx &&
 		     nla_put_flag(msg, NL80211_KEY_DEFAULT)))

@@ -283,7 +283,7 @@ def test_suite_b_mic_failure(dev, apdev):
 
 def test_suite_b_192_mic_failure(dev, apdev):
     """WPA2/GCMP connection at Suite B 192-bit level and MIC derivation failure"""
-    check_suite_b_capa(dev)
+    check_suite_b_192_capa(dev)
     dev[0].flush_scan_cache()
     params = suite_b_192_ap_params()
     hapd = hostapd.add_ap(apdev[0], params)

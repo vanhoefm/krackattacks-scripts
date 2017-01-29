@@ -304,3 +304,58 @@ def test_fils_sk_multiple_realms(dev, apdev):
     if "EVENT-ASSOC-REJECT" in ev:
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_fils_sk_hlp(dev, apdev):
+    """FILS SK HLP"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_FLUSH"):
+        raise Exception("Failed to flush pending FILS HLP requests")
+    tests = [ "",
+              "q",
+              "ff:ff:ff:ff:ff:ff",
+              "ff:ff:ff:ff:ff:ff q" ]
+    for t in tests:
+        if "FAIL" not in dev[0].request("FILS_HLP_REQ_ADD " + t):
+            raise Exception("Invalid FILS_HLP_REQ_ADD accepted: " + t)
+    tests = [ "ff:ff:ff:ff:ff:ff aabb",
+              "ff:ff:ff:ff:ff:ff " + 255*'cc',
+              hapd.own_addr() + " ddee010203040506070809"]
+    for t in tests:
+        if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + t):
+            raise Exception("FILS_HLP_REQ_ADD failed: " + t)
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")

@@ -590,3 +590,31 @@ def test_wpas_ap_params(dev):
         raise Exception("PMKSA_FLUSH failed")
     wpas.request("DISCONNECT")
     wpas.wait_disconnected()
+
+def test_wpas_ap_global_sta(dev):
+    """wpa_supplicant AP mode - STA commands on global control interface"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+
+    dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+
+    addr1 = dev[1].own_addr()
+    res = dev[0].global_request("STA " + addr1)
+    if "UNKNOWN COMMAND" in res:
+        raise Exception("STA command not known on global control interface")
+    res = dev[0].global_request("STA-FIRST")
+    if "UNKNOWN COMMAND" in res:
+        raise Exception("STA-FIRST command not known on global control interface")
+    res = dev[0].global_request("STA-NEXT " + addr1)
+    if "UNKNOWN COMMAND" in res:
+        raise Exception("STA-NEXT command not known on global control interface")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

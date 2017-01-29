@@ -110,7 +110,8 @@ def test_wpas_add_set_remove_support(dev):
     dev[0].remove_network(id)
 
 def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0,
-                          basic_rates=None, chwidth=0):
+                          basic_rates=None, chwidth=0, disable_vht=False,
+                          disable_ht40=False):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
@@ -123,6 +124,10 @@ def add_open_mesh_network(dev, freq="2412", start=True, beacon_int=0,
         dev.set_network(id, "beacon_int", str(beacon_int))
     if basic_rates:
         dev.set_network(id, "mesh_basic_rates", basic_rates)
+    if disable_vht:
+        dev.set_network(id, "disable_vht", "1")
+    if disable_ht40:
+        dev.set_network(id, "disable_ht40", "1")
     if start:
         dev.mesh_group_add(id)
     return id
@@ -859,6 +864,54 @@ def _test_wpas_mesh_open_5ghz_coex(dev, apdev):
     check_mesh_group_removed(dev[1])
     dev[0].dump_monitor()
     dev[1].dump_monitor()
+
+def test_wpas_mesh_open_ht40(dev, apdev):
+    """Mesh and HT40 support difference"""
+    try:
+        _test_wpas_mesh_open_ht40(dev, apdev)
+    finally:
+        dev[0].request("MESH_GROUP_REMOVE " + dev[0].ifname)
+        dev[1].request("MESH_GROUP_REMOVE " + dev[1].ifname)
+        dev[2].request("MESH_GROUP_REMOVE " + dev[2].ifname)
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+        dev[2].flush_scan_cache()
+
+def _test_wpas_mesh_open_ht40(dev, apdev):
+    check_mesh_support(dev[0])
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+    for i in range(3):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        add_open_mesh_network(dev[i], freq="5180", disable_vht=True,
+                              disable_ht40=(i == 2))
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_group_added(dev[2])
+
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+    check_mesh_peer_connected(dev[2])
+
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0], dev[2])
+    hwsim_utils.test_connectivity(dev[1], dev[2])
+
+    dev[0].mesh_group_remove()
+    dev[1].mesh_group_remove()
+    dev[2].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+    check_mesh_group_removed(dev[1])
+    check_mesh_group_removed(dev[2])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[2].dump_monitor()
 
 def test_wpas_mesh_open_vht_80p80(dev, apdev):
     """wpa_supplicant open MESH network on VHT 80+80 MHz channel"""

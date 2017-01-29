@@ -748,6 +748,8 @@ def test_wpas_mesh_open_5ghz(dev, apdev):
     try:
         _test_wpas_mesh_open_5ghz(dev, apdev)
     finally:
+        dev[0].request("MESH_GROUP_REMOVE " + dev[0].ifname)
+        dev[1].request("MESH_GROUP_REMOVE " + dev[1].ifname)
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
@@ -775,11 +777,20 @@ def _test_wpas_mesh_open_5ghz(dev, apdev):
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+    dev[0].mesh_group_remove()
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
 def test_wpas_mesh_open_5ghz_coex(dev, apdev):
     """Mesh network on 5 GHz band and 20/40 coex change"""
     try:
         _test_wpas_mesh_open_5ghz_coex(dev, apdev)
     finally:
+        dev[0].request("MESH_GROUP_REMOVE " + dev[0].ifname)
+        dev[1].request("MESH_GROUP_REMOVE " + dev[1].ifname)
         set_world_reg(apdev0=apdev[0], dev0=dev[0])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
@@ -820,12 +831,20 @@ def _test_wpas_mesh_open_5ghz_coex(dev, apdev):
         raise Exception("Unexpected SIGNAL_POLL output: " + str(sig))
 
     hapd.disable()
+    dev[0].mesh_group_remove()
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
 def test_wpas_mesh_open_vht_80p80(dev, apdev):
     """wpa_supplicant open MESH network on VHT 80+80 MHz channel"""
     try:
         _test_wpas_mesh_open_vht_80p80(dev, apdev)
     finally:
+        dev[0].request("MESH_GROUP_REMOVE " + dev[0].ifname)
+        dev[1].request("MESH_GROUP_REMOVE " + dev[1].ifname)
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
@@ -869,11 +888,20 @@ def _test_wpas_mesh_open_vht_80p80(dev, apdev):
     if "CENTER_FRQ2=5775" not in sig:
         raise Exception("Unexpected SIGNAL_POLL value(4b): " + str(sig))
 
+    dev[0].mesh_group_remove()
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
 def test_mesh_open_vht_160(dev, apdev):
     """Open mesh network on VHT 160 MHz channel"""
     try:
         _test_mesh_open_vht_160(dev, apdev)
     finally:
+        dev[0].request("MESH_GROUP_REMOVE " + dev[0].ifname)
+        dev[1].request("MESH_GROUP_REMOVE " + dev[1].ifname)
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
@@ -908,6 +936,8 @@ def _test_mesh_open_vht_160(dev, apdev):
     # Check for peer connected
     check_mesh_peer_connected(dev[0])
     check_mesh_peer_connected(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
     # Test connectivity 0->1 and 1->0
     hwsim_utils.test_connectivity(dev[0], dev[1])
@@ -923,6 +953,13 @@ def _test_mesh_open_vht_160(dev, apdev):
         raise Exception("Unexpected SIGNAL_POLL value(2b): " + str(sig))
     if "FREQUENCY=5520" not in sig:
         raise Exception("Unexpected SIGNAL_POLL value(3b): " + str(sig))
+
+    dev[0].mesh_group_remove()
+    dev[1].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+    check_mesh_group_removed(dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
 
 def test_wpas_mesh_password_mismatch(dev, apdev):
     """Mesh network and one device with mismatching password"""

@@ -2071,6 +2071,13 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 
 	vht_freq = *freq;
 
+#ifdef CONFIG_VHT_OVERRIDES
+	if (ssid->disable_vht) {
+		freq->vht_enabled = 0;
+		return;
+	}
+#endif /* CONFIG_VHT_OVERRIDES */
+
 	vht_freq.vht_enabled = vht_supported(mode);
 	if (!vht_freq.vht_enabled)
 		return;

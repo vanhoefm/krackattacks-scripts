@@ -4162,10 +4162,14 @@ static int wpas_fst_send_action_cb(void *ctx, const u8 *da, struct wpabuf *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
-	WPA_ASSERT(os_memcmp(wpa_s->bssid, da, ETH_ALEN) == 0);
+	if (os_memcmp(wpa_s->bssid, da, ETH_ALEN) != 0) {
+		wpa_printf(MSG_INFO, "FST:%s:bssid=" MACSTR " != da=" MACSTR,
+			   __func__, MAC2STR(wpa_s->bssid), MAC2STR(da));
+		return -1;
+	}
 	return wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
-					  wpa_s->own_addr, wpa_s->bssid,
-					  wpabuf_head(data), wpabuf_len(data),
+				   wpa_s->own_addr, wpa_s->bssid,
+				   wpabuf_head(data), wpabuf_len(data),
 				   0);
 }
 

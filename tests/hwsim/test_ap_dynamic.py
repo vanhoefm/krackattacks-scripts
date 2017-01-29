@@ -556,7 +556,7 @@ def test_ap_bss_config_file(dev, apdev, params):
     hapd.ping()
     if "OK" not in hapd.request("TERMINATE"):
         raise Exception("Failed to terminate hostapd process")
-    ev = hapd.wait_event(["CTRL-EVENT-TERMINATING"], timeout=5)
+    ev = hapd.wait_event(["CTRL-EVENT-TERMINATING"], timeout=15)
     if ev is None:
         raise Exception("CTRL-EVENT-TERMINATING not seen")
     for i in range(30):

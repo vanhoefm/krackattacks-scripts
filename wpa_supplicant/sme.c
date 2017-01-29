@@ -995,10 +995,35 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	if (auth_type == WLAN_AUTH_FILS_SK) {
 		struct wpabuf *buf;
 		const u8 *snonce, *anonce;
+		const unsigned int max_hlp = 20;
+		struct wpabuf *hlp[max_hlp];
+		unsigned int i, num_hlp = 0;
+		struct fils_hlp_req *req;
+
+		dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
+				 list) {
+			hlp[num_hlp] = wpabuf_alloc(2 * ETH_ALEN + 6 +
+					      wpabuf_len(req->pkt));
+			if (!hlp[num_hlp])
+				break;
+			wpabuf_put_data(hlp[num_hlp], req->dst, ETH_ALEN);
+			wpabuf_put_data(hlp[num_hlp], wpa_s->own_addr,
+					ETH_ALEN);
+			wpabuf_put_data(hlp[num_hlp],
+					"\xaa\xaa\x03\x00\x00\x00", 6);
+			wpabuf_put_buf(hlp[num_hlp], req->pkt);
+			num_hlp++;
+			if (num_hlp >= max_hlp)
+				break;
+		}
 
 		buf = fils_build_assoc_req(wpa_s->wpa, &params.fils_kek,
 					   &params.fils_kek_len, &snonce,
-					   &anonce);
+					   &anonce,
+					   (const struct wpabuf **) hlp,
+					   num_hlp);
+		for (i = 0; i < num_hlp; i++)
+			wpabuf_free(hlp[i]);
 		if (!buf)
 			return;
 		/* TODO: Make wpa_s->sme.assoc_req_ie use dynamic allocation */

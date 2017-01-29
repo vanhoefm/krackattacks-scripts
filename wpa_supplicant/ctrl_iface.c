@@ -9153,6 +9153,40 @@ static int wpas_ctrl_iface_mesh_pmksa_add(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 
 
+#ifdef CONFIG_FILS
+static int wpas_ctrl_iface_fils_hlp_req_add(struct wpa_supplicant *wpa_s,
+					    const char *cmd)
+{
+	struct fils_hlp_req *req;
+	const char *pos;
+
+	/* format: <dst> <packet starting from ethertype> */
+
+	req = os_zalloc(sizeof(*req));
+	if (!req)
+		return -1;
+
+	if (hwaddr_aton(cmd, req->dst))
+		goto fail;
+
+	pos = os_strchr(cmd, ' ');
+	if (!pos)
+		goto fail;
+	pos++;
+	req->pkt = wpabuf_parse_bin(pos);
+	if (!req->pkt)
+		goto fail;
+
+	dl_list_add_tail(&wpa_s->fils_hlp_req, &req->list);
+	return 0;
+fail:
+	wpabuf_free(req->pkt);
+	os_free(req);
+	return -1;
+}
+#endif /* CONFIG_FILS */
+
+
 static int wpas_ctrl_cmd_debug_level(const char *cmd)
 {
 	if (os_strcmp(cmd, "PING") == 0 ||
@@ -9881,6 +9915,13 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "GET_PREF_FREQ_LIST ", 19) == 0) {
 		reply_len = wpas_ctrl_iface_get_pref_freq_list(
 			wpa_s, buf + 19, reply, reply_size);
+#ifdef CONFIG_FILS
+	} else if (os_strncmp(buf, "FILS_HLP_REQ_ADD ", 17) == 0) {
+		if (wpas_ctrl_iface_fils_hlp_req_add(wpa_s, buf + 17))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "FILS_HLP_REQ_FLUSH") == 0) {
+		wpas_flush_fils_hlp_req(wpa_s);
+#endif /* CONFIG_FILS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

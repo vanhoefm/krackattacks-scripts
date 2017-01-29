@@ -3483,11 +3483,18 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 
 struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 				     size_t *kek_len, const u8 **snonce,
-				     const u8 **anonce)
+				     const u8 **anonce,
+				     const struct wpabuf **hlp,
+				     unsigned int num_hlp)
 {
 	struct wpabuf *buf;
+	size_t len;
+	unsigned int i;
 
-	buf = wpabuf_alloc(1000);
+	len = 1000;
+	for (i = 0; hlp && i < num_hlp; i++)
+		len += 10 + wpabuf_len(hlp[i]);
+	buf = wpabuf_alloc(len);
 	if (!buf)
 		return NULL;
 
@@ -3510,7 +3517,34 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 	wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_KEY_CONFIRM);
 	wpabuf_put_data(buf, sm->fils_key_auth_sta, sm->fils_key_auth_len);
 
-	/* TODO: FILS HLP Container */
+	/* FILS HLP Container */
+	for (i = 0; hlp && i < num_hlp; i++) {
+		const u8 *pos = wpabuf_head(hlp[i]);
+		size_t left = wpabuf_len(hlp[i]);
+
+		wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */
+		if (left <= 254)
+			len = 1 + left;
+		else
+			len = 255;
+		wpabuf_put_u8(buf, len); /* Length */
+		/* Element ID Extension */
+		wpabuf_put_u8(buf, WLAN_EID_EXT_FILS_HLP_CONTAINER);
+		/* Destination MAC Address, Source MAC Address, HLP Packet.
+		 * HLP Packet is in MSDU format (i.e., included the LLC/SNAP
+		 * header when LPD is used). */
+		wpabuf_put_data(buf, pos, len - 1);
+		pos += len - 1;
+		left -= len - 1;
+		while (left) {
+			wpabuf_put_u8(buf, WLAN_EID_FRAGMENT);
+			len = left > 255 ? 255 : left;
+			wpabuf_put_u8(buf, len);
+			wpabuf_put_data(buf, pos, len);
+			pos += len;
+			left -= len;
+		}
+	}
 
 	/* TODO: FILS IP Address Assignment */
 

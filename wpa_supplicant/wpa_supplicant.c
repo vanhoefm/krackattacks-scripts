@@ -420,6 +420,19 @@ static void free_bss_tmp_disallowed(struct wpa_supplicant *wpa_s)
 }
 
 
+void wpas_flush_fils_hlp_req(struct wpa_supplicant *wpa_s)
+{
+	struct fils_hlp_req *req;
+
+	while ((req = dl_list_first(&wpa_s->fils_hlp_req, struct fils_hlp_req,
+				    list)) != NULL) {
+		dl_list_del(&req->list);
+		wpabuf_free(req->pkt);
+		os_free(req);
+	}
+}
+
+
 static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 {
 	int i;
@@ -602,6 +615,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	}
 #endif /* CONFIG_MESH */
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
+
+	wpas_flush_fils_hlp_req(wpa_s);
 }
 
 
@@ -3719,6 +3734,7 @@ wpa_supplicant_alloc(struct wpa_supplicant *parent)
 	wpa_s->sched_scanning = 0;
 
 	dl_list_init(&wpa_s->bss_tmp_disallowed);
+	dl_list_init(&wpa_s->fils_hlp_req);
 
 	return wpa_s;
 }

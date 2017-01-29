@@ -466,6 +466,12 @@ struct external_pmksa_cache {
 	void *pmksa_cache;
 };
 
+struct fils_hlp_req {
+	struct dl_list list;
+	u8 dst[ETH_ALEN];
+	struct wpabuf *pkt;
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -747,7 +753,7 @@ struct wpa_supplicant {
 		u8 ssid[SSID_MAX_LEN];
 		size_t ssid_len;
 		int freq;
-		u8 assoc_req_ie[300];
+		u8 assoc_req_ie[1500];
 		size_t assoc_req_ie_len;
 		int mfp;
 		int ft_used;
@@ -1103,6 +1109,9 @@ struct wpa_supplicant {
 	struct os_reltime lci_time;
 
 	struct os_reltime beacon_rep_scan;
+
+	/* FILS HLP requests (struct fils_hlp_req) */
+	struct dl_list fils_hlp_req;
 };
 
 
@@ -1227,6 +1236,7 @@ int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 				 struct wpa_scan_results *scan_res,
 				 struct scan_info *info);
 void wpas_clear_beacon_rep_data(struct wpa_supplicant *wpa_s);
+void wpas_flush_fils_hlp_req(struct wpa_supplicant *wpa_s);
 
 
 /* MBO functions */

@@ -673,6 +673,28 @@ def test_wpas_mesh_dynamic_interface(dev):
         if mesh1:
             dev[1].request("MESH_GROUP_REMOVE " + mesh1)
 
+def test_wpas_mesh_dynamic_interface_remove(dev):
+    """wpa_supplicant mesh with dynamic interface and removal"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    check_mesh_support(wpas)
+    mesh5 = wpas.request("MESH_INTERFACE_ADD ifname=mesh5")
+    if "FAIL" in mesh5:
+        raise Exception("MESH_INTERFACE_ADD failed")
+
+    wpas5 = WpaSupplicant(ifname=mesh5)
+    logger.info(mesh5 + " address " + wpas5.get_status_field("address"))
+    add_open_mesh_network(wpas5)
+    add_open_mesh_network(dev[0])
+    check_mesh_group_added(wpas5)
+    check_mesh_group_added(dev[0])
+    check_mesh_peer_connected(wpas5)
+    check_mesh_peer_connected(dev[0])
+    hwsim_utils.test_connectivity(wpas5, dev[0])
+
+    # Remove the main interface while mesh interface is in use
+    wpas.interface_remove("wlan5")
+
 def test_wpas_mesh_max_peering(dev, apdev, params):
     """Mesh max peering limit"""
     check_mesh_support(dev[0])

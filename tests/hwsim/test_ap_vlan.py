@@ -466,7 +466,7 @@ def ap_vlan_iface_cleanup_multibss(dev, apdev, cfgfile):
         dev[1].wait_disconnected()
 
         # station removal needs some time
-        for i in range(5):
+        for i in range(15):
             time.sleep(1)
             ifaces = netifaces.interfaces()
             if "brvlan2" not in ifaces:

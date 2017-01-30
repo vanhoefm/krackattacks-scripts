@@ -7,7 +7,7 @@
 from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
-from utils import skip_with_fips, alloc_fail, fail_test
+from utils import skip_with_fips, alloc_fail, fail_test, HwsimSkip
 
 @remote_compatible
 def test_hapd_ctrl_status(dev, apdev):
@@ -914,6 +914,8 @@ def test_hapd_ctrl_test_fail(dev, apdev):
     ssid = "hapd-ctrl"
     params = { "ssid": ssid }
     hapd = hostapd.add_ap(apdev[0], params)
+    if "OK" not in hapd.request("TEST_ALLOC_FAIL 1:unknownfunc"):
+            raise HwsimSkip("TEST_ALLOC_FAIL not supported")
     if "OK" not in hapd.request("TEST_ALLOC_FAIL "):
         raise Exception("TEST_ALLOC_FAIL clearing failed")
     if "OK" not in hapd.request("TEST_FAIL "):

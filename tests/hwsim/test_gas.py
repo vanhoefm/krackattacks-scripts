@@ -293,6 +293,10 @@ def test_gas_comeback_delay_long(dev, apdev):
     """GAS long comeback delay"""
     run_gas_comeback_delay(dev, apdev, 2500)
 
+def test_gas_comeback_delay_long2(dev, apdev):
+    """GAS long comeback delay over default STA timeout"""
+    run_gas_comeback_delay(dev, apdev, 6000)
+
 def run_gas_comeback_delay(dev, apdev, delay):
     hapd = start_ap(apdev[0])
     hapd.set("gas_comeback_delay", str(delay))
@@ -302,7 +306,7 @@ def run_gas_comeback_delay(dev, apdev, delay):
     if "FAIL-BUSY" not in dev[0].request("SCAN"):
         raise Exception("SCAN accepted during FETCH_ANQP")
     for i in range(0, 6):
-        ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+        ev = dev[0].wait_event(["RX-ANQP"], timeout=10)
         if ev is None:
             raise Exception("Operation timed out")
 

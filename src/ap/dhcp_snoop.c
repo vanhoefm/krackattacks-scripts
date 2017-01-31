@@ -62,6 +62,8 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 		if (*opt == DHCP_OPT_PAD)
 			continue;
 
+		if (pos >= end || 1 + *pos > end - pos)
+			break;
 		pos += *pos + 1;
 		if (pos >= end)
 			break;

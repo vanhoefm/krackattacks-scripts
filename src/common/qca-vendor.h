@@ -280,6 +280,10 @@ enum qca_radiotap_vendor_ids {
  *	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO_BSSID and
  *	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO_STATUS pairs nested in
  *	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SET_TRACE_LEVEL: Set the trace level for a
+ *	specific QCA module. The trace levels are represented by
+ *	enum qca_attr_trace_level attributes.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -406,6 +410,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET = 149,
 	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
 	QCA_NL80211_VENDOR_SUBCMD_FETCH_BSS_TRANSITION_STATUS = 151,
+	QCA_NL80211_VENDOR_SUBCMD_SET_TRACE_LEVEL = 152,
 };
 
 
@@ -3362,6 +3367,28 @@ enum qca_wlan_vendor_attr_btm_candidate_info {
 	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO_MAX =
 	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO_AFTER_LAST - 1,
+};
+
+enum qca_attr_trace_level {
+	QCA_ATTR_TRACE_LEVEL_INVALID = 0,
+	/*
+	 * Nested array of the following attributes:
+	 * QCA_ATTR_TRACE_LEVEL_MODULE,
+	 * QCA_ATTR_TRACE_LEVEL_MASK.
+	 */
+	QCA_ATTR_TRACE_LEVEL_PARAM = 1,
+	/*
+	 * Specific QCA host driver module. Please refer to the QCA host
+	 * driver implementation to get the specific module ID.
+	 */
+	QCA_ATTR_TRACE_LEVEL_MODULE = 2,
+	/* Different trace level masks represented in the QCA host driver. */
+	QCA_ATTR_TRACE_LEVEL_MASK = 3,
+
+	/* keep last */
+	QCA_ATTR_TRACE_LEVEL_AFTER_LAST,
+	QCA_ATTR_TRACE_LEVEL_MAX =
+		QCA_ATTR_TRACE_LEVEL_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

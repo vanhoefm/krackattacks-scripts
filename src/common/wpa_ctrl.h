@@ -300,6 +300,10 @@ extern "C" {
 /* PMKSA cache entry removed; parameters: <BSSID> <network_id> */
 #define PMKSA_CACHE_REMOVED "PMKSA-CACHE-REMOVED "
 
+/* FILS HLP Container receive; parameters: dst=<addr> src=<addr> frame=<hexdump>
+ */
+#define FILS_HLP_RX "FILS-HLP-RX "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

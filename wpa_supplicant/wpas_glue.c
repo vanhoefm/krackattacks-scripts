@@ -1090,6 +1090,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 
 
 #ifndef CONFIG_NO_WPA
+
 static void wpa_supplicant_set_rekey_offload(void *ctx,
 					     const u8 *kek, size_t kek_len,
 					     const u8 *kck, size_t kck_len,
@@ -1113,6 +1114,25 @@ static int wpa_supplicant_key_mgmt_set_pmk(void *ctx, const u8 *pmk,
 	else
 		return 0;
 }
+
+
+static void wpa_supplicant_fils_hlp_rx(void *ctx, const u8 *dst, const u8 *src,
+				       const u8 *pkt, size_t pkt_len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	char *hex;
+	size_t hexlen;
+
+	hexlen = pkt_len * 2 + 1;
+	hex = os_malloc(hexlen);
+	if (!hex)
+		return;
+	wpa_snprintf_hex(hex, hexlen, pkt, pkt_len);
+	wpa_msg(wpa_s, MSG_INFO, FILS_HLP_RX "dst=" MACSTR " src=" MACSTR
+		" frame=%s", MAC2STR(dst), MAC2STR(src), hex);
+	os_free(hex);
+}
+
 #endif /* CONFIG_NO_WPA */
 
 
@@ -1162,6 +1182,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_TDLS */
 	ctx->set_rekey_offload = wpa_supplicant_set_rekey_offload;
 	ctx->key_mgmt_set_pmk = wpa_supplicant_key_mgmt_set_pmk;
+	ctx->fils_hlp_rx = wpa_supplicant_fils_hlp_rx;
 
 	wpa_s->wpa = wpa_sm_init(ctx);
 	if (wpa_s->wpa == NULL) {

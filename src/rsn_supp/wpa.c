@@ -3564,6 +3564,71 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 }
 
 
+static void fils_process_hlp_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
+{
+	const u8 *pos, *end;
+
+	wpa_hexdump(MSG_MSGDUMP, "FILS: HLP response", resp, len);
+	if (len < 2 * ETH_ALEN)
+		return;
+	pos = resp + 2 * ETH_ALEN;
+	end = resp + len;
+	if (end - pos >= 6 &&
+	    os_memcmp(pos, "\xaa\xaa\x03\x00\x00\x00", 6) == 0)
+		pos += 6; /* Remove SNAP/LLC header */
+	wpa_sm_fils_hlp_rx(sm, resp, resp + ETH_ALEN, pos, end - pos);
+}
+
+
+static void fils_process_hlp_container(struct wpa_sm *sm, const u8 *pos,
+				       size_t len)
+{
+	const u8 *end = pos + len;
+	u8 *tmp, *tmp_pos;
+
+	/* Check if there are any FILS HLP Container elements */
+	while (end - pos >= 2) {
+		if (2 + pos[1] > end - pos)
+			return;
+		if (pos[0] == WLAN_EID_EXTENSION &&
+		    pos[1] >= 1 + 2 * ETH_ALEN &&
+		    pos[2] == WLAN_EID_EXT_FILS_HLP_CONTAINER)
+			break;
+		pos += 2 + pos[1];
+	}
+	if (end - pos < 2)
+		return; /* No FILS HLP Container elements */
+
+	tmp = os_malloc(end - pos);
+	if (!tmp)
+		return;
+
+	while (end - pos >= 2) {
+		if (2 + pos[1] > end - pos ||
+		    pos[0] != WLAN_EID_EXTENSION ||
+		    pos[1] < 1 + 2 * ETH_ALEN ||
+		    pos[2] != WLAN_EID_EXT_FILS_HLP_CONTAINER)
+			break;
+		tmp_pos = tmp;
+		os_memcpy(tmp_pos, pos + 3, pos[1] - 1);
+		tmp_pos += pos[1] - 1;
+		pos += 2 + pos[1];
+
+		/* Add possible fragments */
+		while (end - pos >= 2 && pos[0] == WLAN_EID_FRAGMENT &&
+		       2 + pos[1] <= end - pos) {
+			os_memcpy(tmp_pos, pos + 2, pos[1]);
+			tmp_pos += pos[1];
+			pos += 2 + pos[1];
+		}
+
+		fils_process_hlp_resp(sm, tmp, tmp_pos - tmp);
+	}
+
+	os_free(tmp);
+}
+
+
 int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
 {
 	const struct ieee80211_mgmt *mgmt;
@@ -3705,7 +3770,8 @@ int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
 	/* TK is not needed anymore in supplicant */
 	os_memset(sm->ptk.tk, 0, WPA_TK_MAX_LEN);
 
-	/* TODO: FILS HLP Container */
+	/* FILS HLP Container */
+	fils_process_hlp_container(sm, ie_start, end - ie_start);
 
 	/* TODO: FILS IP Address Assignment */
 

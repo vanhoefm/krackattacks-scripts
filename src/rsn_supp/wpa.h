@@ -79,6 +79,8 @@ struct wpa_sm_ctx {
 				  const u8 *kck, size_t kck_len,
 				  const u8 *replay_ctr);
 	int (*key_mgmt_set_pmk)(void *ctx, const u8 *pmk, size_t pmk_len);
+	void (*fils_hlp_rx)(void *ctx, const u8 *dst, const u8 *src,
+			    const u8 *pkt, size_t pkt_len);
 };
 
 

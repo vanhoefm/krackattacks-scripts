@@ -1,5 +1,5 @@
 # Test cases for FILS
-# Copyright (c) 2015-2016, Qualcomm Atheros, Inc.
+# Copyright (c) 2015-2017, Qualcomm Atheros, Inc.
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -8,6 +8,9 @@ import binascii
 import hashlib
 import logging
 logger = logging.getLogger()
+import os
+import socket
+import struct
 import time
 
 import hostapd
@@ -15,6 +18,7 @@ from wpasupplicant import WpaSupplicant
 import hwsim_utils
 from utils import HwsimSkip
 from test_erp import check_erp_capa, start_erp_as
+from test_ap_hs20 import ip_checksum
 
 def check_fils_capa(dev):
     capa = dev.get_capability("fils")
@@ -361,12 +365,92 @@ def test_fils_sk_multiple_realms(dev, apdev):
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+# DHCP message op codes
+BOOTREQUEST=1
+BOOTREPLY=2
+
+OPT_PAD=0
+OPT_DHCP_MESSAGE_TYPE=53
+OPT_RAPID_COMMIT=80
+OPT_END=255
+
+DHCPDISCOVER=1
+DHCPOFFER=2
+DHCPREQUEST=3
+DHCPDECLINE=4
+DHCPACK=5
+DHCPNAK=6
+DHCPRELEASE=7
+DHCPINFORM=8
+
+def build_dhcp(req, dhcp_msg, chaddr, giaddr="0.0.0.0",
+               ip_src="0.0.0.0", ip_dst="255.255.255.255",
+               rapid_commit=True):
+    proto = '\x08\x00' # IPv4
+    _ip_src = socket.inet_pton(socket.AF_INET, ip_src)
+    _ip_dst = socket.inet_pton(socket.AF_INET, ip_dst)
+
+    _ciaddr = '\x00\x00\x00\x00'
+    _yiaddr = '\x00\x00\x00\x00'
+    _siaddr = '\x00\x00\x00\x00'
+    _giaddr = socket.inet_pton(socket.AF_INET, giaddr)
+    _chaddr = binascii.unhexlify(chaddr.replace(':','')) + 10*'\x00'
+    htype = 1 # Hardware address type; 1 = Ethernet
+    hlen = 6 # Hardware address length
+    hops = 0
+    xid = 123456
+    secs = 0
+    flags = 0
+    if req:
+        op = BOOTREQUEST
+        src_port = 68
+        dst_port = 67
+    else:
+        op = BOOTREPLY
+        src_port = 67
+        dst_port = 68
+    payload = struct.pack('>BBBBLHH', op, htype, hlen, hops, xid, secs, flags)
+    sname = 64*'\x00'
+    file = 128*'\x00'
+    payload += _ciaddr + _yiaddr + _siaddr + _giaddr + _chaddr + sname + file
+    # magic - DHCP
+    payload += '\x63\x82\x53\x63'
+    # Option: DHCP Message Type
+    payload += struct.pack('BBB', OPT_DHCP_MESSAGE_TYPE, 1, dhcp_msg)
+    if rapid_commit:
+        # Option: Rapid Commit
+        payload += struct.pack('BB', OPT_RAPID_COMMIT, 0)
+    # End Option
+    payload += struct.pack('B', OPT_END)
+
+    udp = struct.pack('>HHHH', src_port, dst_port,
+                      8 + len(payload), 0) + payload
+
+    tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    ipv4 = start + csum + _ip_src + _ip_dst
+
+    return proto + ipv4 + udp
+
 def test_fils_sk_hlp(dev, apdev):
-    """FILS SK HLP"""
+    """FILS SK HLP (rapid commit server)"""
+    run_fils_sk_hlp(dev, apdev, True)
+
+def test_fils_sk_hlp_no_rapid_commit(dev, apdev):
+    """FILS SK HLP (no rapid commit server)"""
+    run_fils_sk_hlp(dev, apdev, False)
+
+def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
     start_erp_as(apdev[1])
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.settimeout(5)
+    sock.bind(("127.0.0.2", 67))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -375,6 +459,11 @@ def test_fils_sk_hlp(dev, apdev):
     params['erp_domain'] = 'example.com'
     params['fils_realm'] = 'example.com'
     params['disable_pmksa_caching'] = '1'
+    params['own_ip_addr'] = '127.0.0.3'
+    params['dhcp_server'] = '127.0.0.2'
+    params['fils_hlp_wait_time'] = '10000'
+    if not rapid_commit_server:
+        params['dhcp_rapid_commit_proxy'] = '1'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].scan_for_bss(bssid, freq=2412)
@@ -388,9 +477,12 @@ def test_fils_sk_hlp(dev, apdev):
     for t in tests:
         if "FAIL" not in dev[0].request("FILS_HLP_REQ_ADD " + t):
             raise Exception("Invalid FILS_HLP_REQ_ADD accepted: " + t)
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr())
     tests = [ "ff:ff:ff:ff:ff:ff aabb",
               "ff:ff:ff:ff:ff:ff " + 255*'cc',
-              hapd.own_addr() + " ddee010203040506070809"]
+              hapd.own_addr() + " ddee010203040506070809",
+              "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc) ]
     for t in tests:
         if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + t):
             raise Exception("FILS_HLP_REQ_ADD failed: " + t)
@@ -404,14 +496,60 @@ def test_fils_sk_hlp(dev, apdev):
 
     dev[0].dump_monitor()
     dev[0].select_network(id, freq=2412)
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
-                            "EVENT-ASSOC-REJECT",
-                            "CTRL-EVENT-CONNECTED"], timeout=10)
+
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    if rapid_commit_server:
+        # TODO: Proper rapid commit response
+        dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPACK,
+                              chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+        sock.sendto(dhcpdisc[2+20+8:], addr)
+    else:
+        dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                              chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+        sock.sendto(dhcpdisc[2+20+8:], addr)
+        (msg,addr) = sock.recvfrom(1000)
+        logger.debug("Received DHCP message from %s" % str(addr))
+        dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPACK, rapid_commit=False,
+                              chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+        sock.sendto(dhcpdisc[2+20+8:], addr)
+    ev = dev[0].wait_event(["FILS-HLP-RX"], timeout=10)
     if ev is None:
-        raise Exception("Connection using FILS/ERP timed out")
-    if "CTRL-EVENT-EAP-STARTED" in ev:
-        raise Exception("Unexpected EAP exchange")
-    if "EVENT-ASSOC-REJECT" in ev:
-        raise Exception("Association failed")
+        raise Exception("FILS HLP response not reported")
+    vals = ev.split(' ')
+    frame = binascii.unhexlify(vals[3].split('=')[1])
+    proto, = struct.unpack('>H', frame[0:2])
+    if proto != 0x0800:
+        raise Exception("Unexpected ethertype in HLP response: %d" % proto)
+    frame = frame[2:]
+    ip = frame[0:20]
+    if ip_checksum(ip) != '\x00\x00':
+        raise Exception("IP header checksum mismatch in HLP response")
+    frame = frame[20:]
+    udp = frame[0:8]
+    frame = frame[8:]
+    sport, dport, ulen, ucheck = struct.unpack('>HHHH', udp)
+    if sport != 67 or dport != 68:
+        raise Exception("Unexpected UDP port in HLP response")
+    dhcp = frame[0:28]
+    frame = frame[28:]
+    op,htype,hlen,hops,xid,secs,flags,ciaddr,yiaddr,siaddr,giaddr = struct.unpack('>4BL2H4L', dhcp)
+    chaddr = frame[0:16]
+    frame = frame[16:]
+    sname = frame[0:64]
+    frame = frame[64:]
+    file = frame[0:128]
+    frame = frame[128:]
+    options = frame
+    if options[0:4] != '\x63\x82\x53\x63':
+        raise Exception("No DHCP magic seen in HLP response")
+    options = options[4:]
+    # TODO: fully parse and validate DHCPACK options
+    if struct.pack('BBB', OPT_DHCP_MESSAGE_TYPE, 1, DHCPACK) not in options:
+        raise Exception("DHCPACK not in HLP response")
+
+    dev[0].wait_connected()
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
+
+    # TODO: fils_hlp_wait_time=30 and no response from server

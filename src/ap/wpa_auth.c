@@ -2274,7 +2274,8 @@ int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 
 
 int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
-		       size_t current_len, size_t max_len)
+		       size_t current_len, size_t max_len,
+		       const struct wpabuf *hlp)
 {
 	u8 *end = buf + max_len;
 	u8 *pos = buf + current_len;
@@ -2334,7 +2335,9 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 	wpabuf_put_u8(plain, WLAN_EID_EXT_FILS_KEY_CONFIRM);
 	wpabuf_put_data(plain, sm->fils_key_auth_ap, sm->fils_key_auth_len);
 
-	/* TODO: FILS HLP Container */
+	/* FILS HLP Container */
+	if (hlp)
+		wpabuf_put_buf(plain, hlp);
 
 	/* TODO: FILS IP Address Assignment */
 

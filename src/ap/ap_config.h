@@ -607,6 +607,11 @@ struct hostapd_bss_config {
 	u8 fils_cache_id[FILS_CACHE_ID_LEN];
 	int fils_cache_id_set;
 	struct dl_list fils_realms; /* list of struct fils_realm */
+	struct hostapd_ip_addr dhcp_server;
+	int dhcp_rapid_commit_proxy;
+	unsigned int fils_hlp_wait_time;
+	u16 dhcp_server_port;
+	u16 dhcp_relay_port;
 #endif /* CONFIG_FILS */
 
 	int multicast_to_unicast;

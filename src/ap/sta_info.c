@@ -339,6 +339,13 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	mbo_ap_sta_free(sta);
 	os_free(sta->supp_op_classes);
 
+#ifdef CONFIG_FILS
+	os_free(sta->fils_pending_assoc_req);
+	wpabuf_free(sta->fils_hlp_resp);
+	wpabuf_free(sta->hlp_dhcp_discover);
+	eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+#endif /* CONFIG_FILS */
+
 	os_free(sta);
 }
 

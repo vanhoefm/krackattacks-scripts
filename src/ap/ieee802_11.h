@@ -140,5 +140,7 @@ void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
 				 struct sta_info *sta, int success,
 				 struct wpabuf *erp_resp,
 				 const u8 *msk, size_t msk_len);
+void fils_hlp_timeout(void *eloop_ctx, void *eloop_data);
+void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta);
 
 #endif /* IEEE802_11_H */

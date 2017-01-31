@@ -45,6 +45,7 @@
 #include "ndisc_snoop.h"
 #include "neighbor_db.h"
 #include "rrm.h"
+#include "fils_hlp.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -344,6 +345,7 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_MESH */
 
 	hostapd_clean_rrm(hapd);
+	fils_hlp_deinit(hapd);
 }
 
 
@@ -2006,6 +2008,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	hapd->ctrl_sock = -1;
 	dl_list_init(&hapd->ctrl_dst);
 	dl_list_init(&hapd->nr_db);
+	hapd->dhcp_sock = -1;
 
 	return hapd;
 }

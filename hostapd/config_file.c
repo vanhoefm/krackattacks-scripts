@@ -3615,6 +3615,21 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "fils_realm") == 0) {
 		if (parse_fils_realm(bss, pos) < 0)
 			return 1;
+	} else if (os_strcmp(buf, "dhcp_server") == 0) {
+		if (hostapd_parse_ip_addr(pos, &bss->dhcp_server)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid IP address '%s'",
+				   line, pos);
+			return 1;
+		}
+	} else if (os_strcmp(buf, "dhcp_rapid_commit_proxy") == 0) {
+		bss->dhcp_rapid_commit_proxy = atoi(pos);
+	} else if (os_strcmp(buf, "fils_hlp_wait_time") == 0) {
+		bss->fils_hlp_wait_time = atoi(pos);
+	} else if (os_strcmp(buf, "dhcp_server_port") == 0) {
+		bss->dhcp_server_port = atoi(pos);
+	} else if (os_strcmp(buf, "dhcp_relay_port") == 0) {
+		bss->dhcp_relay_port = atoi(pos);
 #endif /* CONFIG_FILS */
 	} else if (os_strcmp(buf, "multicast_to_unicast") == 0) {
 		bss->multicast_to_unicast = atoi(pos);

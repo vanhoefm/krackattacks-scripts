@@ -2266,11 +2266,22 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 			   const u8 *ies, size_t ies_len)
 {
 	int send_len;
-	u8 buf[sizeof(struct ieee80211_mgmt) + 1024];
+	u8 *buf;
+	size_t buflen;
 	struct ieee80211_mgmt *reply;
 	u8 *p;
+	u16 res = WLAN_STATUS_SUCCESS;
 
-	os_memset(buf, 0, sizeof(buf));
+	buflen = sizeof(struct ieee80211_mgmt) + 1024;
+#ifdef CONFIG_FILS
+	if (sta->fils_hlp_resp)
+		buflen += wpabuf_len(sta->fils_hlp_resp);
+#endif /* CONFIG_FILS */
+	buf = os_zalloc(buflen);
+	if (!buf) {
+		res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		goto done;
+	}
 	reply = (struct ieee80211_mgmt *) buf;
 	reply->frame_control =
 		IEEE80211_FC(WLAN_FC_TYPE_MGMT,
@@ -2298,7 +2309,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		/* IEEE 802.11r: Mobility Domain Information, Fast BSS
 		 * Transition Information, RSN, [RIC Response] */
 		p = wpa_sm_write_assoc_resp_ies(sta->wpa_sm, p,
-						buf + sizeof(buf) - p,
+						buf + buflen - p,
 						sta->auth_alg, ies, ies_len);
 	}
 #endif /* CONFIG_IEEE80211R_AP */
@@ -2400,10 +2411,10 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		p = hostapd_eid_p2p_manage(hapd, p);
 #endif /* CONFIG_P2P_MANAGER */
 
-	p = hostapd_eid_mbo(hapd, p, buf + sizeof(buf) - p);
+	p = hostapd_eid_mbo(hapd, p, buf + buflen - p);
 
 	if (hapd->conf->assocresp_elements &&
-	    (size_t) (buf + sizeof(buf) - p) >=
+	    (size_t) (buf + buflen - p) >=
 	    wpabuf_len(hapd->conf->assocresp_elements)) {
 		os_memcpy(p, wpabuf_head(hapd->conf->assocresp_elements),
 			  wpabuf_len(hapd->conf->assocresp_elements));
@@ -2421,8 +2432,10 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		struct ieee802_11_elems elems;
 
 		if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) ==
-		    ParseFailed || !elems.fils_session)
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		    ParseFailed || !elems.fils_session) {
+			res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto done;
+		}
 
 		/* FILS Session */
 		*p++ = WLAN_EID_EXTENSION; /* Element ID */
@@ -2432,20 +2445,73 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		send_len += 2 + 1 + FILS_SESSION_LEN;
 
 		send_len = fils_encrypt_assoc(sta->wpa_sm, buf, send_len,
-					      sizeof(buf));
-		if (send_len < 0)
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+					      buflen, sta->fils_hlp_resp);
+		if (send_len < 0) {
+			res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto done;
+		}
 	}
 #endif /* CONFIG_FILS */
 
 	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0) {
 		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",
 			   strerror(errno));
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		res = WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	return WLAN_STATUS_SUCCESS;
+done:
+	os_free(buf);
+	return res;
 }
+
+
+#ifdef CONFIG_FILS
+
+void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	u16 reply_res;
+
+	wpa_printf(MSG_DEBUG, "FILS: Finish association with " MACSTR,
+		   MAC2STR(sta->addr));
+	eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+	if (!sta->fils_pending_assoc_req)
+		return;
+	reply_res = send_assoc_resp(hapd, sta, sta->addr, WLAN_STATUS_SUCCESS,
+				    sta->fils_pending_assoc_is_reassoc,
+				    sta->fils_pending_assoc_req,
+				    sta->fils_pending_assoc_req_len);
+	os_free(sta->fils_pending_assoc_req);
+	sta->fils_pending_assoc_req = NULL;
+	sta->fils_pending_assoc_req_len = 0;
+	wpabuf_free(sta->fils_hlp_resp);
+	sta->fils_hlp_resp = NULL;
+	wpabuf_free(sta->hlp_dhcp_discover);
+	sta->hlp_dhcp_discover = NULL;
+
+	/*
+	 * Remove the station in case tranmission of a success response fails
+	 * (the STA was added associated to the driver) or if the station was
+	 * previously added unassociated.
+	 */
+	if (reply_res != WLAN_STATUS_SUCCESS || sta->added_unassoc) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
+}
+
+
+void fils_hlp_timeout(void *eloop_ctx, void *eloop_data)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta = eloop_data;
+
+	wpa_printf(MSG_DEBUG,
+		   "FILS: HLP response timeout - continue with association response for "
+		   MACSTR, MAC2STR(sta->addr));
+	fils_hlp_finish_assoc(hapd, sta);
+}
+
+#endif /* CONFIG_FILS */
 
 
 static void handle_assoc(struct hostapd_data *hapd,
@@ -2461,6 +2527,9 @@ static void handle_assoc(struct hostapd_data *hapd,
 	struct hostapd_sta_wpa_psk_short *psk = NULL;
 	char *identity = NULL;
 	char *radius_cui = NULL;
+#ifdef CONFIG_FILS
+	int delay_assoc = 0;
+#endif /* CONFIG_FILS */
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_req) :
 				      sizeof(mgmt->u.assoc_req))) {
@@ -2749,8 +2818,10 @@ static void handle_assoc(struct hostapd_data *hapd,
 #ifdef CONFIG_FILS
 	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
 	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
-	    sta->auth_alg == WLAN_AUTH_FILS_PK)
-		fils_process_hlp(hapd, sta, pos, left);
+	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		if (fils_process_hlp(hapd, sta, pos, left) > 0)
+			delay_assoc = 1;
+	}
 #endif /* CONFIG_FILS */
 
  fail:
@@ -2778,6 +2849,29 @@ static void handle_assoc(struct hostapd_data *hapd,
 	 */
 	if (resp == WLAN_STATUS_SUCCESS && sta && add_associated_sta(hapd, sta))
 		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+
+#ifdef CONFIG_FILS
+	if (sta) {
+		eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+		os_free(sta->fils_pending_assoc_req);
+		sta->fils_pending_assoc_req = NULL;
+		sta->fils_pending_assoc_req_len = 0;
+		wpabuf_free(sta->fils_hlp_resp);
+		sta->fils_hlp_resp = NULL;
+	}
+	if (sta && delay_assoc && resp == WLAN_STATUS_SUCCESS) {
+		sta->fils_pending_assoc_req = tmp;
+		sta->fils_pending_assoc_req_len = left;
+		sta->fils_pending_assoc_is_reassoc = reassoc;
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Waiting for HLP processing before sending (Re)Association Response frame to "
+			   MACSTR, MAC2STR(sta->addr));
+		eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+		eloop_register_timeout(0, hapd->conf->fils_hlp_wait_time * 1024,
+				       fils_hlp_timeout, hapd, sta);
+		return;
+	}
+#endif /* CONFIG_FILS */
 
 	reply_res = send_assoc_resp(hapd, sta, mgmt->sa, resp, reassoc, pos,
 				    left);

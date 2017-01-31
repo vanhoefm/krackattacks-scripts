@@ -835,6 +835,9 @@ endif
 ifdef CONFIG_MBO
 OBJS += src/ap/mbo_ap.c
 endif
+ifdef CONFIG_FILS
+OBJS += src/ap/fils_hlp.c
+endif
 ifdef CONFIG_CTRL_IFACE
 OBJS += src/ap/ctrl_iface_ap.c
 endif

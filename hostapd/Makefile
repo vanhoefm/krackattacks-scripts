@@ -307,6 +307,7 @@ endif
 
 ifdef CONFIG_FILS
 CFLAGS += -DCONFIG_FILS
+OBJS += ../src/ap/fils_hlp.o
 NEED_CRC32=y
 NEED_SHA384=y
 NEED_AES_SIV=y

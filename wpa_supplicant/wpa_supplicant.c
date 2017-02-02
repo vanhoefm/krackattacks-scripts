@@ -4367,6 +4367,13 @@ static void radio_work_free(struct wpa_radio_work *work)
 }
 
 
+static int radio_work_is_scan(struct wpa_radio_work *work)
+{
+	return os_strcmp(work->type, "scan") == 0 ||
+		os_strcmp(work->type, "p2p-scan") == 0;
+}
+
+
 static struct wpa_radio_work * radio_work_get_next_work(struct wpa_radio *radio)
 {
 	struct wpa_radio_work *active_work = NULL;
@@ -4420,6 +4427,17 @@ static struct wpa_radio_work * radio_work_get_next_work(struct wpa_radio *radio)
 		    os_strcmp(tmp->type, "sme-connect") == 0)
 			break;
 
+		/* Serialize parallel scan and p2p_scan operations on the same
+		 * interface since the driver_nl80211 mechanism for tracking
+		 * scan cookies does not yet have support for this. */
+		if (active_work->wpa_s == tmp->wpa_s &&
+		    radio_work_is_scan(active_work) &&
+		    radio_work_is_scan(tmp)) {
+			wpa_dbg(active_work->wpa_s, MSG_DEBUG,
+				"Do not start work '%s' when another work '%s' is already scheduled",
+				tmp->type, active_work->type);
+			continue;
+		}
 		/*
 		 * Check that the radio works are distinct and
 		 * on different bands.

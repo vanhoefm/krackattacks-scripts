@@ -452,7 +452,7 @@ static void eap_server_erp_init(struct eap_sm *sm)
 
 	wpa_hexdump_key(MSG_DEBUG, "EAP: EMSK", emsk, emsk_len);
 
-	WPA_PUT_BE16(len, 8);
+	WPA_PUT_BE16(len, EAP_EMSK_NAME_LEN);
 	if (hmac_sha256_kdf(sm->eap_if.eapSessionId, sm->eap_if.eapSessionIdLen,
 			    "EMSK", len, sizeof(len),
 			    EMSKname, EAP_EMSK_NAME_LEN) < 0) {

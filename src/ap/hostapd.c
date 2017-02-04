@@ -2004,7 +2004,8 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	hapd->iconf = conf;
 	hapd->conf = bss;
 	hapd->iface = hapd_iface;
-	hapd->driver = hapd->iconf->driver;
+	if (conf)
+		hapd->driver = conf->driver;
 	hapd->ctrl_sock = -1;
 	dl_list_init(&hapd->ctrl_dst);
 	dl_list_init(&hapd->nr_db);

@@ -177,10 +177,9 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	if (!ifmsh->bss)
 		goto out_free;
 
-	ifmsh->bss[0] = bss = os_zalloc(sizeof(struct hostapd_data));
+	ifmsh->bss[0] = bss = hostapd_alloc_bss_data(NULL, NULL, NULL);
 	if (!bss)
 		goto out_free;
-	dl_list_init(&bss->nr_db);
 
 	os_memcpy(bss->own_addr, wpa_s->own_addr, ETH_ALEN);
 	bss->driver = wpa_s->driver;

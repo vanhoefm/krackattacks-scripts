@@ -388,8 +388,10 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 		/* fall through */
 	case VHT_CHANWIDTH_80MHZ:
 		data->bandwidth = 80;
-		if ((vht_oper_chwidth == 1 && center_segment1) ||
-		    (vht_oper_chwidth == 3 && !center_segment1) ||
+		if ((vht_oper_chwidth == VHT_CHANWIDTH_80MHZ &&
+		     center_segment1) ||
+		    (vht_oper_chwidth == VHT_CHANWIDTH_80P80MHZ &&
+		     !center_segment1) ||
 		    !sec_channel_offset)
 			return -1;
 		if (!center_segment0) {

@@ -5322,6 +5322,7 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 #ifdef CONFIG_MESH
 	unsigned int mesh_if_created = wpa_s->mesh_if_created;
 	char *ifname = NULL;
+	struct wpa_supplicant *parent = wpa_s->parent;
 #endif /* CONFIG_MESH */
 
 	/* Remove interface from the global list of interfaces */
@@ -5357,7 +5358,7 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 #ifdef CONFIG_MESH
 	if (mesh_if_created) {
-		wpa_drv_if_remove(wpa_s->parent, WPA_IF_MESH, ifname);
+		wpa_drv_if_remove(parent, WPA_IF_MESH, ifname);
 		os_free(ifname);
 	}
 #endif /* CONFIG_MESH */

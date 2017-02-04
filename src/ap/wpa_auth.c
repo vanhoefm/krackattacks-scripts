@@ -2230,10 +2230,10 @@ int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 	 * field to the FILS Session element (both inclusive).
 	 */
 	aad[4] = (const u8 *) &mgmt->u.assoc_req.capab_info;
-	aad_len[4] = crypt - aad[0];
+	aad_len[4] = crypt - aad[4];
 
 	if (aes_siv_decrypt(sm->PTK.kek, sm->PTK.kek_len, crypt, end - crypt,
-			    1, aad, aad_len, pos + (crypt - ie_start)) < 0) {
+			    5, aad, aad_len, pos + (crypt - ie_start)) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "FILS: Invalid AES-SIV data in the frame");
 		return -1;

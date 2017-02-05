@@ -1484,9 +1484,11 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	WPA_PUT_BE16(key->key_info, key_info);
 
 	alg = pairwise ? sm->pairwise : wpa_auth->conf.wpa_group;
-	WPA_PUT_BE16(key->key_length, wpa_cipher_key_len(alg));
-	if (key_info & WPA_KEY_INFO_SMK_MESSAGE)
+	if ((key_info & WPA_KEY_INFO_SMK_MESSAGE) ||
+	    (sm->wpa == WPA_VERSION_WPA2 && !pairwise))
 		WPA_PUT_BE16(key->key_length, 0);
+	else
+		WPA_PUT_BE16(key->key_length, wpa_cipher_key_len(alg));
 
 	/* FIX: STSL: what to use as key_replay_counter? */
 	for (i = RSNA_MAX_EAPOL_RETRIES - 1; i > 0; i--) {

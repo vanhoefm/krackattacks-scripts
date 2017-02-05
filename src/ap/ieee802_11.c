@@ -2274,7 +2274,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	buflen = sizeof(struct ieee80211_mgmt) + 1024;
 #ifdef CONFIG_FILS
-	if (sta->fils_hlp_resp)
+	if (sta && sta->fils_hlp_resp)
 		buflen += wpabuf_len(sta->fils_hlp_resp);
 #endif /* CONFIG_FILS */
 	buf = os_zalloc(buflen);

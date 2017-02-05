@@ -3104,7 +3104,7 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 		       (wpa_mic_len(sm->wpa_key_mgmt) ? WPA_KEY_INFO_MIC : 0) |
 		       WPA_KEY_INFO_ACK |
 		       (!sm->Pair ? WPA_KEY_INFO_INSTALL : 0),
-		       rsc, gsm->GNonce, kde, kde_len, gsm->GN, 1);
+		       rsc, NULL, kde, kde_len, gsm->GN, 1);
 
 	os_free(kde_buf);
 }

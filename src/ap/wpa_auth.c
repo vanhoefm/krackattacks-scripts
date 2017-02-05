@@ -615,6 +615,7 @@ int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 				"start 4-way handshake");
 		/* Go to PTKINITDONE state to allow GTK rekeying */
 		sm->wpa_ptk_state = WPA_PTK_PTKINITDONE;
+		sm->Pair = TRUE;
 		return 0;
 	}
 #endif /* CONFIG_IEEE80211R_AP */
@@ -625,6 +626,7 @@ int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 				"FILS authentication already completed - do not start 4-way handshake");
 		/* Go to PTKINITDONE state to allow GTK rekeying */
 		sm->wpa_ptk_state = WPA_PTK_PTKINITDONE;
+		sm->Pair = TRUE;
 		return 0;
 	}
 #endif /* CONFIG_FILS */

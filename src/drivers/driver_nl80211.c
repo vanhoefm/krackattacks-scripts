@@ -3786,7 +3786,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		   beacon_set);
 	if (beacon_set)
 		cmd = NL80211_CMD_SET_BEACON;
-	else if (!nl80211_get_wiphy_data_ap(bss))
+	else if (!drv->device_ap_sme && !drv->use_monitor &&
+		 !nl80211_get_wiphy_data_ap(bss))
 		return -ENOBUFS;
 
 	wpa_hexdump(MSG_DEBUG, "nl80211: Beacon head",

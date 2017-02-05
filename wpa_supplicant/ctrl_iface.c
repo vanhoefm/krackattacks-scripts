@@ -8045,6 +8045,7 @@ static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
 	struct wpa_scan_res *res;
 	struct os_reltime now;
 	char *pos, *end;
+	int ret = -1;
 
 	if (!param)
 		return -1;
@@ -8072,8 +8073,8 @@ static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
 		res->flags = strtol(pos + 7, NULL, 16);
 
 	pos = os_strstr(param, " bssid=");
-	if (pos)
-		hwaddr_aton(pos + 7, res->bssid);
+	if (pos && hwaddr_aton(pos + 7, res->bssid))
+		goto fail;
 
 	pos = os_strstr(param, " freq=");
 	if (pos)
@@ -8120,8 +8121,8 @@ static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
 		res->parent_tsf = strtoll(pos + 7, NULL, 16);
 
 	pos = os_strstr(param, " tsf_bssid=");
-	if (pos)
-		hwaddr_aton(pos + 11, res->tsf_bssid);
+	if (pos && hwaddr_aton(pos + 11, res->tsf_bssid))
+		goto fail;
 
 	pos = os_strstr(param, " ie=");
 	if (pos) {
@@ -8130,7 +8131,8 @@ static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
 		if (!end)
 			end = pos + os_strlen(pos);
 		res->ie_len = (end - pos) / 2;
-		hexstr2bin(pos, (u8 *) (res + 1), res->ie_len);
+		if (hexstr2bin(pos, (u8 *) (res + 1), res->ie_len))
+			goto fail;
 	}
 
 	pos = os_strstr(param, " beacon_ie=");
@@ -8140,15 +8142,18 @@ static int wpas_ctrl_iface_driver_scan_res(struct wpa_supplicant *wpa_s,
 		if (!end)
 			end = pos + os_strlen(pos);
 		res->beacon_ie_len = (end - pos) / 2;
-		hexstr2bin(pos, ((u8 *) (res + 1)) + res->ie_len,
-			   res->beacon_ie_len);
+		if (hexstr2bin(pos, ((u8 *) (res + 1)) + res->ie_len,
+			       res->beacon_ie_len))
+			goto fail;
 	}
 
 	os_get_reltime(&now);
 	wpa_bss_update_scan_res(wpa_s, res, &now);
+	ret = 0;
+fail:
 	os_free(res);
 
-	return 0;
+	return ret;
 }
 
 

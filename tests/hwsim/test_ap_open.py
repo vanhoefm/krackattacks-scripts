@@ -220,6 +220,14 @@ def test_ap_bss_load(dev, apdev):
         hwsim_utils.test_connectivity(dev[0], hapd)
         time.sleep(0.15)
 
+def test_ap_bss_load_fail(dev, apdev):
+    """BSS Load update failing to get survey data"""
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": "open",
+                            "bss_load_update_period": "1" })
+    with fail_test(hapd, 1, "wpa_driver_nl80211_get_survey"):
+        wait_fail_trigger(hapd, "GET_FAIL")
+
 def hapd_out_of_mem(hapd, apdev, count, func):
     with alloc_fail(hapd, count, func):
         started = False

@@ -3439,6 +3439,8 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 				       sm->fils_nonce, sm->fils_anonce, NULL, 0,
 				       sm->pmk, &sm->pmk_len);
 		os_memset(rmsk, 0, sizeof(rmsk));
+		if (res)
+			return -1;
 
 		if (!sm->fils_erp_pmkid_set) {
 			wpa_printf(MSG_DEBUG, "FILS: PMKID not available");

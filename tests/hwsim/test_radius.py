@@ -18,7 +18,7 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip, require_under_vm, skip_with_fips, fail_test
+from utils import HwsimSkip, require_under_vm, skip_with_fips, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_hs20 import build_dhcp_ack
 from test_ap_ft import ft_params1
 
@@ -1421,3 +1421,50 @@ def test_radius_mppe_failure(dev, apdev):
                        wait_connect=False, scan_freq="2412")
         dev[0].wait_disconnected()
         dev[0].request("REMOVE_NETWORK all")
+
+def test_radius_acct_failure(dev, apdev):
+    """RADIUS Accounting and failure to add attributes"""
+    # Connection goes through, but Accounting-Request cannot be sent out due to
+    # NAS-Identifier being too long to fit into a RADIUS attribute.
+    params = { "ssid": "radius-acct-open",
+               'acct_server_addr': "127.0.0.1",
+               'acct_server_port': "1813",
+               'acct_server_shared_secret': "radius",
+               'nas_identifier': 255*'A' }
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+
+def test_radius_acct_failure_oom(dev, apdev):
+    """RADIUS Accounting and failure to add attributes due to OOM"""
+    params = { "ssid": "radius-acct-open",
+               'acct_server_addr': "127.0.0.1",
+               'acct_server_port': "1813",
+               'acct_server_shared_secret': "radius",
+               'radius_acct_interim_interval': "1",
+               'nas_identifier': 250*'A',
+               'radius_acct_req_attr': [ "126:s:" + 250*'B',
+                                         "77:s:" + 250*'C',
+                                         "127:s:" + 250*'D',
+                                         "181:s:" + 250*'E' ] }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    with alloc_fail(hapd, 1, "radius_msg_add_attr;=accounting_msg"):
+        dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+    with alloc_fail(hapd, 1, "accounting_sta_report"):
+        dev[1].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+def test_radius_acct_failure_sta_data(dev, apdev):
+    """RADIUS Accounting and failure to get STA data"""
+    params = { "ssid": "radius-acct-open",
+               'acct_server_addr': "127.0.0.1",
+               'acct_server_port': "1813",
+               'acct_server_shared_secret': "radius" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    with fail_test(hapd, 1, "accounting_sta_update_stats"):
+        dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()

@@ -1561,7 +1561,7 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 	if (current_bss->est_throughput > selected->est_throughput + 5000) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"Skip roam - Current BSS has better estimated throughput");
-		return 1;
+		return 0;
 	}
 
 	cur_est = current_bss->est_throughput;

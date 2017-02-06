@@ -867,3 +867,33 @@ def test_ap_vht_tkip(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_ap_vht_40_fallback_to_20(devs, apdevs):
+    """VHT and 40 MHz channel configuration falling back to 20 MHz"""
+    dev = devs[0]
+    ap = apdevs[0]
+    try:
+        hapd = None
+        params = { "ssid": "test-vht40",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "basic_rates": "60 120 240",
+                   "channel": "161",
+                   "ieee80211d": "1",
+                   "ieee80211h": "1",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "ht_capab": "[HT40+][SHORT-GI-20][SHORT-GI-40][DSSS_CCK-40]",
+                   "vht_capab": "[RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC1][MAX-MPDU-11454][MAX-A-MPDU-LEN-EXP7]",
+                   "vht_oper_chwidth": "0",
+                   "vht_oper_centr_freq_seg0_idx": "155",
+                 }
+        hapd = hostapd.add_ap(ap, params)
+        dev.connect("test-vht40", scan_freq="5805", key_mgmt="NONE")
+        hwsim_utils.test_connectivity(dev, hapd)
+    finally:
+        dev.request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev.flush_scan_cache()

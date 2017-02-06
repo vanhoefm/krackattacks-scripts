@@ -3134,6 +3134,10 @@ SM_STATE(WPA_PTK_GROUP, KEYERROR)
 		sm->group->GKeyDoneStations--;
 	sm->GUpdateStationKeys = FALSE;
 	sm->Disconnect = TRUE;
+	wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_INFO,
+			 "group key handshake failed (%s) after %u tries",
+			 sm->wpa == WPA_VERSION_WPA ? "WPA" : "RSN",
+			 sm->wpa_auth->conf.wpa_group_update_count);
 }
 
 

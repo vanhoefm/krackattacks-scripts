@@ -2134,7 +2134,7 @@ static int cmd_osu_select(struct hs20_osu_client *ctx, const char *dir,
 	char fname[255];
 	FILE *f;
 	struct osu_data *osu = NULL, *last = NULL;
-	size_t osu_count, i, j;
+	size_t osu_count = 0, i, j;
 	int ret;
 
 	write_summary(ctx, "OSU provider selection");

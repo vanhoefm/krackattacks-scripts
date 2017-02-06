@@ -2235,3 +2235,22 @@ def test_ap_wpa_psk_rsn_pairwise(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("wpapsk", psk="1234567890", proto="WPA", pairwise="TKIP",
                    scan_freq="2412")
+
+def test_ap_wpa2_eapol_retry_limit(dev, apdev):
+    """WPA2-PSK EAPOL-Key retry limit configuration"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_ptk_rekey'] = '2'
+    params['wpa_group_update_count'] = '1'
+    params['wpa_pairwise_update_count'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"])
+    if ev is None:
+        raise Exception("PTK rekey timed out")
+
+    if "FAIL" not in hapd.request("SET wpa_group_update_count 0"):
+        raise Exception("Invalid wpa_group_update_count value accepted")
+    if "FAIL" not in hapd.request("SET wpa_pairwise_update_count 0"):
+        raise Exception("Invalid wpa_pairwise_update_count value accepted")

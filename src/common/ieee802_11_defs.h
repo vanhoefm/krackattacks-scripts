@@ -1960,4 +1960,53 @@ enum nr_chan_width {
 	NR_CHAN_WIDTH_80P80 = 4,
 };
 
+struct ieee80211_he_capabilities {
+	u8 he_mac_capab_info[5];
+	u8 he_phy_capab_info[9];
+	u16 he_txrx_mcs_support;
+	/* possibly followed by Tx Rx MCS NSS descriptor */
+	u8 variable[];
+	/* PPE Thresholds (optional) */
+} STRUCT_PACKED;
+
+struct ieee80211_he_operation {
+	u32 he_oper_params;
+	u8 he_mcs_nss_set[3];
+	u8 vht_op_info_chwidth;
+	u8 vht_op_info_chan_center_freq_seg0_idx;
+	u8 vht_op_info_chan_center_freq_seg1_idx;
+} STRUCT_PACKED;
+
+/* HE Capabilities Information defines */
+#define HE_PHYCAP_SU_BEAMFORMER_CAPAB_IDX	3
+#define HE_PHYCAP_SU_BEAMFORMER_CAPAB		((u8) BIT(7))
+#define HE_PHYCAP_SU_BEAMFORMEE_CAPAB_IDX	4
+#define HE_PHYCAP_SU_BEAMFORMEE_CAPAB		((u8) BIT(0))
+#define HE_PHYCAP_MU_BEAMFORMER_CAPAB_IDX	4
+#define HE_PHYCAP_MU_BEAMFORMER_CAPAB		((u8) BIT(1))
+
+/* HE Operation defines */
+#define HE_OPERATION_BSS_COLOR_MASK		((u32) (BIT(0) | BIT(1) | \
+							BIT(2) | BIT(3) | \
+							BIT(4) | BIT(5)))
+#define HE_OPERATION_DFLT_PE_DURATION_MASK	((u32) (BIT(6) | BIT(7) | \
+							BIT(8)))
+#define HE_OPERATION_DFLT_PE_DURATION_OFFSET	6
+#define HE_OPERATION_TWT_REQUIRED		((u32) BIT(9))
+#define HE_OPERATION_RTS_THRESHOLD_MASK	((u32) (BIT(10) | BIT(11) | \
+						BIT(12) | BIT(13) | \
+						BIT(14) | BIT(15) | \
+						BIT(16) | BIT(17) | \
+						BIT(18) | BIT(19)))
+#define HE_OPERATION_RTS_THRESHOLD_OFFSET	10
+#define HE_OPERATION_PARTIAL_BSS_COLOR		((u32) BIT(20))
+#define HE_OPERATION_MAX_BSSID_INDICATOR_MASK	((u32) (BIT(21) | BIT(22) | \
+							BIT(23) | BIT(24) | \
+							BIT(25) | BIT(26) | \
+							BIT(27) | BIT(28)))
+#define HE_OPERATION_MAX_BSSID_INDICATOR_OFFSET 21
+#define HE_OPERATION_TX_BSSID_INDICATOR		((u32) BIT(29))
+#define HE_OPERATION_BSS_COLOR_DISABLED		((u32) BIT(30))
+#define HE_OPERATION_BSS_DUAL_BEACON		((u32) BIT(31))
+
 #endif /* IEEE802_11_DEFS_H */

@@ -157,6 +157,12 @@ CONFIG_IPV6=y
 # IEEE 802.11ac (Very High Throughput) support
 #CONFIG_IEEE80211AC=y
 
+# IEEE 802.11ax HE support
+# Note: This is experimental and work in progress. The definitions are still
+# subject to change and this should not be expected to interoperate with the
+# final IEEE 802.11ax version.
+#CONFIG_IEEE80211AX=y
+
 # Remove debugging code that is printing out debug messages to stdout.
 # This can be used to reduce the size of the hostapd considerably if debugging
 # code is not needed.

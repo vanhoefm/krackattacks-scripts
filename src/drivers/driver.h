@@ -136,6 +136,29 @@ struct hostapd_channel_data {
 	unsigned int dfs_cac_ms;
 };
 
+#define HE_MAX_NUM_SS 		8
+#define HE_MAX_PHY_CAPAB_SIZE	3
+
+/**
+ * struct he_ppe_threshold - IEEE 802.11ax HE PPE Threshold
+ */
+struct he_ppe_threshold {
+	u32 numss_m1;
+	u32 ru_count;
+	u32 ppet16_ppet8_ru3_ru0[HE_MAX_NUM_SS];
+};
+
+/**
+ * struct he_capabilities - IEEE 802.11ax HE capabilities
+ */
+struct he_capabilities {
+	u8 he_supported;
+	u32 phy_cap[HE_MAX_PHY_CAPAB_SIZE];
+	u32 mac_cap;
+	u32 mcs;
+	struct he_ppe_threshold ppet;
+};
+
 #define HOSTAPD_MODE_FLAG_HT_INFO_KNOWN BIT(0)
 #define HOSTAPD_MODE_FLAG_VHT_INFO_KNOWN BIT(1)
 
@@ -194,6 +217,11 @@ struct hostapd_hw_modes {
 	u8 vht_mcs_set[8];
 
 	unsigned int flags; /* HOSTAPD_MODE_FLAG_* */
+
+	/**
+	 * he_capab - HE (IEEE 802.11ax) capabilities
+	 */
+	struct he_capabilities he_capab;
 };
 
 
@@ -1429,6 +1457,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_MGMT_TX_RANDOM_TA_CONNECTED	0x0000800000000000ULL
 /** Driver supports better BSS reporting with sched_scan in connected mode */
 #define WPA_DRIVER_FLAGS_SCHED_SCAN_RELATIVE_RSSI	0x0001000000000000ULL
+/** Driver supports HE capabilities */
+#define WPA_DRIVER_FLAGS_HE_CAPABILITIES	0x0002000000000000ULL
 	u64 flags;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \

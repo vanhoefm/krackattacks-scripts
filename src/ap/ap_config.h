@@ -619,6 +619,24 @@ struct hostapd_bss_config {
 	int multicast_to_unicast;
 };
 
+/**
+ * struct he_phy_capabilities_info - HE PHY capabilities
+ */
+struct he_phy_capabilities_info {
+	Boolean he_su_beamformer;
+	Boolean he_su_beamformee;
+	Boolean he_mu_beamformer;
+};
+
+/**
+ * struct he_operation - HE operation
+ */
+struct he_operation {
+	u8 he_bss_color;
+	u8 he_default_pe_duration;
+	u8 he_twt_required;
+	u8 he_rts_threshold;
+};
 
 /**
  * struct hostapd_config - Per-radio interface configuration
@@ -732,6 +750,12 @@ struct hostapd_config {
 	struct wpabuf *lci;
 	struct wpabuf *civic;
 	int stationary_ap;
+
+	int ieee80211ax;
+#ifdef CONFIG_IEEE80211AX
+	struct he_phy_capabilities_info he_phy_capab;
+	struct he_operation he_op;
+#endif /* CONFIG_IEEE80211AX */
 };
 
 

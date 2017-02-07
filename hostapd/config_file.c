@@ -3008,6 +3008,24 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "use_sta_nsts") == 0) {
 		bss->use_sta_nsts = atoi(pos);
 #endif /* CONFIG_IEEE80211AC */
+#ifdef CONFIG_IEEE80211AX
+	} else if (os_strcmp(buf, "ieee80211ax") == 0) {
+		conf->ieee80211ax = atoi(pos);
+	} else if (os_strcmp(buf, "he_su_beamformer") == 0) {
+		conf->he_phy_capab.he_su_beamformer = atoi(pos);
+	} else if (os_strcmp(buf, "he_su_beamformee") == 0) {
+		conf->he_phy_capab.he_su_beamformee = atoi(pos);
+	} else if (os_strcmp(buf, "he_mu_beamformer") == 0) {
+		conf->he_phy_capab.he_mu_beamformer = atoi(pos);
+	} else if (os_strcmp(buf, "he_bss_color") == 0) {
+		conf->he_op.he_bss_color = atoi(pos);
+	} else if (os_strcmp(buf, "he_default_pe_duration") == 0) {
+		conf->he_op.he_default_pe_duration = atoi(pos);
+	} else if (os_strcmp(buf, "he_twt_required") == 0) {
+		conf->he_op.he_twt_required = atoi(pos);
+	} else if (os_strcmp(buf, "he_rts_threshold") == 0) {
+		conf->he_op.he_rts_threshold = atoi(pos);
+#endif /* CONFIG_IEEE80211AX */
 	} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 		bss->max_listen_interval = atoi(pos);
 	} else if (os_strcmp(buf, "disable_pmksa_caching") == 0) {

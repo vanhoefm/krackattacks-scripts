@@ -4367,6 +4367,13 @@ static void radio_work_free(struct wpa_radio_work *work)
 }
 
 
+static int radio_work_is_connect(struct wpa_radio_work *work)
+{
+	return os_strcmp(work->type, "sme-connect") == 0 ||
+		os_strcmp(work->type, "connect") == 0;
+}
+
+
 static int radio_work_is_scan(struct wpa_radio_work *work)
 {
 	return os_strcmp(work->type, "scan") == 0 ||
@@ -4403,8 +4410,7 @@ static struct wpa_radio_work * radio_work_get_next_work(struct wpa_radio *radio)
 		return NULL;
 	}
 
-	if (os_strcmp(active_work->type, "sme-connect") == 0 ||
-	    os_strcmp(active_work->type, "connect") == 0) {
+	if (radio_work_is_connect(active_work)) {
 		/*
 		 * If the active work is either connect or sme-connect,
 		 * do not parallelize them with other radio works.
@@ -4423,8 +4429,7 @@ static struct wpa_radio_work * radio_work_get_next_work(struct wpa_radio *radio)
 		 * If connect or sme-connect are enqueued, parallelize only
 		 * those operations ahead of them in the queue.
 		 */
-		if (os_strcmp(tmp->type, "connect") == 0 ||
-		    os_strcmp(tmp->type, "sme-connect") == 0)
+		if (radio_work_is_connect(tmp))
 			break;
 
 		/* Serialize parallel scan and p2p_scan operations on the same

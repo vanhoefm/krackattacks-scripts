@@ -273,12 +273,12 @@ def test_radius_acct_interim(dev, apdev):
     connect(dev[0], "radius-acct")
     logger.info("Checking for RADIUS counters")
     as_mib_start = as_hapd.get_mib(param="radius_server")
-    time.sleep(3.1)
+    time.sleep(4.1)
     as_mib_end = as_hapd.get_mib(param="radius_server")
     req_s = int(as_mib_start['radiusAccServTotalRequests'])
     req_e = int(as_mib_end['radiusAccServTotalRequests'])
     if req_e < req_s + 3:
-        raise Exception("Unexpected RADIUS server acct MIB value")
+        raise Exception("Unexpected RADIUS server acct MIB value (req_e=%d req_s=%d)" % (req_e, req_s))
 
 def test_radius_acct_interim_unreachable(dev, apdev):
     """RADIUS Accounting interim update with unreachable server"""

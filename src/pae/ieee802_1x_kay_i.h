@@ -93,6 +93,7 @@ struct ieee802_1x_mka_participant {
 	Boolean active;
 	Boolean participant;
 	Boolean retain;
+	enum mka_created_mode mode;
 
 	enum { DEFAULT, DISABLED, ON_OPER_UP, ALWAYS } activate;
 

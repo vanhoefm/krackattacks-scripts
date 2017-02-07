@@ -2428,7 +2428,8 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 		participant->new_sak = FALSE;
 	}
 
-	if (participant->retry_count < MAX_RETRY_CNT) {
+	if (participant->retry_count < MAX_RETRY_CNT ||
+	    participant->mode == PSK) {
 		ieee802_1x_participant_send_mkpdu(participant);
 		participant->retry_count++;
 	}
@@ -2828,7 +2829,7 @@ int ieee802_1x_kay_enable_new_info(struct ieee802_1x_kay *kay)
 	if (!principal)
 		return -1;
 
-	if (principal->retry_count < MAX_RETRY_CNT) {
+	if (principal->retry_count < MAX_RETRY_CNT || principal->mode == PSK) {
 		ieee802_1x_participant_send_mkpdu(principal);
 		principal->retry_count++;
 	}
@@ -3368,6 +3369,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 		participant->mka_life = MKA_LIFE_TIME / 1000 + time(NULL) +
 			usecs / 1000000;
 	}
+	participant->mode = mode;
 
 	return participant;
 

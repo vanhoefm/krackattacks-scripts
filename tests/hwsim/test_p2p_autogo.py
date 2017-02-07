@@ -628,7 +628,11 @@ def test_go_search_non_social(dev):
     dev[1].p2p_find(freq=2422)
     ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=3.5)
     if ev is None:
-        raise Exception("Did not find GO quickly enough")
+        dev[1].p2p_stop_find()
+        dev[1].p2p_find(freq=2422)
+        ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=3.5)
+        if ev is None:
+            raise Exception("Did not find GO quickly enough")
     dev[2].p2p_listen()
     ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is None:

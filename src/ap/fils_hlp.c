@@ -281,8 +281,8 @@ static void fils_dhcp_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	} else {
 		wpabuf_put_data(resp, pos, end - pos);
 	}
-	if (!wpabuf_resize(&sta->fils_hlp_resp, wpabuf_len(resp) +
-			   2 * wpabuf_len(resp) / 255 + 100) == 0) {
+	if (wpabuf_resize(&sta->fils_hlp_resp, wpabuf_len(resp) +
+			  2 * wpabuf_len(resp) / 255 + 100)) {
 		wpabuf_free(resp);
 		return;
 	}

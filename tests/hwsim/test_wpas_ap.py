@@ -360,6 +360,8 @@ def _test_wpas_ap_dfs(dev):
         raise Exception("AP failed to start")
 
     dev[1].connect("wpas-ap-dfs", key_mgmt="NONE")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
 
 @remote_compatible
 def test_wpas_ap_disable(dev):
@@ -618,3 +620,28 @@ def test_wpas_ap_global_sta(dev):
     dev[1].wait_disconnected()
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_wpas_ap_5ghz(dev):
+    """wpa_supplicant AP mode - 5 GHz"""
+    try:
+        _test_wpas_ap_5ghz(dev)
+    finally:
+        set_country("00")
+        dev[0].request("SET country 00")
+        dev[1].flush_scan_cache()
+
+def _test_wpas_ap_5ghz(dev):
+    set_country("US")
+    dev[0].request("SET country US")
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-5ghz")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "5180")
+    dev[0].set_network(id, "scan_freq", "5180")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+
+    dev[1].connect("wpas-ap-5ghz", key_mgmt="NONE", scan_freq="5180")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()

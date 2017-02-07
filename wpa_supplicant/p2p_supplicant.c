@@ -307,6 +307,11 @@ static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 		return;
 	}
 
+	if (wpa_s->clear_driver_scan_cache) {
+		wpa_printf(MSG_DEBUG,
+			   "Request driver to clear scan cache due to local BSS flush");
+		params->only_new_results = 1;
+	}
 	ret = wpa_drv_scan(wpa_s, params);
 	if (ret == 0)
 		wpa_s->curr_scan_cookie = params->scan_cookie;
@@ -322,6 +327,7 @@ static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	os_get_reltime(&wpa_s->scan_trigger_time);
 	wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
 	wpa_s->own_scan_requested = 1;
+	wpa_s->clear_driver_scan_cache = 0;
 	wpa_s->p2p_scan_work = work;
 }
 
@@ -5002,6 +5008,12 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 	params.extra_ies = wpabuf_head(ies);
 	params.extra_ies_len = wpabuf_len(ies);
 
+	if (wpa_s->clear_driver_scan_cache) {
+		wpa_printf(MSG_DEBUG,
+			   "Request driver to clear scan cache due to local BSS flush");
+		params.only_new_results = 1;
+	}
+
 	/*
 	 * Run a scan to update BSS table and start Provision Discovery once
 	 * the new scan results become available.
@@ -5011,6 +5023,7 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
 		wpa_s->own_scan_requested = 1;
+		wpa_s->clear_driver_scan_cache = 0;
 	}
 
 	wpabuf_free(ies);

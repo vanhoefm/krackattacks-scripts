@@ -665,9 +665,11 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 
 #ifndef CONFIG_NO_RADIUS
 	hostapd_acl_cache_free(hapd->acl_cache);
+	hapd->acl_cache = NULL;
 #endif /* CONFIG_NO_RADIUS */
 
 	query = hapd->acl_queries;
+	hapd->acl_queries = NULL;
 	while (query) {
 		prev = query;
 		query = query->next;

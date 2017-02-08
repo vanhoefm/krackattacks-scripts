@@ -4450,11 +4450,13 @@ RGV2aWNlIEEQSQAGADcqAAEg
             res = socks[i].recv(100)
             if "HTTP/1" in res:
                 count += 1
+            else:
+                logger.info("recv[%d]: len=%d" % (i, len(res)))
         except:
             pass
         socks[i].close()
     logger.info("%d concurrent HTTP GET operations returned response" % count)
-    if count < 10:
+    if count < 8:
         raise Exception("Too few concurrent HTTP connections accepted")
 
     logger.info("OOM in HTTP server")

@@ -904,6 +904,30 @@ def test_radius_macacl_oom(dev, apdev):
     with alloc_fail(hapd, 2, "=hostapd_allowed_address"):
         dev[2].connect("radius", key_mgmt="NONE", scan_freq="2412")
 
+def test_radius_macacl_unreachable(dev, apdev):
+    """RADIUS MAC ACL and server unreachable"""
+    params = hostapd.radius_params()
+    params['auth_server_port'] = "18139"
+    params["ssid"] = "radius"
+    params["macaddr_acl"] = "2"
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=3)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+
+    logger.info("Fix authentication server port")
+    hapd.set("auth_server_port", "1812")
+    hapd.disable()
+    hapd.enable()
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
 def test_radius_failover(dev, apdev):
     """RADIUS Authentication and Accounting server failover"""
     subprocess.call(['ip', 'ro', 'replace', '192.168.213.17', 'dev', 'lo'])

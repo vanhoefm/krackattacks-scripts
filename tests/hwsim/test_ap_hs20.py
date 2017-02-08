@@ -4252,9 +4252,12 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
 
     if ebtables:
         for chain in [ 'FORWARD', 'OUTPUT' ]:
-            subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
-                             '-d', 'Broadcast', '-o', apdev[0]['ifname'],
-                             '-j', 'DROP'])
+            try:
+                subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
+                                 '-d', 'Broadcast', '-o', apdev[0]['ifname'],
+                                 '-j', 'DROP'])
+            except:
+                raise HwsimSkip("No ebtables available")
 
     time.sleep(0.5)
     cmd = {}
@@ -4580,23 +4583,26 @@ def _test_proxyarp_open_ipv6(dev, apdev, params, ebtables=False):
 
     if ebtables:
         for chain in [ 'FORWARD', 'OUTPUT' ]:
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'neighbor-solicitation',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'neighbor-advertisement',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            subprocess.call(['ebtables', '-A', chain,
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'router-solicitation',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            # Multicast Listener Report Message
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', '143',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            try:
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'neighbor-solicitation',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'neighbor-advertisement',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                subprocess.call(['ebtables', '-A', chain,
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'router-solicitation',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                # Multicast Listener Report Message
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', '143',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            except:
+                raise HwsimSkip("No ebtables available")
 
     time.sleep(0.5)
     cmd = {}

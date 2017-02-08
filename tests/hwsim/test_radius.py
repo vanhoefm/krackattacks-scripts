@@ -1448,13 +1448,49 @@ def test_radius_acct_failure_oom(dev, apdev):
                                          "181:s:" + 250*'E' ] }
     hapd = hostapd.add_ap(apdev[0], params)
 
-    with alloc_fail(hapd, 1, "radius_msg_add_attr;=accounting_msg"):
+    with alloc_fail(hapd, 1, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_msg"):
         dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
         wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
 
     with alloc_fail(hapd, 1, "accounting_sta_report"):
         dev[1].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
         wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+def test_radius_acct_failure_oom_rsn(dev, apdev):
+    """RADIUS Accounting in RSN and failure to add attributes due to OOM"""
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    params['radius_acct_interim_interval'] = "1"
+    params['nas_identifier'] =  250*'A'
+    params['radius_acct_req_attr'] = [ "126:s:" + 250*'B',
+                                       "77:s:" + 250*'C',
+                                       "127:s:" + 250*'D',
+                                       "181:s:" + 250*'E' ]
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    with alloc_fail(hapd, 1, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_msg"):
+        connect(dev[0], "radius-acct")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+    dev[1].scan_for_bss(bssid, freq="2412")
+    with alloc_fail(hapd, 1, "accounting_sta_report"):
+        connect(dev[1], "radius-acct")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+    dev[2].scan_for_bss(bssid, freq="2412")
+    connect(dev[2], "radius-acct")
+
+    for i in range(1, 8):
+        with alloc_fail(hapd, i, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_msg"):
+            wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+    for i in range(1, 15):
+        with alloc_fail(hapd, i, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_sta_report"):
+            wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
 
 def test_radius_acct_failure_sta_data(dev, apdev):
     """RADIUS Accounting and failure to get STA data"""

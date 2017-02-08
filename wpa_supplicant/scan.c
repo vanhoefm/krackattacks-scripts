@@ -2449,7 +2449,7 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	if ((wpa_s->wpa_state > WPA_SCANNING) &&
-	    (wpa_s->wpa_state <= WPA_COMPLETED)) {
+	    (wpa_s->wpa_state < WPA_COMPLETED)) {
 		wpa_printf(MSG_ERROR, "PNO: In assoc process");
 		return -EAGAIN;
 	}

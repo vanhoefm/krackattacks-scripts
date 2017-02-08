@@ -884,6 +884,26 @@ def test_radius_macacl_acct(dev, apdev):
     dev[1].wait_disconnected()
     dev[1].request("RECONNECT")
 
+def test_radius_macacl_oom(dev, apdev):
+    """RADIUS MAC ACL and OOM"""
+    params = hostapd.radius_params()
+    params["ssid"] = "radius"
+    params["macaddr_acl"] = "2"
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    with alloc_fail(hapd, 1, "hostapd_allowed_address"):
+        dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")
+
+    dev[1].scan_for_bss(bssid, freq="2412")
+    with alloc_fail(hapd, 2, "hostapd_allowed_address"):
+        dev[1].connect("radius", key_mgmt="NONE", scan_freq="2412")
+
+    dev[2].scan_for_bss(bssid, freq="2412")
+    with alloc_fail(hapd, 2, "=hostapd_allowed_address"):
+        dev[2].connect("radius", key_mgmt="NONE", scan_freq="2412")
+
 def test_radius_failover(dev, apdev):
     """RADIUS Authentication and Accounting server failover"""
     subprocess.call(['ip', 'ro', 'replace', '192.168.213.17', 'dev', 'lo'])

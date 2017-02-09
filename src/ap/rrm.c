@@ -147,7 +147,7 @@ static u16 hostapd_parse_location_lci_req_age(const u8 *buf, size_t len)
 	/* Subelements are arranged as IEs */
 	subelem = get_ie(buf + 4, len - 4, LCI_REQ_SUBELEM_MAX_AGE);
 	if (subelem && subelem[1] == 2)
-		return *(u16 *) (subelem + 2);
+		return WPA_GET_LE16(subelem + 2);
 
 	return 0;
 }

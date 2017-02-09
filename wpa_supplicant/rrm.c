@@ -1032,6 +1032,7 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 	elems_len = len - sizeof(*req);
 	rand_interval = le_to_host16(req->rand_interval);
 
+	os_free(params->freqs);
 	os_memset(params, 0, sizeof(*params));
 
 	data->token = elem_token;

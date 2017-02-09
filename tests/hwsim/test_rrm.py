@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger()
 import struct
 import subprocess
+import time
 
 import hostapd
 from wpasupplicant import WpaSupplicant
@@ -261,6 +262,26 @@ def test_rrm_neighbor_rep_req(dev, apdev):
         raise Exception("Request failed")
     check_nr_results(dev[0], ["dd:11:22:33:44:55"], lci=True)
 
+def test_rrm_neighbor_rep_oom(dev, apdev):
+    """hostapd neighbor report OOM"""
+    check_rrm_support(dev[0])
+
+    nr1="00112233445500000000510107"
+    nr2="00112233445600000000510107"
+    nr3="dd112233445500000000510107"
+
+    params = { "ssid": "test", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(hapd, 1, "hostapd_send_nei_report_resp"):
+        if "OK" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+            raise Exception("Request failed")
+        ev = dev[0].wait_event(["RRM-NEIGHBOR-REP-REQUEST-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Neighbor report failure not reported")
+
 def test_rrm_lci_req(dev, apdev):
     """hostapd lci request"""
     check_rrm_support(dev[0])
@@ -294,6 +315,37 @@ def test_rrm_lci_req(dev, apdev):
     if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
         raise Exception("REQ_LCI failed unexpectedly")
 
+def test_rrm_lci_req_timeout(dev, apdev):
+    """hostapd lci request timeout"""
+    check_rrm_support(dev[0])
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET LCI " + lci)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    if "OK" not in hapd.request("REQ_LCI " + addr):
+        raise Exception("REQ_LCI failed unexpectedly")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("No response seen at the AP")
+    # Ignore response and wait for HOSTAPD_RRM_REQUEST_TIMEOUT
+    time.sleep(5.1)
+    # Process response after timeout
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % ev.split(' ')[1]):
+        raise Exception("MGMT_RX_PROCESS failed")
+    for i in range(257):
+        if "OK" not in hapd.request("REQ_LCI " + addr):
+            raise Exception("REQ_LCI failed unexpectedly")
+        dev[0].dump_monitor()
+        hapd.dump_monitor()
+    hapd.set("ext_mgmt_frame_handling", "0")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
 def test_rrm_lci_req_oom(dev, apdev):
     """LCI report generation OOM"""
     check_rrm_support(dev[0])
@@ -316,6 +368,24 @@ def test_rrm_lci_req_oom(dev, apdev):
         if "OK" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
             raise Exception("REQ_LCI failed unexpectedly")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+
+def test_rrm_lci_req_ap_oom(dev, apdev):
+    """LCI report generation AP OOM and failure"""
+    check_rrm_support(dev[0])
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET LCI " + lci)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_send_lci_req"):
+        if "FAIL" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
+            raise Exception("REQ_LCI succeeded during OOM")
+
+    with fail_test(hapd, 1, "nl80211_send_frame_cmd;hostapd_send_lci_req"):
+        if "FAIL" not in hapd.request("REQ_LCI " + dev[0].own_addr()):
+            raise Exception("REQ_LCI succeeded during failure testing")
 
 def test_rrm_lci_req_get_reltime_failure(dev, apdev):
     """LCI report generation and os_get_reltime() failure"""
@@ -451,9 +521,15 @@ def test_rrm_neighbor_rep_req_busy(dev, apdev):
 def test_rrm_ftm_range_req(dev, apdev):
     """hostapd FTM range request command"""
     check_rrm_support(dev[0])
+    try:
+        run_rrm_ftm_range_req(dev, apdev)
+    finally:
+        dev[1].request("VENDOR_ELEM_REMOVE 13 *")
 
+def run_rrm_ftm_range_req(dev, apdev):
     params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
 
     # station not specified
     if "FAIL" not in hapd.request("REQ_RANGE "):
@@ -492,14 +568,109 @@ def test_rrm_ftm_range_req(dev, apdev):
     # Too many responders
     if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 10" + 20*" 00:11:22:33:44:55"):
         raise Exception("REQ_RANGE succeeded unexpectedly (too many responders)")
+    # Wrong min AP count
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 10 00:11:22:33:44:55"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (responder not in database)")
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    # Override RM capabilities to include FTM range report
+    dev[1].request("VENDOR_ELEM_ADD 13 46057100000004")
+    dev[1].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+
+    # Request range: Destination address is not connected
+    if "FAIL" not in hapd.request("REQ_RANGE 11:22:33:44:55:66 10 1 00:11:22:33:44:55"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (responder not in database)")
 
     # Responder not in database
     # Note: this check would pass since the station does not support FTM range
     # request and not because the responder is not in the database.
-    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 10 00:11:22:33:44:55"):
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[0].own_addr() + " 10 1 00:11:22:33:44:55"):
         raise Exception("REQ_RANGE succeeded unexpectedly (responder not in database)")
+
+    # Missing neighbor report for 00:11:22:33:44:55
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[1].own_addr() + " 10 1 00:11:22:33:44:55"):
+        raise Exception("REQ_RANGE succeeded unexpectedly (responder not in database)")
+
+    # Send request
+    if "OK" not in hapd.request("REQ_RANGE " + dev[1].own_addr() + " 10 1 " + bssid):
+        raise Exception("REQ_RANGE failed unexpectedly")
+
+    # Too long range request
+    if "FAIL" not in hapd.request("REQ_RANGE " + dev[1].own_addr() + " 10 1" + 16*(" " + bssid)):
+        raise Exception("REQ_RANGE accepted for too long range request")
+
+    time.sleep(0.1)
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+
+def test_rrm_ftm_range_req_timeout(dev, apdev):
+    """hostapd FTM range request timeout"""
+    check_rrm_support(dev[0])
+    try:
+        run_rrm_ftm_range_req_timeout(dev, apdev)
+    finally:
+        dev[1].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_rrm_ftm_range_req_timeout(dev, apdev):
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    # Override RM capabilities to include FTM range report
+    dev[1].request("VENDOR_ELEM_ADD 13 46057100000004")
+    dev[1].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[1].own_addr()
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    if "OK" not in hapd.request("REQ_RANGE " + addr + " 10 1 " + bssid):
+        raise Exception("REQ_RANGE failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("No response seen at the AP")
+    # Ignore response and wait for HOSTAPD_RRM_REQUEST_TIMEOUT
+    time.sleep(5.1)
+    # Process response after timeout
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % ev.split(' ')[1]):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    for i in range(257):
+        if "OK" not in hapd.request("REQ_RANGE " + addr + " 10 1 " + bssid):
+            raise Exception("REQ_RANGE failed")
+        dev[1].dump_monitor()
+        hapd.dump_monitor()
+
+    hapd.set("ext_mgmt_frame_handling", "0")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+
+def test_rrm_ftm_range_req_failure(dev, apdev):
+    """hostapd FTM range request failure"""
+    check_rrm_support(dev[0])
+    try:
+        run_rrm_ftm_range_req_failure(dev, apdev)
+    finally:
+        dev[1].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_rrm_ftm_range_req_failure(dev, apdev):
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    # Override RM capabilities to include FTM range report
+    dev[1].request("VENDOR_ELEM_ADD 13 46057100000004")
+    dev[1].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_send_range_req"):
+        if "FAIL" not in hapd.request("REQ_RANGE " + dev[1].own_addr() + " 10 1 " + bssid):
+            raise Exception("REQ_RANGE succeeded during OOM")
+
+    with fail_test(hapd, 1, "nl80211_send_frame_cmd;hostapd_send_range_req"):
+        if "FAIL" not in hapd.request("REQ_RANGE " + dev[1].own_addr() + " 10 1 " + bssid):
+            raise Exception("REQ_RANGE succeeded during failure testing")
+
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
 
 def test_rrm_ftm_capa_indication(dev, apdev):
     """FTM capability indication"""
@@ -1407,6 +1578,59 @@ def test_rrm_beacon_req_passive_scan_vht160(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_rrm_beacon_req_ap_errors(dev, apdev):
+    """Beacon request - AP error cases"""
+    try:
+        run_rrm_beacon_req_ap_errors(dev, apdev)
+    finally:
+        dev[1].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_rrm_beacon_req_ap_errors(dev, apdev):
+    params = { "ssid": "rrm", "rrm_beacon_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+    # Override RM capabilities (remove all)
+    dev[1].request("VENDOR_ELEM_ADD 13 46050000000000")
+    dev[1].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr1 = dev[1].own_addr()
+
+    # Beacon request: Too short request data
+    if "FAIL" not in hapd.request("REQ_BEACON " + addr + " 11"):
+        raise Exception("Invalid REQ_BEACON accepted")
+
+    # Beacon request: 02:00:00:00:01:00 does not support table beacon report
+    if "FAIL" not in hapd.request("REQ_BEACON " + addr1 + " 51000000000002ffffffffffff"):
+        raise Exception("Invalid REQ_BEACON accepted")
+
+    # Beacon request: 02:00:00:00:01:00 does not support active beacon report
+    if "FAIL" not in hapd.request("REQ_BEACON " + addr1 + " 51000000640001ffffffffffff"):
+        raise Exception("Invalid REQ_BEACON accepted")
+
+    # Beacon request: 02:00:00:00:01:00 does not support passive beacon report
+    if "FAIL" not in hapd.request("REQ_BEACON " + addr1 + " 510b0000640000ffffffffffff"):
+        raise Exception("Invalid REQ_BEACON accepted")
+
+    # Beacon request: Unknown measurement mode 3
+    if "FAIL" not in hapd.request("REQ_BEACON " + addr1 + " 510b0000640003ffffffffffff"):
+        raise Exception("Invalid REQ_BEACON accepted")
+
+    for i in range(257):
+        if "FAIL" in hapd.request("REQ_BEACON " + addr + " 510b0000640000ffffffffffff"):
+            raise Exception("REQ_BEACON failed")
+        dev[0].dump_monitor()
+        hapd.dump_monitor()
+
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_send_beacon_req"):
+        if "FAIL" not in hapd.request("REQ_BEACON " + addr + " 510b0000640000ffffffffffff"):
+            raise Exception("REQ_BEACON accepted during OOM")
+
+    with fail_test(hapd, 1, "nl80211_send_frame_cmd;hostapd_send_beacon_req"):
+        if "FAIL" not in hapd.request("REQ_BEACON " + addr + " 510b0000640000ffffffffffff"):
+            raise Exception("REQ_BEACON accepted during failure testing")
+
 def test_rrm_req_reject_oom(dev, apdev):
     """Radio measurement request - OOM while rejecting a request"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
@@ -1605,3 +1829,57 @@ def test_rrm_link_measurement_oom(dev, apdev):
     ev = hapd.wait_event(["MGMT-RX"], timeout=0.1)
     if ev is not None:
         raise Exception("Unexpected beacon report response during OOM")
+
+def test_rrm_rep_parse_proto(dev, apdev):
+    """hostapd rrm report parsing protocol testing"""
+    check_rrm_support(dev[0])
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].request("SET LCI " + lci)
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    tests = [ "0501",
+              "05ff01",
+              "0501012703fffffe2700",
+              "0501012703ffff05",
+              "05010127ffffff05" + 252*"00",
+              "0504012603ffffff2600",
+              "0504012603ffff08",
+              "0504012608ffff08ffffffffff",
+              "0504012608ffff08ff04021234",
+              "0504012608ffff08ff04020100",
+              "0504012608ffff08ff0402ffff" ]
+    for t in tests:
+        if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed for " + t)
+
+    if "OK" not in hapd.request("SET_NEIGHBOR 00:11:22:33:44:55 ssid=\"rrm\" nr=" + nr + " lci=" + lci):
+        raise Exception("Set neighbor failed")
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0504012608ffff08ff04021000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+def test_rrm_unexpected(dev, apdev):
+    """hostapd unexpected rrm"""
+    check_rrm_support(dev[0])
+
+    params = { "ssid": "rrm", "rrm_neighbor_report": "0" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    tests = [ "050401" ]
+    for t in tests:
+        if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed for " + t)

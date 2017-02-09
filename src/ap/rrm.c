@@ -370,13 +370,7 @@ int hostapd_send_lci_req(struct hostapd_data *hapd, const u8 *addr)
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 	int ret;
 
-	if (!sta) {
-		wpa_printf(MSG_INFO,
-			   "Request LCI: Destination address is not in station list");
-		return -1;
-	}
-
-	if (!(sta->flags & WLAN_STA_AUTHORIZED)) {
+	if (!sta || !(sta->flags & WLAN_STA_AUTHORIZED)) {
 		wpa_printf(MSG_INFO,
 			   "Request LCI: Destination address is not connected");
 		return -1;

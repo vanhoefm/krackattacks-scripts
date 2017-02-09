@@ -473,9 +473,8 @@ int hostapd_send_range_req(struct hostapd_data *hapd, const u8 *addr,
 		wpa_printf(MSG_DEBUG,
 			   "Request range: Range request is already in process; overriding");
 		hapd->range_req_active = 0;
-		eloop_register_timeout(HOSTAPD_RRM_REQUEST_TIMEOUT, 0,
-				       hostapd_range_rep_timeout_handler, hapd,
-				       NULL);
+		eloop_cancel_timeout(hostapd_range_rep_timeout_handler, hapd,
+				     NULL);
 	}
 
 	/* Action + measurement type + token + reps + EID + len = 7 */

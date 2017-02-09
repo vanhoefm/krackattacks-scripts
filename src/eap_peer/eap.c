@@ -2246,6 +2246,7 @@ static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 		config->pending_req_passphrase++;
 		break;
 	case WPA_CTRL_REQ_SIM:
+		config->pending_req_sim++;
 		txt = msg;
 		break;
 	case WPA_CTRL_REQ_EXT_CERT_CHECK:

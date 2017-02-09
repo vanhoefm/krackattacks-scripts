@@ -628,6 +628,15 @@ struct eap_peer_config {
 	int pending_req_passphrase;
 
 	/**
+	 * pending_req_sim - Pending SIM request
+	 *
+	 * This field should not be set in configuration step. It is only used
+	 * internally when control interface is used to request needed
+	 * information.
+	 */
+	int pending_req_sim;
+
+	/**
 	 * pending_req_otp - Whether there is a pending OTP request
 	 *
 	 * This field should not be set in configuration step. It is only used

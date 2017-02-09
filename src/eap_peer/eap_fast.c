@@ -484,7 +484,8 @@ static int eap_fast_phase2_request(struct eap_sm *sm,
 
 	if (*resp == NULL && config &&
 	    (config->pending_req_identity || config->pending_req_password ||
-	     config->pending_req_otp || config->pending_req_new_password)) {
+	     config->pending_req_otp || config->pending_req_new_password ||
+	     config->pending_req_sim)) {
 		wpabuf_free(data->pending_phase2_req);
 		data->pending_phase2_req = wpabuf_alloc_copy(hdr, len);
 	} else if (*resp == NULL)

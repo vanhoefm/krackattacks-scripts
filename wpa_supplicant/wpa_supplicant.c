@@ -5974,6 +5974,7 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 	case WPA_CTRL_REQ_SIM:
 		str_clear_free(eap->external_sim_resp);
 		eap->external_sim_resp = os_strdup(value);
+		eap->pending_req_sim = 0;
 		break;
 	case WPA_CTRL_REQ_PSK_PASSPHRASE:
 		if (wpa_config_set(ssid, "psk", value, 0) < 0)

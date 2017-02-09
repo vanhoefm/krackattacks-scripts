@@ -458,7 +458,7 @@ static int eap_ttls_phase2_request_eap(struct eap_sm *sm,
 
 	if (*resp == NULL &&
 	    (config->pending_req_identity || config->pending_req_password ||
-	     config->pending_req_otp)) {
+	     config->pending_req_otp || config->pending_req_sim)) {
 		return 0;
 	}
 
@@ -1280,7 +1280,8 @@ static int eap_ttls_process_decrypted(struct eap_sm *sm,
 	} else if (config->pending_req_identity ||
 		   config->pending_req_password ||
 		   config->pending_req_otp ||
-		   config->pending_req_new_password) {
+		   config->pending_req_new_password ||
+		   config->pending_req_sim) {
 		wpabuf_free(data->pending_phase2_req);
 		data->pending_phase2_req = wpabuf_dup(in_decrypted);
 	}
@@ -1317,7 +1318,8 @@ static int eap_ttls_implicit_identity_request(struct eap_sm *sm,
 		    (config->pending_req_identity ||
 		     config->pending_req_password ||
 		     config->pending_req_otp ||
-		     config->pending_req_new_password)) {
+		     config->pending_req_new_password ||
+		     config->pending_req_sim)) {
 			/*
 			 * Use empty buffer to force implicit request
 			 * processing when EAP request is re-processed after

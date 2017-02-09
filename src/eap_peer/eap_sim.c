@@ -46,6 +46,7 @@ struct eap_sim_data {
 		CONTINUE, RESULT_SUCCESS, SUCCESS, FAILURE
 	} state;
 	int result_ind, use_result_ind;
+	int use_pseudonym;
 };
 
 
@@ -115,7 +116,8 @@ static void * eap_sim_init(struct eap_sm *sm)
 			NULL;
 	}
 
-	if (config && config->anonymous_identity) {
+	data->use_pseudonym = !sm->init_phase2;
+	if (config && config->anonymous_identity && data->use_pseudonym) {
 		data->pseudonym = os_malloc(config->anonymous_identity_len);
 		if (data->pseudonym) {
 			os_memcpy(data->pseudonym, config->anonymous_identity,
@@ -372,7 +374,8 @@ static void eap_sim_clear_identities(struct eap_sm *sm,
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
-		eap_set_anon_id(sm, NULL, 0);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, NULL, 0);
 	}
 	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old reauth_id");
@@ -427,7 +430,9 @@ static int eap_sim_learn_ids(struct eap_sm *sm, struct eap_sim_data *data,
 				  realm, realm_len);
 		}
 		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
-		eap_set_anon_id(sm, data->pseudonym, data->pseudonym_len);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, data->pseudonym,
+					data->pseudonym_len);
 	}
 
 	if (attr->next_reauth_id) {

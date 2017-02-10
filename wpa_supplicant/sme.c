@@ -891,10 +891,11 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 			}
 		}
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_AUTH_REJECT MACSTR
-			" auth_type=%u auth_transaction=%u status_code=%u ie=%s",
+			" auth_type=%u auth_transaction=%u status_code=%u%s%s",
 			MAC2STR(data->auth.peer), data->auth.auth_type,
 			data->auth.auth_transaction, data->auth.status_code,
-			ie_txt);
+			ie_txt ? " ie=" : "",
+			ie_txt ? ie_txt : "");
 		os_free(ie_txt);
 
 		if (data->auth.status_code !=

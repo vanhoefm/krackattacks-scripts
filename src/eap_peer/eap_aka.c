@@ -48,6 +48,7 @@ struct eap_aka_data {
 	struct wpabuf *id_msgs;
 	int prev_id;
 	int result_ind, use_result_ind;
+	int use_pseudonym;
 	u8 eap_method;
 	u8 *network_name;
 	size_t network_name_len;
@@ -101,7 +102,8 @@ static void * eap_aka_init(struct eap_sm *sm)
 
 	data->result_ind = phase1 && os_strstr(phase1, "result_ind=1") != NULL;
 
-	if (config && config->anonymous_identity) {
+	data->use_pseudonym = !sm->init_phase2;
+	if (config && config->anonymous_identity && data->use_pseudonym) {
 		data->pseudonym = os_malloc(config->anonymous_identity_len);
 		if (data->pseudonym) {
 			os_memcpy(data->pseudonym, config->anonymous_identity,
@@ -350,7 +352,8 @@ static void eap_aka_clear_identities(struct eap_sm *sm,
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
-		eap_set_anon_id(sm, NULL, 0);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, NULL, 0);
 	}
 	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old reauth_id");
@@ -405,7 +408,9 @@ static int eap_aka_learn_ids(struct eap_sm *sm, struct eap_aka_data *data,
 				  realm, realm_len);
 		}
 		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
-		eap_set_anon_id(sm, data->pseudonym, data->pseudonym_len);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, data->pseudonym,
+					data->pseudonym_len);
 	}
 
 	if (attr->next_reauth_id) {

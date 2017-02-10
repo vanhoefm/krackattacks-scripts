@@ -1632,6 +1632,131 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2_server_oom(dev, apdev):
                 break
         dev[0].request("REMOVE_NETWORK all")
 
+def test_ap_wpa2_eap_ttls_eap_sim(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-SIM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    eap_connect(dev[0], hapd, "TTLS", "1232010000000000",
+                anonymous_identity="1232010000000000@ttls",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=SIM")
+    eap_reauth(dev[0], "TTLS")
+
+def run_ext_sim_auth(dev):
+    ev = dev.wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    rand = p[2].split(' ')[0]
+
+    res = subprocess.check_output(["../../hostapd/hlr_auc_gw",
+                                   "-m",
+                                   "auth_serv/hlr_auc_gw.milenage_db",
+                                   "GSM-AUTH-REQ 232010000000000 " + rand])
+    if "GSM-AUTH-RESP" not in res:
+        raise Exception("Unexpected hlr_auc_gw response")
+    resp = res.split(' ')[2].rstrip()
+
+    dev.request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:" + resp)
+    dev.wait_connected(timeout=15)
+
+    dev.dump_monitor()
+    dev.request("REAUTHENTICATE")
+    ev = dev.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP reauthentication did not succeed")
+    ev = dev.wait_event(["WPA: Key negotiation completed"], timeout=5)
+    if ev is None:
+        raise Exception("Key negotiation did not complete")
+    dev.dump_monitor()
+
+def test_ap_wpa2_eap_ttls_eap_sim_ext(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-SIM and external GSM auth"""
+    check_hlr_auc_gw_support()
+    try:
+        run_ap_wpa2_eap_ttls_eap_sim_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def run_ap_wpa2_eap_ttls_eap_sim_ext(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].request("SET external_sim 1")
+    dev[0].connect("test-wpa2-eap", eap="TTLS", key_mgmt="WPA-EAP",
+                   identity="1232010000000000",
+                   anonymous_identity="1232010000000000@ttls",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                   ca_cert="auth_serv/ca.pem", phase2="autheap=SIM",
+                   wait_connect=False, scan_freq="2412")
+    run_ext_sim_auth(dev[0])
+
+def test_ap_wpa2_eap_peap_eap_sim(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAP/EAP-SIM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    eap_connect(dev[0], hapd, "PEAP", "1232010000000000",
+                anonymous_identity="1232010000000000@peap",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                ca_cert="auth_serv/ca.pem", phase2="auth=SIM")
+    eap_reauth(dev[0], "PEAP")
+
+def test_ap_wpa2_eap_peap_eap_sim_ext(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAP/EAP-SIM and external GSM auth"""
+    check_hlr_auc_gw_support()
+    try:
+        run_ap_wpa2_eap_peap_eap_sim_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def run_ap_wpa2_eap_peap_eap_sim_ext(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].request("SET external_sim 1")
+    dev[0].connect("test-wpa2-eap", eap="PEAP", key_mgmt="WPA-EAP",
+                   identity="1232010000000000",
+                   anonymous_identity="1232010000000000@peap",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=SIM",
+                   wait_connect=False, scan_freq="2412")
+    run_ext_sim_auth(dev[0])
+
+def test_ap_wpa2_eap_fast_eap_sim(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/EAP-SIM"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    eap_connect(dev[0], hapd, "FAST", "1232010000000000",
+                anonymous_identity="1232010000000000@fast",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                phase1="fast_provisioning=2",
+                pac_file="blob://fast_pac_auth_sim",
+                ca_cert="auth_serv/ca.pem", phase2="auth=SIM")
+    eap_reauth(dev[0], "FAST")
+
+def test_ap_wpa2_eap_fast_eap_sim_ext(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/EAP-SIM and external GSM auth"""
+    check_hlr_auc_gw_support()
+    try:
+        run_ap_wpa2_eap_fast_eap_sim_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def run_ap_wpa2_eap_fast_eap_sim_ext(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].request("SET external_sim 1")
+    dev[0].connect("test-wpa2-eap", eap="PEAP", key_mgmt="WPA-EAP",
+                   identity="1232010000000000",
+                   anonymous_identity="1232010000000000@peap",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                   phase1="fast_provisioning=2",
+                   pac_file="blob://fast_pac_auth_sim",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=SIM",
+                   wait_connect=False, scan_freq="2412")
+    run_ext_sim_auth(dev[0])
+
 def test_ap_wpa2_eap_ttls_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-AKA"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

@@ -2026,3 +2026,28 @@ def test_wpas_ctrl_set_tdls_trigger_control(dev):
     # without checking the result for some additional code coverage.
     dev[0].request("SET tdls_trigger_control 1")
     dev[0].request("SET tdls_trigger_control 0")
+
+def test_wpas_ctrl_set_sched_scan_relative_rssi(dev):
+    """wpa_supplicant SET relative RSSI"""
+    tests = [ "relative_rssi -1",
+              "relative_rssi 101",
+              "relative_band_adjust 2G",
+              "relative_band_adjust 2G:-101",
+              "relative_band_adjust 2G:101",
+              "relative_band_adjust 3G:1" ]
+    for t in tests:
+        if "FAIL" not in dev[0].request("SET " + t):
+            raise Exception("No failure reported for SET " + t)
+
+    tests = [ "relative_rssi 0",
+              "relative_rssi 10",
+              "relative_rssi disable",
+              "relative_band_adjust 2G:-1",
+              "relative_band_adjust 2G:0",
+              "relative_band_adjust 2G:1",
+              "relative_band_adjust 5G:-1",
+              "relative_band_adjust 5G:1",
+              "relative_band_adjust 5G:0" ]
+    for t in tests:
+        if "OK" not in dev[0].request("SET " + t):
+            raise Exception("Failed to SET " + t)

@@ -8,7 +8,7 @@ from remotehost import remote_compatible
 import time
 import logging
 logger = logging.getLogger()
-import os.path
+import os
 
 import hwsim_utils
 import hostapd
@@ -139,6 +139,79 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection during TKIP countermeasures")
+
+def test_ap_cipher_tkip_countermeasures_sta2(dev, apdev, params):
+    """WPA-PSK/TKIP countermeasures (detected by two STAs) [long]"""
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+    skip_with_fips(dev[0])
+    params = { "ssid": "tkip-countermeasures",
+               "wpa_passphrase": "12345678",
+               "wpa": "1",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
+    if hapd.cmd_execute([ "ls", testfile ])[0] != 0:
+        raise HwsimSkip("tkip_mic_test not supported in mac80211")
+
+    dev[0].connect("tkip-countermeasures", psk="12345678",
+                   pairwise="TKIP", group="TKIP", scan_freq="2412")
+    dev[0].dump_monitor()
+    id = dev[1].connect("tkip-countermeasures", psk="12345678",
+                        pairwise="TKIP", group="TKIP", scan_freq="2412")
+    dev[1].dump_monitor()
+
+    hapd.cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ],
+                     shell=True)
+    ev = dev[0].wait_disconnected(timeout=10,
+                                  error="No disconnection after two Michael MIC failure")
+    if "reason=14" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+    ev = dev[1].wait_disconnected(timeout=5,
+                                  error="No disconnection after two Michael MIC failure")
+    if "reason=14" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures")
+
+    dev[0].request("REMOVE_NETWORK all")
+    logger.info("Waiting for TKIP countermeasures to end")
+    connected = False
+    start = os.times()[4]
+    while True:
+        now = os.times()[4]
+        if start + 70 < now:
+            break
+        dev[0].connect("tkip-countermeasures", psk="12345678",
+                       pairwise="TKIP", group="TKIP", scan_freq="2412",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-AUTH-REJECT",
+                                "CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("No connection result")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            connected = True
+            break
+        if "status_code=14" not in ev:
+            raise Exception("Unexpected connection failure reason during TKIP countermeasures: " + ev)
+        dev[0].request("REMOVE_NETWORK all")
+        time.sleep(1)
+        dev[0].dump_monitor()
+        dev[1].dump_monitor()
+    if not connected:
+        raise Exception("No connection after TKIP countermeasures terminated")
+
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is None:
+        dev[1].request("DISCONNECT")
+        dev[1].select_network(id)
+        dev[1].wait_connected()
 
 @remote_compatible
 def test_ap_cipher_ccmp(dev, apdev):

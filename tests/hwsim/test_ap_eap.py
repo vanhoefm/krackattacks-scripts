@@ -1765,6 +1765,7 @@ def test_ap_wpa2_eap_ttls_eap_aka(dev, apdev):
                 anonymous_identity="0232010000000000@ttls",
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=AKA")
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_peap_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-AKA"""
@@ -1774,6 +1775,7 @@ def test_ap_wpa2_eap_peap_eap_aka(dev, apdev):
                 anonymous_identity="0232010000000000@peap",
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
                 ca_cert="auth_serv/ca.pem", phase2="auth=AKA")
+    eap_reauth(dev[0], "PEAP")
 
 def test_ap_wpa2_eap_fast_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/EAP-AKA"""
@@ -1786,6 +1788,7 @@ def test_ap_wpa2_eap_fast_eap_aka(dev, apdev):
                 phase1="fast_provisioning=2",
                 pac_file="blob://fast_pac_auth_aka",
                 ca_cert="auth_serv/ca.pem", phase2="auth=AKA")
+    eap_reauth(dev[0], "FAST")
 
 def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""

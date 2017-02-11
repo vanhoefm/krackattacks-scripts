@@ -11,6 +11,7 @@ import struct
 
 import hwsim_utils
 import hostapd
+from utils import fail_test
 
 def add_wmm_ap(apdev, acm_list):
     params = { "ssid": "wmm_ac",
@@ -286,3 +287,112 @@ def test_tspec_reassoc(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd0)
     if dev[0].tspecs() != last_tspecs:
         raise Exception("TSPECs weren't saved on reassociation")
+
+def test_wmm_element(dev, apdev):
+    """hostapd FTM range request timeout"""
+    try:
+        run_wmm_element(dev, apdev)
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_wmm_element(dev, apdev):
+    params = { "ssid": "wmm" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+
+    # Too short WMM IE
+    dev[0].request("VENDOR_ELEM_ADD 13 dd060050f2020001")
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].connect("wmm", key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("Association not rejected")
+    dev[0].request("REMOVE_NETWORK all")
+
+    # Unsupported WMM IE Subtype/Version
+    dev[0].request("VENDOR_ELEM_ADD 13 dd070050f202000000")
+    dev[0].connect("wmm", key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("Association not rejected")
+    dev[0].request("REMOVE_NETWORK all")
+
+    # Unsupported WMM IE Subtype/Version
+    dev[0].request("VENDOR_ELEM_ADD 13 dd070050f202010100")
+    dev[0].connect("wmm", key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("Association not rejected")
+    dev[0].request("REMOVE_NETWORK all")
+
+def test_tspec_ap_fail(dev, apdev):
+    """AP failing to send tspec response"""
+    # configure ap with VO and VI requiring admission-control
+    hapd = add_wmm_ap(apdev[0], ["VO", "VI"])
+    dev[0].connect("wmm_ac", key_mgmt="NONE", scan_freq="2462")
+    tsid = 5
+
+    with fail_test(hapd, 1, "wmm_send_action"):
+        try:
+            # add tspec for UP=6
+            dev[0].add_ts(tsid, 6)
+        except:
+            pass
+
+def test_tspec_ap_parsing(dev, apdev):
+    """TSPEC AP parsing tests"""
+    # configure ap with VO and VI requiring admission-control
+    hapd = add_wmm_ap(apdev[0], ["VO", "VI"])
+    bssid = hapd.own_addr()
+    dev[0].connect("wmm_ac", key_mgmt="NONE", scan_freq="2462")
+    addr = dev[0].own_addr()
+
+    tests = [ "WMM_AC_ADDTS downlink tsid=5 up=6 nominal_msdu_size=1500 sba=9000 mean_data_rate=1500 min_phy_rate=600000",
+              "WMM_AC_ADDTS downlink tsid=5 up=6 nominal_msdu_size=1500 sba=8192 mean_data_rate=1500 min_phy_rate=6000000",
+              "WMM_AC_ADDTS downlink tsid=5 up=6 nominal_msdu_size=32767 sba=65535 mean_data_rate=1500 min_phy_rate=1000000",
+              "WMM_AC_ADDTS downlink tsid=5 up=6 nominal_msdu_size=10000 sba=65535 mean_data_rate=2147483647 min_phy_rate=1000000" ]
+    for t in tests:
+        if "OK" not in dev[0].request(t):
+            raise Exception("WMM_AC_ADDTS failed")
+        ev = dev[0].wait_event(["TSPEC-REQ-FAILED"], timeout=1)
+        if ev is None:
+            raise Exception("No response")
+
+    tests = []
+    # WMM: Invalid Nominal MSDU Size (0)
+    tests += [ "11000400dd3d0050f2020201aa300000000000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff0000" ]
+    # hostapd_wmm_action - missing or wrong length tspec
+    tests += [ "11000400dd3e0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff000000" ]
+    # hostapd_wmm_action - could not parse wmm action
+    tests += [ "11000400dd3d0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff00" ]
+    # valid form
+    tests += [ "11000400dd3d0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff0000" ]
+
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+    for t in tests:
+        if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    hapd.set("ext_mgmt_frame_handling", "0")
+
+def test_wmm_disabled(dev, apdev):
+    """WMM disabled and unexpected TSPEC"""
+    params = { "ssid": "no-wmm", "ieee80211n": "0", "wmm_enabled": "0" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = hapd.own_addr()
+    dev[0].connect("no-wmm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    # wmm action received is not from associated wmm station
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "11000400dd3d0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff0000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    # IEEE 802.11: Ignored Action frame (category=17) from unassociated STA
+    hdr = "d0003a01" + bssid.replace(':', '') + "112233445566" + bssid.replace(':', '') + "1000"
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "11000400dd3d0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff0000"):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    hapd.set("ext_mgmt_frame_handling", "0")

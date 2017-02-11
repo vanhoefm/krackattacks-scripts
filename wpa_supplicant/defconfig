@@ -570,3 +570,13 @@ CONFIG_PEERKEY=y
 
 # Mesh Networking (IEEE 802.11s)
 #CONFIG_MESH=y
+
+# Background scanning modules
+# These can be used to request wpa_supplicant to perform background scanning
+# operations for roaming within an ESS (same SSID). See the bgscan parameter in
+# the wpa_supplicant.conf file for more details.
+# Periodic background scans based on signal strength
+#CONFIG_BGSCAN_SIMPLE=y
+# Learn channels used by the network and try to avoid bgscans on other
+# channels (experimental)
+#CONFIG_BGSCAN_LEARN=y

@@ -21,11 +21,6 @@
 #include "wmm.h"
 
 
-/* TODO: maintain separate sequence and fragment numbers for each AC
- * TODO: IGMP snooping to track which multicasts to forward - and use QOS-DATA
- * if only WMM stations are receiving a certain group */
-
-
 static inline u8 wmm_aci_aifsn(int aifsn, int acm, int aci)
 {
 	u8 ret;

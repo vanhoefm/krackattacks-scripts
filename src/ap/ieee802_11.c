@@ -3062,7 +3062,7 @@ static int handle_action(struct hostapd_data *hapd,
 	    (sta == NULL || !(sta->flags & WLAN_STA_ASSOC))) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignored Action "
 			   "frame (category=%u) from unassociated STA " MACSTR,
-			   MAC2STR(mgmt->sa), mgmt->u.action.category);
+			   mgmt->u.action.category, MAC2STR(mgmt->sa));
 		return 0;
 	}
 

@@ -1,5 +1,5 @@
 # WNM tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2017, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -14,7 +14,7 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail, wait_fail_trigger
+from utils import alloc_fail, fail_test, wait_fail_trigger
 from wlantest import Wlantest
 
 @remote_compatible
@@ -186,6 +186,16 @@ def test_wnm_sleep_mode_open(dev, apdev):
     for cmd in cmds:
         if "FAIL" not in dev[0].request("WNM_SLEEP " + cmd):
             raise Exception("Invalid WNM_SLEEP accepted")
+
+def test_wnm_sleep_mode_open_fail(dev, apdev):
+    """WNM Sleep Mode - open (fail)"""
+    params = { "ssid": "test-wnm", "wnm_sleep_mode": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    with fail_test(hapd, 1, "nl80211_send_frame_cmd;ieee802_11_send_wnmsleep_resp"):
+        dev[0].request("WNM_SLEEP enter")
+        wait_fail_trigger(hapd, "GET_FAIL")
 
 @remote_compatible
 def test_wnm_sleep_mode_rsn(dev, apdev):

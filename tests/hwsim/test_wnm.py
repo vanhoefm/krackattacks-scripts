@@ -235,6 +235,28 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
         raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
 
+def test_wnm_sleep_mode_proto(dev, apdev):
+    """WNM Sleep Mode - protocol testing"""
+    params = { "ssid": "test-wnm", "wnm_sleep_mode": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+    tests = [ "0a1001",
+              "0a10015d00",
+              "0a10015d01",
+              "0a10015d0400000000",
+              "0a1001" + 7*("5bff" + 255*"00") + "5d00",
+              "0a1001ff00" ]
+    for t in tests:
+        if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    hapd.set("ext_mgmt_frame_handling", "0")
+
 MGMT_SUBTYPE_ACTION = 13
 ACTION_CATEG_WNM = 10
 WNM_ACT_BSS_TM_REQ = 7

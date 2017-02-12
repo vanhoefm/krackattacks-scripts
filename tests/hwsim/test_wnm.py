@@ -659,6 +659,7 @@ def test_wnm_bss_tm_errors(dev, apdev):
               "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0" % addr,
               "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0,0,q" % addr,
               "BSS_TM_REQ %s neighbor=02:11:22:33:44:55,0,0,0,0,0q" % addr,
+              "BSS_TM_REQ " + addr + " url=" + 256*'a',
               "BSS_TM_REQ %s url=foo mbo=1:2" % addr,
               "BSS_TM_REQ %s url=foo mbo=100000:0:0" % addr,
               "BSS_TM_REQ %s url=foo mbo=0:0:254" % addr,
@@ -670,6 +671,14 @@ def test_wnm_bss_tm_errors(dev, apdev):
     with alloc_fail(hapd, 1, "=hostapd_ctrl_iface_bss_tm_req"):
         if "FAIL" not in hapd.request("BSS_TM_REQ %s url=http://foo" % addr):
             raise Exception("BSS_TM_REQ accepted during OOM")
+
+    with alloc_fail(hapd, 1, "=wnm_send_bss_tm_req"):
+        if "FAIL" not in hapd.request("BSS_TM_REQ %s url=http://foo" % addr):
+            raise Exception("BSS_TM_REQ accepted during OOM")
+
+    with fail_test(hapd, 1, "wnm_send_bss_tm_req"):
+        if "FAIL" not in hapd.request("BSS_TM_REQ %s url=http://foo" % addr):
+            raise Exception("BSS_TM_REQ accepted during failure testing")
 
 def test_wnm_bss_tm_termination(dev, apdev):
     """WNM BSS Transition Management and BSS termination"""

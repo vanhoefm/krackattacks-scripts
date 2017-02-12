@@ -177,3 +177,23 @@ def test_peerkey_pairwise_mismatch(dev, apdev):
     time.sleep(0.5)
     dev[1].request("STKSTART " + dev[0].p2p_interface_addr())
     time.sleep(0.5)
+
+def test_peerkey_deinit_during_neg(dev, apdev):
+    """RSN AP deinit during PeerKey negotiation"""
+    ssid = "test-peerkey"
+    passphrase = "12345678"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['peerkey'] = "1"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
+    dev[1].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
+
+    dev[1].request("SET ext_eapol_frame_io 1")
+    dev[0].request("STKSTART " + dev[1].own_addr())
+    ev = dev[1].wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("No PeerKey response from dev1")
+    hapd.request("DISABLE")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")

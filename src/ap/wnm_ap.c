@@ -207,7 +207,8 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 		u8 ie_len = pos[1];
 		if (pos + 2 + ie_len > frm + len)
 			break;
-		if (*pos == WLAN_EID_WNMSLEEP)
+		if (*pos == WLAN_EID_WNMSLEEP &&
+		    ie_len >= (int) sizeof(*wnmsleep_ie) - 2)
 			wnmsleep_ie = (struct wnm_sleep_element *) pos;
 		else if (*pos == WLAN_EID_TFS_REQ) {
 			if (!tfsreq_ie_start)

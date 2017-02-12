@@ -250,20 +250,14 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 
 static int ieee802_11_send_bss_trans_mgmt_request(struct hostapd_data *hapd,
 						  const u8 *addr,
-						  u8 dialog_token,
-						  const char *url)
+						  u8 dialog_token)
 {
 	struct ieee80211_mgmt *mgmt;
-	size_t url_len, len;
+	size_t len;
 	u8 *pos;
 	int res;
 
-	if (url)
-		url_len = os_strlen(url);
-	else
-		url_len = 0;
-
-	mgmt = os_zalloc(sizeof(*mgmt) + (url_len ? 1 + url_len : 0));
+	mgmt = os_zalloc(sizeof(*mgmt));
 	if (mgmt == NULL)
 		return -1;
 	os_memcpy(mgmt->da, addr, ETH_ALEN);
@@ -278,11 +272,6 @@ static int ieee802_11_send_bss_trans_mgmt_request(struct hostapd_data *hapd,
 	mgmt->u.action.u.bss_tm_req.disassoc_timer = host_to_le16(0);
 	mgmt->u.action.u.bss_tm_req.validity_interval = 1;
 	pos = mgmt->u.action.u.bss_tm_req.variable;
-	if (url) {
-		*pos++ += url_len;
-		os_memcpy(pos, url, url_len);
-		pos += url_len;
-	}
 
 	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Request to "
 		   MACSTR " dialog_token=%u req_mode=0x%x disassoc_timer=%u "
@@ -325,7 +314,7 @@ static void ieee802_11_rx_bss_trans_mgmt_query(struct hostapd_data *hapd,
 	wpa_hexdump(MSG_DEBUG, "WNM: BSS Transition Candidate List Entries",
 		    pos, end - pos);
 
-	ieee802_11_send_bss_trans_mgmt_request(hapd, addr, dialog_token, NULL);
+	ieee802_11_send_bss_trans_mgmt_request(hapd, addr, dialog_token);
 }
 
 

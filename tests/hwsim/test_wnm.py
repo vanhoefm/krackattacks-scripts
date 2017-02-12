@@ -30,6 +30,16 @@ def test_wnm_bss_transition_mgmt(dev, apdev):
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("WNM_BSS_QUERY 0")
 
+def test_wnm_bss_transition_mgmt_oom(dev, apdev):
+    """WNM BSS Transition Management OOM"""
+    params = { "ssid": "test-wnm", "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    with alloc_fail(hapd, 1, "ieee802_11_send_bss_trans_mgmt_request"):
+        dev[0].request("WNM_BSS_QUERY 0")
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
 @remote_compatible
 def test_wnm_disassoc_imminent(dev, apdev):
     """WNM Disassociation Imminent"""

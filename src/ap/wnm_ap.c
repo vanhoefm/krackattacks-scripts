@@ -95,8 +95,8 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	if (mgmt == NULL) {
 		wpa_printf(MSG_DEBUG, "MLME: Failed to allocate buffer for "
 			   "WNM-Sleep Response action frame");
-		os_free(wnmtfs_ie);
-		return -1;
+		res = -1;
+		goto fail;
 	}
 	os_memcpy(mgmt->da, addr, ETH_ALEN);
 	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
@@ -118,11 +118,8 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 			   (int) gtk_elem_len);
 #ifdef CONFIG_IEEE80211W
 		res = wpa_wnmsleep_igtk_subelem(sta->wpa_sm, pos);
-		if (res < 0) {
-			os_free(wnmtfs_ie);
-			os_free(mgmt);
-			return -1;
-		}
+		if (res < 0)
+			goto fail;
 		igtk_elem_len = res;
 		pos += igtk_elem_len;
 		wpa_printf(MSG_DEBUG, "Pass 4 igtk_len = %d",
@@ -184,6 +181,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 
 #undef MAX_GTK_SUBELEM_LEN
 #undef MAX_IGTK_SUBELEM_LEN
+fail:
 	os_free(wnmtfs_ie);
 	os_free(mgmt);
 	return res;

@@ -62,6 +62,17 @@ def test_wnm_disassoc_imminent(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
 
+def test_wnm_disassoc_imminent_fail(dev, apdev):
+    """WNM Disassociation Imminent failure"""
+    params = { "ssid": "test-wnm", "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+    with fail_test(hapd, 1, "wnm_send_disassoc_imminent"):
+        if "FAIL" not in hapd.request("DISASSOC_IMMINENT " + addr + " 10"):
+            raise Exception("DISASSOC_IMMINENT succeeded during failure testing")
+
 @remote_compatible
 def test_wnm_ess_disassoc_imminent(dev, apdev):
     """WNM ESS Disassociation Imminent"""
@@ -83,6 +94,19 @@ def test_wnm_ess_disassoc_imminent(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
+
+def test_wnm_ess_disassoc_imminent_fail(dev, apdev):
+    """WNM ESS Disassociation Imminent failure"""
+    params = { "ssid": "test-wnm", "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+    if "FAIL" not in hapd.request("ESS_DISASSOC " + addr + " 10 http://" + 256*'a'):
+        raise Exception("Invalid ESS_DISASSOC URL accepted")
+    with fail_test(hapd, 1, "wnm_send_ess_disassoc_imminent"):
+        if "FAIL" not in hapd.request("ESS_DISASSOC " + addr + " 10 http://example.com/session-info"):
+            raise Exception("ESS_DISASSOC succeeded during failure testing")
 
 def test_wnm_ess_disassoc_imminent_reject(dev, apdev):
     """WNM ESS Disassociation Imminent getting rejected"""

@@ -14,13 +14,6 @@
 
 struct wpa_group;
 
-struct wpa_stsl_negotiation {
-	struct wpa_stsl_negotiation *next;
-	u8 initiator[ETH_ALEN];
-	u8 peer[ETH_ALEN];
-};
-
-
 struct wpa_state_machine {
 	struct wpa_authenticator *wpa_auth;
 	struct wpa_group *group;
@@ -200,8 +193,6 @@ struct wpa_authenticator {
 	unsigned int dot11RSNATKIPCounterMeasuresInvoked;
 	unsigned int dot11RSNA4WayHandshakeFailures;
 
-	struct wpa_stsl_negotiation *stsl_negotiations;
-
 	struct wpa_auth_config conf;
 	const struct wpa_auth_callbacks *cb;
 	void *cb_ctx;
@@ -239,8 +230,6 @@ int wpa_auth_for_each_auth(struct wpa_authenticator *wpa_auth,
 			   void *cb_ctx);
 
 #ifdef CONFIG_PEERKEY
-int wpa_stsl_remove(struct wpa_authenticator *wpa_auth,
-		    struct wpa_stsl_negotiation *neg);
 void wpa_smk_error(struct wpa_authenticator *wpa_auth,
 		   struct wpa_state_machine *sm,
 		   const u8 *key_data, size_t key_data_len);

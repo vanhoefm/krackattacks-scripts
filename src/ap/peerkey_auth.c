@@ -19,17 +19,6 @@
 
 #ifdef CONFIG_PEERKEY
 
-static void wpa_stsl_step(void *eloop_ctx, void *timeout_ctx)
-{
-#if 0
-	struct wpa_authenticator *wpa_auth = eloop_ctx;
-	struct wpa_stsl_negotiation *neg = timeout_ctx;
-#endif
-
-	/* TODO: ? */
-}
-
-
 struct wpa_stsl_search {
 	const u8 *addr;
 	struct wpa_state_machine *sm;
@@ -110,7 +99,6 @@ void wpa_smk_m1(struct wpa_authenticator *wpa_auth,
 			   MAC2STR(kde.mac_addr));
 		wpa_smk_send_error(wpa_auth, sm, kde.mac_addr, STK_MUI_SMK,
 				   STK_ERR_STA_NR);
-		/* FIX: wpa_stsl_remove(wpa_auth, neg); */
 		return;
 	}
 
@@ -285,7 +273,6 @@ void wpa_smk_m3(struct wpa_authenticator *wpa_auth,
 			   MAC2STR(kde.mac_addr));
 		wpa_smk_send_error(wpa_auth, sm, kde.mac_addr, STK_MUI_SMK,
 				   STK_ERR_STA_NR);
-		/* FIX: wpa_stsl_remove(wpa_auth, neg); */
 		return;
 	}
 
@@ -363,34 +350,6 @@ void wpa_smk_error(struct wpa_authenticator *wpa_auth,
 			 MAC2STR(kde.mac_addr), mui, error_type);
 
 	wpa_smk_send_error(wpa_auth, search.sm, sm->addr, mui, error_type);
-}
-
-
-int wpa_stsl_remove(struct wpa_authenticator *wpa_auth,
-		    struct wpa_stsl_negotiation *neg)
-{
-	struct wpa_stsl_negotiation *pos, *prev;
-
-	if (wpa_auth == NULL)
-		return -1;
-	pos = wpa_auth->stsl_negotiations;
-	prev = NULL;
-	while (pos) {
-		if (pos == neg) {
-			if (prev)
-				prev->next = pos->next;
-			else
-				wpa_auth->stsl_negotiations = pos->next;
-
-			eloop_cancel_timeout(wpa_stsl_step, wpa_auth, pos);
-			os_free(pos);
-			return 0;
-		}
-		prev = pos;
-		pos = pos->next;
-	}
-
-	return -1;
 }
 
 #endif /* CONFIG_PEERKEY */

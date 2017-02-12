@@ -513,11 +513,6 @@ void wpa_deinit(struct wpa_authenticator *wpa_auth)
 	eloop_cancel_timeout(wpa_rekey_gmk, wpa_auth, NULL);
 	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
 
-#ifdef CONFIG_PEERKEY
-	while (wpa_auth->stsl_negotiations)
-		wpa_stsl_remove(wpa_auth, wpa_auth->stsl_negotiations);
-#endif /* CONFIG_PEERKEY */
-
 	pmksa_cache_auth_deinit(wpa_auth->pmksa);
 
 #ifdef CONFIG_IEEE80211R_AP

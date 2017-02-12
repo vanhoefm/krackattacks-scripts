@@ -1538,3 +1538,34 @@ def test_wnm_bss_tm_reject(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_wnm_bss_tm_ap_proto(dev, apdev):
+    """WNM BSS TM - protocol testing for AP message parsing"""
+    params = { "ssid": "test-wnm", "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
+
+    hdr = "d0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000"
+    hapd.set("ext_mgmt_frame_handling", "1")
+    tests = [ "0a",
+              "0a06",
+              "0a0601",
+              "0a060100",
+              "0a080000",
+              "0a08000000",
+              "0a080000001122334455",
+              "0a08000000112233445566",
+              "0a08000000112233445566112233445566778899",
+              "0a08ffffff",
+              "0a08ffffff112233445566778899",
+              "0a1a",
+              "0a1a00",
+              "0a1a0000",
+              "0aff" ]
+    for t in tests:
+        if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    hapd.set("ext_mgmt_frame_handling", "0")

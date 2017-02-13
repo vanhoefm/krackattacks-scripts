@@ -385,7 +385,8 @@ DHCPINFORM=8
 
 def build_dhcp(req, dhcp_msg, chaddr, giaddr="0.0.0.0",
                ip_src="0.0.0.0", ip_dst="255.255.255.255",
-               rapid_commit=True):
+               rapid_commit=True, override_op=None, magic_override=None,
+               opt_end=True, extra_op=None):
     proto = '\x08\x00' # IPv4
     _ip_src = socket.inet_pton(socket.AF_INET, ip_src)
     _ip_dst = socket.inet_pton(socket.AF_INET, ip_dst)
@@ -409,19 +410,28 @@ def build_dhcp(req, dhcp_msg, chaddr, giaddr="0.0.0.0",
         op = BOOTREPLY
         src_port = 67
         dst_port = 68
+    if override_op is not None:
+        op = override_op
     payload = struct.pack('>BBBBLHH', op, htype, hlen, hops, xid, secs, flags)
     sname = 64*'\x00'
     file = 128*'\x00'
     payload += _ciaddr + _yiaddr + _siaddr + _giaddr + _chaddr + sname + file
     # magic - DHCP
-    payload += '\x63\x82\x53\x63'
+    if magic_override is not None:
+        payload += magic_override
+    else:
+        payload += '\x63\x82\x53\x63'
     # Option: DHCP Message Type
-    payload += struct.pack('BBB', OPT_DHCP_MESSAGE_TYPE, 1, dhcp_msg)
+    if dhcp_msg is not None:
+        payload += struct.pack('BBB', OPT_DHCP_MESSAGE_TYPE, 1, dhcp_msg)
     if rapid_commit:
         # Option: Rapid Commit
         payload += struct.pack('BB', OPT_RAPID_COMMIT, 0)
+    if extra_op:
+        payload += extra_op
     # End Option
-    payload += struct.pack('B', OPT_END)
+    if opt_end:
+        payload += struct.pack('B', OPT_END)
 
     udp = struct.pack('>HHHH', src_port, dst_port,
                       8 + len(payload), 0) + payload
@@ -687,5 +697,173 @@ def test_fils_sk_hlp_oom(dev, apdev):
         dev[0].wait_connected()
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+
+def test_fils_sk_hlp_req_parsing(dev, apdev):
+    """FILS SK HLP request parsing"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = fils_hlp_config(fils_hlp_wait_time=30)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_FLUSH"):
+        raise Exception("Failed to flush pending FILS HLP requests")
+
+    tot_len = 20 + 1
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    _ip_src = '\x00\x00\x00\x00'
+    _ip_dst = '\x00\x00\x00\x00'
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    ipv4_overflow = start + csum + _ip_src + _ip_dst
+
+    tot_len = 20
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 123)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    ipv4_unknown_proto = start + csum + _ip_src + _ip_dst
+
+    tot_len = 20
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    ipv4_missing_udp_hdr = start + csum + _ip_src + _ip_dst
+
+    src_port = 68
+    dst_port = 67
+    udp = struct.pack('>HHHH', src_port, dst_port, 8 + 1, 0)
+    tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    udp_overflow = start + csum + _ip_src + _ip_dst + udp
+
+    udp = struct.pack('>HHHH', src_port, dst_port, 7, 0)
+    tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    udp_underflow = start + csum + _ip_src + _ip_dst + udp
+
+    src_port = 123
+    dst_port = 456
+    udp = struct.pack('>HHHH', src_port, dst_port, 8, 0)
+    tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    udp_unknown_port = start + csum + _ip_src + _ip_dst + udp
+
+    src_port = 68
+    dst_port = 67
+    udp = struct.pack('>HHHH', src_port, dst_port, 8, 0)
+    tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    dhcp_missing_data = start + csum + _ip_src + _ip_dst + udp
+
+    dhcp_not_req = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                              chaddr=dev[0].own_addr(), override_op=BOOTREPLY)
+    dhcp_no_magic = build_dhcp(req=True, dhcp_msg=None,
+                               chaddr=dev[0].own_addr(), magic_override='',
+                               rapid_commit=False, opt_end=False)
+    dhcp_unknown_magic = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                                    chaddr=dev[0].own_addr(),
+                                    magic_override='\x00\x00\x00\x00')
+    dhcp_opts = build_dhcp(req=True, dhcp_msg=DHCPNAK,
+                           chaddr=dev[0].own_addr(),
+                           extra_op='\x00\x11', opt_end=False)
+    dhcp_opts2 = build_dhcp(req=True, dhcp_msg=DHCPNAK,
+                            chaddr=dev[0].own_addr(),
+                            extra_op='\x11\x01', opt_end=False)
+    dhcp_valid = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                            chaddr=dev[0].own_addr())
+
+    tests = [ "ff",
+              "0800",
+              "0800" + 20*"00",
+              "0800" + binascii.hexlify(ipv4_overflow),
+              "0800" + binascii.hexlify(ipv4_unknown_proto),
+              "0800" + binascii.hexlify(ipv4_missing_udp_hdr),
+              "0800" + binascii.hexlify(udp_overflow),
+              "0800" + binascii.hexlify(udp_underflow),
+              "0800" + binascii.hexlify(udp_unknown_port),
+              "0800" + binascii.hexlify(dhcp_missing_data),
+              binascii.hexlify(dhcp_not_req),
+              binascii.hexlify(dhcp_no_magic),
+              binascii.hexlify(dhcp_unknown_magic) ]
+    for t in tests:
+        if "OK" not in dev[0].request("FILS_HLP_REQ_ADD ff:ff:ff:ff:ff:ff " + t):
+            raise Exception("FILS_HLP_REQ_ADD failed: " + t)
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+    tests = [ binascii.hexlify(dhcp_opts),
+              binascii.hexlify(dhcp_opts2) ]
+    for t in tests:
+        if "OK" not in dev[0].request("FILS_HLP_REQ_ADD ff:ff:ff:ff:ff:ff " + t):
+            raise Exception("FILS_HLP_REQ_ADD failed: " + t)
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcp_valid)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    hapd.set("own_ip_addr", "0.0.0.0")
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    hapd.set("dhcp_server", "0.0.0.0")
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS: Failed to bind DHCP socket: Address already in use
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.settimeout(5)
+    sock.bind(("127.0.0.2", 67))
+    hapd.set("own_ip_addr", "127.0.0.2")
+    hapd.set("dhcp_server", "127.0.0.2")
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS: DHCP sendto failed: Invalid argument
+    hapd.set("own_ip_addr", "127.0.0.3")
+    hapd.set("dhcp_server", "127.0.0.2")
+    hapd.set("dhcp_relay_port", "0")
+    hapd.set("dhcp_server_port", "0")
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
 
     dev[0].request("FILS_HLP_REQ_FLUSH")

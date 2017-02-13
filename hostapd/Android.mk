@@ -264,7 +264,6 @@ endif
 ifdef CONFIG_FILS
 L_CFLAGS += -DCONFIG_FILS
 OBJS += src/ap/fils_hlp.c
-NEED_CRC32=y
 NEED_SHA384=y
 NEED_AES_SIV=y
 endif
@@ -864,10 +863,6 @@ endif
 
 ifdef NEED_ECC
 L_CFLAGS += -DCONFIG_ECC
-endif
-
-ifdef NEED_CRC32
-OBJS += src/utils/crc32.c
 endif
 
 ifdef CONFIG_NO_RANDOM_POOL

@@ -434,6 +434,18 @@ def build_dhcp(req, dhcp_msg, chaddr, giaddr="0.0.0.0",
 
     return proto + ipv4 + udp
 
+def fils_hlp_config(fils_hlp_wait_time=10000):
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params['own_ip_addr'] = '127.0.0.3'
+    params['dhcp_server'] = '127.0.0.2'
+    params['fils_hlp_wait_time'] = str(fils_hlp_wait_time)
+    return params
+
 def test_fils_sk_hlp(dev, apdev):
     """FILS SK HLP (rapid commit server)"""
     run_fils_sk_hlp(dev, apdev, True)
@@ -453,14 +465,7 @@ def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
     sock.bind(("127.0.0.2", 67))
 
     bssid = apdev[0]['bssid']
-    params = hostapd.wpa2_eap_params(ssid="fils")
-    params['wpa_key_mgmt'] = "FILS-SHA256"
-    params['auth_server_port'] = "18128"
-    params['erp_domain'] = 'example.com'
-    params['fils_realm'] = 'example.com'
-    params['disable_pmksa_caching'] = '1'
-    params['own_ip_addr'] = '127.0.0.3'
-    params['dhcp_server'] = '127.0.0.2'
+    params = fils_hlp_config()
     params['fils_hlp_wait_time'] = '10000'
     if not rapid_commit_server:
         params['dhcp_rapid_commit_proxy'] = '1'
@@ -552,4 +557,44 @@ def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-    # TODO: fils_hlp_wait_time=30 and no response from server
+def test_fils_sk_hlp_timeout(dev, apdev):
+    """FILS SK HLP (rapid commit server timeout)"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.settimeout(5)
+    sock.bind(("127.0.0.2", 67))
+
+    bssid = apdev[0]['bssid']
+    params = fils_hlp_config(fils_hlp_wait_time=30)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_FLUSH"):
+        raise Exception("Failed to flush pending FILS HLP requests")
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr())
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    # Wait for HLP wait timeout to hit
+    # FILS: HLP response timeout - continue with association response
+    dev[0].wait_connected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")

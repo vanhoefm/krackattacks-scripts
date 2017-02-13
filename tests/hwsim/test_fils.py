@@ -867,3 +867,164 @@ def test_fils_sk_hlp_req_parsing(dev, apdev):
     dev[0].wait_disconnected()
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
+
+def test_fils_sk_hlp_dhcp_parsing(dev, apdev):
+    """FILS SK HLP and DHCP response parsing"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.settimeout(5)
+    sock.bind(("127.0.0.2", 67))
+
+    bssid = apdev[0]['bssid']
+    params = fils_hlp_config(fils_hlp_wait_time=30)
+    params['dhcp_rapid_commit_proxy'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_FLUSH"):
+        raise Exception("Failed to flush pending FILS HLP requests")
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr())
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "fils_process_hlp"):
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPACK,
+                          chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+    #sock.sendto(dhcpdisc[2+20+8:], addr)
+    chaddr = binascii.unhexlify(dev[0].own_addr().replace(':','')) + 10*'\x00'
+    tests = [ "\x00",
+              "\x02" + 500 * "\x00",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + 500 * "\x00",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + 16*"\x00" + 64*"\x00" + 128*"\x00" + "\x63\x82\x53\x63",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + 16*"\x00" + 64*"\x00" + 128*"\x00" + "\x63\x82\x53\x63" + "\x00\x11",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + 16*"\x00" + 64*"\x00" + 128*"\x00" + "\x63\x82\x53\x63" + "\x11\x01",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + chaddr + 64*"\x00" + 128*"\x00" + "\x63\x82\x53\x63" + "\x35\x00\xff",
+              "\x02\x00\x00\x00" + 20*"\x00" + "\x7f\x00\x00\x03" + chaddr + 64*"\x00" + 128*"\x00" + "\x63\x82\x53\x63" + "\x35\x01\x00\xff",
+              1501 * "\x00" ]
+    for t in tests:
+        sock.sendto(t, addr)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS: DHCP sendto failed: Invalid argument for second DHCP TX in proxy
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    hapd.set("dhcp_server_port", "0")
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.set("dhcp_server_port", "67")
+
+    # Options in DHCPOFFER
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3",
+                           extra_op="\x00\x11", opt_end=False)
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # Options in DHCPOFFER (2)
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3",
+                           extra_op="\x11\x01", opt_end=False)
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # Server ID in DHCPOFFER
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3",
+                           extra_op="\x36\x01\x30")
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS: Could not update DHCPDISCOVER
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr(),
+                          extra_op="\x00\x11", opt_end=False)
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3",
+                           extra_op="\x36\x01\x30")
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS: Could not update DHCPDISCOVER (2)
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr(),
+                          extra_op="\x11\x01", opt_end=False)
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3",
+                           extra_op="\x36\x01\x30")
+    sock.sendto(dhcpoffer[2+20+8:], addr)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")

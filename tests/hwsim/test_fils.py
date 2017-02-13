@@ -16,7 +16,7 @@ import time
 import hostapd
 from wpasupplicant import WpaSupplicant
 import hwsim_utils
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
 from test_erp import check_erp_capa, start_erp_as
 from test_ap_hs20 import ip_checksum
 
@@ -596,5 +596,96 @@ def test_fils_sk_hlp_timeout(dev, apdev):
     # Wait for HLP wait timeout to hit
     # FILS: HLP response timeout - continue with association response
     dev[0].wait_connected()
+
+    dev[0].request("FILS_HLP_REQ_FLUSH")
+
+def test_fils_sk_hlp_oom(dev, apdev):
+    """FILS SK HLP and hostapd OOM"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.settimeout(5)
+    sock.bind(("127.0.0.2", 67))
+
+    bssid = apdev[0]['bssid']
+    params = fils_hlp_config(fils_hlp_wait_time=500)
+    params['dhcp_rapid_commit_proxy'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    if "OK" not in dev[0].request("FILS_HLP_REQ_FLUSH"):
+        raise Exception("Failed to flush pending FILS HLP requests")
+    dhcpdisc = build_dhcp(req=True, dhcp_msg=DHCPDISCOVER,
+                          chaddr=dev[0].own_addr())
+    if "OK" not in dev[0].request("FILS_HLP_REQ_ADD " + "ff:ff:ff:ff:ff:ff " + binascii.hexlify(dhcpdisc)):
+        raise Exception("FILS_HLP_REQ_ADD failed")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "fils_process_hlp"):
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "fils_process_hlp_dhcp"):
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "wpabuf_alloc;fils_process_hlp_dhcp"):
+        dev[0].select_network(id, freq=2412)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "wpabuf_alloc;fils_dhcp_handler"):
+        dev[0].select_network(id, freq=2412)
+        (msg,addr) = sock.recvfrom(1000)
+        logger.debug("Received DHCP message from %s" % str(addr))
+        dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPACK,
+                              chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+        sock.sendto(dhcpdisc[2+20+8:], addr)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    with alloc_fail(hapd, 1, "wpabuf_resize;fils_dhcp_handler"):
+        dev[0].select_network(id, freq=2412)
+        (msg,addr) = sock.recvfrom(1000)
+        logger.debug("Received DHCP message from %s" % str(addr))
+        dhcpdisc = build_dhcp(req=False, dhcp_msg=DHCPACK,
+                              chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+        sock.sendto(dhcpdisc[2+20+8:], addr)
+        dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    (msg,addr) = sock.recvfrom(1000)
+    logger.debug("Received DHCP message from %s" % str(addr))
+    dhcpoffer = build_dhcp(req=False, dhcp_msg=DHCPOFFER, rapid_commit=False,
+                           chaddr=dev[0].own_addr(), giaddr="127.0.0.3")
+    with alloc_fail(hapd, 1, "wpabuf_resize;fils_dhcp_request"):
+        sock.sendto(dhcpoffer[2+20+8:], addr)
+        dev[0].wait_connected()
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
 
     dev[0].request("FILS_HLP_REQ_FLUSH")

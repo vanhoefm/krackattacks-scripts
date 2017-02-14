@@ -623,41 +623,6 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 
 
 #ifdef CONFIG_IEEE80211AC
-
-static int ieee80211ac_cap_check(u32 hw, u32 conf, u32 cap, const char *name)
-{
-	u32 req_cap = conf & cap;
-
-	/*
-	 * Make sure we support all requested capabilities.
-	 * NOTE: We assume that 'cap' represents a capability mask,
-	 * not a discrete value.
-	 */
-	if ((hw & req_cap) != req_cap) {
-		wpa_printf(MSG_ERROR, "Driver does not support configured VHT capability [%s]",
-			   name);
-		return 0;
-	}
-	return 1;
-}
-
-
-static int ieee80211ac_cap_check_max(u32 hw, u32 conf, u32 mask,
-				     unsigned int shift,
-				     const char *name)
-{
-	u32 hw_max = hw & mask;
-	u32 conf_val = conf & mask;
-
-	if (conf_val > hw_max) {
-		wpa_printf(MSG_ERROR, "Configured VHT capability [%s] exceeds max value supported by the driver (%d > %d)",
-			   name, conf_val >> shift, hw_max >> shift);
-		return 0;
-	}
-	return 1;
-}
-
-
 static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
 {
 	struct hostapd_hw_modes *mode = iface->current_mode;
@@ -685,45 +650,7 @@ static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
 		}
 	}
 
-#define VHT_CAP_CHECK(cap) \
-	do { \
-		if (!ieee80211ac_cap_check(hw, conf, cap, #cap)) \
-			return 0; \
-	} while (0)
-
-#define VHT_CAP_CHECK_MAX(cap) \
-	do { \
-		if (!ieee80211ac_cap_check_max(hw, conf, cap, cap ## _SHIFT, \
-					       #cap)) \
-			return 0; \
-	} while (0)
-
-	VHT_CAP_CHECK_MAX(VHT_CAP_MAX_MPDU_LENGTH_MASK);
-	VHT_CAP_CHECK(VHT_CAP_SUPP_CHAN_WIDTH_160MHZ);
-	VHT_CAP_CHECK(VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ);
-	VHT_CAP_CHECK(VHT_CAP_RXLDPC);
-	VHT_CAP_CHECK(VHT_CAP_SHORT_GI_80);
-	VHT_CAP_CHECK(VHT_CAP_SHORT_GI_160);
-	VHT_CAP_CHECK(VHT_CAP_TXSTBC);
-	VHT_CAP_CHECK_MAX(VHT_CAP_RXSTBC_MASK);
-	VHT_CAP_CHECK(VHT_CAP_SU_BEAMFORMER_CAPABLE);
-	VHT_CAP_CHECK(VHT_CAP_SU_BEAMFORMEE_CAPABLE);
-	VHT_CAP_CHECK_MAX(VHT_CAP_BEAMFORMEE_STS_MAX);
-	VHT_CAP_CHECK_MAX(VHT_CAP_SOUNDING_DIMENSION_MAX);
-	VHT_CAP_CHECK(VHT_CAP_MU_BEAMFORMER_CAPABLE);
-	VHT_CAP_CHECK(VHT_CAP_MU_BEAMFORMEE_CAPABLE);
-	VHT_CAP_CHECK(VHT_CAP_VHT_TXOP_PS);
-	VHT_CAP_CHECK(VHT_CAP_HTC_VHT);
-	VHT_CAP_CHECK_MAX(VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MAX);
-	VHT_CAP_CHECK(VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB);
-	VHT_CAP_CHECK(VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB);
-	VHT_CAP_CHECK(VHT_CAP_RX_ANTENNA_PATTERN);
-	VHT_CAP_CHECK(VHT_CAP_TX_ANTENNA_PATTERN);
-
-#undef VHT_CAP_CHECK
-#undef VHT_CAP_CHECK_MAX
-
-	return 1;
+	return ieee80211ac_cap_check(hw, conf);
 }
 #endif /* CONFIG_IEEE80211AC */
 

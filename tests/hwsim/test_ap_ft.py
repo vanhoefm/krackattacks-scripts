@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger, skip_with_fips
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -963,6 +963,330 @@ def test_ap_ft_oom(dev, apdev):
     with alloc_fail(dev[0], 1, "=sme_update_ft_ies"):
         dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
                        scan_freq="2412")
+
+def test_ap_ft_ap_oom(dev, apdev):
+    """WPA2-PSK-FT and AP OOM"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    with alloc_fail(hapd0, 1, "wpa_ft_store_pmk_r0"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    # This roam will fail due to missing PMK-R0 (OOM prevented storing it)
+    dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom2(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 2"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    with alloc_fail(hapd0, 1, "wpa_ft_store_pmk_r1"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    dev[0].roam(bssid1)
+    if dev[0].get_status_field('bssid') != bssid1:
+        raise Exception("Did not roam to AP1")
+    # This roam will fail due to missing PMK-R1 (OOM prevented storing it)
+    dev[0].roam(bssid0)
+
+def test_ap_ft_ap_oom3(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 3"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with alloc_fail(hapd1, 1, "wpa_ft_pull_pmk_r1"):
+        # This will fail due to not being able to send out PMK-R1 pull request
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 1, "os_get_random;wpa_ft_pull_pmk_r1"):
+        # This will fail due to not being able to send out PMK-R1 pull request
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 1, "aes_wrap;wpa_ft_pull_pmk_r1"):
+        # This will fail due to not being able to send out PMK-R1 pull request
+        dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom4(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 4"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with alloc_fail(hapd1, 1, "wpa_ft_gtk_subelem"):
+        dev[0].roam(bssid1)
+        if dev[0].get_status_field('bssid') != bssid1:
+            raise Exception("Did not roam to AP1")
+
+    with fail_test(hapd0, 1, "wpa_auth_get_seqnum;wpa_ft_gtk_subelem"):
+        dev[0].roam(bssid0)
+        if dev[0].get_status_field('bssid') != bssid0:
+            raise Exception("Did not roam to AP0")
+
+    with fail_test(hapd0, 1, "aes_wrap;wpa_ft_gtk_subelem"):
+        dev[0].roam(bssid1)
+        if dev[0].get_status_field('bssid') != bssid1:
+            raise Exception("Did not roam to AP1")
+
+def test_ap_ft_ap_oom5(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 5"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with alloc_fail(hapd1, 1, "=wpa_ft_process_auth_req"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 1, "os_get_random;wpa_ft_process_auth_req"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 1, "sha256_prf_bits;wpa_pmk_r1_to_ptk;wpa_ft_process_auth_req"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 3, "wpa_pmk_r1_to_ptk;wpa_ft_process_auth_req"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+    with fail_test(hapd1, 1, "wpa_derive_pmk_r1_name;wpa_ft_process_auth_req"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom6(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 6"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    with fail_test(hapd0, 1, "wpa_derive_pmk_r0;wpa_auth_derive_ptk_ft"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    with fail_test(hapd0, 1, "wpa_derive_pmk_r1;wpa_auth_derive_ptk_ft"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    with fail_test(hapd0, 1, "wpa_pmk_r1_to_ptk;wpa_auth_derive_ptk_ft"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+
+def test_ap_ft_ap_oom7(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 7"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2"
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="2", scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2"
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with alloc_fail(hapd1, 1, "wpa_ft_igtk_subelem"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+    with fail_test(hapd1, 1, "aes_wrap;wpa_ft_igtk_subelem"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+    with alloc_fail(hapd1, 1, "=wpa_sm_write_assoc_resp_ies"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+    with fail_test(hapd1, 1, "wpa_ft_mic;wpa_sm_write_assoc_resp_ies"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom8(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 8"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['ft_psk_generate_local'] = "1";
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['ft_psk_generate_local'] = "1";
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with fail_test(hapd1, 1, "wpa_derive_pmk_r0;wpa_ft_psk_pmk_r1"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+    with fail_test(hapd1, 1, "wpa_derive_pmk_r1;wpa_ft_psk_pmk_r1"):
+        # This will fail to roam
+        dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom9(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 9"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+
+    with alloc_fail(hapd0, 1, "wpa_ft_action_rx"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd0, "GET_ALLOC_FAIL")
+
+    with alloc_fail(hapd1, 1, "wpa_ft_rrb_rx_request"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd1, "GET_ALLOC_FAIL")
+
+    with alloc_fail(hapd1, 1, "wpa_ft_send_rrb_auth_resp"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd1, "GET_ALLOC_FAIL")
+
+def test_ap_ft_ap_oom10(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 10"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+
+    with fail_test(hapd0, 1, "aes_unwrap;wpa_ft_rrb_rx_pull"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd0, "GET_FAIL")
+
+    with fail_test(hapd0, 1, "wpa_derive_pmk_r1;wpa_ft_rrb_rx_pull"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd0, "GET_FAIL")
+
+    with fail_test(hapd0, 1, "aes_wrap;wpa_ft_rrb_rx_pull"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd0, "GET_FAIL")
+
+    with fail_test(hapd1, 1, "aes_unwrap;wpa_ft_rrb_rx_resp"):
+        # This will fail to roam
+        if "OK" not in dev[0].request("FT_DS " + bssid1):
+            raise Exception("FT_DS failed")
+        wait_fail_trigger(hapd1, "GET_FAIL")
+
+def test_ap_ft_ap_oom11(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 11"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    with fail_test(hapd0, 1, "wpa_derive_pmk_r1;wpa_ft_generate_pmk_r1"):
+        dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+        wait_fail_trigger(hapd0, "GET_FAIL")
+
+    dev[1].scan_for_bss(bssid0, freq="2412")
+    with fail_test(hapd0, 1, "aes_wrap;wpa_ft_generate_pmk_r1"):
+        dev[1].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                       scan_freq="2412")
+        wait_fail_trigger(hapd0, "GET_FAIL")
 
 def test_ap_ft_over_ds_proto(dev, apdev):
     """WPA2-PSK-FT AP over DS protocol testing"""

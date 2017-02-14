@@ -1873,11 +1873,6 @@ static int drv_supports_vht(struct wpa_supplicant *wpa_s,
 	u8 channel;
 	int i;
 
-#ifdef CONFIG_HT_OVERRIDES
-	if (ssid->disable_ht)
-		return 0;
-#endif /* CONFIG_HT_OVERRIDES */
-
 	hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
 	if (hw_mode == NUM_HOSTAPD_MODES)
 		return 0;

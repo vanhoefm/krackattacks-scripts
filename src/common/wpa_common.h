@@ -358,15 +358,15 @@ int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,
 	       const u8 *ftie, size_t ftie_len,
 	       const u8 *rsnie, size_t rsnie_len,
 	       const u8 *ric, size_t ric_len, u8 *mic);
-void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
-		       const u8 *ssid, size_t ssid_len,
-		       const u8 *mdid, const u8 *r0kh_id, size_t r0kh_id_len,
-		       const u8 *s0kh_id, u8 *pmk_r0, u8 *pmk_r0_name);
-void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
-			    const u8 *s1kh_id, u8 *pmk_r1_name);
-void wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
-		       const u8 *r1kh_id, const u8 *s1kh_id,
-		       u8 *pmk_r1, u8 *pmk_r1_name);
+int wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
+		      const u8 *ssid, size_t ssid_len,
+		      const u8 *mdid, const u8 *r0kh_id, size_t r0kh_id_len,
+		      const u8 *s0kh_id, u8 *pmk_r0, u8 *pmk_r0_name);
+int wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
+			   const u8 *s1kh_id, u8 *pmk_r1_name);
+int wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
+		      const u8 *r1kh_id, const u8 *s1kh_id,
+		      u8 *pmk_r1, u8 *pmk_r1_name);
 int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 		      const u8 *sta_addr, const u8 *bssid,
 		      const u8 *pmk_r1_name,

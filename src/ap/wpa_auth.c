@@ -857,7 +857,8 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 			pmk_len = sm->pmk_len;
 		}
 
-		wpa_derive_ptk(sm, sm->alt_SNonce, pmk, pmk_len, &PTK);
+		if (wpa_derive_ptk(sm, sm->alt_SNonce, pmk, pmk_len, &PTK) < 0)
+			break;
 
 		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK, data, data_len)
 		    == 0) {
@@ -2464,7 +2465,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 			pmk_len = sm->pmk_len;
 		}
 
-		wpa_derive_ptk(sm, sm->SNonce, pmk, pmk_len, &PTK);
+		if (wpa_derive_ptk(sm, sm->SNonce, pmk, pmk_len, &PTK) < 0)
+			break;
 
 		if (mic_len &&
 		    wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,

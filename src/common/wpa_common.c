@@ -1104,10 +1104,10 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
  *
  * IEEE Std 802.11r-2008 - 8.5.1.5.3
  */
-void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
-		       const u8 *ssid, size_t ssid_len,
-		       const u8 *mdid, const u8 *r0kh_id, size_t r0kh_id_len,
-		       const u8 *s0kh_id, u8 *pmk_r0, u8 *pmk_r0_name)
+int wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
+		      const u8 *ssid, size_t ssid_len,
+		      const u8 *mdid, const u8 *r0kh_id, size_t r0kh_id_len,
+		      const u8 *s0kh_id, u8 *pmk_r0, u8 *pmk_r0_name)
 {
 	u8 buf[1 + SSID_MAX_LEN + MOBILITY_DOMAIN_ID_LEN + 1 +
 	       FT_R0KH_ID_MAX_LEN + ETH_ALEN];
@@ -1124,7 +1124,7 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 	 * PMK-R0Name-Salt = L(R0-Key-Data, 256, 128)
 	 */
 	if (ssid_len > SSID_MAX_LEN || r0kh_id_len > FT_R0KH_ID_MAX_LEN)
-		return;
+		return -1;
 	pos = buf;
 	*pos++ = ssid_len;
 	os_memcpy(pos, ssid, ssid_len);
@@ -1137,8 +1137,9 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 	os_memcpy(pos, s0kh_id, ETH_ALEN);
 	pos += ETH_ALEN;
 
-	sha256_prf(xxkey, xxkey_len, "FT-R0", buf, pos - buf,
-		   r0_key_data, sizeof(r0_key_data));
+	if (sha256_prf(xxkey, xxkey_len, "FT-R0", buf, pos - buf,
+		       r0_key_data, sizeof(r0_key_data)) < 0)
+		return -1;
 	os_memcpy(pmk_r0, r0_key_data, PMK_LEN);
 
 	/*
@@ -1149,8 +1150,10 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 	addr[1] = r0_key_data + PMK_LEN;
 	len[1] = 16;
 
-	sha256_vector(2, addr, len, hash);
+	if (sha256_vector(2, addr, len, hash) < 0)
+		return -1;
 	os_memcpy(pmk_r0_name, hash, WPA_PMK_NAME_LEN);
+	return 0;
 }
 
 
@@ -1159,8 +1162,8 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
  *
  * IEEE Std 802.11r-2008 - 8.5.1.5.4
  */
-void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
-			    const u8 *s1kh_id, u8 *pmk_r1_name)
+int wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
+			   const u8 *s1kh_id, u8 *pmk_r1_name)
 {
 	u8 hash[32];
 	const u8 *addr[4];
@@ -1179,8 +1182,10 @@ void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
 	addr[3] = s1kh_id;
 	len[3] = ETH_ALEN;
 
-	sha256_vector(4, addr, len, hash);
+	if (sha256_vector(4, addr, len, hash) < 0)
+		return -1;
 	os_memcpy(pmk_r1_name, hash, WPA_PMK_NAME_LEN);
+	return 0;
 }
 
 
@@ -1189,9 +1194,9 @@ void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
  *
  * IEEE Std 802.11r-2008 - 8.5.1.5.4
  */
-void wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
-		       const u8 *r1kh_id, const u8 *s1kh_id,
-		       u8 *pmk_r1, u8 *pmk_r1_name)
+int wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
+		      const u8 *r1kh_id, const u8 *s1kh_id,
+		      u8 *pmk_r1, u8 *pmk_r1_name)
 {
 	u8 buf[FT_R1KH_ID_LEN + ETH_ALEN];
 	u8 *pos;
@@ -1203,9 +1208,12 @@ void wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
 	os_memcpy(pos, s1kh_id, ETH_ALEN);
 	pos += ETH_ALEN;
 
-	sha256_prf(pmk_r0, PMK_LEN, "FT-R1", buf, pos - buf, pmk_r1, PMK_LEN);
+	if (sha256_prf(pmk_r0, PMK_LEN, "FT-R1", buf, pos - buf,
+		       pmk_r1, PMK_LEN) < 0)
+		return -1;
 
-	wpa_derive_pmk_r1_name(pmk_r0_name, r1kh_id, s1kh_id, pmk_r1_name);
+	return wpa_derive_pmk_r1_name(pmk_r0_name, r1kh_id, s1kh_id,
+				      pmk_r1_name);
 }
 
 
@@ -1245,7 +1253,9 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 	ptk->tk_len = wpa_cipher_key_len(cipher);
 	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len;
 
-	sha256_prf(pmk_r1, PMK_LEN, "FT-PTK", buf, pos - buf, tmp, ptk_len);
+	if (sha256_prf(pmk_r1, PMK_LEN, "FT-PTK", buf, pos - buf,
+		       tmp, ptk_len) < 0)
+		return -1;
 
 	/*
 	 * PTKName = Truncate-128(SHA-256(PMKR1Name || "FT-PTKN" || SNonce ||
@@ -1264,7 +1274,8 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 	addr[5] = sta_addr;
 	len[5] = ETH_ALEN;
 
-	sha256_vector(6, addr, len, hash);
+	if (sha256_vector(6, addr, len, hash) < 0)
+		return -1;
 	os_memcpy(ptk_name, hash, WPA_PMK_NAME_LEN);
 
 	os_memcpy(ptk->kck, tmp, ptk->kck_len);

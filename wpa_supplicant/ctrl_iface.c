@@ -577,6 +577,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		wpa_s->ignore_assoc_disallow = !!atoi(value);
 	} else if (os_strcasecmp(cmd, "reject_btm_req_reason") == 0) {
 		wpa_s->reject_btm_req_reason = atoi(value);
+	} else if (os_strcasecmp(cmd, "get_pref_freq_list_override") == 0) {
+		os_free(wpa_s->get_pref_freq_list_override);
+		if (!value[0])
+			wpa_s->get_pref_freq_list_override = NULL;
+		else
+			wpa_s->get_pref_freq_list_override = os_strdup(value);
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	} else if (os_strcmp(cmd, "blob") == 0) {
@@ -7219,6 +7225,46 @@ static int wpas_ctrl_iface_signal_monitor(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+int wpas_ctrl_iface_get_pref_freq_list_override(struct wpa_supplicant *wpa_s,
+						enum wpa_driver_if_type if_type,
+						unsigned int *num,
+						unsigned int *freq_list)
+{
+	char *pos = wpa_s->get_pref_freq_list_override;
+	char *end;
+	unsigned int count = 0;
+
+	/* Override string format:
+	 *  <if_type1>:<freq1>,<freq2>,... <if_type2>:... */
+
+	while (pos) {
+		if (atoi(pos) == (int) if_type)
+			break;
+		pos = os_strchr(pos, ' ');
+		if (pos)
+			pos++;
+	}
+	if (!pos)
+		return -1;
+	pos = os_strchr(pos, ':');
+	if (!pos)
+		return -1;
+	pos++;
+	end = os_strchr(pos, ' ');
+	while (pos && (!end || pos < end) && count < *num) {
+		freq_list[count++] = atoi(pos);
+		pos = os_strchr(pos, ',');
+		if (pos)
+			pos++;
+	}
+
+	*num = count;
+	return 0;
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
 static int wpas_ctrl_iface_get_pref_freq_list(
 	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
 {
@@ -7510,6 +7556,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->ignore_assoc_disallow = 0;
 	wpa_s->reject_btm_req_reason = 0;
 	wpa_sm_set_test_assoc_ie(wpa_s->wpa, NULL);
+	os_free(wpa_s->get_pref_freq_list_override);
+	wpa_s->get_pref_freq_list_override = NULL;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_s->disconnected = 0;

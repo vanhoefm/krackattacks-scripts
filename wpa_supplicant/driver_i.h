@@ -902,6 +902,11 @@ static inline int wpa_drv_get_pref_freq_list(struct wpa_supplicant *wpa_s,
 					     unsigned int *num,
 					     unsigned int *freq_list)
 {
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->get_pref_freq_list_override)
+		return wpas_ctrl_iface_get_pref_freq_list_override(
+			wpa_s, if_type, num, freq_list);
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!wpa_s->driver->get_pref_freq_list)
 		return -1;
 	return wpa_s->driver->get_pref_freq_list(wpa_s->drv_priv, if_type,

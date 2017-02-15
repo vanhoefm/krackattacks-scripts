@@ -1288,6 +1288,55 @@ def test_ap_ft_ap_oom11(dev, apdev):
                        scan_freq="2412")
         wait_fail_trigger(hapd0, "GET_FAIL")
 
+def test_ap_ft_over_ds_proto_ap(dev, apdev):
+    """WPA2-PSK-FT AP over DS protocol testing for AP processing"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+    _bssid0 = bssid0.replace(':', '')
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    addr = dev[0].own_addr()
+    _addr = addr.replace(':', '')
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    _bssid1 = bssid1.replace(':', '')
+
+    hapd0.set("ext_mgmt_frame_handling", "1")
+    hdr = "d0003a01" + _bssid0 + _addr + _bssid0 + "1000"
+    valid = "0601" + _addr + _bssid1
+    tests = [ "0601",
+              "0601" + _addr,
+              "0601" + _addr + _bssid0,
+              "0601" + _addr + "ffffffffffff",
+              "0601" + _bssid0 + _bssid0,
+              valid,
+              valid + "01",
+              valid + "3700",
+              valid + "3600",
+              valid + "3603ffffff",
+              valid + "3603a1b2ff",
+              valid + "3603a1b2ff" + "3700",
+              valid + "3603a1b2ff" + "37520000" + 16*"00" + 32*"00" + 32*"00",
+              valid + "3603a1b2ff" + "37520001" + 16*"00" + 32*"00" + 32*"00",
+              valid + "3603a1b2ff" + "37550000" + 16*"00" + 32*"00" + 32*"00" + "0301aa",
+              valid + "3603a1b2ff" + "37550000" + 16*"00" + 32*"00" + 32*"00" + "0301aa" + "3000",
+              valid + "3603a1b2ff" + "37550000" + 16*"00" + 32*"00" + 32*"00" + "0301aa" + "30260100000fac040100000fac040100000facff00000100a225368fe0983b5828a37a0acb37f253",
+              valid + "3603a1b2ff" + "37550000" + 16*"00" + 32*"00" + 32*"00" + "0301aa" + "30260100000fac040100000fac030100000fac0400000100a225368fe0983b5828a37a0acb37f253",
+              valid + "3603a1b2ff" + "37550000" + 16*"00" + 32*"00" + 32*"00" + "0301aa" + "30260100000fac040100000fac040100000fac0400000100a225368fe0983b5828a37a0acb37f253",
+              valid + "0001" ]
+    for t in tests:
+        hapd0.dump_monitor()
+        if "OK" not in hapd0.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+            raise Exception("MGMT_RX_PROCESS failed")
+
+    hapd0.set("ext_mgmt_frame_handling", "0")
+
 def test_ap_ft_over_ds_proto(dev, apdev):
     """WPA2-PSK-FT AP over DS protocol testing"""
     ssid = "test-ft"

@@ -6457,6 +6457,20 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return 0;
 	}
 
+	if (os_strcmp(cmd, "override_pref_op_chan") == 0) {
+		int op_class, chan;
+
+		op_class = atoi(param);
+		param = os_strchr(param, ':');
+		if (!param)
+			return -1;
+		param++;
+		chan = atoi(param);
+		p2p_set_override_pref_op_chan(wpa_s->global->p2p, op_class,
+					      chan);
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
 		   cmd);
 

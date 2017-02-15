@@ -2373,6 +2373,8 @@ void p2p_expire_peers(struct p2p_data *p2p);
 void p2p_set_own_pref_freq_list(struct p2p_data *p2p,
 				const unsigned int *pref_freq_list,
 				unsigned int size);
+void p2p_set_override_pref_op_chan(struct p2p_data *p2p, u8 op_class,
+				   u8 chan);
 
 /**
  * p2p_group_get_common_freqs - Get the group common frequencies

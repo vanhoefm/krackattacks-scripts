@@ -553,6 +553,10 @@ struct p2p_data {
 
 	unsigned int pref_freq_list[P2P_MAX_PREF_CHANNELS];
 	unsigned int num_pref_freq;
+
+	/* Override option for preferred operating channel in GO Negotiation */
+	u8 override_pref_op_class;
+	u8 override_pref_channel;
 };
 
 /**

@@ -3034,6 +3034,8 @@ void p2p_flush(struct p2p_data *p2p)
 	p2p->ssid_set = 0;
 	p2ps_prov_free(p2p);
 	p2p_reset_pending_pd(p2p);
+	p2p->override_pref_op_class = 0;
+	p2p->override_pref_channel = 0;
 }
 
 
@@ -5519,6 +5521,14 @@ void p2p_set_own_pref_freq_list(struct p2p_data *p2p,
 		p2p_dbg(p2p, "Own preferred frequency list[%u]=%u MHz",
 			i, p2p->pref_freq_list[i]);
 	}
+}
+
+
+void p2p_set_override_pref_op_chan(struct p2p_data *p2p, u8 op_class,
+				   u8 chan)
+{
+	p2p->override_pref_op_class = op_class;
+	p2p->override_pref_channel = chan;
 }
 
 

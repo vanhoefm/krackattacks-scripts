@@ -315,7 +315,12 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 			       group_capab);
 	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) | tie_breaker);
 	p2p_buf_add_config_timeout(buf, p2p->go_timeout, p2p->client_timeout);
-	if (peer && peer->go_state == REMOTE_GO && !p2p->num_pref_freq) {
+	if (p2p->override_pref_op_class) {
+		p2p_dbg(p2p, "Override operating channel preference");
+		p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+					      p2p->override_pref_op_class,
+					      p2p->override_pref_channel);
+	} else if (peer && peer->go_state == REMOTE_GO && !p2p->num_pref_freq) {
 		p2p_dbg(p2p, "Omit Operating Channel attribute");
 	} else {
 		p2p_buf_add_operating_channel(buf, p2p->cfg->country,

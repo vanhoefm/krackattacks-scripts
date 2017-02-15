@@ -2051,3 +2051,62 @@ def test_wpas_ctrl_set_sched_scan_relative_rssi(dev):
     for t in tests:
         if "OK" not in dev[0].request("SET " + t):
             raise Exception("Failed to SET " + t)
+
+def test_wpas_ctrl_get_pref_freq_list_override(dev):
+    """wpa_supplicant get_pref_freq_list_override"""
+    if dev[0].request("GET_PREF_FREQ_LIST ").strip() != "FAIL":
+        raise Exception("Invalid GET_PREF_FREQ_LIST accepted")
+
+    dev[0].set("get_pref_freq_list_override", "foo")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "FAIL":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1234:1,2,3 0")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "FAIL":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1234:1,2,3 0:")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "0":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "0:1,2")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1,2":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1:3,4 0:1,2 2:5,6")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1,2":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1:3,4 0:1 2:5,6")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "0:1000,1001 2:1002,1003 3:1004,1005 4:1006,1007 8:1010,1011 9:1008,1009")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1000,1001":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST AP").strip()
+    if res != "1002,1003":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST P2P_GO").strip()
+    if res != "1004,1005":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST P2P_CLIENT").strip()
+    if res != "1006,1007":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST IBSS").strip()
+    if res != "1008,1009":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST TDLS").strip()
+    if res != "1010,1011":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    logger.info("STATION (without override): " + res)

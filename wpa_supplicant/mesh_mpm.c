@@ -684,7 +684,8 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 
 	oper = (struct ieee80211_ht_operation *) elems->ht_operation;
 	if (oper &&
-	    !(oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH)) {
+	    !(oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH) &&
+	    sta->ht_capabilities) {
 		wpa_msg(wpa_s, MSG_DEBUG, MACSTR
 			" does not support 40 MHz bandwidth",
 			MAC2STR(sta->addr));

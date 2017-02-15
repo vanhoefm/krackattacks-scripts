@@ -340,8 +340,8 @@ u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 	 * that did not specify a valid WMM IE in the (Re)Association Request
 	 * frame.
 	 */
-	if (!ht_capab ||
-	    !(sta->flags & WLAN_STA_WMM) || hapd->conf->disable_11n) {
+	if (!ht_capab || !(sta->flags & WLAN_STA_WMM) ||
+	    !hapd->iconf->ieee80211n || hapd->conf->disable_11n) {
 		sta->flags &= ~WLAN_STA_HT;
 		os_free(sta->ht_capabilities);
 		sta->ht_capabilities = NULL;

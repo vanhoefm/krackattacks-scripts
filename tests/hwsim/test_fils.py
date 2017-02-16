@@ -471,6 +471,7 @@ def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
     start_erp_as(apdev[1])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.settimeout(5)
     sock.bind(("127.0.0.2", 67))
 
@@ -575,6 +576,7 @@ def test_fils_sk_hlp_timeout(dev, apdev):
     start_erp_as(apdev[1])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.settimeout(5)
     sock.bind(("127.0.0.2", 67))
 
@@ -617,6 +619,7 @@ def test_fils_sk_hlp_oom(dev, apdev):
     start_erp_as(apdev[1])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.settimeout(5)
     sock.bind(("127.0.0.2", 67))
 
@@ -847,6 +850,7 @@ def test_fils_sk_hlp_req_parsing(dev, apdev):
 
     # FILS: Failed to bind DHCP socket: Address already in use
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.settimeout(5)
     sock.bind(("127.0.0.2", 67))
     hapd.set("own_ip_addr", "127.0.0.2")
@@ -876,6 +880,7 @@ def test_fils_sk_hlp_dhcp_parsing(dev, apdev):
     start_erp_as(apdev[1])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.settimeout(5)
     sock.bind(("127.0.0.2", 67))
 

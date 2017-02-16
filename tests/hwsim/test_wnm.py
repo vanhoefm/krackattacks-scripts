@@ -1017,6 +1017,60 @@ def test_wnm_bss_tm_op_class_0(dev, apdev):
     finally:
         stop_wnm_tm(hapd, dev[0])
 
+def test_wnm_bss_tm_rsn(dev, apdev):
+    """WNM BSS Transition Management with RSN"""
+    try:
+        hapd = None
+        hapd2 = None
+        params = hostapd.wpa2_params(ssid="test-wnm", passphrase="zxcvbnm,.-")
+        params["country_code"] = "FI"
+        params["ieee80211d"] = "1"
+        params["hw_mode"] = "g"
+        params["channel"] = "1"
+        params["bss_transition"] = "1"
+        hapd = hostapd.add_ap(apdev[0], params)
+
+        params = hostapd.wpa2_params(ssid="test-wnm", passphrase="zxcvbnm,.-")
+        params["country_code"] = "FI"
+        params["ieee80211d"] = "1"
+        params["hw_mode"] = "a"
+        params["channel"] = "36"
+        params["bss_transition"] = "1"
+        hapd2 = hostapd.add_ap(apdev[1], params)
+
+        dev[0].scan_for_bss(apdev[1]['bssid'], 5180)
+
+        id = dev[0].connect("test-wnm", psk="zxcvbnm,.-",
+                            bssid=apdev[0]['bssid'], scan_freq="2412")
+        dev[0].set_network(id, "scan_freq", "")
+        dev[0].set_network(id, "bssid", "")
+
+        addr = dev[0].own_addr()
+        dev[0].dump_monitor()
+
+        time.sleep(0.5)
+        logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000," + "115,36,7,0301ff"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" not in ev:
+            raise Exception("BSS transition request was not accepted: " + ev)
+        if "target_bssid=" + apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected target BSS: " + ev)
+        dev[0].wait_connected(timeout=15, error="No reassociation seen")
+        if apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected reassociation target: " + ev)
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
 def test_wnm_action_proto(dev, apdev):
     """WNM Action protocol testing"""
     params = { "ssid": "test-wnm" }

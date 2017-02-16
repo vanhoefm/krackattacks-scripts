@@ -1841,10 +1841,12 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 	}
 
 	/* if SNR is close, decide by max rate or frequency band */
-	if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
-	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
+	if (snr_a && snr_b && abs(snr_b - snr_a) < 7) {
 		if (wa->est_throughput != wb->est_throughput)
 			return wb->est_throughput - wa->est_throughput;
+	}
+	if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
+	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
 		if (IS_5GHZ(wa->freq) ^ IS_5GHZ(wb->freq))
 			return IS_5GHZ(wa->freq) ? -1 : 1;
 	}

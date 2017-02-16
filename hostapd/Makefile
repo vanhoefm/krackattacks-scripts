@@ -875,6 +875,9 @@ endif
 endif
 ifdef NEED_SHA384
 CFLAGS += -DCONFIG_SHA384
+ifneq ($(CONFIG_TLS), openssl)
+OBJS += ../src/crypto/sha384.o
+endif
 OBJS += ../src/crypto/sha384-prf.o
 endif
 

@@ -1330,6 +1330,9 @@ endif
 OBJS += $(SHA256OBJS)
 endif
 ifdef NEED_SHA384
+ifneq ($(CONFIG_TLS), openssl)
+OBJS += ../src/crypto/sha384.o
+endif
 CFLAGS += -DCONFIG_SHA384
 OBJS += ../src/crypto/sha384-prf.o
 endif

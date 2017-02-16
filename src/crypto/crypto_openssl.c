@@ -1031,7 +1031,7 @@ int hmac_sha384_vector(const u8 *key, size_t key_len, size_t num_elem,
 		       const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return openssl_hmac_vector(EVP_sha384(), key, key_len, num_elem, addr,
-				   len, mac, 32);
+				   len, mac, 48);
 }
 
 

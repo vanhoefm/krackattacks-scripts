@@ -1788,10 +1788,12 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
  * This doc https://supportforums.cisco.com/docs/DOC-12954 says, "the general
  * rule of thumb is that any SNR above 20 is good." This one
  * http://www.cisco.com/en/US/tech/tk722/tk809/technologies_q_and_a_item09186a00805e9a96.shtml#qa23
- * recommends 25 as a minimum SNR for 54 Mbps data rate. 30 is chosen here as a
- * conservative value.
+ * recommends 25 as a minimum SNR for 54 Mbps data rate. The estimates used in
+ * scan_est_throughput() allow even smaller SNR values for the maximum rates
+ * (21 for 54 Mbps, 22 for VHT80 MCS9, 24 for HT40 and HT20 MCS7). Use 25 as a
+ * somewhat conservative value here.
  */
-#define GREAT_SNR 30
+#define GREAT_SNR 25
 
 #define IS_5GHZ(n) (n > 4000)
 

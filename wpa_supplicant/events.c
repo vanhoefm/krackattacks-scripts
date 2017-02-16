@@ -3618,6 +3618,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	char buf[100];
 	int resched;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
@@ -3786,17 +3787,24 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #endif /* CONFIG_IBSS_RSN */
 	case EVENT_ASSOC_REJECT:
+		if (data->assoc_reject.timeout_reason)
+			os_snprintf(buf, sizeof(buf), "=%s",
+				    data->assoc_reject.timeout_reason);
+		else
+			buf[0] = '\0';
 		if (data->assoc_reject.bssid)
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
-				"bssid=" MACSTR	" status_code=%u%s",
+				"bssid=" MACSTR	" status_code=%u%s%s",
 				MAC2STR(data->assoc_reject.bssid),
 				data->assoc_reject.status_code,
-				data->assoc_reject.timed_out ? " timeout" : "");
+				data->assoc_reject.timed_out ? " timeout" : "",
+				buf);
 		else
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
-				"status_code=%u%s",
+				"status_code=%u%s%s",
 				data->assoc_reject.status_code,
-				data->assoc_reject.timed_out ? " timeout" : "");
+				data->assoc_reject.timed_out ? " timeout" : "",
+				buf);
 		wpa_s->assoc_status_code = data->assoc_reject.status_code;
 		wpas_notify_assoc_status_code(wpa_s);
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)

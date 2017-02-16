@@ -1925,7 +1925,7 @@ SM_STATE(WPA_PTK, INITPMK)
 	} else if (wpa_auth_get_msk(sm->wpa_auth, sm->addr, msk, &len) == 0) {
 		unsigned int pmk_len;
 
-		if (sm->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		if (wpa_key_mgmt_sha384(sm->wpa_key_mgmt))
 			pmk_len = PMK_LEN_SUITE_B_192;
 		else
 			pmk_len = PMK_LEN;
@@ -3775,7 +3775,7 @@ int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
 	    sm->wpa_auth->conf.disable_pmksa_caching)
 		return -1;
 
-	if (sm->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+	if (wpa_key_mgmt_sha384(sm->wpa_key_mgmt)) {
 		if (pmk_len > PMK_LEN_SUITE_B_192)
 			pmk_len = PMK_LEN_SUITE_B_192;
 	} else if (pmk_len > PMK_LEN) {

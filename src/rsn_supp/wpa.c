@@ -288,7 +288,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 	} else if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) && sm->eapol) {
 		int res, pmk_len;
 
-		if (sm->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		if (wpa_key_mgmt_sha384(sm->key_mgmt))
 			pmk_len = PMK_LEN_SUITE_B_192;
 		else
 			pmk_len = PMK_LEN;

@@ -1393,7 +1393,8 @@ static int wpa_supplicant_process_1_of_2_rsn(struct wpa_sm *sm,
 	int maxkeylen;
 	struct wpa_eapol_ie_parse ie;
 
-	wpa_hexdump(MSG_DEBUG, "RSN: msg 1/2 key data", keydata, keydatalen);
+	wpa_hexdump_key(MSG_DEBUG, "RSN: msg 1/2 key data",
+			keydata, keydatalen);
 	if (wpa_supplicant_parse_ies(keydata, keydatalen, &ie) < 0)
 		return -1;
 	if (ie.gtk && !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {

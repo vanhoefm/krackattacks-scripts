@@ -101,7 +101,8 @@ def ft_params2_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
 
 def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
               sae=False, eap=False, fail_test=False, roams=1,
-              pairwise_cipher="CCMP", group_cipher="TKIP CCMP", ptk_rekey="0"):
+              pairwise_cipher="CCMP", group_cipher="TKIP CCMP", ptk_rekey="0",
+              test_connectivity=True):
     logger.info("Connect to first AP")
     if eap:
         dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
@@ -129,7 +130,8 @@ def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
         ap2 = apdev[0]
         hapd1ap = hapd1
         hapd2ap = hapd0
-    hwsim_utils.test_connectivity(dev, hapd1ap)
+    if test_connectivity:
+        hwsim_utils.test_connectivity(dev, hapd1ap)
 
     dev.scan_for_bss(ap2['bssid'], freq="2412")
 
@@ -143,7 +145,7 @@ def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
             return
         if dev.get_status_field('bssid') != ap2['bssid']:
             raise Exception("Did not connect to correct AP")
-        if i == 0 or i == roams - 1:
+        if (i == 0 or i == roams - 1) and test_connectivity:
             hwsim_utils.test_connectivity(dev, hapd2ap)
 
         logger.info("Roam back to the first AP")
@@ -153,7 +155,7 @@ def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
             dev.roam(ap1['bssid'])
         if dev.get_status_field('bssid') != ap1['bssid']:
             raise Exception("Did not connect to correct AP")
-        if i == 0 or i == roams - 1:
+        if (i == 0 or i == roams - 1) and test_connectivity:
             hwsim_utils.test_connectivity(dev, hapd1ap)
 
 def test_ap_ft(dev, apdev):
@@ -1656,3 +1658,34 @@ def test_ap_ft_extra_ie(dev, apdev):
         dev[0].request("DISCONNECT")
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def test_ap_ft_ric(dev, apdev):
+    """WPA2-PSK-FT AP and RIC"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].set("ric_ies", "")
+    dev[0].set("ric_ies", '""')
+    if "FAIL" not in dev[0].request("SET ric_ies q"):
+        raise Exception("Invalid ric_ies value accepted")
+
+    tests = [ "3900",
+              "3900ff04eeeeeeee",
+              "390400000000",
+              "390400000000" + "390400000000",
+              "390400000000" + "dd050050f20202",
+              "390400000000" + "dd3d0050f2020201" + 55*"00",
+              "390400000000" + "dd3d0050f2020201aa300010270000000000000000000000000000000000000000000000000000ffffff7f00000000000000000000000040420f00ffff0000",
+              "390401010000" + "dd3d0050f2020201aa3000dc050000000000000000000000000000000000000000000000000000dc050000000000000000000000000000808d5b0028230000" ]
+    for t in tests:
+        dev[0].set("ric_ies", t)
+        run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase,
+                  test_connectivity=False)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()

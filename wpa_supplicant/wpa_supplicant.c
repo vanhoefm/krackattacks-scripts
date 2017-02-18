@@ -619,6 +619,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_PMKSA_CACHE_EXTERNAL */
 
 	wpas_flush_fils_hlp_req(wpa_s);
+
+	wpabuf_free(wpa_s->ric_ies);
+	wpa_s->ric_ies = NULL;
 }
 
 

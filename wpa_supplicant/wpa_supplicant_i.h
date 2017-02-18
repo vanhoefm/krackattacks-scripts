@@ -1146,6 +1146,9 @@ struct wpa_supplicant {
 		 */
 		int relative_adjust_rssi;
 	} srp;
+
+	/* RIC elements for FT protocol */
+	struct wpabuf *ric_ies;
 };
 
 

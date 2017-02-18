@@ -386,6 +386,28 @@ static int wpas_ctrl_set_relative_band_adjust(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_iface_set_ric_ies(struct wpa_supplicant *wpa_s,
+				   const char *cmd)
+{
+	struct wpabuf *ric_ies;
+
+	if (*cmd == '\0' || os_strcmp(cmd, "\"\"") == 0) {
+		wpabuf_free(wpa_s->ric_ies);
+		wpa_s->ric_ies = NULL;
+		return 0;
+	}
+
+	ric_ies = wpabuf_parse_bin(cmd);
+	if (!ric_ies)
+		return -1;
+
+	wpabuf_free(wpa_s->ric_ies);
+	wpa_s->ric_ies = ric_ies;
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -608,6 +630,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = wpas_ctrl_set_relative_rssi(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "relative_band_adjust") == 0) {
 		ret = wpas_ctrl_set_relative_band_adjust(wpa_s, value);
+	} else if (os_strcasecmp(cmd, "ric_ies") == 0) {
+		ret = wpas_ctrl_iface_set_ric_ies(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);
@@ -7594,6 +7618,9 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_SME
 	wpa_s->sme.last_unprot_disconnect.sec = 0;
 #endif /* CONFIG_SME */
+
+	wpabuf_free(wpa_s->ric_ies);
+	wpa_s->ric_ies = NULL;
 }
 
 

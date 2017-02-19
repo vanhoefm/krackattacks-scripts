@@ -1011,41 +1011,35 @@ static int wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 	buflen = 2 + sizeof(struct rsn_mdie) + 2 + sizeof(struct rsn_ftie) +
 		2 + FT_R1KH_ID_LEN + 200;
 	*resp_ies = os_zalloc(buflen);
-	if (*resp_ies == NULL) {
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	}
+	if (*resp_ies == NULL)
+		goto fail;
 
 	pos = *resp_ies;
 	end = *resp_ies + buflen;
 
 	ret = wpa_write_rsn_ie(conf, pos, end - pos, parse.rsn_pmkid);
-	if (ret < 0) {
-		os_free(*resp_ies);
-		*resp_ies = NULL;
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	}
+	if (ret < 0)
+		goto fail;
 	pos += ret;
 
 	ret = wpa_write_mdie(conf, pos, end - pos);
-	if (ret < 0) {
-		os_free(*resp_ies);
-		*resp_ies = NULL;
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	}
+	if (ret < 0)
+		goto fail;
 	pos += ret;
 
 	ret = wpa_write_ftie(conf, parse.r0kh_id, parse.r0kh_id_len,
 			     sm->ANonce, sm->SNonce, pos, end - pos, NULL, 0);
-	if (ret < 0) {
-		os_free(*resp_ies);
-		*resp_ies = NULL;
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	}
+	if (ret < 0)
+		goto fail;
 	pos += ret;
 
 	*resp_ies_len = pos - *resp_ies;
 
 	return WLAN_STATUS_SUCCESS;
+fail:
+	os_free(*resp_ies);
+	*resp_ies = NULL;
+	return WLAN_STATUS_UNSPECIFIED_FAILURE;
 }
 
 
@@ -1543,12 +1537,10 @@ static int ft_pull_resp_cb(struct wpa_state_machine *sm, void *ctx)
 {
 	struct ft_r0kh_r1kh_resp_frame *frame = ctx;
 
-	if (os_memcmp(frame->s1kh_id, sm->addr, ETH_ALEN) != 0)
-		return 0;
-	if (os_memcmp(frame->nonce, sm->ft_pending_pull_nonce,
-		      FT_R0KH_R1KH_PULL_NONCE_LEN) != 0)
-		return 0;
-	if (sm->ft_pending_cb == NULL || sm->ft_pending_req_ies == NULL)
+	if (os_memcmp(frame->s1kh_id, sm->addr, ETH_ALEN) != 0 ||
+	    os_memcmp(frame->nonce, sm->ft_pending_pull_nonce,
+		      FT_R0KH_R1KH_PULL_NONCE_LEN) != 0 ||
+	    sm->ft_pending_cb == NULL || sm->ft_pending_req_ies == NULL)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "FT: Response to a pending pull request for "

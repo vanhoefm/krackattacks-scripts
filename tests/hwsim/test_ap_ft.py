@@ -1,5 +1,5 @@
 # Fast BSS Transition tests
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2017, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,10 +10,11 @@ import os
 import time
 import logging
 logger = logging.getLogger()
+import struct
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger, skip_with_fips
+from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger, skip_with_fips, parse_ie
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -1689,3 +1690,111 @@ def test_ap_ft_ric(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
         dev[0].dump_monitor()
+
+def ie_hex(ies, id):
+    return binascii.hexlify(struct.pack('BB', id, len(ies[id])) + ies[id])
+
+def test_ap_ft_reassoc_proto(dev, apdev):
+    """WPA2-PSK-FT AP Reassociation Request frame parsing"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="1", scan_freq="2412")
+    if dev[0].get_status_field('bssid') == hapd0.own_addr():
+        hapd1ap = hapd0
+        hapd2ap = hapd1
+    else:
+        hapd1ap = hapd1
+        hapd2ap = hapd0
+
+    dev[0].scan_for_bss(hapd2ap.own_addr(), freq="2412")
+    hapd2ap.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("ROAM " + hapd2ap.own_addr())
+
+    while True:
+        req = hapd2ap.mgmt_rx()
+        hapd2ap.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+        if req['subtype'] == 11:
+            break
+
+    while True:
+        req = hapd2ap.mgmt_rx()
+        if req['subtype'] == 2:
+            break
+        hapd2ap.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+
+    # IEEE 802.11 header + fixed fields before IEs
+    hdr = binascii.hexlify(req['frame'][0:34])
+    ies = parse_ie(binascii.hexlify(req['frame'][34:]))
+    # First elements: SSID, Supported Rates, Extended Supported Rates
+    ies1 = ie_hex(ies, 0) + ie_hex(ies, 1) + ie_hex(ies, 50)
+
+    rsne = ie_hex(ies, 48)
+    mde = ie_hex(ies, 54)
+    fte = ie_hex(ies, 55)
+    tests = [ ]
+    # RSN: Trying to use FT, but MDIE not included
+    tests += [ rsne ]
+    # RSN: Attempted to use unknown MDIE
+    tests += [ rsne + "3603000000" ]
+    # Invalid RSN pairwise cipher
+    tests += [ "30260100000fac040100000fac030100000fac040000010029208a42cd25c85aa571567dce10dae3" ]
+    # FT: No PMKID in RSNIE
+    tests += [ "30160100000fac040100000fac040100000fac0400000000" + ie_hex(ies, 54) ]
+    # FT: Invalid FTIE
+    tests += [ rsne + mde ]
+    # FT: RIC IE(s) in the frame, but not included in protected IE count
+    # FT: Failed to parse FT IEs
+    tests += [ rsne + mde + fte + "3900" ]
+    # FT: SNonce mismatch in FTIE
+    tests += [ rsne + mde + "37520000" + 16*"00" + 32*"00" + 32*"00" ]
+    # FT: ANonce mismatch in FTIE
+    tests += [ rsne + mde + fte[0:40] + 32*"00" + fte[104:] ]
+    # FT: No R0KH-ID subelem in FTIE
+    tests += [ rsne + mde + "3752" + fte[4:168] ]
+    # FT: R0KH-ID in FTIE did not match with the current R0KH-ID
+    tests += [ rsne + mde + "3755" + fte[4:168] + "0301ff" ]
+    # FT: No R1KH-ID subelem in FTIE
+    tests += [ rsne + mde + "375e" + fte[4:168] + "030a" + "nas1.w1.fi".encode("hex") ]
+    # FT: Unknown R1KH-ID used in ReassocReq
+    tests += [ rsne + mde + "3766" + fte[4:168] + "030a" + "nas1.w1.fi".encode("hex") + "0106000000000000" ]
+    # FT: PMKID in Reassoc Req did not match with the PMKR1Name derived from auth request
+    tests += [ rsne[:-32] + 16*"00" + mde + fte ]
+    # Invalid MIC in FTIE
+    tests += [ rsne + mde + fte[0:8] + 16*"00" + fte[40:] ]
+    for t in tests:
+        hapd2ap.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + ies1 + t)
+
+def test_ap_ft_reassoc_local_fail(dev, apdev):
+    """WPA2-PSK-FT AP Reassociation Request frame and local failure"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="1", scan_freq="2412")
+    if dev[0].get_status_field('bssid') == hapd0.own_addr():
+        hapd1ap = hapd0
+        hapd2ap = hapd1
+    else:
+        hapd1ap = hapd1
+        hapd2ap = hapd0
+
+    dev[0].scan_for_bss(hapd2ap.own_addr(), freq="2412")
+    # FT: Failed to calculate MIC
+    with fail_test(hapd2ap, 1, "wpa_ft_validate_reassoc"):
+        dev[0].request("ROAM " + hapd2ap.own_addr())
+        ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+        dev[0].request("DISCONNECT")
+        if ev is None:
+            raise Exception("Association reject not seen")

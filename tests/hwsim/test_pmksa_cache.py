@@ -738,8 +738,10 @@ def _test_pmksa_cache_preauth_oom(dev, apdev):
 
     tests = [ (1, "rsn_preauth_receive"),
               (2, "rsn_preauth_receive"),
-              (1, "rsn_preauth_send") ]
+              (1, "rsn_preauth_send"),
+              (1, "wpa_auth_pmksa_add_preauth;rsn_preauth_finished") ]
     for test in tests:
+        hapd.request("DEAUTHENTICATE ff:ff:ff:ff:ff:ff")
         with alloc_fail(hapd, test[0], test[1]):
             dev[0].scan_for_bss(bssid1, freq="2412")
             if "OK" not in dev[0].request("PREAUTH " + bssid1):

@@ -250,6 +250,8 @@ SM_STATE(SUPP_PAE, CONNECTING)
 
 	if (sm->eapTriggerStart)
 		send_start = 1;
+	if (sm->ctx->preauth)
+		send_start = 1;
 	sm->eapTriggerStart = FALSE;
 
 	if (send_start) {

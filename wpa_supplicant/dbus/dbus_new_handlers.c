@@ -3766,6 +3766,7 @@ dbus_bool_t wpas_dbus_getter_bss_mode(
 	struct bss_handler_args *args = user_data;
 	struct wpa_bss *res;
 	const char *mode;
+	const u8 *mesh;
 
 	res = get_bss_helper(args, error, __func__);
 	if (!res)
@@ -3784,7 +3785,10 @@ dbus_bool_t wpas_dbus_getter_bss_mode(
 			break;
 		}
 	} else {
-		if (res->caps & IEEE80211_CAP_IBSS)
+		mesh = wpa_bss_get_ie(res, WLAN_EID_MESH_ID);
+		if (mesh)
+			mode = "mesh";
+		else if (res->caps & IEEE80211_CAP_IBSS)
 			mode = "ad-hoc";
 		else
 			mode = "infrastructure";

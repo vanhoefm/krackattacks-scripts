@@ -110,6 +110,11 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	os_memcpy(wconf->ip_addr_start, conf->ip_addr_start, 4);
 	os_memcpy(wconf->ip_addr_end, conf->ip_addr_end, 4);
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_FILS
+	wconf->fils_cache_id_set = conf->fils_cache_id_set;
+	os_memcpy(wconf->fils_cache_id, conf->fils_cache_id,
+		  FILS_CACHE_ID_LEN);
+#endif /* CONFIG_FILS */
 }
 
 

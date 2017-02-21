@@ -1099,6 +1099,11 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 						   pmkid);
 			if (pmksa)
 				break;
+			pmksa = wpa_auth_pmksa_get_fils_cache_id(hapd->wpa_auth,
+								 sta->addr,
+								 pmkid);
+			if (pmksa)
+				break;
 			pmkid += PMKID_LEN;
 			num--;
 		}

@@ -4216,3 +4216,47 @@ void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth)
 	for (group = wpa_auth->group; group; group = group->next)
 		wpa_group_config_group_keys(wpa_auth, group);
 }
+
+
+#ifdef CONFIG_FILS
+
+struct wpa_auth_fils_iter_data {
+	struct wpa_authenticator *auth;
+	const u8 *cache_id;
+	struct rsn_pmksa_cache_entry *pmksa;
+	const u8 *spa;
+	const u8 *pmkid;
+};
+
+
+static int wpa_auth_fils_iter(struct wpa_authenticator *a, void *ctx)
+{
+	struct wpa_auth_fils_iter_data *data = ctx;
+
+	if (a == data->auth || !a->conf.fils_cache_id ||
+	    os_memcmp(a->conf.fils_cache_id, data->cache_id,
+		      FILS_CACHE_ID_LEN) != 0)
+		return 0;
+	data->pmksa = pmksa_cache_auth_get(a->pmksa, data->spa, data->pmkid);
+	return data->pmksa != NULL;
+}
+
+
+struct rsn_pmksa_cache_entry *
+wpa_auth_pmksa_get_fils_cache_id(struct wpa_authenticator *wpa_auth,
+				 const u8 *sta_addr, const u8 *pmkid)
+{
+	struct wpa_auth_fils_iter_data idata;
+
+	if (!wpa_auth->conf.fils_cache_id_set)
+		return NULL;
+	idata.auth = wpa_auth;
+	idata.cache_id = wpa_auth->conf.fils_cache_id;
+	idata.pmksa = NULL;
+	idata.spa = sta_addr;
+	idata.pmkid = pmkid;
+	wpa_auth_for_each_auth(wpa_auth, wpa_auth_fils_iter, &idata);
+	return idata.pmksa;
+}
+
+#endif /* CONFIG_FILS */

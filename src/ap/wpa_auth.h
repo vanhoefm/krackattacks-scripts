@@ -187,6 +187,10 @@ struct wpa_auth_config {
 	u8 ip_addr_start[4];
 	u8 ip_addr_end[4];
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_FILS
+	unsigned int fils_cache_id_set:1;
+	u8 fils_cache_id[FILS_CACHE_ID_LEN];
+#endif /* CONFIG_FILS */
 };
 
 typedef enum {
@@ -314,6 +318,9 @@ int wpa_auth_pmksa_add_entry(struct wpa_authenticator *wpa_auth,
 struct rsn_pmksa_cache_entry *
 wpa_auth_pmksa_get(struct wpa_authenticator *wpa_auth, const u8 *sta_addr,
 		   const u8 *pmkid);
+struct rsn_pmksa_cache_entry *
+wpa_auth_pmksa_get_fils_cache_id(struct wpa_authenticator *wpa_auth,
+				 const u8 *sta_addr, const u8 *pmkid);
 void wpa_auth_pmksa_set_to_sm(struct rsn_pmksa_cache_entry *pmksa,
 			      struct wpa_state_machine *sm,
 			      struct wpa_authenticator *wpa_auth,

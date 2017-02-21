@@ -960,8 +960,8 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 
 #ifdef CONFIG_FILS
 	if (data->auth.auth_type == WLAN_AUTH_FILS_SK) {
-		if (fils_process_auth(wpa_s->wpa, data->auth.ies,
-				      data->auth.ies_len) < 0) {
+		if (fils_process_auth(wpa_s->wpa, wpa_s->pending_bssid,
+				      data->auth.ies, data->auth.ies_len) < 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG,
 				"SME: FILS Authentication response processing failed");
 			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid="

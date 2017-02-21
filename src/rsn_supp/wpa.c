@@ -3328,7 +3328,8 @@ fail:
 }
 
 
-int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
+int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
+		      size_t len)
 {
 	const u8 *pos, *end;
 	struct ieee802_11_elems elems;
@@ -3337,6 +3338,8 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *data, size_t len)
 	u8 ick[FILS_ICK_MAX_LEN];
 	size_t ick_len;
 	int res;
+
+	os_memcpy(sm->bssid, bssid, ETH_ALEN);
 
 	wpa_hexdump(MSG_DEBUG, "FILS: Authentication frame fields",
 		    data, len);

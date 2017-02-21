@@ -254,6 +254,67 @@ def test_fils_sk_pmksa_caching_and_cache_id(dev, apdev):
     if pmksa['pmkid'] != pmksa2['pmkid']:
         raise Exception("Unexpected PMKID change")
 
+def test_fils_sk_pmksa_caching_ctrl_ext(dev, apdev):
+    """FILS SK and PMKSA caching with Cache Identifier and external management"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    hapd_as = start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA384"
+    params['auth_server_port'] = "18128"
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['fils_cache_id'] = "ffee"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA384",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    res1 = dev[0].request("PMKSA_GET %d" % id)
+    logger.info("PMKSA_GET: " + res1)
+    if "UNKNOWN COMMAND" in res1:
+        raise HwsimSkip("PMKSA_GET not supported in the build")
+    if bssid not in res1:
+        raise Exception("PMKSA cache entry missing")
+    if "ffee" not in res1:
+        raise Exception("FILS Cache Identifier not seen in PMKSA cache entry")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd_as.disable()
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("PMKSA_FLUSH")
+    dev[0].request("ERP_FLUSH")
+    for entry in res1.splitlines():
+        if "OK" not in dev[0].request("PMKSA_ADD %d %s" % (id, entry)):
+            raise Exception("Failed to add PMKSA entry")
+
+    bssid2 = apdev[1]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA384"
+    params['auth_server_port'] = "18128"
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['fils_cache_id'] = "ffee"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid2, freq=2412)
+    dev[0].set_network(id, "bssid", bssid2)
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_connected()
+    if bssid2 not in ev:
+        raise Exception("Unexpected BSS selected")
+
 def test_fils_sk_erp(dev, apdev):
     """FILS SK using ERP"""
     run_fils_sk_erp(dev, apdev, "FILS-SHA256")

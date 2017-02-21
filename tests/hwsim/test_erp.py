@@ -123,7 +123,7 @@ def start_erp_as(apdev):
                "eap_fast_a_id_info": "test server",
                "eap_server_erp": "1",
                "erp_domain": "example.com" }
-    hostapd.add_ap(apdev, params)
+    return hostapd.add_ap(apdev, params)
 
 def test_erp_radius(dev, apdev):
     """ERP enabled on RADIUS server and peer"""

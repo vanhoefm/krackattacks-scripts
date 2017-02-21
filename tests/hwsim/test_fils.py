@@ -175,6 +175,85 @@ def test_fils_sk_pmksa_caching(dev, apdev):
     time.sleep(0.1)
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_fils_sk_pmksa_caching_and_cache_id(dev, apdev):
+    """FILS SK and PMKSA caching with Cache Identifier"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['fils_cache_id'] = "abcd"
+    params["radius_server_clients"] = "auth_serv/radius_clients.conf"
+    params["radius_server_auth_port"] = '18128'
+    params["eap_server"] = "1"
+    params["eap_user_file"] = "auth_serv/eap_user.conf"
+    params["ca_cert"] = "auth_serv/ca.pem"
+    params["server_cert"] = "auth_serv/server.pem"
+    params["private_key"] = "auth_serv/server.key"
+    params["eap_sim_db"] = "unix:/tmp/hlr_auc_gw.sock"
+    params["dh_file"] = "auth_serv/dh.conf"
+    params["pac_opaque_encr_key"] = "000102030405060708090a0b0c0d0e0f"
+    params["eap_fast_a_id"] = "101112131415161718191a1b1c1d1e1f"
+    params["eap_fast_a_id_info"] = "test server"
+    params["eap_server_erp"] = "1"
+    params["erp_domain"] = "example.com"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+    res = dev[0].request("PMKSA")
+    if "FILS Cache Identifier" not in res:
+        raise Exception("PMKSA list does not include FILS Cache Identifier")
+    pmksa = dev[0].get_pmksa(bssid)
+    if pmksa is None:
+        raise Exception("No PMKSA cache entry created")
+    if "cache_id" not in pmksa:
+        raise Exception("No FILS Cache Identifier listed")
+    if pmksa["cache_id"] != "abcd":
+        raise Exception("The configured FILS Cache Identifier not seen in PMKSA")
+
+    bssid2 = apdev[1]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['fils_cache_id'] = "abcd"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid2, freq=2412)
+
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("ROAM " + bssid2):
+        raise Exception("ROAM failed")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using PMKSA caching timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if bssid2 not in ev:
+        raise Exception("Failed to connect to the second AP")
+
+    hwsim_utils.test_connectivity(dev[0], hapd2)
+    pmksa2 = dev[0].get_pmksa(bssid2)
+    if pmksa2:
+        raise Exception("Unexpected extra PMKSA cache added")
+    pmksa2 = dev[0].get_pmksa(bssid)
+    if not pmksa2:
+        raise Exception("Original PMKSA cache entry removed")
+    if pmksa['pmkid'] != pmksa2['pmkid']:
+        raise Exception("Unexpected PMKID change")
+
 def test_fils_sk_erp(dev, apdev):
     """FILS SK using ERP"""
     run_fils_sk_erp(dev, apdev, "FILS-SHA256")

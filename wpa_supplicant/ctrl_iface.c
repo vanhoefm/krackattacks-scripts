@@ -9164,6 +9164,7 @@ static int wpas_ctrl_iface_pmksa_get(struct wpa_supplicant *wpa_s,
 	 * Entry format:
 	 * <BSSID> <PMKID> <PMK> <reauth_time in seconds>
 	 * <expiration in seconds> <akmp> <opportunistic>
+	 * [FILS Cache Identifier]
 	 */
 
 	for (entry = wpa_sm_pmksa_cache_head(wpa_s->wpa); entry;
@@ -9198,6 +9199,15 @@ static int wpas_ctrl_iface_pmksa_get(struct wpa_supplicant *wpa_s,
 			break;
 		pos2 += ret;
 
+		if (entry->fils_cache_id_set) {
+			ret = os_snprintf(pos2, end - pos2, " %02x%02x",
+					  entry->fils_cache_id[0],
+					  entry->fils_cache_id[1]);
+			if (os_snprintf_error(end - pos2, ret))
+				break;
+			pos2 += ret;
+		}
+
 		ret = os_snprintf(pos2, end - pos2, "\n");
 		if (os_snprintf_error(end - pos2, ret))
 			break;
@@ -9218,12 +9228,13 @@ static int wpas_ctrl_iface_pmksa_add(struct wpa_supplicant *wpa_s,
 	char *pos, *pos2;
 	int ret = -1;
 	struct os_reltime now;
-	int reauth_time = 0, expiration = 0;
+	int reauth_time = 0, expiration = 0, i;
 
 	/*
 	 * Entry format:
 	 * <network_id> <BSSID> <PMKID> <PMK> <reauth_time in seconds>
 	 * <expiration in seconds> <akmp> <opportunistic>
+	 * [FILS Cache Identifier]
 	 */
 
 	ssid = wpa_config_get_network(wpa_s->conf, atoi(cmd));
@@ -9271,6 +9282,21 @@ static int wpas_ctrl_iface_pmksa_add(struct wpa_supplicant *wpa_s,
 	if (sscanf(pos, "%d %d %d %d", &reauth_time, &expiration,
 		   &entry->akmp, &entry->opportunistic) != 4)
 		goto fail;
+	for (i = 0; i < 4; i++) {
+		pos = os_strchr(pos, ' ');
+		if (!pos) {
+			if (i < 3)
+				goto fail;
+			break;
+		}
+		pos++;
+	}
+	if (pos) {
+		if (hexstr2bin(pos, entry->fils_cache_id,
+			       FILS_CACHE_ID_LEN) < 0)
+			goto fail;
+		entry->fils_cache_id_set = 1;
+	}
 	os_get_reltime(&now);
 	entry->expiration = now.sec + expiration;
 	entry->reauth_time = now.sec + reauth_time;

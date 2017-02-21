@@ -1189,11 +1189,17 @@ class WpaSupplicant:
             if bssid not in l:
                 continue
             vals = dict()
-            [index,aa,pmkid,expiration,opportunistic] = l.split(' ')
+            try:
+                [index,aa,pmkid,expiration,opportunistic] = l.split(' ')
+                cache_id = None
+            except ValueError:
+                [index,aa,pmkid,expiration,opportunistic,cache_id] = l.split(' ')
             vals['index'] = index
             vals['pmkid'] = pmkid
             vals['expiration'] = expiration
             vals['opportunistic'] = opportunistic
+            if cache_id != None:
+                vals['cache_id'] = cache_id
             return vals
         return None
 

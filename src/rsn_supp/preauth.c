@@ -97,7 +97,7 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol,
 					NULL, 0,
 					sm->preauth_bssid, sm->own_addr,
 					sm->network_ctx,
-					WPA_KEY_MGMT_IEEE8021X);
+					WPA_KEY_MGMT_IEEE8021X, NULL);
 		} else {
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"RSN: failed to get master session key from "

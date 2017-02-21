@@ -145,6 +145,7 @@ int wpa_bss_get_max_rate(const struct wpa_bss *bss);
 int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates);
 struct wpa_bss_anqp * wpa_bss_anqp_alloc(void);
 int wpa_bss_anqp_unshare_alloc(struct wpa_bss *bss);
+const u8 * wpa_bss_get_fils_cache_id(struct wpa_bss *bss);
 
 static inline int bss_is_dmg(const struct wpa_bss *bss)
 {

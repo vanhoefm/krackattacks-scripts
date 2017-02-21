@@ -148,7 +148,9 @@ struct wpa_sm {
 	size_t fils_key_auth_len;
 	unsigned int fils_completed:1;
 	unsigned int fils_erp_pmkid_set:1;
+	unsigned int fils_cache_id_set:1;
 	u8 fils_erp_pmkid[PMKID_LEN];
+	u8 fils_cache_id[FILS_CACHE_ID_LEN];
 #endif /* CONFIG_FILS */
 };
 

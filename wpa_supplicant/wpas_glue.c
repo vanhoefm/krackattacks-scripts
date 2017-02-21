@@ -1232,6 +1232,11 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 		}
 #endif /* CONFIG_P2P */
 		conf.wpa_rsc_relaxation = wpa_s->conf->wpa_rsc_relaxation;
+#ifdef CONFIG_FILS
+		if (wpa_key_mgmt_fils(wpa_s->key_mgmt))
+			conf.fils_cache_id =
+				wpa_bss_get_fils_cache_id(wpa_s->current_bss);
+#endif /* CONFIG_FILS */
 	}
 	wpa_sm_set_config(wpa_s->wpa, ssid ? &conf : NULL);
 }

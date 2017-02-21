@@ -301,13 +301,19 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	     wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    wpa_key_mgmt_wpa(ssid->key_mgmt)) {
 		int try_opportunistic;
+		const u8 *cache_id = NULL;
+
 		try_opportunistic = (ssid->proactive_key_caching < 0 ?
 				     wpa_s->conf->okc :
 				     ssid->proactive_key_caching) &&
 			(ssid->proto & WPA_PROTO_RSN);
+#ifdef CONFIG_FILS
+		if (wpa_key_mgmt_fils(ssid->key_mgmt))
+			cache_id = wpa_bss_get_fils_cache_id(bss);
+#endif /* CONFIG_FILS */
 		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
 					    wpa_s->current_ssid,
-					    try_opportunistic) == 0)
+					    try_opportunistic, cache_id) == 0)
 			eapol_sm_notify_pmkid_attempt(wpa_s->eapol);
 		wpa_s->sme.assoc_req_ie_len = sizeof(wpa_s->sme.assoc_req_ie);
 		if (wpa_supplicant_set_suites(wpa_s, bss, ssid,
@@ -516,8 +522,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_SAE
 	if (!skip_auth && params.auth_alg == WPA_AUTH_ALG_SAE &&
-	    pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid, ssid, 0) == 0)
-	{
+	    pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid, ssid, 0,
+				    NULL) == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"PMKSA cache entry found - try to use PMKSA caching instead of new SAE authentication");
 		params.auth_alg = WPA_AUTH_ALG_OPEN;
@@ -552,7 +558,9 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	if (params.auth_alg == WPA_AUTH_ALG_OPEN &&
 	    wpa_key_mgmt_fils(ssid->key_mgmt)) {
 		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
-					    ssid, 0) == 0)
+					    ssid, 0,
+					    wpa_bss_get_fils_cache_id(bss)) ==
+		    0)
 			wpa_printf(MSG_DEBUG,
 				   "SME: Try to use FILS with PMKSA caching");
 		resp = fils_build_auth(wpa_s->wpa);

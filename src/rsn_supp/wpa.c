@@ -315,6 +315,13 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		}
 		if (res == 0) {
 			struct rsn_pmksa_cache_entry *sa = NULL;
+			const u8 *fils_cache_id = NULL;
+
+#ifdef CONFIG_FILS
+			if (sm->fils_cache_id_set)
+				fils_cache_id = sm->fils_cache_id;
+#endif /* CONFIG_FILS */
+
 			wpa_hexdump_key(MSG_DEBUG, "WPA: PMK from EAPOL state "
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
@@ -327,7 +334,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 						     NULL, 0,
 						     src_addr, sm->own_addr,
 						     sm->network_ctx,
-						     sm->key_mgmt);
+						     sm->key_mgmt,
+						     fils_cache_id);
 			}
 			if (!sm->cur_pmksa && pmkid &&
 			    pmksa_cache_get(sm->pmksa, src_addr, pmkid, NULL))
@@ -1371,7 +1379,7 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 		sa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len, NULL,
 				     sm->ptk.kck, sm->ptk.kck_len,
 				     sm->bssid, sm->own_addr,
-				     sm->network_ctx, sm->key_mgmt);
+				     sm->network_ctx, sm->key_mgmt, NULL);
 		if (!sm->cur_pmksa)
 			sm->cur_pmksa = sa;
 	}
@@ -2573,7 +2581,7 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 	if (bssid) {
 		pmksa_cache_add(sm->pmksa, pmk, pmk_len, pmkid, NULL, 0,
 				bssid, sm->own_addr,
-				sm->network_ctx, sm->key_mgmt);
+				sm->network_ctx, sm->key_mgmt, NULL);
 	}
 }
 
@@ -2656,6 +2664,15 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		sm->wpa_ptk_rekey = config->wpa_ptk_rekey;
 		sm->p2p = config->p2p;
 		sm->wpa_rsc_relaxation = config->wpa_rsc_relaxation;
+#ifdef CONFIG_FILS
+		if (config->fils_cache_id) {
+			sm->fils_cache_id_set = 1;
+			os_memcpy(sm->fils_cache_id, config->fils_cache_id,
+				  FILS_CACHE_ID_LEN);
+		} else {
+			sm->fils_cache_id_set = 0;
+		}
+#endif /* CONFIG_FILS */
 	} else {
 		sm->network_ctx = NULL;
 		sm->peerkey_enabled = 0;
@@ -3456,7 +3473,8 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 		sm->cur_pmksa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len,
 						sm->fils_erp_pmkid, NULL, 0,
 						sm->bssid, sm->own_addr,
-						sm->network_ctx, sm->key_mgmt);
+						sm->network_ctx, sm->key_mgmt,
+						NULL);
 	}
 
 	if (!sm->cur_pmksa) {

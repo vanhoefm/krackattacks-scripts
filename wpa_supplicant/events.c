@@ -327,7 +327,7 @@ static void wpa_find_assoc_pmkid(struct wpa_supplicant *wpa_s)
 	for (i = 0; i < ie.num_pmkid; i++) {
 		pmksa_set = pmksa_cache_set_current(wpa_s->wpa,
 						    ie.pmkid + i * PMKID_LEN,
-						    NULL, NULL, 0);
+						    NULL, NULL, 0, NULL);
 		if (pmksa_set == 0) {
 			eapol_sm_notify_pmkid_attempt(wpa_s->eapol);
 			break;

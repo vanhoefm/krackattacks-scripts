@@ -1317,3 +1317,19 @@ int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates)
 	*rates = r;
 	return len;
 }
+
+
+#ifdef CONFIG_FILS
+const u8 * wpa_bss_get_fils_cache_id(struct wpa_bss *bss)
+{
+	const u8 *ie;
+
+	if (bss) {
+		ie = wpa_bss_get_ie(bss, WLAN_EID_FILS_INDICATION);
+		if (ie && ie[1] >= 4 && WPA_GET_LE16(ie + 2) & BIT(7))
+			return ie + 4;
+	}
+
+	return NULL;
+}
+#endif /* CONFIG_FILS */

@@ -109,6 +109,7 @@ struct rsn_supp_config {
 	int wpa_ptk_rekey;
 	int p2p;
 	int wpa_rsc_relaxation;
+	const u8 *fils_cache_id;
 };
 
 #ifndef CONFIG_NO_WPA

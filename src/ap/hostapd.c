@@ -969,7 +969,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 #endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_MESH
-	if (hapd->iface->mconf == NULL)
+	if ((hapd->conf->mesh & MESH_ENABLED) && hapd->iface->mconf == NULL)
 		flush_old_stations = 0;
 #endif /* CONFIG_MESH */
 
@@ -1157,7 +1157,7 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 	struct hostapd_tx_queue_params *p;
 
 #ifdef CONFIG_MESH
-	if (iface->mconf == NULL)
+	if ((hapd->conf->mesh & MESH_ENABLED) && iface->mconf == NULL)
 		return;
 #endif /* CONFIG_MESH */
 

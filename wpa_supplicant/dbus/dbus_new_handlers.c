@@ -2673,6 +2673,11 @@ dbus_bool_t wpas_dbus_getter_capabilities(
 	     !wpa_s->conf->p2p_disabled &&
 	     !wpa_dbus_dict_string_array_add_element(
 		     &iter_array, "p2p")) ||
+#ifdef CONFIG_MESH
+	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_MESH) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "mesh")) ||
+#endif /* CONFIG_MESH */
 	    !wpa_dbus_dict_end_string_array(&iter_dict,
 					    &iter_dict_entry,
 					    &iter_dict_val,

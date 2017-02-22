@@ -617,6 +617,8 @@ struct hostapd_bss_config {
 #endif /* CONFIG_FILS */
 
 	int multicast_to_unicast;
+
+	int broadcast_deauth;
 };
 
 /**

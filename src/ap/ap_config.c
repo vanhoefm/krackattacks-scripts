@@ -107,6 +107,8 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->dhcp_server_port = DHCP_SERVER_PORT;
 	bss->dhcp_relay_port = DHCP_SERVER_PORT;
 #endif /* CONFIG_FILS */
+
+	bss->broadcast_deauth = 1;
 }
 
 

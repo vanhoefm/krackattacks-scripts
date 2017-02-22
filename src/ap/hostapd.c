@@ -491,9 +491,12 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason)
 			ret = -1;
 		}
 	}
-	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "Deauthenticate all stations");
-	os_memset(addr, 0xff, ETH_ALEN);
-	hostapd_drv_sta_deauth(hapd, addr, reason);
+	if (hapd->conf && hapd->conf->broadcast_deauth) {
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+			"Deauthenticate all stations");
+		os_memset(addr, 0xff, ETH_ALEN);
+		hostapd_drv_sta_deauth(hapd, addr, reason);
+	}
 	hostapd_free_stas(hapd);
 
 	return ret;

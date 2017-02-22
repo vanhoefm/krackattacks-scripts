@@ -909,5 +909,19 @@ int hostapd_hw_get_freq(struct hostapd_data *hapd, int chan)
 
 int hostapd_hw_get_channel(struct hostapd_data *hapd, int freq)
 {
-	return hw_get_chan(hapd->iface->current_mode, freq);
+	int i, channel;
+	struct hostapd_hw_modes *mode;
+
+	channel = hw_get_chan(hapd->iface->current_mode, freq);
+	if (channel)
+		return channel;
+	/* Check other available modes since the channel list for the current
+	 * mode did not include the specified frequency. */
+	for (i = 0; i < hapd->iface->num_hw_features; i++) {
+		mode = &hapd->iface->hw_features[i];
+		channel = hw_get_chan(mode, freq);
+		if (channel)
+			return channel;
+	}
+	return 0;
 }

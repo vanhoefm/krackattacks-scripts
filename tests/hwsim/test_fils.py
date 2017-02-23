@@ -1212,3 +1212,41 @@ def test_fils_sk_erp_and_reauth(dev, apdev):
         raise Exception("Unexpected EAP exchange")
     if "EVENT-ASSOC-REJECT" in ev:
         raise Exception("Association failed")
+
+def test_fils_sk_erp_sim(dev, apdev):
+    """FILS SK using ERP with SIM"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    realm='wlan.mnc001.mcc232.3gppnetwork.org'
+    start_erp_as(apdev[1], erp_domain=realm)
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['fils_realm'] = realm
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="SIM", identity="1232010000000000@" + realm,
+                        password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                        erp="1", scan_freq="2412")
+
+    hapd.disable()
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+    hapd.enable()
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Reconnection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")

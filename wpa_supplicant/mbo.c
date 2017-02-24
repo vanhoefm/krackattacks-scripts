@@ -277,11 +277,10 @@ int wpas_mbo_update_non_pref_chan(struct wpa_supplicant *wpa_s,
 		   non_pref_chan ? non_pref_chan : "N/A");
 
 	/*
-	 * The shortest channel configuration is 10 characters - commas, 3
-	 * colons, and 4 values that one of them (oper_class) is 2 digits or
-	 * more.
+	 * The shortest channel configuration is 7 characters - 3 colons and
+	 * 4 values.
 	 */
-	if (!non_pref_chan || os_strlen(non_pref_chan) < 10)
+	if (!non_pref_chan || os_strlen(non_pref_chan) < 7)
 		goto update;
 
 	cmd = os_strdup(non_pref_chan);

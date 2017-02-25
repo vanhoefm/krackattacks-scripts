@@ -1018,6 +1018,13 @@ ssid_list_set:
 		wpa_s->manual_scan_freqs = NULL;
 	}
 
+	if (params.freqs == NULL && wpa_s->select_network_scan_freqs) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Limit select_network scan to specified channels");
+		params.freqs = wpa_s->select_network_scan_freqs;
+		wpa_s->select_network_scan_freqs = NULL;
+	}
+
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "
 			"generated frequency list");

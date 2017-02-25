@@ -665,6 +665,7 @@ struct wpa_supplicant {
 	struct os_reltime scan_min_time;
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
+	int *select_network_scan_freqs;
 	int *manual_scan_freqs;
 	int *manual_sched_scan_freqs;
 	unsigned int manual_scan_passive:1;

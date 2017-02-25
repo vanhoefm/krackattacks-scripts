@@ -2984,9 +2984,8 @@ static int wpa_supplicant_ctrl_iface_select_network(
 	if (pos) {
 		int *freqs = freq_range_to_channel_list(wpa_s, pos + 6);
 		if (freqs) {
-			wpa_s->scan_req = MANUAL_SCAN_REQ;
-			os_free(wpa_s->manual_scan_freqs);
-			wpa_s->manual_scan_freqs = freqs;
+			os_free(wpa_s->select_network_scan_freqs);
+			wpa_s->select_network_scan_freqs = freqs;
 		}
 	}
 
@@ -7601,6 +7600,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->disconnected = 0;
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
+	os_free(wpa_s->select_network_scan_freqs);
+	wpa_s->select_network_scan_freqs = NULL;
 
 	wpa_bss_flush(wpa_s);
 	if (!dl_list_empty(&wpa_s->bss)) {

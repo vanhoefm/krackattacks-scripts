@@ -723,3 +723,21 @@ def test_ap_open_drop_duplicate(dev, apdev, params):
         raise Exception("Unexpected number of reassociation frames: %d" % num_reassoc)
     if num_action != 1:
         raise Exception("Unexpected number of Action frames: %d" % num_action)
+
+def test_ap_open_select_network_freq(dev, apdev):
+    """AP with open mode and use for SELECT_NETWORK freq parameter"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    id = dev[0].connect("open", key_mgmt="NONE", only_add_network=True)
+    dev[0].select_network(id, freq=2412)
+    start = os.times()[4]
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan not started")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=15)
+    if ev is None:
+        raise Exception("Scan not completed")
+    end = os.times()[4]
+    logger.info("Scan duration: {} seconds".format(end - start))
+    if end - start > 3:
+        raise Exception("Scan took unexpectedly long time")
+    dev[0].wait_connected()

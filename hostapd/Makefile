@@ -732,6 +732,47 @@ CONFIG_INTERNAL_RC4=y
 endif
 endif
 
+ifeq ($(CONFIG_TLS), linux)
+OBJS += ../src/crypto/crypto_linux.o
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/crypto_internal-rsa.o
+OBJS += ../src/crypto/tls_internal.o
+OBJS += ../src/tls/tlsv1_common.o
+OBJS += ../src/tls/tlsv1_record.o
+OBJS += ../src/tls/tlsv1_cred.o
+OBJS += ../src/tls/tlsv1_server.o
+OBJS += ../src/tls/tlsv1_server_write.o
+OBJS += ../src/tls/tlsv1_server_read.o
+OBJS += ../src/tls/asn1.o
+OBJS += ../src/tls/rsa.o
+OBJS += ../src/tls/x509v3.o
+OBJS += ../src/tls/pkcs1.o
+OBJS += ../src/tls/pkcs5.o
+OBJS += ../src/tls/pkcs8.o
+NEED_SHA256=y
+NEED_BASE64=y
+NEED_TLS_PRF=y
+ifdef CONFIG_TLSV12
+NEED_TLS_PRF_SHA256=y
+endif
+NEED_MODEXP=y
+NEED_CIPHER=y
+CFLAGS += -DCONFIG_TLS_INTERNAL
+CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
+endif
+ifdef NEED_MODEXP
+OBJS += ../src/crypto/crypto_internal-modexp.o
+OBJS += ../src/tls/bignum.o
+CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
+CFLAGS += -DLTM_FAST
+endif
+CONFIG_INTERNAL_DH_GROUP5=y
+ifdef NEED_FIPS186_2_PRF
+OBJS += ../src/crypto/fips_prf_internal.o
+OBJS += ../src/crypto/sha1-internal.o
+endif
+endif
+
 ifeq ($(CONFIG_TLS), none)
 ifdef TLS_FUNCS
 OBJS += ../src/crypto/tls_none.o
@@ -781,18 +822,24 @@ ifdef NEED_AES_ENCBLOCK
 AESOBJS += ../src/crypto/aes-encblock.o
 endif
 ifdef NEED_AES_OMAC1
+ifneq ($(CONFIG_TLS), linux)
 AESOBJS += ../src/crypto/aes-omac1.o
+endif
 endif
 ifdef NEED_AES_UNWRAP
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 NEED_AES_DEC=y
 AESOBJS += ../src/crypto/aes-unwrap.o
+endif
 endif
 endif
 ifdef NEED_AES_CBC
 NEED_AES_DEC=y
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 AESOBJS += ../src/crypto/aes-cbc.o
+endif
 endif
 endif
 ifdef NEED_AES_DEC
@@ -806,7 +853,9 @@ endif
 
 ifdef NEED_SHA1
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 SHA1OBJS += ../src/crypto/sha1.o
+endif
 endif
 SHA1OBJS += ../src/crypto/sha1-prf.o
 ifdef CONFIG_INTERNAL_SHA1
@@ -831,7 +880,9 @@ OBJS += $(SHA1OBJS)
 endif
 
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 OBJS += ../src/crypto/md5.o
+endif
 endif
 
 ifdef NEED_MD5
@@ -868,7 +919,9 @@ endif
 ifdef NEED_SHA256
 CFLAGS += -DCONFIG_SHA256
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 OBJS += ../src/crypto/sha256.o
+endif
 endif
 OBJS += ../src/crypto/sha256-prf.o
 ifdef CONFIG_INTERNAL_SHA256
@@ -884,7 +937,9 @@ endif
 ifdef NEED_SHA384
 CFLAGS += -DCONFIG_SHA384
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 OBJS += ../src/crypto/sha384.o
+endif
 endif
 OBJS += ../src/crypto/sha384-prf.o
 endif
@@ -923,7 +978,9 @@ HOBJS += ../src/crypto/random.o
 HOBJS += ../src/utils/eloop.o
 HOBJS += $(SHA1OBJS)
 ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
 HOBJS += ../src/crypto/md5.o
+endif
 endif
 endif
 
@@ -1123,6 +1180,9 @@ HOBJS += ../src/crypto/aes-encblock.o
 ifdef CONFIG_INTERNAL_AES
 HOBJS += ../src/crypto/aes-internal.o
 HOBJS += ../src/crypto/aes-internal-enc.o
+endif
+ifeq ($(CONFIG_TLS), linux)
+HOBJS += ../src/crypto/crypto_linux.o
 endif
 
 nt_password_hash: $(NOBJS)

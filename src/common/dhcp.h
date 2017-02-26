@@ -10,7 +10,13 @@
 #define DHCP_H
 
 #include <netinet/ip.h>
+#if __FAVOR_BSD
 #include <netinet/udp.h>
+#else
+#define __FAVOR_BSD 1
+#include <netinet/udp.h>
+#undef __FAVOR_BSD
+#endif
 
 #define DHCP_SERVER_PORT 67
 #define DHCP_CLIENT_PORT 68

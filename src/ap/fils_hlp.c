@@ -269,8 +269,8 @@ static void fils_dhcp_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	udph = wpabuf_put(resp, sizeof(*udph));
 	udph->uh_sport = htons(DHCP_SERVER_PORT);
 	udph->uh_dport = htons(DHCP_CLIENT_PORT);
-	udph->len = htons(sizeof(*udph) + (end - pos));
-	udph->check = htons(0x0000); /* TODO: calculate checksum */
+	udph->uh_ulen = htons(sizeof(*udph) + (end - pos));
+	udph->uh_sum = htons(0x0000); /* TODO: calculate checksum */
 	if (hapd->conf->dhcp_rapid_commit_proxy && msgtype == DHCPACK &&
 	    !rapid_commit && sta->fils_dhcp_rapid_commit_proxy && end_opt) {
 		/* Add rapid commit option */

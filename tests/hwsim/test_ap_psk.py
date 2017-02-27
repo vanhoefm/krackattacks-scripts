@@ -1033,7 +1033,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1043,7 +1043,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 0"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 0 not reported")
@@ -1052,7 +1052,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '1', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 1"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 1 not reported")
@@ -1061,7 +1061,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '123456789', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 9"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 9 not reported")
@@ -1070,7 +1070,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter)
     # do not increment counter to test replay protection
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: AES unwrap failed"])
     if ev is None:
         raise Exception("AES unwrap failure not reported")
@@ -1079,7 +1079,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: EAPOL-Key Replay Counter did not increase"])
     if ev is None:
         raise Exception("Replay Counter replay not reported")
@@ -1089,7 +1089,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               key_info=0x134a)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: No Ack bit in key_info"])
     if ev is None:
         raise Exception("Missing Ack bit not reported")
@@ -1099,7 +1099,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               key_info=0x1bca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: EAPOL-Key with Request bit"])
     if ev is None:
         raise Exception("Request bit not reported")
@@ -1109,7 +1109,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13c8)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 0"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 0 not reported")
@@ -1119,7 +1119,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13c9)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: CCMP is used, but EAPOL-Key descriptor version (1) is not 2"])
     if ev is None:
         raise Exception("Not allowed EAPOL-Key descriptor version not reported")
@@ -1129,7 +1129,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13ca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: AES unwrap failed"])
     if ev is None:
         raise Exception("AES unwrap failure not reported")
@@ -1139,7 +1139,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cb)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: CCMP is used, but EAPOL-Key descriptor version (3) is not 2"])
     if ev is None:
         raise Exception("CCMP key descriptor mismatch not reported")
@@ -1155,7 +1155,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cc)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 4"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 4 not reported")
@@ -1165,7 +1165,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cf)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 7"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 7 not reported")
@@ -1175,7 +1175,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               extra_len=-1)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Invalid EAPOL-Key frame - key_data overflow (8 > 7)"])
     if ev is None:
         raise Exception("Key data overflow not reported")
@@ -1184,19 +1184,19 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               extra_len=1)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("Unsupported descriptor type 0")
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               descr_type=0)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("WPA descriptor type 0")
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               descr_type=254)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("Non-zero key index for pairwise key")
     dev[0].dump_monitor()
@@ -1204,7 +1204,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13ea)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Ignored EAPOL-Key (Pairwise) with non-zero key index"])
     if ev is None:
         raise Exception("Non-zero key index not reported")
@@ -1214,7 +1214,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     wrapped = aes_wrap(kek, 16*'z')
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
@@ -1230,7 +1230,7 @@ def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1241,7 +1241,7 @@ def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
     wrapped = aes_wrap(kek, 16*'\0')
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
@@ -1257,7 +1257,7 @@ def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1268,7 +1268,7 @@ def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(binascii.unhexlify('30060100000fac04dd16000fac010100dc11188831bf4aa4a8678d2b41498618')))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
@@ -1284,7 +1284,7 @@ def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1296,7 +1296,7 @@ def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
@@ -1312,7 +1312,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1324,7 +1324,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
     if ev is not None:
         raise Exception("Unexpected connection completion reported")
@@ -1342,7 +1342,7 @@ def test_ap_wpa2_psk_supp_proto_anonce_change(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1355,7 +1355,7 @@ def test_ap_wpa2_psk_supp_proto_anonce_change(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce2, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: ANonce from message 1 of 4-Way Handshake differs from 3 of 4-Way Handshake"])
     if ev is None:
         raise Exception("ANonce change not reported")
@@ -1373,7 +1373,7 @@ def test_ap_wpa2_psk_supp_proto_unexpected_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1385,7 +1385,7 @@ def test_ap_wpa2_psk_supp_proto_unexpected_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Group Key Handshake started prior to completion of 4-way handshake"])
     if ev is None:
         raise Exception("Unexpected group key message not reported")
@@ -1406,7 +1406,7 @@ def test_ap_wpa2_psk_supp_proto_msg_1_invalid_kde(dev, apdev):
     msg = build_eapol_key_1_4(anonce, replay_counter=counter,
                               key_data=binascii.unhexlify('5555'))
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
@@ -1422,7 +1422,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1435,7 +1435,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_len=15)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Invalid CCMP key length 15"])
     if ev is None:
         raise Exception("Invalid CCMP key length not reported")
@@ -1454,7 +1454,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_group_key_len(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1466,7 +1466,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_group_key_len(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported CCMP Group Cipher key length 15"])
     if ev is None:
         raise Exception("Invalid CCMP key length not reported")
@@ -1485,7 +1485,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_tx_bit_workaround(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1497,7 +1497,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_tx_bit_workaround(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Tx bit set for GTK, but pairwise keys are used - ignore Tx bit"])
     if ev is None:
         raise Exception("GTK Tx bit workaround not reported")
@@ -1516,7 +1516,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1528,7 +1528,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("Valid EAPOL-Key group msg 1/2 (GTK keyidx 3)")
@@ -1538,7 +1538,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     ev = dev[0].wait_event(["WPA: Group rekeying completed"])
     if ev is None:
@@ -1550,7 +1550,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, plain, replay_counter=counter,
                               key_info=0x03c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: GTK IE in unencrypted key data"])
     if ev is None:
         raise Exception("Unencrypted GTK KDE not reported")
@@ -1569,7 +1569,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1581,7 +1581,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("No GTK KDE in EAPOL-Key group msg 1/2")
@@ -1591,7 +1591,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: No GTK IE in Group Key msg 1/2"])
     if ev is None:
         raise Exception("Missing GTK KDE not reported")
@@ -1610,7 +1610,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1622,7 +1622,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("EAPOL-Key group msg 1/2 with too long GTK KDE")
@@ -1632,7 +1632,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported CCMP Group Cipher key length 33"])
     if ev is None:
         raise Exception("Too long GTK KDE not reported")
@@ -1651,7 +1651,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_kde(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1663,7 +1663,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_kde(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
@@ -1679,7 +1679,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1691,7 +1691,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, plain, replay_counter=counter,
                               key_info=0x03ca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: GTK IE in unencrypted key data"])
     if ev is None:
         raise Exception("Unencrypted GTK KDE not reported")

@@ -288,6 +288,10 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_SET_TRACE_LEVEL: Set the trace level for a
  *	specific QCA module. The trace levels are represented by
  *	enum qca_attr_trace_level attributes.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT: Set the Beam Refinement
+ *	Protocol antenna limit in different modes. See enum
+ *	qca_wlan_vendor_attr_brp_ant_limit_mode.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -415,6 +419,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
 	QCA_NL80211_VENDOR_SUBCMD_FETCH_BSS_TRANSITION_STATUS = 151,
 	QCA_NL80211_VENDOR_SUBCMD_SET_TRACE_LEVEL = 152,
+	QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT = 153,
 };
 
 
@@ -573,6 +578,19 @@ enum qca_wlan_vendor_attr {
 	 * driver.
 	 */
 	QCA_WLAN_VENDOR_ATTR_BTM_CANDIDATE_INFO = 37,
+	/* Used in QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT command
+	 * See enum qca_wlan_vendor_attr_brp_ant_limit_mode.
+	 */
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE = 38,
+	/* Used in QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT command
+	 * to define the number of antennas to use for BRP.
+	 * different purpose in each ANT_LIMIT_MODE:
+	 * DISABLE - ignored
+	 * EFFECTIVE - upper limit to number of antennas to be used
+	 * FORCE - exact number of antennas to be used
+	 * unsigned 8 bit value
+	 */
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_NUM_LIMIT = 39,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
@@ -1840,6 +1858,24 @@ enum qca_wlan_vendor_attr_dmg_rf_sector_type {
 	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_RX,
 	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_TX,
 	QCA_WLAN_VENDOR_ATTR_DMG_RF_SECTOR_TYPE_MAX
+};
+
+/**
+ * BRP antenna limit mode
+ *
+ * @QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_DISABLE: Disable BRP force
+ *	antenna limit, BRP will be performed as usual.
+ * @QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_EFFECTIVE: Define maximal
+ *	antennas limit. the hardware may use less antennas than the
+ *	maximum limit.
+ * @QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_FORCE: The hardware will
+ *	use exactly the specified number of antennas for BRP.
+ */
+enum qca_wlan_vendor_attr_brp_ant_limit_mode {
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_DISABLE,
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_EFFECTIVE,
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_FORCE,
+	QCA_WLAN_VENDOR_ATTR_BRP_ANT_LIMIT_MODE_MAX
 };
 
 /**

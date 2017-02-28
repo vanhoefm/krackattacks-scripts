@@ -567,11 +567,11 @@ static struct wpabuf * eap_mschapv2_change_password(
 	if (pwhash) {
 		u8 new_password_hash[16];
 		if (nt_password_hash(new_password, new_password_len,
-				     new_password_hash))
+				     new_password_hash) ||
+		    nt_password_hash_encrypted_with_block(password,
+							  new_password_hash,
+							  cp->encr_hash))
 			goto fail;
-		nt_password_hash_encrypted_with_block(password,
-						      new_password_hash,
-						      cp->encr_hash);
 	} else {
 		if (old_nt_password_hash_encrypted_with_new_nt_password_hash(
 			    new_password, new_password_len,

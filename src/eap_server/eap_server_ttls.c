@@ -372,7 +372,7 @@ static void eap_ttls_reset(struct eap_sm *sm, void *priv)
 
 static struct wpabuf * eap_ttls_build_start(struct eap_sm *sm,
 					    struct eap_ttls_data *data, u8 id)
-{	
+{
 	struct wpabuf *req;
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TTLS, 1,
@@ -666,11 +666,14 @@ static void eap_ttls_process_phase2_mschap(struct eap_sm *sm,
 	}
 	os_free(chal);
 
-	if (sm->user->password_hash)
-		challenge_response(challenge, sm->user->password, nt_response);
-	else
-		nt_challenge_response(challenge, sm->user->password,
-				      sm->user->password_len, nt_response);
+	if ((sm->user->password_hash &&
+	     challenge_response(challenge, sm->user->password, nt_response)) ||
+	    (!sm->user->password_hash &&
+	     nt_challenge_response(challenge, sm->user->password,
+				   sm->user->password_len, nt_response))) {
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
 
 	if (os_memcmp_const(nt_response, response + 2 + 24, 24) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP: Correct response");

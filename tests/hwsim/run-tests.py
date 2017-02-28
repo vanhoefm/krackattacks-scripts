@@ -516,6 +516,8 @@ def main():
                 rename_log(args.logdir, 'fst-wpa_supplicant', name, None)
             if os.path.exists(os.path.join(args.logdir, 'fst-hostapd')):
                 rename_log(args.logdir, 'fst-hostapd', name, None)
+            if os.path.exists(os.path.join(args.logdir, 'wmediumd.log')):
+                rename_log(args.logdir, 'wmediumd.log', name, None)
 
         end = datetime.now()
         diff = end - start

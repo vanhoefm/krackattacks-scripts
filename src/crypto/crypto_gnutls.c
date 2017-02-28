@@ -30,7 +30,7 @@ int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 }
 
 
-void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
+int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 {
 	gcry_cipher_hd_t hd;
 	u8 pkey[8], next, tmp;
@@ -49,6 +49,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 	gcry_err_code(gcry_cipher_setkey(hd, pkey, 8));
 	gcry_cipher_encrypt(hd, cypher, 8, clear, 8);
 	gcry_cipher_close(hd);
+	return 0;
 }
 
 
@@ -107,10 +108,11 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 }
 
 
-void aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
+int aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
 {
 	gcry_cipher_hd_t hd = ctx;
 	gcry_cipher_encrypt(hd, crypt, 16, plain, 16);
+	return 0;
 }
 
 
@@ -137,10 +139,11 @@ void * aes_decrypt_init(const u8 *key, size_t len)
 }
 
 
-void aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
+int aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
 {
 	gcry_cipher_hd_t hd = ctx;
 	gcry_cipher_decrypt(hd, plain, 16, crypt, 16);
+	return 0;
 }
 
 

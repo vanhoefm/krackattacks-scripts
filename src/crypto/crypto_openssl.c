@@ -161,7 +161,7 @@ int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 #endif /* CONFIG_FIPS */
 
 
-void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
+int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 {
 	u8 pkey[8], next, tmp;
 	int i;
@@ -179,6 +179,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 	DES_set_key((DES_cblock *) &pkey, &ks);
 	DES_ecb_encrypt((DES_cblock *) clear, (DES_cblock *) cypher, &ks,
 			DES_ENCRYPT);
+	return 0;
 }
 
 
@@ -295,14 +296,16 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 }
 
 
-void aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
+int aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
 {
 	EVP_CIPHER_CTX *c = ctx;
 	int clen = 16;
 	if (EVP_EncryptUpdate(c, crypt, &clen, plain, 16) != 1) {
 		wpa_printf(MSG_ERROR, "OpenSSL: EVP_EncryptUpdate failed: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
+		return -1;
 	}
+	return 0;
 }
 
 
@@ -347,14 +350,16 @@ void * aes_decrypt_init(const u8 *key, size_t len)
 }
 
 
-void aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
+int aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
 {
 	EVP_CIPHER_CTX *c = ctx;
 	int plen = 16;
 	if (EVP_DecryptUpdate(c, plain, &plen, crypt, 16) != 1) {
 		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DecryptUpdate failed: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
+		return -1;
 	}
+	return 0;
 }
 
 

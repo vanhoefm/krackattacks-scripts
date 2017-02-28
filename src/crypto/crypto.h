@@ -106,8 +106,9 @@ int sha512_vector(size_t num_elem, const u8 *addr[], const size_t *len,
  * @clear: 8 octets (in)
  * @key: 7 octets (in) (no parity bits included)
  * @cypher: 8 octets (out)
+ * Returns: 0 on success, -1 on failure
  */
-void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher);
+int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher);
 
 /**
  * aes_encrypt_init - Initialize AES for encryption
@@ -122,8 +123,9 @@ void * aes_encrypt_init(const u8 *key, size_t len);
  * @ctx: Context pointer from aes_encrypt_init()
  * @plain: Plaintext data to be encrypted (16 bytes)
  * @crypt: Buffer for the encrypted data (16 bytes)
+ * Returns: 0 on success, -1 on failure
  */
-void aes_encrypt(void *ctx, const u8 *plain, u8 *crypt);
+int aes_encrypt(void *ctx, const u8 *plain, u8 *crypt);
 
 /**
  * aes_encrypt_deinit - Deinitialize AES encryption
@@ -144,8 +146,9 @@ void * aes_decrypt_init(const u8 *key, size_t len);
  * @ctx: Context pointer from aes_encrypt_init()
  * @crypt: Encrypted data (16 bytes)
  * @plain: Buffer for the decrypted data (16 bytes)
+ * Returns: 0 on success, -1 on failure
  */
-void aes_decrypt(void *ctx, const u8 *crypt, u8 *plain);
+int aes_decrypt(void *ctx, const u8 *crypt, u8 *plain);
 
 /**
  * aes_decrypt_deinit - Deinitialize AES decryption

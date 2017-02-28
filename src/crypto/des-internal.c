@@ -396,7 +396,7 @@ static void desfunc(u32 *block, const u32 *keys)
 
 /* wpa_supplicant/hostapd specific wrapper */
 
-void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
+int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 {
 	u8 pkey[8], next, tmp;
 	int i;
@@ -421,6 +421,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 
 	os_memset(pkey, 0, sizeof(pkey));
 	os_memset(ek, 0, sizeof(ek));
+	return 0;
 }
 
 

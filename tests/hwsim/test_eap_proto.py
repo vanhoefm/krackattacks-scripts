@@ -8029,6 +8029,14 @@ def run_eap_fast_phase2(dev, test_payload, test_failure=True):
     def ssl_info_callback(conn, where, ret):
         logger.debug("SSL: info where=%d ret=%d" % (where, ret))
 
+    def log_conn_state(conn):
+        try:
+            state = conn.state_string()
+        except AttributeError:
+            state = conn.get_state_string()
+        if state:
+            logger.info("State: " + state)
+
     def process_clienthello(ctx, payload):
         logger.info("Process ClientHello")
         ctx['sslctx'] = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
@@ -8037,43 +8045,31 @@ def run_eap_fast_phase2(dev, test_payload, test_failure=True):
         ctx['sslctx'].set_cipher_list("ADH-AES128-SHA")
         ctx['conn'] = OpenSSL.SSL.Connection(ctx['sslctx'], None)
         ctx['conn'].set_accept_state()
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         ctx['conn'].bio_write(payload)
         try:
             ctx['conn'].do_handshake()
         except OpenSSL.SSL.WantReadError:
             pass
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         data = ctx['conn'].bio_read(4096)
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
                            4 + 1 + 1 + len(data),
                            EAP_TYPE_FAST, 0x01) + data
 
     def process_clientkeyexchange(ctx, payload, appl_data):
         logger.info("Process ClientKeyExchange")
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         ctx['conn'].bio_write(payload)
         try:
             ctx['conn'].do_handshake()
         except OpenSSL.SSL.WantReadError:
             pass
         ctx['conn'].send(appl_data)
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         data = ctx['conn'].bio_read(4096)
-        state = ctx['conn'].state_string()
-        if state:
-            logger.info("State: " + state)
+        log_conn_state(ctx['conn'])
         return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
                            4 + 1 + 1 + len(data),
                            EAP_TYPE_FAST, 0x01) + data

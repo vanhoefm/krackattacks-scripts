@@ -1133,6 +1133,14 @@ enum qca_wlan_vendor_attr_config {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_24 = 37,
 	/* 8-bit unsigned value to set the beacon miss threshold in 5 GHz */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_5 = 38,
+	/* 32-bit unsigned value to configure 5 or 10 MHz channel width for
+	 * station device while in disconnect state. The attribute use the
+	 * value of enum nl80211_chan_width: NL80211_CHAN_WIDTH_5 means 5 MHz,
+	 * NL80211_CHAN_WIDTH_10 means 10 MHz. If set, the device work in 5 or
+	 * 10 MHz channel width, the station will not connect to a BSS using 20
+	 * MHz or higher bandwidth. Set to NL80211_CHAN_WIDTH_20_NOHT to
+	 * clear this constraint. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_SUB20_CHAN_WIDTH = 39,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

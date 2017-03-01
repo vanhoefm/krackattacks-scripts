@@ -679,6 +679,9 @@ struct hostapd_config {
 			  * ' ' (ascii 32): all environments
 			  * 'O': Outdoor environemnt only
 			  * 'I': Indoor environment only
+			  * 'X': Used with noncountry entity ("XXX")
+			  * 0x00..0x31: identifying IEEE 802.11 standard
+			  *	Annex E table (0x04 = global table)
 			  */
 
 	int ieee80211d;

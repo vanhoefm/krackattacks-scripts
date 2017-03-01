@@ -206,6 +206,11 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->acs_num_scans = 5;
 #endif /* CONFIG_ACS */
 
+	/* The third octet of the country string uses an ASCII space character
+	 * by default to indicate that the regulations encompass all
+	 * environments for the current frequency band in the country. */
+	conf->country[2] = ' ';
+
 	return conf;
 }
 

@@ -2138,8 +2138,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->skip_inactivity_poll = atoi(pos);
 	} else if (os_strcmp(buf, "country_code") == 0) {
 		os_memcpy(conf->country, pos, 2);
-		/* FIX: make this configurable */
-		conf->country[2] = ' ';
+	} else if (os_strcmp(buf, "country3") == 0) {
+		conf->country[2] = strtol(pos, NULL, 16);
 	} else if (os_strcmp(buf, "ieee80211d") == 0) {
 		conf->ieee80211d = atoi(pos);
 	} else if (os_strcmp(buf, "ieee80211h") == 0) {

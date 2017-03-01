@@ -2993,6 +2993,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	wpabuf_free(p2p->wfd_dev_info);
 	wpabuf_free(p2p->wfd_assoc_bssid);
 	wpabuf_free(p2p->wfd_coupled_sink_info);
+	wpabuf_free(p2p->wfd_r2_dev_info);
 #endif /* CONFIG_WIFI_DISPLAY */
 
 	eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
@@ -5138,6 +5139,20 @@ int p2p_set_wfd_dev_info(struct p2p_data *p2p, const struct wpabuf *elem)
 			return -1;
 	} else
 		p2p->wfd_dev_info = NULL;
+
+	return 0;
+}
+
+
+int p2p_set_wfd_r2_dev_info(struct p2p_data *p2p, const struct wpabuf *elem)
+{
+	wpabuf_free(p2p->wfd_r2_dev_info);
+	if (elem) {
+		p2p->wfd_r2_dev_info = wpabuf_dup(elem);
+		if (p2p->wfd_r2_dev_info == NULL)
+			return -1;
+	} else
+		p2p->wfd_r2_dev_info = NULL;
 
 	return 0;
 }

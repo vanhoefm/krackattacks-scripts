@@ -2266,6 +2266,7 @@ int p2p_set_wfd_ie_prov_disc_req(struct p2p_data *p2p, struct wpabuf *ie);
 int p2p_set_wfd_ie_prov_disc_resp(struct p2p_data *p2p, struct wpabuf *ie);
 int p2p_set_wfd_ie_go_neg(struct p2p_data *p2p, struct wpabuf *ie);
 int p2p_set_wfd_dev_info(struct p2p_data *p2p, const struct wpabuf *elem);
+int p2p_set_wfd_r2_dev_info(struct p2p_data *p2p, const struct wpabuf *elem);
 int p2p_set_wfd_assoc_bssid(struct p2p_data *p2p, const struct wpabuf *elem);
 int p2p_set_wfd_coupled_sink_info(struct p2p_data *p2p,
 				  const struct wpabuf *elem);

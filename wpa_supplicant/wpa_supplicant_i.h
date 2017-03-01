@@ -296,7 +296,7 @@ struct wpa_global {
 
 #ifdef CONFIG_WIFI_DISPLAY
 	int wifi_display;
-#define MAX_WFD_SUBELEMS 10
+#define MAX_WFD_SUBELEMS 12
 	struct wpabuf *wfd_subelem[MAX_WFD_SUBELEMS];
 #endif /* CONFIG_WIFI_DISPLAY */
 

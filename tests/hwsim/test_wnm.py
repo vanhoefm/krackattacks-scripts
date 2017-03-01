@@ -872,6 +872,57 @@ def test_wnm_bss_tm_scan_needed(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_wnm_bss_tm_scan_needed_e4(dev, apdev):
+    """WNM BSS Transition Management and scan needed (Table E-4)"""
+    try:
+        hapd = None
+        hapd2 = None
+        params = { "ssid": "test-wnm",
+                   "country_code": "FI",
+                   "country3": "0x04",
+                   "ieee80211d": "1",
+                   "hw_mode": "g",
+                   "channel": "1",
+                   "bss_transition": "1" }
+        hapd = hostapd.add_ap(apdev[0], params)
+
+        params = { "ssid": "test-wnm",
+                   "country_code": "FI",
+                   "country3": "0x04",
+                   "ieee80211d": "1",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "bss_transition": "1" }
+        hapd2 = hostapd.add_ap(apdev[1], params)
+
+        id = dev[0].connect("test-wnm", key_mgmt="NONE",
+                            bssid=apdev[0]['bssid'], scan_freq="2412")
+        dev[0].set_network(id, "scan_freq", "")
+        dev[0].set_network(id, "bssid", "")
+
+        addr = dev[0].own_addr()
+        dev[0].dump_monitor()
+
+        logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=4)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response seen quickly enough - did scan optimization fail?")
+        if "status_code=0" not in ev:
+            raise Exception("BSS transition request was not accepted: " + ev)
+        dev[0].wait_connected(timeout=15, error="No reassociation seen")
+        dev[0].dump_monitor()
+    finally:
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].request("ABORT_SCAN")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
 def start_wnm_tm(ap, country, dev, country3=None):
     params = { "ssid": "test-wnm",
                "country_code": country,

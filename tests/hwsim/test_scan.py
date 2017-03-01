@@ -1141,6 +1141,18 @@ def test_scan_fail(dev, apdev):
     with alloc_fail(dev[0], 1, "wpa_bss_add"):
         dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
 
+def test_scan_fail_type_only(dev, apdev):
+    """Scan failures for TYPE=ONLY"""
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_scan"):
+        dev[0].request("SCAN TYPE=ONLY freq=2417")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Scan trigger failure not reported")
+    # Verify that scan_only_handler() does not get left set as the
+    # wpa_s->scan_res_handler in failure case.
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
 @remote_compatible
 def test_scan_freq_list(dev, apdev):
     """Scan with SET freq_list and scan_cur_freq"""

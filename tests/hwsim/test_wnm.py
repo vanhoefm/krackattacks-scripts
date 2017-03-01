@@ -872,13 +872,15 @@ def test_wnm_bss_tm_scan_needed(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
-def start_wnm_tm(ap, country, dev):
+def start_wnm_tm(ap, country, dev, country3=None):
     params = { "ssid": "test-wnm",
                "country_code": country,
                "ieee80211d": "1",
                "hw_mode": "g",
                "channel": "1",
                "bss_transition": "1" }
+    if country3 is not None:
+        params["country3"] = country3
     hapd = hostapd.add_ap(ap, params)
     id = dev.connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     dev.dump_monitor()
@@ -988,10 +990,17 @@ def test_wnm_bss_tm_country_cn(dev, apdev):
 
 def test_wnm_bss_tm_global(dev, apdev):
     """WNM BSS Transition Management (global)"""
+    run_wnm_bss_tm_global(dev, apdev, "XX", None)
+
+def test_wnm_bss_tm_global4(dev, apdev):
+    """WNM BSS Transition Management (global; indicate table E-4)"""
+    run_wnm_bss_tm_global(dev, apdev, "FI", "0x04")
+
+def run_wnm_bss_tm_global(dev, apdev, country, country3):
     addr = dev[0].p2p_interface_addr()
     try:
         hapd = None
-        hapd, id = start_wnm_tm(apdev[0], "XX", dev[0])
+        hapd, id = start_wnm_tm(apdev[0], country, dev[0], country3=country3)
 
         logger.info("Preferred Candidate List (no matching neighbor, known channels)")
         wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,81,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,82,14,7,03010a neighbor=00:11:22:33:44:57,0x0000,83,1,7 neighbor=00:11:22:33:44:59,0x0000,115,36,7 neighbor=00:11:22:33:44:5a,0x0000,121,100,7 neighbor=00:11:22:33:44:5c,0x0000,124,149,7 neighbor=00:11:22:33:44:5d,0x0000,125,149,7 neighbor=00:11:22:33:44:5e,0x0000,128,42,7 neighbor=00:11:22:33:44:5f,0x0000,129,50,7 neighbor=00:11:22:33:44:60,0x0000,180,1,7")

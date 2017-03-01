@@ -17,6 +17,7 @@ import hwsim_utils
 from tshark import run_tshark
 from utils import alloc_fail, fail_test, wait_fail_trigger
 from wpasupplicant import WpaSupplicant
+from test_ap_ht import set_world_reg
 
 @remote_compatible
 def test_ap_open(dev, apdev):
@@ -741,3 +742,37 @@ def test_ap_open_select_network_freq(dev, apdev):
     if end - start > 3:
         raise Exception("Scan took unexpectedly long time")
     dev[0].wait_connected()
+
+def test_ap_open_noncountry(dev, apdev):
+    """AP with open mode and noncountry entity as Country String"""
+    _test_ap_open_country(dev, apdev, "XX", "0x58")
+
+def test_ap_open_country_table_e4(dev, apdev):
+    """AP with open mode and Table E-4 Country String"""
+    _test_ap_open_country(dev, apdev, "DE", "0x04")
+
+def test_ap_open_country_indoor(dev, apdev):
+    """AP with open mode and indoor country code"""
+    _test_ap_open_country(dev, apdev, "DE", "0x49")
+
+def test_ap_open_country_outdoor(dev, apdev):
+    """AP with open mode and outdoor country code"""
+    _test_ap_open_country(dev, apdev, "DE", "0x4f")
+
+def _test_ap_open_country(dev, apdev, country_code, country3):
+    try:
+        run_ap_open_country(dev, apdev, country_code, country3)
+    finally:
+        dev[0].request("DISCONNECT")
+        set_world_reg(apdev[0], apdev[1], dev[0])
+        dev[0].flush_scan_cache()
+
+def run_ap_open_country(dev, apdev, country_code, country3):
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "country_code": country_code,
+                                      "country3": country3,
+                                      "ieee80211d": "1" })
+    dev[0].scan_for_bss(hapd.own_addr(), freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

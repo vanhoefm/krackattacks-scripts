@@ -828,3 +828,23 @@ def test_autogo_join_before_found(dev):
         raise Exception("Joining the group timed out")
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_noa(dev):
+    """P2P autonomous GO and NoA"""
+    res = autogo(dev[0])
+    dev[0].group_request("P2P_SET noa 1,5,20")
+    dev[0].group_request("P2P_SET noa 255,10,50")
+
+    # Connect and disconnect legacy STA to check NoA special cases
+    try:
+        dev[1].request("SET p2p_disabled 1")
+        dev[1].connect(ssid=res['ssid'], psk=res['passphrase'], proto='RSN',
+                       key_mgmt='WPA-PSK', pairwise='CCMP', group='CCMP',
+                       scan_freq=res['freq'])
+        dev[0].group_request("P2P_SET noa 255,15,55")
+        dev[1].request("DISCONNECT")
+        dev[1].wait_disconnected()
+    finally:
+        dev[1].request("SET p2p_disabled 0")
+
+    dev[0].group_request("P2P_SET noa 0,0,0")

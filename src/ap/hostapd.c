@@ -46,6 +46,7 @@
 #include "neighbor_db.h"
 #include "rrm.h"
 #include "fils_hlp.h"
+#include "acs.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -394,8 +395,11 @@ static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
 	hostapd_stop_setup_timers(iface);
 #endif /* NEED_AP_MLME */
 #endif /* CONFIG_IEEE80211N */
+	if (iface->current_mode)
+		acs_cleanup(iface);
 	hostapd_free_hw_features(iface->hw_features, iface->num_hw_features);
 	iface->hw_features = NULL;
+	iface->current_mode = NULL;
 	os_free(iface->current_rates);
 	iface->current_rates = NULL;
 	os_free(iface->basic_rates);

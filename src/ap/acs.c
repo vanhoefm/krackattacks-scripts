@@ -260,7 +260,7 @@ static void acs_clean_chan_surveys(struct hostapd_channel_data *chan)
 }
 
 
-static void acs_cleanup(struct hostapd_iface *iface)
+void acs_cleanup(struct hostapd_iface *iface)
 {
 	int i;
 	struct hostapd_channel_data *chan;

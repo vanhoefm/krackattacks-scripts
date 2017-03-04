@@ -122,6 +122,22 @@ def test_ap_acs_40mhz(dev, apdev):
 
     dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
+def test_ap_acs_40mhz_minus(dev, apdev):
+    """Automatic channel selection for HT40- channel"""
+    clear_scan_cache(apdev[0])
+    force_prev_ap_on_24g(apdev[0])
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['channel'] = '0'
+    params['ht_capab'] = '[HT40-]'
+    params['acs_num_scans'] = '1'
+    params['chanlist'] = '1 11'
+    hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if not ev:
+        raise Exception("ACS start timed out")
+    # HT40- is not currently supported in hostapd ACS, so do not try to connect
+    # or verify that this operation succeeded.
+
 def test_ap_acs_5ghz(dev, apdev):
     """Automatic channel selection on 5 GHz"""
     try:

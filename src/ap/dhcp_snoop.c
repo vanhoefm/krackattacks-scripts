@@ -154,4 +154,5 @@ int dhcp_snoop_init(struct hostapd_data *hapd)
 void dhcp_snoop_deinit(struct hostapd_data *hapd)
 {
 	l2_packet_deinit(hapd->sock_dhcp);
+	hapd->sock_dhcp = NULL;
 }

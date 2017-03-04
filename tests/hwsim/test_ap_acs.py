@@ -1,5 +1,5 @@
 # Test cases for automatic channel selection with hostapd
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2017, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -9,7 +9,7 @@ logger = logging.getLogger()
 import time
 
 import hostapd
-from utils import skip_with_fips
+from utils import skip_with_fips, alloc_fail, fail_test
 from test_ap_ht import clear_scan_cache
 
 def force_prev_ap_on_24g(ap):
@@ -336,3 +336,36 @@ def test_ap_acs_survey(dev, apdev):
         raise Exception("Unexpected frequency")
 
     dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+
+def test_ap_acs_errors(dev, apdev):
+    """Automatic channel selection failures"""
+    clear_scan_cache(apdev[0])
+    force_prev_ap_on_24g(apdev[0])
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['channel'] = '0'
+    params['acs_num_scans'] = '2'
+    params['chanlist'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+
+    with alloc_fail(hapd, 1, "acs_request_scan"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected success for ENABLE")
+
+    hapd.dump_monitor()
+    with fail_test(hapd, 1, "acs_request_scan"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected success for ENABLE")
+
+    hapd.dump_monitor()
+    with fail_test(hapd, 1, "acs_scan_complete"):
+        hapd.enable()
+        ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+        if not ev:
+            raise Exception("ACS start timed out")
+
+    hapd.dump_monitor()
+    with fail_test(hapd, 1, "acs_request_scan;acs_scan_complete"):
+        hapd.enable()
+        ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+        if not ev:
+            raise Exception("ACS start timed out")

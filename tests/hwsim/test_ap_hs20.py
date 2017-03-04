@@ -17,7 +17,7 @@ import socket
 import subprocess
 
 import hostapd
-from utils import HwsimSkip, skip_with_fips, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, skip_with_fips, alloc_fail, fail_test, wait_fail_trigger
 import hwsim_utils
 from tshark import run_tshark
 from wlantest import Wlantest
@@ -4831,6 +4831,71 @@ def test_proxyarp_open_ebtables_ipv6(dev, apdev, params):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
+
+def test_proxyarp_errors(dev, apdev, params):
+    """ProxyARP error cases"""
+    try:
+        run_proxyarp_errors(dev, apdev, params)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def run_proxyarp_errors(dev, apdev, params):
+    params = { 'ssid': 'open',
+               'proxy_arp': '1',
+               'ap_isolate': '1',
+               'bridge': 'ap-br0',
+               'disable_dgaf': '1' }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    hapd.disable()
+    with alloc_fail(hapd, 1, "l2_packet_init;x_snoop_get_l2_packet;dhcp_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with alloc_fail(hapd, 1, "l2_packet_init;x_snoop_get_l2_packet;ndisc_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with fail_test(hapd, 1, "l2_packet_set_packet_filter;x_snoop_get_l2_packet;ndisc_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with fail_test(hapd, 1, "l2_packet_set_packet_filter;x_snoop_get_l2_packet;dhcp_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    hapd.enable()
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    addr0 = dev[0].own_addr()
+
+    pkt = build_ra(src_ll=apdev[0]['bssid'], ip_src="aaaa:bbbb:cccc::33",
+                   ip_dst="ff01::1")
+    with fail_test(hapd, 1, "x_snoop_mcast_to_ucast_convert_send"):
+        if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+            raise Exception("DATA_TEST_FRAME failed")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+
+    with alloc_fail(hapd, 1, "sta_ip6addr_add"):
+        src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
+        pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
+                       ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
+                       opt=src_ll_opt0)
+        if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
+            raise Exception("DATA_TEST_FRAME failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
 def test_ap_hs20_connect_deinit(dev, apdev):
     """Hotspot 2.0 connection interrupted with deinit"""

@@ -255,6 +255,58 @@ def test_ap_acs_vht40(dev, apdev):
         hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_ap_acs_vht160(dev, apdev):
+    """Automatic channel selection for VHT160"""
+    try:
+        hapd = None
+        force_prev_ap_on_5g(apdev[0])
+        params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+        params['hw_mode'] = 'a'
+        params['channel'] = '0'
+        params['ht_capab'] = '[HT40+]'
+        params['country_code'] = 'ZA'
+        params['ieee80211ac'] = '1'
+        params['vht_oper_chwidth'] = '2'
+        params["vht_oper_centr_freq_seg0_idx"] = "114"
+        params['ieee80211d'] = '1'
+        params['ieee80211h'] = '1'
+        params['chanlist'] = '100'
+        params['acs_num_scans'] = '1'
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+        if not ev:
+            raise Exception("ACS start timed out")
+        # VHT160 is not currently supported in hostapd ACS, so do not try to
+        # enforce successful AP start.
+        if "AP-ENABLED" in ev:
+            freq = hapd.get_status_field("freq")
+            if int(freq) < 5000:
+                raise Exception("Unexpected frequency")
+            dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
+
+def test_ap_acs_vht160_scan_disable(dev, apdev):
+    """Automatic channel selection for VHT160 and DISABLE during scan"""
+    force_prev_ap_on_5g(apdev[0])
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['hw_mode'] = 'a'
+    params['channel'] = '0'
+    params['ht_capab'] = '[HT40+]'
+    params['country_code'] = 'ZA'
+    params['ieee80211ac'] = '1'
+    params['vht_oper_chwidth'] = '2'
+    params["vht_oper_centr_freq_seg0_idx"] = "114"
+    params['ieee80211d'] = '1'
+    params['ieee80211h'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+    time.sleep(3)
+    hapd.request("DISABLE")
+    hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
+
 def test_ap_acs_bias(dev, apdev):
     """Automatic channel selection with bias values"""
     force_prev_ap_on_24g(apdev[0])

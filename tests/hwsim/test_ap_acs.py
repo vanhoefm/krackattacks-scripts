@@ -222,6 +222,39 @@ def test_ap_acs_vht(dev, apdev):
         hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+def test_ap_acs_vht40(dev, apdev):
+    """Automatic channel selection for VHT40"""
+    try:
+        hapd = None
+        force_prev_ap_on_5g(apdev[0])
+        params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+        params['hw_mode'] = 'a'
+        params['channel'] = '0'
+        params['ht_capab'] = '[HT40+]'
+        params['country_code'] = 'US'
+        params['ieee80211ac'] = '1'
+        params['vht_oper_chwidth'] = '0'
+        params['acs_num_scans'] = '1'
+        params['chanlist'] = '36 149'
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+        wait_acs(hapd)
+        freq = hapd.get_status_field("freq")
+        if int(freq) < 5000:
+            raise Exception("Unexpected frequency")
+
+        sec = hapd.get_status_field("secondary_channel")
+        if int(sec) == 0:
+            raise Exception("Secondary channel not set")
+
+        dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        hostapd.cmd_execute(apdev[0], ['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
 def test_ap_acs_bias(dev, apdev):
     """Automatic channel selection with bias values"""
     force_prev_ap_on_24g(apdev[0])

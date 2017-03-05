@@ -631,6 +631,9 @@ struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
 	size_t buf_needed;
 	struct radius_attr_hdr *attr;
 
+	if (TEST_FAIL())
+		return NULL;
+
 	if (data_len > RADIUS_MAX_ATTR_LEN) {
 		wpa_printf(MSG_ERROR, "radius_msg_add_attr: too long attribute (%lu bytes)",
 		       (unsigned long) data_len);

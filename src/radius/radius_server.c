@@ -662,14 +662,14 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	sess->username = os_malloc(user_len * 4 + 1);
 	if (sess->username == NULL) {
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 	printf_encode(sess->username, user_len * 4 + 1, user, user_len);
 
 	sess->nas_ip = os_strdup(from_addr);
 	if (sess->nas_ip == NULL) {
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 
@@ -702,7 +702,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	if (sess->eap == NULL) {
 		RADIUS_DEBUG("Failed to initialize EAP state machine for the "
 			     "new session");
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 	sess->eap_if = eap_get_interface(sess->eap);

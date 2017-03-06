@@ -989,4 +989,14 @@ static inline int wpa_drv_set_tdls_mode(struct wpa_supplicant *wpa_s,
 					    tdls_external_control);
 }
 
+static inline struct wpa_bss_candidate_info *
+wpa_drv_get_bss_trans_status(struct wpa_supplicant *wpa_s,
+			     struct wpa_bss_trans_info *params)
+{
+	if (!wpa_s->driver->get_bss_transition_status)
+		return NULL;
+	return wpa_s->driver->get_bss_transition_status(wpa_s->drv_priv,
+							params);
+}
+
 #endif /* DRIVER_I_H */

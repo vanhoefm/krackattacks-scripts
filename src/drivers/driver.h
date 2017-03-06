@@ -1898,6 +1898,20 @@ struct drv_acs_params {
 	const int *freq_list;
 };
 
+struct wpa_bss_trans_info {
+	u8 mbo_transition_reason;
+	u8 n_candidates;
+	u8 *bssid;
+};
+
+struct wpa_bss_candidate_info {
+	u8 num;
+	struct candidate_list {
+		u8 bssid[ETH_ALEN];
+		u8 is_accept;
+		u32 reject_reason;
+	} *candidates;
+};
 
 /**
  * struct wpa_driver_ops - Driver interface API definition
@@ -3808,8 +3822,19 @@ struct wpa_driver_ops {
 	 * trigger control mode to the host driver.
 	 */
 	int (*set_tdls_mode)(void *priv, int tdls_external_control);
-};
 
+	/**
+	 * get_bss_transition_status - Get candidate BSS's transition status
+	 * @priv: Private driver interface data
+	 * @params: Candidate BSS list
+	 *
+	 * Get the accept or reject reason code for a list of BSS transition
+	 * candidates.
+	 */
+	struct wpa_bss_candidate_info *
+	(*get_bss_transition_status)(void *priv,
+				     struct wpa_bss_trans_info *params);
+};
 
 /**
  * enum wpa_event_type - Event type for wpa_supplicant_event() calls

@@ -18,6 +18,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_ht import clear_scan_cache
+from remotehost import remote_compatible
 
 def check_rrm_support(dev):
     rrm = int(dev.get_driver_status_field("capa.rrm_flags"), 16)
@@ -741,11 +742,12 @@ def run_req_beacon(hapd, addr, request):
         raise Exception("Unexected ACK status in TX status: " + fields[3])
     return token
 
+@remote_compatible
 def test_rrm_beacon_req_table(dev, apdev):
     """Beacon request - beacon table mode"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another" })
 
     tests = [ "REQ_BEACON ",
               "REQ_BEACON q",
@@ -783,10 +785,11 @@ def test_rrm_beacon_req_table(dev, apdev):
         if len(report.frame_body) <= 12:
             raise Exception("Too short Reported Frame Body subelement")
 
+@remote_compatible
 def test_rrm_beacon_req_table_detail(dev, apdev):
     """Beacon request - beacon table mode - reporting detail"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -845,10 +848,11 @@ def test_rrm_beacon_req_table_detail(dev, apdev):
         raise Exception("Unexpected beacon report response to invalid reporting detail")
     hapd.dump_monitor()
 
+@remote_compatible
 def test_rrm_beacon_req_table_request(dev, apdev):
     """Beacon request - beacon table mode - request element"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -887,10 +891,11 @@ def test_rrm_beacon_req_table_request(dev, apdev):
         raise Exception("Unexpected beacon report response (multiple request subelements)")
     hapd.dump_monitor()
 
+@remote_compatible
 def test_rrm_beacon_req_table_request_oom(dev, apdev):
     """Beacon request - beacon table mode - request element OOM"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -929,11 +934,12 @@ def test_rrm_beacon_req_table_request_oom(dev, apdev):
         if len(fields[4]) > 0:
             raise Exception("Unexpected beacon report received")
 
+@remote_compatible
 def test_rrm_beacon_req_table_bssid(dev, apdev):
     """Beacon request - beacon table mode - specific BSSID"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -952,11 +958,12 @@ def test_rrm_beacon_req_table_bssid(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected beacon report response")
 
+@remote_compatible
 def test_rrm_beacon_req_table_ssid(dev, apdev):
     """Beacon request - beacon table mode - specific SSID"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -994,10 +1001,11 @@ def test_rrm_beacon_req_table_ssid(dev, apdev):
         raise Exception("Unexpected beacon report response (invalid SSID subelement in request)")
     hapd.dump_monitor()
 
+@remote_compatible
 def test_rrm_beacon_req_table_info(dev, apdev):
     """Beacon request - beacon table mode - Reporting Information subelement"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1016,10 +1024,11 @@ def test_rrm_beacon_req_table_info(dev, apdev):
         raise Exception("Unexpected beacon report response (invalid reporting information length)")
     hapd.dump_monitor()
 
+@remote_compatible
 def test_rrm_beacon_req_table_unknown_subelem(dev, apdev):
     """Beacon request - beacon table mode - unknown subelement"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1032,10 +1041,11 @@ def test_rrm_beacon_req_table_unknown_subelem(dev, apdev):
     report = BeaconReport(binascii.unhexlify(fields[4]))
     logger.info("Received beacon report: " + str(report))
 
+@remote_compatible
 def test_rrm_beacon_req_table_truncated_subelem(dev, apdev):
     """Beacon request - beacon table mode - Truncated subelement"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1046,11 +1056,12 @@ def test_rrm_beacon_req_table_truncated_subelem(dev, apdev):
         raise Exception("Unexpected beacon report response (truncated subelement)")
     hapd.dump_monitor()
 
+@remote_compatible
 def test_rrm_beacon_req_table_rsne(dev, apdev):
     """Beacon request - beacon table mode - RSNE truncation"""
     params = hostapd.wpa2_params(ssid="rrm-rsn", passphrase="12345678")
     params["rrm_beacon_report"] = "1"
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm-rsn", psk="12345678", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1130,12 +1141,12 @@ def test_rrm_beacon_req_table_vht(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
+@remote_compatible
 def test_rrm_beacon_req_active(dev, apdev):
     """Beacon request - active scan mode"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1156,14 +1167,15 @@ def test_rrm_beacon_req_active(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+@remote_compatible
 def test_rrm_beacon_req_active_ignore_old_result(dev, apdev):
     """Beacon request - active scan mode and old scan result"""
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another" })
     dev[0].scan_for_bss(apdev[1]['bssid'], freq=2412)
     hapd2.disable()
 
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1233,12 +1245,12 @@ def test_rrm_beacon_req_active_many(dev, apdev):
         if ok:
             break
 
+@remote_compatible
 def test_rrm_beacon_req_active_ap_channels(dev, apdev):
     """Beacon request - active scan mode with AP Channel Report subelement"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1259,12 +1271,12 @@ def test_rrm_beacon_req_active_ap_channels(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+@remote_compatible
 def test_rrm_beacon_req_passive_ap_channels(dev, apdev):
     """Beacon request - passive scan mode with AP Channel Report subelement"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1285,12 +1297,12 @@ def test_rrm_beacon_req_passive_ap_channels(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+@remote_compatible
 def test_rrm_beacon_req_active_single_channel(dev, apdev):
     """Beacon request - active scan mode with single channel"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1304,12 +1316,12 @@ def test_rrm_beacon_req_active_single_channel(dev, apdev):
     report = BeaconReport(binascii.unhexlify(fields[4]))
     logger.info("Received beacon report: " + str(report))
 
+@remote_compatible
 def test_rrm_beacon_req_active_ap_channels_unknown_opclass(dev, apdev):
     """Beacon request - active scan mode with AP Channel Report subelement and unknown opclass"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1320,12 +1332,12 @@ def test_rrm_beacon_req_active_ap_channels_unknown_opclass(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected Beacon report")
 
+@remote_compatible
 def test_rrm_beacon_req_active_ap_channel_oom(dev, apdev):
     """Beacon request - AP Channel Report subelement and OOM"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1337,10 +1349,11 @@ def test_rrm_beacon_req_active_ap_channel_oom(dev, apdev):
         if ev is not None:
             raise Exception("Unexpected Beacon report during OOM")
 
+@remote_compatible
 def test_rrm_beacon_req_active_scan_fail(dev, apdev):
     """Beacon request - Active scan failure"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1355,12 +1368,12 @@ def test_rrm_beacon_req_active_scan_fail(dev, apdev):
         if fields[3] != "04":
             raise Exception("Unexpected Beacon report contents: " + ev)
 
+@remote_compatible
 def test_rrm_beacon_req_active_zero_duration(dev, apdev):
     """Beacon request - Action scan and zero duration"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1370,10 +1383,11 @@ def test_rrm_beacon_req_active_zero_duration(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected Beacon report")
 
+@remote_compatible
 def test_rrm_beacon_req_active_fail_random(dev, apdev):
     """Beacon request - active scan mode os_get_random failure"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
 
@@ -1386,12 +1400,12 @@ def test_rrm_beacon_req_active_fail_random(dev, apdev):
         report = BeaconReport(binascii.unhexlify(fields[4]))
         logger.info("Received beacon report: " + str(report))
 
+@remote_compatible
 def test_rrm_beacon_req_passive(dev, apdev):
     """Beacon request - passive scan mode"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "another",
-                                                 "channel": "11" })
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "another", "channel": "11" })
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1412,10 +1426,11 @@ def test_rrm_beacon_req_passive(dev, apdev):
             if report.opclass != 81 or report.channel != 11:
                 raise Exception("Incorrect opclass/channel for AP1")
 
+@remote_compatible
 def test_rrm_beacon_req_passive_no_match(dev, apdev):
     """Beacon request - passive scan mode and no matching BSS"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1428,10 +1443,11 @@ def test_rrm_beacon_req_passive_no_match(dev, apdev):
     if len(fields[4]) > 0:
         raise Exception("Unexpected beacon report BSS")
 
+@remote_compatible
 def test_rrm_beacon_req_passive_no_match_oom(dev, apdev):
     """Beacon request - passive scan mode and no matching BSS (OOM)"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1452,10 +1468,11 @@ def test_rrm_beacon_req_passive_no_match_oom(dev, apdev):
     if len(fields[4]) > 0:
         raise Exception("Unexpected beacon report BSS")
 
+@remote_compatible
 def test_rrm_beacon_req_active_duration_mandatory(dev, apdev):
     """Beacon request - Action scan and duration mandatory"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].connect("rrm", key_mgmt="NONE", scan_freq="2412")
     addr = dev[0].own_addr()
@@ -1683,10 +1700,11 @@ def test_rrm_req_when_rrm_not_used(dev, apdev):
     if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + "0502000000"):
         raise Exception("MGMT_RX_PROCESS failed")
 
+@remote_compatible
 def test_rrm_req_proto(dev, apdev):
     """Radio measurement request - protocol testing"""
     params = { "ssid": "rrm", "rrm_beacon_report": "1" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = hapd.own_addr()
 
     dev[0].request("SET LCI ")

@@ -422,7 +422,7 @@ def test_gas_anqp_get(dev, apdev):
         raise Exception("Did not receive WAN Metrics")
 
     logger.info("Attempt an MBO request with an AP that does not support MBO")
-    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 272,mbo:1"):
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 272,mbo:2"):
         raise Exception("ANQP_GET command failed (2)")
 
     ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)

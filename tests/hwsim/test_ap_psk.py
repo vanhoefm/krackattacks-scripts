@@ -217,7 +217,7 @@ def test_ap_wpa_ccmp(dev, apdev):
                         ("dot11RSNAAuthenticationSuiteSelected", "00-50-f2-2"),
                         ("dot1xSuppSuppControlledPortStatus", "Authorized") ])
 
-def test_ap_wpa2_psk_file(dev, apdev):
+def test_ap_wpa2_psk_file_errors(dev, apdev):
     """WPA2-PSK AP with various PSK file error and success cases"""
     addr0 = dev[0].own_addr()
     addr1 = dev[1].own_addr()

@@ -1044,6 +1044,10 @@ struct wpa_supplicant {
 	struct neighbor_report *wnm_neighbor_report_elements;
 	struct os_reltime wnm_cand_valid_until;
 	u8 wnm_cand_from_bss[ETH_ALEN];
+#ifdef CONFIG_MBO
+	unsigned int wnm_mbo_trans_reason_present:1;
+	u8 wnm_mbo_transition_reason;
+#endif /* CONFIG_MBO */
 #endif /* CONFIG_WNM */
 
 #ifdef CONFIG_TESTING_GET_GTK

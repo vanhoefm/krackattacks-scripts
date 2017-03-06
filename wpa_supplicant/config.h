@@ -41,6 +41,7 @@
 #define DEFAULT_P2P_GO_CTWINDOW 0
 #define DEFAULT_WPA_RSC_RELAXATION 1
 #define DEFAULT_MBO_CELL_CAPA MBO_CELL_CAPA_NOT_SUPPORTED
+#define DEFAULT_DISASSOC_IMMINENT_RSSI_THRESHOLD -75
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1291,6 +1292,12 @@ struct wpa_config {
 	 * mbo_cell_capa - Cellular capabilities for MBO
 	 */
 	enum mbo_cellular_capa mbo_cell_capa;
+
+	/**
+	 * disassoc_imminent_rssi_threshold - RSSI threshold of candidate AP
+	 * when disassociation imminent is set.
+	 */
+	 int disassoc_imminent_rssi_threshold;
 #endif /* CONFIG_MBO */
 
 	/**

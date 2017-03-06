@@ -1394,6 +1394,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "non_pref_chan=%s\n", config->non_pref_chan);
 	if (config->mbo_cell_capa != DEFAULT_MBO_CELL_CAPA)
 		fprintf(f, "mbo_cell_capa=%u\n", config->mbo_cell_capa);
+	if (config->disassoc_imminent_rssi_threshold !=
+	    DEFAULT_DISASSOC_IMMINENT_RSSI_THRESHOLD)
+		fprintf(f, "disassoc_imminent_rssi_threshold=%d\n",
+			config->disassoc_imminent_rssi_threshold);
 #endif /* CONFIG_MBO */
 
 	if (config->gas_address3)

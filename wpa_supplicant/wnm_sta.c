@@ -13,6 +13,7 @@
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
 #include "rsn_supp/wpa.h"
+#include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "scan.h"
@@ -499,10 +500,127 @@ static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_bss *
-compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
+static void wnm_clear_acceptable(struct wpa_supplicant *wpa_s)
 {
+	unsigned int i;
 
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++)
+		wpa_s->wnm_neighbor_report_elements[i].acceptable = 0;
+}
+
+
+static struct wpa_bss * get_first_acceptable(struct wpa_supplicant *wpa_s)
+{
+	unsigned int i;
+	struct neighbor_report *nei;
+
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
+		nei = &wpa_s->wnm_neighbor_report_elements[i];
+		if (nei->acceptable)
+			return wpa_bss_get_bssid(wpa_s, nei->bssid);
+	}
+
+	return NULL;
+}
+
+
+#ifdef CONFIG_MBO
+static struct wpa_bss *
+get_mbo_transition_candidate(struct wpa_supplicant *wpa_s,
+			     enum mbo_transition_reject_reason *reason)
+{
+	struct wpa_bss *target = NULL;
+	struct wpa_bss_trans_info params;
+	struct wpa_bss_candidate_info *info = NULL;
+	struct neighbor_report *nei = wpa_s->wnm_neighbor_report_elements;
+	u8 *first_candidate_bssid = NULL, *pos;
+	unsigned int i;
+
+	params.mbo_transition_reason = wpa_s->wnm_mbo_transition_reason;
+	params.n_candidates = 0;
+	params.bssid = os_calloc(wpa_s->wnm_num_neighbor_report, ETH_ALEN);
+	if (!params.bssid)
+		return NULL;
+
+	pos = params.bssid;
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; nei++, i++) {
+		if (nei->is_first)
+			first_candidate_bssid = nei->bssid;
+		if (!nei->acceptable)
+			continue;
+		os_memcpy(pos, nei->bssid, ETH_ALEN);
+		pos += ETH_ALEN;
+		params.n_candidates++;
+	}
+
+	if (!params.n_candidates)
+		goto end;
+
+	info = wpa_drv_get_bss_trans_status(wpa_s, &params);
+	if (!info) {
+		/* If failed to get candidate BSS transition status from driver,
+		 * get the first acceptable candidate from wpa_supplicant.
+		 */
+		target = wpa_bss_get_bssid(wpa_s, params.bssid);
+		goto end;
+	}
+
+	/* Get the first acceptable candidate from driver */
+	for (i = 0; i < info->num; i++) {
+		if (info->candidates[i].is_accept) {
+			target = wpa_bss_get_bssid(wpa_s,
+						   info->candidates[i].bssid);
+			goto end;
+		}
+	}
+
+	/* If Disassociation Imminent is set and driver rejects all the
+	 * candidate select first acceptable candidate which has
+	 * rssi > disassoc_imminent_rssi_threshold
+	 */
+	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT) {
+		for (i = 0; i < info->num; i++) {
+			target = wpa_bss_get_bssid(wpa_s,
+						   info->candidates[i].bssid);
+			if (target->level <
+			    wpa_s->conf->disassoc_imminent_rssi_threshold)
+				continue;
+			goto end;
+		}
+	}
+
+	/* While sending BTM reject use reason code of the first candidate
+	 * received in BTM request frame
+	 */
+	if (reason) {
+		for (i = 0; i < info->num; i++) {
+			if (first_candidate_bssid &&
+			    os_memcmp(first_candidate_bssid,
+				      info->candidates[i].bssid, ETH_ALEN) == 0)
+			{
+				*reason = info->candidates[i].reject_reason;
+				break;
+			}
+		}
+	}
+
+	target = NULL;
+
+end:
+	os_free(params.bssid);
+	if (info) {
+		os_free(info->candidates);
+		os_free(info);
+	}
+	return target;
+}
+#endif /* CONFIG_MBO */
+
+
+static struct wpa_bss *
+compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs,
+			      enum mbo_transition_reject_reason *reason)
+{
 	u8 i;
 	struct wpa_bss *bss = wpa_s->current_bss;
 	struct wpa_bss *target;
@@ -512,6 +630,8 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
 
 	wpa_printf(MSG_DEBUG, "WNM: Current BSS " MACSTR " RSSI %d",
 		   MAC2STR(wpa_s->bssid), bss->level);
+
+	wnm_clear_acceptable(wpa_s);
 
 	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
 		struct neighbor_report *nei;
@@ -589,14 +709,26 @@ compare_scan_neighbor_results(struct wpa_supplicant *wpa_s, os_time_t age_secs)
 			continue;
 		}
 
+		nei->acceptable = 1;
+	}
+
+#ifdef CONFIG_MBO
+	if (wpa_s->wnm_mbo_trans_reason_present)
+		target = get_mbo_transition_candidate(wpa_s, reason);
+	else
+		target = get_first_acceptable(wpa_s);
+#else /* CONFIG_MBO */
+	target = get_first_acceptable(wpa_s);
+#endif /* CONFIG_MBO */
+
+	if (target) {
 		wpa_printf(MSG_DEBUG,
 			   "WNM: Found an acceptable preferred transition candidate BSS "
 			   MACSTR " (RSSI %d)",
-			   MAC2STR(nei->bssid), target->level);
-		return target;
+			   MAC2STR(target->bssid), target->level);
 	}
 
-	return NULL;
+	return target;
 }
 
 
@@ -780,17 +912,19 @@ static int wnm_add_cand_list(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 
 static void wnm_send_bss_transition_mgmt_resp(
 	struct wpa_supplicant *wpa_s, u8 dialog_token,
-	enum bss_trans_mgmt_status_code status, u8 delay,
-	const u8 *target_bssid)
+	enum bss_trans_mgmt_status_code status,
+	enum mbo_transition_reject_reason reason,
+	u8 delay, const u8 *target_bssid)
 {
 	u8 buf[2000], *pos;
 	struct ieee80211_mgmt *mgmt;
 	size_t len;
 	int res;
 
-	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Response "
-		   "to " MACSTR " dialog_token=%u status=%u delay=%d",
-		   MAC2STR(wpa_s->bssid), dialog_token, status, delay);
+	wpa_printf(MSG_DEBUG,
+		   "WNM: Send BSS Transition Management Response to " MACSTR
+		   " dialog_token=%u status=%u reason=%u delay=%d",
+		   MAC2STR(wpa_s->bssid), dialog_token, status, reason, delay);
 	if (!wpa_s->current_bss) {
 		wpa_printf(MSG_DEBUG,
 			   "WNM: Current BSS not known - drop response");
@@ -827,10 +961,10 @@ static void wnm_send_bss_transition_mgmt_resp(
 		pos += wnm_add_cand_list(wpa_s, pos, buf + sizeof(buf) - pos);
 
 #ifdef CONFIG_MBO
-	if (status != WNM_BSS_TM_ACCEPT) {
+	if (status != WNM_BSS_TM_ACCEPT &&
+	    wpa_bss_get_vendor_ie(wpa_s->current_bss, MBO_IE_VENDOR_TYPE)) {
 		pos += wpas_mbo_ie_bss_trans_reject(
-			wpa_s, pos, buf + sizeof(buf) - pos,
-			MBO_TRANSITION_REJECT_REASON_UNSPECIFIED);
+			wpa_s, pos, buf + sizeof(buf) - pos, reason);
 	}
 #endif /* CONFIG_MBO */
 
@@ -861,10 +995,9 @@ static void wnm_bss_tm_connect(struct wpa_supplicant *wpa_s,
 		wpa_s->wnm_reply = 0;
 		wpa_printf(MSG_DEBUG,
 			   "WNM: Sending successful BSS Transition Management Response");
-		wnm_send_bss_transition_mgmt_resp(wpa_s,
-						  wpa_s->wnm_dialog_token,
-						  WNM_BSS_TM_ACCEPT,
-						  0, bss->bssid);
+		wnm_send_bss_transition_mgmt_resp(
+			wpa_s, wpa_s->wnm_dialog_token, WNM_BSS_TM_ACCEPT,
+			MBO_TRANSITION_REASON_UNSPECIFIED, 0, bss->bssid);
 	}
 
 	if (bss == wpa_s->current_bss) {
@@ -886,6 +1019,8 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	struct wpa_bss *bss;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	enum bss_trans_mgmt_status_code status = WNM_BSS_TM_REJECT_UNSPECIFIED;
+	enum mbo_transition_reject_reason reason =
+		MBO_TRANSITION_REJECT_REASON_UNSPECIFIED;
 
 	if (!wpa_s->wnm_neighbor_report_elements)
 		return 0;
@@ -907,7 +1042,7 @@ int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail)
 	}
 
 	/* Compare the Neighbor Report and scan results */
-	bss = compare_scan_neighbor_results(wpa_s, 0);
+	bss = compare_scan_neighbor_results(wpa_s, 0, &reason);
 	if (!bss) {
 		wpa_printf(MSG_DEBUG, "WNM: No BSS transition candidate match found");
 		status = WNM_BSS_TM_REJECT_NO_SUITABLE_CANDIDATES;
@@ -928,7 +1063,7 @@ send_bss_resp_fail:
 		wpa_s->wnm_reply = 0;
 		wnm_send_bss_transition_mgmt_resp(wpa_s,
 						  wpa_s->wnm_dialog_token,
-						  status, 0, NULL);
+						  status, reason, 0, NULL);
 	}
 	wnm_deallocate_memory(wpa_s);
 
@@ -1116,7 +1251,7 @@ static int wnm_fetch_scan_results(struct wpa_supplicant *wpa_s)
 		return 0;
 	}
 
-	bss = compare_scan_neighbor_results(wpa_s, WNM_SCAN_RESULT_AGE);
+	bss = compare_scan_neighbor_results(wpa_s, WNM_SCAN_RESULT_AGE, NULL);
 	if (!bss) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"WNM: Comparison of scan results against transition candidates did not find matches");
@@ -1142,6 +1277,11 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 	if (end - pos < 5)
 		return;
 
+#ifdef CONFIG_MBO
+	wpa_s->wnm_mbo_trans_reason_present = 0;
+	wpa_s->wnm_mbo_transition_reason = 0;
+#endif /* CONFIG_MBO */
+
 	if (wpa_s->current_bss)
 		beacon_int = wpa_s->current_bss->beacon_int;
 	else
@@ -1164,10 +1304,10 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_INFO,
 			   "WNM: Testing - reject BSS Transition Management Request: reject_btm_req_reason=%d",
 			   wpa_s->reject_btm_req_reason);
-		wnm_send_bss_transition_mgmt_resp(wpa_s,
-						  wpa_s->wnm_dialog_token,
-						  wpa_s->reject_btm_req_reason,
-						  0, NULL);
+		wnm_send_bss_transition_mgmt_resp(
+			wpa_s, wpa_s->wnm_dialog_token,
+			wpa_s->reject_btm_req_reason,
+			MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
 		return;
 	}
 #endif /* CONFIG_MBO && CONFIG_TESTING_OPTIONS */
@@ -1246,6 +1386,15 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 					wpa_s->wnm_num_neighbor_report];
 				wnm_parse_neighbor_report(wpa_s, pos, len, rep);
 				wpa_s->wnm_num_neighbor_report++;
+#ifdef CONFIG_MBO
+				if (wpa_s->wnm_mbo_trans_reason_present &&
+				    wpa_s->wnm_num_neighbor_report == 1) {
+					rep->is_first = 1;
+					wpa_printf(MSG_DEBUG,
+						   "WNM: First transition candidate is "
+						   MACSTR, MAC2STR(rep->bssid));
+				}
+#endif /* CONFIG_MBO */
 			}
 
 			pos += len;
@@ -1257,7 +1406,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			wnm_send_bss_transition_mgmt_resp(
 				wpa_s, wpa_s->wnm_dialog_token,
 				WNM_BSS_TM_REJECT_NO_SUITABLE_CANDIDATES,
-				0, NULL);
+				MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
 			return;
 		}
 
@@ -1320,9 +1469,9 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_INFO, "WNM: BSS Transition Management Request did not include candidates");
 			status = WNM_BSS_TM_REJECT_UNSPECIFIED;
 		}
-		wnm_send_bss_transition_mgmt_resp(wpa_s,
-						  wpa_s->wnm_dialog_token,
-						  status, 0, NULL);
+		wnm_send_bss_transition_mgmt_resp(
+			wpa_s, wpa_s->wnm_dialog_token, status,
+			MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
 	}
 }
 

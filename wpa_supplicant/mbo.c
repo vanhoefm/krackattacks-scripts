@@ -382,7 +382,7 @@ void wpas_mbo_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ie)
 void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *mbo_ie,
 			   size_t len)
 {
-	const u8 *pos, *cell_pref = NULL, *reason = NULL;
+	const u8 *pos, *cell_pref = NULL;
 	u8 id, elen;
 	u16 disallowed_sec = 0;
 
@@ -417,7 +417,8 @@ void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *mbo_ie,
 			if (elen != 1)
 				goto fail;
 
-			reason = pos;
+			wpa_s->wnm_mbo_trans_reason_present = 1;
+			wpa_s->wnm_mbo_transition_reason = *pos;
 			break;
 		case MBO_ATTR_ID_ASSOC_RETRY_DELAY:
 			if (elen != 2)
@@ -460,9 +461,9 @@ void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *mbo_ie,
 		wpa_msg(wpa_s, MSG_INFO, MBO_CELL_PREFERENCE "preference=%u",
 			*cell_pref);
 
-	if (reason)
+	if (wpa_s->wnm_mbo_trans_reason_present)
 		wpa_msg(wpa_s, MSG_INFO, MBO_TRANSITION_REASON "reason=%u",
-			*reason);
+			wpa_s->wnm_mbo_transition_reason);
 
 	if (disallowed_sec && wpa_s->current_bss)
 		wpa_bss_tmp_disallow(wpa_s, wpa_s->current_bss->bssid,

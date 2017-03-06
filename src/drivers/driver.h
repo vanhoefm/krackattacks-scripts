@@ -483,6 +483,15 @@ struct wpa_driver_scan_params {
 	 unsigned int sched_scan_plans_num;
 
 	/**
+	 * sched_scan_start_delay - Delay to use before starting the first scan
+	 *
+	 * Delay (in seconds) before scheduling first scan plan cycle. The
+	 * driver may ignore this parameter and start immediately (or at any
+	 * other time), if this feature is not supported.
+	 */
+	 u32 sched_scan_start_delay;
+
+	/**
 	 * bssid - Specific BSSID to scan for
 	 *
 	 * This optional parameter can be used to replace the default wildcard

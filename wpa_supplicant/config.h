@@ -1097,6 +1097,15 @@ struct wpa_config {
 	unsigned int sched_scan_interval;
 
 	/**
+	 * sched_scan_start_delay - Schedule scan start delay before first scan
+	 *
+	 * Delay (in seconds) before scheduling first scan plan cycle. The
+	 * driver may ignore this parameter and start immediately (or at any
+	 * other time), if this feature is not supported.
+	 */
+	unsigned int sched_scan_start_delay;
+
+	/**
 	 * tdls_external_control - External control for TDLS setup requests
 	 *
 	 * Enable TDLS mode where external programs are given the control

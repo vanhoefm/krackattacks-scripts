@@ -578,6 +578,7 @@ static char ** wpa_cli_complete_get(const char *str, int pos)
 		"p2p_go_max_inactivity", "auto_interworking", "okc", "pmf",
 		"dtim_period", "beacon_int", "ignore_old_scan_res",
 		"scan_cur_freq", "sched_scan_interval",
+		"sched_scan_start_delay",
 		"tdls_external_control", "osu_dir", "wowlan_triggers",
 		"p2p_search_delay", "mac_addr", "rand_addr_lifetime",
 		"preassoc_mac_addr", "key_mgmt_offload", "passive_scan",

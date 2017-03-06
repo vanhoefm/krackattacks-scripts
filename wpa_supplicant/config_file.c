@@ -1320,6 +1320,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "sched_scan_interval=%u\n",
 			config->sched_scan_interval);
 
+	if (config->sched_scan_start_delay)
+		fprintf(f, "sched_scan_start_delay=%u\n",
+			config->sched_scan_start_delay);
+
 	if (config->external_sim)
 		fprintf(f, "external_sim=%d\n", config->external_sim);
 

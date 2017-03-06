@@ -381,7 +381,6 @@ def test_wnm_bss_tm_req(dev, apdev):
     params = { "ssid": "test-wnm", "bss_transition": "1" }
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
-    hapd2 = hostapd.add_ap(apdev[1], params)
 
     hapd.set("ext_mgmt_frame_handling", "1")
 

@@ -381,86 +381,97 @@ def test_wnm_bss_tm_req(dev, apdev):
     params = { "ssid": "test-wnm", "bss_transition": "1" }
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].own_addr()
 
     hapd.set("ext_mgmt_frame_handling", "1")
 
     # truncated BSS TM Request
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x08)
     req['payload'] = struct.pack("<BBBBH",
                                  ACTION_CATEG_WNM, WNM_ACT_BSS_TM_REQ,
                                  1, 0, 0)
     hapd.mgmt_tx(req)
     expect_ack(hapd)
+    dev[0].dump_monitor()
 
     # no disassociation and no candidate list
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      dialog_token=2)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=2, expect_status=1)
+    dev[0].dump_monitor()
 
     # truncated BSS Termination Duration
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x08)
     hapd.mgmt_tx(req)
     expect_ack(hapd)
+    dev[0].dump_monitor()
 
     # BSS Termination Duration with TSF=0 and Duration=10
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x08, dialog_token=3)
     req['payload'] += struct.pack("<BBQH", 4, 10, 0, 10)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=3, expect_status=1)
+    dev[0].dump_monitor()
 
     # truncated Session Information URL
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x10)
     hapd.mgmt_tx(req)
     expect_ack(hapd)
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x10)
     req['payload'] += struct.pack("<BBB", 3, 65, 66)
     hapd.mgmt_tx(req)
     expect_ack(hapd)
+    dev[0].dump_monitor()
 
     # Session Information URL
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x10, dialog_token=4)
     req['payload'] += struct.pack("<BBB", 2, 65, 66)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=4, expect_status=0)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List without any entries
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=5)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=5, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with a truncated entry
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01)
     req['payload'] += struct.pack("<BB", 52, 1)
     hapd.mgmt_tx(req)
     expect_ack(hapd)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with a too short entry
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=6)
     req['payload'] += struct.pack("<BB", 52, 0)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with a non-matching entry
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=6)
     req['payload'] += struct.pack("<BB6BLBBB", 52, 13,
                                   1, 2, 3, 4, 5, 6,
                                   0, 81, 1, 7)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with a truncated subelement
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=7)
     req['payload'] += struct.pack("<BB6BLBBBBB", 52, 13 + 2,
                                   1, 2, 3, 4, 5, 6,
@@ -468,9 +479,10 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   1, 1)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=7, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with lots of invalid optional subelements
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=8)
     subelems = struct.pack("<BBHB", 1, 3, 0, 100)
     subelems += struct.pack("<BBB", 2, 1, 65)
@@ -485,9 +497,10 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   0, 81, 1, 7) + subelems
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List with lots of valid optional subelements (twice)
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=8)
     # TSF Information
     subelems = struct.pack("<BBHH", 1, 4, 0, 100)
@@ -510,9 +523,10 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   0, 81, 1, 7) + subelems + subelems
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
+    dev[0].dump_monitor()
 
     # Preferred Candidate List followed by vendor element
-    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+    req = bss_tm_req(addr, apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=8)
     subelems = ""
     req['payload'] += struct.pack("<BB6BLBBB", 52, 13 + len(subelems),
@@ -521,6 +535,7 @@ def test_wnm_bss_tm_req(dev, apdev):
     req['payload'] += binascii.unhexlify("DD0411223344")
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
+    dev[0].dump_monitor()
 
 @remote_compatible
 def test_wnm_bss_keep_alive(dev, apdev):

@@ -46,16 +46,33 @@ static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
 #ifdef CONFIG_IEEE80211N
 static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
+			     struct wpa_ssid *ssid,
 			     struct hostapd_config *conf,
 			     struct hostapd_hw_modes *mode)
 {
-#ifdef CONFIG_P2P
 	u8 center_chan = 0;
 	u8 channel = conf->channel;
 
 	if (!conf->secondary_channel)
 		goto no_vht;
 
+	/* Use the maximum oper channel width if it's given. */
+	if (ssid->max_oper_chwidth)
+		conf->vht_oper_chwidth = ssid->max_oper_chwidth;
+
+	ieee80211_freq_to_chan(ssid->vht_center_freq2,
+			       &conf->vht_oper_centr_freq_seg1_idx);
+
+	if (!ssid->p2p_group) {
+		if (!ssid->vht_center_freq1 ||
+		    conf->vht_oper_chwidth == VHT_CHANWIDTH_USE_HT)
+			goto no_vht;
+		ieee80211_freq_to_chan(ssid->vht_center_freq1,
+				       &conf->vht_oper_centr_freq_seg0_idx);
+		return;
+	}
+
+#ifdef CONFIG_P2P
 	switch (conf->vht_oper_chwidth) {
 	case VHT_CHANWIDTH_80MHZ:
 	case VHT_CHANWIDTH_80P80MHZ:
@@ -84,14 +101,11 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 
 	conf->vht_oper_centr_freq_seg0_idx = center_chan;
 	return;
+#endif /* CONFIG_P2P */
 
 no_vht:
 	conf->vht_oper_centr_freq_seg0_idx =
-		channel + conf->secondary_channel * 2;
-#else /* CONFIG_P2P */
-	conf->vht_oper_centr_freq_seg0_idx =
 		conf->channel + conf->secondary_channel * 2;
-#endif /* CONFIG_P2P */
 	conf->vht_oper_chwidth = VHT_CHANWIDTH_USE_HT;
 }
 #endif /* CONFIG_IEEE80211N */
@@ -141,17 +155,24 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 		if (!no_ht && mode && mode->ht_capab) {
 			conf->ieee80211n = 1;
 #ifdef CONFIG_P2P
-			if (conf->hw_mode == HOSTAPD_MODE_IEEE80211A &&
+			if (ssid->p2p_group &&
+			    conf->hw_mode == HOSTAPD_MODE_IEEE80211A &&
 			    (mode->ht_capab &
 			     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
 			    ssid->ht40)
 				conf->secondary_channel =
 					wpas_p2p_get_ht40_mode(wpa_s, mode,
 							       conf->channel);
+#endif /* CONFIG_P2P */
+
+			if (!ssid->p2p_group &&
+			    (mode->ht_capab &
+			     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+				conf->secondary_channel = ssid->ht40;
+
 			if (conf->secondary_channel)
 				conf->ht_capab |=
 					HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
-#endif /* CONFIG_P2P */
 
 			/*
 			 * white-list capabilities that won't cause issues
@@ -169,7 +190,7 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 			if (mode->vht_capab && ssid->vht) {
 				conf->ieee80211ac = 1;
 				conf->vht_capab |= mode->vht_capab;
-				wpas_conf_ap_vht(wpa_s, conf, mode);
+				wpas_conf_ap_vht(wpa_s, ssid, conf, mode);
 			}
 		}
 	}
@@ -692,13 +713,6 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;
 	}
-
-	/* Use the maximum oper channel width if it's given. */
-	if (ssid->max_oper_chwidth)
-		conf->vht_oper_chwidth = ssid->max_oper_chwidth;
-
-	ieee80211_freq_to_chan(ssid->vht_center_freq2,
-			       &conf->vht_oper_centr_freq_seg1_idx);
 
 	os_memcpy(wpa_s->ap_iface->conf->wmm_ac_params,
 		  wpa_s->conf->wmm_ac_params,

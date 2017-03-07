@@ -476,6 +476,7 @@ struct wpa_ssid {
 
 	u8 max_oper_chwidth;
 
+	unsigned int vht_center_freq1;
 	unsigned int vht_center_freq2;
 
 	/**

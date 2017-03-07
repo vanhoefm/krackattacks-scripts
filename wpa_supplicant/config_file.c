@@ -792,7 +792,11 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(disabled);
 	INT(peerkey);
 	INT(mixed_cell);
+	INT(vht);
+	INT(ht40);
 	INT(max_oper_chwidth);
+	INT(vht_center_freq1);
+	INT(vht_center_freq2);
 	INT(pbss);
 	INT(wps_disabled);
 #ifdef CONFIG_IEEE80211W

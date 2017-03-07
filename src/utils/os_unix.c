@@ -508,6 +508,16 @@ int os_memcmp_const(const void *a, const void *b, size_t len)
 }
 
 
+void * os_memdup(const void *src, size_t len)
+{
+	void *r = os_malloc(len);
+
+	if (r)
+		os_memcpy(r, src, len);
+	return r;
+}
+
+
 #ifdef WPA_TRACE
 
 #if defined(WPA_TRACE_BFD) && defined(CONFIG_TESTING_OPTIONS)
@@ -539,6 +549,8 @@ static int testing_fail_alloc(void)
 	if (i < res && os_strcmp(func[i], "os_realloc_array") == 0)
 		i++;
 	if (i < res && os_strcmp(func[i], "os_strdup") == 0)
+		i++;
+	if (i < res && os_strcmp(func[i], "os_memdup") == 0)
 		i++;
 
 	pos = wpa_trace_fail_func;

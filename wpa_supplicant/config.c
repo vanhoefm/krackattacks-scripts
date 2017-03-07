@@ -1995,6 +1995,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(auth_alg) },
 	{ FUNC(scan_freq) },
 	{ FUNC(freq_list) },
+	{ INT_RANGE(ht, 0, 1) },
 	{ INT_RANGE(vht, 0, 1) },
 	{ INT_RANGE(ht40, -1, 1) },
 	{ INT_RANGE(max_oper_chwidth, VHT_CHANWIDTH_USE_HT,
@@ -2580,6 +2581,7 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->group_cipher = DEFAULT_GROUP;
 	ssid->key_mgmt = DEFAULT_KEY_MGMT;
 	ssid->bg_scan_period = DEFAULT_BG_SCAN_PERIOD;
+	ssid->ht = 1;
 #ifdef IEEE8021X_EAPOL
 	ssid->eapol_flags = DEFAULT_EAPOL_FLAGS;
 	ssid->eap_workaround = DEFAULT_EAP_WORKAROUND;

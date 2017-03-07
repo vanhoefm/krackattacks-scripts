@@ -470,6 +470,7 @@ struct wpa_ssid {
 	int dot11MeshConfirmTimeout; /* msec */
 	int dot11MeshHoldingTimeout; /* msec */
 
+	int ht;
 	int ht40;
 
 	int vht;

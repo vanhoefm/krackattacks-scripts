@@ -145,12 +145,15 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 		}
 
 #ifdef CONFIG_HT_OVERRIDES
-		if (ssid->disable_ht) {
+		if (ssid->disable_ht)
+			ssid->ht = 0;
+#endif /* CONFIG_HT_OVERRIDES */
+
+		if (!ssid->ht) {
 			conf->ieee80211n = 0;
 			conf->ht_capab = 0;
 			no_ht = 1;
 		}
-#endif /* CONFIG_HT_OVERRIDES */
 
 		if (!no_ht && mode && mode->ht_capab) {
 			conf->ieee80211n = 1;

@@ -793,6 +793,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(peerkey);
 	INT(mixed_cell);
 	INT(vht);
+	INT_DEF(ht, 1);
 	INT(ht40);
 	INT(max_oper_chwidth);
 	INT(vht_center_freq1);

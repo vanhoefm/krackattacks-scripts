@@ -170,7 +170,7 @@ def test_authsrv_oom(dev, apdev):
 def test_authsrv_errors_1(dev, apdev):
     """Authentication server errors (1)"""
     params = authsrv_params()
-    params["eap_user_file"] = "sqlite:auth_serv/does-not-exist"
+    params["eap_user_file"] = "sqlite:auth_serv/does-not-exist/does-not-exist"
     authsrv = hostapd.add_ap(apdev[1], params, no_enable=True)
     if "FAIL" not in authsrv.request("ENABLE"):
         raise Exception("ENABLE succeeded with invalid SQLite EAP user file")
@@ -186,7 +186,7 @@ def test_authsrv_errors_2(dev, apdev):
 def test_authsrv_errors_3(dev, apdev):
     """Authentication server errors (3)"""
     params = authsrv_params()
-    params["eap_sim_db"] = "unix:/tmp/hlr_auc_gw.sock db=auth_serv/does-not-exist"
+    params["eap_sim_db"] = "unix:/tmp/hlr_auc_gw.sock db=auth_serv/does-not-exist/does-not-exist"
     authsrv = hostapd.add_ap(apdev[1], params, no_enable=True)
     if "FAIL" not in authsrv.request("ENABLE"):
         raise Exception("ENABLE succeeded with invalid RADIUS client file")

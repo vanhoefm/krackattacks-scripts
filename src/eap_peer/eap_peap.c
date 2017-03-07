@@ -1272,12 +1272,11 @@ static u8 * eap_peap_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->session_id == NULL || !data->phase2_success)
 		return NULL;
 
-	id = os_malloc(data->id_len);
+	id = os_memdup(data->session_id, data->id_len);
 	if (id == NULL)
 		return NULL;
 
 	*len = data->id_len;
-	os_memcpy(id, data->session_id, data->id_len);
 
 	return id;
 }

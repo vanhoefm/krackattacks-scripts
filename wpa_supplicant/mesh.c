@@ -259,11 +259,10 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 		 * advertised in beacons match the one in peering frames, sigh.
 		 */
 		if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {
-			conf->basic_rates = os_malloc(sizeof(basic_rates_erp));
+			conf->basic_rates = os_memdup(basic_rates_erp,
+						      sizeof(basic_rates_erp));
 			if (!conf->basic_rates)
 				goto out_free;
-			os_memcpy(conf->basic_rates, basic_rates_erp,
-				  sizeof(basic_rates_erp));
 		}
 	} else {
 		rate_len = 0;
@@ -306,11 +305,10 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 			wpas_mesh_copy_groups(bss, wpa_s);
 		} else {
 			bss->conf->sae_groups =
-				os_malloc(sizeof(default_groups));
+				os_memdup(default_groups,
+					  sizeof(default_groups));
 			if (!bss->conf->sae_groups)
 				goto out_free;
-			os_memcpy(bss->conf->sae_groups, default_groups,
-				  sizeof(default_groups));
 		}
 
 		len = os_strlen(ssid->passphrase);

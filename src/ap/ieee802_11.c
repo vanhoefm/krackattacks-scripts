@@ -2715,12 +2715,11 @@ static void handle_assoc(struct hostapd_data *hapd,
 		/* The end of the payload is encrypted. Need to decrypt it
 		 * before parsing. */
 
-		tmp = os_malloc(left);
+		tmp = os_memdup(pos, left);
 		if (!tmp) {
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			goto fail;
 		}
-		os_memcpy(tmp, pos, left);
 
 		left = fils_decrypt_assoc(sta->wpa_sm, sta->fils_session, mgmt,
 					  len, tmp, left);
@@ -3188,10 +3187,9 @@ static int handle_action(struct hostapd_data *hapd,
 		 */
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Return unknown Action "
 			   "frame back to sender");
-		resp = os_malloc(len);
+		resp = os_memdup(mgmt, len);
 		if (resp == NULL)
 			return 0;
-		os_memcpy(resp, mgmt, len);
 		os_memcpy(resp->da, resp->sa, ETH_ALEN);
 		os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
 		os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);

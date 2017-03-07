@@ -760,10 +760,9 @@ static int ibss_rsn_process_rx_eapol(struct ibss_rsn *ibss_rsn,
 	if (supp < 0)
 		return -1;
 
-	tmp = os_malloc(len);
+	tmp = os_memdup(buf, len);
 	if (tmp == NULL)
 		return -1;
-	os_memcpy(tmp, buf, len);
 	if (supp) {
 		peer->authentication_status |= IBSS_RSN_AUTH_EAPOL_BY_PEER;
 		wpa_printf(MSG_DEBUG, "RSN: IBSS RX EAPOL for Supplicant from "

@@ -327,14 +327,13 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			return HOSTAPD_ACL_REJECT;
 		}
 
-		query->auth_msg = os_malloc(len);
+		query->auth_msg = os_memdup(msg, len);
 		if (query->auth_msg == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to allocate memory for "
 				   "auth frame.");
 			hostapd_acl_query_free(query);
 			return HOSTAPD_ACL_REJECT;
 		}
-		os_memcpy(query->auth_msg, msg, len);
 		query->auth_msg_len = len;
 		query->next = hapd->acl_queries;
 		hapd->acl_queries = query;

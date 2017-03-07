@@ -546,23 +546,22 @@ static void wiphy_info_extended_capab(struct wpa_driver_nl80211_data *drv,
 			   nl80211_iftype_str(capa->iftype));
 
 		len = nla_len(tb1[NL80211_ATTR_EXT_CAPA]);
-		capa->ext_capa = os_malloc(len);
+		capa->ext_capa = os_memdup(nla_data(tb1[NL80211_ATTR_EXT_CAPA]),
+					   len);
 		if (!capa->ext_capa)
 			goto err;
 
-		os_memcpy(capa->ext_capa, nla_data(tb1[NL80211_ATTR_EXT_CAPA]),
-			  len);
 		capa->ext_capa_len = len;
 		wpa_hexdump(MSG_DEBUG, "nl80211: Extended capabilities",
 			    capa->ext_capa, capa->ext_capa_len);
 
 		len = nla_len(tb1[NL80211_ATTR_EXT_CAPA_MASK]);
-		capa->ext_capa_mask = os_malloc(len);
+		capa->ext_capa_mask =
+			os_memdup(nla_data(tb1[NL80211_ATTR_EXT_CAPA_MASK]),
+				  len);
 		if (!capa->ext_capa_mask)
 			goto err;
 
-		os_memcpy(capa->ext_capa_mask,
-			  nla_data(tb1[NL80211_ATTR_EXT_CAPA_MASK]), len);
 		wpa_hexdump(MSG_DEBUG, "nl80211: Extended capabilities mask",
 			    capa->ext_capa_mask, capa->ext_capa_len);
 
@@ -1525,14 +1524,13 @@ wpa_driver_nl80211_postprocess_modes(struct hostapd_hw_modes *modes,
 
 	mode11g = &modes[mode11g_idx];
 	mode->num_channels = mode11g->num_channels;
-	mode->channels = os_malloc(mode11g->num_channels *
+	mode->channels = os_memdup(mode11g->channels,
+				   mode11g->num_channels *
 				   sizeof(struct hostapd_channel_data));
 	if (mode->channels == NULL) {
 		(*num_modes)--;
 		return modes; /* Could not add 802.11b mode */
 	}
-	os_memcpy(mode->channels, mode11g->channels,
-		  mode11g->num_channels * sizeof(struct hostapd_channel_data));
 
 	mode->num_rates = 0;
 	mode->rates = os_malloc(4 * sizeof(int));

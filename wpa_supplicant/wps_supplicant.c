@@ -1027,10 +1027,9 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 				continue;
 
 			os_free(ssid->ssid);
-			ssid->ssid = os_malloc(bss->ssid_len);
+			ssid->ssid = os_memdup(bss->ssid, bss->ssid_len);
 			if (ssid->ssid == NULL)
 				break;
-			os_memcpy(ssid->ssid, bss->ssid, bss->ssid_len);
 			ssid->ssid_len = bss->ssid_len;
 			wpa_hexdump_ascii(MSG_DEBUG, "WPS: Picked SSID from "
 					  "scan results",

@@ -1076,12 +1076,11 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 		}
 
 		if (len != 0) {
-			ssid = os_malloc(len);
+			ssid = os_memdup(val, len);
 			if (ssid == NULL) {
 				*reply = wpas_dbus_error_no_memory(message);
 				return -1;
 			}
-			os_memcpy(ssid, val, len);
 		} else {
 			/* Allow zero-length SSIDs */
 			ssid = NULL;
@@ -1927,13 +1926,12 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 		goto err;
 	}
 
-	blob->data = os_malloc(blob_len);
+	blob->data = os_memdup(blob_data, blob_len);
 	blob->name = os_strdup(blob_name);
 	if (!blob->data || !blob->name) {
 		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
-	os_memcpy(blob->data, blob_data, blob_len);
 	blob->len = blob_len;
 
 	wpa_config_set_blob(wpa_s->conf, blob);

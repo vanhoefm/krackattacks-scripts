@@ -184,10 +184,9 @@ wpa_driver_privsep_get_scan_results2(void *priv)
 		if (len < 0 || len > 10000 || len > end - pos)
 			break;
 
-		r = os_malloc(len);
+		r = os_memdup(pos, len);
 		if (r == NULL)
 			break;
-		os_memcpy(r, pos, len);
 		pos += len;
 		if (sizeof(*r) + r->ie_len + r->beacon_ie_len > (size_t) len) {
 			wpa_printf(MSG_ERROR,

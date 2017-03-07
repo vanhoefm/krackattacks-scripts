@@ -85,12 +85,11 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 	/* TFS IE(s) */
 	if (tfs_req) {
 		wnmtfs_ie_len = wpabuf_len(tfs_req);
-		wnmtfs_ie = os_malloc(wnmtfs_ie_len);
+		wnmtfs_ie = os_memdup(wpabuf_head(tfs_req), wnmtfs_ie_len);
 		if (wnmtfs_ie == NULL) {
 			os_free(wnmsleep_ie);
 			return -1;
 		}
-		os_memcpy(wnmtfs_ie, wpabuf_head(tfs_req), wnmtfs_ie_len);
 	} else {
 		wnmtfs_ie = os_zalloc(MAX_TFS_IE_LEN);
 		if (wnmtfs_ie == NULL) {

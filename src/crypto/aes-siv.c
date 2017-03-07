@@ -95,11 +95,10 @@ static int aes_s2v(const u8 *key, size_t key_len,
 		xor(tmp, tmp2);
 	}
 	if (len[i] >= AES_BLOCK_SIZE) {
-		buf = os_malloc(len[i]);
+		buf = os_memdup(addr[i], len[i]);
 		if (!buf)
 			return -ENOMEM;
 
-		os_memcpy(buf, addr[i], len[i]);
 		xorend(buf, len[i], tmp, AES_BLOCK_SIZE);
 		data[0] = buf;
 		ret = omac1_aes_vector(key, key_len, 1, data, &len[i], mac);

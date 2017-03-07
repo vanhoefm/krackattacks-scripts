@@ -1335,10 +1335,9 @@ continue_processing:
 #endif /* CONFIG_PEERKEY */
 
 	os_free(sm->last_rx_eapol_key);
-	sm->last_rx_eapol_key = os_malloc(data_len);
+	sm->last_rx_eapol_key = os_memdup(data, data_len);
 	if (sm->last_rx_eapol_key == NULL)
 		return;
-	os_memcpy(sm->last_rx_eapol_key, data, data_len);
 	sm->last_rx_eapol_key_len = data_len;
 
 	sm->rx_eapol_key_secure = !!(key_info & WPA_KEY_INFO_SECURE);

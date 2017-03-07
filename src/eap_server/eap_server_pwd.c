@@ -1035,11 +1035,10 @@ static u8 * eap_pwd_getkey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_MSK_LEN);
+	key = os_memdup(data->msk, EAP_MSK_LEN);
 	if (key == NULL)
 		return NULL;
 
-	os_memcpy(key, data->msk, EAP_MSK_LEN);
 	*len = EAP_MSK_LEN;
 
 	return key;
@@ -1054,11 +1053,10 @@ static u8 * eap_pwd_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->emsk, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
-	os_memcpy(key, data->emsk, EAP_EMSK_LEN);
 	*len = EAP_EMSK_LEN;
 
 	return key;
@@ -1087,11 +1085,10 @@ static u8 * eap_pwd_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	id = os_malloc(1 + SHA256_MAC_LEN);
+	id = os_memdup(data->session_id, 1 + SHA256_MAC_LEN);
 	if (id == NULL)
 		return NULL;
 
-	os_memcpy(id, data->session_id, 1 + SHA256_MAC_LEN);
 	*len = 1 + SHA256_MAC_LEN;
 
 	return id;

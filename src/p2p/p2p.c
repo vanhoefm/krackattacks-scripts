@@ -1173,12 +1173,11 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 
 	p2p_free_req_dev_types(p2p);
 	if (req_dev_types && num_req_dev_types) {
-		p2p->req_dev_types = os_malloc(num_req_dev_types *
+		p2p->req_dev_types = os_memdup(req_dev_types,
+					       num_req_dev_types *
 					       WPS_DEV_TYPE_LEN);
 		if (p2p->req_dev_types == NULL)
 			return -1;
-		os_memcpy(p2p->req_dev_types, req_dev_types,
-			  num_req_dev_types * WPS_DEV_TYPE_LEN);
 		p2p->num_req_dev_types = num_req_dev_types;
 	}
 
@@ -4818,11 +4817,10 @@ int p2p_set_pref_chan(struct p2p_data *p2p, unsigned int num_pref_chan,
 	struct p2p_channel *n;
 
 	if (pref_chan) {
-		n = os_malloc(num_pref_chan * sizeof(struct p2p_channel));
+		n = os_memdup(pref_chan,
+			      num_pref_chan * sizeof(struct p2p_channel));
 		if (n == NULL)
 			return -1;
-		os_memcpy(n, pref_chan,
-			  num_pref_chan * sizeof(struct p2p_channel));
 	} else
 		n = NULL;
 

@@ -318,10 +318,9 @@ u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 	wpa_hexdump(MSG_EXCESSIVE, "TKIP RC4KEY", rc4key, sizeof(rc4key));
 
 	plain_len = data_len - 8;
-	plain = os_malloc(plain_len);
+	plain = os_memdup(data + 8, plain_len);
 	if (plain == NULL)
 		return NULL;
-	os_memcpy(plain, data + 8, plain_len);
 	wep_crypt(rc4key, plain, plain_len);
 
 	icv = crc32(plain, plain_len - 4);

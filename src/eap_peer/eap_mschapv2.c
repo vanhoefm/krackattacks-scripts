@@ -109,23 +109,21 @@ static void * eap_mschapv2_init(struct eap_sm *sm)
 		return NULL;
 
 	if (sm->peer_challenge) {
-		data->peer_challenge = os_malloc(MSCHAPV2_CHAL_LEN);
+		data->peer_challenge = os_memdup(sm->peer_challenge,
+						 MSCHAPV2_CHAL_LEN);
 		if (data->peer_challenge == NULL) {
 			eap_mschapv2_deinit(sm, data);
 			return NULL;
 		}
-		os_memcpy(data->peer_challenge, sm->peer_challenge,
-			  MSCHAPV2_CHAL_LEN);
 	}
 
 	if (sm->auth_challenge) {
-		data->auth_challenge = os_malloc(MSCHAPV2_CHAL_LEN);
+		data->auth_challenge = os_memdup(sm->auth_challenge,
+						 MSCHAPV2_CHAL_LEN);
 		if (data->auth_challenge == NULL) {
 			eap_mschapv2_deinit(sm, data);
 			return NULL;
 		}
-		os_memcpy(data->auth_challenge, sm->auth_challenge,
-			  MSCHAPV2_CHAL_LEN);
 	}
 
 	data->phase2 = sm->init_phase2;

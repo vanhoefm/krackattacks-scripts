@@ -874,13 +874,12 @@ static int eap_ttls_parse_attr_eap(const u8 *dpos, size_t dlen,
 {
 	wpa_printf(MSG_DEBUG, "EAP-TTLS: AVP - EAP Message");
 	if (parse->eapdata == NULL) {
-		parse->eapdata = os_malloc(dlen);
+		parse->eapdata = os_memdup(dpos, dlen);
 		if (parse->eapdata == NULL) {
 			wpa_printf(MSG_WARNING, "EAP-TTLS: Failed to allocate "
 				   "memory for Phase 2 EAP data");
 			return -1;
 		}
-		os_memcpy(parse->eapdata, dpos, dlen);
 		parse->eap_len = dlen;
 	} else {
 		u8 *neweap = os_realloc(parse->eapdata, parse->eap_len + dlen);
@@ -1749,12 +1748,11 @@ static u8 * eap_ttls_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->key_data == NULL || !data->phase2_success)
 		return NULL;
 
-	key = os_malloc(EAP_TLS_KEY_LEN);
+	key = os_memdup(data->key_data, EAP_TLS_KEY_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_TLS_KEY_LEN;
-	os_memcpy(key, data->key_data, EAP_TLS_KEY_LEN);
 
 	return key;
 }
@@ -1768,12 +1766,11 @@ static u8 * eap_ttls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->session_id == NULL || !data->phase2_success)
 		return NULL;
 
-	id = os_malloc(data->id_len);
+	id = os_memdup(data->session_id, data->id_len);
 	if (id == NULL)
 		return NULL;
 
 	*len = data->id_len;
-	os_memcpy(id, data->session_id, data->id_len);
 
 	return id;
 }
@@ -1787,12 +1784,11 @@ static u8 * eap_ttls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->key_data == NULL)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->key_data + EAP_TLS_KEY_LEN, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_EMSK_LEN;
-	os_memcpy(key, data->key_data + EAP_TLS_KEY_LEN, EAP_EMSK_LEN);
 
 	return key;
 }

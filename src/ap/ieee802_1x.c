@@ -1420,11 +1420,10 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 			}
 		} while (class_len < 1);
 
-		nclass[nclass_count].data = os_malloc(class_len);
+		nclass[nclass_count].data = os_memdup(attr_class, class_len);
 		if (nclass[nclass_count].data == NULL)
 			break;
 
-		os_memcpy(nclass[nclass_count].data, attr_class, class_len);
 		nclass[nclass_count].len = class_len;
 		nclass_count++;
 	}
@@ -2072,11 +2071,10 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 	}
 
 	if (eap_user->password) {
-		user->password = os_malloc(eap_user->password_len);
+		user->password = os_memdup(eap_user->password,
+					   eap_user->password_len);
 		if (user->password == NULL)
 			goto out;
-		os_memcpy(user->password, eap_user->password,
-			  eap_user->password_len);
 		user->password_len = eap_user->password_len;
 		user->password_hash = eap_user->password_hash;
 	}

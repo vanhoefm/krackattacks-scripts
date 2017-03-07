@@ -228,14 +228,13 @@ static int eap_ttls_avp_parse(struct wpabuf *buf, struct eap_ttls_avp *parse)
 		if (vendor_id == 0 && avp_code == RADIUS_ATTR_EAP_MESSAGE) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS: AVP - EAP Message");
 			if (parse->eap == NULL) {
-				parse->eap = os_malloc(dlen);
+				parse->eap = os_memdup(dpos, dlen);
 				if (parse->eap == NULL) {
 					wpa_printf(MSG_WARNING, "EAP-TTLS: "
 						   "failed to allocate memory "
 						   "for Phase 2 EAP data");
 					goto fail;
 				}
-				os_memcpy(parse->eap, dpos, dlen);
 				parse->eap_len = dlen;
 			} else {
 				u8 *neweap = os_realloc(parse->eap,
@@ -1054,12 +1053,11 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 		}
 
 		os_free(sm->identity);
-		sm->identity = os_malloc(parse.user_name_len);
+		sm->identity = os_memdup(parse.user_name, parse.user_name_len);
 		if (sm->identity == NULL) {
 			eap_ttls_state(data, FAILURE);
 			goto done;
 		}
-		os_memcpy(sm->identity, parse.user_name, parse.user_name_len);
 		sm->identity_len = parse.user_name_len;
 		if (eap_user_get(sm, parse.user_name, parse.user_name_len, 1)
 		    != 0) {

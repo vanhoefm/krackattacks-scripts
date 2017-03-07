@@ -2341,11 +2341,10 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 
 	for (i = 0; i < src->num_ssids; i++) {
 		if (src->ssids[i].ssid) {
-			n = os_malloc(src->ssids[i].ssid_len);
+			n = os_memdup(src->ssids[i].ssid,
+				      src->ssids[i].ssid_len);
 			if (n == NULL)
 				goto failed;
-			os_memcpy(n, src->ssids[i].ssid,
-				  src->ssids[i].ssid_len);
 			params->ssids[i].ssid = n;
 			params->ssids[i].ssid_len = src->ssids[i].ssid_len;
 		}
@@ -2353,30 +2352,26 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	params->num_ssids = src->num_ssids;
 
 	if (src->extra_ies) {
-		n = os_malloc(src->extra_ies_len);
+		n = os_memdup(src->extra_ies, src->extra_ies_len);
 		if (n == NULL)
 			goto failed;
-		os_memcpy(n, src->extra_ies, src->extra_ies_len);
 		params->extra_ies = n;
 		params->extra_ies_len = src->extra_ies_len;
 	}
 
 	if (src->freqs) {
 		int len = int_array_len(src->freqs);
-		params->freqs = os_malloc((len + 1) * sizeof(int));
+		params->freqs = os_memdup(src->freqs, (len + 1) * sizeof(int));
 		if (params->freqs == NULL)
 			goto failed;
-		os_memcpy(params->freqs, src->freqs, (len + 1) * sizeof(int));
 	}
 
 	if (src->filter_ssids) {
-		params->filter_ssids = os_malloc(sizeof(*params->filter_ssids) *
+		params->filter_ssids = os_memdup(src->filter_ssids,
+						 sizeof(*params->filter_ssids) *
 						 src->num_filter_ssids);
 		if (params->filter_ssids == NULL)
 			goto failed;
-		os_memcpy(params->filter_ssids, src->filter_ssids,
-			  sizeof(*params->filter_ssids) *
-			  src->num_filter_ssids);
 		params->num_filter_ssids = src->num_filter_ssids;
 	}
 
@@ -2389,14 +2384,12 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 
 	if (src->sched_scan_plans_num > 0) {
 		params->sched_scan_plans =
-			os_malloc(sizeof(*src->sched_scan_plans) *
+			os_memdup(src->sched_scan_plans,
+				  sizeof(*src->sched_scan_plans) *
 				  src->sched_scan_plans_num);
 		if (!params->sched_scan_plans)
 			goto failed;
 
-		os_memcpy(params->sched_scan_plans, src->sched_scan_plans,
-			  sizeof(*src->sched_scan_plans) *
-			  src->sched_scan_plans_num);
 		params->sched_scan_plans_num = src->sched_scan_plans_num;
 	}
 
@@ -2421,10 +2414,9 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	if (src->bssid) {
 		u8 *bssid;
 
-		bssid = os_malloc(ETH_ALEN);
+		bssid = os_memdup(src->bssid, ETH_ALEN);
 		if (!bssid)
 			goto failed;
-		os_memcpy(bssid, src->bssid, ETH_ALEN);
 		params->bssid = bssid;
 	}
 

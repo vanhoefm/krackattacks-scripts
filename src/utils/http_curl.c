@@ -486,12 +486,11 @@ static void add_logo(struct http_ctx *ctx, struct http_cert *hcert,
 		return;
 
 	n->hash_len = ASN1_STRING_length(hash->hashValue);
-	n->hash = os_malloc(n->hash_len);
+	n->hash = os_memdup(ASN1_STRING_data(hash->hashValue), n->hash_len);
 	if (n->hash == NULL) {
 		os_free(n->alg_oid);
 		return;
 	}
-	os_memcpy(n->hash, ASN1_STRING_data(hash->hashValue), n->hash_len);
 
 	len = ASN1_STRING_length(uri);
 	n->uri = os_malloc(len + 1);

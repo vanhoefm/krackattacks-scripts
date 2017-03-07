@@ -963,10 +963,9 @@ static u8 *radius_msg_get_vendor_attr(struct radius_msg *msg, u32 vendor,
 			}
 
 			len = vhdr->vendor_length - sizeof(*vhdr);
-			data = os_malloc(len);
+			data = os_memdup(pos + sizeof(*vhdr), len);
 			if (data == NULL)
 				return NULL;
-			os_memcpy(data, pos + sizeof(*vhdr), len);
 			if (alen)
 				*alen = len;
 			return data;
@@ -1043,12 +1042,11 @@ static u8 * decrypt_ms_key(const u8 *key, size_t len,
 		return NULL;
 	}
 
-	res = os_malloc(plain[0]);
+	res = os_memdup(plain + 1, plain[0]);
 	if (res == NULL) {
 		os_free(plain);
 		return NULL;
 	}
-	os_memcpy(res, plain + 1, plain[0]);
 	if (reslen)
 		*reslen = plain[0];
 	os_free(plain);
@@ -1597,10 +1595,9 @@ char * radius_msg_get_tunnel_password(struct radius_msg *msg, int *keylen,
 		goto out;
 
 	/* alloc writable memory for decryption */
-	buf = os_malloc(fdlen);
+	buf = os_memdup(fdata, fdlen);
 	if (buf == NULL)
 		goto out;
-	os_memcpy(buf, fdata, fdlen);
 	buflen = fdlen;
 
 	/* init pointers */
@@ -1687,12 +1684,11 @@ int radius_copy_class(struct radius_class_data *dst,
 	dst->count = 0;
 
 	for (i = 0; i < src->count; i++) {
-		dst->attr[i].data = os_malloc(src->attr[i].len);
+		dst->attr[i].data = os_memdup(src->attr[i].data,
+					      src->attr[i].len);
 		if (dst->attr[i].data == NULL)
 			break;
 		dst->count++;
-		os_memcpy(dst->attr[i].data, src->attr[i].data,
-			  src->attr[i].len);
 		dst->attr[i].len = src->attr[i].len;
 	}
 

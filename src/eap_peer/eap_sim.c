@@ -437,15 +437,14 @@ static int eap_sim_learn_ids(struct eap_sm *sm, struct eap_sim_data *data,
 
 	if (attr->next_reauth_id) {
 		os_free(data->reauth_id);
-		data->reauth_id = os_malloc(attr->next_reauth_id_len);
+		data->reauth_id = os_memdup(attr->next_reauth_id,
+					    attr->next_reauth_id_len);
 		if (data->reauth_id == NULL) {
 			wpa_printf(MSG_INFO, "EAP-SIM: (encr) No memory for "
 				   "next reauth_id");
 			data->reauth_id_len = 0;
 			return -1;
 		}
-		os_memcpy(data->reauth_id, attr->next_reauth_id,
-			  attr->next_reauth_id_len);
 		data->reauth_id_len = attr->next_reauth_id_len;
 		wpa_hexdump_ascii(MSG_DEBUG,
 				  "EAP-SIM: (encr) AT_NEXT_REAUTH_ID",
@@ -640,14 +639,13 @@ static struct wpabuf * eap_sim_process_start(struct eap_sm *sm,
 	}
 
 	os_free(data->ver_list);
-	data->ver_list = os_malloc(attr->version_list_len);
+	data->ver_list = os_memdup(attr->version_list, attr->version_list_len);
 	if (data->ver_list == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Failed to allocate "
 			   "memory for version list");
 		return eap_sim_client_error(data, id,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
 	}
-	os_memcpy(data->ver_list, attr->version_list, attr->version_list_len);
 	data->ver_list_len = attr->version_list_len;
 	pos = data->ver_list;
 	for (i = 0; i < data->ver_list_len / 2; i++) {
@@ -1186,12 +1184,11 @@ static u8 * eap_sim_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_SIM_KEYING_DATA_LEN);
+	key = os_memdup(data->msk, EAP_SIM_KEYING_DATA_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_SIM_KEYING_DATA_LEN;
-	os_memcpy(key, data->msk, EAP_SIM_KEYING_DATA_LEN);
 
 	return key;
 }
@@ -1228,12 +1225,11 @@ static u8 * eap_sim_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->emsk, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_EMSK_LEN;
-	os_memcpy(key, data->emsk, EAP_EMSK_LEN);
 
 	return key;
 }

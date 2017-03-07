@@ -362,12 +362,11 @@ static int wpa_driver_wext_event_wireless_assocreqie(
 	wpa_hexdump(MSG_DEBUG, "AssocReq IE wireless event", (const u8 *) ev,
 		    len);
 	os_free(drv->assoc_req_ies);
-	drv->assoc_req_ies = os_malloc(len);
+	drv->assoc_req_ies = os_memdup(ev, len);
 	if (drv->assoc_req_ies == NULL) {
 		drv->assoc_req_ies_len = 0;
 		return -1;
 	}
-	os_memcpy(drv->assoc_req_ies, ev, len);
 	drv->assoc_req_ies_len = len;
 
 	return 0;
@@ -383,12 +382,11 @@ static int wpa_driver_wext_event_wireless_assocrespie(
 	wpa_hexdump(MSG_DEBUG, "AssocResp IE wireless event", (const u8 *) ev,
 		    len);
 	os_free(drv->assoc_resp_ies);
-	drv->assoc_resp_ies = os_malloc(len);
+	drv->assoc_resp_ies = os_memdup(ev, len);
 	if (drv->assoc_resp_ies == NULL) {
 		drv->assoc_resp_ies_len = 0;
 		return -1;
 	}
-	os_memcpy(drv->assoc_resp_ies, ev, len);
 	drv->assoc_resp_ies_len = len;
 
 	return 0;

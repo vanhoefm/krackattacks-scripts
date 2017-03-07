@@ -307,13 +307,12 @@ static int hostapd_config_read_eap_user(const char *fname,
 				goto failed;
 			}
 
-			user->identity = os_malloc(pos - start);
+			user->identity = os_memdup(start, pos - start);
 			if (user->identity == NULL) {
 				wpa_printf(MSG_ERROR, "Failed to allocate "
 					   "memory for EAP identity");
 				goto failed;
 			}
-			os_memcpy(user->identity, start, pos - start);
 			user->identity_len = pos - start;
 
 			if (pos[0] == '"' && pos[1] == '*') {
@@ -431,13 +430,12 @@ static int hostapd_config_read_eap_user(const char *fname,
 				goto failed;
 			}
 
-			user->password = os_malloc(pos - start);
+			user->password = os_memdup(start, pos - start);
 			if (user->password == NULL) {
 				wpa_printf(MSG_ERROR, "Failed to allocate "
 					   "memory for EAP password");
 				goto failed;
 			}
-			os_memcpy(user->password, start, pos - start);
 			user->password_len = pos - start;
 
 			pos++;
@@ -782,10 +780,9 @@ static int hostapd_config_read_wep(struct hostapd_wep_keys *wep, int keyidx,
 		if (len < 2 || val[len - 1] != '"')
 			return -1;
 		len -= 2;
-		wep->key[keyidx] = os_malloc(len);
+		wep->key[keyidx] = os_memdup(val + 1, len);
 		if (wep->key[keyidx] == NULL)
 			return -1;
-		os_memcpy(wep->key[keyidx], val + 1, len);
 		wep->len[keyidx] = len;
 	} else {
 		if (len & 1)

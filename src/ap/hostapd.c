@@ -2953,60 +2953,52 @@ static int hostapd_build_beacon_data(struct hostapd_data *hapd,
 		goto free_ap_params;
 
 	ret = -1;
-	beacon->head = os_malloc(params.head_len);
+	beacon->head = os_memdup(params.head, params.head_len);
 	if (!beacon->head)
 		goto free_ap_extra_ies;
 
-	os_memcpy(beacon->head, params.head, params.head_len);
 	beacon->head_len = params.head_len;
 
-	beacon->tail = os_malloc(params.tail_len);
+	beacon->tail = os_memdup(params.tail, params.tail_len);
 	if (!beacon->tail)
 		goto free_beacon;
 
-	os_memcpy(beacon->tail, params.tail, params.tail_len);
 	beacon->tail_len = params.tail_len;
 
 	if (params.proberesp != NULL) {
-		beacon->probe_resp = os_malloc(params.proberesp_len);
+		beacon->probe_resp = os_memdup(params.proberesp,
+					       params.proberesp_len);
 		if (!beacon->probe_resp)
 			goto free_beacon;
 
-		os_memcpy(beacon->probe_resp, params.proberesp,
-			  params.proberesp_len);
 		beacon->probe_resp_len = params.proberesp_len;
 	}
 
 	/* copy the extra ies */
 	if (beacon_extra) {
-		beacon->beacon_ies = os_malloc(wpabuf_len(beacon_extra));
+		beacon->beacon_ies = os_memdup(beacon_extra->buf,
+					       wpabuf_len(beacon_extra));
 		if (!beacon->beacon_ies)
 			goto free_beacon;
 
-		os_memcpy(beacon->beacon_ies,
-			  beacon_extra->buf, wpabuf_len(beacon_extra));
 		beacon->beacon_ies_len = wpabuf_len(beacon_extra);
 	}
 
 	if (proberesp_extra) {
-		beacon->proberesp_ies =
-			os_malloc(wpabuf_len(proberesp_extra));
+		beacon->proberesp_ies = os_memdup(proberesp_extra->buf,
+						  wpabuf_len(proberesp_extra));
 		if (!beacon->proberesp_ies)
 			goto free_beacon;
 
-		os_memcpy(beacon->proberesp_ies, proberesp_extra->buf,
-			  wpabuf_len(proberesp_extra));
 		beacon->proberesp_ies_len = wpabuf_len(proberesp_extra);
 	}
 
 	if (assocresp_extra) {
-		beacon->assocresp_ies =
-			os_malloc(wpabuf_len(assocresp_extra));
+		beacon->assocresp_ies = os_memdup(assocresp_extra->buf,
+						  wpabuf_len(assocresp_extra));
 		if (!beacon->assocresp_ies)
 			goto free_beacon;
 
-		os_memcpy(beacon->assocresp_ies, assocresp_extra->buf,
-			  wpabuf_len(assocresp_extra));
 		beacon->assocresp_ies_len = wpabuf_len(assocresp_extra);
 	}
 

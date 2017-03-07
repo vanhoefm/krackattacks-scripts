@@ -318,11 +318,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		for (i = 0; i < NUM_WEP_KEYS; i++) {
 			if (ssid->wep_key_len[i] == 0)
 				continue;
-			wep->key[i] = os_malloc(ssid->wep_key_len[i]);
+			wep->key[i] = os_memdup(ssid->wep_key[i],
+						ssid->wep_key_len[i]);
 			if (wep->key[i] == NULL)
 				return -1;
-			os_memcpy(wep->key[i], ssid->wep_key[i],
-				  ssid->wep_key_len[i]);
 			wep->len[i] = ssid->wep_key_len[i];
 		}
 		wep->idx = ssid->wep_tx_keyidx;

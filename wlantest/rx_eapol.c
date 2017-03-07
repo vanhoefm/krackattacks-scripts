@@ -41,10 +41,9 @@ static int check_mic(const u8 *kck, size_t kck_len, int akmp, int ver,
 	u8 rx_mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
 	size_t mic_len = wpa_mic_len(akmp);
 
-	buf = os_malloc(len);
+	buf = os_memdup(data, len);
 	if (buf == NULL)
 		return -1;
-	os_memcpy(buf, data, len);
 	hdr = (struct ieee802_1x_hdr *) buf;
 	key = (struct wpa_eapol_key *) (hdr + 1);
 
@@ -355,13 +354,12 @@ static u8 * decrypt_eapol_key_data_rc4(struct wlantest *wt, const u8 *kek,
 {
 	u8 ek[32], *buf;
 
-	buf = os_malloc(keydatalen);
+	buf = os_memdup(keydata, keydatalen);
 	if (buf == NULL)
 		return NULL;
 
 	os_memcpy(ek, hdr->key_iv, 16);
 	os_memcpy(ek + 16, kek, 16);
-	os_memcpy(buf, keydata, keydatalen);
 	if (rc4_skip(ek, 32, 256, buf, keydatalen)) {
 		add_note(wt, MSG_INFO, "RC4 failed");
 		os_free(buf);

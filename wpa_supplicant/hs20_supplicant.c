@@ -429,10 +429,9 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 	dl_list_for_each(icon, &wpa_s->icon_head, struct icon_entry, list) {
 		if (icon->dialog_token == dialog_token && !icon->image &&
 		    os_memcmp(icon->bssid, sa, ETH_ALEN) == 0) {
-			icon->image = os_malloc(slen);
+			icon->image = os_memdup(pos, slen);
 			if (!icon->image)
 				return -1;
-			os_memcpy(icon->image, pos, slen);
 			icon->image_len = slen;
 			hs20_remove_duplicate_icons(wpa_s, icon);
 			wpa_msg(wpa_s, MSG_INFO,

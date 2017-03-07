@@ -71,11 +71,10 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 	}
 
 	if (eap_user->password) {
-		user->password = os_malloc(eap_user->password_len);
+		user->password = os_memdup(eap_user->password,
+					   eap_user->password_len);
 		if (user->password == NULL)
 			goto out;
-		os_memcpy(user->password, eap_user->password,
-			  eap_user->password_len);
 		user->password_len = eap_user->password_len;
 		user->password_hash = eap_user->password_hash;
 	}

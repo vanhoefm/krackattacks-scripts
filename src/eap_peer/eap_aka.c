@@ -415,15 +415,14 @@ static int eap_aka_learn_ids(struct eap_sm *sm, struct eap_aka_data *data,
 
 	if (attr->next_reauth_id) {
 		os_free(data->reauth_id);
-		data->reauth_id = os_malloc(attr->next_reauth_id_len);
+		data->reauth_id = os_memdup(attr->next_reauth_id,
+					    attr->next_reauth_id_len);
 		if (data->reauth_id == NULL) {
 			wpa_printf(MSG_INFO, "EAP-AKA: (encr) No memory for "
 				   "next reauth_id");
 			data->reauth_id_len = 0;
 			return -1;
 		}
-		os_memcpy(data->reauth_id, attr->next_reauth_id,
-			  attr->next_reauth_id_len);
 		data->reauth_id_len = attr->next_reauth_id_len;
 		wpa_hexdump_ascii(MSG_DEBUG,
 				  "EAP-AKA: (encr) AT_NEXT_REAUTH_ID",
@@ -913,14 +912,13 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 			return eap_aka_authentication_reject(data, id);
 		}
 		os_free(data->network_name);
-		data->network_name = os_malloc(attr->kdf_input_len);
+		data->network_name = os_memdup(attr->kdf_input,
+					       attr->kdf_input_len);
 		if (data->network_name == NULL) {
 			wpa_printf(MSG_WARNING, "EAP-AKA': No memory for "
 				   "storing Network Name");
 			return eap_aka_authentication_reject(data, id);
 		}
-		os_memcpy(data->network_name, attr->kdf_input,
-			  attr->kdf_input_len);
 		data->network_name_len = attr->kdf_input_len;
 		wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA': Network Name "
 				  "(AT_KDF_INPUT)",
@@ -1442,12 +1440,11 @@ static u8 * eap_aka_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_SIM_KEYING_DATA_LEN);
+	key = os_memdup(data->msk, EAP_SIM_KEYING_DATA_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_SIM_KEYING_DATA_LEN;
-	os_memcpy(key, data->msk, EAP_SIM_KEYING_DATA_LEN);
 
 	return key;
 }
@@ -1483,12 +1480,11 @@ static u8 * eap_aka_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->emsk, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_EMSK_LEN;
-	os_memcpy(key, data->emsk, EAP_EMSK_LEN);
 
 	return key;
 }

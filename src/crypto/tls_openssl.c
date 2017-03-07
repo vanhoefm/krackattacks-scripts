@@ -4227,11 +4227,10 @@ static int tls_session_ticket_ext_cb(SSL *s, const unsigned char *data,
 	wpa_hexdump(MSG_DEBUG, "OpenSSL: ClientHello SessionTicket "
 		    "extension", data, len);
 
-	conn->session_ticket = os_malloc(len);
+	conn->session_ticket = os_memdup(data, len);
 	if (conn->session_ticket == NULL)
 		return 0;
 
-	os_memcpy(conn->session_ticket, data, len);
 	conn->session_ticket_len = len;
 
 	return 1;

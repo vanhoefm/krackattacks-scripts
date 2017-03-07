@@ -285,10 +285,9 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 	peer->sm_tmr.peer_capab = peer_capab;
 	peer->sm_tmr.buf_len = msg_len;
 	os_free(peer->sm_tmr.buf);
-	peer->sm_tmr.buf = os_malloc(msg_len);
+	peer->sm_tmr.buf = os_memdup(msg, msg_len);
 	if (peer->sm_tmr.buf == NULL)
 		return -1;
-	os_memcpy(peer->sm_tmr.buf, msg, msg_len);
 
 	wpa_printf(MSG_DEBUG, "TDLS: Retry timeout registered "
 		   "(action_code=%u)", action_code);

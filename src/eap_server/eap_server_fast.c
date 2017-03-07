@@ -471,12 +471,11 @@ static void * eap_fast_init(struct eap_sm *sm)
 		eap_fast_reset(sm, data);
 		return NULL;
 	}
-	data->srv_id = os_malloc(sm->eap_fast_a_id_len);
+	data->srv_id = os_memdup(sm->eap_fast_a_id, sm->eap_fast_a_id_len);
 	if (data->srv_id == NULL) {
 		eap_fast_reset(sm, data);
 		return NULL;
 	}
-	os_memcpy(data->srv_id, sm->eap_fast_a_id, sm->eap_fast_a_id_len);
 	data->srv_id_len = sm->eap_fast_a_id_len;
 
 	if (sm->eap_fast_a_id_info == NULL) {

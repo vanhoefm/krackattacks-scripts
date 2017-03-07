@@ -1970,10 +1970,9 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	 * Make a copy of the frame since we need to modify the buffer during
 	 * MAC validation and Key Data decryption.
 	 */
-	tmp = os_malloc(data_len);
+	tmp = os_memdup(buf, data_len);
 	if (tmp == NULL)
 		goto out;
-	os_memcpy(tmp, buf, data_len);
 	key = (struct wpa_eapol_key *) (tmp + sizeof(struct ieee802_1x_hdr));
 	mic = (u8 *) (key + 1);
 	key_data = mic + mic_len + 2;
@@ -2896,11 +2895,10 @@ int wpa_sm_set_assoc_wpa_ie_default(struct wpa_sm *sm, u8 *wpa_ie,
 		 * the correct version of the IE even if PMKSA caching is
 		 * aborted (which would remove PMKID from IE generation).
 		 */
-		sm->assoc_wpa_ie = os_malloc(*wpa_ie_len);
+		sm->assoc_wpa_ie = os_memdup(wpa_ie, *wpa_ie_len);
 		if (sm->assoc_wpa_ie == NULL)
 			return -1;
 
-		os_memcpy(sm->assoc_wpa_ie, wpa_ie, *wpa_ie_len);
 		sm->assoc_wpa_ie_len = *wpa_ie_len;
 	} else {
 		wpa_hexdump(MSG_DEBUG,
@@ -2936,11 +2934,10 @@ int wpa_sm_set_assoc_wpa_ie(struct wpa_sm *sm, const u8 *ie, size_t len)
 		sm->assoc_wpa_ie_len = 0;
 	} else {
 		wpa_hexdump(MSG_DEBUG, "WPA: set own WPA/RSN IE", ie, len);
-		sm->assoc_wpa_ie = os_malloc(len);
+		sm->assoc_wpa_ie = os_memdup(ie, len);
 		if (sm->assoc_wpa_ie == NULL)
 			return -1;
 
-		os_memcpy(sm->assoc_wpa_ie, ie, len);
 		sm->assoc_wpa_ie_len = len;
 	}
 
@@ -2971,11 +2968,10 @@ int wpa_sm_set_ap_wpa_ie(struct wpa_sm *sm, const u8 *ie, size_t len)
 		sm->ap_wpa_ie_len = 0;
 	} else {
 		wpa_hexdump(MSG_DEBUG, "WPA: set AP WPA IE", ie, len);
-		sm->ap_wpa_ie = os_malloc(len);
+		sm->ap_wpa_ie = os_memdup(ie, len);
 		if (sm->ap_wpa_ie == NULL)
 			return -1;
 
-		os_memcpy(sm->ap_wpa_ie, ie, len);
 		sm->ap_wpa_ie_len = len;
 	}
 
@@ -3006,11 +3002,10 @@ int wpa_sm_set_ap_rsn_ie(struct wpa_sm *sm, const u8 *ie, size_t len)
 		sm->ap_rsn_ie_len = 0;
 	} else {
 		wpa_hexdump(MSG_DEBUG, "WPA: set AP RSN IE", ie, len);
-		sm->ap_rsn_ie = os_malloc(len);
+		sm->ap_rsn_ie = os_memdup(ie, len);
 		if (sm->ap_rsn_ie == NULL)
 			return -1;
 
-		os_memcpy(sm->ap_rsn_ie, ie, len);
 		sm->ap_rsn_ie_len = len;
 	}
 

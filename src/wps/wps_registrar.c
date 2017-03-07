@@ -748,12 +748,11 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
 		p->wildcard_uuid = 1;
 	else
 		os_memcpy(p->uuid, uuid, WPS_UUID_LEN);
-	p->pin = os_malloc(pin_len);
+	p->pin = os_memdup(pin, pin_len);
 	if (p->pin == NULL) {
 		os_free(p);
 		return -1;
 	}
-	os_memcpy(p->pin, pin, pin_len);
 	p->pin_len = pin_len;
 
 	if (timeout) {
@@ -1404,10 +1403,9 @@ static int wps_get_dev_password(struct wps_data *wps)
 		return -1;
 	}
 
-	wps->dev_password = os_malloc(pin_len);
+	wps->dev_password = os_memdup(pin, pin_len);
 	if (wps->dev_password == NULL)
 		return -1;
-	os_memcpy(wps->dev_password, pin, pin_len);
 	wps->dev_password_len = pin_len;
 
 	return 0;

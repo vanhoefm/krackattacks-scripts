@@ -4340,6 +4340,15 @@ enum wpa_event_type {
 	 * range.
 	 */
 	EVENT_BEACON_LOSS,
+
+	/**
+	 * EVENT_DFS_PRE_CAC_EXPIRED - Notify that channel availability check
+	 * done previously (Pre-CAC) on the channel has expired. This would
+	 * normally be on a non-ETSI DFS regulatory domain. DFS state of the
+	 * channel will be moved from available to usable. A new CAC has to be
+	 * performed before start operating on this channel.
+	 */
+	EVENT_DFS_PRE_CAC_EXPIRED,
 };
 
 

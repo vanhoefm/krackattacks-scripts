@@ -82,6 +82,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(DFS_CAC_STARTED);
 	E2S(P2P_LO_STOP);
 	E2S(BEACON_LOSS);
+	E2S(DFS_PRE_CAC_EXPIRED);
 	}
 
 	return "UNKNOWN";

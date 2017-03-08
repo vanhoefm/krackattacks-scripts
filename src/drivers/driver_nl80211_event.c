@@ -1568,6 +1568,10 @@ static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 	case NL80211_RADAR_NOP_FINISHED:
 		wpa_supplicant_event(drv->ctx, EVENT_DFS_NOP_FINISHED, &data);
 		break;
+	case NL80211_RADAR_PRE_CAC_EXPIRED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_PRE_CAC_EXPIRED,
+				     &data);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Unknown radar event %d "
 			   "received", event_type);

@@ -1730,3 +1730,23 @@ def test_wnm_bss_tm_ap_proto(dev, apdev):
             raise Exception("MGMT_RX_PROCESS failed")
 
     hapd.set("ext_mgmt_frame_handling", "0")
+
+def test_wnm_bss_transition_mgmt_query_with_unknown_candidates(dev, apdev):
+    """WNM BSS Transition Management query with unknown candidates"""
+    params = { "ssid": "test-wnm",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], 2412)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("WNM_BSS_QUERY 0 neighbor=00:11:22:33:44:55,0,81,1,4")
+
+    ev = dev[0].wait_event(["WNM: BSS Transition Management Request"],
+                           timeout=5)
+    if ev is None:
+        raise Exception("No BSS Transition Management Request frame seen")
+
+    ev = hapd.wait_event(["BSS-TM-RESP"], timeout=5)
+    if ev is None:
+        raise Exception("No BSS Transition Management Response frame seen")

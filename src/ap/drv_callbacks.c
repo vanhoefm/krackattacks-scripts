@@ -1121,6 +1121,16 @@ static void hostapd_event_dfs_radar_detected(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_event_dfs_pre_cac_expired(struct hostapd_data *hapd,
+					      struct dfs_event *radar)
+{
+	wpa_printf(MSG_DEBUG, "DFS Pre-CAC expired on %d MHz", radar->freq);
+	hostapd_dfs_pre_cac_expired(hapd->iface, radar->freq, radar->ht_enabled,
+				    radar->chan_offset, radar->chan_width,
+				    radar->cf1, radar->cf2);
+}
+
+
 static void hostapd_event_dfs_cac_finished(struct hostapd_data *hapd,
 					   struct dfs_event *radar)
 {
@@ -1312,6 +1322,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (!data)
 			break;
 		hostapd_event_dfs_radar_detected(hapd, &data->dfs_event);
+		break;
+	case EVENT_DFS_PRE_CAC_EXPIRED:
+		if (!data)
+			break;
+		hostapd_event_dfs_pre_cac_expired(hapd, &data->dfs_event);
 		break;
 	case EVENT_DFS_CAC_FINISHED:
 		if (!data)

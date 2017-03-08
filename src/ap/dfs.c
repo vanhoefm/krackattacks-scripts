@@ -1,7 +1,7 @@
 /*
  * DFS - Dynamic Frequency Selection
  * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2013-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2013-2017, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -801,6 +801,25 @@ int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 			}
 		}
 	}
+
+	return 0;
+}
+
+
+int hostapd_dfs_pre_cac_expired(struct hostapd_iface *iface, int freq,
+				int ht_enabled, int chan_offset, int chan_width,
+				int cf1, int cf2)
+{
+	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_PRE_CAC_EXPIRED
+		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
+		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+
+	/* Proceed only if DFS is not offloaded to the driver */
+	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
+		return 0;
+
+	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
+		      cf1, cf2, HOSTAPD_CHAN_DFS_USABLE);
 
 	return 0;
 }

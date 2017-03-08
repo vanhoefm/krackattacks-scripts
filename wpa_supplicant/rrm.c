@@ -409,7 +409,8 @@ static void wpas_rrm_send_msr_report(struct wpa_supplicant *wpa_s,
 			pos = next;
 		}
 
-		next += next[1] + 2;
+		if (len)
+			next += next[1] + 2;
 	}
 #undef MPDU_REPORT_LEN
 }

@@ -3410,7 +3410,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wnm_sleep", wpa_cli_cmd_wnm_sleep, NULL, cli_cmd_flag_none,
 	  "<enter/exit> [interval=#] = enter/exit WNM-Sleep mode" },
 	{ "wnm_bss_query", wpa_cli_cmd_wnm_bss_query, NULL, cli_cmd_flag_none,
-	  "<query reason> [list] = Send BSS Transition Management Query" },
+	  "<query reason> [list]"
+	  " [neighbor=<BSSID>,<BSSID information>,<operating class>,<channel number>,<PHY type>[,<hexdump of optional subelements>]"
+	  " = Send BSS Transition Management Query" },
 #endif /* CONFIG_WNM */
 	{ "raw", wpa_cli_cmd_raw, NULL, cli_cmd_flag_sensitive,
 	  "<params..> = Sent unprocessed command" },

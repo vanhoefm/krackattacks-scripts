@@ -1486,7 +1486,9 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 #define BTM_QUERY_MIN_SIZE	4
 
 int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
-				       u8 query_reason, int cand_list)
+				       u8 query_reason,
+				       const char *btm_candidates,
+				       int cand_list)
 {
 	struct wpabuf *buf;
 	int ret;
@@ -1507,6 +1509,26 @@ int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
 
 	if (cand_list)
 		wnm_add_cand_list(wpa_s, &buf);
+
+	if (btm_candidates) {
+		const size_t max_len = 1000;
+
+		ret = wpabuf_resize(&buf, max_len);
+		if (ret < 0) {
+			wpabuf_free(buf);
+			return ret;
+		}
+
+		ret = ieee802_11_parse_candidate_list(btm_candidates,
+						      wpabuf_put(buf, 0),
+						      max_len);
+		if (ret < 0) {
+			wpabuf_free(buf);
+			return ret;
+		}
+
+		wpabuf_put(buf, ret);
+	}
 
 	ret = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
 				  wpa_s->own_addr, wpa_s->bssid,

@@ -793,7 +793,7 @@ static int wpas_add_beacon_rep(struct wpa_supplicant *wpa_s,
 	u8 *ie = (u8 *) (bss + 1);
 	size_t ie_len = bss->ie_len + bss->beacon_ie_len;
 	int ret;
-	u8 buf[2000];
+	u8 *buf;
 	struct rrm_measurement_beacon_report *rep;
 
 	if (os_memcmp(data->bssid, broadcast_ether_addr, ETH_ALEN) != 0 &&
@@ -805,10 +805,18 @@ static int wpas_add_beacon_rep(struct wpa_supplicant *wpa_s,
 	     os_memcmp(data->ssid, bss->ssid, bss->ssid_len) != 0))
 		return 0;
 
+	/* Maximum element length: beacon report element + reported frame body
+	 * subelement + all IEs of the reported beacon */
+	buf = os_malloc(sizeof(*rep) + 14 + ie_len);
+	if (!buf)
+		return -1;
+
 	rep = (struct rrm_measurement_beacon_report *) buf;
 	if (wpas_get_op_chan_phy(bss->freq, ie, ie_len, &rep->op_class,
-				 &rep->channel, &rep->report_info) < 0)
-		return 0;
+				 &rep->channel, &rep->report_info) < 0) {
+		ret = 0;
+		goto out;
+	}
 
 	rep->start_time = host_to_le64(start);
 	rep->duration = host_to_le16(data->scan_params.duration);
@@ -819,15 +827,17 @@ static int wpas_add_beacon_rep(struct wpa_supplicant *wpa_s,
 	rep->parent_tsf = host_to_le32(parent_tsf);
 
 	ret = wpas_beacon_rep_add_frame_body(data->eids, data->report_detail,
-					     bss, rep->variable,
-					     sizeof(buf) - sizeof(*rep));
+					     bss, rep->variable, 14 + ie_len);
 	if (ret < 0)
-		return -1;
+		goto out;
 
-	return wpas_rrm_report_elem(wpa_buf, wpa_s->beacon_rep_data.token,
-				    MEASUREMENT_REPORT_MODE_ACCEPT,
-				    MEASURE_TYPE_BEACON, buf,
-				    ret + sizeof(*rep));
+	ret = wpas_rrm_report_elem(wpa_buf, wpa_s->beacon_rep_data.token,
+				   MEASUREMENT_REPORT_MODE_ACCEPT,
+				   MEASURE_TYPE_BEACON, buf,
+				   ret + sizeof(*rep));
+out:
+	os_free(buf);
+	return ret;
 }
 
 

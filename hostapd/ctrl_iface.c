@@ -838,7 +838,7 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 	char *url = NULL;
 	int ret;
 	u8 nei_rep[1000];
-	u8 *nei_pos = nei_rep;
+	int nei_len;
 	u8 mbo[10];
 	size_t mbo_len = 0;
 
@@ -888,99 +888,10 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 		WPA_PUT_LE16(&bss_term_dur[10], atoi(end));
 	}
 
-
-	/*
-	 * BSS Transition Candidate List Entries - Neighbor Report elements
-	 * neighbor=<BSSID>,<BSSID Information>,<Operating Class>,
-	 * <Channel Number>,<PHY Type>[,<hexdump of Optional Subelements>]
-	 */
-	pos = cmd;
-	while (pos) {
-		u8 *nei_start;
-		long int val;
-		char *endptr, *tmp;
-
-		pos = os_strstr(pos, " neighbor=");
-		if (!pos)
-			break;
-		if (nei_pos + 15 > nei_rep + sizeof(nei_rep)) {
-			wpa_printf(MSG_DEBUG,
-				   "Not enough room for additional neighbor");
-			return -1;
-		}
-		pos += 10;
-
-		nei_start = nei_pos;
-		*nei_pos++ = WLAN_EID_NEIGHBOR_REPORT;
-		nei_pos++; /* length to be filled in */
-
-		if (hwaddr_aton(pos, nei_pos)) {
-			wpa_printf(MSG_DEBUG, "Invalid BSSID");
-			return -1;
-		}
-		nei_pos += ETH_ALEN;
-		pos += 17;
-		if (*pos != ',') {
-			wpa_printf(MSG_DEBUG, "Missing BSSID Information");
-			return -1;
-		}
-		pos++;
-
-		val = strtol(pos, &endptr, 0);
-		WPA_PUT_LE32(nei_pos, val);
-		nei_pos += 4;
-		if (*endptr != ',') {
-			wpa_printf(MSG_DEBUG, "Missing Operating Class");
-			return -1;
-		}
-		pos = endptr + 1;
-
-		*nei_pos++ = atoi(pos); /* Operating Class */
-		pos = os_strchr(pos, ',');
-		if (pos == NULL) {
-			wpa_printf(MSG_DEBUG, "Missing Channel Number");
-			return -1;
-		}
-		pos++;
-
-		*nei_pos++ = atoi(pos); /* Channel Number */
-		pos = os_strchr(pos, ',');
-		if (pos == NULL) {
-			wpa_printf(MSG_DEBUG, "Missing PHY Type");
-			return -1;
-		}
-		pos++;
-
-		*nei_pos++ = atoi(pos); /* PHY Type */
-		end = os_strchr(pos, ' ');
-		tmp = os_strchr(pos, ',');
-		if (tmp && (!end || tmp < end)) {
-			/* Optional Subelements (hexdump) */
-			size_t len;
-
-			pos = tmp + 1;
-			end = os_strchr(pos, ' ');
-			if (end)
-				len = end - pos;
-			else
-				len = os_strlen(pos);
-			if (nei_pos + len / 2 > nei_rep + sizeof(nei_rep)) {
-				wpa_printf(MSG_DEBUG,
-					   "Not enough room for neighbor subelements");
-				return -1;
-			}
-			if (len & 0x01 ||
-			    hexstr2bin(pos, nei_pos, len / 2) < 0) {
-				wpa_printf(MSG_DEBUG,
-					   "Invalid neighbor subelement info");
-				return -1;
-			}
-			nei_pos += len / 2;
-			pos = end;
-		}
-
-		nei_start[1] = nei_pos - nei_start - 2;
-	}
+	nei_len = ieee802_11_parse_candidate_list(cmd, nei_rep,
+						  sizeof(nei_rep));
+	if (nei_len < 0)
+		return -1;
 
 	pos = os_strstr(cmd, " url=");
 	if (pos) {
@@ -1067,9 +978,8 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 
 	ret = wnm_send_bss_tm_req(hapd, sta, req_mode, disassoc_timer,
 				  valid_int, bss_term_dur, url,
-				  nei_pos > nei_rep ? nei_rep : NULL,
-				  nei_pos - nei_rep, mbo_len ? mbo : NULL,
-				  mbo_len);
+				  nei_len ? nei_rep : NULL, nei_len,
+				  mbo_len ? mbo : NULL, mbo_len);
 #ifdef CONFIG_MBO
 fail:
 #endif /* CONFIG_MBO */

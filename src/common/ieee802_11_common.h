@@ -186,4 +186,7 @@ u8 country_to_global_op_class(const char *country, u8 op_class);
 
 const struct oper_class_map * get_oper_class(const char *country, u8 op_class);
 
+int ieee802_11_parse_candidate_list(const char *pos, u8 *nei_rep,
+				    size_t nei_rep_len);
+
 #endif /* IEEE802_11_COMMON_H */

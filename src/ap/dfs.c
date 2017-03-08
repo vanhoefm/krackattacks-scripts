@@ -747,6 +747,23 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 }
 
 
+static int hostapd_config_dfs_chan_available(struct hostapd_iface *iface)
+{
+	int n_chans, n_chans1, start_chan_idx, start_chan_idx1;
+
+	/* Get the start (first) channel for current configuration */
+	start_chan_idx = dfs_get_start_chan_idx(iface, &start_chan_idx1);
+	if (start_chan_idx < 0)
+		return 0;
+
+	/* Get the number of used channels, depending on width */
+	n_chans = dfs_get_used_n_chans(iface, &n_chans1);
+
+	/* Check if all channels are DFS available */
+	return dfs_check_chans_available(iface, start_chan_idx, n_chans);
+}
+
+
 int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 			     int ht_enabled, int chan_offset, int chan_width,
 			     int cf1, int cf2)
@@ -767,8 +784,21 @@ int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 			set_dfs_state(iface, freq, ht_enabled, chan_offset,
 				      chan_width, cf1, cf2,
 				      HOSTAPD_CHAN_DFS_AVAILABLE);
-			iface->cac_started = 0;
-			hostapd_setup_interface_complete(iface, 0);
+			/*
+			 * Just mark the channel available when CAC completion
+			 * event is received in enabled state. CAC result could
+			 * have been propagated from another radio having the
+			 * same regulatory configuration. When CAC completion is
+			 * received during non-HAPD_IFACE_ENABLED state, make
+			 * sure the configured channel is available because this
+			 * CAC completion event could have been propagated from
+			 * another radio.
+			 */
+			if (iface->state != HAPD_IFACE_ENABLED &&
+			    hostapd_config_dfs_chan_available(iface)) {
+				hostapd_setup_interface_complete(iface, 0);
+				iface->cac_started = 0;
+			}
 		}
 	}
 

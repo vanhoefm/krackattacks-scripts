@@ -515,10 +515,11 @@ void wpas_mbo_update_cell_capa(struct wpa_supplicant *wpa_s, u8 mbo_cell_capa)
 
 
 struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
-				   struct wpa_bss *bss)
+				   struct wpa_bss *bss, u32 mbo_subtypes)
 {
 	struct wpabuf *anqp_buf;
 	u8 *len_pos;
+	u8 i;
 
 	if (!wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
 		wpa_printf(MSG_INFO, "MBO: " MACSTR
@@ -527,7 +528,8 @@ struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
-	anqp_buf = wpabuf_alloc(10);
+	/* Allocate size for the maximum case - all MBO subtypes are set */
+	anqp_buf = wpabuf_alloc(9 + MAX_MBO_ANQP_SUBTYPE);
 	if (!anqp_buf)
 		return NULL;
 
@@ -535,7 +537,14 @@ struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
 	wpabuf_put_be24(anqp_buf, OUI_WFA);
 	wpabuf_put_u8(anqp_buf, MBO_ANQP_OUI_TYPE);
 
-	wpabuf_put_u8(anqp_buf, MBO_ANQP_SUBTYPE_CELL_CONN_PREF);
+	wpabuf_put_u8(anqp_buf, MBO_ANQP_SUBTYPE_QUERY_LIST);
+
+	/* The first valid MBO subtype is 1 */
+	for (i = 1; i <= MAX_MBO_ANQP_SUBTYPE; i++) {
+		if (mbo_subtypes & BIT(i))
+			wpabuf_put_u8(anqp_buf, i);
+	}
+
 	gas_anqp_set_element_len(anqp_buf, len_pos);
 
 	return anqp_buf;

@@ -1294,7 +1294,7 @@ size_t wpas_mbo_ie_bss_trans_reject(struct wpa_supplicant *wpa_s, u8 *pos,
 				    enum mbo_transition_reject_reason reason);
 void wpas_mbo_update_cell_capa(struct wpa_supplicant *wpa_s, u8 mbo_cell_capa);
 struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
-				   struct wpa_bss *bss);
+				   struct wpa_bss *bss, u32 mbo_subtypes);
 
 /* op_classes.c */
 enum chan_allowed {

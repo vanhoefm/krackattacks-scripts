@@ -1419,9 +1419,11 @@ enum wfa_wnm_notif_subelem_id {
 	WFA_WNM_NOTIF_SUBELEM_CELL_DATA_CAPA = 3,
 };
 
-/* MBO v0.0_r25, 4.3: MBO ANQP-elements */
+/* MBO v0.0_r27, 4.3: MBO ANQP-elements */
 #define MBO_ANQP_OUI_TYPE 0x12
-#define MBO_ANQP_SUBTYPE_CELL_CONN_PREF 1
+#define MBO_ANQP_SUBTYPE_QUERY_LIST 1
+#define MBO_ANQP_SUBTYPE_CELL_CONN_PREF 2
+#define MAX_MBO_ANQP_SUBTYPE MBO_ANQP_SUBTYPE_CELL_CONN_PREF
 
 /* Wi-Fi Direct (P2P) */
 

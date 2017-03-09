@@ -6712,7 +6712,7 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 	u16 id[MAX_ANQP_INFO_ID];
 	size_t num_id = 0;
 	u32 subtypes = 0;
-	int get_cell_pref = 0;
+	u32 mbo_subtypes = 0;
 
 	used = hwaddr_aton2(dst, dst_addr);
 	if (used < 0)
@@ -6733,9 +6733,10 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 		} else if (os_strncmp(pos, "mbo:", 4) == 0) {
 #ifdef CONFIG_MBO
 			int num = atoi(pos + 4);
-			if (num != MBO_ANQP_SUBTYPE_CELL_CONN_PREF)
+
+			if (num <= 0 || num > MAX_MBO_ANQP_SUBTYPE)
 				return -1;
-			get_cell_pref = 1;
+			mbo_subtypes |= BIT(num);
 #else /* CONFIG_MBO */
 			return -1;
 #endif /* CONFIG_MBO */
@@ -6754,7 +6755,7 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 		return -1;
 
 	return anqp_send_req(wpa_s, dst_addr, id, num_id, subtypes,
-			     get_cell_pref);
+			     mbo_subtypes);
 }
 
 

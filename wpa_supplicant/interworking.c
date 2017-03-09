@@ -2694,7 +2694,7 @@ void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s)
 
 int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 		  u16 info_ids[], size_t num_ids, u32 subtypes,
-		  int get_cell_pref)
+		  u32 mbo_subtypes)
 {
 	struct wpabuf *buf;
 	struct wpabuf *extra_buf = NULL;
@@ -2728,10 +2728,10 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 #endif /* CONFIG_HS20 */
 
 #ifdef CONFIG_MBO
-	if (get_cell_pref) {
+	if (mbo_subtypes) {
 		struct wpabuf *mbo;
 
-		mbo = mbo_build_anqp_buf(wpa_s, bss);
+		mbo = mbo_build_anqp_buf(wpa_s, bss, mbo_subtypes);
 		if (mbo) {
 			if (wpabuf_resize(&extra_buf, wpabuf_len(mbo))) {
 				wpabuf_free(extra_buf);

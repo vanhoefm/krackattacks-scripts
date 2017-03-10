@@ -1159,6 +1159,9 @@ enum qca_wlan_vendor_attr_config {
 	 * MHz or higher bandwidth. Set to NL80211_CHAN_WIDTH_20_NOHT to
 	 * clear this constraint. */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_SUB20_CHAN_WIDTH = 39,
+	/* 32-bit unsigned value to configure the propagation absolute delay
+	 * for 2G/5G band (units in us) */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_ABS_DELAY = 40,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

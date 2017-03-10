@@ -591,6 +591,9 @@ enum qca_wlan_vendor_attr {
 	 * unsigned 8 bit value
 	 */
 	QCA_WLAN_VENDOR_ATTR_BRP_ANT_NUM_LIMIT = 39,
+	/* Used in QCA_NL80211_VENDOR_SUBCMD_GET_CHAIN_RSSI command
+	 * to report the corresponding antenna index to the chain RSSI value */
+	QCA_WLAN_VENDOR_ATTR_ANTENNA_INFO = 40,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
@@ -1162,6 +1165,20 @@ enum qca_wlan_vendor_attr_config {
 	/* 32-bit unsigned value to configure the propagation absolute delay
 	 * for 2G/5G band (units in us) */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_ABS_DELAY = 40,
+	/* 32-bit unsigned value to set probe period */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_PROBE_PERIOD = 41,
+	/* 32-bit unsigned value to set stay period */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_STAY_PERIOD = 42,
+	/* 32-bit unsigned value to set snr diff */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_SNR_DIFF = 43,
+	/* 32-bit unsigned value to set probe dwell time */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_PROBE_DWELL_TIME = 44,
+	/* 32-bit unsigned value to set mgmt snr weight */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_MGMT_SNR_WEIGHT = 45,
+	/* 32-bit unsigned value to set data snr weight */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_DATA_SNR_WEIGHT = 46,
+	/* 32-bit unsigned value to set ack snr weight */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ANT_DIV_ACK_SNR_WEIGHT = 47,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

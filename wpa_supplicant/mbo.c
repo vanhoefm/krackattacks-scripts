@@ -549,3 +549,31 @@ struct wpabuf * mbo_build_anqp_buf(struct wpa_supplicant *wpa_s,
 
 	return anqp_buf;
 }
+
+
+void mbo_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
+			    struct wpa_bss *bss, const u8 *sa,
+			    const u8 *data, size_t slen)
+{
+	const u8 *pos = data;
+	u8 subtype;
+
+	if (slen < 1)
+		return;
+
+	subtype = *pos++;
+	slen--;
+
+	switch (subtype) {
+	case MBO_ANQP_SUBTYPE_CELL_CONN_PREF:
+		if (slen < 1)
+			break;
+		wpa_msg(wpa_s, MSG_INFO, RX_MBO_ANQP MACSTR
+			" cell_conn_pref=%u", MAC2STR(sa), *pos);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "MBO: Unsupported ANQP subtype %u",
+			   subtype);
+		break;
+	}
+}

@@ -2912,7 +2912,6 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			return;
 
 		switch (WPA_GET_BE24(pos)) {
-#ifdef CONFIG_HS20
 		case OUI_WFA:
 			pos += 3;
 			slen -= 3;
@@ -2923,19 +2922,26 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			slen--;
 
 			switch (type) {
+#ifdef CONFIG_HS20
 			case HS20_ANQP_OUI_TYPE:
 				hs20_parse_rx_hs20_anqp_resp(wpa_s, bss, sa,
 							     pos, slen,
 							     dialog_token);
 				break;
+#endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+			case MBO_ANQP_OUI_TYPE:
+				mbo_parse_rx_anqp_resp(wpa_s, bss, sa,
+						       pos, slen);
+				break;
+#endif /* CONFIG_MBO */
 			default:
 				wpa_msg(wpa_s, MSG_DEBUG,
-					"HS20: Unsupported ANQP vendor type %u",
+					"ANQP: Unsupported ANQP vendor type %u",
 					type);
 				break;
 			}
 			break;
-#endif /* CONFIG_HS20 */
 		default:
 			wpa_msg(wpa_s, MSG_DEBUG,
 				"Interworking: Unsupported vendor-specific ANQP OUI %06x",

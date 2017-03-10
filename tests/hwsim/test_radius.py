@@ -1555,14 +1555,42 @@ def test_radius_acct_failure_oom(dev, apdev):
                                          "127:s:" + 250*'D',
                                          "181:s:" + 250*'E' ] }
     hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
 
+    dev[0].scan_for_bss(bssid, freq="2412")
     with alloc_fail(hapd, 1, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_msg"):
         dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
         wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
 
+    dev[1].scan_for_bss(bssid, freq="2412")
     with alloc_fail(hapd, 1, "accounting_sta_report"):
         dev[1].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
         wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+        dev[1].request("REMOVE_NETWORK all")
+        dev[1].wait_disconnected()
+
+    tests = [ (1, "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_msg"),
+              (2, "radius_msg_add_attr;accounting_msg"),
+              (3, "radius_msg_add_attr;accounting_msg") ]
+    for count, func in tests:
+        with fail_test(hapd, count, func):
+            dev[0].connect("radius-acct-open", key_mgmt="NONE",
+                           scan_freq="2412")
+            wait_fail_trigger(hapd, "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+    dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
+    with fail_test(hapd, 8,
+                   "radius_msg_add_attr;?radius_msg_add_attr_int32;=accounting_sta_report"):
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        wait_fail_trigger(hapd, "GET_FAIL")
+
+    with fail_test(hapd, 1, "radius_msg_add_attr;=accounting_report_state"):
+        hapd.disable()
 
 def test_radius_acct_failure_oom_rsn(dev, apdev):
     """RADIUS Accounting in RSN and failure to add attributes due to OOM"""

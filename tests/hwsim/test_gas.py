@@ -410,6 +410,27 @@ def test_gas_anqp_get(dev, apdev):
     if "result=SUCCESS" not in ev:
         raise Exception("Unexpected result: " + ev)
 
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " hs20:3"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "Operator Friendly Name" not in ev:
+        raise Exception("Did not receive Operator Friendly Name")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
     if "OK" not in dev[0].request("HS20_ANQP_GET " + bssid + " 3,4"):
         raise Exception("ANQP_GET command failed")
 
@@ -444,6 +465,7 @@ def test_gas_anqp_get(dev, apdev):
              "00:11:22:33:44:55 mbo:-1",
              "00:11:22:33:44:55 mbo:0",
              "00:11:22:33:44:55 mbo:999",
+             "00:11:22:33:44:55 mbo:1,258,mbo:2,mbo:3,259",
              "00:11:22:33:44:55",
              "00:11:22:33:44:55 ",
              "00:11:22:33:44:55 0",

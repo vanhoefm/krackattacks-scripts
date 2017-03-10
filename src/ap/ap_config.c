@@ -109,6 +109,10 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #endif /* CONFIG_FILS */
 
 	bss->broadcast_deauth = 1;
+
+#ifdef CONFIG_MBO
+	bss->mbo_cell_data_conn_pref = -1;
+#endif /* CONFIG_MBO */
 }
 
 

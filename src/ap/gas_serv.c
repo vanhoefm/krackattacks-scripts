@@ -828,6 +828,22 @@ static void anqp_add_icon_binary_file(struct hostapd_data *hapd,
 #endif /* CONFIG_HS20 */
 
 
+#ifdef CONFIG_MBO
+static void anqp_add_mbo_cell_data_conn_pref(struct hostapd_data *hapd,
+					     struct wpabuf *buf)
+{
+	if (hapd->conf->mbo_cell_data_conn_pref >= 0) {
+		u8 *len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+		wpabuf_put_be24(buf, OUI_WFA);
+		wpabuf_put_u8(buf, MBO_ANQP_OUI_TYPE);
+		wpabuf_put_u8(buf, MBO_ANQP_SUBTYPE_CELL_CONN_PREF);
+		wpabuf_put_u8(buf, hapd->conf->mbo_cell_data_conn_pref);
+		gas_anqp_set_element_len(buf, len);
+	}
+}
+#endif /* CONFIG_MBO */
+
+
 static size_t anqp_get_required_len(struct hostapd_data *hapd,
 				    const u16 *infoid,
 				    unsigned int num_infoid)
@@ -932,6 +948,11 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 	if (request & ANQP_REQ_ICON_REQUEST)
 		anqp_add_icon_binary_file(hapd, buf, icon_name, icon_name_len);
 #endif /* CONFIG_HS20 */
+
+#ifdef CONFIG_MBO
+	if (request & ANQP_REQ_MBO_CELL_DATA_CONN_PREF)
+		anqp_add_mbo_cell_data_conn_pref(hapd, buf);
+#endif /* CONFIG_MBO */
 
 	return buf;
 }
@@ -1152,48 +1173,11 @@ static void rx_anqp_hs_icon_request(struct hostapd_data *hapd,
 }
 
 
-static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
-				    const u8 *pos, const u8 *end,
-				    struct anqp_query_info *qi)
+static void rx_anqp_vendor_specific_hs20(struct hostapd_data *hapd,
+					 const u8 *pos, const u8 *end,
+					 struct anqp_query_info *qi)
 {
-	u32 oui;
 	u8 subtype;
-
-	if (end - pos < 4) {
-		wpa_printf(MSG_DEBUG, "ANQP: Too short vendor specific ANQP "
-			   "Query element");
-		return;
-	}
-
-	oui = WPA_GET_BE24(pos);
-	pos += 3;
-	if (oui != OUI_WFA) {
-		wpa_printf(MSG_DEBUG, "ANQP: Unsupported vendor OUI %06x",
-			   oui);
-		return;
-	}
-
-#ifdef CONFIG_P2P
-	if (*pos == P2P_OUI_TYPE) {
-		/*
-		 * This is for P2P SD and will be taken care of by the P2P
-		 * implementation. This query needs to be ignored in the generic
-		 * GAS server to avoid duplicated response.
-		 */
-		wpa_printf(MSG_DEBUG,
-			   "ANQP: Ignore WFA vendor type %u (P2P SD) in generic GAS server",
-			   *pos);
-		qi->p2p_sd = 1;
-		return;
-	}
-#endif /* CONFIG_P2P */
-
-	if (*pos != HS20_ANQP_OUI_TYPE) {
-		wpa_printf(MSG_DEBUG, "ANQP: Unsupported WFA vendor type %u",
-			   *pos);
-		return;
-	}
-	pos++;
 
 	if (end - pos <= 1)
 		return;
@@ -1222,6 +1206,115 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 }
 
 #endif /* CONFIG_HS20 */
+
+
+#ifdef CONFIG_P2P
+static void rx_anqp_vendor_specific_p2p(struct hostapd_data *hapd,
+					struct anqp_query_info *qi)
+{
+	/*
+	 * This is for P2P SD and will be taken care of by the P2P
+	 * implementation. This query needs to be ignored in the generic
+	 * GAS server to avoid duplicated response.
+	 */
+	wpa_printf(MSG_DEBUG,
+		   "ANQP: Ignore WFA vendor type %u (P2P SD) in generic GAS server",
+		   P2P_OUI_TYPE);
+	qi->p2p_sd = 1;
+	return;
+}
+#endif /* CONFIG_P2P */
+
+
+#ifdef CONFIG_MBO
+
+static void rx_anqp_mbo_query_list(struct hostapd_data *hapd, u8 subtype,
+				  struct anqp_query_info *qi)
+{
+	switch (subtype) {
+	case MBO_ANQP_SUBTYPE_CELL_CONN_PREF:
+		set_anqp_req(ANQP_REQ_MBO_CELL_DATA_CONN_PREF,
+			     "Cellular Data Connection Preference",
+			     hapd->conf->mbo_cell_data_conn_pref >= 0, qi);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported MBO subtype %u",
+			   subtype);
+		break;
+	}
+}
+
+
+static void rx_anqp_vendor_specific_mbo(struct hostapd_data *hapd,
+					const u8 *pos, const u8 *end,
+					struct anqp_query_info *qi)
+{
+	u8 subtype;
+
+	if (end - pos < 1)
+		return;
+
+	subtype = *pos++;
+	switch (subtype) {
+	case MBO_ANQP_SUBTYPE_QUERY_LIST:
+		wpa_printf(MSG_DEBUG, "ANQP: MBO Query List");
+		while (pos < end) {
+			rx_anqp_mbo_query_list(hapd, *pos, qi);
+			pos++;
+		}
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported MBO query subtype %u",
+			   subtype);
+		break;
+	}
+}
+
+#endif /* CONFIG_MBO */
+
+
+static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
+				    const u8 *pos, const u8 *end,
+				    struct anqp_query_info *qi)
+{
+	u32 oui;
+
+	if (end - pos < 4) {
+		wpa_printf(MSG_DEBUG, "ANQP: Too short vendor specific ANQP "
+			   "Query element");
+		return;
+	}
+
+	oui = WPA_GET_BE24(pos);
+	pos += 3;
+	if (oui != OUI_WFA) {
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported vendor OUI %06x",
+			   oui);
+		return;
+	}
+
+	switch (*pos) {
+#ifdef CONFIG_P2P
+	case P2P_OUI_TYPE:
+		rx_anqp_vendor_specific_p2p(hapd, qi);
+		break;
+#endif /* CONFIG_P2P */
+#ifdef CONFIG_HS20
+	case HS20_ANQP_OUI_TYPE:
+		rx_anqp_vendor_specific_hs20(hapd, pos + 1, end, qi);
+		break;
+#endif /* CONFIG_HS20 */
+#ifdef CONFIG_MBO
+	case MBO_ANQP_OUI_TYPE:
+		rx_anqp_vendor_specific_mbo(hapd, pos + 1, end, qi);
+		break;
+#endif /* CONFIG_MBO */
+	default:
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported WFA vendor type %u",
+			   *pos);
+		break;
+	}
+}
 
 
 static void gas_serv_req_local_processing(struct hostapd_data *hapd,

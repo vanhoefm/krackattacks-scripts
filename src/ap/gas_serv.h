@@ -41,7 +41,7 @@
 #define ANQP_REQ_EMERGENCY_NAI \
 	(1 << (ANQP_EMERGENCY_NAI - ANQP_QUERY_LIST))
 /*
- * First 16 Hotspot 2.0 vendor specific ANQP-elements can be included in the
+ * First 15 Hotspot 2.0 vendor specific ANQP-elements can be included in the
  * optimized bitmap.
  */
 #define ANQP_REQ_HS_CAPABILITY_LIST \
@@ -60,6 +60,9 @@
 	(0x10000 << HS20_STYPE_OSU_PROVIDERS_LIST)
 #define ANQP_REQ_ICON_REQUEST \
 	(0x10000 << HS20_STYPE_ICON_REQUEST)
+/* The first MBO ANQP-element can be included in the optimized bitmap. */
+#define ANQP_REQ_MBO_CELL_DATA_CONN_PREF \
+	(BIT(29) << MBO_ANQP_SUBTYPE_CELL_CONN_PREF)
 
 struct gas_dialog_info {
 	u8 valid;

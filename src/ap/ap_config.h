@@ -600,6 +600,7 @@ struct hostapd_bss_config {
 
 #ifdef CONFIG_MBO
 	int mbo_enabled;
+	int mbo_cell_data_conn_pref;
 #endif /* CONFIG_MBO */
 
 	int ftm_responder;

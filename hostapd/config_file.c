@@ -3442,6 +3442,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #ifdef CONFIG_MBO
 	} else if (os_strcmp(buf, "mbo") == 0) {
 		bss->mbo_enabled = atoi(pos);
+	} else if (os_strcmp(buf, "mbo_cell_data_conn_pref") == 0) {
+		bss->mbo_cell_data_conn_pref = atoi(pos);
 #endif /* CONFIG_MBO */
 #ifdef CONFIG_TESTING_OPTIONS
 #define PARSE_TEST_PROBABILITY(_val)				\

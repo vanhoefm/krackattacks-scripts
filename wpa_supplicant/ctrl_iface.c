@@ -6751,7 +6751,7 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 		pos++;
 	}
 
-	if (num_id == 0)
+	if (num_id == 0 && !subtypes && !mbo_subtypes)
 		return -1;
 
 	return anqp_send_req(wpa_s, dst_addr, id, num_id, subtypes,

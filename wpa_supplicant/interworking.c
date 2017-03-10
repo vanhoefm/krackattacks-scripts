@@ -106,10 +106,12 @@ static struct wpabuf * anqp_build_req(u16 info_ids[], size_t num_ids,
 	if (buf == NULL)
 		return NULL;
 
-	len_pos = gas_anqp_add_element(buf, ANQP_QUERY_LIST);
-	for (i = 0; i < num_ids; i++)
-		wpabuf_put_le16(buf, info_ids[i]);
-	gas_anqp_set_element_len(buf, len_pos);
+	if (num_ids > 0) {
+		len_pos = gas_anqp_add_element(buf, ANQP_QUERY_LIST);
+		for (i = 0; i < num_ids; i++)
+			wpabuf_put_le16(buf, info_ids[i]);
+		gas_anqp_set_element_len(buf, len_pos);
+	}
 	if (extra)
 		wpabuf_put_buf(buf, extra);
 

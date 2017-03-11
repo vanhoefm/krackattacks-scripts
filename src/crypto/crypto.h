@@ -1,6 +1,6 @@
 /*
  * Wrapper functions for crypto libraries
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -831,5 +831,13 @@ int crypto_ec_point_is_on_curve(struct crypto_ec *e,
 int crypto_ec_point_cmp(const struct crypto_ec *e,
 			const struct crypto_ec_point *a,
 			const struct crypto_ec_point *b);
+
+struct crypto_ecdh;
+
+struct crypto_ecdh * crypto_ecdh_init(int group);
+struct wpabuf * crypto_ecdh_get_pubkey(struct crypto_ecdh *ecdh, int inc_y);
+struct wpabuf * crypto_ecdh_set_peerkey(struct crypto_ecdh *ecdh, int inc_y,
+					const u8 *key, size_t len);
+void crypto_ecdh_deinit(struct crypto_ecdh *ecdh);
 
 #endif /* CRYPTO_H */

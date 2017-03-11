@@ -234,6 +234,13 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	}
 #endif /* CONFIG_IEEE80211R_AP */
 #endif /* CONFIG_FILS */
+#ifdef CONFIG_OWE
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_OWE);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_OWE */
 
 #ifdef CONFIG_RSN_TESTING
 	if (rsn_testing) {
@@ -567,6 +574,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			selector = RSN_AUTH_KEY_MGMT_UNSPEC_802_1X;
 		else if (data.key_mgmt & WPA_KEY_MGMT_PSK)
 			selector = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
+#ifdef CONFIG_OWE
+		else if (data.key_mgmt & WPA_KEY_MGMT_OWE)
+			selector = RSN_AUTH_KEY_MGMT_OWE;
+#endif /* CONFIG_OWE */
 		wpa_auth->dot11RSNAAuthenticationSuiteSelected = selector;
 
 		selector = wpa_cipher_to_suite(WPA_PROTO_RSN,
@@ -659,6 +670,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_SAE */
 	else if (key_mgmt & WPA_KEY_MGMT_IEEE8021X)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X;
+#ifdef CONFIG_OWE
+	else if (key_mgmt & WPA_KEY_MGMT_OWE)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_OWE;
+#endif /* CONFIG_OWE */
 	else
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 

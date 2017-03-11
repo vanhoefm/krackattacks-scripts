@@ -146,6 +146,7 @@ static int wpa_supplicant_eapol_send(void *ctx, int type, const u8 *buf,
 	 * extra copy here */
 
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_NONE) {
 		/* Current SSID is not using IEEE 802.1X/EAP, so drop possible
 		 * EAPOL frames (mainly, EAPOL-Start) from EAPOL state

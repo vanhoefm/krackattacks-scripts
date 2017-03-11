@@ -652,7 +652,8 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 			sm, addr, MLME_SETPROTECTION_PROTECT_TYPE_RX_TX,
 			MLME_SETPROTECTION_KEY_TYPE_PAIRWISE);
 		eapol_sm_notify_portValid(sm->eapol, TRUE);
-		if (wpa_key_mgmt_wpa_psk(sm->key_mgmt))
+		if (wpa_key_mgmt_wpa_psk(sm->key_mgmt) ||
+		    sm->key_mgmt == WPA_KEY_MGMT_OWE)
 			eapol_sm_notify_eap_success(sm->eapol, TRUE);
 		/*
 		 * Start preauthentication after a short wait to avoid a

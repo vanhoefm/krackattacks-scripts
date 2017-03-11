@@ -765,6 +765,10 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 		return WPA_KEY_MGMT_FT_FILS_SHA256;
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FT_FILS_SHA384)
 		return WPA_KEY_MGMT_FT_FILS_SHA384;
+#ifdef CONFIG_OWE
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_OWE)
+		return WPA_KEY_MGMT_OWE;
+#endif /* CONFIG_OWE */
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_OSEN)
 		return WPA_KEY_MGMT_OSEN;
 	return 0;

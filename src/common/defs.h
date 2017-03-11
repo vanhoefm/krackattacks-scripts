@@ -55,6 +55,7 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #define WPA_KEY_MGMT_FILS_SHA384 BIT(19)
 #define WPA_KEY_MGMT_FT_FILS_SHA256 BIT(20)
 #define WPA_KEY_MGMT_FT_FILS_SHA384 BIT(21)
+#define WPA_KEY_MGMT_OWE BIT(22)
 
 static inline int wpa_key_mgmt_wpa_ieee8021x(int akm)
 {
@@ -136,7 +137,8 @@ static inline int wpa_key_mgmt_wpa(int akm)
 	return wpa_key_mgmt_wpa_ieee8021x(akm) ||
 		wpa_key_mgmt_wpa_psk(akm) ||
 		wpa_key_mgmt_fils(akm) ||
-		wpa_key_mgmt_sae(akm);
+		wpa_key_mgmt_sae(akm) ||
+		akm == WPA_KEY_MGMT_OWE;
 }
 
 static inline int wpa_key_mgmt_wpa_any(int akm)

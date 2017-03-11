@@ -973,7 +973,8 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	}
 
 	key_mgmt = wpa_auth_sta_key_mgmt(sta->wpa_sm);
-	if (key_mgmt != -1 && wpa_key_mgmt_wpa_psk(key_mgmt)) {
+	if (key_mgmt != -1 &&
+	    (wpa_key_mgmt_wpa_psk(key_mgmt) || key_mgmt == WPA_KEY_MGMT_OWE)) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Ignore EAPOL message - "
 			   "STA is using PSK");
 		return;
@@ -1116,7 +1117,8 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	}
 
 	key_mgmt = wpa_auth_sta_key_mgmt(sta->wpa_sm);
-	if (key_mgmt != -1 && wpa_key_mgmt_wpa_psk(key_mgmt)) {
+	if (key_mgmt != -1 &&
+	    (wpa_key_mgmt_wpa_psk(key_mgmt) || key_mgmt == WPA_KEY_MGMT_OWE)) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Ignore STA - using PSK");
 		/*
 		 * Clear any possible EAPOL authenticator state to support

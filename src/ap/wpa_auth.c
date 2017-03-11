@@ -1809,7 +1809,8 @@ SM_STATE(WPA_PTK, INITIALIZE)
 	wpa_remove_ptk(sm);
 	wpa_auth_set_eapol(sm->wpa_auth, sm->addr, WPA_EAPOL_portValid, 0);
 	sm->TimeoutCtr = 0;
-	if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
+	if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) ||
+	    sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE) {
 		wpa_auth_set_eapol(sm->wpa_auth, sm->addr,
 				   WPA_EAPOL_authorized, 0);
 	}
@@ -2882,7 +2883,8 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 					       sm->wpa_auth, sm);
 		}
 
-		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
+		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) ||
+		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE) {
 			wpa_auth_set_eapol(sm->wpa_auth, sm->addr,
 					   WPA_EAPOL_authorized, 1);
 		}
@@ -2951,7 +2953,8 @@ SM_STEP(WPA_PTK)
 		    wpa_auth_get_eapol(sm->wpa_auth, sm->addr,
 				       WPA_EAPOL_keyRun) > 0)
 			SM_ENTER(WPA_PTK, INITPMK);
-		else if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)
+		else if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) ||
+			 sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE
 			 /* FIX: && 802.1X::keyRun */)
 			SM_ENTER(WPA_PTK, INITPSK);
 		break;

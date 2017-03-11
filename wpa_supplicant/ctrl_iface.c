@@ -2578,6 +2578,16 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 #endif /* CONFIG_IEEE80211R */
 #endif /* CONFIG_FILS */
 
+#ifdef CONFIG_OWE
+	if (data.key_mgmt & WPA_KEY_MGMT_OWE) {
+		ret = os_snprintf(pos, end - pos, "%sOWE",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+#endif /* CONFIG_OWE */
+
 	if (data.key_mgmt & WPA_KEY_MGMT_OSEN) {
 		ret = os_snprintf(pos, end - pos, "%sOSEN",
 				  pos == start ? "" : "+");

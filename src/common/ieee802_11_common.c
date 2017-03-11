@@ -250,6 +250,12 @@ static int ieee802_11_parse_extension(const u8 *pos, size_t elen,
 			break;
 		elems->fils_nonce = pos;
 		break;
+	case WLAN_EID_EXT_OWE_DH_PARAM:
+		if (elen < 2)
+			break;
+		elems->owe_dh = pos;
+		elems->owe_dh_len = elen;
+		break;
 	default:
 		if (show_errors) {
 			wpa_printf(MSG_MSGDUMP,

@@ -362,3 +362,7 @@ CONFIG_IPV6=y
 # Include internal line edit mode in hostapd_cli. This can be used to provide
 # limited command line editing and history support.
 #CONFIG_WPA_CLI_EDIT=y
+
+# Opportunistic Wireless Encryption (OWE)
+# Experimental implementation of draft-harkins-owe-07.txt
+#CONFIG_OWE=y

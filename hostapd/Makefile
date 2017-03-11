@@ -305,6 +305,12 @@ NEED_DH_GROUPS=y
 NEED_AP_MLME=y
 endif
 
+ifdef CONFIG_OWE
+CFLAGS += -DCONFIG_OWE
+NEED_ECC=y
+NEED_HMAC_SHA256_KDF=y
+endif
+
 ifdef CONFIG_FILS
 CFLAGS += -DCONFIG_FILS
 OBJS += ../src/ap/fils_hlp.o

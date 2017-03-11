@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2016, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -17,6 +17,7 @@
 #include "radius/radius_client.h"
 #include "p2p/p2p.h"
 #include "fst/fst.h"
+#include "crypto/crypto.h"
 #include "hostapd.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
@@ -345,6 +346,11 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	wpabuf_free(sta->hlp_dhcp_discover);
 	eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_OWE
+	bin_clear_free(sta->owe_pmk, PMK_LEN);
+	crypto_ecdh_deinit(sta->owe_ecdh);
+#endif /* CONFIG_OWE */
 
 	os_free(sta);
 }

@@ -1066,7 +1066,7 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 
 	res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 				  elems.rsn_ie - 2, elems.rsn_ie_len + 2,
-				  elems.mdie, elems.mdie_len);
+				  elems.mdie, elems.mdie_len, NULL, 0);
 	resp = wpa_res_to_status_code(res);
 	if (resp != WLAN_STATUS_SUCCESS)
 		goto fail;
@@ -1893,6 +1893,100 @@ static u16 check_ext_capab(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+#ifdef CONFIG_OWE
+static u16 owe_process_assoc_req(struct sta_info *sta, const u8 *owe_dh,
+				 u8 owe_dh_len)
+{
+	struct wpabuf *secret, *pub, *hkey;
+	int res;
+	u8 prk[SHA256_MAC_LEN], pmkid[SHA256_MAC_LEN];
+	const char *info = "OWE Key Generation";
+	const u8 *addr[2];
+	size_t len[2];
+
+	if (WPA_GET_LE16(owe_dh) != OWE_DH_GROUP)
+		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+
+	crypto_ecdh_deinit(sta->owe_ecdh);
+	sta->owe_ecdh = crypto_ecdh_init(OWE_DH_GROUP);
+	if (!sta->owe_ecdh)
+		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+
+	secret = crypto_ecdh_set_peerkey(sta->owe_ecdh, 0, owe_dh + 2,
+					 owe_dh_len - 2);
+	if (!secret) {
+		wpa_printf(MSG_DEBUG, "OWE: Invalid peer DH public key");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+	wpa_hexdump_buf_key(MSG_DEBUG, "OWE: DH shared secret", secret);
+
+	/* prk = HKDF-extract(C | A | group, z) */
+
+	pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);
+	if (!pub) {
+		wpabuf_clear_free(secret);
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	/* PMKID = Truncate-128(Hash(C | A)) */
+	addr[0] = owe_dh + 2;
+	len[0] = owe_dh_len - 2;
+	addr[1] = wpabuf_head(pub);
+	len[1] = wpabuf_len(pub);
+	res = sha256_vector(2, addr, len, pmkid);
+	if (res < 0) {
+		wpabuf_free(pub);
+		wpabuf_clear_free(secret);
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	hkey = wpabuf_alloc(owe_dh_len - 2 + wpabuf_len(pub) + 2);
+	if (!hkey) {
+		wpabuf_free(pub);
+		wpabuf_clear_free(secret);
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	wpabuf_put_data(hkey, owe_dh + 2, owe_dh_len - 2); /* C */
+	wpabuf_put_buf(hkey, pub); /* A */
+	wpabuf_free(pub);
+	wpabuf_put_le16(hkey, OWE_DH_GROUP); /* group */
+	res = hmac_sha256(wpabuf_head(hkey), wpabuf_len(hkey),
+			  wpabuf_head(secret), wpabuf_len(secret), prk);
+	wpabuf_clear_free(hkey);
+	wpabuf_clear_free(secret);
+	if (res < 0)
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+
+	wpa_hexdump_key(MSG_DEBUG, "OWE: prk", prk, SHA256_MAC_LEN);
+
+	/* PMK = HKDF-expand(prk, "OWE Key Generation", n) */
+
+	os_free(sta->owe_pmk);
+	sta->owe_pmk = os_malloc(PMK_LEN);
+	if (!sta->owe_pmk) {
+		os_memset(prk, 0, SHA256_MAC_LEN);
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	res = hmac_sha256_kdf(prk, SHA256_MAC_LEN, NULL, (const u8 *) info,
+			      os_strlen(info), sta->owe_pmk, PMK_LEN);
+	os_memset(prk, 0, SHA256_MAC_LEN);
+	if (res < 0) {
+		os_free(sta->owe_pmk);
+		sta->owe_pmk = NULL;
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sta->owe_pmk, PMK_LEN);
+	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);
+	/* TODO: Add PMKSA cache entry */
+
+	return WLAN_STATUS_SUCCESS;
+}
+#endif /* CONFIG_OWE */
+
+
 static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			   const u8 *ies, size_t ies_len, int reassoc)
 {
@@ -2034,7 +2128,8 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 					  wpa_ie, wpa_ie_len,
-					  elems.mdie, elems.mdie_len);
+					  elems.mdie, elems.mdie_len,
+					  elems.owe_dh, elems.owe_dh_len);
 		resp = wpa_res_to_status_code(res);
 		if (resp != WLAN_STATUS_SUCCESS)
 			return resp;
@@ -2103,6 +2198,17 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			return WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG;
 		}
 #endif /* CONFIG_SAE */
+
+#ifdef CONFIG_OWE
+		if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
+		    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_OWE &&
+		    elems.owe_dh) {
+			resp = owe_process_assoc_req(sta, elems.owe_dh,
+						     elems.owe_dh_len);
+			if (resp != WLAN_STATUS_SUCCESS)
+				return resp;
+		}
+#endif /* CONFIG_OWE */
 
 #ifdef CONFIG_IEEE80211N
 		if ((sta->flags & (WLAN_STA_HT | WLAN_STA_VHT)) &&
@@ -2282,6 +2388,10 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta && sta->fils_hlp_resp)
 		buflen += wpabuf_len(sta->fils_hlp_resp);
 #endif /* CONFIG_FILS */
+#ifdef CONFIG_OWE
+	if (sta && (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE))
+		buflen += 50;
+#endif /* CONFIG_OWE */
 	buf = os_zalloc(buflen);
 	if (!buf) {
 		res = WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -2457,6 +2567,30 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 	}
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_OWE
+	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
+	    sta && sta->owe_ecdh &&
+	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_OWE) {
+		struct wpabuf *pub;
+
+		pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);
+		if (!pub) {
+			res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto done;
+		}
+		/* OWE Diffie-Hellman Parameter element */
+		*p++ = WLAN_EID_EXTENSION; /* Element ID */
+		*p++ = 1 + 2 + wpabuf_len(pub); /* Length */
+		*p++ = WLAN_EID_EXT_OWE_DH_PARAM; /* Element ID Extension */
+		WPA_PUT_LE16(p, OWE_DH_GROUP);
+		p += 2;
+		os_memcpy(p, wpabuf_head(pub), wpabuf_len(pub));
+		p += wpabuf_len(pub);
+		send_len += 3 + 2 + wpabuf_len(pub);
+		wpabuf_free(pub);
+	}
+#endif /* CONFIG_OWE */
 
 	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0) {
 		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",

@@ -231,7 +231,8 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		}
 		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 					  ie, ielen,
-					  elems.mdie, elems.mdie_len);
+					  elems.mdie, elems.mdie_len,
+					  elems.owe_dh, elems.owe_dh_len);
 		if (res != WPA_IE_OK) {
 			wpa_printf(MSG_DEBUG,
 				   "WPA/RSN information element rejected? (res %u)",

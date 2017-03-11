@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -232,6 +232,11 @@ struct sta_info {
 	struct wpabuf *fils_hlp_resp;
 	struct wpabuf *hlp_dhcp_discover;
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_OWE
+	u8 *owe_pmk;
+	struct crypto_ecdh *owe_ecdh;
+#endif /* CONFIG_OWE */
 };
 
 

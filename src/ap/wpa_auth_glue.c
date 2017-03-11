@@ -245,6 +245,12 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 	}
 #endif /* CONFIG_SAE */
 
+#ifdef CONFIG_OWE
+	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
+	    sta && sta->owe_pmk)
+		return sta->owe_pmk;
+#endif /* CONFIG_OWE */
+
 	psk = hostapd_get_psk(hapd->conf, addr, p2p_dev_addr, prev_psk);
 	/*
 	 * This is about to iterate over all psks, prev_psk gives the last

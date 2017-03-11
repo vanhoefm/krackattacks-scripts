@@ -505,7 +505,8 @@ static int wpa_auth_okc_iter(struct wpa_authenticator *a, void *ctx)
 int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			struct wpa_state_machine *sm,
 			const u8 *wpa_ie, size_t wpa_ie_len,
-			const u8 *mdie, size_t mdie_len)
+			const u8 *mdie, size_t mdie_len,
+			const u8 *owe_dh, size_t owe_dh_len)
 {
 	struct wpa_ie_data data;
 	int ciphers, key_mgmt, res, version;
@@ -737,6 +738,19 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		return WPA_INVALID_AKMP;
 	}
 #endif /* CONFIG_IEEE80211R_AP */
+
+#ifdef CONFIG_OWE
+	if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE && !owe_dh) {
+		wpa_printf(MSG_DEBUG,
+			   "OWE: No Diffie-Hellman Parameter element");
+		return WPA_INVALID_AKMP;
+	}
+	if (sm->wpa_key_mgmt != WPA_KEY_MGMT_OWE && owe_dh) {
+		wpa_printf(MSG_DEBUG,
+			   "OWE: Unexpected Diffie-Hellman Parameter element with non-OWE AKM");
+		return WPA_INVALID_AKMP;
+	}
+#endif /* CONFIG_OWE */
 
 	sm->pairwise = wpa_pick_pairwise_cipher(ciphers, 0);
 	if (sm->pairwise < 0)

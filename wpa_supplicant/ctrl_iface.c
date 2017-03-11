@@ -3805,6 +3805,14 @@ static int ctrl_iface_get_capability_key_mgmt(int res, char *strict,
 		pos += ret;
 	}
 #endif /* CONFIG_SUITEB192 */
+#ifdef CONFIG_OWE
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_OWE) {
+		ret = os_snprintf(pos, end - pos, " OWE");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_OWE */
 
 	return pos - buf;
 }

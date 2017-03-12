@@ -345,6 +345,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	wpabuf_free(sta->fils_hlp_resp);
 	wpabuf_free(sta->hlp_dhcp_discover);
 	eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+#ifdef CONFIG_FILS_SK_PFS
+	crypto_ecdh_deinit(sta->fils_ecdh);
+	wpabuf_clear_free(sta->fils_dh_ss);
+#endif /* CONFIG_FILS_SK_PFS */
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE

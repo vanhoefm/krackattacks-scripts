@@ -272,6 +272,10 @@ L_CFLAGS += -DCONFIG_FILS
 OBJS += src/ap/fils_hlp.c
 NEED_SHA384=y
 NEED_AES_SIV=y
+ifdef CONFIG_FILS_SK_PFS
+L_CFLAGS += -DCONFIG_FILS_SK_PFS
+NEED_ECC=y
+endif
 endif
 
 ifdef CONFIG_WNM

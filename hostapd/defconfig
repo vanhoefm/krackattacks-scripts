@@ -358,6 +358,8 @@ CONFIG_IPV6=y
 # Note: This is an experimental and not yet complete implementation. This
 # should not be enabled for production use.
 #CONFIG_FILS=y
+# FILS shared key authentication with PFS
+#CONFIG_FILS_SK_PFS=y
 
 # Include internal line edit mode in hostapd_cli. This can be used to provide
 # limited command line editing and history support.

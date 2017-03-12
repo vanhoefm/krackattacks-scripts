@@ -231,6 +231,10 @@ struct sta_info {
 	unsigned int fils_dhcp_rapid_commit_proxy:1;
 	struct wpabuf *fils_hlp_resp;
 	struct wpabuf *hlp_dhcp_discover;
+#ifdef CONFIG_FILS_SK_PFS
+	struct crypto_ecdh *fils_ecdh;
+#endif /* CONFIG_FILS_SK_PFS */
+	struct wpabuf *fils_dh_ss;
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE

@@ -630,7 +630,10 @@ u8 * hostapd_eid_fils_indic(struct hostapd_data *hapd, u8 *eid, int hessid)
 		fils_info |= BIT(8); /* HESSID Included */
 	/* FILS Shared Key Authentication without PFS Supported */
 	fils_info |= BIT(9);
-	/* TODO: B10: FILS Shared Key Authentication with PFS Supported */
+	if (hapd->conf->fils_dh_group) {
+		/* FILS Shared Key Authentication with PFS Supported */
+		fils_info |= BIT(10);
+	}
 	/* TODO: B11: FILS Public Key Authentication Supported */
 	/* B12..B15: Reserved */
 	WPA_PUT_LE16(pos, fils_info);

@@ -1014,8 +1014,9 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 				    const u8 *msk, size_t msk_len);
 
 static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
-			    const struct ieee80211_mgmt *mgmt, size_t len,
-			    u16 auth_transaction, u16 status_code)
+			     const struct ieee80211_mgmt *mgmt, size_t len,
+			     u16 auth_alg, u16 auth_transaction,
+			     u16 status_code)
 {
 	u16 resp = WLAN_STATUS_SUCCESS;
 	const u8 *pos, *end;
@@ -1033,8 +1034,76 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 	wpa_hexdump(MSG_DEBUG, "FILS: Authentication frame fields",
 		    pos, end - pos);
 
-	/* TODO: Finite Cyclic Group when using PK or PFS */
-	/* TODO: Element when using PK or PFS */
+	/* TODO: FILS PK */
+#ifdef CONFIG_FILS_SK_PFS
+	if (auth_alg == WLAN_AUTH_FILS_SK_PFS) {
+		u16 group;
+		struct wpabuf *pub;
+		size_t elem_len;
+
+		/* Using FILS PFS */
+
+		/* Finite Cyclic Group */
+		if (end - pos < 2) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: No room for Finite Cyclic Group");
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		group = WPA_GET_LE16(pos);
+		pos += 2;
+		if (group != hapd->conf->fils_dh_group) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Unsupported Finite Cyclic Group: %u (expected %u)",
+				   group, hapd->conf->fils_dh_group);
+			resp = WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+			goto fail;
+		}
+
+		crypto_ecdh_deinit(sta->fils_ecdh);
+		sta->fils_ecdh = crypto_ecdh_init(group);
+		if (!sta->fils_ecdh) {
+			wpa_printf(MSG_INFO,
+				   "FILS: Could not initialize ECDH with group %d",
+				   group);
+			resp = WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+			goto fail;
+		}
+
+		pub = crypto_ecdh_get_pubkey(sta->fils_ecdh, 1);
+		if (!pub) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Failed to derive ECDH public key");
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		elem_len = wpabuf_len(pub);
+		wpabuf_free(pub);
+
+		/* Element */
+		if ((size_t) (end - pos) < elem_len) {
+			wpa_printf(MSG_DEBUG, "FILS: No room for Element");
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+
+		wpabuf_clear_free(sta->fils_dh_ss);
+		sta->fils_dh_ss = crypto_ecdh_set_peerkey(sta->fils_ecdh, 1,
+							  pos, elem_len);
+		if (!sta->fils_dh_ss) {
+			wpa_printf(MSG_DEBUG, "FILS: ECDH operation failed");
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		wpa_hexdump_buf_key(MSG_DEBUG, "FILS: DH_SS", sta->fils_dh_ss);
+		pos += elem_len;
+	} else {
+		crypto_ecdh_deinit(sta->fils_ecdh);
+		sta->fils_ecdh = NULL;
+		wpabuf_clear_free(sta->fils_dh_ss);
+		sta->fils_dh_ss = NULL;
+	}
+#endif /* CONFIG_FILS_SK_PFS */
 
 	wpa_hexdump(MSG_DEBUG, "FILS: Remaining IEs", pos, end - pos);
 	if (ieee802_11_parse_elems(pos, end - pos, &elems, 1) == ParseFailed) {
@@ -1173,6 +1242,8 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 	const u8 *pmk = NULL;
 	size_t pmk_len = 0;
 	u8 pmk_buf[PMK_LEN_MAX];
+	struct wpabuf *pub = NULL;
+	u16 auth_alg;
 
 	if (resp != WLAN_STATUS_SUCCESS)
 		goto fail;
@@ -1204,14 +1275,32 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 	wpa_hexdump(MSG_DEBUG, "RSN: Generated FILS Nonce",
 		    fils_nonce, FILS_NONCE_LEN);
 
-	data = wpabuf_alloc(1000 + ielen);
+#ifdef CONFIG_FILS_SK_PFS
+	if (sta->fils_dh_ss && sta->fils_ecdh) {
+		pub = crypto_ecdh_get_pubkey(sta->fils_ecdh, 1);
+		if (!pub) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+	}
+#endif /* CONFIG_FILS_SK_PFS */
+
+	data = wpabuf_alloc(1000 + ielen + (pub ? wpabuf_len(pub) : 0));
 	if (!data) {
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
 
-	/* TODO: Finite Cyclic Group when using PK or PFS */
-	/* TODO: Element when using PK or PFS */
+	/* TODO: FILS PK */
+#ifdef CONFIG_FILS_SK_PFS
+	if (pub) {
+		/* Finite Cyclic Group */
+		wpabuf_put_le16(data, hapd->conf->fils_dh_group);
+
+		/* Element */
+		wpabuf_put_buf(data, pub);
+	}
+#endif /* CONFIG_FILS_SK_PFS */
 
 	/* RSNE */
 	wpabuf_put_data(data, ie, ielen);
@@ -1243,7 +1332,11 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 
 		if (fils_rmsk_to_pmk(wpa_auth_sta_key_mgmt(sta->wpa_sm),
 				     msk, msk_len, sta->fils_snonce, fils_nonce,
-				     NULL, 0, pmk_buf, &pmk_len)) {
+				     sta->fils_dh_ss ?
+				     wpabuf_head(sta->fils_dh_ss) : NULL,
+				     sta->fils_dh_ss ?
+				     wpabuf_len(sta->fils_dh_ss) : 0,
+				     pmk_buf, &pmk_len)) {
 			wpa_printf(MSG_DEBUG, "FILS: Failed to derive PMK");
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			wpabuf_free(data);
@@ -1273,8 +1366,10 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 	}
 
 fail:
-	send_auth_reply(hapd, sta->addr, hapd->own_addr, WLAN_AUTH_FILS_SK, 2,
-			resp,
+	auth_alg = (pub ||
+		    resp == WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED) ?
+		WLAN_AUTH_FILS_SK_PFS : WLAN_AUTH_FILS_SK;
+	send_auth_reply(hapd, sta->addr, hapd->own_addr, auth_alg, 2, resp,
 			data ? wpabuf_head(data) : (u8 *) "",
 			data ? wpabuf_len(data) : 0);
 	wpabuf_free(data);
@@ -1285,11 +1380,18 @@ fail:
 			       "authentication OK (FILS)");
 		sta->flags |= WLAN_STA_AUTH;
 		wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
-		sta->auth_alg = WLAN_AUTH_FILS_SK;
+		sta->auth_alg = pub ? WLAN_AUTH_FILS_SK_PFS : WLAN_AUTH_FILS_SK;
 		mlme_authenticate_indication(hapd, sta);
 	}
 
 	os_free(ie_buf);
+	wpabuf_free(pub);
+	wpabuf_clear_free(sta->fils_dh_ss);
+	sta->fils_dh_ss = NULL;
+#ifdef CONFIG_FILS_SK_PFS
+	crypto_ecdh_deinit(sta->fils_ecdh);
+	sta->fils_ecdh = NULL;
+#endif /* CONFIG_FILS_SK_PFS */
 }
 
 
@@ -1472,6 +1574,9 @@ static void handle_auth(struct hostapd_data *hapd,
 #ifdef CONFIG_FILS
 	      (hapd->conf->wpa && wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt) &&
 	       auth_alg == WLAN_AUTH_FILS_SK) ||
+	      (hapd->conf->wpa && wpa_key_mgmt_fils(hapd->conf->wpa_key_mgmt) &&
+	       hapd->conf->fils_dh_group &&
+	       auth_alg == WLAN_AUTH_FILS_SK_PFS) ||
 #endif /* CONFIG_FILS */
 	      ((hapd->conf->auth_algs & WPA_AUTH_ALG_SHARED) &&
 	       auth_alg == WLAN_AUTH_SHARED_KEY))) {
@@ -1738,8 +1843,9 @@ static void handle_auth(struct hostapd_data *hapd,
 #endif /* CONFIG_SAE */
 #ifdef CONFIG_FILS
 	case WLAN_AUTH_FILS_SK:
-		handle_auth_fils(hapd, sta, mgmt, len, auth_transaction,
-				 status_code);
+	case WLAN_AUTH_FILS_SK_PFS:
+		handle_auth_fils(hapd, sta, mgmt, len, auth_alg,
+				 auth_transaction, status_code);
 		return;
 #endif /* CONFIG_FILS */
 	}

@@ -557,6 +557,37 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	 * networks). */
 	if (params.auth_alg == WPA_AUTH_ALG_OPEN &&
 	    wpa_key_mgmt_fils(ssid->key_mgmt)) {
+		const u8 *indic;
+		u16 fils_info;
+
+		/*
+		 * Check FILS Indication element (FILS Information field) bits
+		 * indicating supported authentication algorithms against local
+		 * configuration (ssid->fils_dh_group). Try to use FILS
+		 * authentication only if the AP supports the combination in the
+		 * network profile. */
+		indic = wpa_bss_get_ie(bss, WLAN_EID_FILS_INDICATION);
+		if (!indic || indic[1] < 2) {
+			wpa_printf(MSG_DEBUG, "SME: " MACSTR
+				   " does not include FILS Indication element - cannot use FILS authentication with it",
+				   MAC2STR(bss->bssid));
+			goto no_fils;
+		}
+
+		fils_info = WPA_GET_LE16(indic + 2);
+		if (ssid->fils_dh_group == 0 && !(fils_info & BIT(9))) {
+			wpa_printf(MSG_DEBUG, "SME: " MACSTR
+				   " does not support FILS SK without PFS - cannot use FILS authentication with it",
+				   MAC2STR(bss->bssid));
+			goto no_fils;
+		}
+		if (ssid->fils_dh_group != 0 && !(fils_info & BIT(10))) {
+			wpa_printf(MSG_DEBUG, "SME: " MACSTR
+				   " does not support FILS SK with PFS - cannot use FILS authentication with it",
+				   MAC2STR(bss->bssid));
+			goto no_fils;
+		}
+
 		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
 					    ssid, 0,
 					    wpa_bss_get_fils_cache_id(bss)) ==
@@ -582,6 +613,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			wpa_s->sme.auth_alg = auth_alg;
 		}
 	}
+no_fils:
 #endif /* CONFIG_FILS */
 
 	wpa_supplicant_cancel_sched_scan(wpa_s);

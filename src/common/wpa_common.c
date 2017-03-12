@@ -136,6 +136,15 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 			os_memcpy(mic, hash, 24);
 			break;
 #endif /* CONFIG_SUITEB192 */
+#ifdef CONFIG_OWE
+		case WPA_KEY_MGMT_OWE:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC using HMAC-SHA256 (AKM-defined - OWE)");
+			if (hmac_sha256(key, key_len, buf, len, hash))
+				return -1;
+			os_memcpy(mic, hash, MD5_MAC_LEN);
+			break;
+#endif /* CONFIG_OWE */
 		default:
 			wpa_printf(MSG_DEBUG,
 				   "WPA: EAPOL-Key MIC algorithm not known (AKM-defined - akmp=0x%x)",
@@ -218,7 +227,7 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 #else /* CONFIG_SUITEB192 || CONFIG_FILS */
 		return -1;
 #endif /* CONFIG_SUITEB192 || CONFIG_FILS */
-	} else if (wpa_key_mgmt_sha256(akmp)) {
+	} else if (wpa_key_mgmt_sha256(akmp) || akmp == WPA_KEY_MGMT_OWE) {
 #ifdef CONFIG_IEEE80211W
 		wpa_printf(MSG_DEBUG, "WPA: PTK derivation using PRF(SHA256)");
 		if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),

@@ -1018,6 +1018,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 
 			if (!wpa_use_aes_cmac(sm) &&
 			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
+			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OWE &&
 			    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1028,7 +1029,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		}
 
 		if ((wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
-		     wpa_key_mgmt_fils(sm->wpa_key_mgmt)) &&
+		     wpa_key_mgmt_fils(sm->wpa_key_mgmt) ||
+		     sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE) &&
 		    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_WARNING,
 					"did not use EAPOL-Key descriptor version 0 as required for AKM-defined cases");
@@ -1419,6 +1421,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	if (force_version)
 		version = force_version;
 	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
+		 sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
 		 wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		 wpa_key_mgmt_fils(sm->wpa_key_mgmt))
 		version = WPA_KEY_INFO_TYPE_AKM_DEFINED;
@@ -1444,6 +1447,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	key_data_len = kde_len;
 
 	if ((version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
+	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
 	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 	     wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 	     version == WPA_KEY_INFO_TYPE_AES_128_CMAC) && encr) {
@@ -1546,6 +1550,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		wpa_hexdump_key(MSG_DEBUG, "Plaintext EAPOL-Key Key Data",
 				buf, key_data_len);
 		if (version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
+		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
 		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {

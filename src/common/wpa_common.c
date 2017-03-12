@@ -96,25 +96,32 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 	switch (ver) {
 #ifndef CONFIG_FIPS
 	case WPA_KEY_INFO_TYPE_HMAC_MD5_RC4:
+		wpa_printf(MSG_DEBUG, "WPA: EAPOL-Key MIC using HMAC-MD5");
 		return hmac_md5(key, key_len, buf, len, mic);
 #endif /* CONFIG_FIPS */
 	case WPA_KEY_INFO_TYPE_HMAC_SHA1_AES:
+		wpa_printf(MSG_DEBUG, "WPA: EAPOL-Key MIC using HMAC-SHA1");
 		if (hmac_sha1(key, key_len, buf, len, hash))
 			return -1;
 		os_memcpy(mic, hash, MD5_MAC_LEN);
 		break;
 #if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)
 	case WPA_KEY_INFO_TYPE_AES_128_CMAC:
+		wpa_printf(MSG_DEBUG, "WPA: EAPOL-Key MIC using AES-CMAC");
 		return omac1_aes_128(key, buf, len, mic);
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
 	case WPA_KEY_INFO_TYPE_AKM_DEFINED:
 		switch (akmp) {
 #ifdef CONFIG_HS20
 		case WPA_KEY_MGMT_OSEN:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC using AES-CMAC (AKM-defined - OSEN)");
 			return omac1_aes_128(key, buf, len, mic);
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_SUITEB
 		case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC using HMAC-SHA256 (AKM-defined - Suite B)");
 			if (hmac_sha256(key, key_len, buf, len, hash))
 				return -1;
 			os_memcpy(mic, hash, MD5_MAC_LEN);
@@ -122,16 +129,24 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 #endif /* CONFIG_SUITEB */
 #ifdef CONFIG_SUITEB192
 		case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC using HMAC-SHA384 (AKM-defined - Suite B 192-bit)");
 			if (hmac_sha384(key, key_len, buf, len, hash))
 				return -1;
 			os_memcpy(mic, hash, 24);
 			break;
 #endif /* CONFIG_SUITEB192 */
 		default:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC algorithm not known (AKM-defined - akmp=0x%x)",
+				   akmp);
 			return -1;
 		}
 		break;
 	default:
+		wpa_printf(MSG_DEBUG,
+			   "WPA: EAPOL-Key MIC algorithm not known (ver=%d)",
+			   ver);
 		return -1;
 	}
 
@@ -194,19 +209,30 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 	ptk->tk_len = wpa_cipher_key_len(cipher);
 	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len;
 
+	if (wpa_key_mgmt_sha384(akmp)) {
 #if defined(CONFIG_SUITEB192) || defined(CONFIG_FILS)
-	if (wpa_key_mgmt_sha384(akmp))
-		sha384_prf(pmk, pmk_len, label, data, sizeof(data),
-			   tmp, ptk_len);
-	else
+		wpa_printf(MSG_DEBUG, "WPA: PTK derivation using PRF(SHA384)");
+		if (sha384_prf(pmk, pmk_len, label, data, sizeof(data),
+			       tmp, ptk_len) < 0)
+			return -1;
+#else /* CONFIG_SUITEB192 || CONFIG_FILS */
+		return -1;
 #endif /* CONFIG_SUITEB192 || CONFIG_FILS */
+	} else if (wpa_key_mgmt_sha256(akmp)) {
 #ifdef CONFIG_IEEE80211W
-	if (wpa_key_mgmt_sha256(akmp))
-		sha256_prf(pmk, pmk_len, label, data, sizeof(data),
-			   tmp, ptk_len);
-	else
+		wpa_printf(MSG_DEBUG, "WPA: PTK derivation using PRF(SHA256)");
+		if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),
+			       tmp, ptk_len) < 0)
+			return -1;
+#else /* CONFIG_IEEE80211W */
+		return -1;
 #endif /* CONFIG_IEEE80211W */
-		sha1_prf(pmk, pmk_len, label, data, sizeof(data), tmp, ptk_len);
+	} else {
+		wpa_printf(MSG_DEBUG, "WPA: PTK derivation using PRF(SHA1)");
+		if (sha1_prf(pmk, pmk_len, label, data, sizeof(data), tmp,
+			     ptk_len) < 0)
+			return -1;
+	}
 
 	wpa_printf(MSG_DEBUG, "WPA: PTK derivation - A1=" MACSTR " A2=" MACSTR,
 		   MAC2STR(addr1), MAC2STR(addr2));
@@ -337,12 +363,17 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		return -1;
 	key_data_len = *ick_len + ptk->kek_len + ptk->tk_len;
 
-	if (wpa_key_mgmt_sha384(akmp))
-		sha384_prf(pmk, pmk_len, label, data, sizeof(data),
-			   tmp, key_data_len);
-	else if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),
-			    tmp, key_data_len) < 0)
-		return -1;
+	if (wpa_key_mgmt_sha384(akmp)) {
+		wpa_printf(MSG_DEBUG, "FILS: PTK derivation using PRF(SHA384)");
+		if (sha384_prf(pmk, pmk_len, label, data, sizeof(data),
+			       tmp, key_data_len) < 0)
+			return -1;
+	} else {
+		wpa_printf(MSG_DEBUG, "FILS: PTK derivation using PRF(SHA256)");
+		if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),
+			       tmp, key_data_len) < 0)
+			return -1;
+	}
 
 	wpa_printf(MSG_DEBUG, "FILS: PTK derivation - SPA=" MACSTR
 		   " AA=" MACSTR, MAC2STR(spa), MAC2STR(aa));

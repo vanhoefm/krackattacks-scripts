@@ -1549,6 +1549,9 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
+			wpa_printf(MSG_DEBUG,
+				   "WPA: Encrypt Key Data using AES-WRAP (KEK length %u)",
+				   (unsigned int) sm->PTK.kek_len);
 			if (aes_wrap(sm->PTK.kek, sm->PTK.kek_len,
 				     (key_data_len - 8) / 8, buf, key_data)) {
 				os_free(hdr);
@@ -1559,6 +1562,9 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 #ifndef CONFIG_NO_RC4
 		} else if (sm->PTK.kek_len == 16) {
 			u8 ek[32];
+
+			wpa_printf(MSG_DEBUG,
+				   "WPA: Encrypt Key Data using RC4");
 			os_memcpy(key->key_iv,
 				  sm->group->Counter + WPA_NONCE_LEN - 16, 16);
 			inc_byte_array(sm->group->Counter, WPA_NONCE_LEN);

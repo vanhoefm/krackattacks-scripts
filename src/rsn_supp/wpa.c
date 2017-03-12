@@ -51,6 +51,9 @@ int wpa_eapol_key_send(struct wpa_sm *sm, struct wpa_ptk *ptk,
 	int ret = -1;
 	size_t mic_len = wpa_mic_len(sm->key_mgmt);
 
+	wpa_printf(MSG_DEBUG, "WPA: Send EAPOL-Key frame to " MACSTR
+		   " ver=%d mic_len=%d key_mgmt=0x%x",
+		   MAC2STR(dest), ver, (int) mic_len, sm->key_mgmt);
 	if (is_zero_ether_addr(dest) && is_zero_ether_addr(sm->bssid)) {
 		/*
 		 * Association event was not yet received; try to fetch
@@ -1720,6 +1723,8 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		return -1;
 #else /* CONFIG_NO_RC4 */
 		u8 ek[32];
+
+		wpa_printf(MSG_DEBUG, "WPA: Decrypt Key Data using RC4");
 		os_memcpy(ek, key->key_iv, 16);
 		os_memcpy(ek + 16, sm->ptk.kek, sm->ptk.kek_len);
 		if (rc4_skip(ek, 32, 256, key_data, *key_data_len)) {
@@ -1735,6 +1740,10 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		   sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
 		   wpa_key_mgmt_suite_b(sm->key_mgmt)) {
 		u8 *buf;
+
+		wpa_printf(MSG_DEBUG,
+			   "WPA: Decrypt Key Data using AES-UNWRAP (KEK length %u)",
+			   (unsigned int) sm->ptk.kek_len);
 		if (*key_data_len < 8 || *key_data_len % 8) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Unsupported AES-WRAP len %u",

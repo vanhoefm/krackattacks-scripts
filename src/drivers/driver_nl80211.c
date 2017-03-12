@@ -3219,6 +3219,8 @@ retry:
 		type = NL80211_AUTHTYPE_SAE;
 	else if (params->auth_alg & WPA_AUTH_ALG_FILS)
 		type = NL80211_AUTHTYPE_FILS_SK;
+	else if (params->auth_alg & WPA_AUTH_ALG_FILS_SK_PFS)
+		type = NL80211_AUTHTYPE_FILS_SK_PFS;
 	else
 		goto fail;
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);

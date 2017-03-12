@@ -1,6 +1,6 @@
 /*
  * Internal WPA/RSN supplicant state machine definitions
- * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -152,6 +152,10 @@ struct wpa_sm {
 	u8 fils_erp_pmkid[PMKID_LEN];
 	u8 fils_cache_id[FILS_CACHE_ID_LEN];
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_OWE
+	struct crypto_ecdh *owe_ecdh;
+#endif /* CONFIG_OWE */
 };
 
 

@@ -2225,6 +2225,16 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_SME */
 #endif /* CONFIG_FILS */
 
+#ifdef CONFIG_OWE
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_OWE &&
+	    owe_process_assoc_resp(wpa_s->wpa,
+				   data->assoc_info.resp_ies,
+				   data->assoc_info.resp_ies_len) < 0) {
+		wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_UNSPECIFIED);
+		return -1;
+	}
+#endif /* CONFIG_OWE */
+
 #ifdef CONFIG_IEEE80211R
 #ifdef CONFIG_SME
 	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FT) {

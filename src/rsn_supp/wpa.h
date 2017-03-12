@@ -446,4 +446,8 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len);
 int wpa_fils_is_completed(struct wpa_sm *sm);
 
+struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm);
+int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
+			   size_t resp_ies_len);
+
 #endif /* WPA_H */

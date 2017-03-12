@@ -1064,6 +1064,31 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	}
 #endif /* CONFIG_FILS */
 
+#ifdef CONFIG_OWE
+	if (auth_type == WLAN_AUTH_OPEN &&
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
+		struct wpabuf *owe_ie;
+
+		owe_ie = owe_build_assoc_req(wpa_s->wpa);
+		if (!owe_ie) {
+			wpa_printf(MSG_ERROR,
+				   "OWE: Failed to build IE for Association Request frame");
+			return;
+		}
+		if (wpa_s->sme.assoc_req_ie_len + wpabuf_len(owe_ie) >
+		    sizeof(wpa_s->sme.assoc_req_ie)) {
+			wpa_printf(MSG_ERROR,
+				   "OWE: Not enough buffer room for own Association Request frame elements");
+			wpabuf_free(owe_ie);
+			return;
+		}
+		os_memcpy(wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len,
+			  wpabuf_head(owe_ie), wpabuf_len(owe_ie));
+		wpa_s->sme.assoc_req_ie_len += wpabuf_len(owe_ie);
+		wpabuf_free(owe_ie);
+	}
+#endif /* CONFIG_OWE */
+
 	params.bssid = bssid;
 	params.ssid = wpa_s->sme.ssid;
 	params.ssid_len = wpa_s->sme.ssid_len;

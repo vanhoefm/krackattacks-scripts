@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - WPA state machine and EAPOL-Key processing
- * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi>
  * Copyright(c) 2015 Intel Deutschland GmbH
  *
  * This software may be distributed under the terms of the BSD license.
@@ -15,6 +15,7 @@
 #include "crypto/crypto.h"
 #include "crypto/random.h"
 #include "crypto/aes_siv.h"
+#include "crypto/sha256.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "eap_common/eap_defs.h"
@@ -2447,6 +2448,9 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 #ifdef CONFIG_TESTING_OPTIONS
 	wpabuf_free(sm->test_assoc_ie);
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_OWE
+	crypto_ecdh_deinit(sm->owe_ecdh);
+#endif /* CONFIG_OWE */
 	os_free(sm);
 }
 
@@ -3814,3 +3818,139 @@ int wpa_fils_is_completed(struct wpa_sm *sm)
 	return 0;
 #endif /* CONFIG_FILS */
 }
+
+
+#ifdef CONFIG_OWE
+
+struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm)
+{
+	struct wpabuf *ie = NULL, *pub = NULL;
+
+	crypto_ecdh_deinit(sm->owe_ecdh);
+	sm->owe_ecdh = crypto_ecdh_init(OWE_DH_GROUP);
+	if (!sm->owe_ecdh)
+		goto fail;
+	pub = crypto_ecdh_get_pubkey(sm->owe_ecdh, 0);
+	if (!pub)
+		goto fail;
+
+	ie = wpabuf_alloc(5 + wpabuf_len(pub));
+	if (!ie)
+		goto fail;
+	wpabuf_put_u8(ie, WLAN_EID_EXTENSION);
+	wpabuf_put_u8(ie, 1 + 2 + wpabuf_len(pub));
+	wpabuf_put_u8(ie, WLAN_EID_EXT_OWE_DH_PARAM);
+	wpabuf_put_le16(ie, OWE_DH_GROUP);
+	wpabuf_put_buf(ie, pub);
+	wpabuf_free(pub);
+	wpa_hexdump_buf(MSG_DEBUG, "OWE: Diffie-Hellman Parameter element",
+			ie);
+
+	return ie;
+fail:
+	wpabuf_free(pub);
+	crypto_ecdh_deinit(sm->owe_ecdh);
+	sm->owe_ecdh = NULL;
+	return NULL;
+}
+
+
+int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
+			   size_t resp_ies_len)
+{
+	struct ieee802_11_elems elems;
+	u16 group;
+	struct wpabuf *secret, *pub, *hkey;
+	int res;
+	u8 prk[SHA256_MAC_LEN], pmkid[SHA256_MAC_LEN];
+	const char *info = "OWE Key Generation";
+	const u8 *addr[2];
+	size_t len[2];
+
+	if (!resp_ies ||
+	    ieee802_11_parse_elems(resp_ies, resp_ies_len, &elems, 1) ==
+	    ParseFailed ||
+	    !elems.owe_dh) {
+		wpa_printf(MSG_INFO,
+			   "OWE: No Diffie-Hellman Parameter element found in Association Response frame");
+		return -1;
+	}
+
+	group = WPA_GET_LE16(elems.owe_dh);
+	if (group != OWE_DH_GROUP) {
+		wpa_printf(MSG_INFO,
+			   "OWE: Unexpected Diffie-Hellman group in response: %u",
+			   group);
+		return -1;
+	}
+
+	if (!sm->owe_ecdh) {
+		wpa_printf(MSG_INFO, "OWE: No ECDH state available");
+		return -1;
+	}
+
+	secret = crypto_ecdh_set_peerkey(sm->owe_ecdh, 0,
+					 elems.owe_dh + 2,
+					 elems.owe_dh_len - 2);
+	if (!secret) {
+		wpa_printf(MSG_DEBUG, "OWE: Invalid peer DH public key");
+		return -1;
+	}
+	wpa_hexdump_buf_key(MSG_DEBUG, "OWE: DH shared secret", secret);
+
+	/* prk = HKDF-extract(C | A | group, z) */
+
+	pub = crypto_ecdh_get_pubkey(sm->owe_ecdh, 0);
+	if (!pub) {
+		wpabuf_clear_free(secret);
+		return -1;
+	}
+
+	/* PMKID = Truncate-128(Hash(C | A)) */
+	addr[0] = wpabuf_head(pub);
+	len[0] = wpabuf_len(pub);
+	addr[1] = elems.owe_dh + 2;
+	len[1] = elems.owe_dh_len - 2;
+	res = sha256_vector(2, addr, len, pmkid);
+	if (res < 0) {
+		wpabuf_free(pub);
+		wpabuf_clear_free(secret);
+		return -1;
+	}
+
+	hkey = wpabuf_alloc(wpabuf_len(pub) + elems.owe_dh_len - 2 + 2);
+	if (!hkey) {
+		wpabuf_free(pub);
+		wpabuf_clear_free(secret);
+		return -1;
+	}
+
+	wpabuf_put_buf(hkey, pub); /* C */
+	wpabuf_free(pub);
+	wpabuf_put_data(hkey, elems.owe_dh + 2, elems.owe_dh_len - 2); /* A */
+	wpabuf_put_le16(hkey, OWE_DH_GROUP); /* group */
+	res = hmac_sha256(wpabuf_head(hkey), wpabuf_len(hkey),
+			  wpabuf_head(secret), wpabuf_len(secret), prk);
+	wpabuf_clear_free(hkey);
+	wpabuf_clear_free(secret);
+	if (res < 0)
+		return -1;
+
+	wpa_hexdump_key(MSG_DEBUG, "OWE: prk", prk, SHA256_MAC_LEN);
+
+	/* PMK = HKDF-expand(prk, "OWE Key Generation", n) */
+
+	res = hmac_sha256_kdf(prk, SHA256_MAC_LEN, NULL, (const u8 *) info,
+			      os_strlen(info), sm->pmk, PMK_LEN);
+	os_memset(prk, 0, SHA256_MAC_LEN);
+	if (res < 0)
+		return -1;
+
+	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, PMK_LEN);
+	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);
+	/* TODO: Add PMKSA cache entry */
+
+	return 0;
+}
+
+#endif /* CONFIG_OWE */

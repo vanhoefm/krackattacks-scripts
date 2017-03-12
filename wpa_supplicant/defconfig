@@ -558,6 +558,8 @@ CONFIG_PEERKEY=y
 # Note: This is an experimental and not yet complete implementation. This
 # should not be enabled for production use.
 #CONFIG_FILS=y
+# FILS shared key authentication with PFS
+#CONFIG_FILS_SK_PFS=y
 
 # Support RSN on IBSS networks
 # This is needed to be able to use mode=1 network profile with proto=RSN and

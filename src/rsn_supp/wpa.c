@@ -2461,6 +2461,9 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 #ifdef CONFIG_TESTING_OPTIONS
 	wpabuf_free(sm->test_assoc_ie);
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_FILS
+	crypto_ecdh_deinit(sm->fils_ecdh);
+#endif /* CONFIG_FILS */
 #ifdef CONFIG_OWE
 	crypto_ecdh_deinit(sm->owe_ecdh);
 #endif /* CONFIG_OWE */
@@ -3265,10 +3268,11 @@ void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf)
 
 #ifdef CONFIG_FILS
 
-struct wpabuf * fils_build_auth(struct wpa_sm *sm)
+struct wpabuf * fils_build_auth(struct wpa_sm *sm, int dh_group)
 {
 	struct wpabuf *buf = NULL;
 	struct wpabuf *erp_msg;
+	struct wpabuf *pub = NULL;
 
 	erp_msg = eapol_sm_build_erp_reauth_start(sm->eapol);
 	if (!erp_msg && !sm->cur_pmksa) {
@@ -3296,7 +3300,28 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 	wpa_hexdump(MSG_DEBUG, "FILS: Generated FILS Session",
 		    sm->fils_session, FILS_SESSION_LEN);
 
-	buf = wpabuf_alloc(1000 + sm->assoc_wpa_ie_len);
+#ifdef CONFIG_FILS_SK_PFS
+	sm->fils_dh_group = dh_group;
+	if (dh_group) {
+		crypto_ecdh_deinit(sm->fils_ecdh);
+		sm->fils_ecdh = crypto_ecdh_init(dh_group);
+		if (!sm->fils_ecdh) {
+			wpa_printf(MSG_INFO,
+				   "FILS: Could not initialize ECDH with group %d",
+				   dh_group);
+			goto fail;
+		}
+		pub = crypto_ecdh_get_pubkey(sm->fils_ecdh, 1);
+		if (!pub)
+			goto fail;
+		wpa_hexdump_buf(MSG_DEBUG, "FILS: Element (DH public key)",
+				pub);
+		sm->fils_dh_elem_len = wpabuf_len(pub);
+	}
+#endif /* CONFIG_FILS_SK_PFS */
+
+	buf = wpabuf_alloc(1000 + sm->assoc_wpa_ie_len +
+			   (pub ? wpabuf_len(pub) : 0));
 	if (!buf)
 		goto fail;
 
@@ -3308,8 +3333,15 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 	/* Status Code */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
 
-	/* TODO: Finite Cyclic Group when using PK or PFS */
-	/* TODO: Element when using PK or PFS */
+	/* TODO: FILS PK */
+#ifdef CONFIG_FILS_SK_PFS
+	if (dh_group) {
+		/* Finite Cyclic Group */
+		wpabuf_put_le16(buf, dh_group);
+		/* Element */
+		wpabuf_put_buf(buf, pub);
+	}
+#endif /* CONFIG_FILS_SK_PFS */
 
 	/* RSNE */
 	wpa_hexdump(MSG_DEBUG, "FILS: RSNE in FILS Authentication frame",
@@ -3354,6 +3386,7 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm)
 
 fail:
 	wpabuf_free(erp_msg);
+	wpabuf_free(pub);
 	return buf;
 }
 
@@ -3368,6 +3401,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	u8 ick[FILS_ICK_MAX_LEN];
 	size_t ick_len;
 	int res;
+	struct wpabuf *dh_ss = NULL;
 
 	os_memcpy(sm->bssid, bssid, ETH_ALEN);
 
@@ -3376,13 +3410,53 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	pos = data;
 	end = data + len;
 
-	/* TODO: Finite Cyclic Group when using PK or PFS */
-	/* TODO: Element when using PK or PFS */
+	/* TODO: FILS PK */
+#ifdef CONFIG_FILS_SK_PFS
+	if (sm->fils_dh_group) {
+		u16 group;
+
+		/* Using FILS PFS */
+
+		/* Finite Cyclic Group */
+		if (end - pos < 2) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: No room for Finite Cyclic Group");
+			goto fail;
+		}
+		group = WPA_GET_LE16(pos);
+		pos += 2;
+		if (group != sm->fils_dh_group) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Unexpected change in Finite Cyclic Group: %u (expected %u)",
+				   group, sm->fils_dh_group);
+			goto fail;
+		}
+
+		/* Element */
+		if ((size_t) (end - pos) < sm->fils_dh_elem_len) {
+			wpa_printf(MSG_DEBUG, "FILS: No room for Element");
+			goto fail;
+		}
+
+		if (!sm->fils_ecdh) {
+			wpa_printf(MSG_DEBUG, "FILS: No ECDH state available");
+			goto fail;
+		}
+		dh_ss = crypto_ecdh_set_peerkey(sm->fils_ecdh, 1, pos,
+						sm->fils_dh_elem_len);
+		if (!dh_ss) {
+			wpa_printf(MSG_DEBUG, "FILS: ECDH operation failed");
+			goto fail;
+		}
+		wpa_hexdump_buf_key(MSG_DEBUG, "FILS: DH_SS", dh_ss);
+		pos += sm->fils_dh_elem_len;
+	}
+#endif /* CONFIG_FILS_SK_PFS */
 
 	wpa_hexdump(MSG_DEBUG, "FILS: Remaining IEs", pos, end - pos);
 	if (ieee802_11_parse_elems(pos, end - pos, &elems, 1) == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "FILS: Could not parse elements");
-		return -1;
+		goto fail;
 	}
 
 	/* RSNE */
@@ -3392,12 +3466,12 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	    wpa_parse_wpa_ie_rsn(elems.rsn_ie - 2, elems.rsn_ie_len + 2,
 				 &rsn) < 0) {
 		wpa_printf(MSG_DEBUG, "FILS: No RSN element");
-		return -1;
+		goto fail;
 	}
 
 	if (!elems.fils_nonce) {
 		wpa_printf(MSG_DEBUG, "FILS: No FILS Nonce field");
-		return -1;
+		goto fail;
 	}
 	os_memcpy(sm->fils_anonce, elems.fils_nonce, FILS_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", sm->fils_anonce, FILS_NONCE_LEN);
@@ -3412,7 +3486,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 
 		if (rsn.num_pmkid != 1) {
 			wpa_printf(MSG_DEBUG, "FILS: Invalid PMKID selection");
-			return -1;
+			goto fail;
 		}
 		wpa_hexdump(MSG_DEBUG, "FILS: PMKID", rsn.pmkid, PMKID_LEN);
 		if (os_memcmp(sm->cur_pmksa->pmkid, rsn.pmkid, PMKID_LEN) != 0)
@@ -3420,7 +3494,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 			wpa_printf(MSG_DEBUG, "FILS: PMKID mismatch");
 			wpa_hexdump(MSG_DEBUG, "FILS: Expected PMKID",
 				    sm->cur_pmksa->pmkid, PMKID_LEN);
-			return -1;
+			goto fail;
 		}
 		wpa_printf(MSG_DEBUG,
 			   "FILS: Matching PMKID - continue using PMKSA caching");
@@ -3435,7 +3509,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	/* FILS Session */
 	if (!elems.fils_session) {
 		wpa_printf(MSG_DEBUG, "FILS: No FILS Session element");
-		return -1;
+		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "FILS: FILS Session", elems.fils_session,
 		    FILS_SESSION_LEN);
@@ -3444,7 +3518,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 		wpa_printf(MSG_DEBUG, "FILS: Session mismatch");
 		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
 			    sm->fils_session, FILS_SESSION_LEN);
-		return -1;
+		goto fail;
 	}
 
 	/* FILS Wrapped Data */
@@ -3458,7 +3532,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 		eapol_sm_process_erp_finish(sm->eapol, elems.fils_wrapped_data,
 					    elems.fils_wrapped_data_len);
 		if (eapol_sm_failed(sm->eapol))
-			return -1;
+			goto fail;
 
 		rmsk_len = ERP_MAX_KEY_LEN;
 		res = eapol_sm_get_key(sm->eapol, rmsk, rmsk_len);
@@ -3467,18 +3541,22 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 			res = eapol_sm_get_key(sm->eapol, rmsk, rmsk_len);
 		}
 		if (res)
-			return -1;
+			goto fail;
 
 		res = fils_rmsk_to_pmk(sm->key_mgmt, rmsk, rmsk_len,
-				       sm->fils_nonce, sm->fils_anonce, NULL, 0,
+				       sm->fils_nonce, sm->fils_anonce,
+				       dh_ss ? wpabuf_head(dh_ss) : NULL,
+				       dh_ss ? wpabuf_len(dh_ss) : 0,
 				       sm->pmk, &sm->pmk_len);
 		os_memset(rmsk, 0, sizeof(rmsk));
+		wpabuf_clear_free(dh_ss);
+		dh_ss = NULL;
 		if (res)
-			return -1;
+			goto fail;
 
 		if (!sm->fils_erp_pmkid_set) {
 			wpa_printf(MSG_DEBUG, "FILS: PMKID not available");
-			return -1;
+			goto fail;
 		}
 		wpa_hexdump(MSG_DEBUG, "FILS: PMKID", sm->fils_erp_pmkid,
 			    PMKID_LEN);
@@ -3493,7 +3571,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	if (!sm->cur_pmksa) {
 		wpa_printf(MSG_DEBUG,
 			   "FILS: No remaining options to continue FILS authentication");
-		return -1;
+		goto fail;
 	}
 
 	if (fils_pmk_to_ptk(sm->pmk, sm->pmk_len, sm->own_addr, sm->bssid,
@@ -3501,7 +3579,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher) <
 	    0) {
 		wpa_printf(MSG_DEBUG, "FILS: Failed to derive PTK");
-		return -1;
+		goto fail;
 	}
 	sm->ptk_set = 1;
 	sm->tptk_set = 0;
@@ -3509,12 +3587,15 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 
 	res = fils_key_auth_sk(ick, ick_len, sm->fils_nonce,
 			       sm->fils_anonce, sm->own_addr, sm->bssid,
-			       NULL, 0, NULL, 0, /* TODO: SK+PFS */
+			       NULL, 0, NULL, 0, /* TODO: PK */
 			       sm->key_mgmt, sm->fils_key_auth_sta,
 			       sm->fils_key_auth_ap,
 			       &sm->fils_key_auth_len);
 	os_memset(ick, 0, sizeof(ick));
 	return res;
+fail:
+	wpabuf_clear_free(dh_ss);
+	return -1;
 }
 
 

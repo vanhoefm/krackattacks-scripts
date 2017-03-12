@@ -2214,7 +2214,8 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_FILS
 #ifdef CONFIG_SME
-	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FILS &&
+	if ((wpa_s->sme.auth_alg == WPA_AUTH_ALG_FILS ||
+	     wpa_s->sme.auth_alg == WPA_AUTH_ALG_FILS_SK_PFS) &&
 	    (!data->assoc_info.resp_frame ||
 	     fils_process_assoc_resp(wpa_s->wpa,
 				     data->assoc_info.resp_frame,

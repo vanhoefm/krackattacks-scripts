@@ -563,12 +563,23 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		    0)
 			wpa_printf(MSG_DEBUG,
 				   "SME: Try to use FILS with PMKSA caching");
-		resp = fils_build_auth(wpa_s->wpa);
+		resp = fils_build_auth(wpa_s->wpa, ssid->fils_dh_group);
 		if (resp) {
-			params.auth_alg = WPA_AUTH_ALG_FILS;
+			int auth_alg;
+
+			if (ssid->fils_dh_group)
+				wpa_printf(MSG_DEBUG,
+					   "SME: Try to use FILS SK authentication with PFS (DH Group %u)",
+					   ssid->fils_dh_group);
+			else
+				wpa_printf(MSG_DEBUG,
+					   "SME: Try to use FILS SK authentication without PFS");
+			auth_alg = ssid->fils_dh_group ?
+				WPA_AUTH_ALG_FILS_SK_PFS : WPA_AUTH_ALG_FILS;
+			params.auth_alg = auth_alg;
 			params.auth_data = wpabuf_head(resp);
 			params.auth_data_len = wpabuf_len(resp);
-			wpa_s->sme.auth_alg = WPA_AUTH_ALG_FILS;
+			wpa_s->sme.auth_alg = auth_alg;
 		}
 	}
 #endif /* CONFIG_FILS */
@@ -968,7 +979,27 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_FILS
-	if (data->auth.auth_type == WLAN_AUTH_FILS_SK) {
+	if (data->auth.auth_type == WLAN_AUTH_FILS_SK ||
+	    data->auth.auth_type == WLAN_AUTH_FILS_SK_PFS) {
+		u16 expect_auth_type;
+
+		expect_auth_type = wpa_s->sme.auth_alg ==
+			WPA_AUTH_ALG_FILS_SK_PFS ? WLAN_AUTH_FILS_SK_PFS :
+			WLAN_AUTH_FILS_SK;
+		if (data->auth.auth_type != expect_auth_type) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SME: FILS Authentication response used different auth alg (%u; expected %u)",
+				data->auth.auth_type, expect_auth_type);
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid="
+				MACSTR
+				" reason=%d locally_generated=1",
+				MAC2STR(wpa_s->pending_bssid),
+				WLAN_REASON_DEAUTH_LEAVING);
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_mark_disassoc(wpa_s);
+			return;
+		}
+
 		if (fils_process_auth(wpa_s->wpa, wpa_s->pending_bssid,
 				      data->auth.ies, data->auth.ies_len) < 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG,
@@ -1010,7 +1041,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	os_memset(&params, 0, sizeof(params));
 
 #ifdef CONFIG_FILS
-	if (auth_type == WLAN_AUTH_FILS_SK) {
+	if (auth_type == WLAN_AUTH_FILS_SK ||
+	    auth_type == WLAN_AUTH_FILS_SK_PFS) {
 		struct wpabuf *buf;
 		const u8 *snonce, *anonce;
 		const unsigned int max_hlp = 20;

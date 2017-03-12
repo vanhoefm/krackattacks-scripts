@@ -2147,6 +2147,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(mac_addr, 0, 2) },
 	{ INT_RANGE(pbss, 0, 2) },
 	{ INT_RANGE(wps_disabled, 0, 1) },
+	{ INT_RANGE(fils_dh_group, 0, 65535) },
 };
 
 #undef OFFSET

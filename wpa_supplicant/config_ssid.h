@@ -814,6 +814,14 @@ struct wpa_ssid {
 	 * 1 = WPS disabled
 	 */
 	int wps_disabled;
+
+	/**
+	 * fils_dh_group - FILS DH Group
+	 *
+	 * 0 = PFS disabled with FILS shared key authentication
+	 * 1-65535 DH Group to use for FILS PFS
+	 */
+	int fils_dh_group;
 };
 
 #endif /* CONFIG_SSID_H */

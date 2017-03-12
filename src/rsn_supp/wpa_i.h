@@ -151,6 +151,9 @@ struct wpa_sm {
 	unsigned int fils_cache_id_set:1;
 	u8 fils_erp_pmkid[PMKID_LEN];
 	u8 fils_cache_id[FILS_CACHE_ID_LEN];
+	struct crypto_ecdh *fils_ecdh;
+	int fils_dh_group;
+	size_t fils_dh_elem_len;
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE

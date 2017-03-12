@@ -1250,3 +1250,119 @@ def test_fils_sk_erp_sim(dev, apdev):
         raise Exception("Unexpected EAP exchange")
     if "EVENT-ASSOC-REJECT" in ev:
         raise Exception("Association failed")
+
+def test_fils_sk_pfs_19(dev, apdev):
+    """FILS SK with PFS (DH group 19)"""
+    rul_fils_sk_pfs(dev, apdev, "19")
+
+def test_fils_sk_pfs_20(dev, apdev):
+    """FILS SK with PFS (DH group 20)"""
+    rul_fils_sk_pfs(dev, apdev, "20")
+
+def test_fils_sk_pfs_21(dev, apdev):
+    """FILS SK with PFS (DH group 21)"""
+    rul_fils_sk_pfs(dev, apdev, "21")
+
+def test_fils_sk_pfs_25(dev, apdev):
+    """FILS SK with PFS (DH group 25)"""
+    rul_fils_sk_pfs(dev, apdev, "25")
+
+def test_fils_sk_pfs_26(dev, apdev):
+    """FILS SK with PFS (DH group 26)"""
+    rul_fils_sk_pfs(dev, apdev, "26")
+
+def test_fils_sk_pfs_27(dev, apdev):
+    """FILS SK with PFS (DH group 27)"""
+    rul_fils_sk_pfs(dev, apdev, "27")
+
+def test_fils_sk_pfs_28(dev, apdev):
+    """FILS SK with PFS (DH group 28)"""
+    rul_fils_sk_pfs(dev, apdev, "28")
+
+def test_fils_sk_pfs_29(dev, apdev):
+    """FILS SK with PFS (DH group 29)"""
+    rul_fils_sk_pfs(dev, apdev, "29")
+
+def test_fils_sk_pfs_30(dev, apdev):
+    """FILS SK with PFS (DH group 30)"""
+    rul_fils_sk_pfs(dev, apdev, "30")
+
+def rul_fils_sk_pfs(dev, apdev, group):
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    tls = dev[0].request("GET tls_library")
+    if int(group) in [ 27, 28, 29, 30 ]:
+        if not (tls.startswith("OpenSSL") and ("build=OpenSSL 1.0.2" in tls or "build=OpenSSL 1.1" in tls) and ("run=OpenSSL 1.0.2" in tls or "run=OpenSSL 1.1" in tls)):
+            raise HwsimSkip("Brainpool EC group not supported")
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params['fils_dh_group'] = group
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", fils_dh_group=group, scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_fils_sk_pfs_group_mismatch(dev, apdev):
+    """FILS SK PFS DH group mismatch"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params['fils_dh_group'] = "20"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", fils_dh_group="19", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-AUTH-REJECT"], timeout=10)
+    dev[0].request("DISCONNECT")
+    if ev is None:
+        raise Exception("Authentication rejection not seen")
+    if "auth_type=5 auth_transaction=2 status_code=77" not in ev:
+        raise Exception("Unexpected auth reject value: " + ev)

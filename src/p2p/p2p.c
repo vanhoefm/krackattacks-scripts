@@ -1010,7 +1010,13 @@ static void p2p_search(struct p2p_data *p2p)
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 
-	if ((p2p->find_type == P2P_FIND_PROGRESSIVE &&
+	if (p2p->find_pending_full &&
+	    (p2p->find_type == P2P_FIND_PROGRESSIVE ||
+	     p2p->find_type == P2P_FIND_START_WITH_FULL)) {
+		type = P2P_SCAN_FULL;
+		p2p_dbg(p2p, "Starting search (pending full scan)");
+		p2p->find_pending_full = 0;
+	} else if ((p2p->find_type == P2P_FIND_PROGRESSIVE &&
 	    (freq = p2p_get_next_prog_freq(p2p)) > 0) ||
 	    (p2p->find_type == P2P_FIND_START_WITH_FULL &&
 	     (freq = p2p->find_specified_freq) > 0)) {
@@ -1236,6 +1242,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		p2p->pending_listen_freq = 0;
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
+	p2p->find_pending_full = 0;
 	p2p->find_type = type;
 	if (freq != 2412 && freq != 2437 && freq != 2462 && freq != 60480)
 		p2p->find_specified_freq = freq;
@@ -1285,6 +1292,9 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	if (res != 0 && p2p->p2p_scan_running) {
 		p2p_dbg(p2p, "Failed to start p2p_scan - another p2p_scan was already running");
 		/* wait for the previous p2p_scan to complete */
+		if (type == P2P_FIND_PROGRESSIVE ||
+		    (type == P2P_FIND_START_WITH_FULL && freq == 0))
+			p2p->find_pending_full = 1;
 		res = 0; /* do not report failure */
 	} else if (res != 0) {
 		p2p_dbg(p2p, "Failed to start p2p_scan");

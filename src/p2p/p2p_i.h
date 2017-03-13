@@ -441,6 +441,7 @@ struct p2p_data {
 	unsigned int last_p2p_find_timeout;
 	u8 last_prog_scan_class;
 	u8 last_prog_scan_chan;
+	unsigned int find_pending_full:1;
 	int p2p_scan_running;
 	enum p2p_after_scan {
 		P2P_AFTER_SCAN_NOTHING,

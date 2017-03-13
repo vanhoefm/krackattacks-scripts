@@ -4175,7 +4175,11 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 #ifdef CONFIG_FILS
 	if (os_strcmp(field, "fils") == 0 &&
 	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_FILS)) {
+#ifdef CONFIG_FILS_SK_PFS
+		res = os_snprintf(buf, buflen, "FILS FILS-SK-PFS");
+#else /* CONFIG_FILS_SK_PFS */
 		res = os_snprintf(buf, buflen, "FILS");
+#endif /* CONFIG_FILS_SK_PFS */
 		if (os_snprintf_error(buflen, res))
 			return -1;
 		return res;

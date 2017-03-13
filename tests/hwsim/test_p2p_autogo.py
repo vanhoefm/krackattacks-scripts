@@ -641,6 +641,36 @@ def test_go_search_non_social(dev):
     dev[1].p2p_stop_find()
     dev[0].remove_group()
 
+def test_go_search_non_social2(dev):
+    """P2P_FIND with freq parameter to scan a single channel (2)"""
+    addr0 = dev[0].p2p_dev_addr()
+    dev[1].p2p_find(freq=2422)
+    # Wait for the first p2p_find scan round to complete before starting GO
+    time.sleep(1)
+    autogo(dev[0], freq=2422)
+    # Verify that p2p_find is still scanning the specified frequency
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        dev[1].p2p_stop_find()
+        raise Exception("Did not find GO quickly enough")
+    # Verify that p2p_find is scanning the social channels
+    dev[2].p2p_listen()
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Did not find peer")
+    dev[2].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[0].remove_group()
+    dev[1].dump_monitor()
+
+    # Verify that social channel as the specific channel works
+    dev[1].p2p_find(freq=2412)
+    time.sleep(0.5)
+    dev[2].p2p_listen()
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Did not find peer (2)")
+
 def test_autogo_many(dev):
     """P2P autonomous GO with large number of GO instances"""
     dev[0].global_request("SET p2p_no_group_iface 0")

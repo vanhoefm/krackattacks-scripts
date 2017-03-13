@@ -1010,8 +1010,10 @@ static void p2p_search(struct p2p_data *p2p)
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 
-	if (p2p->find_type == P2P_FIND_PROGRESSIVE &&
-	    (freq = p2p_get_next_prog_freq(p2p)) > 0) {
+	if ((p2p->find_type == P2P_FIND_PROGRESSIVE &&
+	    (freq = p2p_get_next_prog_freq(p2p)) > 0) ||
+	    (p2p->find_type == P2P_FIND_START_WITH_FULL &&
+	     (freq = p2p->find_specified_freq) > 0)) {
 		type = P2P_SCAN_SOCIAL_PLUS_ONE;
 		p2p_dbg(p2p, "Starting search (+ freq %u)", freq);
 	} else {
@@ -1235,6 +1237,10 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 	p2p->find_type = type;
+	if (freq != 2412 && freq != 2437 && freq != 2462 && freq != 60480)
+		p2p->find_specified_freq = freq;
+	else
+		p2p->find_specified_freq = 0;
 	p2p_device_clear_reported(p2p);
 	os_memset(p2p->sd_query_no_ack, 0, ETH_ALEN);
 	p2p_set_state(p2p, P2P_SEARCH);
@@ -1250,7 +1256,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		if (freq > 0) {
 			/*
 			 * Start with the specified channel and then move to
-			 * social channels only scans.
+			 * scans for social channels and this specific channel.
 			 */
 			res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx,
 						 P2P_SCAN_SPECIFIC, freq,

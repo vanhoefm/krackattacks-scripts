@@ -437,6 +437,7 @@ struct p2p_data {
 	int inv_persistent;
 
 	enum p2p_discovery_type find_type;
+	int find_specified_freq;
 	unsigned int last_p2p_find_timeout;
 	u8 last_prog_scan_class;
 	u8 last_prog_scan_chan;

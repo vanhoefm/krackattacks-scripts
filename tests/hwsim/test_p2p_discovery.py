@@ -17,6 +17,7 @@ from hwsim import HWSimRadio
 from tshark import run_tshark
 from test_gas import start_ap
 from test_cfg80211 import nl80211_remain_on_channel
+from test_p2p_channel import set_country
 
 @remote_compatible
 def test_discovery(dev):
@@ -444,6 +445,35 @@ def test_discovery_stop(dev):
     ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is not None:
         raise Exception("Peer found unexpectedly: " + ev)
+
+def test_discovery_restart(dev):
+    """P2P device discovery and p2p_find restart"""
+    autogo(dev[1], freq=2457)
+    dev[0].p2p_find(social=True)
+    dev[0].p2p_stop_find()
+    dev[0].p2p_find(social=False)
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=7)
+    if ev is None:
+        dev[0].p2p_find(social=False)
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=7)
+        if ev is None:
+            raise Exception("Peer not found")
+
+def test_discovery_restart_progressive(dev):
+    """P2P device discovery and p2p_find type=progressive restart"""
+    try:
+        set_country("US", dev[1])
+        autogo(dev[1], freq=5805)
+        dev[0].p2p_find(social=True)
+        dev[0].p2p_stop_find()
+        dev[0].p2p_find(progressive=True)
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=20)
+        dev[1].remove_group()
+        if ev is None:
+            raise Exception("Peer not found")
+    finally:
+        set_country("00")
+        dev[1].flush_scan_cache()
 
 def test_p2p_peer_command(dev):
     """P2P_PEER command"""

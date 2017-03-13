@@ -25,6 +25,11 @@ def check_fils_capa(dev):
     if capa is None or "FILS" not in capa:
         raise HwsimSkip("FILS not supported")
 
+def check_fils_sk_pfs_capa(dev):
+    capa = dev.get_capability("fils")
+    if capa is None or "FILS-SK-PFS" not in capa:
+        raise HwsimSkip("FILS-SK-PFS not supported")
+
 def test_fils_sk_full_auth(dev, apdev):
     """FILS SK full authentication"""
     check_fils_capa(dev[0])
@@ -1288,7 +1293,7 @@ def test_fils_sk_pfs_30(dev, apdev):
     rul_fils_sk_pfs(dev, apdev, "30")
 
 def rul_fils_sk_pfs(dev, apdev, group):
-    check_fils_capa(dev[0])
+    check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
     tls = dev[0].request("GET tls_library")
@@ -1333,7 +1338,7 @@ def rul_fils_sk_pfs(dev, apdev, group):
 
 def test_fils_sk_pfs_group_mismatch(dev, apdev):
     """FILS SK PFS DH group mismatch"""
-    check_fils_capa(dev[0])
+    check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
     start_erp_as(apdev[1])
@@ -1369,7 +1374,7 @@ def test_fils_sk_pfs_group_mismatch(dev, apdev):
 
 def test_fils_sk_auth_mismatch(dev, apdev):
     """FILS SK authentication type mismatch (PFS not supported)"""
-    check_fils_capa(dev[0])
+    check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
     start_erp_as(apdev[1])

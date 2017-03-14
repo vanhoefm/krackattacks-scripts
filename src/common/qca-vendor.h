@@ -3375,11 +3375,11 @@ enum qca_attr_nud_stats_get {
 	/* Flag indicating if the station's link to the AP is active.
 	 * Active Link - If included, Inactive link - If not included
 	 */
-	QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE= 9,
+	QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE = 9,
 	/* Flag indicating if there is any duplicate address detected (DAD).
 	 * Yes - If detected, No - If not detected.
 	 */
-	QCA_ATTR_NUD_STATS_IS_DAD = 9,
+	QCA_ATTR_NUD_STATS_IS_DAD = 10,
 
 	/* keep last */
 	QCA_ATTR_NUD_STATS_GET_LAST,

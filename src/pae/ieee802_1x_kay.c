@@ -532,6 +532,7 @@ ieee802_1x_kay_deinit_receive_sc(
 		ieee802_1x_delete_receive_sa(participant->kay, psa);
 
 	dl_list_del(&psc->list);
+	secy_delete_receive_sc(participant->kay, psc);
 	os_free(psc);
 }
 
@@ -2363,7 +2364,6 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 				if (sci_equal(&rxsc->sci, &peer->sci)) {
 					ieee802_1x_kay_deinit_receive_sc(
 						participant, rxsc);
-					secy_delete_receive_sc(kay, rxsc);
 				}
 			}
 			dl_list_del(&peer->list);
@@ -3433,7 +3433,6 @@ ieee802_1x_kay_delete_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn)
 		rxsc = dl_list_entry(participant->rxsc_list.next,
 				     struct receive_sc, list);
 		ieee802_1x_kay_deinit_receive_sc(participant, rxsc);
-		secy_delete_receive_sc(kay, rxsc);
 	}
 	ieee802_1x_kay_deinit_transmit_sc(participant, participant->txsc);
 	secy_delete_transmit_sc(kay, participant->txsc);

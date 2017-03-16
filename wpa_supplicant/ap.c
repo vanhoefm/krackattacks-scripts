@@ -50,8 +50,10 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 			     struct hostapd_config *conf,
 			     struct hostapd_hw_modes *mode)
 {
+#ifdef CONFIG_P2P
 	u8 center_chan = 0;
 	u8 channel = conf->channel;
+#endif /* CONFIG_P2P */
 
 	if (!conf->secondary_channel)
 		goto no_vht;

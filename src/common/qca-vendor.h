@@ -90,6 +90,27 @@ enum qca_radiotap_vendor_ids {
  *	which supports DFS offloading, to indicate a radar pattern has been
  *	detected. The channel is now unusable.
  *
+ * @QCA_NL80211_VENDOR_SUBCMD_OCB_SET_CONFIG: Command used to set configuration
+ *	for IEEE 802.11 communicating outside the context of a basic service
+ *	set, called OCB command. Uses the attributes defines in
+ *	enum qca_wlan_vendor_attr_ocb_set_config.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_OCB_SET_UTC_TIME: Command used to set OCB
+ *	UTC time. Use the attributes defines in
+ *	enum qca_wlan_vendor_attr_ocb_set_utc_time.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_OCB_START_TIMING_ADVERT: Command used to start
+ *	sending OCB timing advert frames. Uses the attributes defines in
+ *	enum qca_wlan_vendor_attr_ocb_start_timing_advert.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_OCB_STOP_TIMING_ADVERT: Command used to stop
+ *	OCB timing advert. Uses the attributes defines in
+ *	enum qca_wlan_vendor_attr_ocb_stop_timing_advert.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_OCB_GET_TSF_TIMER: Command used to get TSF
+ *	timer value. Uses the attributes defines in
+ *	enum qca_wlan_vendor_attr_ocb_get_tsf_resp.
+ *
  * @QCA_NL80211_VENDOR_SUBCMD_P2P_LISTEN_OFFLOAD_START: Command used to
  *	start the P2P Listen offload function in device and pass the listen
  *	channel, period, interval, count, device types, and vendor specific
@@ -733,6 +754,108 @@ enum qca_wlan_vendor_attr_data_offload_ind {
 	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_MAX =
 	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ocb_set_config - Vendor subcmd attributes to set
+ *	OCB config
+ *
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_CHANNEL_COUNT: Number of channels in the
+ *	configuration
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_SCHEDULE_SIZE: Size of the schedule
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_CHANNEL_ARRAY: Array of channels
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_SCHEDULE_ARRAY: Array of channels to be
+ *	scheduled
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_NDL_CHANNEL_ARRAY: Array of NDL channel
+ *	information
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_NDL_ACTIVE_STATE_ARRAY: Array of NDL
+ *	active state configuration
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_FLAGS: Configuration flags such as
+ *	OCB_CONFIG_FLAG_80211_FRAME_MODE
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_DEF_TX_PARAM: Default TX parameters to
+ *	use in the case that a packet is sent without a TX control header
+ */
+enum qca_wlan_vendor_attr_ocb_set_config {
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_CHANNEL_COUNT = 1,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_SCHEDULE_SIZE = 2,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_CHANNEL_ARRAY = 3,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_SCHEDULE_ARRAY = 4,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_NDL_CHANNEL_ARRAY = 5,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_NDL_ACTIVE_STATE_ARRAY = 6,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_FLAGS = 7,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_DEF_TX_PARAM = 8,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_MAX =
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ocb_set_utc_time - Vendor subcmd attributes to set
+ *	UTC time
+ *
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_VALUE: The UTC time as an array of
+ *	10 bytes
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_ERROR: The time error as an array of
+ *	5 bytes
+ */
+enum qca_wlan_vendor_attr_ocb_set_utc_time {
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_VALUE = 1,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_ERROR = 2,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_MAX =
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_UTC_TIME_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ocb_start_timing_advert - Vendor subcmd attributes
+ *	to start sending timing advert frames
+ *
+ * @QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_CHANNEL_FREQ: Cannel frequency
+ *	on which to send the frames
+ * @QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_REPEAT_RATE: Number of times
+ *	the frame is sent in 5 seconds
+ */
+enum qca_wlan_vendor_attr_ocb_start_timing_advert {
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_CHANNEL_FREQ = 1,
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_REPEAT_RATE = 2,
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_MAX =
+	QCA_WLAN_VENDOR_ATTR_OCB_START_TIMING_ADVERT_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ocb_stop_timing_advert - Vendor subcmd attributes
+ *	to stop timing advert
+ *
+ * @QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_CHANNEL_FREQ: The channel
+ *	frequency on which to stop the timing advert
+ */
+enum qca_wlan_vendor_attr_ocb_stop_timing_advert {
+	QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_CHANNEL_FREQ = 1,
+	QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_MAX =
+	QCA_WLAN_VENDOR_ATTR_OCB_STOP_TIMING_ADVERT_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ocb_get_tsf_response - Vendor subcmd attributes to
+ *	get TSF timer value
+ *
+ * @QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_TIMER_HIGH: Higher 32 bits of the
+ *	timer
+ * @QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_TIMER_LOW: Lower 32 bits of the timer
+ */
+enum qca_wlan_vendor_attr_ocb_get_tsf_resp {
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_TIMER_HIGH = 1,
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_TIMER_LOW = 2,
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_MAX =
+	QCA_WLAN_VENDOR_ATTR_OCB_GET_TSF_RESP_AFTER_LAST - 1
 };
 
 enum qca_vendor_attr_get_preferred_freq_list {

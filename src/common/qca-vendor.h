@@ -774,6 +774,9 @@ enum qca_wlan_vendor_attr_data_offload_ind {
  *	OCB_CONFIG_FLAG_80211_FRAME_MODE
  * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_DEF_TX_PARAM: Default TX parameters to
  *	use in the case that a packet is sent without a TX control header
+ * @QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_TA_MAX_DURATION: Max duration after the
+ *	last TA received that the local time set by TA is synchronous to other
+ *	communicating OCB STAs.
  */
 enum qca_wlan_vendor_attr_ocb_set_config {
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_INVALID = 0,
@@ -785,6 +788,7 @@ enum qca_wlan_vendor_attr_ocb_set_config {
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_NDL_ACTIVE_STATE_ARRAY = 6,
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_FLAGS = 7,
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_DEF_TX_PARAM = 8,
+	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_TA_MAX_DURATION = 9,
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_MAX =
 	QCA_WLAN_VENDOR_ATTR_OCB_SET_CONFIG_AFTER_LAST - 1

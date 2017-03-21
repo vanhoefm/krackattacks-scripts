@@ -11,6 +11,9 @@ from test_wpas_mesh import check_mesh_support, check_mesh_group_added
 from test_wpas_mesh import check_mesh_peer_connected, add_open_mesh_network
 from test_wpas_mesh import check_mesh_group_removed
 
+class LocalVariables:
+    revs = []
+
 CFG = """
 ifaces :
 {
@@ -33,6 +36,32 @@ ifaces :
     );
 };
 """
+
+def get_wmediumd_version():
+    if len(LocalVariables.revs) > 0:
+        return LocalVariables.revs;
+
+    try:
+        verstr = subprocess.check_output(['wmediumd', '-V'])
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            raise HwsimSkip('wmediumd not available')
+        raise
+
+    vernum = verstr.split(' ')[1][1:]
+    LocalVariables.revs = vernum.split('.')
+    for i in range(0, len(LocalVariables.revs)):
+        LocalVariables.revs[i] = int(LocalVariables.revs[i])
+    while len(LocalVariables.revs) < 3:
+        LocalVariables.revs += [0]
+
+    return LocalVariables.revs;
+
+def require_wmediumd_version(major, minor, patch):
+    revs = get_wmediumd_version()
+    if revs[0] < major or revs[1] < minor or revs[2] < patch:
+        raise HwsimSkip('wmediumd v%s.%s.%s is too old for this test' %
+                        (revs[0], revs[1], revs[2]))
 
 def output_wmediumd_log(p, params, data):
     log_file = open(os.path.abspath(os.path.join(params['logdir'],
@@ -93,6 +122,7 @@ def test_wmediumd_path_simple(dev, apdev, params):
     # |           |
     # +-----X-----+
     # This tests if 1 and 2 can communicate each other via 0.
+    require_wmediumd_version(0, 3, 1)
     fd, fn = tempfile.mkstemp()
     try:
         f = os.fdopen(fd, 'w')

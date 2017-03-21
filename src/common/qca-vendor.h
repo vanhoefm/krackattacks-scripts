@@ -313,6 +313,16 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT: Set the Beam Refinement
  *	Protocol antenna limit in different modes. See enum
  *	qca_wlan_vendor_attr_brp_ant_limit_mode.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_START: Start spectral scan. The scan
+ *	parameters are specified by enum qca_wlan_vendor_attr_spectral_scan.
+ *	This returns a cookie (%QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_COOKIE)
+ *	identifying the operation in success case.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_STOP: Stop spectral scan. This uses
+ *	a cookie (%QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_COOKIE) from
+ *	@QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_START to identify the scan to
+ *	be stopped.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -441,6 +451,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_FETCH_BSS_TRANSITION_STATUS = 151,
 	QCA_NL80211_VENDOR_SUBCMD_SET_TRACE_LEVEL = 152,
 	QCA_NL80211_VENDOR_SUBCMD_BRP_SET_ANT_LIMIT = 153,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_START = 154,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_STOP = 155,
 };
 
 
@@ -3611,6 +3623,102 @@ enum qca_wlan_vendor_attr_get_he_capabilities {
 	QCA_WLAN_VENDOR_ATTR_HE_CAPABILITIES_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_HE_CAPABILITIES_MAX =
 	QCA_WLAN_VENDOR_ATTR_HE_CAPABILITIES_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_spectral_scan - Spectral scan config parameters
+ */
+enum qca_wlan_vendor_attr_spectral_scan {
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_INVALID = 0,
+	/* Number of times the chip enters spectral scan mode before
+	 * deactivating spectral scans. When set to 0, chip will enter spectral
+	 * scan mode continuously. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_SCAN_COUNT = 1,
+	/* Spectral scan period. Period increment resolution is 256*Tclk,
+	 * where Tclk = 1/44 MHz (Gmode), 1/40 MHz (Amode). u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_SCAN_PERIOD = 2,
+	/* Spectral scan priority. u32 attribute. */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_PRIORITY = 3,
+	/* Number of FFT data points to compute. u32 attribute. */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_SIZE = 4,
+	/* Enable targeted gain change before starting the spectral scan FFT.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_GC_ENA = 5,
+	/* Restart a queued spectral scan. u32 attribute. */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_RESTART_ENA = 6,
+	/* Noise floor reference number for the calculation of bin power.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_NOISE_FLOOR_REF = 7,
+	/* Disallow spectral scan triggers after TX/RX packets by setting
+	 * this delay value to roughly SIFS time period or greater.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_INIT_DELAY = 8,
+	/* Number of strong bins (inclusive) per sub-channel, below
+	 * which a signal is declared a narrow band tone. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_NB_TONE_THR = 9,
+	/* Specify the threshold over which a bin is declared strong (for
+	 * scan bandwidth analysis). u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_STR_BIN_THR = 10,
+	/* Spectral scan report mode. u32 attribute. */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_WB_RPT_MODE = 11,
+	/* RSSI report mode, if the ADC RSSI is below
+	 * QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_RSSI_THR,
+	 * then FFTs will not trigger, but timestamps and summaries get
+	 * reported. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_RSSI_RPT_MODE = 12,
+	/* ADC RSSI must be greater than or equal to this threshold (signed dB)
+	 * to ensure spectral scan reporting with normal error code.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_RSSI_THR = 13,
+	/* Format of frequency bin magnitude for spectral scan triggered FFTs:
+	 * 0: linear magnitude, 1: log magnitude (20*log10(lin_mag)).
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_PWR_FORMAT = 14,
+	/* Format of FFT report to software for spectral scan triggered FFTs.
+	 * 0: No FFT report (only spectral scan summary report)
+	 * 1: 2-dword summary of metrics for each completed FFT + spectral scan
+	 * report
+	 * 2: 2-dword summary of metrics for each completed FFT + 1x-oversampled
+	 * bins (in-band) per FFT + spectral scan summary report
+	 * 3: 2-dword summary of metrics for each completed FFT + 2x-oversampled
+	 * bins (all) per FFT + spectral scan summary report
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_RPT_MODE = 15,
+	/* Number of LSBs to shift out in order to scale the FFT bins.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_BIN_SCALE = 16,
+	/* Set to 1 (with spectral_scan_pwr_format=1), to report bin magnitudes
+	 * in dBm power. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_DBM_ADJ = 17,
+	/* Per chain enable mask to select input ADC for search FFT.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_CHN_MASK = 18,
+	/* An unsigned 64-bit integer provided by host driver to identify the
+	 * spectral scan request. This attribute is included in the scan
+	 * response message for @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_START
+	 * and used as an attribute in
+	 * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_STOP to identify the
+	 * specific scan to be stopped.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_COOKIE = 19,
+
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_MAX =
+		QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

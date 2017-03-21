@@ -6,6 +6,7 @@
 
 import tempfile, os, subprocess, errno, hwsim_utils
 from utils import HwsimSkip
+from wpasupplicant import WpaSupplicant
 from test_ap_open import _test_ap_open
 from test_wpas_mesh import check_mesh_support, check_mesh_group_added
 from test_wpas_mesh import check_mesh_peer_connected, add_open_mesh_network
@@ -38,6 +39,26 @@ model:
         (0, 1, 0.000000),
         (0, 2, 0.000000),
         (1, 2, 1.000000)
+    );
+};
+"""
+
+CFG3 = """
+ifaces :
+{
+    ids = ["%s", "%s", "%s", "%s", "%s" ];
+};
+
+model:
+{
+    type = "prob";
+
+    default_prob = 1.0;
+    links = (
+        (0, 1, 0.000000),
+        (1, 2, 0.000000),
+        (2, 3, 0.000000),
+        (3, 4, 0.000000)
     );
 };
 """
@@ -199,6 +220,97 @@ def _test_wmediumd_path_simple(dev, apdev):
     if data.find(dev[1].own_addr() + ' ' +  dev[1].own_addr()) > -1 or \
        data.find(dev[2].own_addr()) > -1:
         raise Exception("invalid mpath found on dev2:\n" + data)
+
+    # remove mesh groups
+    for i in range(0, 3):
+        dev[i].mesh_group_remove()
+        check_mesh_group_removed(dev[i])
+        dev[i].dump_monitor()
+
+def test_wmediumd_path_ttl(dev, apdev, params):
+    """Mesh path request TTL"""
+    # 0 --- 1 --- 2 --- 3 --- 4
+    # Test the TTL of mesh path request.
+    # If the TTL is shorter than path, the mesh path request should be dropped.
+    require_wmediumd_version(0, 3, 1)
+
+    local_dev = []
+    for i in range(0, 3):
+        local_dev.append(dev[i])
+
+    for i in range(5, 7):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add("wlan" + str(i))
+        check_mesh_support(wpas)
+        temp_dev = wpas.request("MESH_INTERFACE_ADD ifname=mesh" + str(i))
+        if "FAIL" in temp_dev:
+            raise Exception("MESH_INTERFACE_ADD failed")
+        local_dev.append(WpaSupplicant(ifname=temp_dev))
+
+    fd, fn = tempfile.mkstemp()
+    try:
+        f = os.fdopen(fd, 'w')
+        f.write(CFG3 % (local_dev[0].own_addr(), local_dev[1].own_addr(),
+                        local_dev[2].own_addr(), local_dev[3].own_addr(),
+                        local_dev[4].own_addr()))
+        f.close()
+        p = start_wmediumd(fn, params)
+        try:
+            _test_wmediumd_path_ttl(local_dev, True)
+            _test_wmediumd_path_ttl(local_dev, False)
+        finally:
+            stop_wmediumd(p, params)
+    finally:
+        os.unlink(fn)
+        for i in range(5, 7):
+            wpas.interface_remove("wlan" + str(i))
+
+def _test_wmediumd_path_ttl(dev, ok):
+    for i in range(0, 5):
+        check_mesh_support(dev[i])
+        add_open_mesh_network(dev[i], freq="2462", basic_rates="60 120 240")
+
+    # Check for mesh joined
+    for i in range(0, 5):
+        check_mesh_group_added(dev[i])
+
+        state = dev[i].get_status_field("wpa_state")
+        if state != "COMPLETED":
+            raise Exception("Unexpected wpa_state on dev" + str(i) + ": " + state)
+
+        mode = dev[i].get_status_field("mode")
+        if mode != "mesh":
+            raise Exception("Unexpected mode: " + mode)
+
+    # set mesh path request ttl
+    subprocess.check_call([ "iw", "dev", dev[0].ifname, "set", "mesh_param",
+                            "mesh_element_ttl=" + ("4" if ok else "3") ])
+
+    # Check for peer connected
+    for i in range(0, 5):
+        check_mesh_peer_connected(dev[i])
+    for i in range(1, 4):
+        check_mesh_peer_connected(dev[i])
+
+    # Test connectivity 0->4 and 0->4
+    hwsim_utils.test_connectivity(dev[0], dev[4], success_expected=ok)
+
+    # Check mpath table on 0
+    res, data = dev[0].cmd_execute(['iw', dev[0].ifname, 'mpath', 'dump'])
+    if res != 0:
+        raise Exception("iw command failed on dev0")
+    if ok:
+        if data.find(dev[1].own_addr() + ' ' +  dev[1].own_addr()) == -1 or \
+           data.find(dev[4].own_addr() + ' ' +  dev[1].own_addr()) == -1:
+            raise Exception("mpath not found on dev0:\n" + data)
+    else:
+        if data.find(dev[1].own_addr() + ' ' +  dev[1].own_addr()) == -1 or \
+           data.find(dev[4].own_addr() + ' 00:00:00:00:00:00') == -1:
+            raise Exception("mpath not found on dev0:\n" + data)
+    if data.find(dev[0].own_addr()) > -1 or \
+       data.find(dev[2].own_addr()) > -1 or \
+       data.find(dev[3].own_addr()) > -1:
+        raise Exception("invalid mpath found on dev0:\n" + data)
 
     # remove mesh groups
     for i in range(0, 3):

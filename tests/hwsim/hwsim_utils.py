@@ -141,7 +141,7 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
 def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
                       dev1group=False, dev2group=False,
                       ifname1=None, ifname2=None, config=True, timeout=5,
-                      multicast_to_unicast=False):
+                      multicast_to_unicast=False, success_expected=True):
     if dscp:
         tos = dscp << 2
     if not tos:
@@ -161,8 +161,10 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
             last_err = e
             if i + 1 < max_tries:
                 time.sleep(1)
-    if not success:
+    if success_expected and not success:
         raise Exception(last_err)
+    if not success_expected and success:
+        raise Exception("Unexpected connectivity detected")
 
 def test_connectivity_iface(dev1, dev2, ifname, dscp=None, tos=None,
                             max_tries=1, timeout=5):

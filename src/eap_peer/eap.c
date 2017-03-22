@@ -371,9 +371,8 @@ nak:
 
 #ifdef CONFIG_ERP
 
-static char * eap_home_realm(struct eap_sm *sm)
+static char * eap_get_realm(struct eap_sm *sm, struct eap_peer_config *config)
 {
-	struct eap_peer_config *config = eap_get_config(sm);
 	char *realm;
 	size_t i, realm_len;
 
@@ -414,6 +413,12 @@ static char * eap_home_realm(struct eap_sm *sm)
 	}
 
 	return os_strdup("");
+}
+
+
+static char * eap_home_realm(struct eap_sm *sm)
+{
+	return eap_get_realm(sm, eap_get_config(sm));
 }
 
 
@@ -467,6 +472,84 @@ static void eap_erp_remove_keys_realm(struct eap_sm *sm, const char *realm)
 			   erp->keyname_nai);
 		eap_peer_erp_free_key(erp);
 	}
+}
+
+
+int eap_peer_update_erp_next_seq_num(struct eap_sm *sm, u16 next_seq_num)
+{
+	struct eap_erp_key *erp;
+	char *home_realm;
+
+	home_realm = eap_home_realm(sm);
+	if (!home_realm || os_strlen(home_realm) == 0) {
+		os_free(home_realm);
+		return -1;
+	}
+
+	erp = eap_erp_get_key(sm, home_realm);
+	if (!erp) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Failed to find ERP key for realm: %s",
+			   home_realm);
+		os_free(home_realm);
+		return -1;
+	}
+
+	if ((u32) next_seq_num < erp->next_seq) {
+		/* Sequence number has wrapped around, clear this ERP
+		 * info and do a full auth next time.
+		 */
+		eap_peer_erp_free_key(erp);
+	} else {
+		erp->next_seq = (u32) next_seq_num;
+	}
+
+	os_free(home_realm);
+	return 0;
+}
+
+
+int eap_peer_get_erp_info(struct eap_sm *sm, struct eap_peer_config *config,
+			  const u8 **username, size_t *username_len,
+			  const u8 **realm, size_t *realm_len,
+			  u16 *erp_next_seq_num, const u8 **rrk,
+			  size_t *rrk_len)
+{
+	struct eap_erp_key *erp;
+	char *home_realm;
+	char *pos;
+
+	home_realm = eap_get_realm(sm, config);
+	if (!home_realm || os_strlen(home_realm) == 0) {
+		os_free(home_realm);
+		return -1;
+	}
+
+	erp = eap_erp_get_key(sm, home_realm);
+	os_free(home_realm);
+	if (!erp)
+		return -1;
+
+	if (erp->next_seq >= 65536)
+		return -1; /* SEQ has range of 0..65535 */
+
+	pos = os_strchr(erp->keyname_nai, '@');
+	*username_len = pos - erp->keyname_nai;
+	*username = (u8 *) erp->keyname_nai;
+
+	pos++;
+	*realm_len = os_strlen(pos);
+	*realm = (u8 *) pos;
+
+	*erp_next_seq_num = (u16) erp->next_seq;
+
+	*rrk_len = erp->rRK_len;
+	*rrk = erp->rRK;
+
+	if (*username_len == 0 || *realm_len == 0 || *rrk_len == 0)
+		return -1;
+
+	return 0;
 }
 
 #endif /* CONFIG_ERP */

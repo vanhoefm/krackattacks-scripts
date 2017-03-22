@@ -2195,3 +2195,33 @@ void eapol_sm_process_erp_finish(struct eapol_sm *sm, const u8 *buf,
 	eap_peer_finish(sm->eap, (const struct eap_hdr *) buf, len);
 #endif /* CONFIG_ERP */
 }
+
+
+int eapol_sm_update_erp_next_seq_num(struct eapol_sm *sm, u16 next_seq_num)
+{
+#ifdef CONFIG_ERP
+	if (!sm)
+		return -1;
+	return eap_peer_update_erp_next_seq_num(sm->eap, next_seq_num);
+#else /* CONFIG_ERP */
+	return -1;
+#endif /* CONFIG_ERP */
+}
+
+
+int eapol_sm_get_erp_info(struct eapol_sm *sm, struct eap_peer_config *config,
+			  const u8 **username, size_t *username_len,
+			  const u8 **realm, size_t *realm_len,
+			  u16 *erp_next_seq_num, const u8 **rrk,
+			  size_t *rrk_len)
+{
+#ifdef CONFIG_ERP
+	if (!sm)
+		return -1;
+	return eap_peer_get_erp_info(sm->eap, config, username, username_len,
+				     realm, realm_len, erp_next_seq_num, rrk,
+				     rrk_len);
+#else /* CONFIG_ERP */
+	return -1;
+#endif /* CONFIG_ERP */
+}

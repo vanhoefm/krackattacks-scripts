@@ -340,6 +340,13 @@ struct wpabuf * eapol_sm_build_erp_reauth_start(struct eapol_sm *sm);
 void eapol_sm_process_erp_finish(struct eapol_sm *sm, const u8 *buf,
 				 size_t len);
 int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len);
+int eapol_sm_update_erp_next_seq_num(struct eapol_sm *sm, u16 next_seq_num);
+int eapol_sm_get_erp_info(struct eapol_sm *sm, struct eap_peer_config *config,
+			  const u8 **username, size_t *username_len,
+			  const u8 **realm, size_t *realm_len,
+			  u16 *erp_next_seq_num, const u8 **rrk,
+			  size_t *rrk_len);
+
 #else /* IEEE8021X_EAPOL */
 static inline struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 {
@@ -457,6 +464,19 @@ eapol_sm_build_erp_reauth_start(struct eapol_sm *sm)
 static inline void eapol_sm_process_erp_finish(struct eapol_sm *sm,
 					       const u8 *buf, size_t len)
 {
+}
+static inline int eapol_sm_update_erp_next_seq_num(struct eapol_sm *sm,
+						   u16 next_seq_num)
+{
+	return -1;
+}
+static inline int
+eapol_sm_get_erp_info(struct eapol_sm *sm, struct eap_peer_config *config,
+		      const u8 **username, size_t *username_len,
+		      const u8 **realm, size_t *realm_len,
+		      u16 *erp_next_seq_num, const u8 **rrk, size_t *rrk_len)
+{
+	return -1;
 }
 #endif /* IEEE8021X_EAPOL */
 

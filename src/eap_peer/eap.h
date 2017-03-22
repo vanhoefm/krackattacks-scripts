@@ -358,6 +358,11 @@ int eap_peer_was_failure_expected(struct eap_sm *sm);
 void eap_peer_erp_free_keys(struct eap_sm *sm);
 struct wpabuf * eap_peer_build_erp_reauth_start(struct eap_sm *sm, u8 eap_id);
 void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr, size_t len);
+int eap_peer_get_erp_info(struct eap_sm *sm, struct eap_peer_config *config,
+			  const u8 **username, size_t *username_len,
+			  const u8 **realm, size_t *realm_len, u16 *erp_seq_num,
+			  const u8 **rrk, size_t *rrk_len);
+int eap_peer_update_erp_next_seq_num(struct eap_sm *sm, u16 seq_num);
 
 #endif /* IEEE8021X_EAPOL */
 

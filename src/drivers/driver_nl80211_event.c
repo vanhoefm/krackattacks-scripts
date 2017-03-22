@@ -284,7 +284,10 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       struct nlattr *key_replay_ctr,
 			       struct nlattr *ptk_kck,
 			       struct nlattr *ptk_kek,
-			       struct nlattr *subnet_status)
+			       struct nlattr *subnet_status,
+			       struct nlattr *fils_erp_next_seq_num,
+			       struct nlattr *fils_pmk,
+			       struct nlattr *fils_pmkid)
 {
 	union wpa_event_data event;
 	const u8 *ssid = NULL;
@@ -357,6 +360,9 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 				break;
 			}
 		}
+		if (fils_erp_next_seq_num)
+			event.assoc_reject.fils_erp_next_seq_num =
+				nla_get_u16(fils_erp_next_seq_num);
 		wpa_supplicant_event(drv->ctx, EVENT_ASSOC_REJECT, &event);
 		return;
 	}
@@ -429,6 +435,18 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		 */
 		event.assoc_info.subnet_status = nla_get_u8(subnet_status);
 	}
+
+	if (fils_erp_next_seq_num)
+		event.assoc_info.fils_erp_next_seq_num =
+			nla_get_u16(fils_erp_next_seq_num);
+
+	if (fils_pmk) {
+		event.assoc_info.fils_pmk = nla_data(fils_pmk);
+		event.assoc_info.fils_pmk_len = nla_len(fils_pmk);
+	}
+
+	if (fils_pmkid)
+		event.assoc_info.fils_pmkid = nla_data(fils_pmkid);
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
@@ -1754,7 +1772,8 @@ static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_KEY_REPLAY_CTR],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KCK],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KEK],
-			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_SUBNET_STATUS]);
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_SUBNET_STATUS],
+			   NULL, NULL, NULL);
 }
 
 
@@ -2270,7 +2289,12 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				   tb[NL80211_ATTR_RESP_IE],
 				   tb[NL80211_ATTR_TIMED_OUT],
 				   tb[NL80211_ATTR_TIMEOUT_REASON],
-				   NULL, NULL, NULL, NULL, NULL);
+				   NULL, NULL, NULL,
+				   tb[NL80211_ATTR_FILS_KEK],
+				   NULL,
+				   tb[NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM],
+				   tb[NL80211_ATTR_PMK],
+				   tb[NL80211_ATTR_PMKID]);
 		break;
 	case NL80211_CMD_CH_SWITCH_NOTIFY:
 		mlme_event_ch_switch(drv,

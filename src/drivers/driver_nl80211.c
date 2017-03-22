@@ -5067,6 +5067,47 @@ fail:
 }
 
 
+static int nl80211_put_fils_connect_params(struct wpa_driver_nl80211_data *drv,
+					   struct wpa_driver_associate_params *params,
+					   struct nl_msg *msg)
+{
+	if (params->fils_erp_username_len) {
+		wpa_hexdump_ascii(MSG_DEBUG, "  * FILS ERP EMSKname/username",
+				  params->fils_erp_username,
+				  params->fils_erp_username_len);
+		if (nla_put(msg, NL80211_ATTR_FILS_ERP_USERNAME,
+			    params->fils_erp_username_len,
+			    params->fils_erp_username))
+			return -1;
+	}
+
+	if (params->fils_erp_realm_len) {
+		wpa_hexdump_ascii(MSG_DEBUG, "  * FILS ERP Realm",
+				  params->fils_erp_realm,
+				  params->fils_erp_realm_len);
+		if (nla_put(msg, NL80211_ATTR_FILS_ERP_REALM,
+			    params->fils_erp_realm_len, params->fils_erp_realm))
+			return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "  * FILS ERP next seq %u",
+		   params->fils_erp_next_seq_num);
+	if (nla_put_u16(msg, NL80211_ATTR_FILS_ERP_NEXT_SEQ_NUM,
+			params->fils_erp_next_seq_num))
+		return -1;
+
+	if (params->fils_erp_rrk_len) {
+		wpa_printf(MSG_DEBUG, "  * FILS ERP rRK (len=%lu)",
+			   (unsigned long) params->fils_erp_rrk_len);
+		if (nla_put(msg, NL80211_ATTR_FILS_ERP_RRK,
+			    params->fils_erp_rrk_len, params->fils_erp_rrk))
+			return -1;
+	}
+
+	return 0;
+}
+
+
 static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 				  struct wpa_driver_associate_params *params,
 				  struct nl_msg *msg)
@@ -5174,7 +5215,11 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256 ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256 ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B ||
-	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FILS_SHA256 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FILS_SHA384 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_FILS_SHA256 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_FILS_SHA384) {
 		int mgmt = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 
 		switch (params->key_mgmt_suite) {
@@ -5204,6 +5249,18 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			break;
 		case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
 			mgmt = RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192;
+			break;
+		case WPA_KEY_MGMT_FILS_SHA256:
+			mgmt = RSN_AUTH_KEY_MGMT_FILS_SHA256;
+			break;
+		case WPA_KEY_MGMT_FILS_SHA384:
+			mgmt = RSN_AUTH_KEY_MGMT_FILS_SHA384;
+			break;
+		case WPA_KEY_MGMT_FT_FILS_SHA256:
+			mgmt = RSN_AUTH_KEY_MGMT_FT_FILS_SHA256;
+			break;
+		case WPA_KEY_MGMT_FT_FILS_SHA384:
+			mgmt = RSN_AUTH_KEY_MGMT_FT_FILS_SHA384;
 			break;
 		case WPA_KEY_MGMT_PSK:
 		default:
@@ -5262,6 +5319,10 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 		drv->connect_reassoc = 1;
 	}
 
+	if ((params->auth_alg & WPA_AUTH_ALG_FILS) &&
+	    nl80211_put_fils_connect_params(drv, params, msg) != 0)
+		return -1;
+
 	return 0;
 }
 
@@ -5317,6 +5378,8 @@ static int wpa_driver_nl80211_try_connect(
 		type = NL80211_AUTHTYPE_NETWORK_EAP;
 	else if (params->auth_alg & WPA_AUTH_ALG_FT)
 		type = NL80211_AUTHTYPE_FT;
+	else if (params->auth_alg & WPA_AUTH_ALG_FILS)
+		type = NL80211_AUTHTYPE_FILS_SK;
 	else
 		goto fail;
 

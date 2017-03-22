@@ -398,6 +398,9 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 	if (ext_feature_isset(ext_features, len,
 			      NL80211_EXT_FEATURE_SCHED_SCAN_RELATIVE_RSSI))
 		capa->flags |= WPA_DRIVER_FLAGS_SCHED_SCAN_RELATIVE_RSSI;
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_FILS_SK_OFFLOAD))
+		capa->flags |= WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD;
 }
 
 

@@ -1011,6 +1011,43 @@ struct wpa_driver_associate_params {
 	 * fils_nonces_len: Length of fils_nonce in bytes
 	 */
 	size_t fils_nonces_len;
+
+	/**
+	 * fils_erp_username - Username part of keyName-NAI
+	 */
+	const u8 *fils_erp_username;
+
+	/**
+	 * fils_erp_username_len - Length of fils_erp_username in bytes
+	 */
+	size_t fils_erp_username_len;
+
+	/**
+	 * fils_erp_realm - Realm/domain name to use in FILS ERP
+	 */
+	const u8 *fils_erp_realm;
+
+	/**
+	 * fils_erp_realm_len - Length of fils_erp_realm in bytes
+	 */
+	size_t fils_erp_realm_len;
+
+	/**
+	 * fils_erp_next_seq_num - The next sequence number to use in FILS ERP
+	 * messages
+	 */
+	u16 fils_erp_next_seq_num;
+
+	/**
+	 * fils_erp_rrk - Re-authentication root key (rRK) for the keyName-NAI
+	 * specified by fils_erp_username@fils_erp_realm.
+	 */
+	const u8 *fils_erp_rrk;
+
+	/**
+	 * fils_erp_rrk_len - Length of fils_erp_rrk in bytes
+	 */
+	size_t fils_erp_rrk_len;
 };
 
 enum hide_ssid {
@@ -1469,6 +1506,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_SCHED_SCAN_RELATIVE_RSSI	0x0001000000000000ULL
 /** Driver supports HE capabilities */
 #define WPA_DRIVER_FLAGS_HE_CAPABILITIES	0x0002000000000000ULL
+/** Driver supports FILS shared key offload */
+#define WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD	0x0004000000000000ULL
 	u64 flags;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \
@@ -4528,6 +4567,8 @@ union wpa_event_data {
 
 		/**
 		 * ptk_kek - The derived PTK KEK
+		 * This is used in key management offload and also in FILS SK
+		 * offload.
 		 */
 		const u8 *ptk_kek;
 
@@ -4541,6 +4582,36 @@ union wpa_event_data {
 		 * 0 = unknown, 1 = unchanged, 2 = changed
 		 */
 		u8 subnet_status;
+
+		/**
+		 * The following information is used in FILS SK offload
+		 * @fils_erp_next_seq_num
+		 * @fils_pmk
+		 * @fils_pmk_len
+		 * @fils_pmkid
+		 */
+
+		/**
+		 * fils_erp_next_seq_num - The next sequence number to use in
+		 * FILS ERP messages
+		 */
+		u16 fils_erp_next_seq_num;
+
+		/**
+		 * fils_pmk - A new PMK if generated in case of FILS
+		 * authentication
+		 */
+		const u8 *fils_pmk;
+
+		/**
+		 * fils_pmk_len - Length of fils_pmk
+		 */
+		size_t fils_pmk_len;
+
+		/**
+		 * fils_pmkid - PMKID used or generated in FILS authentication
+		 */
+		const u8 *fils_pmkid;
 	} assoc_info;
 
 	/**
@@ -4756,6 +4827,12 @@ union wpa_event_data {
 		 * timeout_reason - Reason for the timeout
 		 */
 		const char *timeout_reason;
+
+		/**
+		 * fils_erp_next_seq_num - The next sequence number to use in
+		 * FILS ERP messages
+		 */
+		u16 fils_erp_next_seq_num;
 	} assoc_reject;
 
 	struct timeout_event {

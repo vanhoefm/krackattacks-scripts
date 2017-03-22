@@ -274,7 +274,8 @@ static inline const char * hostapd_drv_get_radio_name(struct hostapd_data *hapd)
 static inline int hostapd_drv_switch_channel(struct hostapd_data *hapd,
 					     struct csa_settings *settings)
 {
-	if (hapd->driver == NULL || hapd->driver->switch_channel == NULL)
+	if (hapd->driver == NULL || hapd->driver->switch_channel == NULL ||
+	    hapd->drv_priv == NULL)
 		return -ENOTSUP;
 
 	return hapd->driver->switch_channel(hapd->drv_priv, settings);

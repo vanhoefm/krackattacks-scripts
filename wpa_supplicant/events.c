@@ -3623,11 +3623,22 @@ static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_portValid(wpa_s->eapol, TRUE);
 		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
 	}
-	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
 	wpa_sm_set_ptk_kck_kek(wpa_s->wpa, data->assoc_info.ptk_kck,
 			       data->assoc_info.ptk_kck_len,
 			       data->assoc_info.ptk_kek,
 			       data->assoc_info.ptk_kek_len);
+#ifdef CONFIG_FILS
+	if (wpa_s->auth_alg == WPA_AUTH_ALG_FILS) {
+		/* Update ERP next sequence number */
+		eapol_sm_update_erp_next_seq_num(
+			wpa_s->eapol, data->assoc_info.fils_erp_next_seq_num);
+	} else {
+		wpa_sm_set_rx_replay_ctr(wpa_s->wpa,
+					 data->assoc_info.key_replay_ctr);
+	}
+#else /* CONFIG_FILS */
+	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
+#endif /* CONFIG_FILS */
 }
 
 
@@ -3828,6 +3839,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			sme_event_assoc_reject(wpa_s, data);
 		else {
 			const u8 *bssid = data->assoc_reject.bssid;
+
+#ifdef CONFIG_FILS
+			/* Update ERP next sequence number */
+			if (wpa_s->auth_alg == WPA_AUTH_ALG_FILS)
+				eapol_sm_update_erp_next_seq_num(
+				      wpa_s->eapol,
+				      data->assoc_reject.fils_erp_next_seq_num);
+#endif /* CONFIG_FILS */
+
 			if (bssid == NULL || is_zero_ether_addr(bssid))
 				bssid = wpa_s->pending_bssid;
 			wpas_connection_failed(wpa_s, bssid);

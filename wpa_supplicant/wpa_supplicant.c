@@ -2194,6 +2194,11 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
        struct ieee80211_vht_capabilities vhtcaps;
        struct ieee80211_vht_capabilities vhtcaps_mask;
 #endif /* CONFIG_VHT_OVERRIDES */
+#ifdef CONFIG_FILS
+	const u8 *realm, *username, *rrk;
+	size_t realm_len, username_len, rrk_len;
+	u16 next_seq_num;
+#endif /* CONFIG_FILS */
 
 	if (deinit) {
 		if (work->started) {
@@ -2281,7 +2286,25 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 				algs |= WPA_AUTH_ALG_LEAP;
 		}
 	}
+
+#ifdef CONFIG_FILS
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD) &&
+	    ssid->eap.erp && wpa_key_mgmt_fils(ssid->key_mgmt) &&
+	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap, &username,
+				  &username_len, &realm, &realm_len,
+				  &next_seq_num, &rrk, &rrk_len) == 0) {
+		algs = WPA_AUTH_ALG_FILS;
+		params.fils_erp_username = username;
+		params.fils_erp_username_len = username_len;
+		params.fils_erp_realm = realm;
+		params.fils_erp_realm_len = realm_len;
+		params.fils_erp_next_seq_num = next_seq_num;
+		params.fils_erp_rrk = rrk;
+		params.fils_erp_rrk_len = rrk_len;
+	}
+#endif /* CONFIG_FILS */
 #endif /* IEEE8021X_EAPOL */
+
 	wpa_dbg(wpa_s, MSG_DEBUG, "Automatic auth_alg selection: 0x%x", algs);
 	if (ssid->auth_alg) {
 		algs = ssid->auth_alg;

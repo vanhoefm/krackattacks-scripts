@@ -2288,6 +2288,9 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 
 #ifdef CONFIG_FILS
+	/* Clear FILS association */
+	wpa_sm_set_reset_fils_completed(wpa_s->wpa, 0);
+
 	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD) &&
 	    ssid->eap.erp && wpa_key_mgmt_fils(ssid->key_mgmt) &&
 	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap, &username,
@@ -2593,6 +2596,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	params.key_mgmt_suite = wpa_s->key_mgmt;
 	params.wpa_proto = wpa_s->wpa_proto;
 	params.auth_alg = algs;
+	wpa_s->auth_alg = params.auth_alg;
 	params.mode = ssid->mode;
 	params.bg_scan_period = ssid->bg_scan_period;
 	for (i = 0; i < NUM_WEP_KEYS; i++) {

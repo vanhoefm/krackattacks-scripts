@@ -3909,6 +3909,13 @@ fail:
 	return -1;
 }
 
+
+void wpa_sm_set_reset_fils_completed(struct wpa_sm *sm, int set)
+{
+	if (sm)
+		sm->fils_completed = !!set;
+}
+
 #endif /* CONFIG_FILS */
 
 

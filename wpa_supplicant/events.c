@@ -2223,6 +2223,11 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 #endif /* CONFIG_SME */
+
+	/* Additional processing for FILS when SME is in driver */
+	if (wpa_s->auth_alg == WPA_AUTH_ALG_FILS &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
+		wpa_sm_set_reset_fils_completed(wpa_s->wpa, 1);
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE
@@ -3681,7 +3686,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_TESTING_OPTIONS */
 		wpa_supplicant_event_assoc(wpa_s, data);
-		if (data && data->assoc_info.authorized)
+		if ((data && data->assoc_info.authorized) ||
+		    (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		     wpa_fils_is_completed(wpa_s->wpa)))
 			wpa_supplicant_event_assoc_auth(wpa_s, data);
 		if (data) {
 			wpa_msg(wpa_s, MSG_INFO,

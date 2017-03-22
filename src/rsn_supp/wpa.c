@@ -3079,6 +3079,16 @@ wpa_sm_pmksa_cache_add_entry(struct wpa_sm *sm,
 }
 
 
+void wpa_sm_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
+			    const u8 *pmkid, const u8 *bssid,
+			    const u8 *fils_cache_id)
+{
+	sm->cur_pmksa = pmksa_cache_add(sm->pmksa, pmk, pmk_len, pmkid, NULL, 0,
+					bssid, sm->own_addr, sm->network_ctx,
+					sm->key_mgmt, fils_cache_id);
+}
+
+
 void wpa_sm_drop_sa(struct wpa_sm *sm)
 {
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PMK and PTK");

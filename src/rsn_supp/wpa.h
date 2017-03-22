@@ -157,6 +157,9 @@ struct rsn_pmksa_cache_entry * wpa_sm_pmksa_cache_head(struct wpa_sm *sm);
 struct rsn_pmksa_cache_entry *
 wpa_sm_pmksa_cache_add_entry(struct wpa_sm *sm,
 			     struct rsn_pmksa_cache_entry * entry);
+void wpa_sm_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
+			    const u8 *pmkid, const u8 *bssid,
+			    const u8 *fils_cache_id);
 void wpa_sm_drop_sa(struct wpa_sm *sm);
 int wpa_sm_has_ptk(struct wpa_sm *sm);
 

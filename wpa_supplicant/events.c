@@ -3629,9 +3629,26 @@ static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
 			       data->assoc_info.ptk_kek_len);
 #ifdef CONFIG_FILS
 	if (wpa_s->auth_alg == WPA_AUTH_ALG_FILS) {
+		struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, wpa_s->bssid);
+		const u8 *fils_cache_id = wpa_bss_get_fils_cache_id(bss);
+
 		/* Update ERP next sequence number */
 		eapol_sm_update_erp_next_seq_num(
 			wpa_s->eapol, data->assoc_info.fils_erp_next_seq_num);
+
+		if (data->assoc_info.fils_pmk && data->assoc_info.fils_pmkid) {
+			/* Add the new PMK and PMKID to the PMKSA cache */
+			wpa_sm_pmksa_cache_add(wpa_s->wpa,
+					       data->assoc_info.fils_pmk,
+					       data->assoc_info.fils_pmk_len,
+					       data->assoc_info.fils_pmkid,
+					       wpa_s->bssid, fils_cache_id);
+		} else if (data->assoc_info.fils_pmkid) {
+			/* Update the current PMKSA used for this connection */
+			pmksa_cache_set_current(wpa_s->wpa,
+						data->assoc_info.fils_pmkid,
+						NULL, NULL, 0, NULL);
+		}
 	} else {
 		wpa_sm_set_rx_replay_ctr(wpa_s->wpa,
 					 data->assoc_info.key_replay_ctr);

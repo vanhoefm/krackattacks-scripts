@@ -455,5 +455,6 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 			   size_t resp_ies_len);
 
 void wpa_sm_set_reset_fils_completed(struct wpa_sm *sm, int set);
+void wpa_sm_set_fils_cache_id(struct wpa_sm *sm, const u8 *fils_cache_id);
 
 #endif /* WPA_H */

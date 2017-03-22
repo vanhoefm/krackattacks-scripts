@@ -4073,3 +4073,14 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 }
 
 #endif /* CONFIG_OWE */
+
+
+void wpa_sm_set_fils_cache_id(struct wpa_sm *sm, const u8 *fils_cache_id)
+{
+#ifdef CONFIG_FILS
+	if (sm && fils_cache_id) {
+		sm->fils_cache_id_set = 1;
+		os_memcpy(sm->fils_cache_id, fils_cache_id, FILS_CACHE_ID_LEN);
+	}
+#endif /* CONFIG_FILS */
+}

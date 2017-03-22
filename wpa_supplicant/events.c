@@ -2653,6 +2653,16 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		if (wpa_s->reassoc_same_bss)
 			wmm_ac_restore_tspecs(wpa_s);
 	}
+
+#ifdef CONFIG_FILS
+	if (wpa_key_mgmt_fils(wpa_s->key_mgmt)) {
+		struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, bssid);
+		const u8 *fils_cache_id = wpa_bss_get_fils_cache_id(bss);
+
+		if (fils_cache_id)
+			wpa_sm_set_fils_cache_id(wpa_s->wpa, fils_cache_id);
+	}
+#endif /* CONFIG_FILS */
 }
 
 

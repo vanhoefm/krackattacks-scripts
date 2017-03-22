@@ -2293,12 +2293,19 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		    wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    wpa_key_mgmt_wpa(ssid->key_mgmt)) {
 		int try_opportunistic;
+		const u8 *cache_id = NULL;
+
 		try_opportunistic = (ssid->proactive_key_caching < 0 ?
 				     wpa_s->conf->okc :
 				     ssid->proactive_key_caching) &&
 			(ssid->proto & WPA_PROTO_RSN);
+#ifdef CONFIG_FILS
+		if (wpa_key_mgmt_fils(ssid->key_mgmt))
+			cache_id = wpa_bss_get_fils_cache_id(bss);
+#endif /* CONFIG_FILS */
 		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
-					    ssid, try_opportunistic, NULL) == 0)
+					    ssid, try_opportunistic,
+					    cache_id) == 0)
 			eapol_sm_notify_pmkid_attempt(wpa_s->eapol);
 		wpa_ie_len = sizeof(wpa_ie);
 		if (wpa_supplicant_set_suites(wpa_s, bss, ssid,

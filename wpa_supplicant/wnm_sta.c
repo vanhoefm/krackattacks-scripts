@@ -1004,7 +1004,8 @@ static void wnm_bss_tm_connect(struct wpa_supplicant *wpa_s,
 			   "WNM: Sending successful BSS Transition Management Response");
 		wnm_send_bss_transition_mgmt_resp(
 			wpa_s, wpa_s->wnm_dialog_token, WNM_BSS_TM_ACCEPT,
-			MBO_TRANSITION_REASON_UNSPECIFIED, 0, bss->bssid);
+			MBO_TRANSITION_REJECT_REASON_UNSPECIFIED, 0,
+			bss->bssid);
 	}
 
 	if (bss == wpa_s->current_bss) {
@@ -1314,7 +1315,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		wnm_send_bss_transition_mgmt_resp(
 			wpa_s, wpa_s->wnm_dialog_token,
 			wpa_s->reject_btm_req_reason,
-			MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
+			MBO_TRANSITION_REJECT_REASON_UNSPECIFIED, 0, NULL);
 		return;
 	}
 #endif /* CONFIG_MBO && CONFIG_TESTING_OPTIONS */
@@ -1413,7 +1414,8 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			wnm_send_bss_transition_mgmt_resp(
 				wpa_s, wpa_s->wnm_dialog_token,
 				WNM_BSS_TM_REJECT_NO_SUITABLE_CANDIDATES,
-				MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
+				MBO_TRANSITION_REJECT_REASON_UNSPECIFIED, 0,
+				NULL);
 			return;
 		}
 
@@ -1478,7 +1480,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		}
 		wnm_send_bss_transition_mgmt_resp(
 			wpa_s, wpa_s->wnm_dialog_token, status,
-			MBO_TRANSITION_REASON_UNSPECIFIED, 0, NULL);
+			MBO_TRANSITION_REJECT_REASON_UNSPECIFIED, 0, NULL);
 	}
 }
 

@@ -2017,6 +2017,9 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	dl_list_init(&hapd->ctrl_dst);
 	dl_list_init(&hapd->nr_db);
 	hapd->dhcp_sock = -1;
+#ifdef CONFIG_IEEE80211R_AP
+	dl_list_init(&hapd->l2_queue);
+#endif /* CONFIG_IEEE80211R_AP */
 
 	return hapd;
 }

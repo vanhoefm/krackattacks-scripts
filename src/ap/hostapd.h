@@ -185,6 +185,11 @@ struct hostapd_data {
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 	struct l2_packet_data *l2;
+
+#ifdef CONFIG_IEEE80211R_AP
+	struct dl_list l2_queue;
+#endif /* CONFIG_IEEE80211R_AP */
+
 	struct wps_context *wps;
 
 	int beacon_set_done;

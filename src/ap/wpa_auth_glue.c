@@ -9,6 +9,8 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
+#include "utils/list.h"
 #include "common/ieee802_11_defs.h"
 #include "common/sae.h"
 #include "common/wpa_ctrl.h"
@@ -417,6 +419,31 @@ static int hostapd_wpa_auth_for_each_auth(
 
 #ifdef CONFIG_IEEE80211R_AP
 
+struct wpa_ft_rrb_rx_later_data {
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
+	size_t data_len;
+	/* followed by data_len octets of data */
+};
+
+static void hostapd_wpa_ft_rrb_rx_later(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct wpa_ft_rrb_rx_later_data *data, *n;
+
+	dl_list_for_each_safe(data, n, &hapd->l2_queue,
+			      struct wpa_ft_rrb_rx_later_data, list) {
+		if (hapd->wpa_auth) {
+			wpa_ft_rrb_rx(hapd->wpa_auth, data->addr,
+				      (const u8 *) (data + 1),
+				      data->data_len);
+		}
+		dl_list_del(&data->list);
+		os_free(data);
+	}
+}
+
+
 struct wpa_auth_ft_iface_iter_data {
 	struct hostapd_data *src_hapd;
 	const u8 *dst;
@@ -428,27 +455,48 @@ struct wpa_auth_ft_iface_iter_data {
 static int hostapd_wpa_auth_ft_iter(struct hostapd_iface *iface, void *ctx)
 {
 	struct wpa_auth_ft_iface_iter_data *idata = ctx;
+	struct wpa_ft_rrb_rx_later_data *data;
 	struct hostapd_data *hapd;
 	size_t j;
 
 	for (j = 0; j < iface->num_bss; j++) {
 		hapd = iface->bss[j];
-		if (hapd == idata->src_hapd)
+		if (hapd == idata->src_hapd ||
+		    !hapd->wpa_auth ||
+		    os_memcmp(hapd->own_addr, idata->dst, ETH_ALEN) != 0)
 			continue;
-		if (!hapd->wpa_auth)
-			continue;
-		if (os_memcmp(hapd->own_addr, idata->dst, ETH_ALEN) == 0) {
-			wpa_printf(MSG_DEBUG, "FT: Send RRB data directly to "
-				   "locally managed BSS " MACSTR "@%s -> "
-				   MACSTR "@%s",
-				   MAC2STR(idata->src_hapd->own_addr),
-				   idata->src_hapd->conf->iface,
-				   MAC2STR(hapd->own_addr), hapd->conf->iface);
-			wpa_ft_rrb_rx(hapd->wpa_auth,
-				      idata->src_hapd->own_addr,
-				      idata->data, idata->data_len);
+
+		wpa_printf(MSG_DEBUG,
+			   "FT: Send RRB data directly to locally managed BSS "
+			   MACSTR "@%s -> " MACSTR "@%s",
+			   MAC2STR(idata->src_hapd->own_addr),
+			   idata->src_hapd->conf->iface,
+			   MAC2STR(hapd->own_addr), hapd->conf->iface);
+
+		/* Defer wpa_ft_rrb_rx() until next eloop step as this is
+		 * when it would be triggered when reading from a socket.
+		 * This avoids
+		 * hapd0:send -> hapd1:recv -> hapd1:send -> hapd0:recv,
+		 * that is calling hapd0:recv handler from within
+		 * hapd0:send directly.
+		 */
+		data = os_zalloc(sizeof(*data) + idata->data_len);
+		if (!data)
 			return 1;
-		}
+
+		os_memcpy(data->addr, idata->src_hapd->own_addr, ETH_ALEN);
+		os_memcpy(data + 1, idata->data, idata->data_len);
+		data->data_len = idata->data_len;
+
+		dl_list_add(&hapd->l2_queue, &data->list);
+
+		if (!eloop_is_timeout_registered(hostapd_wpa_ft_rrb_rx_later,
+						 hapd, NULL))
+			eloop_register_timeout(0, 0,
+					       hostapd_wpa_ft_rrb_rx_later,
+					       hapd, NULL);
+
+		return 1;
 	}
 
 	return 0;
@@ -716,6 +764,8 @@ void hostapd_deinit_wpa(struct hostapd_data *hapd)
 	ieee802_1x_deinit(hapd);
 
 #ifdef CONFIG_IEEE80211R_AP
+	eloop_cancel_timeout(hostapd_wpa_ft_rrb_rx_later, hapd, ELOOP_ALL_CTX);
+	hostapd_wpa_ft_rrb_rx_later(hapd, NULL); /* flush without delivering */
 	l2_packet_deinit(hapd->l2);
 	hapd->l2 = NULL;
 #endif /* CONFIG_IEEE80211R_AP */

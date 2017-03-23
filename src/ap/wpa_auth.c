@@ -4246,7 +4246,7 @@ static int wpa_auth_fils_iter(struct wpa_authenticator *a, void *ctx)
 {
 	struct wpa_auth_fils_iter_data *data = ctx;
 
-	if (a == data->auth || !a->conf.fils_cache_id ||
+	if (a == data->auth || !a->conf.fils_cache_id_set ||
 	    os_memcmp(a->conf.fils_cache_id, data->cache_id,
 		      FILS_CACHE_ID_LEN) != 0)
 		return 0;

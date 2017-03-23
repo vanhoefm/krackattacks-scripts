@@ -178,3 +178,14 @@ http://buildbot.w1.fi/backports-wireless-testing/backports-wireless-testing-2015
 With that version, ibss_rsn is failing due to a known cfg80211
 regression in the specific snapshot build. All other test cases passed
 at least on retry or were skipped due to missing testing capability.
+
+With systemd based distros, e.g., Ubuntu 16.04, systemd-rfkill.service might
+block the mac80211_hwsim network devices.
+The tests will fail with
+  Exception: Failed to enable hostapd interface wlan3
+In the *.hostapd log, would will read
+  nl80211: Could not yet enable interface 'wlan3' due to rfkill
+Your syslog will read
+  systemd[1]: Starting Load/Save RF Kill Switch Status...
+This can be fixed by
+  systemctl mask systemd-rfkill.service

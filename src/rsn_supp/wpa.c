@@ -2461,9 +2461,9 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 #ifdef CONFIG_TESTING_OPTIONS
 	wpabuf_free(sm->test_assoc_ie);
 #endif /* CONFIG_TESTING_OPTIONS */
-#ifdef CONFIG_FILS
+#ifdef CONFIG_FILS_SK_PFS
 	crypto_ecdh_deinit(sm->fils_ecdh);
-#endif /* CONFIG_FILS */
+#endif /* CONFIG_FILS_SK_PFS */
 #ifdef CONFIG_OWE
 	crypto_ecdh_deinit(sm->owe_ecdh);
 #endif /* CONFIG_OWE */

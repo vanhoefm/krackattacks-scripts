@@ -168,6 +168,9 @@ static int try_commit(struct macsec_drv_data *drv)
 {
 	int err;
 
+	if (!drv->sk)
+		return 0;
+
 	if (!drv->link)
 		return 0;
 
@@ -982,6 +985,11 @@ static int macsec_drv_create_transmit_sc(
 
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 
+	if (!drv->sk) {
+		wpa_printf(MSG_ERROR, DRV_PREFIX "NULL rtnl socket");
+		return -1;
+	}
+
 	link = rtnl_link_macsec_alloc();
 	if (!link) {
 		wpa_printf(MSG_ERROR, DRV_PREFIX "couldn't allocate link");
@@ -1047,6 +1055,9 @@ static int macsec_drv_delete_transmit_sc(void *priv, struct transmit_sc *sc)
 	int err;
 
 	wpa_printf(MSG_DEBUG, "%s", __func__);
+
+	if (!drv->sk)
+		return 0;
 
 	if (!drv->created_link) {
 		rtnl_link_put(drv->link);

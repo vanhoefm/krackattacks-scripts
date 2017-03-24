@@ -653,9 +653,16 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 			if (p[0] == 0xdd && p[1] == 0x00) {
 				/* Remove padding */
 				plain_len = p - decrypted;
+				p = NULL;
 				break;
 			}
 			p += 2 + p[1];
+		}
+		if (p && p > decrypted && *p == 0xdd &&
+		    p + 1 == decrypted + decrypted_len) {
+			/* Remove padding */
+			p--;
+			plain_len = p - decrypted;
 		}
 
 		os_memset(buf, 0, sizeof(buf));

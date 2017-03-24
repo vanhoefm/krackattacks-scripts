@@ -640,7 +640,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 	if (wt->write_pcap_dumper && decrypted != key_data) {
 		/* Fill in a dummy Data frame header */
-		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr)];
+		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr) + 64];
 		struct ieee80211_hdr *h;
 		struct wpa_eapol_key *k;
 		const u8 *p;
@@ -675,7 +675,8 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		WPA_PUT_BE16(k->key_info,
 			     key_info & ~WPA_KEY_INFO_ENCR_KEY_DATA);
 		WPA_PUT_BE16(pos, plain_len);
-		write_pcap_decrypted(wt, buf, sizeof(buf),
+		write_pcap_decrypted(wt, buf, 24 + 8 + sizeof(*eapol) +
+				     sizeof(*hdr) + mic_len + 2,
 				     decrypted, plain_len);
 	}
 
@@ -835,7 +836,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 		    decrypted, decrypted_len);
 	if (wt->write_pcap_dumper) {
 		/* Fill in a dummy Data frame header */
-		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr)];
+		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr) + 64];
 		struct ieee80211_hdr *h;
 		struct wpa_eapol_key *k;
 		u8 *pos;
@@ -869,7 +870,8 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 		WPA_PUT_BE16(k->key_info,
 			     key_info & ~WPA_KEY_INFO_ENCR_KEY_DATA);
 		WPA_PUT_BE16(pos, plain_len);
-		write_pcap_decrypted(wt, buf, sizeof(buf),
+		write_pcap_decrypted(wt, buf, 24 + 8 + sizeof(*eapol) +
+				     sizeof(*hdr) + mic_len + 2,
 				     decrypted, plain_len);
 	}
 	if (sta->proto & WPA_PROTO_RSN)

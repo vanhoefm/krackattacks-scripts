@@ -171,6 +171,17 @@ static int add_pmk_file(struct wlantest *wt, const char *pmk_file)
 		os_memcpy(p->pmk, pmk, 32);
 		dl_list_add(&wt->pmk, &p->list);
 		wpa_hexdump(MSG_DEBUG, "Added PMK from file", pmk, 32);
+
+		/* For FT, the send half of MSK is used */
+		if (hexstr2bin(&buf[64], pmk, 32) < 0)
+			continue;
+		p = os_zalloc(sizeof(*p));
+		if (p == NULL)
+			break;
+		os_memcpy(p->pmk, pmk, 32);
+		dl_list_add(&wt->pmk, &p->list);
+		wpa_hexdump(MSG_DEBUG, "Added PMK from file (2nd half of MSK)",
+			    pmk, 32);
 	}
 
 	fclose(f);

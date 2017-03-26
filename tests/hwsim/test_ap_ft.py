@@ -173,6 +173,30 @@ def test_ap_ft(dev, apdev):
     if "[WPA2-FT/PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing RSN element info")
 
+def test_ap_ft_multi_akm(dev, apdev):
+    """WPA2-PSK-FT AP with non-FT AKMs enabled"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["wpa_key_mgmt"] = "FT-PSK WPA-PSK WPA-PSK-SHA256"
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["wpa_key_mgmt"] = "FT-PSK WPA-PSK WPA-PSK-SHA256"
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    Wlantest.setup(hapd0)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase(passphrase)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase)
+    if "[WPA2-PSK+FT/PSK+PSK-SHA256-CCMP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing RSN element info")
+    dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[2].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK-SHA256",
+                   scan_freq="2412")
+
 def test_ap_ft_local_key_gen(dev, apdev):
     """WPA2-PSK-FT AP with local key generation (without pull/push)"""
     ssid = "test-ft"

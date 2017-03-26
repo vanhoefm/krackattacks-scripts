@@ -243,10 +243,17 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 	}
 	os_get_reltime(&query->last_oper);
 
-	if (result == OFFCHANNEL_SEND_ACTION_SUCCESS) {
+	if (result == OFFCHANNEL_SEND_ACTION_SUCCESS ||
+	    result == OFFCHANNEL_SEND_ACTION_NO_ACK) {
 		eloop_cancel_timeout(gas_query_timeout, gas, query);
-		eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
-				       gas_query_timeout, gas, query);
+		if (result == OFFCHANNEL_SEND_ACTION_NO_ACK) {
+			wpa_printf(MSG_DEBUG, "GAS: No ACK to GAS request");
+			eloop_register_timeout(0, 250000,
+					       gas_query_timeout, gas, query);
+		} else {
+			eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
+					       gas_query_timeout, gas, query);
+		}
 		if (query->wait_comeback && !query->retry) {
 			eloop_cancel_timeout(gas_query_rx_comeback_timeout,
 					     gas, query);

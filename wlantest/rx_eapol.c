@@ -638,7 +638,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
 			    decrypted, decrypted_len);
 	}
-	if (wt->write_pcap_dumper && decrypted != key_data) {
+	if ((wt->write_pcap_dumper || wt->pcapng) && decrypted != key_data) {
 		/* Fill in a dummy Data frame header */
 		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr) + 64];
 		struct ieee80211_hdr *h;
@@ -841,7 +841,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	}
 	wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
 		    decrypted, decrypted_len);
-	if (wt->write_pcap_dumper) {
+	if (wt->write_pcap_dumper || wt->pcapng) {
 		/* Fill in a dummy Data frame header */
 		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr) + 64];
 		struct ieee80211_hdr *h;

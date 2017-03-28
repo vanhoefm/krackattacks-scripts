@@ -117,9 +117,19 @@ int wpa_supplicant_enabled_networks(struct wpa_supplicant *wpa_s)
 static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 				     struct wpa_ssid *ssid)
 {
+	int min_temp_disabled = 0;
+
 	while (ssid) {
-		if (!wpas_network_disabled(wpa_s, ssid))
-			break;
+		if (!wpas_network_disabled(wpa_s, ssid)) {
+			int temp_disabled = wpas_temp_disabled(wpa_s, ssid);
+
+			if (temp_disabled <= 0)
+				break;
+
+			if (!min_temp_disabled ||
+			    temp_disabled < min_temp_disabled)
+				min_temp_disabled = temp_disabled;
+		}
 		ssid = ssid->next;
 	}
 
@@ -128,7 +138,7 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "wpa_supplicant_assoc_try: Reached "
 			"end of scan list - go back to beginning");
 		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		wpa_supplicant_req_scan(wpa_s, min_temp_disabled, 0);
 		return;
 	}
 	if (ssid->next) {

@@ -54,8 +54,7 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 
 
-static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
-			      struct wpa_ssid *ssid)
+int wpas_temp_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {
 	struct os_reltime now;
 

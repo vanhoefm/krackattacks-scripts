@@ -1964,7 +1964,12 @@ struct wpa_bss_candidate_info {
 
 struct wpa_pmkid_params {
 	const u8 *bssid;
+	const u8 *ssid;
+	size_t ssid_len;
+	const u8 *fils_cache_id;
 	const u8 *pmkid;
+	const u8 *pmk;
+	size_t pmk_len;
 };
 
 /**
@@ -2153,7 +2158,9 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This function is called when a new PMK is received, as a result of
-	 * either normal authentication or RSN pre-authentication.
+	 * either normal authentication or RSN pre-authentication. The PMKSA
+	 * parameters are either a set of bssid, pmkid, and pmk; or a set of
+	 * ssid, fils_cache_id, pmkid, and pmk.
 	 *
 	 * If the driver generates RSN IE, i.e., it does not use wpa_ie in
 	 * associate(), add_pmkid() can be used to add new PMKSA cache entries
@@ -2171,7 +2178,8 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This function is called when the supplicant drops a PMKSA cache
-	 * entry for any reason.
+	 * entry for any reason. The PMKSA parameters are either a set of
+	 * bssid and pmkid; or a set of ssid, fils_cache_id, and pmkid.
 	 *
 	 * If the driver generates RSN IE, i.e., it does not use wpa_ie in
 	 * associate(), remove_pmkid() can be used to synchronize PMKSA caches

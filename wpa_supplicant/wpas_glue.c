@@ -530,7 +530,9 @@ static struct wpa_ssid * wpas_get_network_ctx(struct wpa_supplicant *wpa_s,
 
 
 static int wpa_supplicant_add_pmkid(void *_wpa_s, void *network_ctx,
-				    const u8 *bssid, const u8 *pmkid)
+				    const u8 *bssid, const u8 *pmkid,
+				    const u8 *fils_cache_id,
+				    const u8 *pmk, size_t pmk_len)
 {
 	struct wpa_supplicant *wpa_s = _wpa_s;
 	struct wpa_ssid *ssid;
@@ -541,15 +543,25 @@ static int wpa_supplicant_add_pmkid(void *_wpa_s, void *network_ctx,
 	if (ssid)
 		wpa_msg(wpa_s, MSG_INFO, PMKSA_CACHE_ADDED MACSTR " %d",
 			MAC2STR(bssid), ssid->id);
-	params.bssid = bssid;
+	if (ssid && fils_cache_id) {
+		params.ssid = ssid->ssid;
+		params.ssid_len = ssid->ssid_len;
+		params.fils_cache_id = fils_cache_id;
+	} else {
+		params.bssid = bssid;
+	}
+
 	params.pmkid = pmkid;
+	params.pmk = pmk;
+	params.pmk_len = pmk_len;
 
 	return wpa_drv_add_pmkid(wpa_s, &params);
 }
 
 
 static int wpa_supplicant_remove_pmkid(void *_wpa_s, void *network_ctx,
-				       const u8 *bssid, const u8 *pmkid)
+				       const u8 *bssid, const u8 *pmkid,
+				       const u8 *fils_cache_id)
 {
 	struct wpa_supplicant *wpa_s = _wpa_s;
 	struct wpa_ssid *ssid;
@@ -560,8 +572,14 @@ static int wpa_supplicant_remove_pmkid(void *_wpa_s, void *network_ctx,
 	if (ssid)
 		wpa_msg(wpa_s, MSG_INFO, PMKSA_CACHE_REMOVED MACSTR " %d",
 			MAC2STR(bssid), ssid->id);
+	if (ssid && fils_cache_id) {
+		params.ssid = ssid->ssid;
+		params.ssid_len = ssid->ssid_len;
+		params.fils_cache_id = fils_cache_id;
+	} else {
+		params.bssid = bssid;
+	}
 
-	params.bssid = bssid;
 	params.pmkid = pmkid;
 
 	return wpa_drv_remove_pmkid(wpa_s, &params);

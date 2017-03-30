@@ -189,20 +189,19 @@ static inline int wpa_drv_deauthenticate(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_add_pmkid(struct wpa_supplicant *wpa_s,
-				    const u8 *bssid, const u8 *pmkid)
+				    struct wpa_pmkid_params *params)
 {
 	if (wpa_s->driver->add_pmkid) {
-		return wpa_s->driver->add_pmkid(wpa_s->drv_priv, bssid, pmkid);
+		return wpa_s->driver->add_pmkid(wpa_s->drv_priv, params);
 	}
 	return -1;
 }
 
 static inline int wpa_drv_remove_pmkid(struct wpa_supplicant *wpa_s,
-				       const u8 *bssid, const u8 *pmkid)
+				       struct wpa_pmkid_params *params)
 {
 	if (wpa_s->driver->remove_pmkid) {
-		return wpa_s->driver->remove_pmkid(wpa_s->drv_priv, bssid,
-						   pmkid);
+		return wpa_s->driver->remove_pmkid(wpa_s->drv_priv, params);
 	}
 	return -1;
 }

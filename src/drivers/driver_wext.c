@@ -2351,19 +2351,21 @@ static int wpa_driver_wext_pmksa(struct wpa_driver_wext_data *drv,
 }
 
 
-static int wpa_driver_wext_add_pmkid(void *priv, const u8 *bssid,
-				     const u8 *pmkid)
+static int wpa_driver_wext_add_pmkid(void *priv,
+				     struct wpa_pmkid_params *params)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	return wpa_driver_wext_pmksa(drv, IW_PMKSA_ADD, bssid, pmkid);
+	return wpa_driver_wext_pmksa(drv, IW_PMKSA_ADD, params->bssid,
+				     params->pmkid);
 }
 
 
-static int wpa_driver_wext_remove_pmkid(void *priv, const u8 *bssid,
-		 			const u8 *pmkid)
+static int wpa_driver_wext_remove_pmkid(void *priv,
+					struct wpa_pmkid_params *params)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	return wpa_driver_wext_pmksa(drv, IW_PMKSA_REMOVE, bssid, pmkid);
+	return wpa_driver_wext_pmksa(drv, IW_PMKSA_REMOVE, params->bssid,
+				     params->pmkid);
 }
 
 

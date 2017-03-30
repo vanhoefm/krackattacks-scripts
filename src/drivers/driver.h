@@ -1962,6 +1962,11 @@ struct wpa_bss_candidate_info {
 	} *candidates;
 };
 
+struct wpa_pmkid_params {
+	const u8 *bssid;
+	const u8 *pmkid;
+};
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -2143,8 +2148,7 @@ struct wpa_driver_ops {
 	/**
 	 * add_pmkid - Add PMKSA cache entry to the driver
 	 * @priv: private driver interface data
-	 * @bssid: BSSID for the PMKSA cache entry
-	 * @pmkid: PMKID for the PMKSA cache entry
+	 * @params: PMKSA parameters
 	 *
 	 * Returns: 0 on success, -1 on failure
 	 *
@@ -2157,13 +2161,12 @@ struct wpa_driver_ops {
 	 * driver_ops function does not need to be implemented. Likewise, if
 	 * the driver does not support WPA, this function is not needed.
 	 */
-	int (*add_pmkid)(void *priv, const u8 *bssid, const u8 *pmkid);
+	int (*add_pmkid)(void *priv, struct wpa_pmkid_params *params);
 
 	/**
 	 * remove_pmkid - Remove PMKSA cache entry to the driver
 	 * @priv: private driver interface data
-	 * @bssid: BSSID for the PMKSA cache entry
-	 * @pmkid: PMKID for the PMKSA cache entry
+	 * @params: PMKSA parameters
 	 *
 	 * Returns: 0 on success, -1 on failure
 	 *
@@ -2177,7 +2180,7 @@ struct wpa_driver_ops {
 	 * implemented. Likewise, if the driver does not support WPA, this
 	 * function is not needed.
 	 */
-	int (*remove_pmkid)(void *priv, const u8 *bssid, const u8 *pmkid);
+	int (*remove_pmkid)(void *priv, struct wpa_pmkid_params *params);
 
 	/**
 	 * flush_pmkid - Flush PMKSA cache

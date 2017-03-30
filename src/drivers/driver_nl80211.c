@@ -7476,20 +7476,23 @@ static int nl80211_pmkid(struct i802_bss *bss, int cmd, const u8 *bssid,
 }
 
 
-static int nl80211_add_pmkid(void *priv, const u8 *bssid, const u8 *pmkid)
+static int nl80211_add_pmkid(void *priv, struct wpa_pmkid_params *params)
 {
 	struct i802_bss *bss = priv;
-	wpa_printf(MSG_DEBUG, "nl80211: Add PMKID for " MACSTR, MAC2STR(bssid));
-	return nl80211_pmkid(bss, NL80211_CMD_SET_PMKSA, bssid, pmkid);
+	wpa_printf(MSG_DEBUG, "nl80211: Add PMKID for " MACSTR,
+		   MAC2STR(params->bssid));
+	return nl80211_pmkid(bss, NL80211_CMD_SET_PMKSA, params->bssid,
+			     params->pmkid);
 }
 
 
-static int nl80211_remove_pmkid(void *priv, const u8 *bssid, const u8 *pmkid)
+static int nl80211_remove_pmkid(void *priv, struct wpa_pmkid_params *params)
 {
 	struct i802_bss *bss = priv;
 	wpa_printf(MSG_DEBUG, "nl80211: Delete PMKID for " MACSTR,
-		   MAC2STR(bssid));
-	return nl80211_pmkid(bss, NL80211_CMD_DEL_PMKSA, bssid, pmkid);
+		   MAC2STR(params->bssid));
+	return nl80211_pmkid(bss, NL80211_CMD_DEL_PMKSA, params->bssid,
+			     params->pmkid);
 }
 
 

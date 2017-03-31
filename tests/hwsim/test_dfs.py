@@ -23,7 +23,7 @@ def wait_dfs_event(hapd, event, timeout):
     if not ev:
         raise Exception("DFS event timed out")
     if event and event not in ev:
-        raise Exception("Unexpected DFS event")
+        raise Exception("Unexpected DFS event: " + ev + " (expected: %s)" % event)
     return ev
 
 def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht=True, ht40=False,
@@ -61,7 +61,7 @@ def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht=True, ht40=False,
 
     ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
     if "DFS-CAC-START" not in ev:
-        raise Exception("Unexpected DFS event")
+        raise Exception("Unexpected DFS event: " + ev)
 
     state = hapd.get_status_field("state")
     if state != "DFS":
@@ -166,7 +166,7 @@ def test_dfs_radar(dev, apdev):
         else:
             logger.info("Trying to start AP on another DFS channel")
             if "DFS-CAC-START" not in ev:
-                raise Exception("Unexpected DFS event")
+                raise Exception("Unexpected DFS event: " + ev)
             if "freq=5260" in ev:
                 raise Exception("Unexpected DFS CAC freq")
 
@@ -248,7 +248,7 @@ def test_dfs_radar_chanlist(dev, apdev):
 
         ev = wait_dfs_event(hapd, None, 5)
         if "AP-ENABLED" not in ev:
-            raise Exception("Unexpected DFS event")
+            raise Exception("Unexpected DFS event: " + ev)
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         dev[0].request("DISCONNECT")
@@ -283,7 +283,7 @@ def test_dfs_radar_chanlist_vht80(dev, apdev):
 
         ev = wait_dfs_event(hapd, None, 5)
         if "AP-ENABLED" not in ev:
-            raise Exception("Unexpected DFS event")
+            raise Exception("Unexpected DFS event: " + ev)
         dev[0].connect("dfs", key_mgmt="NONE")
 
         if hapd.get_status_field('vht_oper_centr_freq_seg0_idx') != "42":
@@ -321,7 +321,7 @@ def test_dfs_radar_chanlist_vht20(dev, apdev):
 
         ev = wait_dfs_event(hapd, None, 5)
         if "AP-ENABLED" not in ev:
-            raise Exception("Unexpected DFS event")
+            raise Exception("Unexpected DFS event: " + ev)
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         dev[0].request("DISCONNECT")
@@ -356,7 +356,7 @@ def test_dfs_radar_no_ht(dev, apdev):
 
         ev = wait_dfs_event(hapd, None, 5)
         if "AP-ENABLED" not in ev:
-            raise Exception("Unexpected DFS event")
+            raise Exception("Unexpected DFS event: " + ev)
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         dev[0].request("DISCONNECT")
@@ -391,7 +391,7 @@ def test_dfs_radar_ht40minus(dev, apdev):
 
         ev = wait_dfs_event(hapd, None, 5)
         if "AP-ENABLED" not in ev:
-            raise Exception("Unexpected DFS event")
+            raise Exception("Unexpected DFS event: " + ev)
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         dev[0].request("DISCONNECT")

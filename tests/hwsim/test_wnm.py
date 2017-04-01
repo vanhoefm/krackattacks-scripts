@@ -926,6 +926,14 @@ def test_wnm_bss_tm_scan_needed_e4(dev, apdev):
         if "status_code=0" not in ev:
             raise Exception("BSS transition request was not accepted: " + ev)
         dev[0].wait_connected(timeout=15, error="No reassociation seen")
+        # Wait for regdom change due to country IE to avoid issues with that
+        # processing happening only after the disconnection and cfg80211 ending
+        # up intersecting regdoms when we try to clear state back to world (00)
+        # regdom below.
+        while True:
+            ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=0.5)
+            if not ev or "COUNTRY_IE" in ev:
+                break
         dev[0].dump_monitor()
     finally:
         dev[0].request("REMOVE_NETWORK all")

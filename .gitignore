@@ -8,6 +8,7 @@
 *~
 .config
 tests/hwsim/logs
+tests/remote/logs
 wpaspy/build
 wpa_supplicant/eapol_test
 wpa_supplicant/nfc_pw_token

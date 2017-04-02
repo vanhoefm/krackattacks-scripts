@@ -55,9 +55,9 @@ def ft_params1a(rsn=True, ssid=None, passphrase=None):
 
 def ft_params1(rsn=True, ssid=None, passphrase=None):
     params = ft_params1a(rsn, ssid, passphrase)
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f",
-                       "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params2a(rsn=True, ssid=None, passphrase=None):
@@ -68,36 +68,36 @@ def ft_params2a(rsn=True, ssid=None, passphrase=None):
 
 def ft_params2(rsn=True, ssid=None, passphrase=None):
     params = ft_params2a(rsn, ssid, passphrase)
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f",
-                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params1_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
     params = ft_params(rsn, ssid, passphrase)
     params['nas_identifier'] = "nas1.w1.fi"
     params['r1_key_holder'] = "000102030405"
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f",
-                       "12:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "12:00:00:00:04:00 10:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
+                       "12:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "12:00:00:00:04:00 10:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params2_incorrect_rrb_key(rsn=True, ssid=None, passphrase=None):
     params = ft_params(rsn, ssid, passphrase)
     params['nas_identifier'] = "nas2.w1.fi"
     params['r1_key_holder'] = "000102030406"
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0ef1",
-                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0ef2" ]
-    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0ef3"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0ef1200102030405060708090a0b0c0d0ef1",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0ef2000102030405060708090a0b0c0d0ef2" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0ef3300102030405060708090a0b0c0d0ef3"
     return params
 
 def ft_params2_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
     params = ft_params(rsn, ssid, passphrase)
     params['nas_identifier'] = "nas2.w1.fi"
     params['r1_key_holder'] = "000102030406"
-    params['r0kh'] = [ "12:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f",
-                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "12:00:00:00:03:00 10:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
+    params['r0kh'] = [ "12:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "12:00:00:00:03:00 10:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
     return params
 
 def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False,
@@ -1061,7 +1061,7 @@ def test_ap_ft_ap_oom3(dev, apdev):
         # This will fail due to not being able to send out PMK-R1 pull request
         dev[0].roam(bssid1)
 
-    with fail_test(hapd1, 1, "aes_wrap;wpa_ft_pull_pmk_r1"):
+    with fail_test(hapd1, 1, "aes_siv_encrypt;wpa_ft_pull_pmk_r1"):
         # This will fail due to not being able to send out PMK-R1 pull request
         dev[0].roam(bssid1)
 
@@ -1270,7 +1270,7 @@ def test_ap_ft_ap_oom10(dev, apdev):
     bssid1 = hapd1.own_addr()
     dev[0].scan_for_bss(bssid1, freq="2412")
 
-    with fail_test(hapd0, 1, "aes_unwrap;wpa_ft_rrb_rx_pull"):
+    with fail_test(hapd0, 1, "aes_siv_decrypt;wpa_ft_rrb_rx_pull"):
         # This will fail to roam
         if "OK" not in dev[0].request("FT_DS " + bssid1):
             raise Exception("FT_DS failed")
@@ -1282,13 +1282,13 @@ def test_ap_ft_ap_oom10(dev, apdev):
             raise Exception("FT_DS failed")
         wait_fail_trigger(hapd0, "GET_FAIL")
 
-    with fail_test(hapd0, 1, "aes_wrap;wpa_ft_rrb_rx_pull"):
+    with fail_test(hapd0, 1, "aes_siv_encrypt;wpa_ft_rrb_rx_pull"):
         # This will fail to roam
         if "OK" not in dev[0].request("FT_DS " + bssid1):
             raise Exception("FT_DS failed")
         wait_fail_trigger(hapd0, "GET_FAIL")
 
-    with fail_test(hapd1, 1, "aes_unwrap;wpa_ft_rrb_rx_resp"):
+    with fail_test(hapd1, 1, "aes_siv_decrypt;wpa_ft_rrb_rx_resp"):
         # This will fail to roam
         if "OK" not in dev[0].request("FT_DS " + bssid1):
             raise Exception("FT_DS failed")
@@ -1310,7 +1310,7 @@ def test_ap_ft_ap_oom11(dev, apdev):
         wait_fail_trigger(hapd0, "GET_FAIL")
 
     dev[1].scan_for_bss(bssid0, freq="2412")
-    with fail_test(hapd0, 1, "aes_wrap;wpa_ft_generate_pmk_r1"):
+    with fail_test(hapd0, 1, "aes_siv_encrypt;wpa_ft_generate_pmk_r1"):
         dev[1].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
                        scan_freq="2412")
         wait_fail_trigger(hapd0, "GET_FAIL")

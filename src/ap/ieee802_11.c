@@ -1140,9 +1140,6 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 	if (resp != WLAN_STATUS_SUCCESS)
 		goto fail;
 
-	/* TODO: MDE when using FILS+FT */
-	/* TODO: FTE when using FILS+FT */
-
 	if (!elems.fils_nonce) {
 		wpa_printf(MSG_DEBUG, "FILS: No FILS Nonce field");
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1305,8 +1302,22 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 	/* RSNE */
 	wpabuf_put_data(data, ie, ielen);
 
-	/* TODO: MDE when using FILS+FT */
-	/* TODO: FTE when using FILS+FT */
+	/* MDE when using FILS+FT (already included in ie,ielen with RSNE) */
+
+#ifdef CONFIG_IEEE80211R_AP
+	if (wpa_key_mgmt_ft(wpa_auth_sta_key_mgmt(sta->wpa_sm))) {
+		/* FTE[R1KH-ID,R0KH-ID] when using FILS+FT */
+		int res;
+
+		res = wpa_auth_write_fte(hapd->wpa_auth, wpabuf_put(data, 0),
+					 wpabuf_tailroom(data));
+		if (res < 0) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto fail;
+		}
+		wpabuf_put(data, res);
+	}
+#endif /* CONFIG_IEEE80211R_AP */
 
 	/* FILS Nonce */
 	wpabuf_put_u8(data, WLAN_EID_EXTENSION); /* Element ID */

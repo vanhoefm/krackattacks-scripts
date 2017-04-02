@@ -4272,4 +4272,16 @@ wpa_auth_pmksa_get_fils_cache_id(struct wpa_authenticator *wpa_auth,
 	return idata.pmksa;
 }
 
+
+#ifdef CONFIG_IEEE80211R_AP
+int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, u8 *buf, size_t len)
+{
+	struct wpa_auth_config *conf = &wpa_auth->conf;
+
+	return wpa_write_ftie(conf, conf->r0_key_holder,
+			      conf->r0_key_holder_len,
+			      NULL, NULL, buf, len, NULL, 0);
+}
+#endif /* CONFIG_IEEE80211R_AP */
+
 #endif /* CONFIG_FILS */

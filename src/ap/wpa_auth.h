@@ -375,4 +375,6 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 		       const struct wpabuf *hlp);
 int fils_set_tk(struct wpa_state_machine *sm);
 
+int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, u8 *buf, size_t len);
+
 #endif /* WPA_AUTH_H */

@@ -53,11 +53,15 @@ def ft_params1a(rsn=True, ssid=None, passphrase=None):
     params['r1_key_holder'] = "000102030405"
     return params
 
-def ft_params1(rsn=True, ssid=None, passphrase=None):
+def ft_params1(rsn=True, ssid=None, passphrase=None, discovery=False):
     params = ft_params1a(rsn, ssid, passphrase)
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
-                       "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
+    if discovery:
+        params['r0kh'] = "ff:ff:ff:ff:ff:ff * 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f"
+        params['r1kh'] = "00:00:00:00:00:00 00:00:00:00:00:00 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f"
+    else:
+        params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
+                           "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f" ]
+        params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params1_old_key(rsn=True, ssid=None, passphrase=None):
@@ -73,11 +77,15 @@ def ft_params2a(rsn=True, ssid=None, passphrase=None):
     params['r1_key_holder'] = "000102030406"
     return params
 
-def ft_params2(rsn=True, ssid=None, passphrase=None):
+def ft_params2(rsn=True, ssid=None, passphrase=None, discovery=False):
     params = ft_params2a(rsn, ssid, passphrase)
-    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
-                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
-    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
+    if discovery:
+        params['r0kh'] = "ff:ff:ff:ff:ff:ff * 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f"
+        params['r1kh'] = "00:00:00:00:00:00 00:00:00:00:00:00 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f"
+    else:
+        params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
+                           "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
+        params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params2_old_key(rsn=True, ssid=None, passphrase=None):
@@ -519,13 +527,12 @@ def test_ap_ft_sae_over_ds(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, sae=True,
               over_ds=True)
 
-def test_ap_ft_eap(dev, apdev):
-    """WPA2-EAP-FT AP"""
+def generic_ap_ft_eap(dev, apdev, over_ds=False, discovery=False, roams=1):
     ssid = "test-ft"
     passphrase="12345678"
 
     radius = hostapd.radius_params()
-    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params = ft_params1(ssid=ssid, passphrase=passphrase, discovery=discovery)
     params['wpa_key_mgmt'] = "FT-EAP"
     params["ieee8021x"] = "1"
     params = dict(radius.items() + params.items())
@@ -533,13 +540,14 @@ def test_ap_ft_eap(dev, apdev):
     key_mgmt = hapd.get_config()['key_mgmt']
     if key_mgmt.split(' ')[0] != "FT-EAP":
         raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
-    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params = ft_params2(ssid=ssid, passphrase=passphrase, discovery=discovery)
     params['wpa_key_mgmt'] = "FT-EAP"
     params["ieee8021x"] = "1"
     params = dict(radius.items() + params.items())
     hapd1 = hostapd.add_ap(apdev[1], params)
 
-    run_roams(dev[0], apdev, hapd, hapd1, ssid, passphrase, eap=True)
+    run_roams(dev[0], apdev, hapd, hapd1, ssid, passphrase, eap=True,
+              over_ds=over_ds, roams=roams)
     if "[WPA2-FT/EAP-CCMP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing RSN element info")
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-3"),
@@ -559,6 +567,22 @@ def test_ap_ft_eap(dev, apdev):
         raise Exception("EAP authentication did not succeed")
     time.sleep(0.1)
     hwsim_utils.test_connectivity(dev[0], ap)
+
+def test_ap_ft_eap(dev, apdev):
+    """WPA2-EAP-FT AP"""
+    generic_ap_ft_eap(dev, apdev)
+
+def test_ap_ft_eap_over_ds(dev, apdev):
+    """WPA2-EAP-FT AP using over-the-DS"""
+    generic_ap_ft_eap(dev, apdev, over_ds=True)
+
+def test_ap_ft_eap_dis(dev, apdev):
+    """WPA2-EAP-FT AP with AP discovery"""
+    generic_ap_ft_eap(dev, apdev, discovery=True)
+
+def test_ap_ft_eap_dis_over_ds(dev, apdev):
+    """WPA2-EAP-FT AP with AP discovery and over-the-DS"""
+    generic_ap_ft_eap(dev, apdev, over_ds=True, discovery=True)
 
 def test_ap_ft_eap_pull(dev, apdev):
     """WPA2-EAP-FT AP (pull PMK)"""

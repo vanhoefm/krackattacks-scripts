@@ -195,6 +195,8 @@ struct hostapd_data {
 	struct eth_p_oui_ctx *oui_pull;
 	struct eth_p_oui_ctx *oui_resp;
 	struct eth_p_oui_ctx *oui_push;
+	struct eth_p_oui_ctx *oui_sreq;
+	struct eth_p_oui_ctx *oui_sresp;
 #endif /* CONFIG_IEEE80211R_AP */
 
 	struct wps_context *wps;

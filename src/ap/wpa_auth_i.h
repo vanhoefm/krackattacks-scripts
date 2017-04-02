@@ -121,7 +121,7 @@ struct wpa_state_machine {
 			      const u8 *ies, size_t ies_len);
 	void *ft_pending_cb_ctx;
 	struct wpabuf *ft_pending_req_ies;
-	u8 ft_pending_pull_nonce[FT_R0KH_R1KH_PULL_NONCE_LEN];
+	u8 ft_pending_pull_nonce[FT_RRB_NONCE_LEN];
 	u8 ft_pending_auth_transaction;
 	u8 ft_pending_current_ap[ETH_ALEN];
 #endif /* CONFIG_IEEE80211R_AP */

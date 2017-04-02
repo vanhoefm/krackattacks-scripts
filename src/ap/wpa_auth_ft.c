@@ -882,6 +882,12 @@ static int wpa_ft_set_key_mgmt(struct wpa_state_machine *sm,
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_FT_IEEE8021X;
 	else if (key_mgmt & WPA_KEY_MGMT_FT_PSK)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_FT_PSK;
+#ifdef CONFIG_FILS
+	else if (key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA256)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_FT_FILS_SHA256;
+	else if (key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA384)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_FT_FILS_SHA384;
+#endif /* CONFIG_FILS */
 	ciphers = parse->pairwise_cipher & sm->wpa_auth->conf.rsn_pairwise;
 	if (!ciphers) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid pairwise cipher (0x%x) from "

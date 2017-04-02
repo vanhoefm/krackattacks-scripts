@@ -208,9 +208,9 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_IEEE80211R
 	const u8 *ie;
 #endif /* CONFIG_IEEE80211R */
-#ifdef CONFIG_IEEE80211R
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_FILS)
 	const u8 *md = NULL;
-#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211R || CONFIG_FILS */
 	int i, bssid_changed;
 	struct wpabuf *resp = NULL;
 	u8 ext_capab[18];
@@ -373,7 +373,12 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		wpa_ft_prepare_auth_request(wpa_s->wpa, ie);
 	}
 
-	if (md && wpa_key_mgmt_ft(ssid->key_mgmt)) {
+	if (md && !wpa_key_mgmt_ft(ssid->key_mgmt))
+		md = NULL;
+	if (md) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: FT mobility domain %02x%02x",
+			md[0], md[1]);
+
 		if (wpa_s->sme.assoc_req_ie_len + 5 <
 		    sizeof(wpa_s->sme.assoc_req_ie)) {
 			struct rsn_mdie *mdie;
@@ -594,7 +599,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		    0)
 			wpa_printf(MSG_DEBUG,
 				   "SME: Try to use FILS with PMKSA caching");
-		resp = fils_build_auth(wpa_s->wpa, ssid->fils_dh_group);
+		resp = fils_build_auth(wpa_s->wpa, ssid->fils_dh_group, md);
 		if (resp) {
 			int auth_alg;
 

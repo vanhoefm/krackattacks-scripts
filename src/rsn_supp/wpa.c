@@ -3268,7 +3268,7 @@ void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf)
 
 #ifdef CONFIG_FILS
 
-struct wpabuf * fils_build_auth(struct wpa_sm *sm, int dh_group)
+struct wpabuf * fils_build_auth(struct wpa_sm *sm, int dh_group, const u8 *md)
 {
 	struct wpabuf *buf = NULL;
 	struct wpabuf *erp_msg;
@@ -3348,8 +3348,16 @@ struct wpabuf * fils_build_auth(struct wpa_sm *sm, int dh_group)
 		    sm->assoc_wpa_ie, sm->assoc_wpa_ie_len);
 	wpabuf_put_data(buf, sm->assoc_wpa_ie, sm->assoc_wpa_ie_len);
 
-	/* TODO: MDE when using FILS for FT initial association */
-	/* TODO: FTE when using FILS for FT initial association */
+	if (md) {
+		/* MDE when using FILS for FT initial association */
+		struct rsn_mdie *mdie;
+
+		wpabuf_put_u8(buf, WLAN_EID_MOBILITY_DOMAIN);
+		wpabuf_put_u8(buf, sizeof(*mdie));
+		mdie = wpabuf_put(buf, sizeof(*mdie));
+		os_memcpy(mdie->mobility_domain, md, MOBILITY_DOMAIN_ID_LEN);
+		mdie->ft_capab = 0;
+	}
 
 	/* FILS Nonce */
 	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */

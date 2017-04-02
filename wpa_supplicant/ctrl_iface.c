@@ -9426,7 +9426,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	int reply_len;
 
 	if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0 ||
-	    os_strncmp(buf, "SET_NETWORK ", 12) == 0) {
+	    os_strncmp(buf, "SET_NETWORK ", 12) == 0 ||
+	    os_strncmp(buf, "PMKSA_ADD ", 10) == 0 ||
+	    os_strncmp(buf, "MESH_PMKSA_ADD ", 15) == 0) {
 		if (wpa_debug_show_keys)
 			wpa_dbg(wpa_s, MSG_DEBUG,
 				"Control interface command '%s'", buf);
@@ -9435,7 +9437,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 				"Control interface command '%s [REMOVED]'",
 				os_strncmp(buf, WPA_CTRL_RSP,
 					   os_strlen(WPA_CTRL_RSP)) == 0 ?
-				WPA_CTRL_RSP : "SET_NETWORK");
+				WPA_CTRL_RSP :
+				(os_strncmp(buf, "SET_NETWORK ", 12) == 0 ?
+				 "SET_NETWORK" : "key-add"));
 	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ", 16) == 0 ||
 		   os_strncmp(buf, "NFC_REPORT_HANDOVER", 19) == 0) {
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",

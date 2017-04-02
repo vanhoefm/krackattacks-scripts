@@ -1097,11 +1097,32 @@ def test_ap_ft_ap_oom3(dev, apdev):
         # This will fail due to not being able to send out PMK-R1 pull request
         dev[0].roam(bssid1)
 
-    with fail_test(hapd1, 1, "os_get_random;wpa_ft_pull_pmk_r1"):
+    with fail_test(hapd1, 2, "os_get_random;wpa_ft_pull_pmk_r1"):
         # This will fail due to not being able to send out PMK-R1 pull request
         dev[0].roam(bssid1)
 
-    with fail_test(hapd1, 1, "aes_siv_encrypt;wpa_ft_pull_pmk_r1"):
+    with fail_test(hapd1, 2, "aes_siv_encrypt;wpa_ft_pull_pmk_r1"):
+        # This will fail due to not being able to send out PMK-R1 pull request
+        dev[0].roam(bssid1)
+
+def test_ap_ft_ap_oom3b(dev, apdev):
+    """WPA2-PSK-FT and AP OOM 3b"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    bssid0 = hapd0.own_addr()
+
+    dev[0].scan_for_bss(bssid0, freq="2412")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+    bssid1 = hapd1.own_addr()
+    dev[0].scan_for_bss(bssid1, freq="2412")
+    with fail_test(hapd1, 1, "os_get_random;wpa_ft_pull_pmk_r1"):
         # This will fail due to not being able to send out PMK-R1 pull request
         dev[0].roam(bssid1)
 

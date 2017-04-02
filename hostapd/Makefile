@@ -295,6 +295,12 @@ OBJS += ../src/ap/wpa_auth_ft.o
 NEED_SHA256=y
 NEED_AES_OMAC1=y
 NEED_AES_UNWRAP=y
+NEED_ETH_P_OUI=y
+endif
+
+ifdef NEED_ETH_P_OUI
+CFLAGS += -DCONFIG_ETH_P_OUI
+OBJS += ../src/ap/eth_p_oui.o
 endif
 
 ifdef CONFIG_SAE

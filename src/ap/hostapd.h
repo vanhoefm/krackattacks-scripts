@@ -53,6 +53,9 @@ struct hapd_interfaces {
 #ifndef CONFIG_NO_VLAN
 	struct dynamic_iface *vlan_priv;
 #endif /* CONFIG_NO_VLAN */
+#ifdef CONFIG_ETH_P_OUI
+	struct dl_list eth_p_oui; /* OUI Extended EtherType handlers */
+#endif /* CONFIG_ETH_P_OUI */
 	int eloop_initialized;
 };
 
@@ -188,6 +191,10 @@ struct hostapd_data {
 
 #ifdef CONFIG_IEEE80211R_AP
 	struct dl_list l2_queue;
+	struct dl_list l2_oui_queue;
+	struct eth_p_oui_ctx *oui_pull;
+	struct eth_p_oui_ctx *oui_resp;
+	struct eth_p_oui_ctx *oui_push;
 #endif /* CONFIG_IEEE80211R_AP */
 
 	struct wps_context *wps;

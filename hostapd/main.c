@@ -666,6 +666,9 @@ int main(int argc, char *argv[])
 	interfaces.global_iface_name = NULL;
 	interfaces.global_ctrl_sock = -1;
 	dl_list_init(&interfaces.global_ctrl_dst);
+#ifdef CONFIG_ETH_P_OUI
+	dl_list_init(&interfaces.eth_p_oui);
+#endif /* CONFIG_ETH_P_OUI */
 
 	for (;;) {
 		c = getopt(argc, argv, "b:Bde:f:hi:KP:sSTtu:vg:G:");

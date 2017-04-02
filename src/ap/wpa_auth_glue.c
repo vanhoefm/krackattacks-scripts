@@ -19,6 +19,7 @@
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
 #include "l2_packet/l2_packet.h"
+#include "eth_p_oui.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "preauth_auth.h"
@@ -565,6 +566,152 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 }
 
 
+#ifdef CONFIG_ETH_P_OUI
+static struct eth_p_oui_ctx * hostapd_wpa_get_oui(struct hostapd_data *hapd,
+						  u8 oui_suffix)
+{
+	switch (oui_suffix) {
+#ifdef CONFIG_IEEE80211R_AP
+	case FT_PACKET_R0KH_R1KH_PULL:
+		return hapd->oui_pull;
+	case FT_PACKET_R0KH_R1KH_RESP:
+		return hapd->oui_resp;
+	case FT_PACKET_R0KH_R1KH_PUSH:
+		return hapd->oui_push;
+#endif /* CONFIG_IEEE80211R_AP */
+	default:
+		return NULL;
+	}
+}
+#endif /* CONFIG_ETH_P_OUI */
+
+
+#ifdef CONFIG_IEEE80211R_AP
+
+struct oui_deliver_later_data {
+	struct dl_list list;
+	u8 src_addr[ETH_ALEN];
+	u8 dst_addr[ETH_ALEN];
+	size_t data_len;
+	u8 oui_suffix;
+	/* followed by data_len octets of data */
+};
+
+static void hostapd_oui_deliver_later(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct oui_deliver_later_data *data, *n;
+	struct eth_p_oui_ctx *oui_ctx;
+
+	dl_list_for_each_safe(data, n, &hapd->l2_oui_queue,
+			      struct oui_deliver_later_data, list) {
+		oui_ctx = hostapd_wpa_get_oui(hapd, data->oui_suffix);
+		if (hapd->wpa_auth && oui_ctx) {
+			eth_p_oui_deliver(oui_ctx, data->src_addr,
+					  data->dst_addr,
+					  (const u8 *) (data + 1),
+					  data->data_len);
+		}
+		dl_list_del(&data->list);
+		os_free(data);
+	}
+}
+
+
+struct wpa_auth_oui_iface_iter_data {
+	struct hostapd_data *src_hapd;
+	const u8 *dst_addr;
+	const u8 *data;
+	size_t data_len;
+	u8 oui_suffix;
+};
+
+static int hostapd_wpa_auth_oui_iter(struct hostapd_iface *iface, void *ctx)
+{
+	struct wpa_auth_oui_iface_iter_data *idata = ctx;
+	struct oui_deliver_later_data *data;
+	struct hostapd_data *hapd;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		hapd = iface->bss[j];
+		if (hapd == idata->src_hapd)
+			continue;
+		if (!is_multicast_ether_addr(idata->dst_addr) &&
+		    os_memcmp(hapd->own_addr, idata->dst_addr, ETH_ALEN) != 0)
+			continue;
+
+		/* defer eth_p_oui_deliver until next eloop step as this is
+		 * when it would be triggerd from reading from sock
+		 * This avoids
+		 * hapd0:send -> hapd1:recv -> hapd1:send -> hapd0:recv,
+		 * that is calling hapd0:recv handler from within
+		 * hapd0:send directly.
+		 */
+		data = os_zalloc(sizeof(*data) + idata->data_len);
+		if (!data)
+			return 1;
+
+		os_memcpy(data->src_addr, idata->src_hapd->own_addr, ETH_ALEN);
+		os_memcpy(data->dst_addr, idata->dst_addr, ETH_ALEN);
+		os_memcpy(data + 1, idata->data, idata->data_len);
+		data->data_len = idata->data_len;
+		data->oui_suffix = idata->oui_suffix;
+
+		dl_list_add(&hapd->l2_oui_queue, &data->list);
+
+		if (!eloop_is_timeout_registered(hostapd_oui_deliver_later,
+						 hapd, NULL))
+			eloop_register_timeout(0, 0,
+					       hostapd_oui_deliver_later,
+					       hapd, NULL);
+
+		return 1;
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_IEEE80211R_AP */
+
+
+static int hostapd_wpa_auth_send_oui(void *ctx, const u8 *dst, u8 oui_suffix,
+				     const u8 *data, size_t data_len)
+{
+#ifdef CONFIG_ETH_P_OUI
+	struct hostapd_data *hapd = ctx;
+	struct eth_p_oui_ctx *oui_ctx;
+
+#ifdef CONFIG_IEEE80211R_AP
+	if (hapd->iface->interfaces &&
+	    hapd->iface->interfaces->for_each_interface) {
+		struct wpa_auth_oui_iface_iter_data idata;
+		int res;
+
+		idata.src_hapd = hapd;
+		idata.dst_addr = dst;
+		idata.data = data;
+		idata.data_len = data_len;
+		idata.oui_suffix = oui_suffix;
+		res = hapd->iface->interfaces->for_each_interface(
+			hapd->iface->interfaces, hostapd_wpa_auth_oui_iter,
+			&idata);
+		if (res == 1)
+			return data_len;
+	}
+#endif /* CONFIG_IEEE80211R_AP */
+
+	oui_ctx = hostapd_wpa_get_oui(hapd, oui_suffix);
+	if (!oui_ctx)
+		return -1;
+
+	return eth_p_oui_send(oui_ctx, hapd->own_addr, dst, data, data_len);
+#else /* CONFIG_ETH_P_OUI */
+	return -1;
+#endif /* CONFIG_ETH_P_OUI */
+}
+
+
 #ifdef CONFIG_IEEE80211R_AP
 
 static int hostapd_wpa_auth_send_ft_action(void *ctx, const u8 *dst,
@@ -643,6 +790,22 @@ static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 }
 
 
+static void hostapd_rrb_oui_receive(void *ctx, const u8 *src_addr,
+				    const u8 *dst_addr, u8 oui_suffix,
+				    const u8 *buf, size_t len)
+{
+	struct hostapd_data *hapd = ctx;
+
+	wpa_printf(MSG_DEBUG, "FT: RRB received packet " MACSTR " -> "
+		   MACSTR, MAC2STR(src_addr), MAC2STR(dst_addr));
+	if (!is_multicast_ether_addr(dst_addr) &&
+	    os_memcmp(hapd->own_addr, dst_addr, ETH_ALEN) != 0)
+		return;
+	wpa_ft_rrb_oui_rx(hapd->wpa_auth, src_addr, dst_addr, oui_suffix, buf,
+			  len);
+}
+
+
 static int hostapd_wpa_auth_add_tspec(void *ctx, const u8 *sta_addr,
 				      u8 *tspec_ie, size_t tspec_ielen)
 {
@@ -650,6 +813,42 @@ static int hostapd_wpa_auth_add_tspec(void *ctx, const u8 *sta_addr,
 	return hostapd_add_tspec(hapd, sta_addr, tspec_ie, tspec_ielen);
 }
 
+
+
+static int hostapd_wpa_register_ft_oui(struct hostapd_data *hapd,
+				       const char *ft_iface)
+{
+	hapd->oui_pull = eth_p_oui_register(hapd, ft_iface,
+					    FT_PACKET_R0KH_R1KH_PULL,
+					    hostapd_rrb_oui_receive, hapd);
+	if (!hapd->oui_pull)
+		return -1;
+
+	hapd->oui_resp = eth_p_oui_register(hapd, ft_iface,
+					    FT_PACKET_R0KH_R1KH_RESP,
+					    hostapd_rrb_oui_receive, hapd);
+	if (!hapd->oui_resp)
+		return -1;
+
+	hapd->oui_push = eth_p_oui_register(hapd, ft_iface,
+					    FT_PACKET_R0KH_R1KH_PUSH,
+					    hostapd_rrb_oui_receive, hapd);
+	if (!hapd->oui_push)
+		return -1;
+
+	return 0;
+}
+
+
+static void hostapd_wpa_unregister_ft_oui(struct hostapd_data *hapd)
+{
+	eth_p_oui_unregister(hapd->oui_pull);
+	hapd->oui_pull = NULL;
+	eth_p_oui_unregister(hapd->oui_resp);
+	hapd->oui_resp = NULL;
+	eth_p_oui_unregister(hapd->oui_push);
+	hapd->oui_push = NULL;
+}
 #endif /* CONFIG_IEEE80211R_AP */
 
 
@@ -671,6 +870,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		.for_each_sta = hostapd_wpa_auth_for_each_sta,
 		.for_each_auth = hostapd_wpa_auth_for_each_auth,
 		.send_ether = hostapd_wpa_auth_send_ether,
+		.send_oui = hostapd_wpa_auth_send_oui,
 #ifdef CONFIG_IEEE80211R_AP
 		.send_ft_action = hostapd_wpa_auth_send_ft_action,
 		.add_sta = hostapd_wpa_auth_add_sta,
@@ -713,15 +913,23 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 #ifdef CONFIG_IEEE80211R_AP
 	if (!hostapd_drv_none(hapd) &&
 	    wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt)) {
-		hapd->l2 = l2_packet_init(hapd->conf->bridge[0] ?
-					  hapd->conf->bridge :
-					  hapd->conf->iface, NULL, ETH_P_RRB,
+		const char *ft_iface;
+
+		ft_iface = hapd->conf->bridge[0] ? hapd->conf->bridge :
+			   hapd->conf->iface;
+		hapd->l2 = l2_packet_init(ft_iface, NULL, ETH_P_RRB,
 					  hostapd_rrb_receive, hapd, 1);
 		if (hapd->l2 == NULL &&
 		    (hapd->driver == NULL ||
 		     hapd->driver->send_ether == NULL)) {
 			wpa_printf(MSG_ERROR, "Failed to open l2_packet "
 				   "interface");
+			return -1;
+		}
+
+		if (hostapd_wpa_register_ft_oui(hapd, ft_iface)) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to open ETH_P_OUI interface");
 			return -1;
 		}
 	}
@@ -766,7 +974,10 @@ void hostapd_deinit_wpa(struct hostapd_data *hapd)
 #ifdef CONFIG_IEEE80211R_AP
 	eloop_cancel_timeout(hostapd_wpa_ft_rrb_rx_later, hapd, ELOOP_ALL_CTX);
 	hostapd_wpa_ft_rrb_rx_later(hapd, NULL); /* flush without delivering */
+	eloop_cancel_timeout(hostapd_oui_deliver_later, hapd, ELOOP_ALL_CTX);
+	hostapd_oui_deliver_later(hapd, NULL); /* flush without delivering */
 	l2_packet_deinit(hapd->l2);
 	hapd->l2 = NULL;
+	hostapd_wpa_unregister_ft_oui(hapd);
 #endif /* CONFIG_IEEE80211R_AP */
 }

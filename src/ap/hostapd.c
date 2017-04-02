@@ -2019,6 +2019,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	hapd->dhcp_sock = -1;
 #ifdef CONFIG_IEEE80211R_AP
 	dl_list_init(&hapd->l2_queue);
+	dl_list_init(&hapd->l2_oui_queue);
 #endif /* CONFIG_IEEE80211R_AP */
 
 	return hapd;

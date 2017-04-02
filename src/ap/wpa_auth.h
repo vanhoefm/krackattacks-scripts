@@ -37,10 +37,12 @@ struct ft_rrb_frame {
 
 #define FT_PACKET_REQUEST 0
 #define FT_PACKET_RESPONSE 1
-/* Vendor-specific types for R0KH-R1KH protocol; not defined in 802.11r */
-#define FT_PACKET_R0KH_R1KH_PULL 200
-#define FT_PACKET_R0KH_R1KH_RESP 201
-#define FT_PACKET_R0KH_R1KH_PUSH 202
+
+/* Vendor-specific types for R0KH-R1KH protocol; not defined in 802.11r. These
+ * use OUI Extended EtherType as the encapsulating format. */
+#define FT_PACKET_R0KH_R1KH_PULL 0x01
+#define FT_PACKET_R0KH_R1KH_RESP 0x02
+#define FT_PACKET_R0KH_R1KH_PUSH 0x03
 
 #define FT_R0KH_R1KH_PULL_NONCE_LEN 16
 #define FT_R0KH_R1KH_PULL_DATA_LEN (FT_R0KH_R1KH_PULL_NONCE_LEN + \
@@ -49,11 +51,6 @@ struct ft_rrb_frame {
 #define FT_R0KH_R1KH_PULL_PAD_LEN ((8 - FT_R0KH_R1KH_PULL_DATA_LEN % 8) % 8)
 
 struct ft_r0kh_r1kh_pull_frame {
-	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
-	u8 packet_type; /* FT_PACKET_R0KH_R1KH_PULL */
-	le16 data_length; /* little endian length of data (44) */
-	u8 ap_address[ETH_ALEN];
-
 	u8 nonce[FT_R0KH_R1KH_PULL_NONCE_LEN];
 	u8 pmk_r0_name[WPA_PMK_NAME_LEN];
 	u8 r1kh_id[FT_R1KH_ID_LEN];
@@ -67,11 +64,6 @@ struct ft_r0kh_r1kh_pull_frame {
 				    WPA_PMK_NAME_LEN + 2)
 #define FT_R0KH_R1KH_RESP_PAD_LEN ((8 - FT_R0KH_R1KH_RESP_DATA_LEN % 8) % 8)
 struct ft_r0kh_r1kh_resp_frame {
-	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
-	u8 packet_type; /* FT_PACKET_R0KH_R1KH_RESP */
-	le16 data_length; /* little endian length of data (78) */
-	u8 ap_address[ETH_ALEN];
-
 	u8 nonce[FT_R0KH_R1KH_PULL_NONCE_LEN]; /* copied from pull */
 	u8 r1kh_id[FT_R1KH_ID_LEN]; /* copied from pull */
 	u8 s1kh_id[ETH_ALEN]; /* copied from pull */
@@ -87,11 +79,6 @@ struct ft_r0kh_r1kh_resp_frame {
 				    WPA_PMK_NAME_LEN + 2)
 #define FT_R0KH_R1KH_PUSH_PAD_LEN ((8 - FT_R0KH_R1KH_PUSH_DATA_LEN % 8) % 8)
 struct ft_r0kh_r1kh_push_frame {
-	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
-	u8 packet_type; /* FT_PACKET_R0KH_R1KH_PUSH */
-	le16 data_length; /* little endian length of data (82) */
-	u8 ap_address[ETH_ALEN];
-
 	/* Encrypted with AES key-wrap */
 	u8 timestamp[4]; /* current time in seconds since unix epoch, little
 			  * endian */
@@ -226,6 +213,8 @@ struct wpa_auth_callbacks {
 						  void *ctx), void *cb_ctx);
 	int (*send_ether)(void *ctx, const u8 *dst, u16 proto, const u8 *data,
 			  size_t data_len);
+	int (*send_oui)(void *ctx, const u8 *dst, u8 oui_suffix, const u8 *data,
+			size_t data_len);
 #ifdef CONFIG_IEEE80211R_AP
 	struct wpa_state_machine * (*add_sta)(void *ctx, const u8 *sta_addr);
 	int (*send_ft_action)(void *ctx, const u8 *dst,
@@ -345,6 +334,9 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 int wpa_ft_action_rx(struct wpa_state_machine *sm, const u8 *data, size_t len);
 int wpa_ft_rrb_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
 		  const u8 *data, size_t data_len);
+void wpa_ft_rrb_oui_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
+		       const u8 *dst_addr, u8 oui_suffix, const u8 *data,
+		       size_t data_len);
 void wpa_ft_push_pmk_r1(struct wpa_authenticator *wpa_auth, const u8 *addr);
 #endif /* CONFIG_IEEE80211R_AP */
 

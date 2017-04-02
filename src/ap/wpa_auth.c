@@ -520,6 +520,7 @@ void wpa_deinit(struct wpa_authenticator *wpa_auth)
 #ifdef CONFIG_IEEE80211R_AP
 	wpa_ft_pmk_cache_deinit(wpa_auth->ft_pmk_cache);
 	wpa_auth->ft_pmk_cache = NULL;
+	wpa_ft_deinit(wpa_auth);
 #endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_P2P

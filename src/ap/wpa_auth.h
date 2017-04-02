@@ -103,7 +103,8 @@ struct ft_rrb_seq {
  *   auth:
  *     required: SEQ, NONCE, R0KH_ID, R1KH_ID
  *   encrypted:
- *     required: S1KH_ID, session TLVs
+ *     required: S1KH_ID
+ *     optional: session TLVs
  *
  * push frame TLVs:
  *   auth:
@@ -185,9 +186,13 @@ struct wpa_auth_config {
 	size_t r0_key_holder_len;
 	u8 r1_key_holder[FT_R1KH_ID_LEN];
 	u32 r0_key_lifetime;
+	int rkh_pos_timeout;
+	int rkh_neg_timeout;
+	int rkh_pull_timeout; /* ms */
+	int rkh_pull_retries;
 	u32 reassociation_deadline;
-	struct ft_remote_r0kh *r0kh_list;
-	struct ft_remote_r1kh *r1kh_list;
+	struct ft_remote_r0kh **r0kh_list;
+	struct ft_remote_r1kh **r1kh_list;
 	int pmk_r1_push;
 	int ft_over_ds;
 	int ft_psk_generate_local;
@@ -370,6 +375,7 @@ void wpa_ft_rrb_oui_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
 		       size_t data_len);
 void wpa_ft_push_pmk_r1(struct wpa_authenticator *wpa_auth, const u8 *addr);
 void wpa_ft_deinit(struct wpa_authenticator *wpa_auth);
+void wpa_ft_sta_deinit(struct wpa_state_machine *sm);
 #endif /* CONFIG_IEEE80211R_AP */
 
 void wpa_wnmsleep_rekey_gtk(struct wpa_state_machine *sm);

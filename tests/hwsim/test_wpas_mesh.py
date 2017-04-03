@@ -279,6 +279,31 @@ def test_mesh_open_no_auto2(dev, apdev):
         raise Exception("MESH_PEER_ADD succeeded for connected STA")
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+def test_mesh_open_rssi_threshold(dev, apdev):
+    """Open mesh network with RSSI threshold"""
+    check_mesh_support(dev[0])
+
+    _test_mesh_open_rssi_threshold(dev, apdev, -255, -255)
+    _test_mesh_open_rssi_threshold(dev, apdev, 0, 0)
+    _test_mesh_open_rssi_threshold(dev, apdev, 1, 0)
+
+def _test_mesh_open_rssi_threshold(dev, apdev, value, expected):
+    id = add_open_mesh_network(dev[0], start=False)
+    dev[0].set_network(id, "mesh_rssi_threshold", str(value))
+    dev[0].mesh_group_add(id)
+    check_mesh_group_added(dev[0])
+
+    cmd = subprocess.Popen([ "iw", "dev", dev[0].ifname, "get", "mesh_param",
+                             "mesh_rssi_threshold" ], stdout=subprocess.PIPE)
+    mesh_rssi_threshold = int(cmd.stdout.read().split(" ")[0])
+
+    dev[0].mesh_group_remove()
+    check_mesh_group_removed(dev[0])
+
+    if mesh_rssi_threshold != expected:
+        raise Exception("mesh_rssi_threshold should be " + str(expected) +
+                        ": " + str(mesh_rssi_threshold))
+
 def add_mesh_secure_net(dev, psk=True, pmf=False, pairwise=None, group=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")

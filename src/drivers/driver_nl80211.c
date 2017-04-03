@@ -8870,7 +8870,10 @@ static int nl80211_put_mesh_config(struct nl_msg *msg,
 			 params->auto_plinks)) ||
 	    ((params->flags & WPA_DRIVER_MESH_CONF_FLAG_MAX_PEER_LINKS) &&
 	     nla_put_u16(msg, NL80211_MESHCONF_MAX_PEER_LINKS,
-			 params->max_peer_links)))
+			 params->max_peer_links)) ||
+	    ((params->flags & WPA_DRIVER_MESH_CONF_FLAG_RSSI_THRESHOLD) &&
+	     nla_put_u32(msg, NL80211_MESHCONF_RSSI_THRESHOLD,
+			 params->rssi_threshold)))
 		return -1;
 
 	/*

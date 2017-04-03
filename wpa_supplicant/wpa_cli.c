@@ -1392,7 +1392,7 @@ static const char *network_fields[] = {
 	"eap_workaround", "pac_file", "fragment_size", "ocsp",
 #endif /* IEEE8021X_EAPOL */
 #ifdef CONFIG_MESH
-	"mode", "no_auto_peer",
+	"mode", "no_auto_peer", "mesh_rssi_threshold",
 #else /* CONFIG_MESH */
 	"mode",
 #endif /* CONFIG_MESH */

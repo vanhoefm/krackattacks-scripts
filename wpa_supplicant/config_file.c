@@ -783,6 +783,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
 	INT(no_auto_peer);
+	INT_DEF(mesh_rssi_threshold, DEFAULT_MESH_RSSI_THRESHOLD);
 	INT(frequency);
 	INT(fixed_freq);
 #ifdef CONFIG_ACS

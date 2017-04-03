@@ -413,6 +413,10 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	else if (wpa_s->conf->dtim_period > 0)
 		params.dtim_period = wpa_s->conf->dtim_period;
 	params.conf.max_peer_links = wpa_s->conf->max_peer_links;
+	if (ssid->mesh_rssi_threshold < DEFAULT_MESH_RSSI_THRESHOLD) {
+		params.conf.rssi_threshold = ssid->mesh_rssi_threshold;
+		params.conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_RSSI_THRESHOLD;
+	}
 
 	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {
 		params.flags |= WPA_DRIVER_MESH_FLAG_SAE_AUTH;

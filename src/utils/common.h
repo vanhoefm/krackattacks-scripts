@@ -53,6 +53,15 @@ static inline unsigned int bswap_32(unsigned int v)
 }
 #endif /* __APPLE__ */
 
+#ifdef __rtems__
+#include <rtems/endian.h>
+#define __BYTE_ORDER BYTE_ORDER
+#define __LITTLE_ENDIAN LITTLE_ENDIAN
+#define __BIG_ENDIAN BIG_ENDIAN
+#define bswap_16 CPU_swap_u16
+#define bswap_32 CPU_swap_u32
+#endif /* __rtems__ */
+
 #ifdef CONFIG_NATIVE_WINDOWS
 #include <winsock.h>
 

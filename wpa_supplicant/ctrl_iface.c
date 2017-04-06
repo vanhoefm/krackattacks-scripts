@@ -10466,6 +10466,7 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 #ifdef ANDROID
 		"DRIVER ",
 #endif /* ANDROID */
+		"GET_CAPABILITY ",
 		"GET_NETWORK ",
 		"REMOVE_NETWORK ",
 		"P2P_FIND ",

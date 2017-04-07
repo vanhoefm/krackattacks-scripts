@@ -455,7 +455,7 @@ def test_erp_home_realm_oom(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
 
     for count in range(1, 3):
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                            identity="erp-ttls@example.com",
@@ -469,7 +469,7 @@ def test_erp_home_realm_oom(dev, apdev):
             dev[0].wait_disconnected()
 
     for count in range(1, 3):
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                            identity="erp-ttls",
@@ -493,7 +493,7 @@ def test_erp_home_realm_oom(dev, apdev):
         dev[0].wait_connected(timeout=10)
         if range > 1:
             continue
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("DISCONNECT")
             dev[0].wait_disconnected(timeout=15)
             dev[0].request("RECONNECT")

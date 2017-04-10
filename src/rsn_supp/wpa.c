@@ -1557,6 +1557,8 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 	key_info |= ver | WPA_KEY_INFO_SECURE;
 	if (mic_len)
 		key_info |= WPA_KEY_INFO_MIC;
+	else
+		key_info |= WPA_KEY_INFO_ENCR_KEY_DATA;
 	WPA_PUT_BE16(reply->key_info, key_info);
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);

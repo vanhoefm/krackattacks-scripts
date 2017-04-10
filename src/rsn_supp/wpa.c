@@ -1585,7 +1585,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	struct wpa_gtk_data gd;
 	const u8 *key_rsc;
 
-	if (!sm->msg_3_of_4_ok) {
+	if (!sm->msg_3_of_4_ok && !wpa_fils_is_completed(sm)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: Group Key Handshake started prior to completion of 4-way handshake");
 		goto failed;

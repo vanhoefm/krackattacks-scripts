@@ -822,6 +822,20 @@ endif
 endif
 endif
 
+ifdef CONFIG_MACSEC
+CFLAGS += -DCONFIG_MACSEC
+CONFIG_IEEE8021X_EAPOL=y
+NEED_AES_ENCBLOCK=y
+NEED_AES_UNWRAP=y
+NEED_AES_WRAP=y
+NEED_AES_OMAC1=y
+OBJS += wpas_kay.o
+OBJS += ../src/pae/ieee802_1x_cp.o
+OBJS += ../src/pae/ieee802_1x_kay.o
+OBJS += ../src/pae/ieee802_1x_key.o
+OBJS += ../src/pae/ieee802_1x_secy_ops.o
+endif
+
 ifdef CONFIG_IEEE8021X_EAPOL
 # IEEE 802.1X/EAPOL state machines (e.g., for RADIUS authentication)
 CFLAGS += -DIEEE8021X_EAPOL
@@ -832,19 +846,6 @@ ifdef CONFIG_DYNAMIC_EAP_METHODS
 CFLAGS += -DCONFIG_DYNAMIC_EAP_METHODS
 LIBS += -ldl -rdynamic
 endif
-endif
-
-ifdef CONFIG_MACSEC
-CFLAGS += -DCONFIG_MACSEC
-NEED_AES_ENCBLOCK=y
-NEED_AES_UNWRAP=y
-NEED_AES_WRAP=y
-NEED_AES_OMAC1=y
-OBJS += wpas_kay.o
-OBJS += ../src/pae/ieee802_1x_cp.o
-OBJS += ../src/pae/ieee802_1x_kay.o
-OBJS += ../src/pae/ieee802_1x_key.o
-OBJS += ../src/pae/ieee802_1x_secy_ops.o
 endif
 
 ifdef CONFIG_AP

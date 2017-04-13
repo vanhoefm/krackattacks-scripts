@@ -512,6 +512,10 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<p>Save configuration to the configuration file.</p>
       </li>
       <li>
+	<h3>AbortScan ( ) --> nothing</h3>
+	<p>Abort ongoing scan operation.</p>
+      </li>
+      <li>
 	<h3>EAPLogoff ( ) --> nothing</h3>
 	<p>IEEE 802.1X EAPOL state machine logoff.</p>
       </li>

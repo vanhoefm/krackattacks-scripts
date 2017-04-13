@@ -74,6 +74,9 @@ DECLARE_ACCESSOR(wpas_dbus_setter_iface_global);
 DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				     struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_abort_scan(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_handler_signal_poll(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s);
 

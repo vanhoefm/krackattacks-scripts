@@ -3119,6 +3119,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_NO_CONFIG_WRITE */
+	{ "AbortScan", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_abort_scan,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 

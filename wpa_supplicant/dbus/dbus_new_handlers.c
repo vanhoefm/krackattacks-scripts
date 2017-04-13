@@ -1419,6 +1419,27 @@ out:
 }
 
 
+/*
+ * wpas_dbus_handler_abort_scan - Request an ongoing scan to be aborted
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: Abort failed or no scan in progress DBus error message on failure
+ * or NULL otherwise.
+ *
+ * Handler function for "AbortScan" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_abort_scan(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	if (wpas_abort_ongoing_scan(wpa_s) < 0)
+		return dbus_message_new_error(
+			message, WPAS_DBUS_ERROR_IFACE_SCAN_ERROR,
+			"Abort failed or no scan in progress");
+
+	return NULL;
+}
+
+
 /**
  * wpas_dbus_handler_signal_poll - Request immediate signal properties
  * @message: Pointer to incoming dbus message

@@ -4408,6 +4408,7 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC_NO_VAR(load_dynamic_eap), 0 },
 #ifdef CONFIG_WPS
 	{ FUNC(uuid), CFG_CHANGED_UUID },
+	{ INT_RANGE(auto_uuid, 0, 1), 0 },
 	{ STR_RANGE(device_name, 0, WPS_DEV_NAME_MAX_LEN),
 	  CFG_CHANGED_DEVICE_NAME },
 	{ STR_RANGE(manufacturer, 0, 64), CFG_CHANGED_WPS_STRING },

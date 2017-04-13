@@ -626,6 +626,13 @@ struct wpa_config {
 	u8 uuid[16];
 
 	/**
+	 * auto_uuid - Automatic UUID behavior
+	 * 0 = generate static value based on the local MAC address (default)
+	 * 1 = generate a random UUID every time wpa_supplicant starts
+	 */
+	int auto_uuid;
+
+	/**
 	 * device_name - Device Name (WPS)
 	 * User-friendly description of device; up to 32 octets encoded in
 	 * UTF-8

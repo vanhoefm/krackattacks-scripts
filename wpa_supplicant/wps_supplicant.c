@@ -1481,6 +1481,9 @@ static void wpas_wps_set_uuid(struct wpa_supplicant *wpa_s,
 					  wpa_s->global->ifaces->wps->uuid,
 					  WPS_UUID_LEN);
 			src = "from the first interface";
+		} else if (wpa_s->conf->auto_uuid == 1) {
+			uuid_random(wps->uuid);
+			src = "based on random data";
 		} else {
 			uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
 			src = "based on MAC address";

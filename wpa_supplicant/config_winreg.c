@@ -233,6 +233,7 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 #ifdef CONFIG_WPS
 	if (wpa_config_read_global_uuid(config, hk))
 		errors++;
+	wpa_config_read_reg_dword(hk, TEXT("auto_uuid"), &config->auto_uuid);
 	config->device_name = wpa_config_read_reg_string(
 		hk, TEXT("device_name"));
 	config->manufacturer = wpa_config_read_reg_string(
@@ -579,6 +580,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		wpa_config_write_reg_string(hk, "uuid", buf);
 	}
+	wpa_config_write_reg_dword(hk, TEXT("auto_uuid"), config->auto_uuid,
+				   0);
 	wpa_config_write_reg_string(hk, "device_name", config->device_name);
 	wpa_config_write_reg_string(hk, "manufacturer", config->manufacturer);
 	wpa_config_write_reg_string(hk, "model_name", config->model_name);

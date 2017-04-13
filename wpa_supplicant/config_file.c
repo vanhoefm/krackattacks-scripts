@@ -1088,6 +1088,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		fprintf(f, "uuid=%s\n", buf);
 	}
+	if (config->auto_uuid)
+		fprintf(f, "auto_uuid=%d\n", config->auto_uuid);
 	if (config->device_name)
 		fprintf(f, "device_name=%s\n", config->device_name);
 	if (config->manufacturer)

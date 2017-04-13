@@ -465,6 +465,15 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
       </li>
       <li>
+	<h3>TDLSCancelChannelSwitch ( s : peer_address ) --> nothing</h3>
+	<p>Disable channel switching for a TDLS session with a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : peer_address</dt>
+	  <dd>MAC address for the peer.</dd>
+	</dl>
+      </li>
+      <li>
 	<h3>VendorElemAdd ( i: frame_id, ay: ielems ) --> nothing</h3>
 	<p>Add Vendor Elements to corresponding frame ID.</p>
 	<h4>Arguments</h4>

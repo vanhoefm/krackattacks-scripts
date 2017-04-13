@@ -2432,6 +2432,37 @@ wpas_dbus_handler_tdls_channel_switch(DBusMessage *message,
 	return NULL;
 }
 
+/*
+ * wpas_dbus_handler_tdls_cancel_channel_switch - Disable channel switching with TDLS peer
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL indicating success or DBus error message on failure
+ *
+ * Handler function for "TDLSCancelChannelSwitch" method call of network
+ * interface.
+ */
+DBusMessage *
+wpas_dbus_handler_tdls_cancel_channel_switch(DBusMessage *message,
+					     struct wpa_supplicant *wpa_s)
+{
+	u8 peer[ETH_ALEN];
+	DBusMessage *error_reply;
+	int ret;
+
+	if (get_peer_hwaddr_helper(message, __func__, peer, &error_reply) < 0)
+		return error_reply;
+
+	wpa_printf(MSG_DEBUG, "dbus: TDLS_CANCEL_CHAN_SWITCH " MACSTR,
+		   MAC2STR(peer));
+
+	ret = wpa_tdls_disable_chan_switch(wpa_s->wpa, peer);
+	if (ret)
+		return wpas_dbus_error_unknown_error(
+			message, "error canceling TDLS channel switch");
+
+	return NULL;
+}
+
 #endif /* CONFIG_TDLS */
 
 

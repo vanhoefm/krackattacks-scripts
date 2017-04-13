@@ -9928,3 +9928,40 @@ def test_ap_wps_ap_pin_failure(dev, apdev):
 
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_ap_wps_random_uuid(dev, apdev, params):
+    """WPS and random UUID on Enrollee"""
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                          "wpa_passphrase": "12345678", "wpa": "2",
+                          "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+
+    config = os.path.join(params['logdir'], 'ap_wps_random_uuid.conf')
+    with open(config, "w") as f:
+        f.write("auto_uuid=1\n")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+
+    uuid = []
+    for i in range(3):
+        wpas.interface_add("wlan5", config=config)
+
+        wpas.scan_for_bss(apdev[0]['bssid'], freq="2412")
+        wpas.dump_monitor()
+        wpas.request("WPS_PBC " + apdev[0]['bssid'])
+
+        ev = hapd.wait_event(["WPS-ENROLLEE-SEEN"], timeout=10)
+        if ev is None:
+            raise Exception("Enrollee not seen")
+        uuid.append(ev.split(' ')[2])
+        wpas.request("WPS_CANCEL")
+        wpas.dump_monitor()
+
+        wpas.interface_remove("wlan5")
+
+        hapd.dump_monitor()
+
+    logger.info("Seen UUIDs: " + str(uuid))
+    if uuid[0] == uuid[1] or uuid[0] == uuid[2] or uuid[1] == uuid[2]:
+        raise Exception("Same UUID used multiple times")

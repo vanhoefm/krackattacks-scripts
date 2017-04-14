@@ -2170,6 +2170,76 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_FILS
+static size_t wpas_add_fils_hlp_req(struct wpa_supplicant *wpa_s, u8 *ie_buf,
+				    size_t ie_buf_len)
+{
+	struct fils_hlp_req *req;
+	size_t rem_len, hdr_len, hlp_len, len, ie_len = 0;
+	const u8 *pos;
+	u8 *buf = ie_buf;
+
+	dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
+			 list) {
+		rem_len = ie_buf_len - ie_len;
+		pos = wpabuf_head(req->pkt);
+		hdr_len = 1 + 2 * ETH_ALEN + 6;
+		hlp_len = wpabuf_len(req->pkt);
+
+		if (rem_len < 2 + hdr_len + hlp_len) {
+			wpa_printf(MSG_ERROR,
+				   "FILS: Cannot fit HLP - rem_len=%lu to_fill=%lu",
+				   (unsigned long) rem_len,
+				   (unsigned long) (2 + hdr_len + hlp_len));
+			break;
+		}
+
+		len = (hdr_len + hlp_len) > 255 ? 255 : hdr_len + hlp_len;
+		/* Element ID */
+		*buf++ = WLAN_EID_EXTENSION;
+		/* Length */
+		*buf++ = len;
+		/* Element ID Extension */
+		*buf++ = WLAN_EID_EXT_FILS_HLP_CONTAINER;
+		/* Destination MAC address */
+		os_memcpy(buf, req->dst, ETH_ALEN);
+		buf += ETH_ALEN;
+		/* Source MAC address */
+		os_memcpy(buf, wpa_s->own_addr, ETH_ALEN);
+		buf += ETH_ALEN;
+		/* LLC/SNAP Header */
+		os_memcpy(buf, "\xaa\xaa\x03\x00\x00\x00", 6);
+		buf += 6;
+		/* HLP Packet */
+		os_memcpy(buf, pos, len - hdr_len);
+		buf += len - hdr_len;
+		pos += len - hdr_len;
+
+		hlp_len -= len - hdr_len;
+		ie_len += 2 + len;
+		rem_len -= 2 + len;
+
+		while (hlp_len) {
+			len = (hlp_len > 255) ? 255 : hlp_len;
+			if (rem_len < 2 + len)
+				break;
+			*buf++ = WLAN_EID_FRAGMENT;
+			*buf++ = len;
+			os_memcpy(buf, pos, len);
+			buf += len;
+			pos += len;
+
+			hlp_len -= len;
+			ie_len += 2 + len;
+			rem_len -= 2 + len;
+		}
+	}
+
+	return ie_len;
+}
+#endif /* CONFIG_FILS */
+
+
 static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 {
 	struct wpa_connect_work *cwork = work->ctx;
@@ -2316,6 +2386,18 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			"0x%x", algs);
 	}
 
+#ifdef CONFIG_FILS
+	if (algs == WPA_AUTH_ALG_FILS) {
+		struct fils_hlp_req *req;
+
+		dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
+				 list) {
+			max_wpa_ie_len += 3 + 2 * ETH_ALEN + 6 +
+				wpabuf_len(req->pkt) +
+				2 + 2 * wpabuf_len(req->pkt) / 255;
+		}
+	}
+#endif /* CONFIG_FILS */
 	wpa_ie = os_malloc(max_wpa_ie_len);
 	if (!wpa_ie) {
 		wpa_printf(MSG_ERROR,
@@ -2520,6 +2602,16 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			wpa_ie_len += len;
 	}
 #endif /* CONFIG_MBO */
+
+#ifdef CONFIG_FILS
+	if (algs == WPA_AUTH_ALG_FILS) {
+		size_t len;
+
+		len = wpas_add_fils_hlp_req(wpa_s, wpa_ie + wpa_ie_len,
+					    max_wpa_ie_len - wpa_ie_len);
+		wpa_ie_len += len;
+	}
+#endif /* CONFIG_FILS */
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;

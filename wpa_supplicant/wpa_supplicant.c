@@ -2176,7 +2176,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	struct wpa_bss *bss = cwork->bss;
 	struct wpa_ssid *ssid = cwork->ssid;
 	struct wpa_supplicant *wpa_s = work->wpa_s;
-	u8 wpa_ie[200];
+	u8 *wpa_ie;
+	size_t max_wpa_ie_len = 200;
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
@@ -2315,6 +2316,15 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			"0x%x", algs);
 	}
 
+	wpa_ie = os_malloc(max_wpa_ie_len);
+	if (!wpa_ie) {
+		wpa_printf(MSG_ERROR,
+			   "Failed to allocate connect IE buffer for %lu bytes",
+			   (unsigned long) max_wpa_ie_len);
+		wpas_connect_work_done(wpa_s);
+		return;
+	}
+
 	if (bss && (wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
 		    wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    wpa_key_mgmt_wpa(ssid->key_mgmt)) {
@@ -2333,12 +2343,13 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 					    ssid, try_opportunistic,
 					    cache_id) == 0)
 			eapol_sm_notify_pmkid_attempt(wpa_s->eapol);
-		wpa_ie_len = sizeof(wpa_ie);
+		wpa_ie_len = max_wpa_ie_len;
 		if (wpa_supplicant_set_suites(wpa_s, bss, ssid,
 					      wpa_ie, &wpa_ie_len)) {
 			wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to set WPA "
 				"key management and encryption suites");
 			wpas_connect_work_done(wpa_s);
+			os_free(wpa_ie);
 			return;
 		}
 	} else if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) && bss &&
@@ -2352,20 +2363,21 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		wpa_ie_len = 0;
 		wpa_s->wpa_proto = 0;
 	} else if (wpa_key_mgmt_wpa_any(ssid->key_mgmt)) {
-		wpa_ie_len = sizeof(wpa_ie);
+		wpa_ie_len = max_wpa_ie_len;
 		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,
 					      wpa_ie, &wpa_ie_len)) {
 			wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to set WPA "
 				"key management and encryption suites (no "
 				"scan results)");
 			wpas_connect_work_done(wpa_s);
+			os_free(wpa_ie);
 			return;
 		}
 #ifdef CONFIG_WPS
 	} else if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
 		struct wpabuf *wps_ie;
 		wps_ie = wps_build_assoc_req_ie(wpas_wps_get_req_type(ssid));
-		if (wps_ie && wpabuf_len(wps_ie) <= sizeof(wpa_ie)) {
+		if (wps_ie && wpabuf_len(wps_ie) <= max_wpa_ie_len) {
 			wpa_ie_len = wpabuf_len(wps_ie);
 			os_memcpy(wpa_ie, wpabuf_head(wps_ie), wpa_ie_len);
 		} else
@@ -2390,7 +2402,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		size_t len;
 		int res;
 		pos = wpa_ie + wpa_ie_len;
-		len = sizeof(wpa_ie) - wpa_ie_len;
+		len = max_wpa_ie_len - wpa_ie_len;
 		res = wpas_p2p_assoc_req_ie(wpa_s, bss, pos, len,
 					    ssid->p2p_group);
 		if (res >= 0)
@@ -2418,7 +2430,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (bss) {
 		wpa_ie_len += wpas_supp_op_class_ie(wpa_s, bss->freq,
 						    wpa_ie + wpa_ie_len,
-						    sizeof(wpa_ie) -
+						    max_wpa_ie_len -
 						    wpa_ie_len);
 	}
 
@@ -2461,7 +2473,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			size_t len;
 
 			wpas_hs20_add_indication(hs20, pps_mo_id);
-			len = sizeof(wpa_ie) - wpa_ie_len;
+			len = max_wpa_ie_len - wpa_ie_len;
 			if (wpabuf_len(hs20) <= len) {
 				os_memcpy(wpa_ie + wpa_ie_len,
 					  wpabuf_head(hs20), wpabuf_len(hs20));
@@ -2478,7 +2490,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		struct wpabuf *buf = wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ];
 		size_t len;
 
-		len = sizeof(wpa_ie) - wpa_ie_len;
+		len = max_wpa_ie_len - wpa_ie_len;
 		if (wpabuf_len(buf) <= len) {
 			os_memcpy(wpa_ie + wpa_ie_len,
 				  wpabuf_head(buf), wpabuf_len(buf));
@@ -2490,7 +2502,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (wpa_s->fst_ies) {
 		int fst_ies_len = wpabuf_len(wpa_s->fst_ies);
 
-		if (wpa_ie_len + fst_ies_len <= sizeof(wpa_ie)) {
+		if (wpa_ie_len + fst_ies_len <= max_wpa_ie_len) {
 			os_memcpy(wpa_ie + wpa_ie_len,
 				  wpabuf_head(wpa_s->fst_ies), fst_ies_len);
 			wpa_ie_len += fst_ies_len;
@@ -2503,7 +2515,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		int len;
 
 		len = wpas_mbo_ie(wpa_s, wpa_ie + wpa_ie_len,
-				  sizeof(wpa_ie) - wpa_ie_len);
+				  max_wpa_ie_len - wpa_ie_len);
 		if (len >= 0)
 			wpa_ie_len += len;
 	}
@@ -2688,6 +2700,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			if (wpas_p2p_handle_frequency_conflicts(
 				    wpa_s, params.freq.freq, ssid) < 0) {
 				wpas_connect_work_done(wpa_s);
+				os_free(wpa_ie);
 				return;
 			}
 		}
@@ -2699,6 +2712,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		params.prev_bssid = prev_bssid;
 
 	ret = wpa_drv_associate(wpa_s, &params);
+	os_free(wpa_ie);
 	if (ret < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");

@@ -60,6 +60,13 @@ def ft_params1(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
     return params
 
+def ft_params1_old_key(rsn=True, ssid=None, passphrase=None):
+    params = ft_params1a(rsn, ssid, passphrase)
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    return params
+
 def ft_params2a(rsn=True, ssid=None, passphrase=None):
     params = ft_params(rsn, ssid, passphrase)
     params['nas_identifier'] = "nas2.w1.fi"
@@ -71,6 +78,13 @@ def ft_params2(rsn=True, ssid=None, passphrase=None):
     params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
                        "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
     params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
+    return params
+
+def ft_params2_old_key(rsn=True, ssid=None, passphrase=None):
+    params = ft_params2a(rsn, ssid, passphrase)
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
 def ft_params1_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
@@ -172,6 +186,18 @@ def test_ap_ft(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase)
     if "[WPA2-FT/PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing RSN element info")
+
+def test_ap_ft_old_key(dev, apdev):
+    """WPA2-PSK-FT AP (old key)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1_old_key(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2_old_key(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase)
 
 def test_ap_ft_multi_akm(dev, apdev):
     """WPA2-PSK-FT AP with non-FT AKMs enabled"""
@@ -436,6 +462,20 @@ def test_ap_ft_over_ds_pull(dev, apdev):
     params["pmk_r1_push"] = "0"
     hapd0 = hostapd.add_ap(apdev[0], params)
     params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True)
+
+def test_ap_ft_over_ds_pull_old_key(dev, apdev):
+    """WPA2-PSK-FT AP over DS (pull PMK; old key)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1_old_key(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2_old_key(ssid=ssid, passphrase=passphrase)
     params["pmk_r1_push"] = "0"
     hapd1 = hostapd.add_ap(apdev[1], params)
 

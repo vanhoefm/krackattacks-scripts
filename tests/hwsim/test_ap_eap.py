@@ -4078,13 +4078,17 @@ def root_ocsp(cert):
     fd2, fn2 = tempfile.mkstemp()
     os.close(fd2)
 
-    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-cert", cert,
-            "-no_nonce", "-sha256", "-text" ]
+    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-sha256",
+            "-cert", cert, "-no_nonce", "-text" ]
+    logger.info(' '.join(arg))
     cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
     res = cmd.stdout.read() + "\n" + cmd.stderr.read()
     cmd.stdout.close()
     cmd.stderr.close()
+    cmd.wait()
+    if cmd.returncode != 0:
+        raise Exception("bad return code from openssl ocsp\n\n" + res)
     logger.info("OCSP request:\n" + res)
 
     fd, fn = tempfile.mkstemp()
@@ -4099,6 +4103,9 @@ def root_ocsp(cert):
     res = cmd.stdout.read() + "\n" + cmd.stderr.read()
     cmd.stdout.close()
     cmd.stderr.close()
+    cmd.wait()
+    if cmd.returncode != 0:
+        raise Exception("bad return code from openssl ocsp\n\n" + res)
     logger.info("OCSP response:\n" + res)
     os.unlink(fn2)
     return fn
@@ -4111,13 +4118,16 @@ def ica_ocsp(cert):
     fd2, fn2 = tempfile.mkstemp()
     os.close(fd2)
 
-    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-cert", cert,
-            "-no_nonce", "-sha256", "-text" ]
+    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-sha256",
+            "-cert", cert, "-no_nonce", "-text" ]
     cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
     res = cmd.stdout.read() + "\n" + cmd.stderr.read()
     cmd.stdout.close()
     cmd.stderr.close()
+    cmd.wait()
+    if cmd.returncode != 0:
+        raise Exception("bad return code from openssl ocsp\n\n" + res)
     logger.info("OCSP request:\n" + res)
 
     fd, fn = tempfile.mkstemp()
@@ -4132,6 +4142,9 @@ def ica_ocsp(cert):
     res = cmd.stdout.read() + "\n" + cmd.stderr.read()
     cmd.stdout.close()
     cmd.stderr.close()
+    cmd.wait()
+    if cmd.returncode != 0:
+        raise Exception("bad return code from openssl ocsp\n\n" + res)
     logger.info("OCSP response:\n" + res)
     os.unlink(fn2)
     return fn

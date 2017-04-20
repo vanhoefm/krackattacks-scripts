@@ -3226,6 +3226,24 @@ enum qca_wlan_vendor_acs_select_reason {
 };
 
 /**
+ * qca_wlan_vendor_attr_external_acs_policy: Attribute values for
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_POLICY to the vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_EXTERNAL_ACS. This represents the
+ * external ACS policies to select the channels w.r.t. the PCL weights.
+ * (QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PCL represents the channels and
+ * their PCL weights.)
+ * @QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_POLICY_PCL_MANDATORY: Mandatory to
+ * select a channel with non-zero PCL weight.
+ * @QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_POLICY_PCL_PREFERRED: Prefer a
+ * channel with non-zero PCL weight.
+ *
+ */
+enum qca_wlan_vendor_attr_external_acs_policy {
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_POLICY_PCL_PREFERRED,
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_POLICY_PCL_MANDATORY,
+};
+
+/**
  * qca_wlan_vendor_channel_prop_flags: This represent the flags for a channel.
  * This is used by QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAGS.
  */
@@ -3411,6 +3429,11 @@ enum qca_wlan_vendor_attr_external_acs_event {
 	 * in enum qca_wlan_vendor_external_acs_event_chan_info_attr.
 	 */
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_CHAN_INFO = 12,
+	/* External ACS policy such as PCL mandatory, PCL preferred, etc.
+	 * It uses values defined in enum
+	 * qca_wlan_vendor_attr_external_acs_policy.
+	 */
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_POLICY = 13,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_LAST,

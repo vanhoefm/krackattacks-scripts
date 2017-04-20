@@ -165,6 +165,10 @@ static inline int wpa_key_mgmt_cckm(int akm)
 #define WPA_AUTH_ALG_FILS BIT(5)
 #define WPA_AUTH_ALG_FILS_SK_PFS BIT(6)
 
+static inline int wpa_auth_alg_fils(int alg)
+{
+	return !!(alg & (WPA_AUTH_ALG_FILS | WPA_AUTH_ALG_FILS_SK_PFS));
+}
 
 enum wpa_alg {
 	WPA_ALG_NONE,

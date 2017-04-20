@@ -837,12 +837,24 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 
 	if (state == WPA_COMPLETED && wpa_s->new_connection) {
 		struct wpa_ssid *ssid = wpa_s->current_ssid;
+		int fils_hlp_sent = 0;
+
+#ifdef CONFIG_SME
+		if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		    wpa_auth_alg_fils(wpa_s->sme.auth_alg))
+			fils_hlp_sent = 1;
+#endif /* CONFIG_SME */
+		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		    wpa_auth_alg_fils(wpa_s->auth_alg))
+			fils_hlp_sent = 1;
+
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CONNECTED "- Connection to "
-			MACSTR " completed [id=%d id_str=%s]",
+			MACSTR " completed [id=%d id_str=%s%s]",
 			MAC2STR(wpa_s->bssid),
 			ssid ? ssid->id : -1,
-			ssid && ssid->id_str ? ssid->id_str : "");
+			ssid && ssid->id_str ? ssid->id_str : "",
+			fils_hlp_sent ? " FILS_HLP_SENT" : "");
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 		wpas_clear_temp_disabled(wpa_s, ssid, 1);
 		wpa_blacklist_clear(wpa_s);

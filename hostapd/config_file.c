@@ -1106,6 +1106,10 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 		conf->ht_capab |= HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
 		conf->secondary_channel = 1;
 	}
+	if (os_strstr(capab, "[HT40+]") && os_strstr(capab, "[HT40-]")) {
+		conf->ht_capab |= HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
+		conf->ht40_plus_minus_allowed = 1;
+	}
 	if (os_strstr(capab, "[SMPS-STATIC]")) {
 		conf->ht_capab &= ~HT_CAP_INFO_SMPS_MASK;
 		conf->ht_capab |= HT_CAP_INFO_SMPS_STATIC;

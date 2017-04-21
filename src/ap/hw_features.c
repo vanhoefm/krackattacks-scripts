@@ -722,14 +722,33 @@ static int hostapd_is_usable_chan(struct hostapd_iface *iface,
 
 static int hostapd_is_usable_chans(struct hostapd_iface *iface)
 {
+	int secondary_chan;
+
 	if (!hostapd_is_usable_chan(iface, iface->conf->channel, 1))
 		return 0;
 
 	if (!iface->conf->secondary_channel)
 		return 1;
 
-	return hostapd_is_usable_chan(iface, iface->conf->channel +
-				      iface->conf->secondary_channel * 4, 0);
+	if (!iface->conf->ht40_plus_minus_allowed)
+		return hostapd_is_usable_chan(
+			iface, iface->conf->channel +
+			iface->conf->secondary_channel * 4, 0);
+
+	/* Both HT40+ and HT40- are set, pick a valid secondary channel */
+	secondary_chan = iface->conf->channel + 4;
+	if (hostapd_is_usable_chan(iface, secondary_chan, 0)) {
+		iface->conf->secondary_channel = 1;
+		return 1;
+	}
+
+	secondary_chan = iface->conf->channel - 4;
+	if (hostapd_is_usable_chan(iface, secondary_chan, 0)) {
+		iface->conf->secondary_channel = -1;
+		return 1;
+	}
+
+	return 0;
 }
 
 

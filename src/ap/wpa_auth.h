@@ -377,6 +377,8 @@ int fils_set_tk(struct wpa_state_machine *sm);
 const u8 *  wpa_fils_validate_fils_session(struct wpa_state_machine *sm,
 					   const u8 *ies, size_t ies_len,
 					   const u8 *fils_session);
+int wpa_fils_validate_key_confirm(struct wpa_state_machine *sm, const u8 *ies,
+				  size_t ies_len);
 
 int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, u8 *buf, size_t len);
 void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,

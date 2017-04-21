@@ -2215,13 +2215,50 @@ const u8 * wpa_fils_validate_fils_session(struct wpa_state_machine *sm,
 }
 
 
+int wpa_fils_validate_key_confirm(struct wpa_state_machine *sm, const u8 *ies,
+				  size_t ies_len)
+{
+	struct ieee802_11_elems elems;
+
+	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Failed to parse decrypted elements");
+		return -1;
+	}
+
+	if (!elems.fils_key_confirm) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Key Confirm element");
+		return -1;
+	}
+
+	if (elems.fils_key_confirm_len != sm->fils_key_auth_len) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Unexpected Key-Auth length %d (expected %d)",
+			   elems.fils_key_confirm_len,
+			   (int) sm->fils_key_auth_len);
+		return -1;
+	}
+
+	if (os_memcmp(elems.fils_key_confirm, sm->fils_key_auth_sta,
+		      sm->fils_key_auth_len) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Key-Auth mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Received Key-Auth",
+			    elems.fils_key_confirm, elems.fils_key_confirm_len);
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected Key-Auth",
+			    sm->fils_key_auth_sta, sm->fils_key_auth_len);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 		       const struct ieee80211_mgmt *mgmt, size_t frame_len,
 		       u8 *pos, size_t left)
 {
 	u16 fc, stype;
 	const u8 *end, *ie_start, *ie, *session, *crypt;
-	struct ieee802_11_elems elems;
 	const u8 *aad[5];
 	size_t aad_len[5];
 
@@ -2295,31 +2332,8 @@ int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 	wpa_hexdump(MSG_DEBUG, "FILS: Decrypted Association Request elements",
 		    pos, left - AES_BLOCK_SIZE);
 
-	if (ieee802_11_parse_elems(pos, left - AES_BLOCK_SIZE, &elems, 1) ==
-	    ParseFailed) {
-		wpa_printf(MSG_DEBUG,
-			   "FILS: Failed to parse decrypted elements");
-		return -1;
-	}
-	if (!elems.fils_key_confirm) {
-		wpa_printf(MSG_DEBUG, "FILS: No FILS Key Confirm element");
-		return -1;
-	}
-	if (elems.fils_key_confirm_len != sm->fils_key_auth_len) {
-		wpa_printf(MSG_DEBUG,
-			   "FILS: Unexpected Key-Auth length %d (expected %d)",
-			   elems.fils_key_confirm_len,
-			   (int) sm->fils_key_auth_len);
-		return -1;
-	}
-	if (os_memcmp(elems.fils_key_confirm, sm->fils_key_auth_sta,
-		      sm->fils_key_auth_len) != 0) {
-		wpa_printf(MSG_DEBUG, "FILS: Key-Auth mismatch");
-		wpa_hexdump(MSG_DEBUG, "FILS: Received Key-Auth",
-			    elems.fils_key_confirm,
-			    elems.fils_key_confirm_len);
-		wpa_hexdump(MSG_DEBUG, "FILS: Expected Key-Auth",
-			    sm->fils_key_auth_sta, sm->fils_key_auth_len);
+	if (wpa_fils_validate_key_confirm(sm, pos, left - AES_BLOCK_SIZE) < 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Key Confirm validation failed");
 		return -1;
 	}
 

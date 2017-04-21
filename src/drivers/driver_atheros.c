@@ -70,6 +70,7 @@ struct atheros_driver_data {
 	int	ioctl_sock;			/* socket for ioctl() use */
 	struct netlink_data *netlink;
 	int	we_version;
+	int fils_en;			/* FILS enable/disable in driver */
 	u8	acct_mac[ETH_ALEN];
 	struct hostap_sta_driver_data acct_data;
 
@@ -176,6 +177,25 @@ static const char * athr_get_param_name(int op)
 		return "??";
 	}
 }
+
+
+#ifdef CONFIG_FILS
+static int
+get80211param(struct atheros_driver_data *drv, int op, int *data)
+{
+	struct iwreq iwr;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+	iwr.u.mode = op;
+
+	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_GETPARAM, &iwr) < 0)
+		return -1;
+
+	*data = iwr.u.mode;
+	return 0;
+}
+#endif /* CONFIG_FILS */
 
 
 static int
@@ -1603,6 +1623,27 @@ handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 			   len - sizeof(struct l2_ethhdr));
 }
 
+
+static void atheros_read_fils_cap(struct atheros_driver_data *drv)
+{
+	int fils = 0;
+
+#ifdef CONFIG_FILS
+	/* TODO: Would be better to have #ifdef on the IEEE80211_PARAM_* value
+	 * to automatically check this against the driver header files. */
+	if (get80211param(drv, IEEE80211_PARAM_ENABLE_FILS, &fils) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: Failed to get FILS capability from driver",
+			   __func__);
+		/* Assume driver does not support FILS */
+		fils = 0;
+	}
+#endif /* CONFIG_FILS */
+	drv->fils_en = fils;
+	wpa_printf(MSG_DEBUG, "atheros: fils_en=%d", drv->fils_en);
+}
+
+
 static void *
 atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
@@ -1682,6 +1723,9 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	if (atheros_wireless_event_init(drv))
 		goto bad;
+
+	/* Read FILS capability from the driver */
+	atheros_read_fils_cap(drv);
 
 	return drv;
 bad:

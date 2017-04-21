@@ -144,5 +144,11 @@ void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
 				 const u8 *msk, size_t msk_len);
 void fils_hlp_timeout(void *eloop_ctx, void *eloop_data);
 void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta);
+void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
+		      const u8 *pos, size_t len, u16 auth_alg,
+		      u16 auth_transaction, u16 status_code,
+		      void (*cb)(struct hostapd_data *hapd,
+				 struct sta_info *sta,
+				 u16 resp, struct wpabuf *data, int pub));
 
 #endif /* IEEE802_11_H */

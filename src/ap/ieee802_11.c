@@ -1019,13 +1019,14 @@ static u16 wpa_res_to_status_code(int res)
 
 static void handle_auth_fils_finish(struct hostapd_data *hapd,
 				    struct sta_info *sta, u16 resp,
-				    struct rsn_pmksa_cache_entry *pmksa,
-				    struct wpabuf *erp_resp,
-				    const u8 *msk, size_t msk_len);
+				    struct wpabuf *data, int pub);
 
-static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
-			     const u8 *pos, size_t len, u16 auth_alg,
-			     u16 auth_transaction, u16 status_code)
+void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
+		      const u8 *pos, size_t len, u16 auth_alg,
+		      u16 auth_transaction, u16 status_code,
+		      void (*cb)(struct hostapd_data *hapd,
+				 struct sta_info *sta, u16 resp,
+				 struct wpabuf *data, int pub))
 {
 	u16 resp = WLAN_STATUS_SUCCESS;
 	const u8 *end;
@@ -1217,6 +1218,7 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 			ieee802_1x_encapsulate_radius(
 				hapd, sta, elems.fils_wrapped_data,
 				elems.fils_wrapped_data_len);
+			sta->fils_pending_cb = cb;
 			wpa_printf(MSG_DEBUG,
 				   "FILS: Will send Authentication frame once the response from authentication server is available");
 			sta->flags |= WLAN_STA_PENDING_FILS_ERP;
@@ -1229,7 +1231,20 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 fail:
-	handle_auth_fils_finish(hapd, sta, resp, pmksa, NULL, NULL, 0);
+	if (cb) {
+		struct wpabuf *data;
+		int pub = 0;
+
+		data = prepare_auth_resp_fils(hapd, sta, &resp, pmksa, NULL,
+					      NULL, 0, &pub);
+		if (!data) {
+			wpa_printf(MSG_DEBUG,
+				   "%s: prepare_auth_resp_fils() returned failure",
+				   __func__);
+		}
+
+		cb(hapd, sta, resp, data, pub);
+	}
 }
 
 
@@ -1404,19 +1419,9 @@ fail:
 
 static void handle_auth_fils_finish(struct hostapd_data *hapd,
 				    struct sta_info *sta, u16 resp,
-				    struct rsn_pmksa_cache_entry *pmksa,
-				    struct wpabuf *erp_resp,
-				    const u8 *msk, size_t msk_len)
+				    struct wpabuf *data, int pub)
 {
-	struct wpabuf *data;
 	u16 auth_alg;
-	int pub = 0;
-
-	data = prepare_auth_resp_fils(hapd, sta, &resp, pmksa, erp_resp,
-				      msk, msk_len, &pub);
-	if (!data)
-		wpa_printf(MSG_DEBUG, "%s: prepare_auth_resp returned failure",
-			   __func__);
 
 	auth_alg = (pub ||
 		    resp == WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED) ?
@@ -1443,10 +1448,23 @@ void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
 				 struct wpabuf *erp_resp,
 				 const u8 *msk, size_t msk_len)
 {
+	struct wpabuf *data;
+	int pub = 0;
+	u16 resp;
+
 	sta->flags &= ~WLAN_STA_PENDING_FILS_ERP;
-	handle_auth_fils_finish(hapd, sta, success ? WLAN_STATUS_SUCCESS :
-				WLAN_STATUS_UNSPECIFIED_FAILURE, NULL,
-				erp_resp, msk, msk_len);
+
+	if (!sta->fils_pending_cb)
+		return;
+	resp = success ? WLAN_STATUS_SUCCESS : WLAN_STATUS_UNSPECIFIED_FAILURE;
+	data = prepare_auth_resp_fils(hapd, sta, &resp, NULL, erp_resp,
+				      msk, msk_len, &pub);
+	if (!data) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: prepare_auth_resp_fils() returned failure",
+			   __func__);
+	}
+	sta->fils_pending_cb(hapd, sta, resp, data, pub);
 }
 
 #endif /* CONFIG_FILS */
@@ -1889,7 +1907,8 @@ static void handle_auth(struct hostapd_data *hapd,
 	case WLAN_AUTH_FILS_SK_PFS:
 		handle_auth_fils(hapd, sta, mgmt->u.auth.variable,
 				 len - IEEE80211_HDRLEN - sizeof(mgmt->u.auth),
-				 auth_alg, auth_transaction, status_code);
+				 auth_alg, auth_transaction, status_code,
+				 handle_auth_fils_finish);
 		return;
 #endif /* CONFIG_FILS */
 	}

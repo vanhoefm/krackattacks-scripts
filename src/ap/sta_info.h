@@ -48,6 +48,7 @@
  * Supported Rates IEs). */
 #define WLAN_SUPP_RATES_MAX 32
 
+struct hostapd_data;
 
 struct mbo_non_pref_chan_info {
 	struct mbo_non_pref_chan_info *next;
@@ -231,6 +232,8 @@ struct sta_info {
 	unsigned int fils_dhcp_rapid_commit_proxy:1;
 	struct wpabuf *fils_hlp_resp;
 	struct wpabuf *hlp_dhcp_discover;
+	void (*fils_pending_cb)(struct hostapd_data *hapd, struct sta_info *sta,
+				u16 resp, struct wpabuf *data, int pub);
 #ifdef CONFIG_FILS_SK_PFS
 	struct crypto_ecdh *fils_ecdh;
 #endif /* CONFIG_FILS_SK_PFS */
@@ -259,8 +262,6 @@ struct sta_info {
 /* Number of seconds to keep STA entry after it has been deauthenticated. */
 #define AP_MAX_INACTIVITY_AFTER_DEAUTH (1 * 5)
 
-
-struct hostapd_data;
 
 int ap_for_each_sta(struct hostapd_data *hapd,
 		    int (*cb)(struct hostapd_data *hapd, struct sta_info *sta,

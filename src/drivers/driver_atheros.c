@@ -36,6 +36,10 @@
 
 #include "ieee80211_external.h"
 
+/* Avoid conflicting definition from the driver header files with
+ * common/wpa_common.h */
+#undef WPA_OUI_TYPE
+
 
 #ifdef CONFIG_WPS
 #include <netpacket/packet.h>
@@ -1065,7 +1069,32 @@ atheros_sta_auth(void *priv, struct wpa_driver_sta_auth_params *params)
 	wpa_printf(MSG_DEBUG, "%s: addr=%s status_code=%d",
 		   __func__, ether_sprintf(params->addr), params->status);
 
+#ifdef CONFIG_FILS
+	/* Copy FILS AAD parameters if the driver supports FILS */
+	if (params->fils_auth && drv->fils_en) {
+		wpa_printf(MSG_DEBUG, "%s: im_op IEEE80211_MLME_AUTH_FILS",
+			   __func__);
+		os_memcpy(mlme.fils_aad.ANonce, params->fils_anonce,
+			  IEEE80211_FILS_NONCE_LEN);
+		os_memcpy(mlme.fils_aad.SNonce, params->fils_snonce,
+			  IEEE80211_FILS_NONCE_LEN);
+		os_memcpy(mlme.fils_aad.kek, params->fils_kek,
+			  IEEE80211_MAX_WPA_KEK_LEN);
+		mlme.fils_aad.kek_len = params->fils_kek_len;
+		mlme.im_op = IEEE80211_MLME_AUTH_FILS;
+		wpa_hexdump(MSG_DEBUG, "FILS: ANonce",
+			    mlme.fils_aad.ANonce, FILS_NONCE_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS: SNonce",
+			    mlme.fils_aad.SNonce, FILS_NONCE_LEN);
+		wpa_hexdump_key(MSG_DEBUG, "FILS: KEK",
+				mlme.fils_aad.kek, mlme.fils_aad.kek_len);
+	} else {
+		mlme.im_op = IEEE80211_MLME_AUTH;
+	}
+#else /* CONFIG_FILS */
 	mlme.im_op = IEEE80211_MLME_AUTH;
+#endif /* CONFIG_FILS */
+
 	mlme.im_reason = params->status;
 	mlme.im_seq = params->seq;
 	os_memcpy(mlme.im_macaddr, params->addr, IEEE80211_ADDR_LEN);

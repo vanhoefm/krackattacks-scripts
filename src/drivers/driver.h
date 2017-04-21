@@ -21,6 +21,7 @@
 
 #include "common/defs.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_common.h"
 #ifdef CONFIG_MACSEC
 #include "pae/ieee802_1x_kay.h"
 #endif /* CONFIG_MACSEC */
@@ -719,6 +720,31 @@ struct wpa_driver_sta_auth_params {
 	 * len - ie buffer length
 	 */
 	size_t len;
+
+	/**
+	 * fils_auth - Indicates whether FILS authentication is being performed
+	 */
+	int fils_auth;
+
+	/**
+	 * fils_anonce - ANonce (required for FILS)
+	 */
+	u8 fils_anonce[WPA_NONCE_LEN];
+
+	/**
+	 * fils_snonce - SNonce (required for FILS)
+	*/
+	u8 fils_snonce[WPA_NONCE_LEN];
+
+	/**
+	 * fils_kek - key for encryption (required for FILS)
+	 */
+	u8 fils_kek[WPA_KEK_MAX_LEN];
+
+	/**
+	 * fils_kek_len - Length of the fils_kek in octets (required for FILS)
+	 */
+	size_t fils_kek_len;
 };
 
 /**

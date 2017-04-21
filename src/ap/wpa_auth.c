@@ -40,6 +40,8 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 #ifdef CONFIG_FILS
 static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 			    u8 *buf, size_t buf_len, u16 *_key_data_len);
+static struct wpabuf * fils_prepare_plainbuf(struct wpa_state_machine *sm,
+					     const struct wpabuf *hlp);
 #endif /* CONFIG_FILS */
 static void wpa_sm_call_step(void *eloop_ctx, void *timeout_ctx);
 static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
@@ -2349,11 +2351,6 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 	u8 *pos = buf + current_len;
 	struct ieee80211_mgmt *mgmt;
 	struct wpabuf *plain;
-	u8 *len, *tmp, *tmp2;
-	u8 hdr[2];
-	u8 *gtk, dummy_gtk[32];
-	size_t gtk_len;
-	struct wpa_group *gsm;
 	const u8 *aad[5];
 	size_t aad_len[5];
 
@@ -2389,10 +2386,54 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 	aad_len[4] = pos - aad[4];
 
 	/* The following elements will be encrypted with AES-SIV */
+	plain = fils_prepare_plainbuf(sm, hlp);
+	if (!plain) {
+		wpa_printf(MSG_DEBUG, "FILS: Plain buffer prep failed");
+		return -1;
+	}
+
+	if (pos + wpabuf_len(plain) + AES_BLOCK_SIZE > end) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Not enough room for FILS elements");
+		wpabuf_free(plain);
+		return -1;
+	}
+
+	wpa_hexdump_buf_key(MSG_DEBUG, "FILS: Association Response plaintext",
+			    plain);
+
+	if (aes_siv_encrypt(sm->PTK.kek, sm->PTK.kek_len,
+			    wpabuf_head(plain), wpabuf_len(plain),
+			    5, aad, aad_len, pos) < 0) {
+		wpabuf_free(plain);
+		return -1;
+	}
+
+	wpa_hexdump(MSG_DEBUG,
+		    "FILS: Encrypted Association Response elements",
+		    pos, AES_BLOCK_SIZE + wpabuf_len(plain));
+	current_len += wpabuf_len(plain) + AES_BLOCK_SIZE;
+	wpabuf_free(plain);
+
+	sm->fils_completed = 1;
+
+	return current_len;
+}
+
+
+static struct wpabuf * fils_prepare_plainbuf(struct wpa_state_machine *sm,
+					     const struct wpabuf *hlp)
+{
+	struct wpabuf *plain;
+	u8 *len, *tmp, *tmp2;
+	u8 hdr[2];
+	u8 *gtk, dummy_gtk[32];
+	size_t gtk_len;
+	struct wpa_group *gsm;
 
 	plain = wpabuf_alloc(1000);
 	if (!plain)
-		return -1;
+		return NULL;
 
 	/* TODO: FILS Public Key */
 
@@ -2426,7 +2467,7 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 		 */
 		if (random_get_bytes(dummy_gtk, gtk_len) < 0) {
 			wpabuf_free(plain);
-			return -1;
+			return NULL;
 		}
 		gtk = dummy_gtk;
 	}
@@ -2443,33 +2484,7 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 	wpabuf_put(plain, tmp2 - tmp);
 
 	*len = (u8 *) wpabuf_put(plain, 0) - len - 1;
-
-	if (pos + wpabuf_len(plain) + AES_BLOCK_SIZE > end) {
-		wpa_printf(MSG_DEBUG,
-			   "FILS: Not enough room for FILS elements");
-		wpabuf_free(plain);
-		return -1;
-	}
-
-	wpa_hexdump_buf_key(MSG_DEBUG, "FILS: Association Response plaintext",
-			    plain);
-
-	if (aes_siv_encrypt(sm->PTK.kek, sm->PTK.kek_len,
-			    wpabuf_head(plain), wpabuf_len(plain),
-			    5, aad, aad_len, pos) < 0) {
-		wpabuf_free(plain);
-		return -1;
-	}
-
-	wpa_hexdump(MSG_DEBUG,
-		    "FILS: Encrypted Association Response elements",
-		    pos, AES_BLOCK_SIZE + wpabuf_len(plain));
-	current_len += wpabuf_len(plain) + AES_BLOCK_SIZE;
-	wpabuf_free(plain);
-
-	sm->fils_completed = 1;
-
-	return current_len;
+	return plain;
 }
 
 

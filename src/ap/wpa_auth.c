@@ -2161,6 +2161,60 @@ static int wpa_aead_decrypt(struct wpa_state_machine *sm, struct wpa_ptk *ptk,
 }
 
 
+const u8 * wpa_fils_validate_fils_session(struct wpa_state_machine *sm,
+					  const u8 *ies, size_t ies_len,
+					  const u8 *fils_session)
+{
+	const u8 *ie, *end;
+	const u8 *session = NULL;
+
+	if (!wpa_key_mgmt_fils(sm->wpa_key_mgmt)) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Not a FILS AKM - reject association");
+		return NULL;
+	}
+
+	/* Verify Session element */
+	ie = ies;
+	end = ((const u8 *) ie) + ies_len;
+	while (ie + 1 < end) {
+		if (ie + 2 + ie[1] > end)
+			break;
+		if (ie[0] == WLAN_EID_EXTENSION &&
+		    ie[1] >= 1 + FILS_SESSION_LEN &&
+		    ie[2] == WLAN_EID_EXT_FILS_SESSION) {
+			session = ie;
+			break;
+		}
+		ie += 2 + ie[1];
+	}
+
+	if (!session) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: %s: Could not find FILS Session element in Assoc Req - reject",
+			   __func__);
+		return NULL;
+	}
+
+	if (!fils_session) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: %s: Could not find FILS Session element in STA entry - reject",
+			   __func__);
+		return NULL;
+	}
+
+	if (os_memcmp(fils_session, session + 3, FILS_SESSION_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FILS: Session mismatch");
+		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
+			    fils_session, FILS_SESSION_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS: Received FILS Session",
+			    session + 3, FILS_SESSION_LEN);
+		return NULL;
+	}
+	return session;
+}
+
+
 int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 		       const struct ieee80211_mgmt *mgmt, size_t frame_len,
 		       u8 *pos, size_t left)
@@ -2196,32 +2250,13 @@ int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 	 * Find FILS Session element which is the last unencrypted element in
 	 * the frame.
 	 */
-	session = NULL;
-	while (ie + 1 < end) {
-		if (ie + 2 + ie[1] > end)
-			break;
-		if (ie[0] == WLAN_EID_EXTENSION &&
-		    ie[1] >= 1 + FILS_SESSION_LEN &&
-		    ie[2] == WLAN_EID_EXT_FILS_SESSION) {
-			session = ie;
-			break;
-		}
-		ie += 2 + ie[1];
+	session = wpa_fils_validate_fils_session(sm, ie, end - ie,
+						 fils_session);
+	if (!session) {
+		wpa_printf(MSG_DEBUG, "FILS: Session validation failed");
+		return -1;
 	}
 
-	if (!session) {
-		wpa_printf(MSG_DEBUG,
-			   "FILS: Could not find FILS Session element in Association Request frame - reject");
-		return -1;
-	}
-	if (os_memcmp(fils_session, session + 3, FILS_SESSION_LEN) != 0) {
-		wpa_printf(MSG_DEBUG, "FILS: Session mismatch");
-		wpa_hexdump(MSG_DEBUG, "FILS: Expected FILS Session",
-			    fils_session, FILS_SESSION_LEN);
-		wpa_hexdump(MSG_DEBUG, "FILS: Received FILS Session",
-			    session + 3, FILS_SESSION_LEN);
-		return -1;
-	}
 	crypt = session + 2 + session[1];
 
 	if (end - crypt < AES_BLOCK_SIZE) {

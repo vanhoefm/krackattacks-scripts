@@ -379,16 +379,21 @@ skip_wpa_check:
 #ifdef CONFIG_IEEE80211R_AP
 	p = wpa_sm_write_assoc_resp_ies(sta->wpa_sm, buf, sizeof(buf),
 					sta->auth_alg, req_ies, req_ies_len);
+#endif /* CONFIG_IEEE80211R_AP */
 
+#if defined(CONFIG_IEEE80211R_AP) || defined(CONFIG_FILS)
 	hostapd_sta_assoc(hapd, addr, reassoc, status, buf, p - buf);
 
-	if (sta->auth_alg == WLAN_AUTH_FT)
+	if (sta->auth_alg == WLAN_AUTH_FT ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	    sta->auth_alg == WLAN_AUTH_FILS_PK)
 		ap_sta_set_authorized(hapd, sta, 1);
-#else /* CONFIG_IEEE80211R_AP */
+#else /* CONFIG_IEEE80211R_AP || CONFIG_FILS */
 	/* Keep compiler silent about unused variables */
 	if (status) {
 	}
-#endif /* CONFIG_IEEE80211R_AP */
+#endif /* CONFIG_IEEE80211R_AP || CONFIG_FILS */
 
 	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
 	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;

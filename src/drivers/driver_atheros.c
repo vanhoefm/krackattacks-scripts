@@ -55,7 +55,7 @@
 #include "netlink.h"
 #include "linux_ioctl.h"
 
-#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R) || defined(CONFIG_HS20) || defined(CONFIG_WNM) || defined(CONFIG_WPS)
+#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R) || defined(CONFIG_HS20) || defined(CONFIG_WNM) || defined(CONFIG_WPS) || defined(CONFIG_FILS)
 #define ATHEROS_USE_RAW_RECEIVE
 #endif
 
@@ -951,11 +951,11 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 #ifdef CONFIG_WPS
 	filt.app_filterype |= IEEE80211_FILTER_TYPE_PROBE_REQ;
 #endif /* CONFIG_WPS */
-#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R)
+#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R) || defined(CONFIG_FILS)
 	filt.app_filterype |= (IEEE80211_FILTER_TYPE_ASSOC_REQ |
 			       IEEE80211_FILTER_TYPE_AUTH |
 			       IEEE80211_FILTER_TYPE_ACTION);
-#endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
+#endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W || CONFIG_FILS */
 #ifdef CONFIG_WNM
 	filt.app_filterype |= IEEE80211_FILTER_TYPE_ACTION;
 #endif /* CONFIG_WNM */
@@ -969,12 +969,12 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 			return ret;
 	}
 
-#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R)
+#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R) || defined(CONFIG_FILS)
 	drv->sock_raw = l2_packet_init(drv->iface, NULL, ETH_P_80211_RAW,
 				       atheros_raw_receive, drv, 1);
 	if (drv->sock_raw == NULL)
 		return -1;
-#endif /* CONFIG_WPS || CONFIG_IEEE80211R */
+#endif /* CONFIG_WPS || CONFIG_IEEE80211R || CONFIG_FILS */
 	return ret;
 }
 
@@ -1054,7 +1054,7 @@ atheros_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
 #define atheros_set_ap_wps_ie NULL
 #endif /* CONFIG_WPS */
 
-#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W) || defined(CONFIG_FILS)
 static int
 atheros_sta_auth(void *priv, const u8 *own_addr, const u8 *addr, u16 seq,
 		 u16 status_code, const u8 *ie, size_t len)
@@ -1130,7 +1130,7 @@ atheros_sta_assoc(void *priv, const u8 *own_addr, const u8 *addr,
 	}
 	return ret;
 }
-#endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
+#endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W || CONFIG_FILS */
 
 static void
 atheros_new_sta(struct atheros_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
@@ -1277,7 +1277,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		atheros_raw_receive(drv, NULL,
 				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
 #endif /* CONFIG_WPS */
-#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W) || defined(CONFIG_FILS)
 	} else if (os_strncmp(custom, "Manage.assoc_req ", 17) == 0) {
 		/* Format: "Manage.assoc_req <frame len>" | zero padding |
 		 * frame */
@@ -1301,7 +1301,7 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		}
 		atheros_raw_receive(drv, NULL,
 				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
-#endif /* CONFIG_IEEE80211W || CONFIG_IEEE80211R */
+#endif /* CONFIG_IEEE80211W || CONFIG_IEEE80211R || CONFIG_FILS */
 #ifdef ATHEROS_USE_RAW_RECEIVE
 		} else if (os_strncmp(custom, "Manage.action ", 14) == 0) {
 		/* Format: "Manage.assoc_req <frame len>" | zero padding | frame
@@ -2202,7 +2202,7 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.set_ap_wps_ie		= atheros_set_ap_wps_ie,
 	.set_authmode		= atheros_set_authmode,
 	.set_ap			= atheros_set_ap,
-#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)
+#if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W) || defined(CONFIG_FILS)
 	.sta_assoc              = atheros_sta_assoc,
 	.sta_auth               = atheros_sta_auth,
 	.send_mlme       	= atheros_send_mgmt,

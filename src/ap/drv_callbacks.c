@@ -31,6 +31,7 @@
 #include "wps_hostapd.h"
 #include "ap_drv_ops.h"
 #include "ap_config.h"
+#include "ap_mlme.h"
 #include "hw_features.h"
 #include "dfs.h"
 #include "beacon.h"
@@ -381,6 +382,39 @@ skip_wpa_check:
 					sta->auth_alg, req_ies, req_ies_len);
 #endif /* CONFIG_IEEE80211R_AP */
 
+#ifdef CONFIG_FILS
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		if (!wpa_fils_validate_fils_session(sta->wpa_sm, req_ies,
+						    req_ies_len,
+						    sta->fils_session)) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Session validation failed");
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
+
+		res = wpa_fils_validate_key_confirm(sta->wpa_sm, req_ies,
+						    req_ies_len);
+		if (res < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Key Confirm validation failed");
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
+
+		if (!elems.fils_session) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Session element not found");
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
+
+		p = hostapd_eid_assoc_fils_session(sta->wpa_sm, p,
+						   elems.fils_session);
+		wpa_hexdump(MSG_DEBUG, "FILS Assoc Resp BUF (IEs)",
+			    buf, p - buf);
+	}
+#endif /* CONFIG_FILS */
+
 #if defined(CONFIG_IEEE80211R_AP) || defined(CONFIG_FILS)
 	hostapd_sta_assoc(hapd, addr, reassoc, status, buf, p - buf);
 
@@ -723,6 +757,32 @@ static void hostapd_notify_auth_ft_finish(void *ctx, const u8 *dst,
 #endif /* CONFIG_IEEE80211R_AP */
 
 
+#ifdef CONFIG_FILS
+static void hostapd_notify_auth_fils_finish(struct hostapd_data *hapd,
+					    struct sta_info *sta, u16 resp,
+					    struct wpabuf *data, int pub)
+{
+	if (resp == WLAN_STATUS_SUCCESS) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG, "authentication OK (FILS)");
+		sta->flags |= WLAN_STA_AUTH;
+		wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
+		sta->auth_alg = WLAN_AUTH_FILS_SK;
+		mlme_authenticate_indication(hapd, sta);
+	} else {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "authentication failed (FILS)");
+	}
+
+	hostapd_sta_auth(hapd, sta->addr, 2, resp,
+			 data ? wpabuf_head(data) : NULL,
+			 data ? wpabuf_len(data) : 0);
+	wpabuf_free(data);
+}
+#endif /* CONFIG_FILS */
+
+
 static void hostapd_notif_auth(struct hostapd_data *hapd,
 			       struct auth_info *rx_auth)
 {
@@ -760,6 +820,18 @@ static void hostapd_notif_auth(struct hostapd_data *hapd,
 		return;
 	}
 #endif /* CONFIG_IEEE80211R_AP */
+
+#ifdef CONFIG_FILS
+	if (rx_auth->auth_type == WLAN_AUTH_FILS_SK) {
+		sta->auth_alg = WLAN_AUTH_FILS_SK;
+		handle_auth_fils(hapd, sta, rx_auth->ies, rx_auth->ies_len,
+				 rx_auth->auth_type, rx_auth->auth_transaction,
+				 rx_auth->status_code,
+				 hostapd_notify_auth_fils_finish);
+		return;
+	}
+#endif /* CONFIG_FILS */
+
 fail:
 	hostapd_sta_auth(hapd, rx_auth->peer, rx_auth->auth_transaction + 1,
 			 status, resp_ies, resp_ies_len);

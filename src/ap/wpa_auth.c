@@ -2509,6 +2509,36 @@ int fils_set_tk(struct wpa_state_machine *sm)
 	return 0;
 }
 
+
+u8 * hostapd_eid_assoc_fils_session(struct wpa_state_machine *sm, u8 *buf,
+				    const u8 *fils_session)
+{
+	struct wpabuf *plain;
+	u8 *pos = buf;
+
+	/* FILS Session */
+	*pos++ = WLAN_EID_EXTENSION; /* Element ID */
+	*pos++ = 1 + FILS_SESSION_LEN; /* Length */
+	*pos++ = WLAN_EID_EXT_FILS_SESSION; /* Element ID Extension */
+	os_memcpy(pos, fils_session, FILS_SESSION_LEN);
+	pos += FILS_SESSION_LEN;
+
+	plain = fils_prepare_plainbuf(sm, NULL);
+	if (!plain) {
+		wpa_printf(MSG_DEBUG, "FILS: Plain buffer prep failed");
+		return NULL;
+	}
+
+	os_memcpy(pos, wpabuf_head(plain), wpabuf_len(plain));
+	pos += wpabuf_len(plain);
+
+	wpa_printf(MSG_DEBUG, "%s: plain buf_len: %u", __func__,
+		   (unsigned int) wpabuf_len(plain));
+	wpabuf_free(plain);
+	sm->fils_completed = 1;
+	return pos;
+}
+
 #endif /* CONFIG_FILS */
 
 

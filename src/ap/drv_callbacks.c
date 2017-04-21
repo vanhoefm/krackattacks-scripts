@@ -398,6 +398,12 @@ skip_wpa_check:
 
 	if (reassoc && (sta->auth_alg == WLAN_AUTH_FT))
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FT);
+#ifdef CONFIG_FILS
+	else if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
+		 sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+		 sta->auth_alg == WLAN_AUTH_FILS_PK)
+		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FILS);
+#endif /* CONFIG_FILS */
 	else
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
 

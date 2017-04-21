@@ -1761,6 +1761,16 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event)
 #else /* CONFIG_IEEE80211R_AP */
 		break;
 #endif /* CONFIG_IEEE80211R_AP */
+	case WPA_ASSOC_FILS:
+#ifdef CONFIG_FILS
+		wpa_printf(MSG_DEBUG,
+			   "FILS: TK configuration after association");
+		fils_set_tk(sm);
+		sm->fils_completed = 1;
+		return 0;
+#else /* CONFIG_FILS */
+		break;
+#endif /* CONFIG_FILS */
 	}
 
 #ifdef CONFIG_IEEE80211R_AP

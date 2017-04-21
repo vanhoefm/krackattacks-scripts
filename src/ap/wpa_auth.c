@@ -4284,4 +4284,15 @@ int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, u8 *buf, size_t len)
 }
 #endif /* CONFIG_IEEE80211R_AP */
 
+
+void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,
+				   u8 *fils_anonce, u8 *fils_snonce,
+				   u8 *fils_kek, size_t *fils_kek_len)
+{
+	os_memcpy(fils_anonce, sm->ANonce, WPA_NONCE_LEN);
+	os_memcpy(fils_snonce, sm->SNonce, WPA_NONCE_LEN);
+	os_memcpy(fils_kek, sm->PTK.kek, WPA_KEK_MAX_LEN);
+	*fils_kek_len = sm->PTK.kek_len;
+}
+
 #endif /* CONFIG_FILS */

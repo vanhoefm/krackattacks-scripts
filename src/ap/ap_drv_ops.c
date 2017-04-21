@@ -19,6 +19,7 @@
 #include "ap_config.h"
 #include "p2p_hostapd.h"
 #include "hs20.h"
+#include "wpa_auth.h"
 #include "ap_drv_ops.h"
 
 
@@ -348,11 +349,34 @@ int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,
 		     u16 seq, u16 status, const u8 *ie, size_t len)
 {
 	struct wpa_driver_sta_auth_params params;
+#ifdef CONFIG_FILS
+	struct sta_info *sta;
+#endif /* CONFIG_FILS */
 
 	if (hapd->driver == NULL || hapd->driver->sta_auth == NULL)
 		return 0;
 
 	os_memset(&params, 0, sizeof(params));
+
+#ifdef CONFIG_FILS
+	sta = ap_get_sta(hapd, addr);
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR
+			   " not found for sta_auth processing",
+			   MAC2STR(addr));
+		return 0;
+	}
+
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
+	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
+	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		params.fils_auth = 1;
+		wpa_auth_get_fils_aead_params(sta->wpa_sm, params.fils_anonce,
+					      params.fils_snonce,
+					      params.fils_kek,
+					      &params.fils_kek_len);
+	}
+#endif /* CONFIG_FILS */
 
 	params.own_addr = hapd->own_addr;
 	params.addr = addr;

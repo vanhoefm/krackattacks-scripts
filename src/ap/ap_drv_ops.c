@@ -347,10 +347,21 @@ int hostapd_add_sta_node(struct hostapd_data *hapd, const u8 *addr,
 int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,
 		     u16 seq, u16 status, const u8 *ie, size_t len)
 {
+	struct wpa_driver_sta_auth_params params;
+
 	if (hapd->driver == NULL || hapd->driver->sta_auth == NULL)
 		return 0;
-	return hapd->driver->sta_auth(hapd->drv_priv, hapd->own_addr, addr,
-				      seq, status, ie, len);
+
+	os_memset(&params, 0, sizeof(params));
+
+	params.own_addr = hapd->own_addr;
+	params.addr = addr;
+	params.seq = seq;
+	params.status = status;
+	params.ie = ie;
+	params.len = len;
+
+	return hapd->driver->sta_auth(hapd->drv_priv, &params);
 }
 
 

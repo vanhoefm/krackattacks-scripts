@@ -685,6 +685,43 @@ struct hostapd_freq_params {
 };
 
 /**
+ * struct wpa_driver_sta_auth_params - Authentication parameters
+ * Data for struct wpa_driver_ops::sta_auth().
+ */
+struct wpa_driver_sta_auth_params {
+
+	/**
+	 * own_addr - Source address and BSSID for authentication frame
+	 */
+	const u8 *own_addr;
+
+	/**
+	 * addr - MAC address of the station to associate
+	 */
+	const u8 *addr;
+
+	/**
+	 * seq - authentication sequence number
+	 */
+	u16 seq;
+
+	/**
+	 * status - authentication response status code
+	 */
+	u16 status;
+
+	/**
+	 * ie - authentication frame ie buffer
+	 */
+	const u8 *ie;
+
+	/**
+	 * len - ie buffer length
+	 */
+	size_t len;
+};
+
+/**
  * struct wpa_driver_associate_params - Association parameters
  * Data for struct wpa_driver_ops::associate().
  */
@@ -3313,19 +3350,13 @@ struct wpa_driver_ops {
 
 	/**
 	 * sta_auth - Station authentication indication
-	 * @priv: Private driver interface data
-	 * @own_addr: Source address and BSSID for authentication frame
-	 * @addr: MAC address of the station to associate
-	 * @seq: authentication sequence number
-	 * @status: authentication response status code
-	 * @ie: authentication frame ie buffer
-	 * @len: ie buffer length
+	 * @priv: private driver interface data
+	 * @params: Station authentication parameters
 	 *
-	 * This function indicates the driver to send Authentication frame
-	 * to the station.
+	 * Returns: 0 on success, -1 on failure
 	 */
-	 int (*sta_auth)(void *priv, const u8 *own_addr, const u8 *addr,
-			 u16 seq, u16 status, const u8 *ie, size_t len);
+	 int (*sta_auth)(void *priv,
+			 struct wpa_driver_sta_auth_params *params);
 
 	/**
 	 * add_tspec - Add traffic stream

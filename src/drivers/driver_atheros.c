@@ -1056,30 +1056,29 @@ atheros_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
 
 #if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W) || defined(CONFIG_FILS)
 static int
-atheros_sta_auth(void *priv, const u8 *own_addr, const u8 *addr, u16 seq,
-		 u16 status_code, const u8 *ie, size_t len)
+atheros_sta_auth(void *priv, struct wpa_driver_sta_auth_params *params)
 {
 	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int ret;
 
 	wpa_printf(MSG_DEBUG, "%s: addr=%s status_code=%d",
-		   __func__, ether_sprintf(addr), status_code);
+		   __func__, ether_sprintf(params->addr), params->status);
 
 	mlme.im_op = IEEE80211_MLME_AUTH;
-	mlme.im_reason = status_code;
-	mlme.im_seq = seq;
-	os_memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	mlme.im_optie_len = len;
-	if (len) {
-		if (len < IEEE80211_MAX_OPT_IE) {
-			os_memcpy(mlme.im_optie, ie, len);
+	mlme.im_reason = params->status;
+	mlme.im_seq = params->seq;
+	os_memcpy(mlme.im_macaddr, params->addr, IEEE80211_ADDR_LEN);
+	mlme.im_optie_len = params->len;
+	if (params->len) {
+		if (params->len < IEEE80211_MAX_OPT_IE) {
+			os_memcpy(mlme.im_optie, params->ie, params->len);
 		} else {
 			wpa_printf(MSG_DEBUG, "%s: Not enough space to copy "
 				   "opt_ie STA (addr " MACSTR " reason %d, "
 				   "ie_len %d)",
-				   __func__, MAC2STR(addr), status_code,
-				   (int) len);
+				   __func__, MAC2STR(params->addr),
+				   params->status, (int) params->len);
 			return -1;
 		}
 	}
@@ -1087,7 +1086,7 @@ atheros_sta_auth(void *priv, const u8 *own_addr, const u8 *addr, u16 seq,
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to auth STA (addr " MACSTR
 			   " reason %d)",
-			   __func__, MAC2STR(addr), status_code);
+			   __func__, MAC2STR(params->addr), params->status);
 	}
 	return ret;
 }

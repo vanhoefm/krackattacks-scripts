@@ -1014,12 +1014,11 @@ static void handle_auth_fils_finish(struct hostapd_data *hapd,
 				    const u8 *msk, size_t msk_len);
 
 static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
-			     const struct ieee80211_mgmt *mgmt, size_t len,
-			     u16 auth_alg, u16 auth_transaction,
-			     u16 status_code)
+			     const u8 *pos, size_t len, u16 auth_alg,
+			     u16 auth_transaction, u16 status_code)
 {
 	u16 resp = WLAN_STATUS_SUCCESS;
-	const u8 *pos, *end;
+	const u8 *end;
 	struct ieee802_11_elems elems;
 	int res;
 	struct wpa_ie_data rsn;
@@ -1028,8 +1027,7 @@ static void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 	if (auth_transaction != 1 || status_code != WLAN_STATUS_SUCCESS)
 		return;
 
-	pos = mgmt->u.auth.variable;
-	end = ((const u8 *) mgmt) + len;
+	end = pos + len;
 
 	wpa_hexdump(MSG_DEBUG, "FILS: Authentication frame fields",
 		    pos, end - pos);
@@ -1855,8 +1853,9 @@ static void handle_auth(struct hostapd_data *hapd,
 #ifdef CONFIG_FILS
 	case WLAN_AUTH_FILS_SK:
 	case WLAN_AUTH_FILS_SK_PFS:
-		handle_auth_fils(hapd, sta, mgmt, len, auth_alg,
-				 auth_transaction, status_code);
+		handle_auth_fils(hapd, sta, mgmt->u.auth.variable,
+				 len - IEEE80211_HDRLEN - sizeof(mgmt->u.auth),
+				 auth_alg, auth_transaction, status_code);
 		return;
 #endif /* CONFIG_FILS */
 	}

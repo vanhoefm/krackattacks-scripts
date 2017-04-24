@@ -633,6 +633,8 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 	struct receive_sc *rxsc;
 
 	peer = ieee802_1x_kay_get_potential_peer(participant, mi);
+	if (!peer)
+		return NULL;
 
 	rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci);
 	if (!rxsc)

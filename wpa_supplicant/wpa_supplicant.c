@@ -3149,13 +3149,19 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 				wpas_notify_network_enabled_changed(
 					wpa_s, other_ssid);
 		}
-		if (wpa_s->current_ssid)
+		if (wpa_s->current_ssid) {
+			if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
+				wpa_s->own_disconnect_req = 1;
 			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		}
 	} else if (ssid->disabled != 2) {
-		if (ssid == wpa_s->current_ssid)
+		if (ssid == wpa_s->current_ssid) {
+			if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
+				wpa_s->own_disconnect_req = 1;
 			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		}
 
 		was_disabled = ssid->disabled;
 

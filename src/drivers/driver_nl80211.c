@@ -933,6 +933,30 @@ nl80211_find_drv(struct nl80211_global *global, int idx, u8 *buf, size_t len)
 }
 
 
+static void nl80211_refresh_mac(struct wpa_driver_nl80211_data *drv,
+				int ifindex)
+{
+	struct i802_bss *bss;
+	u8 addr[ETH_ALEN];
+
+	bss = get_bss_ifindex(drv, ifindex);
+	if (bss &&
+	    linux_get_ifhwaddr(drv->global->ioctl_sock,
+			       bss->ifname, addr) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: %s: failed to re-read MAC address",
+			   bss->ifname);
+	} else if (bss && os_memcmp(addr, bss->addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Own MAC address on ifindex %d (%s) changed from "
+			   MACSTR " to " MACSTR,
+			   ifindex, bss->ifname,
+			   MAC2STR(bss->addr), MAC2STR(addr));
+		os_memcpy(bss->addr, addr, ETH_ALEN);
+	}
+}
+
+
 static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 						 struct ifinfomsg *ifi,
 						 u8 *buf, size_t len)
@@ -997,6 +1021,8 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		namebuf[0] = '\0';
 		if (if_indextoname(ifi->ifi_index, namebuf) &&
 		    linux_iface_up(drv->global->ioctl_sock, namebuf) > 0) {
+			/* Re-read MAC address as it may have changed */
+			nl80211_refresh_mac(drv, ifi->ifi_index);
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "
 				   "event since interface %s is up", namebuf);
 			drv->ignore_if_down_event = 0;
@@ -1044,27 +1070,8 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				   "event since interface %s is marked "
 				   "removed", drv->first_bss->ifname);
 		} else {
-			struct i802_bss *bss;
-			u8 addr[ETH_ALEN];
-
 			/* Re-read MAC address as it may have changed */
-			bss = get_bss_ifindex(drv, ifi->ifi_index);
-			if (bss &&
-			    linux_get_ifhwaddr(drv->global->ioctl_sock,
-					       bss->ifname, addr) < 0) {
-				wpa_printf(MSG_DEBUG,
-					   "nl80211: %s: failed to re-read MAC address",
-					   bss->ifname);
-			} else if (bss &&
-				   os_memcmp(addr, bss->addr, ETH_ALEN) != 0) {
-				wpa_printf(MSG_DEBUG,
-					   "nl80211: Own MAC address on ifindex %d (%s) changed from "
-					   MACSTR " to " MACSTR,
-					   ifi->ifi_index, bss->ifname,
-					   MAC2STR(bss->addr),
-					   MAC2STR(addr));
-				os_memcpy(bss->addr, addr, ETH_ALEN);
-			}
+			nl80211_refresh_mac(drv, ifi->ifi_index);
 
 			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;

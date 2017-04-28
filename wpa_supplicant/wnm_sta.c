@@ -581,8 +581,9 @@ get_mbo_transition_candidate(struct wpa_supplicant *wpa_s,
 		for (i = 0; i < info->num; i++) {
 			target = wpa_bss_get_bssid(wpa_s,
 						   info->candidates[i].bssid);
-			if (target->level <
-			    wpa_s->conf->disassoc_imminent_rssi_threshold)
+			if (target &&
+			    (target->level <
+			     wpa_s->conf->disassoc_imminent_rssi_threshold))
 				continue;
 			goto end;
 		}

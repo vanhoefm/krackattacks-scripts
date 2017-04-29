@@ -1328,3 +1328,43 @@ def test_ap_ht_op_class_126(dev, apdev):
 def test_ap_ht_op_class_127(dev, apdev):
     """HT40 on operationg class 127"""
     run_op_class(dev, apdev, "a", "153", "US", "[HT40-]", "-1", "5765", 127)
+
+def test_ap_ht40_plus_minus1(dev, apdev):
+    """HT40 with both plus and minus allowed (1)"""
+    clear_scan_cache(apdev[0])
+    params = { "ssid": "test-ht40",
+               "channel": "11",
+               "ht_capab": "[HT40+][HT40-]"}
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2462":
+        raise Exception("Unexpected frequency: " + freq)
+    pri = hapd.get_status_field("channel")
+    if pri != "11":
+        raise Exception("Unexpected primary channel: " + pri)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "-1":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_ap_ht40_plus_minus2(dev, apdev):
+    """HT40 with both plus and minus allowed (2)"""
+    clear_scan_cache(apdev[0])
+    params = { "ssid": "test-ht40",
+               "channel": "1",
+               "ht_capab": "[HT40+][HT40-]"}
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2412":
+        raise Exception("Unexpected frequency: " + freq)
+    pri = hapd.get_status_field("channel")
+    if pri != "1":
+        raise Exception("Unexpected primary channel: " + pri)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "1":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)

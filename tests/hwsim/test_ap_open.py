@@ -776,3 +776,17 @@ def run_ap_open_country(dev, apdev, country_code, country3):
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_ap_open_disable_select(dev, apdev):
+    """DISABLE_NETWORK for connected AP followed by SELECT_NETWORK"""
+    hapd1 = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "open" })
+    id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+    dev[0].request("DISABLE_NETWORK %d" % id)
+    dev[0].wait_disconnected()
+    res = dev[0].request("BLACKLIST")
+    if hapd1.own_addr() in res or hapd2.own_addr() in res:
+        raise Exception("Unexpected blacklist entry added")
+    dev[0].request("SELECT_NETWORK %d" % id)
+    dev[0].wait_connected()

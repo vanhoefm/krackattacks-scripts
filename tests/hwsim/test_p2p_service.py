@@ -478,7 +478,7 @@ def test_p2p_service_discovery_peer_not_listening(dev):
     add_bonjour_services(dev[0])
     add_upnp_services(dev[0])
     dev[0].p2p_listen()
-    dev[1].global_request("P2P_FIND 1 type=social")
+    dev[1].global_request("P2P_FIND 4 type=social")
     ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=4)
     if ev is None:
         raise Exception("Peer not found")

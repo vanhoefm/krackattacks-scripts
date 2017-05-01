@@ -2807,9 +2807,7 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 {
 	const u8 *pos = data;
 	struct wpa_bss_anqp *anqp = NULL;
-#ifdef CONFIG_HS20
 	u8 type;
-#endif /* CONFIG_HS20 */
 
 	if (bss)
 		anqp = bss->anqp;

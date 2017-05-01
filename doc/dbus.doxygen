@@ -456,6 +456,15 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
       </li>
       <li>
+	<h3>TDLSChannelSwitch ( a{sv} : args ) --> nothing</h3>
+	<p>Configure TDLS channel switching behavior with a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>A dictionary with arguments identifying the peer and channel switching behavior.</dd>
+	</dl>
+      </li>
+      <li>
 	<h3>VendorElemAdd ( i: frame_id, ay: ielems ) --> nothing</h3>
 	<p>Add Vendor Elements to corresponding frame ID.</p>
 	<h4>Arguments</h4>

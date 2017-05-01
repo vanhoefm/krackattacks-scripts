@@ -2313,6 +2313,125 @@ DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 	return NULL;
 }
 
+/*
+ * wpas_dbus_handler_tdls_channel_switch - Enable channel switching with TDLS peer
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL indicating success or DBus error message on failure
+ *
+ * Handler function for "TDLSChannelSwitch" method call of network interface.
+ */
+DBusMessage *
+wpas_dbus_handler_tdls_channel_switch(DBusMessage *message,
+				      struct wpa_supplicant *wpa_s)
+{
+	DBusMessageIter	iter, iter_dict;
+	struct wpa_dbus_dict_entry entry;
+	u8 peer[ETH_ALEN];
+	struct hostapd_freq_params freq_params;
+	u8 oper_class = 0;
+	int ret;
+	int is_peer_present = 0;
+
+	if (!wpa_tdls_is_external_setup(wpa_s->wpa)) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Only supported with external setup");
+		return wpas_dbus_error_unknown_error(message, "TDLS is not using external setup");
+	}
+
+	os_memset(&freq_params, 0, sizeof(freq_params));
+
+	dbus_message_iter_init(message, &iter);
+
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
+		return wpas_dbus_error_invalid_args(message, NULL);
+
+	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
+		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
+			return wpas_dbus_error_invalid_args(message, NULL);
+
+		if (os_strcmp(entry.key, "PeerAddress") == 0 &&
+		    entry.type == DBUS_TYPE_STRING) {
+			if (hwaddr_aton(entry.str_value, peer)) {
+				wpa_printf(MSG_DEBUG,
+					   "tdls_chanswitch: Invalid address '%s'",
+					   entry.str_value);
+				wpa_dbus_dict_entry_clear(&entry);
+				return wpas_dbus_error_invalid_args(message,
+								    NULL);
+			}
+
+			is_peer_present = 1;
+		} else if (os_strcmp(entry.key, "OperClass") == 0 &&
+			   entry.type == DBUS_TYPE_BYTE) {
+			oper_class = entry.byte_value;
+		} else if (os_strcmp(entry.key, "Frequency") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
+			freq_params.freq = entry.uint32_value;
+		} else if (os_strcmp(entry.key, "SecChannelOffset") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
+			freq_params.sec_channel_offset = entry.uint32_value;
+		} else if (os_strcmp(entry.key, "CenterFrequency1") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
+			freq_params.center_freq1 = entry.uint32_value;
+		} else if (os_strcmp(entry.key, "CenterFrequency2") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
+			freq_params.center_freq2 = entry.uint32_value;
+		} else if (os_strcmp(entry.key, "Bandwidth") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
+			freq_params.bandwidth = entry.uint32_value;
+		} else if (os_strcmp(entry.key, "HT") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
+			freq_params.ht_enabled = entry.bool_value;
+		} else if (os_strcmp(entry.key, "VHT") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
+			freq_params.vht_enabled = entry.bool_value;
+		} else {
+			wpa_dbus_dict_entry_clear(&entry);
+			return wpas_dbus_error_invalid_args(message, NULL);
+		}
+
+		wpa_dbus_dict_entry_clear(&entry);
+	}
+
+	if (oper_class == 0) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Invalid op class provided");
+		return wpas_dbus_error_invalid_args(
+			message, "Invalid op class provided");
+	}
+
+	if (freq_params.freq == 0) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Invalid freq provided");
+		return wpas_dbus_error_invalid_args(message,
+						    "Invalid freq provided");
+	}
+
+	if (is_peer_present == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "tdls_chanswitch: peer address not provided");
+		return wpas_dbus_error_invalid_args(
+			message, "peer address not provided");
+	}
+
+	wpa_printf(MSG_DEBUG, "dbus: TDLS_CHAN_SWITCH " MACSTR
+		   " OP CLASS %d FREQ %d CENTER1 %d CENTER2 %d BW %d SEC_OFFSET %d%s%s",
+		   MAC2STR(peer), oper_class, freq_params.freq,
+		   freq_params.center_freq1, freq_params.center_freq2,
+		   freq_params.bandwidth, freq_params.sec_channel_offset,
+		   freq_params.ht_enabled ? " HT" : "",
+		   freq_params.vht_enabled ? " VHT" : "");
+
+	ret = wpa_tdls_enable_chan_switch(wpa_s->wpa, peer, oper_class,
+					  &freq_params);
+	if (ret)
+		return wpas_dbus_error_unknown_error(
+			message, "error processing TDLS channel switch");
+
+	return NULL;
+}
+
 #endif /* CONFIG_TDLS */
 
 

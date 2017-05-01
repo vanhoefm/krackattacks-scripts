@@ -216,6 +216,9 @@ DBusMessage * wpas_dbus_handler_tdls_status(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s);
 DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 					      struct wpa_supplicant *wpa_s);
+DBusMessage *
+wpas_dbus_handler_tdls_channel_switch(DBusMessage *message,
+				      struct wpa_supplicant *wpa_s);
 
 DBusMessage * wpas_dbus_handler_vendor_elem_add(DBusMessage *message,
 						struct wpa_supplicant *wpa_s);

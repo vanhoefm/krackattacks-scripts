@@ -716,10 +716,14 @@ atheros_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 	wpa_hexdump(MSG_DEBUG, "atheros: set_generic_elem", ie, ie_len);
 
 	wpabuf_free(drv->wpa_ie);
-	drv->wpa_ie = wpabuf_alloc_copy(ie, ie_len);
+	if (ie)
+		drv->wpa_ie = wpabuf_alloc_copy(ie, ie_len);
+	else
+		drv->wpa_ie = NULL;
 
 	app_ie = (struct ieee80211req_getset_appiebuf *) buf;
-	os_memcpy(&(app_ie->app_buf[0]), ie, ie_len);
+	if (ie)
+		os_memcpy(&(app_ie->app_buf[0]), ie, ie_len);
 	app_ie->app_buflen = ie_len;
 
 	app_ie->app_frmtype = IEEE80211_APPIE_FRAME_BEACON;
@@ -1005,7 +1009,8 @@ atheros_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 	beac_ie = (struct ieee80211req_getset_appiebuf *) buf;
 	beac_ie->app_frmtype = frametype;
 	beac_ie->app_buflen = len;
-	os_memcpy(&(beac_ie->app_buf[0]), ie, len);
+	if (ie)
+		os_memcpy(&(beac_ie->app_buf[0]), ie, len);
 
 	/* append the WPA/RSN IE if it is set already */
 	if (((frametype == IEEE80211_APPIE_FRAME_BEACON) ||

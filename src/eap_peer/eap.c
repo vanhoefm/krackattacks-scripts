@@ -534,6 +534,8 @@ int eap_peer_get_erp_info(struct eap_sm *sm, struct eap_peer_config *config,
 		return -1; /* SEQ has range of 0..65535 */
 
 	pos = os_strchr(erp->keyname_nai, '@');
+	if (!pos)
+		return -1; /* this cannot really happen */
 	*username_len = pos - erp->keyname_nai;
 	*username = (u8 *) erp->keyname_nai;
 

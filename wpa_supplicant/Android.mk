@@ -259,6 +259,10 @@ NEED_ECC=y
 endif
 endif
 
+ifdef CONFIG_MBO
+CONFIG_WNM=y
+endif
+
 ifdef CONFIG_WNM
 L_CFLAGS += -DCONFIG_WNM
 OBJS += wnm_sta.c

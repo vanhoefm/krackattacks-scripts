@@ -1492,11 +1492,9 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		case ANQP_QUERY_LIST:
 			rx_anqp_query_list(hapd, pos, pos + elen, &qi);
 			break;
-#ifdef CONFIG_HS20
 		case ANQP_VENDOR_SPECIFIC:
 			rx_anqp_vendor_specific(hapd, pos, pos + elen, &qi);
 			break;
-#endif /* CONFIG_HS20 */
 		default:
 			wpa_printf(MSG_DEBUG, "ANQP: Unsupported Query "
 				   "Request element %u", info_id);

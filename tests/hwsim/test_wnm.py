@@ -1662,13 +1662,7 @@ def test_wnm_bss_tm_connect_cmd(dev, apdev):
     if ev is None:
         raise Exception("No reassociation seen")
     if "CTRL-EVENT-DISCONNECTED" in ev:
-        #TODO: Uncomment this once kernel side changes for Connect command
-        #reassociation are in upstream.
-        #raise Exception("Unexpected disconnection reported")
-        logger.info("Unexpected disconnection reported")
-        ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("No reassociation seen")
+        raise Exception("Unexpected disconnection reported")
     if apdev[1]['bssid'] not in ev:
         raise Exception("Unexpected reassociation target: " + ev)
 

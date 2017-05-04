@@ -9949,6 +9949,56 @@ fail:
 	return NULL;
 }
 
+
+/**
+ * nl80211_ignore_assoc_disallow - Configure driver to ignore assoc_disallow
+ * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
+ * @ignore_assoc_disallow: 0 to not ignore, 1 to ignore
+ * Returns: 0 on success, -1 on failure
+ */
+static int nl80211_ignore_assoc_disallow(void *priv, int ignore_disallow)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *attr;
+	int ret = -1;
+
+	if (!drv->set_wifi_conf_vendor_cmd_avail)
+		return -1;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION))
+		goto fail;
+
+	attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+	if (!attr)
+		goto fail;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set ignore_assoc_disallow %d",
+		   ignore_disallow);
+	if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED,
+		       ignore_disallow))
+		goto fail;
+
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "nl80211: Set ignore_assoc_disallow failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto fail;
+	}
+
+fail:
+	nlmsg_free(msg);
+	return ret;
+}
+
 #endif /* CONFIG_MBO */
 
 #endif /* CONFIG_DRIVER_NL80211_QCA */
@@ -10197,6 +10247,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_tdls_mode = nl80211_set_tdls_mode,
 #ifdef CONFIG_MBO
 	.get_bss_transition_status = nl80211_get_bss_transition_status,
+	.ignore_assoc_disallow = nl80211_ignore_assoc_disallow,
 #endif /* CONFIG_MBO */
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 	.configure_data_frame_filters = nl80211_configure_data_frame_filters,

@@ -998,4 +998,12 @@ wpa_drv_get_bss_trans_status(struct wpa_supplicant *wpa_s,
 							params);
 }
 
+static inline int wpa_drv_ignore_assoc_disallow(struct wpa_supplicant *wpa_s,
+						int val)
+{
+	if (!wpa_s->driver->ignore_assoc_disallow)
+		return -1;
+	return wpa_s->driver->ignore_assoc_disallow(wpa_s->drv_priv, val);
+}
+
 #endif /* DRIVER_I_H */

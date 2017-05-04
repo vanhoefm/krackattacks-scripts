@@ -3951,6 +3951,13 @@ struct wpa_driver_ops {
 	struct wpa_bss_candidate_info *
 	(*get_bss_transition_status)(void *priv,
 				     struct wpa_bss_trans_info *params);
+	/**
+	 * ignore_assoc_disallow - Configure driver to ignore assoc_disallow
+	 * @priv: Private driver interface data
+	 * @ignore_disallow: 0 to not ignore, 1 to ignore
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*ignore_assoc_disallow)(void *priv, int ignore_disallow);
 };
 
 /**

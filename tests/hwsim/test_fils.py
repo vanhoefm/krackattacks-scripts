@@ -1456,3 +1456,91 @@ def test_fils_auth_gtk_rekey(dev, apdev):
     if ev is not None:
         raise Exception("Rekeying failed - disconnected")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_fils_and_ft(dev, apdev):
+    """FILS SK using ERP and FT initial mobility domain association"""
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    er = start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.disable()
+    dev[0].flush_scan_cache()
+    if "FAIL" in dev[0].request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+
+    params = hostapd.wpa2_eap_params(ssid="fils-ft")
+    params['wpa_key_mgmt'] = "FILS-SHA256 FT-FILS-SHA256 FT-EAP"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params["mobility_domain"] = "a1b2"
+    params["r0_key_lifetime"] = "10000"
+    params["pmk_r1_push"] = "1"
+    params["reassociation_deadline"] = "1000"
+    params['nas_identifier'] = "nas1.w1.fi"
+    params['r1_key_holder'] = "000102030405"
+    params['r0kh'] = [ "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    params['ieee80211w'] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].dump_monitor()
+    id = dev[0].connect("fils-ft", key_mgmt="FILS-SHA256 FT-FILS-SHA256 FT-EAP",
+                        ieee80211w="1",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412", wait_connect=False)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-AUTH-REJECT",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "CTRL-EVENT-AUTH-REJECT" in ev:
+        raise Exception("Authentication failed")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    er.disable()
+
+    # FIX: FT-FILS-SHA256 does not currently work for FT protocol due to not
+    # fully defined FT Reassociation Request/Response frame MIC use in FTE.
+    # FT-EAP can be used to work around that in this test case to confirm the
+    # FT key hierarchy was properly formed in the previous step.
+    #params['wpa_key_mgmt'] = "FILS-SHA256 FT-FILS-SHA256"
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params['nas_identifier'] = "nas2.w1.fi"
+    params['r1_key_holder'] = "000102030406"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412", force_scan=True)
+    # FIX: Cannot use FT-over-DS without the FTE MIC issue addressed
+    #dev[0].roam_over_ds(apdev[1]['bssid'])
+    dev[0].roam(apdev[1]['bssid'])

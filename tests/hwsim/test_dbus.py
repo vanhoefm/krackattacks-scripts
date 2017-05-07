@@ -2073,6 +2073,20 @@ def test_dbus_tdls_invalid(dev, apdev):
         if "UnknownError: error performing TDLS teardown" not in str(e):
             raise Exception("Unexpected error message: " + str(e))
 
+    try:
+        iface.TDLSChannelSwitch({})
+        raise Exception("Invalid TDLSChannelSwitch() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e):
+            raise Exception("Unexpected error message for invalid TDLSChannelSwitch: " + str(e))
+
+    try:
+        iface.TDLSCancelChannelSwitch("foo")
+        raise Exception("Invalid TDLSCancelChannelSwitch() accepted")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidArgs" not in str(e):
+            raise Exception("Unexpected error message for invalid TDLSCancelChannelSwitch: " + str(e))
+
 def test_dbus_tdls_oom(dev, apdev):
     """D-Bus TDLS operations during OOM"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -2144,6 +2158,119 @@ def test_dbus_tdls(dev, apdev):
 
         def success(self):
             return self.tdls_setup and self.tdls_teardown
+
+    with TestDbusTdls(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
+def test_dbus_tdls_channel_switch(dev, apdev):
+    """D-Bus TDLS channel switch configuration"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
+    connect_2sta_open(dev, hapd)
+
+    addr1 = dev[1].p2p_interface_addr()
+
+    class TestDbusTdls(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.tdls_setup = False
+            self.tdls_done = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_tdls)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
+                            "PropertiesChanged")
+            self.loop.run()
+            return self
+
+        def propertiesChanged(self, properties):
+            logger.debug("propertiesChanged: %s" % str(properties))
+
+        def run_tdls(self, *args):
+            logger.debug("run_tdls")
+            iface.TDLSDiscover(addr1)
+            gobject.timeout_add(100, self.run_tdls2)
+            return False
+
+        def run_tdls2(self, *args):
+            logger.debug("run_tdls2")
+            iface.TDLSSetup(addr1)
+            gobject.timeout_add(500, self.run_tdls3)
+            return False
+
+        def run_tdls3(self, *args):
+            logger.debug("run_tdls3")
+            res = iface.TDLSStatus(addr1)
+            if res == "connected":
+                self.tdls_setup = True
+            else:
+                logger.info("Unexpected TDLSStatus: " + res)
+
+            # Unknown dict entry
+            args = dbus.Dictionary({ 'Foobar': dbus.Byte(1) },
+                                   signature='sv')
+            try:
+                iface.TDLSChannelSwitch(args)
+            except Exception, e:
+                if "InvalidArgs" not in str(e):
+                    raise Exception("Unexpected exception")
+
+            # Missing OperClass
+            args = dbus.Dictionary({}, signature='sv')
+            try:
+                iface.TDLSChannelSwitch(args)
+            except Exception, e:
+                if "InvalidArgs" not in str(e):
+                    raise Exception("Unexpected exception")
+
+            # Missing Frequency
+            args = dbus.Dictionary({ 'OperClass': dbus.Byte(1) },
+                                   signature='sv')
+            try:
+                iface.TDLSChannelSwitch(args)
+            except Exception, e:
+                if "InvalidArgs" not in str(e):
+                    raise Exception("Unexpected exception")
+
+            # Missing PeerAddress
+            args = dbus.Dictionary({ 'OperClass': dbus.Byte(1),
+                                     'Frequency': dbus.UInt32(2417) },
+                                   signature='sv')
+            try:
+                iface.TDLSChannelSwitch(args)
+            except Exception, e:
+                if "InvalidArgs" not in str(e):
+                    raise Exception("Unexpected exception")
+
+            # Valid parameters
+            args = dbus.Dictionary({ 'OperClass': dbus.Byte(1),
+                                     'Frequency': dbus.UInt32(2417),
+                                     'PeerAddress': addr1,
+                                     'SecChannelOffset': dbus.UInt32(0),
+                                     'CenterFrequency1': dbus.UInt32(0),
+                                     'CenterFrequency2': dbus.UInt32(0),
+                                     'Bandwidth': dbus.UInt32(20),
+                                     'HT': dbus.Boolean(False),
+                                     'VHT': dbus.Boolean(False) },
+                                   signature='sv')
+            iface.TDLSChannelSwitch(args)
+
+            gobject.timeout_add(200, self.run_tdls4)
+            return False
+
+        def run_tdls4(self, *args):
+            logger.debug("run_tdls4")
+            iface.TDLSCancelChannelSwitch(addr1)
+            self.tdls_done = True
+            self.loop.quit()
+            return False
+
+        def success(self):
+            return self.tdls_setup and self.tdls_done
 
     with TestDbusTdls(bus) as t:
         if not t.success():

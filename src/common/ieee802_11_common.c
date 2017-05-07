@@ -1119,7 +1119,7 @@ static int ieee80211_chan_to_freq_global(u8 op_class, u8 chan)
 			return -1;
 		return 5000 + 5 * chan;
 	case 129: /* center freqs 50, 114; 160 MHz */
-		if (chan < 50 || chan > 114)
+		if (chan < 36 || chan > 128)
 			return -1;
 		return 5000 + 5 * chan;
 	case 180: /* 60 GHz band, channels 1..4 */

@@ -892,9 +892,9 @@ void wpa_ft_pmk_cache_deinit(struct wpa_ft_pmk_cache *cache)
 }
 
 
-static int wpa_ft_store_pmk_r0(struct wpa_authenticator *wpa_auth,
-			       const u8 *spa, const u8 *pmk_r0,
-			       const u8 *pmk_r0_name, int pairwise)
+int wpa_ft_store_pmk_r0(struct wpa_authenticator *wpa_auth,
+			const u8 *spa, const u8 *pmk_r0,
+			const u8 *pmk_r0_name, int pairwise)
 {
 	struct wpa_ft_pmk_cache *cache = wpa_auth->ft_pmk_cache;
 	struct wpa_ft_pmk_r0_sa *r0;

@@ -288,6 +288,9 @@ int wpa_auth_derive_ptk_ft(struct wpa_state_machine *sm, const u8 *pmk,
 struct wpa_ft_pmk_cache * wpa_ft_pmk_cache_init(void);
 void wpa_ft_pmk_cache_deinit(struct wpa_ft_pmk_cache *cache);
 void wpa_ft_install_ptk(struct wpa_state_machine *sm);
+int wpa_ft_store_pmk_r0(struct wpa_authenticator *wpa_auth,
+			const u8 *spa, const u8 *pmk_r0,
+			const u8 *pmk_r0_name, int pairwise);
 #endif /* CONFIG_IEEE80211R_AP */
 
 #endif /* WPA_AUTH_I_H */

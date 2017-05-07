@@ -2089,13 +2089,39 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 	u8 ick[FILS_ICK_MAX_LEN];
 	size_t ick_len;
 	int res;
+	u8 fils_ft[FILS_FT_MAX_LEN];
+	size_t fils_ft_len = 0;
 
 	res = fils_pmk_to_ptk(pmk, pmk_len, sm->addr, sm->wpa_auth->addr,
 			      snonce, anonce, &sm->PTK, ick, &ick_len,
-			      sm->wpa_key_mgmt, sm->pairwise, NULL, NULL);
+			      sm->wpa_key_mgmt, sm->pairwise,
+			      fils_ft, &fils_ft_len);
 	if (res < 0)
 		return res;
 	sm->PTK_valid = TRUE;
+
+#ifdef CONFIG_IEEE80211R_AP
+	if (fils_ft_len) {
+		struct wpa_authenticator *wpa_auth = sm->wpa_auth;
+		struct wpa_auth_config *conf = &wpa_auth->conf;
+		u8 pmk_r0[PMK_LEN], pmk_r0_name[WPA_PMK_NAME_LEN];
+
+		if (wpa_derive_pmk_r0(fils_ft, fils_ft_len,
+				      conf->ssid, conf->ssid_len,
+				      conf->mobility_domain,
+				      conf->r0_key_holder,
+				      conf->r0_key_holder_len,
+				      sm->addr, pmk_r0, pmk_r0_name) < 0)
+			return -1;
+
+		wpa_hexdump_key(MSG_DEBUG, "FILS+FT: PMK-R0", pmk_r0, PMK_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS+FT: PMKR0Name",
+			    pmk_r0_name, WPA_PMK_NAME_LEN);
+		wpa_ft_store_pmk_r0(wpa_auth, sm->addr, pmk_r0, pmk_r0_name,
+				    sm->pairwise);
+		os_memset(fils_ft, 0, sizeof(fils_ft));
+	}
+#endif /* CONFIG_IEEE80211R_AP */
 
 	res = fils_key_auth_sk(ick, ick_len, snonce, anonce,
 			       sm->addr, sm->wpa_auth->addr,

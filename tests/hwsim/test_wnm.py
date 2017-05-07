@@ -666,6 +666,23 @@ def test_wnm_bss_tm(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.5)
         if ev is not None:
             raise Exception("Unexpected reassociation")
+
+        logger.info("Preferred Candidate List with two matches and extra frequency (160 MHz), no roam needed")
+        if "OK" not in hapd2.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[0]['bssid'] + ",0x0000,81,1,7,030101 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff" + ' neighbor=00:11:22:33:44:55,0x0000,129,36,7'):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd2.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" not in ev:
+            raise Exception("BSS transition request was not accepted: " + ev)
+        if "target_bssid=" + apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected target BSS: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected scan started")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.5)
+        if ev is not None:
+            raise Exception("Unexpected reassociation")
     finally:
         dev[0].request("DISCONNECT")
         if hapd:

@@ -419,6 +419,14 @@ int fils_key_auth_sk(const u8 *ick, size_t ick_len, const u8 *snonce,
 	size_t num_elem = 4;
 	int res;
 
+	wpa_printf(MSG_DEBUG, "FILS: Key-Auth derivation: STA-MAC=" MACSTR
+		   " AP-BSSID=" MACSTR, MAC2STR(sta_addr), MAC2STR(bssid));
+	wpa_hexdump_key(MSG_DEBUG, "FILS: ICK", ick, ick_len);
+	wpa_hexdump(MSG_DEBUG, "FILS: SNonce", snonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", anonce, FILS_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS: gSTA", g_sta, g_sta_len);
+	wpa_hexdump(MSG_DEBUG, "FILS: gAP", g_ap, g_ap_len);
+
 	/*
 	 * For (Re)Association Request frame (STA->AP):
 	 * Key-Auth = HMAC-Hash(ICK, SNonce || ANonce || STA-MAC || AP-BSSID

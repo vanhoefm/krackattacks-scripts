@@ -396,7 +396,8 @@ void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth);
 int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
-			 size_t pmk_len, const u8 *snonce, const u8 *anonce);
+			 size_t pmk_len, const u8 *snonce, const u8 *anonce,
+			 struct wpabuf *g_sta, struct wpabuf *g_ap);
 int fils_decrypt_assoc(struct wpa_state_machine *sm, const u8 *fils_session,
 		       const struct ieee80211_mgmt *mgmt, size_t frame_len,
 		       u8 *pos, size_t left);

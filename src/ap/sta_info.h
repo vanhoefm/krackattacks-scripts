@@ -238,6 +238,7 @@ struct sta_info {
 	struct crypto_ecdh *fils_ecdh;
 #endif /* CONFIG_FILS_SK_PFS */
 	struct wpabuf *fils_dh_ss;
+	struct wpabuf *fils_g_sta;
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE

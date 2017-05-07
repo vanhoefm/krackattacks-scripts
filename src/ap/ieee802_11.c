@@ -1096,6 +1096,8 @@ void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 			goto fail;
 		}
 
+		wpabuf_free(sta->fils_g_sta);
+		sta->fils_g_sta = wpabuf_alloc_copy(pos, elem_len);
 		wpabuf_clear_free(sta->fils_dh_ss);
 		sta->fils_dh_ss = crypto_ecdh_set_peerkey(sta->fils_ecdh, 1,
 							  pos, elem_len);
@@ -1395,7 +1397,8 @@ prepare_auth_resp_fils(struct hostapd_data *hapd,
 	}
 
 	if (fils_auth_pmk_to_ptk(sta->wpa_sm, pmk, pmk_len,
-				 sta->fils_snonce, fils_nonce) < 0) {
+				 sta->fils_snonce, fils_nonce,
+				 sta->fils_g_sta, pub) < 0) {
 		*resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		wpabuf_free(data);
 		data = NULL;

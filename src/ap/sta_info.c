@@ -348,6 +348,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 #ifdef CONFIG_FILS_SK_PFS
 	crypto_ecdh_deinit(sta->fils_ecdh);
 	wpabuf_clear_free(sta->fils_dh_ss);
+	wpabuf_free(sta->fils_g_sta);
 #endif /* CONFIG_FILS_SK_PFS */
 #endif /* CONFIG_FILS */
 

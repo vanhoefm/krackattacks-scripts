@@ -2466,6 +2466,9 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 #ifdef CONFIG_FILS_SK_PFS
 	crypto_ecdh_deinit(sm->fils_ecdh);
 #endif /* CONFIG_FILS_SK_PFS */
+#ifdef CONFIG_FILS
+	wpabuf_free(sm->fils_ft_ies);
+#endif /* CONFIG_FILS */
 #ifdef CONFIG_OWE
 	crypto_ecdh_deinit(sm->owe_ecdh);
 #endif /* CONFIG_OWE */
@@ -3503,8 +3506,53 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	os_memcpy(sm->fils_anonce, elems.fils_nonce, FILS_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", sm->fils_anonce, FILS_NONCE_LEN);
 
-	/* TODO: MDE when using FILS+FT */
-	/* TODO: FTE when using FILS+FT */
+	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
+		struct wpa_ft_ies parse;
+
+		if (!elems.mdie || !elems.ftie) {
+			wpa_printf(MSG_DEBUG, "FILS+FT: No MDE or FTE");
+			goto fail;
+		}
+
+		if (wpa_ft_parse_ies(pos, end - pos, &parse) < 0) {
+			wpa_printf(MSG_DEBUG, "FILS+FT: Failed to parse IEs");
+			goto fail;
+		}
+
+		if (!parse.r0kh_id) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS+FT: No R0KH-ID subelem in FTE");
+			goto fail;
+		}
+		os_memcpy(sm->r0kh_id, parse.r0kh_id, parse.r0kh_id_len);
+		sm->r0kh_id_len = parse.r0kh_id_len;
+		wpa_hexdump_ascii(MSG_DEBUG, "FILS+FT: R0KH-ID",
+				  sm->r0kh_id, sm->r0kh_id_len);
+
+		if (!parse.r1kh_id) {
+			wpa_printf(MSG_DEBUG,
+				   "FILS+FT: No R1KH-ID subelem in FTE");
+			goto fail;
+		}
+		os_memcpy(sm->r1kh_id, parse.r1kh_id, FT_R1KH_ID_LEN);
+		wpa_hexdump(MSG_DEBUG, "FILS+FT: R1KH-ID",
+			    sm->r1kh_id, FT_R1KH_ID_LEN);
+
+		/* TODO: Check MDE and FTE payload */
+
+		wpabuf_free(sm->fils_ft_ies);
+		sm->fils_ft_ies = wpabuf_alloc(2 + elems.mdie_len +
+					       2 + elems.ftie_len);
+		if (!sm->fils_ft_ies)
+			goto fail;
+		wpabuf_put_data(sm->fils_ft_ies, elems.mdie - 2,
+				2 + elems.mdie_len);
+		wpabuf_put_data(sm->fils_ft_ies, elems.ftie - 2,
+				2 + elems.ftie_len);
+	} else {
+		wpabuf_free(sm->fils_ft_ies);
+		sm->fils_ft_ies = NULL;
+	}
 
 	/* PMKID List */
 	if (rsn.pmkid && rsn.num_pmkid > 0) {
@@ -3604,7 +3652,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	if (fils_pmk_to_ptk(sm->pmk, sm->pmk_len, sm->own_addr, sm->bssid,
 			    sm->fils_nonce, sm->fils_anonce, &sm->ptk,
 			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher,
-			    NULL, NULL) < 0) {
+			    sm->fils_ft, &sm->fils_ft_len) < 0) {
 		wpa_printf(MSG_DEBUG, "FILS: Failed to derive PTK");
 		goto fail;
 	}
@@ -3648,6 +3696,110 @@ fail:
 }
 
 
+#ifdef CONFIG_IEEE80211R
+static int fils_ft_build_assoc_req_rsne(struct wpa_sm *sm, struct wpabuf *buf)
+{
+	struct rsn_ie_hdr *rsnie;
+	u16 capab;
+	u8 *pos;
+
+	/* RSNIE[PMKR0Name/PMKR1Name] */
+	rsnie = wpabuf_put(buf, sizeof(*rsnie));
+	rsnie->elem_id = WLAN_EID_RSN;
+	WPA_PUT_LE16(rsnie->version, RSN_VERSION);
+
+	/* Group Suite Selector */
+	if (!wpa_cipher_valid_group(sm->group_cipher)) {
+		wpa_printf(MSG_WARNING, "FT: Invalid group cipher (%d)",
+			   sm->group_cipher);
+		return -1;
+	}
+	pos = wpabuf_put(buf, RSN_SELECTOR_LEN);
+	RSN_SELECTOR_PUT(pos, wpa_cipher_to_suite(WPA_PROTO_RSN,
+						  sm->group_cipher));
+
+	/* Pairwise Suite Count */
+	wpabuf_put_le16(buf, 1);
+
+	/* Pairwise Suite List */
+	if (!wpa_cipher_valid_pairwise(sm->pairwise_cipher)) {
+		wpa_printf(MSG_WARNING, "FT: Invalid pairwise cipher (%d)",
+			   sm->pairwise_cipher);
+		return -1;
+	}
+	pos = wpabuf_put(buf, RSN_SELECTOR_LEN);
+	RSN_SELECTOR_PUT(pos, wpa_cipher_to_suite(WPA_PROTO_RSN,
+						  sm->pairwise_cipher));
+
+	/* Authenticated Key Management Suite Count */
+	wpabuf_put_le16(buf, 1);
+
+	/* Authenticated Key Management Suite List */
+	pos = wpabuf_put(buf, RSN_SELECTOR_LEN);
+	if (sm->key_mgmt == WPA_KEY_MGMT_FT_FILS_SHA256)
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_FILS_SHA256);
+	else if (sm->key_mgmt == WPA_KEY_MGMT_FT_FILS_SHA384)
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_FILS_SHA384);
+	else {
+		wpa_printf(MSG_WARNING,
+			   "FILS+FT: Invalid key management type (%d)",
+			   sm->key_mgmt);
+		return -1;
+	}
+
+	/* RSN Capabilities */
+	capab = 0;
+#ifdef CONFIG_IEEE80211W
+	if (sm->mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC)
+		capab |= WPA_CAPABILITY_MFPC;
+#endif /* CONFIG_IEEE80211W */
+	wpabuf_put_le16(buf, capab);
+
+	/* PMKID Count */
+	wpabuf_put_le16(buf, 1);
+
+	/* PMKID List [PMKR1Name] */
+	wpa_hexdump_key(MSG_DEBUG, "FILS+FT: XXKey (FILS-FT)",
+			sm->fils_ft, sm->fils_ft_len);
+	wpa_hexdump_ascii(MSG_DEBUG, "FILS+FT: SSID", sm->ssid, sm->ssid_len);
+	wpa_hexdump(MSG_DEBUG, "FILS+FT: MDID",
+		    sm->mobility_domain, MOBILITY_DOMAIN_ID_LEN);
+	wpa_hexdump_ascii(MSG_DEBUG, "FILS+FT: R0KH-ID",
+			  sm->r0kh_id, sm->r0kh_id_len);
+	if (wpa_derive_pmk_r0(sm->fils_ft, sm->fils_ft_len, sm->ssid,
+			      sm->ssid_len, sm->mobility_domain,
+			      sm->r0kh_id, sm->r0kh_id_len, sm->own_addr,
+			      sm->pmk_r0, sm->pmk_r0_name) < 0) {
+		wpa_printf(MSG_WARNING, "FILS+FT: Could not derive PMK-R0");
+		return -1;
+	}
+	wpa_hexdump_key(MSG_DEBUG, "FILS+FT: PMK-R0", sm->pmk_r0, PMK_LEN);
+	wpa_hexdump(MSG_DEBUG, "FILS+FT: PMKR0Name",
+		    sm->pmk_r0_name, WPA_PMK_NAME_LEN);
+	wpa_printf(MSG_DEBUG, "FILS+FT: R1KH-ID: " MACSTR,
+		   MAC2STR(sm->r1kh_id));
+	pos = wpabuf_put(buf, WPA_PMK_NAME_LEN);
+	if (wpa_derive_pmk_r1_name(sm->pmk_r0_name, sm->r1kh_id, sm->own_addr,
+				   pos) < 0) {
+		wpa_printf(MSG_WARNING, "FILS+FT: Could not derive PMKR1Name");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "FILS+FT: PMKR1Name", pos, WPA_PMK_NAME_LEN);
+
+#ifdef CONFIG_IEEE80211W
+	if (sm->mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC) {
+		/* Management Group Cipher Suite */
+		pos = wpabuf_put(buf, RSN_SELECTOR_LEN);
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_AES_128_CMAC);
+	}
+#endif /* CONFIG_IEEE80211W */
+
+	rsnie->len = ((u8 *) wpabuf_put(buf, 0) - (u8 *) rsnie) - 2;
+	return 0;
+}
+#endif /* CONFIG_IEEE80211R */
+
+
 struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 				     size_t *kek_len, const u8 **snonce,
 				     const u8 **anonce,
@@ -3659,11 +3811,29 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 	unsigned int i;
 
 	len = 1000;
+#ifdef CONFIG_IEEE80211R
+	if (sm->fils_ft_ies)
+		len += wpabuf_len(sm->fils_ft_ies);
+	if (wpa_key_mgmt_ft(sm->key_mgmt))
+		len += 256;
+#endif /* CONFIG_IEEE80211R */
 	for (i = 0; hlp && i < num_hlp; i++)
 		len += 10 + wpabuf_len(hlp[i]);
 	buf = wpabuf_alloc(len);
 	if (!buf)
 		return NULL;
+
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->key_mgmt) && sm->fils_ft_ies) {
+		/* MDE and FTE when using FILS+FT */
+		wpabuf_put_buf(buf, sm->fils_ft_ies);
+		/* RSNE with PMKR1Name in PMKID field */
+		if (fils_ft_build_assoc_req_rsne(sm, buf) < 0) {
+			wpabuf_free(buf);
+			return NULL;
+		}
+	}
+#endif /* CONFIG_IEEE80211R */
 
 	/* FILS Session */
 	wpabuf_put_u8(buf, WLAN_EID_EXTENSION); /* Element ID */

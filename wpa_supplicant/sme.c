@@ -1058,6 +1058,22 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 }
 
 
+#ifdef CONFIG_IEEE80211R
+static void remove_ie(u8 *buf, size_t *len, u8 eid)
+{
+	u8 *pos, *next, *end;
+
+	pos = (u8 *) get_ie(buf, *len, eid);
+	if (pos) {
+		next = pos + 2 + pos[1];
+		end = buf + *len;
+		*len -= 2 + pos[1];
+		os_memmove(pos, next, end - next);
+	}
+}
+#endif /* CONFIG_IEEE80211R */
+
+
 void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		   const u8 *bssid, u16 auth_type)
 {
@@ -1113,6 +1129,30 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 			wpabuf_free(hlp[i]);
 		if (!buf)
 			return;
+		wpa_hexdump(MSG_DEBUG, "FILS: assoc_req before FILS elements",
+			    wpa_s->sme.assoc_req_ie,
+			    wpa_s->sme.assoc_req_ie_len);
+#ifdef CONFIG_IEEE80211R
+		if (wpa_key_mgmt_ft(wpa_s->key_mgmt)) {
+			/* Remove RSNE and MDE to allow them to be overridden
+			 * with FILS+FT specific values from
+			 * fils_build_assoc_req(). */
+			remove_ie(wpa_s->sme.assoc_req_ie,
+				  &wpa_s->sme.assoc_req_ie_len,
+				  WLAN_EID_RSN);
+			wpa_hexdump(MSG_DEBUG,
+				    "FILS: assoc_req after RSNE removal",
+				    wpa_s->sme.assoc_req_ie,
+				    wpa_s->sme.assoc_req_ie_len);
+			remove_ie(wpa_s->sme.assoc_req_ie,
+				  &wpa_s->sme.assoc_req_ie_len,
+				  WLAN_EID_MOBILITY_DOMAIN);
+			wpa_hexdump(MSG_DEBUG,
+				    "FILS: assoc_req after MDE removal",
+				    wpa_s->sme.assoc_req_ie,
+				    wpa_s->sme.assoc_req_ie_len);
+		}
+#endif /* CONFIG_IEEE80211R */
 		/* TODO: Make wpa_s->sme.assoc_req_ie use dynamic allocation */
 		if (wpa_s->sme.assoc_req_ie_len + wpabuf_len(buf) >
 		    sizeof(wpa_s->sme.assoc_req_ie)) {
@@ -1125,6 +1165,9 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 			  wpabuf_head(buf), wpabuf_len(buf));
 		wpa_s->sme.assoc_req_ie_len += wpabuf_len(buf);
 		wpabuf_free(buf);
+		wpa_hexdump(MSG_DEBUG, "FILS: assoc_req after FILS elements",
+			    wpa_s->sme.assoc_req_ie,
+			    wpa_s->sme.assoc_req_ie_len);
 
 		os_memcpy(nonces, snonce, FILS_NONCE_LEN);
 		os_memcpy(nonces + FILS_NONCE_LEN, anonce, FILS_NONCE_LEN);

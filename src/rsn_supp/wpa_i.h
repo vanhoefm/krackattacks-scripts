@@ -154,6 +154,9 @@ struct wpa_sm {
 	struct crypto_ecdh *fils_ecdh;
 	int fils_dh_group;
 	size_t fils_dh_elem_len;
+	struct wpabuf *fils_ft_ies;
+	u8 fils_ft[FILS_FT_MAX_LEN];
+	size_t fils_ft_len;
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE

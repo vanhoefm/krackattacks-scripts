@@ -1166,6 +1166,24 @@ def test_dbus_scan_busy(dev, apdev):
     if ev is None:
         raise Exception("Scan timed out")
 
+def test_dbus_scan_abort(dev, apdev):
+    """D-Bus scan trigger and abort"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    iface.Scan({'Type': 'active', 'AllowRoam': False})
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], 15)
+    if ev is None:
+        raise Exception("Scan start timed out")
+
+    iface.AbortScan()
+    iface.Scan({'Type': 'active', 'AllowRoam': False})
+    iface.AbortScan()
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan timed out")
+
 def test_dbus_connect(dev, apdev):
     """D-Bus AddNetwork and connect"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

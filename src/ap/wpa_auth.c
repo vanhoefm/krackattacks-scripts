@@ -2092,7 +2092,7 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 
 	res = fils_pmk_to_ptk(pmk, pmk_len, sm->addr, sm->wpa_auth->addr,
 			      snonce, anonce, &sm->PTK, ick, &ick_len,
-			      sm->wpa_key_mgmt, sm->pairwise);
+			      sm->wpa_key_mgmt, sm->pairwise, NULL, NULL);
 	if (res < 0)
 		return res;
 	sm->PTK_valid = TRUE;

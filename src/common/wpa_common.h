@@ -202,6 +202,7 @@ struct wpa_eapol_key {
 #define WPA_KEK_MAX_LEN 64
 #define WPA_TK_MAX_LEN 32
 #define FILS_ICK_MAX_LEN 48
+#define FILS_FT_MAX_LEN 48
 
 /**
  * struct wpa_ptk - WPA Pairwise Transient Key
@@ -346,7 +347,8 @@ int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
 		   u8 *pmkid);
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
-		    u8 *ick, size_t *ick_len, int akmp, int cipher);
+		    u8 *ick, size_t *ick_len, int akmp, int cipher,
+		    u8 *fils_ft, size_t *fils_ft_len);
 int fils_key_auth_sk(const u8 *ick, size_t ick_len, const u8 *snonce,
 		     const u8 *anonce, const u8 *sta_addr, const u8 *bssid,
 		     const u8 *g_sta, size_t g_sta_len,

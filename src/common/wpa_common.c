@@ -339,10 +339,12 @@ int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
 
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
-		    u8 *ick, size_t *ick_len, int akmp, int cipher)
+		    u8 *ick, size_t *ick_len, int akmp, int cipher,
+		    u8 *fils_ft, size_t *fils_ft_len)
 {
 	u8 data[2 * ETH_ALEN + 2 * FILS_NONCE_LEN];
-	u8 tmp[FILS_ICK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN];
+	u8 tmp[FILS_ICK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN +
+	       FILS_FT_MAX_LEN];
 	size_t key_data_len;
 	const char *label = "FILS PTK Derivation";
 
@@ -372,6 +374,18 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		return -1;
 	key_data_len = *ick_len + ptk->kek_len + ptk->tk_len;
 
+	if (fils_ft && fils_ft_len) {
+		if (akmp == WPA_KEY_MGMT_FT_FILS_SHA256) {
+			*fils_ft_len = 32;
+		} else if (akmp == WPA_KEY_MGMT_FT_FILS_SHA384) {
+			*fils_ft_len = 48;
+		} else {
+			*fils_ft_len = 0;
+			fils_ft = NULL;
+		}
+		key_data_len += *fils_ft_len;
+	}
+
 	if (wpa_key_mgmt_sha384(akmp)) {
 		wpa_printf(MSG_DEBUG, "FILS: PTK derivation using PRF(SHA384)");
 		if (sha384_prf(pmk, pmk_len, label, data, sizeof(data),
@@ -400,7 +414,12 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 	os_memcpy(ptk->tk, tmp + *ick_len + ptk->kek_len, ptk->tk_len);
 	wpa_hexdump_key(MSG_DEBUG, "FILS: TK", ptk->tk, ptk->tk_len);
 
-	/* TODO: FILS-FT */
+	if (fils_ft && fils_ft_len) {
+		os_memcpy(fils_ft, tmp + *ick_len + ptk->kek_len + ptk->tk_len,
+			  *fils_ft_len);
+		wpa_hexdump_key(MSG_DEBUG, "FILS: FILS-FT",
+				fils_ft, *fils_ft_len);
+	}
 
 	os_memset(tmp, 0, sizeof(tmp));
 	return 0;

@@ -3603,8 +3603,8 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 
 	if (fils_pmk_to_ptk(sm->pmk, sm->pmk_len, sm->own_addr, sm->bssid,
 			    sm->fils_nonce, sm->fils_anonce, &sm->ptk,
-			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher) <
-	    0) {
+			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher,
+			    NULL, NULL) < 0) {
 		wpa_printf(MSG_DEBUG, "FILS: Failed to derive PTK");
 		goto fail;
 	}

@@ -3422,6 +3422,11 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	size_t ick_len;
 	int res;
 	struct wpabuf *dh_ss = NULL;
+	const u8 *g_sta = NULL;
+	size_t g_sta_len = 0;
+	const u8 *g_ap = NULL;
+	size_t g_ap_len = 0;
+	struct wpabuf *pub = NULL;
 
 	os_memcpy(sm->bssid, bssid, ETH_ALEN);
 
@@ -3469,6 +3474,8 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 			goto fail;
 		}
 		wpa_hexdump_buf_key(MSG_DEBUG, "FILS: DH_SS", dh_ss);
+		g_ap = pos;
+		g_ap_len = sm->fils_dh_elem_len;
 		pos += sm->fils_dh_elem_len;
 	}
 #endif /* CONFIG_FILS_SK_PFS */
@@ -3605,15 +3612,37 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	sm->tptk_set = 0;
 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
 
+#ifdef CONFIG_FILS_SK_PFS
+	if (sm->fils_dh_group) {
+		if (!sm->fils_ecdh) {
+			wpa_printf(MSG_INFO, "FILS: ECDH not initialized");
+			goto fail;
+		}
+		pub = crypto_ecdh_get_pubkey(sm->fils_ecdh, 1);
+		if (!pub)
+			goto fail;
+		wpa_hexdump_buf(MSG_DEBUG, "FILS: gSTA", pub);
+		g_sta = wpabuf_head(pub);
+		g_sta_len = wpabuf_len(pub);
+		if (!g_ap) {
+			wpa_printf(MSG_INFO, "FILS: gAP not available");
+			goto fail;
+		}
+		wpa_hexdump(MSG_DEBUG, "FILS: gAP", g_ap, g_ap_len);
+	}
+#endif /* CONFIG_FILS_SK_PFS */
+
 	res = fils_key_auth_sk(ick, ick_len, sm->fils_nonce,
 			       sm->fils_anonce, sm->own_addr, sm->bssid,
-			       NULL, 0, NULL, 0, /* TODO: PK */
+			       g_sta, g_sta_len, g_ap, g_ap_len,
 			       sm->key_mgmt, sm->fils_key_auth_sta,
 			       sm->fils_key_auth_ap,
 			       &sm->fils_key_auth_len);
+	wpabuf_free(pub);
 	os_memset(ick, 0, sizeof(ick));
 	return res;
 fail:
+	wpabuf_free(pub);
 	wpabuf_clear_free(dh_ss);
 	return -1;
 }

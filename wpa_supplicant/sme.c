@@ -1058,6 +1058,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 }
 
 
+#ifdef CONFIG_FILS
 #ifdef CONFIG_IEEE80211R
 static void remove_ie(u8 *buf, size_t *len, u8 eid)
 {
@@ -1072,6 +1073,7 @@ static void remove_ie(u8 *buf, size_t *len, u8 eid)
 	}
 }
 #endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_FILS */
 
 
 void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,

@@ -4110,7 +4110,7 @@ def root_ocsp(cert):
     os.unlink(fn2)
     return fn
 
-def ica_ocsp(cert):
+def ica_ocsp(cert, md="-sha256"):
     prefix = "auth_serv/iCA-server/"
     ca = prefix + "cacert.pem"
     cert = prefix + cert
@@ -4118,7 +4118,7 @@ def ica_ocsp(cert):
     fd2, fn2 = tempfile.mkstemp()
     os.close(fd2)
 
-    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, "-sha256",
+    arg = [ "openssl", "ocsp", "-reqout", fn2, "-issuer", ca, md,
             "-cert", cert, "-no_nonce", "-text" ]
     cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -4151,11 +4151,18 @@ def ica_ocsp(cert):
 
 def test_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params):
     """EAP-TLS with intermediate server/user CA and OCSP on server certificate"""
+    run_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params, "-sha256")
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_sha1(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP on server certificate )SHA1)"""
+    run_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params, "-sha1")
+
+def run_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params, md):
     params = int_eap_server_params()
     params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
     params["server_cert"] = "auth_serv/iCA-server/server.pem"
     params["private_key"] = "auth_serv/iCA-server/server.key"
-    fn = ica_ocsp("server.pem")
+    fn = ica_ocsp("server.pem", md)
     params["ocsp_stapling_response"] = fn
     try:
         hostapd.add_ap(apdev[0], params)
@@ -4170,11 +4177,20 @@ def test_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params):
 
 def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params):
     """EAP-TLS with intermediate server/user CA and OCSP on revoked server certificate"""
+    run_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params,
+                                                     "-sha256")
+
+def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked_sha1(dev, apdev, params):
+    """EAP-TLS with intermediate server/user CA and OCSP on revoked server certificate (SHA1)"""
+    run_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params,
+                                                     "-sha1")
+
+def run_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params, md):
     params = int_eap_server_params()
     params["ca_cert"] = "auth_serv/iCA-server/ca-and-root.pem"
     params["server_cert"] = "auth_serv/iCA-server/server-revoked.pem"
     params["private_key"] = "auth_serv/iCA-server/server-revoked.key"
-    fn = ica_ocsp("server-revoked.pem")
+    fn = ica_ocsp("server-revoked.pem", md)
     params["ocsp_stapling_response"] = fn
     try:
         hostapd.add_ap(apdev[0], params)

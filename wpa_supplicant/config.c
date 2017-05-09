@@ -397,6 +397,50 @@ static char * wpa_config_write_bssid(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
+static int wpa_config_parse_bssid_hint(const struct parse_data *data,
+				       struct wpa_ssid *ssid, int line,
+				       const char *value)
+{
+	if (value[0] == '\0' || os_strcmp(value, "\"\"") == 0 ||
+	    os_strcmp(value, "any") == 0) {
+		ssid->bssid_hint_set = 0;
+		wpa_printf(MSG_MSGDUMP, "BSSID hint any");
+		return 0;
+	}
+	if (hwaddr_aton(value, ssid->bssid_hint)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid BSSID hint '%s'.",
+			   line, value);
+		return -1;
+	}
+	ssid->bssid_hint_set = 1;
+	wpa_hexdump(MSG_MSGDUMP, "BSSID hint", ssid->bssid_hint, ETH_ALEN);
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_bssid_hint(const struct parse_data *data,
+					  struct wpa_ssid *ssid)
+{
+	char *value;
+	int res;
+
+	if (!ssid->bssid_hint_set)
+		return NULL;
+
+	value = os_malloc(20);
+	if (!value)
+		return NULL;
+	res = os_snprintf(value, 20, MACSTR, MAC2STR(ssid->bssid_hint));
+	if (os_snprintf_error(20, res)) {
+		os_free(value);
+		return NULL;
+	}
+	return value;
+}
+#endif /* NO_CONFIG_WRITE */
+
+
 static int wpa_config_parse_bssid_blacklist(const struct parse_data *data,
 					    struct wpa_ssid *ssid, int line,
 					    const char *value)
@@ -2028,6 +2072,7 @@ static const struct parse_data ssid_fields[] = {
 	{ STR_RANGE(ssid, 0, SSID_MAX_LEN) },
 	{ INT_RANGE(scan_ssid, 0, 1) },
 	{ FUNC(bssid) },
+	{ FUNC(bssid_hint) },
 	{ FUNC(bssid_blacklist) },
 	{ FUNC(bssid_whitelist) },
 	{ FUNC_KEY(psk) },

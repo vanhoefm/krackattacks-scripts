@@ -2681,6 +2681,9 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		params.freq_hint = bss->freq;
 		params.pbss = bss_is_pbss(bss);
 	} else {
+		if (ssid->bssid_hint_set)
+			params.bssid_hint = ssid->bssid_hint;
+
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;
 		params.pbss = (ssid->pbss != 2) ? ssid->pbss : 0;

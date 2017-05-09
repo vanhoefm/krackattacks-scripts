@@ -503,6 +503,17 @@ static void write_bssid(FILE *f, struct wpa_ssid *ssid)
 }
 
 
+static void write_bssid_hint(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value = wpa_config_get(ssid, "bssid_hint");
+
+	if (!value)
+		return;
+	fprintf(f, "\tbssid_hint=%s\n", value);
+	os_free(value);
+}
+
+
 static void write_psk(FILE *f, struct wpa_ssid *ssid)
 {
 	char *value;
@@ -713,6 +724,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(ssid);
 	INT(scan_ssid);
 	write_bssid(f, ssid);
+	write_bssid_hint(f, ssid);
 	write_str(f, "bssid_blacklist", ssid);
 	write_str(f, "bssid_whitelist", ssid);
 	write_psk(f, ssid);

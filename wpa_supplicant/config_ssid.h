@@ -147,6 +147,19 @@ struct wpa_ssid {
 	int bssid_set;
 
 	/**
+	 * bssid_hint - BSSID hint
+	 *
+	 * If set, this is configured to the driver as a preferred initial BSSID
+	 * while connecting to this network.
+	 */
+	u8 bssid_hint[ETH_ALEN];
+
+	/**
+	 * bssid_hint_set - Whether BSSID hint is configured for this network
+	 */
+	int bssid_hint_set;
+
+	/**
 	 * go_p2p_dev_addr - GO's P2P Device Address or all zeros if not set
 	 */
 	u8 go_p2p_dev_addr[ETH_ALEN];

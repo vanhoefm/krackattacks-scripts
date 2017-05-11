@@ -188,3 +188,45 @@ def test_connect_cmd_roam(dev, apdev):
     wpas.request("DISCONNECT")
     wpas.wait_disconnected()
     wpas.dump_monitor()
+
+def test_connect_cmd_bssid_hint(dev, apdev):
+    """cfg80211 connect command with bssid_hint"""
+    params = { "ssid": "sta-connect" }
+    hostapd.add_ap(apdev[0], params)
+    hostapd.add_ap(apdev[1], params)
+
+    # This does not really give full coverage with mac80211_hwsim since the
+    # driver does not end up claiming support for driver-based BSS selection.
+    # Anyway, some test coverage can be achieved for setting the parameter and
+    # checking that it does not prevent connection with another BSSID.
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                 bssid_hint=apdev[0]['bssid'])
+    wpas.request("REMOVE_NETWORK all")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
+
+    wpas.request("BSS_FLUSH 0")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                 bssid_hint='22:33:44:55:66:77')
+    wpas.request("REMOVE_NETWORK all")
+    wpas.wait_disconnected()
+    wpas.dump_monitor()
+
+    # Additional coverage using ap_scan=2 to prevent scan entry -based selection
+    # within wpa_supplicant from overriding bssid_hint.
+
+    try:
+        if "OK" not in wpas.request("AP_SCAN 2"):
+            raise Exception("Failed to set AP_SCAN 2")
+        wpas.request("BSS_FLUSH 0")
+        wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                     bssid_hint='22:33:44:55:66:77')
+        wpas.request("REMOVE_NETWORK all")
+        wpas.wait_disconnected()
+        wpas.dump_monitor()
+    finally:
+        wpas.request("AP_SCAN 1")

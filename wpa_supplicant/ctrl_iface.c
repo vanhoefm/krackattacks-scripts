@@ -7991,6 +7991,19 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 			goto done;
 		}
 
+		pos = os_strstr(params, "bssid=");
+		if (pos) {
+			u8 bssid[ETH_ALEN];
+
+			pos += 6;
+			if (hwaddr_aton(pos, bssid)) {
+				wpa_printf(MSG_ERROR, "Invalid BSSID %s", pos);
+				*reply_len = -1;
+				goto done;
+			}
+			os_memcpy(wpa_s->next_scan_bssid, bssid, ETH_ALEN);
+		}
+
 		pos = params;
 		while (pos && *pos != '\0') {
 			if (os_strncmp(pos, "ssid ", 5) == 0) {

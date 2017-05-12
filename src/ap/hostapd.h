@@ -475,6 +475,8 @@ struct hostapd_iface {
 
 	struct dl_list sta_seen; /* struct hostapd_sta_info */
 	unsigned int num_sta_seen;
+
+	u8 dfs_domain;
 };
 
 /* hostapd.c */

@@ -93,6 +93,7 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 	}
 
 	iface->hw_flags = flags;
+	iface->dfs_domain = dfs_domain;
 
 	hostapd_free_hw_features(iface->hw_features, iface->num_hw_features);
 	iface->hw_features = modes;

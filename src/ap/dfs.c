@@ -889,6 +889,13 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
 	if (iface->cac_started)
 		return hostapd_dfs_start_channel_switch_cac(iface);
 
+	/*
+	 * Allow selection of DFS channel in ETSI to comply with
+	 * uniform spreading.
+	 */
+	if (iface->dfs_domain == HOSTAPD_DFS_REGION_ETSI)
+		skip_radar = 0;
+
 	/* Perform channel switch/CSA */
 	channel = dfs_get_valid_channel(iface, &secondary_channel,
 					&vht_oper_centr_freq_seg0_idx,

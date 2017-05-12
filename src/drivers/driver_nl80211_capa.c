@@ -1209,6 +1209,7 @@ struct phy_info_arg {
 	struct hostapd_hw_modes *modes;
 	int last_mode, last_chan_idx;
 	int failed;
+	u8 dfs_domain;
 };
 
 static void phy_info_ht_capa(struct hostapd_hw_modes *mode, struct nlattr *capa,
@@ -1737,6 +1738,20 @@ static void nl80211_reg_rule_vht(struct nlattr *tb[],
 }
 
 
+static void nl80211_set_dfs_domain(enum nl80211_dfs_regions region,
+				   u8 *dfs_domain)
+{
+	if (region == NL80211_DFS_FCC)
+		*dfs_domain = HOSTAPD_DFS_REGION_FCC;
+	else if (region == NL80211_DFS_ETSI)
+		*dfs_domain = HOSTAPD_DFS_REGION_ETSI;
+	else if (region == NL80211_DFS_JP)
+		*dfs_domain = HOSTAPD_DFS_REGION_JP;
+	else
+		*dfs_domain = 0;
+}
+
+
 static const char * dfs_domain_name(enum nl80211_dfs_regions region)
 {
 	switch (region) {
@@ -1783,6 +1798,7 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 	if (tb_msg[NL80211_ATTR_DFS_REGION]) {
 		enum nl80211_dfs_regions dfs_domain;
 		dfs_domain = nla_get_u8(tb_msg[NL80211_ATTR_DFS_REGION]);
+		nl80211_set_dfs_domain(dfs_domain, &results->dfs_domain);
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory information - country=%s (%s)",
 			   (char *) nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]),
 			   dfs_domain_name(dfs_domain));
@@ -1859,7 +1875,8 @@ static int nl80211_set_regulatory_flags(struct wpa_driver_nl80211_data *drv,
 
 
 struct hostapd_hw_modes *
-nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
+nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags,
+			    u8 *dfs_domain)
 {
 	u32 feat;
 	struct i802_bss *bss = priv;
@@ -1871,10 +1888,12 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 		.modes = NULL,
 		.last_mode = -1,
 		.failed = 0,
+		.dfs_domain = 0,
 	};
 
 	*num_modes = 0;
 	*flags = 0;
+	*dfs_domain = 0;
 
 	feat = get_nl80211_protocol_features(drv);
 	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
@@ -1898,6 +1917,9 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 			*num_modes = 0;
 			return NULL;
 		}
+
+		*dfs_domain = result.dfs_domain;
+
 		return wpa_driver_nl80211_postprocess_modes(result.modes,
 							    num_modes);
 	}

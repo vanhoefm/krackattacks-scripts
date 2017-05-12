@@ -78,10 +78,12 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 	int i, j;
 	u16 num_modes, flags;
 	struct hostapd_hw_modes *modes;
+	u8 dfs_domain;
 
 	if (hostapd_drv_none(hapd))
 		return -1;
-	modes = hostapd_get_hw_feature_data(hapd, &num_modes, &flags);
+	modes = hostapd_get_hw_feature_data(hapd, &num_modes, &flags,
+					    &dfs_domain);
 	if (modes == NULL) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,

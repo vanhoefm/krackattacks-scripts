@@ -3428,6 +3428,7 @@ static void wpa_supplicant_update_channel_list(
 	struct wpa_supplicant *wpa_s, struct channel_list_changed *info)
 {
 	struct wpa_supplicant *ifs;
+	u8 dfs_domain;
 
 	/*
 	 * To allow backwards compatibility with higher level layers that
@@ -3452,7 +3453,7 @@ static void wpa_supplicant_update_channel_list(
 			   ifs->ifname);
 		free_hw_features(ifs);
 		ifs->hw.modes = wpa_drv_get_hw_feature_data(
-			ifs, &ifs->hw.num_modes, &ifs->hw.flags);
+			ifs, &ifs->hw.num_modes, &ifs->hw.flags, &dfs_domain);
 
 		/* Restart PNO/sched_scan with updated channel list */
 		if (ifs->pno) {

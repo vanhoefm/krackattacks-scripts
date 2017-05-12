@@ -596,13 +596,13 @@ int hostapd_set_tx_queue_params(struct hostapd_data *hapd, int queue, int aifs,
 
 struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
-			    u16 *flags)
+			    u16 *flags, u8 *dfs_domain)
 {
 	if (hapd->driver == NULL ||
 	    hapd->driver->get_hw_feature_data == NULL)
 		return NULL;
 	return hapd->driver->get_hw_feature_data(hapd->drv_priv, num_modes,
-						 flags);
+						 flags, dfs_domain);
 }
 
 

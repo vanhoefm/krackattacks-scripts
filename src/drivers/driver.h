@@ -65,6 +65,10 @@
 /* Filter unicast IP packets encrypted using the GTK */
 #define WPA_DATA_FRAME_FILTER_FLAG_GTK BIT(2)
 
+#define HOSTAPD_DFS_REGION_FCC	1
+#define HOSTAPD_DFS_REGION_ETSI	2
+#define HOSTAPD_DFS_REGION_JP	3
+
 /**
  * enum reg_change_initiator - Regulatory change initiator
  */
@@ -2368,12 +2372,13 @@ struct wpa_driver_ops {
 	 * @priv: Private driver interface data
 	 * @num_modes: Variable for returning the number of returned modes
 	 * flags: Variable for returning hardware feature flags
+	 * @dfs: Variable for returning DFS region (HOSTAPD_DFS_REGION_*)
 	 * Returns: Pointer to allocated hardware data on success or %NULL on
 	 * failure. Caller is responsible for freeing this.
 	 */
 	struct hostapd_hw_modes * (*get_hw_feature_data)(void *priv,
 							 u16 *num_modes,
-							 u16 *flags);
+							 u16 *flags, u8 *dfs);
 
 	/**
 	 * send_mlme - Send management frame from MLME

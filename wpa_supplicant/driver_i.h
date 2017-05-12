@@ -275,11 +275,12 @@ static inline int wpa_drv_mlme_setprotection(struct wpa_supplicant *wpa_s,
 
 static inline struct hostapd_hw_modes *
 wpa_drv_get_hw_feature_data(struct wpa_supplicant *wpa_s, u16 *num_modes,
-			    u16 *flags)
+			    u16 *flags, u8 *dfs_domain)
 {
 	if (wpa_s->driver->get_hw_feature_data)
 		return wpa_s->driver->get_hw_feature_data(wpa_s->drv_priv,
-							  num_modes, flags);
+							  num_modes, flags,
+							  dfs_domain);
 	return NULL;
 }
 

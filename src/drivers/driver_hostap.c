@@ -1088,7 +1088,7 @@ static int hostap_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 
 static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 							    u16 *num_modes,
-							    u16 *flags)
+							    u16 *flags, u8 *dfs)
 {
 	struct hostapd_hw_modes *mode;
 	int i, clen, rlen;
@@ -1103,6 +1103,7 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 
 	*num_modes = 1;
 	*flags = 0;
+	*dfs = 0;
 
 	mode->mode = HOSTAPD_MODE_IEEE80211B;
 	mode->num_channels = 14;

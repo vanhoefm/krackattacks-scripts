@@ -4939,6 +4939,7 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_driver_capa capa;
 	int capa_res;
+	u8 dfs_domain;
 
 	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
 		   "'%s' ctrl_interface '%s' bridge '%s'", iface->ifname,
@@ -5066,7 +5067,8 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 
 	wpa_s->hw.modes = wpa_drv_get_hw_feature_data(wpa_s,
 						      &wpa_s->hw.num_modes,
-						      &wpa_s->hw.flags);
+						      &wpa_s->hw.flags,
+						      &dfs_domain);
 	if (wpa_s->hw.modes) {
 		u16 i;
 

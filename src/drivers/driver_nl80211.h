@@ -260,7 +260,8 @@ int nl80211_send_monitor(struct wpa_driver_nl80211_data *drv,
 
 int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv);
 struct hostapd_hw_modes *
-nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags);
+nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags,
+			    u8 *dfs_domain);
 
 int process_global_event(struct nl_msg *msg, void *arg);
 int process_bss_event(struct nl_msg *msg, void *arg);

@@ -1345,6 +1345,35 @@ enum qca_wlan_vendor_attr_config {
 	 * etc.).
 	 */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_LISTEN_INTERVAL = 48,
+	/*
+	 * 8 bit unsigned value that is set on an AP/GO virtual interface to
+	 * disable operations that would cause the AP/GO to leave its operating
+	 * channel.
+	 *
+	 * This will restrict the scans to the AP/GO operating channel and the
+	 * channels of the other band, if DBS is supported.A STA/CLI interface
+	 * brought up after this setting is enabled, will be restricted to
+	 * connecting to devices only on the AP/GO interface's operating channel
+	 * or on the other band in DBS case. P2P supported channel list is
+	 * modified, to only include AP interface's operating-channel and the
+	 * channels of the other band if DBS is supported.
+	 *
+	 * These restrictions are only applicable as long as the AP/GO interface
+	 * is alive. If the AP/GO interface is brought down then this
+	 * setting/restriction is forgotten.
+	 *
+	 * If this variable is set on an AP/GO interface while a multi-channel
+	 * concurrent session is active, it has no effect on the operation of
+	 * the current interfaces, other than restricting the scan to the AP/GO
+	 * operating channel and the other band channels if DBS is supported.
+	 * However, if the STA is brought down and restarted then the new STA
+	 * connection will either be formed on the AP/GO channel or on the
+	 * other band in a DBS case. This is because of the scan being
+	 * restricted on these channels as mentioned above.
+	 *
+	 * 1-Disable offchannel operations, 0-Enable offchannel operations.
+	 */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_DISABLE_OFFCHANNEL = 49,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

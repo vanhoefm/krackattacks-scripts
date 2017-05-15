@@ -75,3 +75,20 @@ int eap_proxy_notify_config(struct eap_proxy_sm *sm,
 {
 	return -1;
 }
+
+
+u8 * eap_proxy_get_eap_session_id(struct eap_proxy_sm *sm, size_t *len)
+{
+	return NULL;
+}
+
+
+u8 * eap_proxy_get_emsk(struct eap_proxy_sm *sm, size_t *len)
+{
+	return NULL;
+}
+
+
+void eap_proxy_sm_abort(struct eap_proxy_sm *sm)
+{
+}

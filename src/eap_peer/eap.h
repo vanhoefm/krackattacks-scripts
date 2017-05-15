@@ -363,6 +363,9 @@ int eap_peer_get_erp_info(struct eap_sm *sm, struct eap_peer_config *config,
 			  const u8 **realm, size_t *realm_len, u16 *erp_seq_num,
 			  const u8 **rrk, size_t *rrk_len);
 int eap_peer_update_erp_next_seq_num(struct eap_sm *sm, u16 seq_num);
+void eap_peer_erp_init(struct eap_sm *sm, u8 *ext_session_id,
+		       size_t ext_session_id_len, u8 *ext_emsk,
+		       size_t ext_emsk_len);
 
 #endif /* IEEE8021X_EAPOL */
 

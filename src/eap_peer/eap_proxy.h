@@ -46,4 +46,10 @@ int eap_proxy_get_imsi(struct eap_proxy_sm *eap_proxy, char *imsi_buf,
 int eap_proxy_notify_config(struct eap_proxy_sm *sm,
 			    struct eap_peer_config *config);
 
+u8 * eap_proxy_get_eap_session_id(struct eap_proxy_sm *sm, size_t *len);
+
+u8 * eap_proxy_get_emsk(struct eap_proxy_sm *sm, size_t *len);
+
+void eap_proxy_sm_abort(struct eap_proxy_sm *sm);
+
 #endif /* EAP_PROXY_H */

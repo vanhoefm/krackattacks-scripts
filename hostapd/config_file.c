@@ -2745,6 +2745,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line, pos);
 			return 1;
 		}
+	} else if (os_strcmp(buf, "acs_exclude_dfs") == 0) {
+		conf->acs_exclude_dfs = atoi(pos);
 	} else if (os_strcmp(buf, "channel") == 0) {
 		if (os_strcmp(pos, "acs_survey") == 0) {
 #ifndef CONFIG_ACS

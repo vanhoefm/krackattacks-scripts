@@ -660,6 +660,7 @@ struct hostapd_config {
 	u8 channel;
 	u8 acs;
 	struct wpa_freq_range_list acs_ch_list;
+	int acs_exclude_dfs;
 	enum hostapd_hw_mode hw_mode; /* HOSTAPD_MODE_IEEE80211A, .. */
 	enum {
 		LONG_PREAMBLE = 0,

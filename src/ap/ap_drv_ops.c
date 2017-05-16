@@ -816,7 +816,9 @@ static void hostapd_get_hw_mode_any_channels(struct hostapd_data *hapd,
 		if ((acs_ch_list_all ||
 		     freq_range_list_includes(&hapd->iface->conf->acs_ch_list,
 					      chan->chan)) &&
-		    !(chan->flag & HOSTAPD_CHAN_DISABLED))
+		    !(chan->flag & HOSTAPD_CHAN_DISABLED) &&
+		    !(hapd->iface->conf->acs_exclude_dfs &&
+		      (chan->flag & HOSTAPD_CHAN_RADAR)))
 			int_array_add_unique(freq_list, chan->freq);
 	}
 }
@@ -870,6 +872,9 @@ int hostapd_drv_do_acs(struct hostapd_data *hapd)
 			    !freq_range_list_includes(
 				    &hapd->iface->conf->acs_ch_list,
 				    chan->chan))
+				continue;
+			if (hapd->iface->conf->acs_exclude_dfs &&
+			    (chan->flag & HOSTAPD_CHAN_RADAR))
 				continue;
 			if (!(chan->flag & HOSTAPD_CHAN_DISABLED)) {
 				channels[num_channels++] = chan->chan;

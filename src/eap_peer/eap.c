@@ -412,7 +412,7 @@ static char * eap_get_realm(struct eap_sm *sm, struct eap_peer_config *config)
 		}
 	}
 
-	return os_strdup("");
+	return NULL;
 }
 
 

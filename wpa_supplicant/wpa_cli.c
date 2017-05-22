@@ -1823,7 +1823,8 @@ static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, const char *cmd,
 	}
 
 	buf[len] = '\0';
-	if (os_memcmp(buf, "FAIL", 4) == 0)
+	if (os_memcmp(buf, "FAIL", 4) == 0 ||
+	    os_memcmp(buf, "UNKNOWN COMMAND", 15) == 0)
 		return -1;
 	if (print)
 		printf("%s", buf);

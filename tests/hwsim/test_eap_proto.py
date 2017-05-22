@@ -803,7 +803,7 @@ def test_eap_proto_sake_errors(dev, apdev):
     for count, func in tests:
         with alloc_fail(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="SAKE", identity="sake user",
+                           eap="SAKE", identity="sake user@domain",
                            password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                            erp="1",
                            wait_connect=False)
@@ -2261,7 +2261,7 @@ def test_eap_proto_eke(dev, apdev):
 
 def eap_eke_test_fail(dev, phase1=None, success=False):
     dev.connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                eap="EKE", identity="eke user", password="hello",
+                eap="EKE", identity="eke user@domain", password="hello",
                 phase1=phase1, erp="1", wait_connect=False)
     ev = dev.wait_event([ "CTRL-EVENT-EAP-FAILURE",
                           "CTRL-EVENT-EAP-SUCCESS" ], timeout=5)
@@ -4531,7 +4531,7 @@ def test_eap_proto_sim_errors(dev, apdev):
     for count, func in tests:
         with alloc_fail(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="SIM", identity="1232010000000000",
+                           eap="SIM", identity="1232010000000000@domain",
                            password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
                            erp="1", wait_connect=False)
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
@@ -4630,7 +4630,7 @@ def test_eap_proto_aka_errors(dev, apdev):
     for count, func in tests:
         with alloc_fail(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="AKA", identity="0232010000000000",
+                           eap="AKA", identity="0232010000000000@domain",
                            password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
                            erp="1", wait_connect=False)
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
@@ -5311,7 +5311,7 @@ def test_eap_proto_ikev2_errors(dev, apdev):
     for count, func in tests:
         with alloc_fail(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="IKEV2", identity="ikev2 user",
+                           eap="IKEV2", identity="ikev2 user@domain",
                            password="ike password", erp="1", wait_connect=False)
             ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
                                    timeout=15)
@@ -6278,7 +6278,7 @@ def test_eap_proto_pwd_errors(dev, apdev):
     for func in funcs:
         with alloc_fail(dev[0], 1, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
-                           eap="PWD", identity="pwd user",
+                           eap="PWD", identity="pwd user@domain",
                            password="secret password", erp="1",
                            wait_connect=False)
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
@@ -6604,7 +6604,7 @@ def test_eap_proto_fast_errors(dev, apdev):
         with alloc_fail(dev[0], count, func):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="FAST", anonymous_identity="FAST",
-                           identity="user", password="password",
+                           identity="user@example.com", password="password",
                            ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
                            phase1="fast_provisioning=2",
                            pac_file="blob://fast_pac_auth_errors",
@@ -6867,7 +6867,7 @@ def test_eap_proto_ttls_errors(dev, apdev):
               (1, "eap_ttls_get_session_id",
                "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
               (1, "eap_ttls_get_emsk",
-               "DOMAIN\mschapv2 user", "auth=MSCHAPV2"),
+               "mschapv2 user@domain", "auth=MSCHAPV2"),
               (1, "wpabuf_alloc;eap_ttls_phase2_request_mschap",
                "mschap user", "auth=MSCHAP"),
               (1, "eap_peer_tls_derive_key;eap_ttls_phase2_request_mschap",

@@ -5773,7 +5773,7 @@ def test_eap_gpsk_errors(dev, apdev):
         with alloc_fail(dev[0], count, func):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="GPSK",
-                           identity="gpsk user", erp="1",
+                           identity="gpsk user@domain", erp="1",
                            password="abcdefghijklmnop0123456789abcdef",
                            wait_connect=False, scan_freq="2412")
             wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
@@ -6151,7 +6151,8 @@ def test_eap_tls_errors(dev, apdev):
     for func in tests:
         with alloc_fail(dev[0], 1, func):
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
-                           identity="tls user", ca_cert="auth_serv/ca.pem",
+                           identity="tls user@domain",
+                           ca_cert="auth_serv/ca.pem",
                            client_cert="auth_serv/user.pem",
                            private_key="auth_serv/user.key",
                            erp="1",

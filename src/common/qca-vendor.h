@@ -1371,9 +1371,9 @@ enum qca_wlan_vendor_attr_config {
 	 * other band in a DBS case. This is because of the scan being
 	 * restricted on these channels as mentioned above.
 	 *
-	 * 1-Disable offchannel operations, 0-Enable offchannel operations.
+	 * 1-Restrict / 0-Don't restrict offchannel operations.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_DISABLE_OFFCHANNEL = 49,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RESTRICT_OFFCHANNEL = 49,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

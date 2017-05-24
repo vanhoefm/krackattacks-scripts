@@ -1771,9 +1771,10 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	switch (eap->method) {
 	case EAP_TYPE_TTLS:
 		if (eap->inner_method) {
-			os_snprintf(buf, sizeof(buf), "\"autheap=%s\"",
-				    eap_get_name(EAP_VENDOR_IETF,
-						 eap->inner_method));
+			name = eap_get_name(EAP_VENDOR_IETF, eap->inner_method);
+			if (!name)
+				goto fail;
+			os_snprintf(buf, sizeof(buf), "\"autheap=%s\"", name);
 			if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
 				goto fail;
 			break;

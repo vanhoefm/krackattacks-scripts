@@ -424,6 +424,7 @@ def main():
             if t.__doc__:
                 logger.info("Test: " + t.__doc__)
             start = datetime.now()
+            open('/dev/kmsg', 'w').write('TEST-START %s @%.6f\n' % (name, time.time()))
             for d in dev:
                 try:
                     d.dump_monitor()
@@ -468,6 +469,7 @@ def main():
                 if args.loglevel == logging.WARNING:
                     print "Exception: " + str(e)
                 result = "FAIL"
+            open('/dev/kmsg', 'w').write('TEST-STOP %s @%.6f\n' % (name, time.time()))
             for d in dev:
                 try:
                     d.dump_monitor()

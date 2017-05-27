@@ -620,7 +620,7 @@ def test_wnm_bss_tm(dev, apdev):
         dev[0].dump_monitor()
 
         logger.info("Preferred Candidate List (no matching neighbor) without Disassociation Imminent")
-        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 neighbor=11:22:33:44:55:66,0x0000,81,3,7,0301ff neighbor=22:33:44:55:66:77,0x0000,1,36,7 neighbor=00:11:22:33:44:55,0x0000,81,4,7,03010a"):
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 neighbor=11:22:33:44:55:66,0x0000,81,3,7,0301ff neighbor=22:33:44:55:66:77,0x0000,1,44,7 neighbor=00:11:22:33:44:55,0x0000,81,4,7,03010a"):
             raise Exception("BSS_TM_REQ command failed")
         ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
         if ev is None:

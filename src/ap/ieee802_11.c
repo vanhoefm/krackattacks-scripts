@@ -3448,6 +3448,7 @@ static int handle_action(struct hostapd_data *hapd,
 				   "HT20/40 coex mgmt frame received from STA "
 				   MACSTR, MAC2STR(mgmt->sa));
 			hostapd_2040_coex_action(hapd, mgmt, len);
+			return 1;
 		}
 #endif /* CONFIG_IEEE80211N */
 		if (hapd->public_action_cb) {

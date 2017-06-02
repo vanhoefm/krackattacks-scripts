@@ -19,6 +19,7 @@ from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_ht import clear_scan_cache
 from remotehost import remote_compatible
+from test_ap_vht import vht_supported
 
 def check_rrm_support(dev):
     rrm = int(dev.get_driver_status_field("capa.rrm_flags"), 16)

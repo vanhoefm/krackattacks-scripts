@@ -2065,6 +2065,7 @@ static const struct eapol_callbacks eapol_cb =
 #ifdef CONFIG_EAP_PROXY
 	eapol_sm_eap_proxy_cb,
 	eapol_sm_eap_proxy_notify_sim_status,
+	eapol_sm_get_eap_proxy_imsi,
 #endif /* CONFIG_EAP_PROXY */
 	eapol_sm_set_anon_id
 };
@@ -2173,8 +2174,10 @@ int eapol_sm_failed(struct eapol_sm *sm)
 
 
 #ifdef CONFIG_EAP_PROXY
-int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len)
+int eapol_sm_get_eap_proxy_imsi(void *ctx, char *imsi, size_t *len)
 {
+	struct eapol_sm *sm = ctx;
+
 	if (sm->eap_proxy == NULL)
 		return -1;
 	return eap_proxy_get_imsi(sm->eap_proxy, imsi, len);

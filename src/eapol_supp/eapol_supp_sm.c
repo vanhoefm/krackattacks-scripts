@@ -2174,13 +2174,13 @@ int eapol_sm_failed(struct eapol_sm *sm)
 
 
 #ifdef CONFIG_EAP_PROXY
-int eapol_sm_get_eap_proxy_imsi(void *ctx, char *imsi, size_t *len)
+int eapol_sm_get_eap_proxy_imsi(void *ctx, int sim_num, char *imsi, size_t *len)
 {
 	struct eapol_sm *sm = ctx;
 
 	if (sm->eap_proxy == NULL)
 		return -1;
-	return eap_proxy_get_imsi(sm->eap_proxy, imsi, len);
+	return eap_proxy_get_imsi(sm->eap_proxy, sim_num, imsi, len);
 }
 #endif /* CONFIG_EAP_PROXY */
 

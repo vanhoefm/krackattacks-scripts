@@ -482,8 +482,8 @@ static char * eap_get_realm(struct eap_sm *sm, struct eap_peer_config *config)
 		int mnc_len, pos;
 
 		wpa_printf(MSG_DEBUG, "EAP: Build realm from IMSI (eap_proxy)");
-		mnc_len = sm->eapol_cb->get_imsi(sm->eapol_ctx, imsi,
-						 &imsi_len);
+		mnc_len = sm->eapol_cb->get_imsi(sm->eapol_ctx, config->sim_num,
+						 imsi, &imsi_len);
 		if (mnc_len < 0)
 			return NULL;
 

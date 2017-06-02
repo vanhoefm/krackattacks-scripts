@@ -40,8 +40,8 @@ eap_proxy_packet_update(struct eap_proxy_sm *eap_proxy, u8 *eapReqData,
 int eap_proxy_sm_get_status(struct eap_proxy_sm *sm, char *buf, size_t buflen,
 			    int verbose);
 
-int eap_proxy_get_imsi(struct eap_proxy_sm *eap_proxy, char *imsi_buf,
-		       size_t *imsi_len);
+int eap_proxy_get_imsi(struct eap_proxy_sm *eap_proxy, int sim_num,
+		       char *imsi_buf, size_t *imsi_len);
 
 int eap_proxy_notify_config(struct eap_proxy_sm *sm,
 			    struct eap_peer_config *config);

@@ -63,8 +63,8 @@ int eap_proxy_sm_get_status(struct eap_proxy_sm *sm, char *buf, size_t buflen,
 }
 
 
-int eap_proxy_get_imsi(struct eap_proxy_sm *eap_proxy, char *imsi_buf,
-		       size_t *imsi_len)
+int eap_proxy_get_imsi(struct eap_proxy_sm *eap_proxy, int sim_num,
+		       char *imsi_buf, size_t *imsi_len)
 {
 	return -1;
 }

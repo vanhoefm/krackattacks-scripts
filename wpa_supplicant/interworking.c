@@ -1897,7 +1897,7 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		size_t len;
 		wpa_msg(wpa_s, MSG_DEBUG,
 			"Interworking: IMSI not available - try to read again through eap_proxy");
-		wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol,
+		wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol, -1,
 							     wpa_s->imsi,
 							     &len);
 		if (wpa_s->mnc_len > 0) {

@@ -264,11 +264,12 @@ struct eapol_callbacks {
 	/**
 	 * get_imsi - Get the IMSI value from eap_proxy
 	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @sim_num: SIM/USIM number to get the IMSI value for
 	 * @imsi: Buffer for IMSI value
 	 * @len: Buffer for returning IMSI length in octets
 	 * Returns: MNC length (2 or 3) or -1 on error
 	 */
-	int (*get_imsi)(void *ctx, char *imsi, size_t *len);
+	int (*get_imsi)(void *ctx, int sim_num, char *imsi, size_t *len);
 #endif /* CONFIG_EAP_PROXY */
 
 	/**

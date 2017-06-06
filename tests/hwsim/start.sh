@@ -107,7 +107,7 @@ sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dtN -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do
     DBUSARG=""
-    if [ $i = "0" -a -r /var/run/dbus/pid -a -r /var/run/dbus/hwsim-test ]; then
+    if [ $i = "0" ] && ([ -r /var/run/dbus/pid ] || [ -r /var/run/dbus/system_bus_socket ]); then
 	if $WPAS | grep -q -- -u; then
 	    DBUSARG="-u"
 	fi

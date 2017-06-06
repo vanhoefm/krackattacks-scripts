@@ -911,7 +911,8 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 		nl80211_check_global(drv->global);
 		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
 			   "interface");
-		wpa_driver_nl80211_finish_drv_init(drv, NULL, 0, NULL);
+		if (wpa_driver_nl80211_finish_drv_init(drv, NULL, 0, NULL) < 0)
+			return -1;
 		return 1;
 	}
 
@@ -920,13 +921,25 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 
 
 static struct wpa_driver_nl80211_data *
-nl80211_find_drv(struct nl80211_global *global, int idx, u8 *buf, size_t len)
+nl80211_find_drv(struct nl80211_global *global, int idx, u8 *buf, size_t len,
+		 int *init_failed)
 {
 	struct wpa_driver_nl80211_data *drv;
+	int res;
+
+	if (init_failed)
+		*init_failed = 0;
 	dl_list_for_each(drv, &global->interfaces,
 			 struct wpa_driver_nl80211_data, list) {
-		if (wpa_driver_nl80211_own_ifindex(drv, idx, buf, len) ||
-		    have_ifidx(drv, idx, IFIDX_ANY))
+		res = wpa_driver_nl80211_own_ifindex(drv, idx, buf, len);
+		if (res < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Found matching own interface, but failed to complete reinitialization");
+			if (init_failed)
+				*init_failed = 1;
+			return drv;
+		}
+		if (res > 0 || have_ifidx(drv, idx, IFIDX_ANY))
 			return drv;
 	}
 	return NULL;
@@ -969,6 +982,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	char namebuf[IFNAMSIZ];
 	char ifname[IFNAMSIZ + 1];
 	char extra[100], *pos, *end;
+	int init_failed;
 
 	extra[0] = '\0';
 	pos = extra;
@@ -1013,9 +1027,11 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 
-	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
+	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len, &init_failed);
 	if (!drv)
 		goto event_newlink;
+	if (init_failed)
+		return; /* do not update interface state */
 
 	if (!drv->if_disabled && !(ifi->ifi_flags & IFF_UP)) {
 		namebuf[0] = '\0';
@@ -1049,7 +1065,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 			 * dynamic interfaces
 			 */
 			drv = nl80211_find_drv(global, ifi->ifi_index,
-					       buf, len);
+					       buf, len, NULL);
 			if (!drv)
 				return;
 		}
@@ -1175,7 +1191,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 
-	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
+	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len, NULL);
 
 	if (ifi->ifi_family == AF_BRIDGE && brid && drv) {
 		/* device has been removed from bridge */

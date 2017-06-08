@@ -2738,6 +2738,7 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 		if (mbo) {
 			if (wpabuf_resize(&extra_buf, wpabuf_len(mbo))) {
 				wpabuf_free(extra_buf);
+				wpabuf_free(mbo);
 				return -1;
 			}
 			wpabuf_put_buf(extra_buf, mbo);

@@ -1376,6 +1376,10 @@ int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
+		/*
+		 * Don't report results that were not received during the
+		 * current measurement.
+		 */
 		if (!(wpa_s->drv_rrm_flags &
 		      WPA_DRIVER_FLAGS_SUPPORT_BEACON_REPORT)) {
 			struct os_reltime update_time, diff;
@@ -1402,14 +1406,10 @@ int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 					   (unsigned int) diff.usec);
 				continue;
 			}
-		}
-
-		/*
-		 * Don't report results that were not received during the
-		 * current measurement.
-		 */
-		if (info->scan_start_tsf > scan_res->res[i]->parent_tsf)
+		} else if (info->scan_start_tsf >
+			   scan_res->res[i]->parent_tsf) {
 			continue;
+		}
 
 		if (wpas_add_beacon_rep(wpa_s, &buf, bss, info->scan_start_tsf,
 					scan_res->res[i]->parent_tsf) < 0)

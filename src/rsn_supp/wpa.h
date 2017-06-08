@@ -175,6 +175,7 @@ void wpa_sm_set_rx_replay_ctr(struct wpa_sm *sm, const u8 *rx_replay_counter);
 void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm,
 			    const u8 *ptk_kck, size_t ptk_kck_len,
 			    const u8 *ptk_kek, size_t ptk_kek_len);
+int wpa_fils_is_completed(struct wpa_sm *sm);
 
 #else /* CONFIG_NO_WPA */
 
@@ -342,6 +343,11 @@ static inline void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm, const u8 *ptk_kck,
 {
 }
 
+static inline int wpa_fils_is_completed(struct wpa_sm *sm)
+{
+	return 0;
+}
+
 #endif /* CONFIG_NO_WPA */
 
 #ifdef CONFIG_PEERKEY
@@ -450,7 +456,6 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 				     const struct wpabuf **hlp,
 				     unsigned int num_hlp);
 int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len);
-int wpa_fils_is_completed(struct wpa_sm *sm);
 
 struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm);
 int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,

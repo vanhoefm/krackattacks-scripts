@@ -276,7 +276,7 @@ static inline int hostapd_drv_switch_channel(struct hostapd_data *hapd,
 {
 	if (hapd->driver == NULL || hapd->driver->switch_channel == NULL ||
 	    hapd->drv_priv == NULL)
-		return -ENOTSUP;
+		return -1;
 
 	return hapd->driver->switch_channel(hapd->drv_priv, settings);
 }

@@ -120,6 +120,7 @@ static struct wpabuf * eap_leap_process_request(struct eap_sm *sm, void *priv,
 	     nt_challenge_response(challenge, password, password_len, rpos))) {
 		wpa_printf(MSG_DEBUG, "EAP-LEAP: Failed to derive response");
 		ret->ignore = TRUE;
+		wpabuf_free(resp);
 		return NULL;
 	}
 	os_memcpy(data->peer_response, rpos, LEAP_RESPONSE_LEN);

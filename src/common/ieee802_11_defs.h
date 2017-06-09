@@ -1127,6 +1127,7 @@ struct ieee80211_ampe_ie {
 #define VHT_CAP_SUPP_CHAN_WIDTH_160MHZ              ((u32) BIT(2))
 #define VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ     ((u32) BIT(3))
 #define VHT_CAP_SUPP_CHAN_WIDTH_MASK                ((u32) BIT(2) | BIT(3))
+#define VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT          2
 #define VHT_CAP_RXLDPC                              ((u32) BIT(4))
 #define VHT_CAP_SHORT_GI_80                         ((u32) BIT(5))
 #define VHT_CAP_SHORT_GI_160                        ((u32) BIT(6))

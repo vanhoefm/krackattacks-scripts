@@ -1012,9 +1012,13 @@ def test_rrm_beacon_req_table_info(dev, apdev):
 
     logger.info("Unsupported reporting information 1")
     token = run_req_beacon(hapd, addr, "51000000000002ffffffffffff" + "01020100")
-    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
-    if ev is not None:
-        raise Exception("Unexpected beacon report response (unsupported reporting information 1)")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report response (incapable) is not received")
+
+    fields = ev.split(' ')
+    if fields[3] != "02":
+        raise Exception("Beacon report response - unexpected mode (" + fields[3] + ")")
     hapd.dump_monitor()
 
     logger.info("Invalid reporting information length")
@@ -1328,9 +1332,13 @@ def test_rrm_beacon_req_active_ap_channels_unknown_opclass(dev, apdev):
 
     token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "3303ff010b")
 
-    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.2)
-    if ev is not None:
-        raise Exception("Unexpected Beacon report")
+    ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon report response (refused) not received")
+
+    fields = ev.split(' ')
+    if fields[3] != "04":
+        raise Exception("Unexpected beacon report mode: " + fields[3])
 
 @remote_compatible
 def test_rrm_beacon_req_active_ap_channel_oom(dev, apdev):
@@ -1345,9 +1353,12 @@ def test_rrm_beacon_req_active_ap_channel_oom(dev, apdev):
     with alloc_fail(dev[0], 1, "wpas_add_channels"):
         token = run_req_beacon(hapd, addr, "51ff0000640001ffffffffffff" + "330351010b")
         wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
-        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=0.1)
+        ev = hapd.wait_event(["BEACON-RESP-RX"], timeout=10)
+        # allow either not to respond or send refused response
         if ev is not None:
-            raise Exception("Unexpected Beacon report during OOM")
+            fields = ev.split(' ')
+            if fields[3] != "04":
+                raise Exception("Unexpected Beacon report during OOM with mode: " + fields[3])
 
 @remote_compatible
 def test_rrm_beacon_req_active_scan_fail(dev, apdev):
@@ -1744,8 +1755,6 @@ def test_rrm_req_proto(dev, apdev):
                "0500010000260f010005112233445566778899aabbcc" ]
     # Unknown beacon report mode
     tests += [ "05000100002610010005112233445566778899aabbccdd" ]
-    # Beacon report info subelement; no valid channels
-    tests += [ "05000100002614010005112233445566008899aabbccdd01020000" ]
     # "RRM: Expected Measurement Request element, but EID is 0"
     tests += [ "05000100000000" ]
     for t in tests:
@@ -1762,6 +1771,8 @@ def test_rrm_req_proto(dev, apdev):
     tests += [ "050001000026030100fe" ]
     # Reject LCI request
     tests += [ "0500010000260701000811223344" ]
+    # Beacon report info subelement; no valid channels
+    tests += [ "05000100002614010005112233445566008899aabbccdd01020000" ]
     for t in tests:
         if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
             raise Exception("MGMT_RX_PROCESS failed")

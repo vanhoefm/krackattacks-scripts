@@ -428,6 +428,9 @@ struct rrm_data {
 
 	/* token - Dialog token of the current radio measurement */
 	u8 token;
+
+	/* destination address of the current radio measurement request */
+	u8 dst_addr[ETH_ALEN];
 };
 
 enum wpa_supplicant_test_failure {
@@ -1308,7 +1311,7 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 						  struct wpabuf *neighbor_rep),
 				       void *cb_ctx);
 void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
-					       const u8 *src,
+					       const u8 *src, const u8 *dst,
 					       const u8 *frame, size_t len);
 void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 					      const u8 *src,

@@ -355,7 +355,8 @@ wpas_rrm_build_lci_report(struct wpa_supplicant *wpa_s,
 	return 0;
 
 reject:
-	if (wpas_rrm_report_elem(buf, req->token,
+	if (!is_multicast_ether_addr(wpa_s->rrm.dst_addr) &&
+	    wpas_rrm_report_elem(buf, req->token,
 				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
 				 req->type, NULL, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
@@ -871,19 +872,22 @@ static void wpas_beacon_rep_table(struct wpa_supplicant *wpa_s,
 
 static void wpas_rrm_refuse_request(struct wpa_supplicant *wpa_s)
 {
-	struct wpabuf *buf = NULL;
+	if (!is_multicast_ether_addr(wpa_s->rrm.dst_addr)) {
+		struct wpabuf *buf = NULL;
 
-	if (wpas_rrm_report_elem(&buf, wpa_s->beacon_rep_data.token,
-				 MEASUREMENT_REPORT_MODE_REJECT_REFUSED,
-				 MEASURE_TYPE_BEACON, NULL, 0)) {
-		wpa_printf(MSG_ERROR, "RRM: Memory allocation failed");
+		if (wpas_rrm_report_elem(&buf, wpa_s->beacon_rep_data.token,
+					 MEASUREMENT_REPORT_MODE_REJECT_REFUSED,
+					 MEASURE_TYPE_BEACON, NULL, 0)) {
+			wpa_printf(MSG_ERROR, "RRM: Memory allocation failed");
+			wpabuf_free(buf);
+			return;
+		}
+
+		wpas_rrm_send_msr_report(wpa_s, buf);
 		wpabuf_free(buf);
-		return;
 	}
 
-	wpas_rrm_send_msr_report(wpa_s, buf);
 	wpas_clear_beacon_rep_data(wpa_s);
-	wpabuf_free(buf);
 }
 
 
@@ -1164,7 +1168,8 @@ wpas_rrm_handle_msr_req_element(
 	}
 
 reject:
-	if (wpas_rrm_report_elem(buf, req->token,
+	if (!is_multicast_ether_addr(wpa_s->rrm.dst_addr) &&
+	    wpas_rrm_report_elem(buf, req->token,
 				 MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE,
 				 req->type, NULL, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
@@ -1225,7 +1230,7 @@ out:
 
 
 void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
-					       const u8 *src,
+					       const u8 *src, const u8 *dst,
 					       const u8 *frame, size_t len)
 {
 	struct wpabuf *report;
@@ -1249,6 +1254,7 @@ void wpas_rrm_handle_radio_measurement_request(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_s->rrm.token = *frame;
+	os_memcpy(wpa_s->rrm.dst_addr, dst, ETH_ALEN);
 
 	/* Number of repetitions is not supported */
 

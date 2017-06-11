@@ -3582,6 +3582,7 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	if (category == WLAN_ACTION_RADIO_MEASUREMENT &&
 	    payload[0] == WLAN_RRM_RADIO_MEASUREMENT_REQUEST) {
 		wpas_rrm_handle_radio_measurement_request(wpa_s, mgmt->sa,
+							  mgmt->da,
 							  payload + 1,
 							  plen - 1);
 		return;

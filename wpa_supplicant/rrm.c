@@ -967,7 +967,7 @@ static int wpas_rm_handle_beacon_req_subelem(struct wpa_supplicant *wpa_s,
 		    BEACON_REPORT_DETAIL_ALL_FIELDS_AND_ELEMENTS) {
 			wpa_printf(MSG_DEBUG, "Invalid reporting detail: %u",
 				   subelem[0]);
-			return 0;
+			return -1;
 		}
 
 		break;
@@ -1034,6 +1034,7 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 	u32 interval_usec;
 	u32 _rand;
 	int ret = 0, res;
+	u8 reject_mode;
 
 	if (len < sizeof(*req))
 		return -1;
@@ -1067,9 +1068,12 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 
 		res = wpas_rm_handle_beacon_req_subelem(
 			wpa_s, data, subelems[0], subelems[1], &subelems[2]);
-		if (res != 1) {
+		if (res < 0) {
 			ret = res;
 			goto out;
+		} else if (!res) {
+			reject_mode = MEASUREMENT_REPORT_MODE_REJECT_INCAPABLE;
+			goto out_reject;
 		}
 
 		elems_len -= 2 + subelems[1];
@@ -1087,7 +1091,8 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 		req->variable, len - sizeof(*req));
 	if (!params->freqs) {
 		wpa_printf(MSG_DEBUG, "Beacon request: No valid channels");
-		goto out;
+		reject_mode = MEASUREMENT_REPORT_MODE_REJECT_REFUSED;
+		goto out_reject;
 	}
 
 	params->duration = le_to_host16(req->duration);
@@ -1111,6 +1116,13 @@ wpas_rm_handle_beacon_req(struct wpa_supplicant *wpa_s,
 	eloop_register_timeout(0, interval_usec, wpas_rrm_scan_timeout, wpa_s,
 			       NULL);
 	return 1;
+out_reject:
+	if (!is_multicast_ether_addr(wpa_s->rrm.dst_addr) &&
+	    wpas_rrm_report_elem(buf, elem_token, reject_mode,
+				 MEASURE_TYPE_BEACON, NULL, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "RRM: Failed to add report element");
+		ret = -1;
+	}
 out:
 	wpas_clear_beacon_rep_data(wpa_s);
 	return ret;

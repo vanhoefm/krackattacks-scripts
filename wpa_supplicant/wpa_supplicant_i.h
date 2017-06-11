@@ -1317,6 +1317,7 @@ void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
 					      const u8 *src,
 					      const u8 *frame, size_t len,
 					      int rssi);
+void wpas_rrm_refuse_request(struct wpa_supplicant *wpa_s);
 int wpas_beacon_rep_scan_process(struct wpa_supplicant *wpa_s,
 				 struct wpa_scan_results *scan_res,
 				 struct scan_info *info);

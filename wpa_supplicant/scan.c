@@ -200,7 +200,8 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	wpa_scan_free_params(params);
 	work->ctx = NULL;
 	if (ret) {
-		int retry = wpa_s->last_scan_req != MANUAL_SCAN_REQ;
+		int retry = wpa_s->last_scan_req != MANUAL_SCAN_REQ &&
+			!wpa_s->beacon_rep_data.token;
 
 		if (wpa_s->disconnected)
 			retry = 0;
@@ -222,6 +223,10 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 			/* Clear the scan_res_handler */
 			wpa_s->scan_res_handler = NULL;
 		}
+
+		if (wpa_s->beacon_rep_data.token)
+			wpas_rrm_refuse_request(wpa_s);
+
 		return;
 	}
 

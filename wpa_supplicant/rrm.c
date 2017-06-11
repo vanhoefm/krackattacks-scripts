@@ -870,7 +870,7 @@ static void wpas_beacon_rep_table(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpas_rrm_refuse_request(struct wpa_supplicant *wpa_s)
+void wpas_rrm_refuse_request(struct wpa_supplicant *wpa_s)
 {
 	if (!is_multicast_ether_addr(wpa_s->rrm.dst_addr)) {
 		struct wpabuf *buf = NULL;

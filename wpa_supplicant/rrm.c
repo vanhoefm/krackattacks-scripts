@@ -629,6 +629,7 @@ static int * wpas_beacon_request_freqs(struct wpa_supplicant *wpa_s,
 	if (ext_freqs) {
 		int_array_concat(&freqs, ext_freqs);
 		os_free(ext_freqs);
+		int_array_sort_unique(freqs);
 	}
 
 	return freqs;

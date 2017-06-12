@@ -907,8 +907,6 @@ SM_STATE(EAP, METHOD)
 
 	if (sm->m->isKeyAvailable && sm->m->getKey &&
 	    sm->m->isKeyAvailable(sm, sm->eap_method_priv)) {
-		struct eap_peer_config *config = eap_get_config(sm);
-
 		eap_sm_free_key(sm);
 		sm->eapKeyData = sm->m->getKey(sm, sm->eap_method_priv,
 					       &sm->eapKeyDataLen);
@@ -921,8 +919,6 @@ SM_STATE(EAP, METHOD)
 			wpa_hexdump(MSG_DEBUG, "EAP: Session-Id",
 				    sm->eapSessionId, sm->eapSessionIdLen);
 		}
-		if (config->erp && sm->m->get_emsk && sm->eapSessionId)
-			eap_peer_erp_init(sm, NULL, 0, NULL, 0);
 	}
 }
 
@@ -1020,6 +1016,8 @@ SM_STATE(EAP, RETRANSMIT)
  */
 SM_STATE(EAP, SUCCESS)
 {
+	struct eap_peer_config *config = eap_get_config(sm);
+
 	SM_ENTRY(EAP, SUCCESS);
 	if (sm->eapKeyData != NULL)
 		sm->eapKeyAvailable = TRUE;
@@ -1042,6 +1040,11 @@ SM_STATE(EAP, SUCCESS)
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS
 		"EAP authentication completed successfully");
+
+	if (config->erp && sm->m->get_emsk && sm->eapSessionId &&
+	    sm->m->isKeyAvailable &&
+	    sm->m->isKeyAvailable(sm, sm->eap_method_priv))
+		eap_peer_erp_init(sm, NULL, 0, NULL, 0);
 }
 
 

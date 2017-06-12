@@ -16,6 +16,7 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import alloc_fail, fail_test, wait_fail_trigger
 from wlantest import Wlantest
+from datetime import datetime
 
 @remote_compatible
 def test_wnm_bss_transition_mgmt(dev, apdev):
@@ -1548,6 +1549,8 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     if ev is None or "reason=3" not in ev:
         raise Exception("Timeout waiting for MBO-TRANSITION-REASON event")
 
+    t0 = datetime.now()
+
     ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
     if ev is None:
         raise Exception("No BSS Transition Management Response")
@@ -1562,15 +1565,15 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     if 'OK' not in dev[0].request("SCAN_INTERVAL 1"):
         raise Exception("Failed to set scan interval")
 
-    # Make sure no connection is made during the retry delay
-    ev = dev[0].wait_event(['CTRL-EVENT-CONNECTED'], 5)
-    if ev is not None:
-        raise Exception("Station connected before assoc retry delay was over")
-
-    # After the assoc retry delay is over, we can reconnect
-    ev = dev[0].wait_event(['CTRL-EVENT-CONNECTED'], 5)
+    # Wait until connected
+    ev = dev[0].wait_event(['CTRL-EVENT-CONNECTED'], 10)
     if ev is None:
-        raise Exception("Station did not connect after assoc retry delay is over")
+        raise Exception("Station did not connect")
+
+    # Make sure no connection is made during the retry delay
+    time_diff = datetime.now() - t0
+    if time_diff.total_seconds() < 5:
+        raise Exception("Station connected before assoc retry delay was over")
 
     if "OK" not in dev[0].request("SET mbo_cell_capa 3"):
         raise Exception("Failed to set STA as cellular data not-capable")

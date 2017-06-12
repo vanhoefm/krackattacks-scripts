@@ -288,7 +288,7 @@ endif
 endif
 
 ifdef CONFIG_WNM
-L_CFLAGS += -DCONFIG_WNM
+L_CFLAGS += -DCONFIG_WNM -DCONFIG_WNM_AP
 OBJS += src/ap/wnm_ap.c
 endif
 

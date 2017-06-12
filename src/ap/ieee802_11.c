@@ -3458,11 +3458,11 @@ static int handle_action(struct hostapd_data *hapd,
 	case WLAN_ACTION_SA_QUERY:
 		return hostapd_sa_query_action(hapd, mgmt, len);
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	case WLAN_ACTION_WNM:
 		ieee802_11_rx_wnm_action_ap(hapd, mgmt, len);
 		return 1;
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 #ifdef CONFIG_FST
 	case WLAN_ACTION_FST:
 		if (hapd->iface->fst)

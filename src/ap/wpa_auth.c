@@ -3445,7 +3445,7 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 }
 
 
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 /* update GTK when exiting WNM-Sleep Mode */
 void wpa_wnmsleep_rekey_gtk(struct wpa_state_machine *sm)
 {
@@ -3524,7 +3524,7 @@ int wpa_wnmsleep_igtk_subelem(struct wpa_state_machine *sm, u8 *pos)
 	return pos - start;
 }
 #endif /* CONFIG_IEEE80211W */
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 
 
 static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,

@@ -900,7 +900,8 @@ ifdef CONFIG_IEEE80211AX
 OBJS += ../src/ap/ieee802_11_he.o
 endif
 endif
-ifdef CONFIG_WNM
+ifdef CONFIG_WNM_AP
+CFLAGS += -DCONFIG_WNM_AP
 OBJS += ../src/ap/wnm_ap.o
 endif
 ifdef CONFIG_MBO

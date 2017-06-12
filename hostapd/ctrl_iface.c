@@ -764,7 +764,7 @@ static int hostapd_ctrl_iface_send_qos_map_conf(struct hostapd_data *hapd,
 #endif /* CONFIG_INTERWORKING */
 
 
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 
 static int hostapd_ctrl_iface_disassoc_imminent(struct hostapd_data *hapd,
 						const char *cmd)
@@ -988,7 +988,7 @@ fail:
 	return ret;
 }
 
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 
 
 static int hostapd_ctrl_iface_get_key_mgmt(struct hostapd_data *hapd,
@@ -2538,7 +2538,7 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		if (hostapd_ctrl_iface_hs20_deauth_req(hapd, buf + 16))
 			reply_len = -1;
 #endif /* CONFIG_HS20 */
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	} else if (os_strncmp(buf, "DISASSOC_IMMINENT ", 18) == 0) {
 		if (hostapd_ctrl_iface_disassoc_imminent(hapd, buf + 18))
 			reply_len = -1;
@@ -2548,7 +2548,7 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "BSS_TM_REQ ", 11) == 0) {
 		if (hostapd_ctrl_iface_bss_tm_req(hapd, buf + 11))
 			reply_len = -1;
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 	} else if (os_strcmp(buf, "GET_CONFIG") == 0) {
 		reply_len = hostapd_ctrl_iface_get_config(hapd, reply,
 							  reply_size);

@@ -981,11 +981,11 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 			mgmt->u.action.u.sa_query_resp.trans_id);
 	}
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	if (mgmt->u.action.category == WLAN_ACTION_WNM) {
 		ieee802_11_rx_wnm_action_ap(hapd, mgmt, drv_mgmt->frame_len);
 	}
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 #ifdef CONFIG_FST
 	if (mgmt->u.action.category == WLAN_ACTION_FST && hapd->iface->fst) {
 		fst_rx_action(hapd->iface->fst, mgmt, drv_mgmt->frame_len);

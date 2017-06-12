@@ -186,9 +186,9 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 			*pos |= 0x08; /* Bit 19 - BSS Transition */
 		break;
 	case 3: /* Bits 24-31 */
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 		*pos |= 0x02; /* Bit 25 - SSID List */
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 		if (hapd->conf->time_advertisement == 2)
 			*pos |= 0x08; /* Bit 27 - UTC TSF Offset */
 		if (hapd->conf->interworking)
@@ -254,10 +254,10 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	if (len < 9 &&
 	    (hapd->conf->ftm_initiator || hapd->conf->ftm_responder))
 		len = 9;
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	if (len < 4)
 		len = 4;
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 #ifdef CONFIG_HS20
 	if (hapd->conf->hs20 && len < 6)
 		len = 6;
@@ -516,7 +516,7 @@ u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 *pos = eid;
 
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	if (hapd->conf->ap_max_inactivity > 0) {
 		unsigned int val;
 		*pos++ = WLAN_EID_BSS_MAX_IDLE_PERIOD;
@@ -534,7 +534,7 @@ u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid)
 		pos += 2;
 		*pos++ = 0x00; /* TODO: Protected Keep-Alive Required */
 	}
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 
 	return pos;
 }

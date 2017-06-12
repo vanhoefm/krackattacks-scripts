@@ -617,7 +617,7 @@ void ap_sta_no_session_timeout(struct hostapd_data *hapd, struct sta_info *sta)
 
 static void ap_handle_session_warning_timer(void *eloop_ctx, void *timeout_ctx)
 {
-#ifdef CONFIG_WNM
+#ifdef CONFIG_WNM_AP
 	struct hostapd_data *hapd = eloop_ctx;
 	struct sta_info *sta = timeout_ctx;
 
@@ -628,7 +628,7 @@ static void ap_handle_session_warning_timer(void *eloop_ctx, void *timeout_ctx)
 
 	wnm_send_ess_disassoc_imminent(hapd, sta, sta->hs20_session_info_url,
 				       sta->hs20_disassoc_timer);
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM_AP */
 }
 
 

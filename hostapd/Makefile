@@ -332,7 +332,7 @@ endif
 endif
 
 ifdef CONFIG_WNM
-CFLAGS += -DCONFIG_WNM
+CFLAGS += -DCONFIG_WNM -DCONFIG_WNM_AP
 OBJS += ../src/ap/wnm_ap.o
 endif
 

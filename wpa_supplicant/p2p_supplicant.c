@@ -6579,8 +6579,14 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 	wpa_s->p2p_long_listen = 0;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL ||
-	    wpa_s->p2p_in_provisioning)
+	    wpa_s->p2p_in_provisioning) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Reject p2p_find operation%s%s",
+			(wpa_s->global->p2p_disabled || !wpa_s->global->p2p) ?
+			" (P2P disabled)" : "",
+			wpa_s->p2p_in_provisioning ?
+			" (p2p_in_provisioning)" : "");
 		return -1;
+	}
 
 	wpa_supplicant_cancel_sched_scan(wpa_s);
 

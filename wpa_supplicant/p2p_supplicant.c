@@ -1320,6 +1320,10 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	if (wpa_s->p2p_go_group_formation_completed) {
 		wpa_s->global->p2p_group_formation = NULL;
 		wpa_s->p2p_in_provisioning = 0;
+	} else if (wpa_s->p2p_in_provisioning && !success) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"P2P: Stop provisioning state due to failure");
+		wpa_s->p2p_in_provisioning = 0;
 	}
 	wpa_s->p2p_in_invitation = 0;
 	wpa_s->group_formation_reported = 1;

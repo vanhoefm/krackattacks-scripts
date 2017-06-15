@@ -146,7 +146,8 @@ def test_tnc_ttls_errors(dev, apdev):
               (1, "os_readfile;tncc_read_config", "pap user", "auth=PAP"),
               (1, "tncc_init", "pap user", "auth=PAP"),
               (1, "TNC_TNCC_ReportMessageTypes", "pap user", "auth=PAP"),
-              (1, "base64_encode;TNC_TNCC_SendMessage", "pap user", "auth=PAP"),
+              (1, "base64_gen_encode;?base64_encode;TNC_TNCC_SendMessage",
+               "pap user", "auth=PAP"),
               (1, "=TNC_TNCC_SendMessage", "pap user", "auth=PAP"),
               (1, "tncc_get_base64;tncc_process_if_tnccs",
                "pap user", "auth=PAP") ]

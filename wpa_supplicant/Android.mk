@@ -1565,6 +1565,11 @@ OBJS += offchannel.c
 L_CFLAGS += -DCONFIG_OFFCHANNEL
 endif
 
+ifdef NEED_JSON
+OBJS += src/utils/json.c
+L_CFLAGS += -DCONFIG_JSON
+endif
+
 OBJS += src/drivers/driver_common.c
 
 OBJS += wpa_supplicant.c events.c blacklist.c wpas_glue.c scan.c

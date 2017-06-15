@@ -1035,6 +1035,11 @@ ifdef NEED_BASE64
 OBJS += ../src/utils/base64.o
 endif
 
+ifdef NEED_JSON
+OBJS += ../src/utils/json.o
+CFLAGS += -DCONFIG_JSON
+endif
+
 ifdef NEED_AP_MLME
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o

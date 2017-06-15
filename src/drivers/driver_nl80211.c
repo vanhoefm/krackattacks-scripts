@@ -2032,7 +2032,7 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	if (nl80211_register_action_frame(bss, (u8 *) "\x01\x04", 2) < 0)
 		ret = -1;
 #endif /* CONFIG_INTERWORKING */
-#if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING)
+#if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING) || defined(CONFIG_DPP)
 	/* GAS Initial Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0a", 2) < 0)
 		ret = -1;
@@ -2057,7 +2057,7 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	/* Protected GAS Comeback Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x09\x0d", 2) < 0)
 		ret = -1;
-#endif /* CONFIG_P2P || CONFIG_INTERWORKING */
+#endif /* CONFIG_P2P || CONFIG_INTERWORKING || CONFIG_DPP */
 #ifdef CONFIG_P2P
 	/* P2P Public Action */
 	if (nl80211_register_action_frame(bss,
@@ -2070,6 +2070,13 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 					  5) < 0)
 		ret = -1;
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_DPP
+	/* DPP Public Action */
+	if (nl80211_register_action_frame(bss,
+					  (u8 *) "\x04\x09\x50\x6f\x9a\x1a",
+					  6) < 0)
+		ret = -1;
+#endif /* CONFIG_DPP */
 #ifdef CONFIG_IEEE80211W
 	/* SA Query Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x08\x01", 2) < 0)

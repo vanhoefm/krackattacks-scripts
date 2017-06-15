@@ -2833,6 +2833,73 @@ static int wpa_cli_cmd_p2p_lo_stop(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_DPP
+
+static int wpa_cli_cmd_dpp_qr_code(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_QR_CODE", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_bootstrap_gen(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_BOOTSTRAP_GEN", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_bootstrap_remove(struct wpa_ctrl *ctrl, int argc,
+					    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_BOOTSTRAP_REMOVE", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_bootstrap_get_uri(struct wpa_ctrl *ctrl, int argc,
+					     char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_BOOTSTRAP_GET_URI", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_auth_init(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_AUTH_INIT", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_listen(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_LISTEN", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_stop_listen(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DPP_STOP_LISTEN");
+}
+
+
+static int wpa_cli_cmd_dpp_configurator_add(struct wpa_ctrl *ctrl, int argc,
+					    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_ADD", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_configurator_remove(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_REMOVE", 1, argc, argv);
+}
+
+#endif /* CONFIG_DPP */
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3448,6 +3515,32 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_lo_stop", wpa_cli_cmd_p2p_lo_stop, NULL,
 	  cli_cmd_flag_none,
 	  "= stop P2P listen offload" },
+#ifdef CONFIG_DPP
+	{ "dpp_qr_code", wpa_cli_cmd_dpp_qr_code, NULL, cli_cmd_flag_none,
+	  "report a scanned DPP URI from a QR Code" },
+	{ "dpp_bootstrap_gen", wpa_cli_cmd_dpp_bootstrap_gen, NULL,
+	  cli_cmd_flag_sensitive,
+	  "type=<qrcode> [chan=..] [mac=..] [info=..] [curve=..] [key=..] = generate DPP bootstrap information" },
+	{ "dpp_bootstrap_remove", wpa_cli_cmd_dpp_bootstrap_remove, NULL,
+	  cli_cmd_flag_none,
+	  "*|<id> = remove DPP bootstrap information" },
+	{ "dpp_bootstrap_get_uri", wpa_cli_cmd_dpp_bootstrap_get_uri, NULL,
+	  cli_cmd_flag_none,
+	  "<id> = get DPP bootstrap URI" },
+	{ "dpp_auth_init", wpa_cli_cmd_dpp_auth_init, NULL, cli_cmd_flag_none,
+	  "peer=<id> [own=<id>] = initiate DPP bootstrapping" },
+	{ "dpp_listen", wpa_cli_cmd_dpp_listen, NULL, cli_cmd_flag_none,
+	  "<freq in MHz> = start DPP listen" },
+	{ "dpp_stop_listen", wpa_cli_cmd_dpp_stop_listen, NULL,
+	  cli_cmd_flag_none,
+	  "= stop DPP listen" },
+	{ "dpp_configurator_add", wpa_cli_cmd_dpp_configurator_add, NULL,
+	  cli_cmd_flag_sensitive,
+	  "[curve=..] [key=..] = add DPP configurator" },
+	{ "dpp_configurator_remove", wpa_cli_cmd_dpp_configurator_remove, NULL,
+	  cli_cmd_flag_none,
+	  "*|<id> = remove DPP configurator" },
+#endif /* CONFIG_DPP */
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

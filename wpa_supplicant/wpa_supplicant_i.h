@@ -1160,6 +1160,12 @@ struct wpa_supplicant {
 #ifdef CONFIG_DPP
 	struct dl_list dpp_bootstrap; /* struct dpp_bootstrap_info */
 	int dpp_init_done;
+	struct dpp_authentication *dpp_auth;
+	struct wpa_radio_work *dpp_listen_work;
+	unsigned int dpp_pending_listen_freq;
+	unsigned int dpp_listen_freq;
+	u8 dpp_allowed_roles;
+	int dpp_qr_mutual;
 #endif /* CONFIG_DPP */
 };
 

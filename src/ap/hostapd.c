@@ -31,6 +31,8 @@
 #include "vlan_init.h"
 #include "wpa_auth.h"
 #include "wps_hostapd.h"
+#include "dpp_hostapd.h"
+#include "gas_query_ap.h"
 #include "hw_features.h"
 #include "wpa_auth_glue.h"
 #include "ap_drv_ops.h"
@@ -302,6 +304,10 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_NO_RADIUS */
 
 	hostapd_deinit_wps(hapd);
+#ifdef CONFIG_DPP
+	hostapd_dpp_deinit(hapd);
+	gas_query_ap_deinit(hapd->gas);
+#endif /* CONFIG_DPP */
 
 	authsrv_deinit(hapd);
 
@@ -1076,6 +1082,14 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 	if (hostapd_init_wps(hapd, conf))
 		return -1;
+
+#ifdef CONFIG_DPP
+	hapd->gas = gas_query_ap_init(hapd, hapd->msg_ctx);
+	if (!hapd->gas)
+		return -1;
+	if (hostapd_dpp_init(hapd))
+		return -1;
+#endif /* CONFIG_DPP */
 
 	if (authsrv_init(hapd) < 0)
 		return -1;

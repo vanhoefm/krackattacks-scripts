@@ -14,6 +14,7 @@
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/dpp.h"
 #include "common/wpa_ctrl.h"
 #include "crypto/random.h"
 #include "p2p/p2p.h"
@@ -36,6 +37,7 @@
 #include "dfs.h"
 #include "beacon.h"
 #include "mbo_ap.h"
+#include "dpp_hostapd.h"
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
@@ -890,7 +892,23 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 		return;
 	}
 #endif /* CONFIG_FST */
+#ifdef CONFIG_DPP
+	if (plen >= 1 + 4 &&
+	    mgmt->u.action.u.vs_public_action.action ==
+	    WLAN_PA_VENDOR_SPECIFIC &&
+	    WPA_GET_BE24(mgmt->u.action.u.vs_public_action.oui) ==
+	    OUI_WFA &&
+	    mgmt->u.action.u.vs_public_action.variable[0] ==
+	    DPP_OUI_TYPE) {
+		const u8 *pos, *end;
 
+		pos = &mgmt->u.action.u.vs_public_action.variable[1];
+		end = drv_mgmt->frame + drv_mgmt->frame_len;
+		hostapd_dpp_rx_action(hapd, mgmt->sa, pos, end - pos,
+				      drv_mgmt->freq);
+		return;
+	}
+#endif /* CONFIG_DPP */
 }
 
 

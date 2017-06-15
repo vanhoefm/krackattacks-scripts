@@ -50,6 +50,7 @@
 #include "ap/beacon.h"
 #include "ap/neighbor_db.h"
 #include "ap/rrm.h"
+#include "ap/dpp_hostapd.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
 #include "fst/fst_ctrl_iface.h"
@@ -1278,6 +1279,23 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		hapd->ext_mgmt_frame_handling = atoi(value);
 	} else if (os_strcasecmp(cmd, "ext_eapol_frame_io") == 0) {
 		hapd->ext_eapol_frame_io = atoi(value);
+#ifdef CONFIG_DPP
+	} else if (os_strcasecmp(cmd, "dpp_config_obj_override") == 0) {
+		os_free(hapd->dpp_config_obj_override);
+		hapd->dpp_config_obj_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_discovery_override") == 0) {
+		os_free(hapd->dpp_discovery_override);
+		hapd->dpp_discovery_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_groups_override") == 0) {
+		os_free(hapd->dpp_groups_override);
+		hapd->dpp_groups_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_devices_override") == 0) {
+		os_free(hapd->dpp_devices_override);
+		hapd->dpp_devices_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd,
+				 "dpp_ignore_netaccesskey_mismatch") == 0) {
+		hapd->dpp_ignore_netaccesskey_mismatch = atoi(value);
+#endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_MBO
 	} else if (os_strcasecmp(cmd, "mbo_assoc_disallow") == 0) {
@@ -2622,6 +2640,43 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 						      reply_size);
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		eloop_terminate();
+#ifdef CONFIG_DPP
+	} else if (os_strncmp(buf, "DPP_QR_CODE ", 12) == 0) {
+		res = hostapd_dpp_qr_code(hapd, buf + 12);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GEN ", 18) == 0) {
+		res = hostapd_dpp_bootstrap_gen(hapd, buf + 18);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_REMOVE ", 21) == 0) {
+		if (hostapd_dpp_bootstrap_remove(hapd, buf + 21) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GET_URI ", 22) == 0) {
+		const char *uri;
+
+		uri = hostapd_dpp_bootstrap_get_uri(hapd, atoi(buf + 22));
+		if (!uri) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%s", uri);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_AUTH_INIT ", 14) == 0) {
+		if (hostapd_dpp_auth_init(hapd, buf + 13) < 0)
+			reply_len = -1;
+#endif /* CONFIG_DPP */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

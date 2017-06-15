@@ -899,6 +899,10 @@ L_CFLAGS += -DEAP_SERVER_WSC
 OBJS += src/ap/wps_hostapd.c
 OBJS += src/eap_server/eap_server_wsc.c
 endif
+ifdef CONFIG_DPP
+OBJS += src/ap/dpp_hostapd.c
+OBJS += src/ap/gas_query_ap.c
+endif
 ifdef CONFIG_INTERWORKING
 OBJS += src/ap/gas_serv.c
 endif

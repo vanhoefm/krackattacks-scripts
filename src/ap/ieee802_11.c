@@ -19,6 +19,7 @@
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
 #include "common/sae.h"
+#include "common/dpp.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "p2p/p2p.h"
@@ -46,6 +47,8 @@
 #include "rrm.h"
 #include "taxonomy.h"
 #include "fils_hlp.h"
+#include "dpp_hostapd.h"
+#include "gas_query_ap.h"
 
 
 #ifdef CONFIG_FILS
@@ -3451,6 +3454,37 @@ static int handle_action(struct hostapd_data *hapd,
 			return 1;
 		}
 #endif /* CONFIG_IEEE80211N */
+#ifdef CONFIG_DPP
+		if (len >= IEEE80211_HDRLEN + 6 &&
+		    mgmt->u.action.u.vs_public_action.action ==
+		    WLAN_PA_VENDOR_SPECIFIC &&
+		    WPA_GET_BE24(mgmt->u.action.u.vs_public_action.oui) ==
+		    OUI_WFA &&
+		    mgmt->u.action.u.vs_public_action.variable[0] ==
+		    DPP_OUI_TYPE) {
+			const u8 *pos, *end;
+
+			pos = &mgmt->u.action.u.vs_public_action.variable[1];
+			end = ((const u8 *) mgmt) + len;
+			hostapd_dpp_rx_action(hapd, mgmt->sa, pos, end - pos,
+					      hapd->iface->freq);
+			return 1;
+		}
+		if (len >= IEEE80211_HDRLEN + 2 &&
+		    (mgmt->u.action.u.public_action.action ==
+		     WLAN_PA_GAS_INITIAL_RESP ||
+		     mgmt->u.action.u.public_action.action ==
+		     WLAN_PA_GAS_COMEBACK_RESP)) {
+			const u8 *pos, *end;
+
+			pos = &mgmt->u.action.u.public_action.action;
+			end = ((const u8 *) mgmt) + len;
+			gas_query_ap_rx(hapd->gas, mgmt->sa,
+					mgmt->u.action.category,
+					pos, end - pos, hapd->iface->freq);
+			return 1;
+		}
+#endif /* CONFIG_DPP */
 		if (hapd->public_action_cb) {
 			hapd->public_action_cb(hapd->public_action_cb_ctx,
 					       (u8 *) mgmt, len,
@@ -3905,6 +3939,36 @@ static void handle_action_cb(struct hostapd_data *hapd,
 
 	if (is_multicast_ether_addr(mgmt->da))
 		return;
+#ifdef CONFIG_DPP
+	if (len >= IEEE80211_HDRLEN + 6 &&
+	    mgmt->u.action.category == WLAN_ACTION_PUBLIC &&
+	    mgmt->u.action.u.vs_public_action.action ==
+	    WLAN_PA_VENDOR_SPECIFIC &&
+	    WPA_GET_BE24(mgmt->u.action.u.vs_public_action.oui) ==
+	    OUI_WFA &&
+	    mgmt->u.action.u.vs_public_action.variable[0] ==
+	    DPP_OUI_TYPE) {
+		const u8 *pos, *end;
+
+		pos = &mgmt->u.action.u.vs_public_action.variable[1];
+		end = ((const u8 *) mgmt) + len;
+		hostapd_dpp_tx_status(hapd, mgmt->da, pos, end - pos, ok);
+		return;
+	}
+	if (len >= IEEE80211_HDRLEN + 2 &&
+	    mgmt->u.action.category == WLAN_ACTION_PUBLIC &&
+	    (mgmt->u.action.u.public_action.action ==
+	     WLAN_PA_GAS_INITIAL_REQ ||
+	     mgmt->u.action.u.public_action.action ==
+	     WLAN_PA_GAS_COMEBACK_REQ)) {
+		const u8 *pos, *end;
+
+		pos = mgmt->u.action.u.public_action.variable;
+		end = ((const u8 *) mgmt) + len;
+		gas_query_ap_tx_status(hapd->gas, mgmt->da, pos, end - pos, ok);
+		return;
+	}
+#endif /* CONFIG_DPP */
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
 		wpa_printf(MSG_DEBUG, "handle_action_cb: STA " MACSTR

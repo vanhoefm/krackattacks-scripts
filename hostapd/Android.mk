@@ -532,6 +532,22 @@ endif
 
 endif
 
+ifdef CONFIG_DPP
+L_CFLAGS += -DCONFIG_DPP
+OBJS += src/common/dpp.c
+OBJS += src/ap/dpp_hostapd.c
+OBJS += src/ap/gas_query_ap.c
+NEED_AES_SIV=y
+NEED_HMAC_SHA256_KDF=y
+NEED_HMAC_SHA384_KDF=y
+NEED_HMAC_SHA512_KDF=y
+NEED_SHA256=y
+NEED_SHA384=y
+NEED_SHA512=y
+NEED_JSON=y
+NEED_GAS=y
+endif
+
 ifdef CONFIG_EAP_IKEV2
 L_CFLAGS += -DEAP_SERVER_IKEV2
 OBJS += src/eap_server/eap_server_ikev2.c src/eap_server/ikev2.c
@@ -979,6 +995,10 @@ endif
 
 ifdef CONFIG_INTERWORKING
 L_CFLAGS += -DCONFIG_INTERWORKING
+NEED_GAS=y
+endif
+
+ifdef NEED_GAS
 OBJS += src/common/gas.c
 OBJS += src/ap/gas_serv.c
 endif

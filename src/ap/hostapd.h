@@ -319,6 +319,23 @@ struct hostapd_data {
 	unsigned int range_req_active:1;
 
 	int dhcp_sock; /* UDP socket used with the DHCP server */
+
+#ifdef CONFIG_DPP
+	struct dl_list dpp_bootstrap; /* struct dpp_bootstrap_info */
+	int dpp_init_done;
+	struct dpp_authentication *dpp_auth;
+	u8 dpp_allowed_roles;
+	int dpp_qr_mutual;
+	int dpp_auth_ok_on_ack;
+	struct gas_query_ap *gas;
+#ifdef CONFIG_TESTING_OPTIONS
+	char *dpp_config_obj_override;
+	char *dpp_discovery_override;
+	char *dpp_groups_override;
+	char *dpp_devices_override;
+	unsigned int dpp_ignore_netaccesskey_mismatch:1;
+#endif /* CONFIG_TESTING_OPTIONS */
+#endif /* CONFIG_DPP */
 };
 
 

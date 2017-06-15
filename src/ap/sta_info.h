@@ -174,11 +174,11 @@ struct sta_info {
 	struct os_reltime sa_query_start;
 #endif /* CONFIG_IEEE80211W */
 
-#ifdef CONFIG_INTERWORKING
+#if defined(CONFIG_INTERWORKING) || defined(CONFIG_DPP)
 #define GAS_DIALOG_MAX 8 /* Max concurrent dialog number */
 	struct gas_dialog_info *gas_dialog;
 	u8 gas_dialog_next;
-#endif /* CONFIG_INTERWORKING */
+#endif /* CONFIG_INTERWORKING || CONFIG_DPP */
 
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */

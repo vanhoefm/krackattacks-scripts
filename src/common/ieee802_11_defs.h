@@ -1337,6 +1337,7 @@ enum wmm_ac {
 
 /* MBO v0.0_r19, 4.2: MBO Attributes */
 /* Table 4-5: MBO Attributes */
+/* OCE v0.0.10, Table 4-3: OCE Attributes */
 enum mbo_attr_id {
 	MBO_ATTR_ID_AP_CAPA_IND = 1,
 	MBO_ATTR_ID_NON_PREF_CHAN_REPORT = 2,
@@ -1346,6 +1347,10 @@ enum mbo_attr_id {
 	MBO_ATTR_ID_TRANSITION_REASON = 6,
 	MBO_ATTR_ID_TRANSITION_REJECT_REASON = 7,
 	MBO_ATTR_ID_ASSOC_RETRY_DELAY = 8,
+	OCE_ATTR_ID_CAPA_IND = 101,
+	OCE_ATTR_ID_RSSI_BASED_ASSOC_REJECT = 102,
+	OCE_ATTR_ID_REDUCED_WAN_METRICS = 103,
+	OCE_ATTR_ID_RNR_COMPLETENESS = 104,
 };
 
 /* MBO v0.0_r19, 4.2.1: MBO AP Capability Indication Attribute */
@@ -1425,6 +1430,12 @@ enum wfa_wnm_notif_subelem_id {
 #define MBO_ANQP_SUBTYPE_QUERY_LIST 1
 #define MBO_ANQP_SUBTYPE_CELL_CONN_PREF 2
 #define MAX_MBO_ANQP_SUBTYPE MBO_ANQP_SUBTYPE_CELL_CONN_PREF
+
+/* OCE v0.0.10, 4.2.1: OCE Capability Indication Attribute */
+#define OCE_RELEASE 1
+#define OCE_RELEASE_MASK (BIT(0) | BIT(1) | BIT(2))
+#define OCE_IS_STA_CFON BIT(3)
+#define OCE_IS_NON_OCE_AP_PRESENT BIT(4)
 
 /* Wi-Fi Direct (P2P) */
 

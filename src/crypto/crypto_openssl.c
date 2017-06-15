@@ -246,6 +246,7 @@ int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 }
 #endif /* NO_SHA256_WRAPPER */
 
+
 #ifndef NO_SHA384_WRAPPER
 int sha384_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 		  u8 *mac)
@@ -253,6 +254,15 @@ int sha384_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 	return openssl_digest_vector(EVP_sha384(), num_elem, addr, len, mac);
 }
 #endif /* NO_SHA384_WRAPPER */
+
+
+#ifndef NO_SHA512_WRAPPER
+int sha512_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		  u8 *mac)
+{
+	return openssl_digest_vector(EVP_sha512(), num_elem, addr, len, mac);
+}
+#endif /* NO_SHA512_WRAPPER */
 
 
 static const EVP_CIPHER * aes_get_evp_cipher(size_t keylen)
@@ -1047,6 +1057,25 @@ int hmac_sha384(const u8 *key, size_t key_len, const u8 *data,
 }
 
 #endif /* CONFIG_SHA384 */
+
+
+#ifdef CONFIG_SHA512
+
+int hmac_sha512_vector(const u8 *key, size_t key_len, size_t num_elem,
+		       const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return openssl_hmac_vector(EVP_sha512(), key, key_len, num_elem, addr,
+				   len, mac, 64);
+}
+
+
+int hmac_sha512(const u8 *key, size_t key_len, const u8 *data,
+		size_t data_len, u8 *mac)
+{
+	return hmac_sha512_vector(key, key_len, 1, &data, &data_len, mac);
+}
+
+#endif /* CONFIG_SHA512 */
 
 
 int crypto_get_random(void *buf, size_t len)

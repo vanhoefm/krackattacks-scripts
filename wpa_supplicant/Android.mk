@@ -1306,6 +1306,14 @@ ifdef NEED_HMAC_SHA256_KDF
 L_CFLAGS += -DCONFIG_HMAC_SHA256_KDF
 SHA256OBJS += src/crypto/sha256-kdf.c
 endif
+ifdef NEED_HMAC_SHA384_KDF
+L_CFLAGS += -DCONFIG_HMAC_SHA384_KDF
+SHA256OBJS += src/crypto/sha384-kdf.c
+endif
+ifdef NEED_HMAC_SHA512_KDF
+L_CFLAGS += -DCONFIG_HMAC_SHA512_KDF
+SHA256OBJS += src/crypto/sha512-kdf.c
+endif
 OBJS += $(SHA256OBJS)
 endif
 ifdef NEED_SHA384
@@ -1314,6 +1322,13 @@ ifneq ($(CONFIG_TLS), openssl)
 OBJS += src/crypto/sha384.c
 endif
 OBJS += src/crypto/sha384-prf.c
+endif
+ifdef NEED_SHA512
+L_CFLAGS += -DCONFIG_SHA512
+ifneq ($(CONFIG_TLS), openssl)
+OBJS += src/crypto/sha512.c
+endif
+OBJS += src/crypto/sha512-prf.c
 endif
 
 ifdef NEED_DH_GROUPS

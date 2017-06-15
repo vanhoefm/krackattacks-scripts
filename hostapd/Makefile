@@ -952,6 +952,12 @@ endif
 ifdef NEED_HMAC_SHA256_KDF
 OBJS += ../src/crypto/sha256-kdf.o
 endif
+ifdef NEED_HMAC_SHA384_KDF
+OBJS += ../src/crypto/sha384-kdf.o
+endif
+ifdef NEED_HMAC_SHA512_KDF
+OBJS += ../src/crypto/sha512-kdf.o
+endif
 endif
 ifdef NEED_SHA384
 CFLAGS += -DCONFIG_SHA384
@@ -961,6 +967,15 @@ OBJS += ../src/crypto/sha384.o
 endif
 endif
 OBJS += ../src/crypto/sha384-prf.o
+endif
+ifdef NEED_SHA512
+CFLAGS += -DCONFIG_SHA512
+ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
+OBJS += ../src/crypto/sha512.o
+endif
+endif
+OBJS += ../src/crypto/sha512-prf.o
 endif
 
 ifdef CONFIG_INTERNAL_SHA384

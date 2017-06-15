@@ -38,6 +38,7 @@
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
 #include "common/hw_features_common.h"
+#include "common/gas_server.h"
 #include "p2p/p2p.h"
 #include "fst/fst.h"
 #include "blacklist.h"
@@ -547,6 +548,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 		radio_remove_works(wpa_s, "gas-query", 0);
 	gas_query_deinit(wpa_s->gas);
 	wpa_s->gas = NULL;
+	gas_server_deinit(wpa_s->gas_server);
+	wpa_s->gas_server = NULL;
 
 	free_hw_features(wpa_s);
 
@@ -4939,6 +4942,41 @@ next_driver:
 }
 
 
+#ifdef CONFIG_GAS_SERVER
+
+static void wpas_gas_server_tx_status(struct wpa_supplicant *wpa_s,
+				      unsigned int freq, const u8 *dst,
+				      const u8 *src, const u8 *bssid,
+				      const u8 *data, size_t data_len,
+				      enum offchannel_send_action_result result)
+{
+	wpa_printf(MSG_DEBUG, "GAS: TX status: freq=%u dst=" MACSTR
+		   " result=%s",
+		   freq, MAC2STR(dst),
+		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		    "FAILED"));
+	gas_server_tx_status(wpa_s->gas_server, dst, data, data_len,
+			     result == OFFCHANNEL_SEND_ACTION_SUCCESS);
+}
+
+
+static void wpas_gas_server_tx(void *ctx, int freq, const u8 *da,
+			       struct wpabuf *buf, unsigned int wait_time)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+	if (wait_time > wpa_s->max_remain_on_chan)
+		wait_time = wpa_s->max_remain_on_chan;
+
+	offchannel_send_action(wpa_s, freq, da, wpa_s->own_addr, broadcast,
+			       wpabuf_head(buf), wpabuf_len(buf),
+			       wait_time, wpas_gas_server_tx_status, 0);
+}
+
+#endif /* CONFIG_GAS_SERVER */
+
 static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
@@ -5182,6 +5220,14 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 
 	if (wpas_wps_init(wpa_s))
 		return -1;
+
+#ifdef CONFIG_GAS_SERVER
+	wpa_s->gas_server = gas_server_init(wpa_s, wpas_gas_server_tx);
+	if (!wpa_s->gas_server) {
+		wpa_printf(MSG_ERROR, "Failed to initialize GAS server");
+		return -1;
+	}
+#endif /* CONFIG_GAS_SERVER */
 
 #ifdef CONFIG_DPP
 	if (wpas_dpp_init(wpa_s) < 0)

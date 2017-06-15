@@ -101,6 +101,21 @@ struct dpp_bootstrap_info {
 	const struct dpp_curve_params *curve;
 };
 
+struct dpp_configuration {
+	u8 ssid[32];
+	size_t ssid_len;
+	int dpp; /* whether to use DPP or legacy configuration */
+
+	/* For DPP configuration (connector) */
+	os_time_t netaccesskey_expiry;
+
+	/* TODO: groups, devices */
+
+	/* For legacy configuration */
+	char *passphrase;
+	u8 psk[32];
+};
+
 struct dpp_authentication {
 	void *msg_ctx;
 	const struct dpp_curve_params *curve;
@@ -112,6 +127,7 @@ struct dpp_authentication {
 	u8 peer_mac_addr[ETH_ALEN];
 	u8 i_nonce[DPP_MAX_NONCE_LEN];
 	u8 r_nonce[DPP_MAX_NONCE_LEN];
+	u8 e_nonce[DPP_MAX_NONCE_LEN];
 	u8 i_capab;
 	u8 r_capab;
 	EVP_PKEY *own_protocol_key;
@@ -130,6 +146,34 @@ struct dpp_authentication {
 	int configurator;
 	int remove_on_tx_status;
 	int auth_success;
+	struct wpabuf *conf_req;
+	struct dpp_configuration *conf_ap;
+	struct dpp_configuration *conf_sta;
+	struct dpp_configurator *conf;
+	char *connector; /* received signedConnector */
+	u8 ssid[SSID_MAX_LEN];
+	u8 ssid_len;
+	struct wpabuf *net_access_key;
+	os_time_t net_access_key_expiry;
+	struct wpabuf *c_sign_key;
+	os_time_t c_sign_key_expiry;
+#ifdef CONFIG_TESTING_OPTIONS
+	char *config_obj_override;
+	char *discovery_override;
+	char *groups_override;
+	char *devices_override;
+	unsigned int ignore_netaccesskey_mismatch:1;
+#endif /* CONFIG_TESTING_OPTIONS */
+};
+
+struct dpp_configurator {
+	struct dl_list list;
+	unsigned int id;
+	int own;
+	EVP_PKEY *csign;
+	char *kid;
+	const struct dpp_curve_params *curve;
+	os_time_t csign_expiry;
 };
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);
@@ -153,14 +197,27 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 struct wpabuf *
 dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		 size_t attr_len);
+struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
+				   const char *json);
 int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		     size_t attr_len);
 int dpp_notify_new_qr_code(struct dpp_authentication *auth,
 			   struct dpp_bootstrap_info *peer_bi);
+void dpp_configuration_free(struct dpp_configuration *conf);
 void dpp_auth_deinit(struct dpp_authentication *auth);
+struct wpabuf *
+dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
+		size_t attr_len);
+int dpp_conf_resp_rx(struct dpp_authentication *auth,
+		     const struct wpabuf *resp);
 struct wpabuf * dpp_alloc_msg(enum dpp_public_action_frame_type type,
 			      size_t len);
 const u8 * dpp_get_attr(const u8 *buf, size_t len, u16 req_id, u16 *ret_len);
 int dpp_check_attrs(const u8 *buf, size_t len);
+int dpp_key_expired(const char *timestamp, os_time_t *expiry);
+void dpp_configurator_free(struct dpp_configurator *conf);
+struct dpp_configurator *
+dpp_keygen_configurator(const char *curve, const u8 *privkey,
+			size_t privkey_len);
 
 #endif /* DPP_H */

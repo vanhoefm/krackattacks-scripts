@@ -608,6 +608,23 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			wpa_s->get_pref_freq_list_override = NULL;
 		else
 			wpa_s->get_pref_freq_list_override = os_strdup(value);
+#ifdef CONFIG_DPP
+	} else if (os_strcasecmp(cmd, "dpp_config_obj_override") == 0) {
+		os_free(wpa_s->dpp_config_obj_override);
+		wpa_s->dpp_config_obj_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_discovery_override") == 0) {
+		os_free(wpa_s->dpp_discovery_override);
+		wpa_s->dpp_discovery_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_groups_override") == 0) {
+		os_free(wpa_s->dpp_groups_override);
+		wpa_s->dpp_groups_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "dpp_devices_override") == 0) {
+		os_free(wpa_s->dpp_devices_override);
+		wpa_s->dpp_devices_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd,
+				 "dpp_ignore_netaccesskey_mismatch") == 0) {
+		wpa_s->dpp_ignore_netaccesskey_mismatch = atoi(value);
+#endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	} else if (os_strcmp(cmd, "blob") == 0) {
@@ -10199,6 +10216,20 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "DPP_STOP_LISTEN") == 0) {
 		wpas_dpp_listen_stop(wpa_s);
+	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_ADD", 20) == 0) {
+		int res;
+
+		res = wpas_dpp_configurator_add(wpa_s, buf + 20);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_REMOVE ", 24) == 0) {
+		if (wpas_dpp_configurator_remove(wpa_s, buf + 24) < 0)
+			reply_len = -1;
 #endif /* CONFIG_DPP */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

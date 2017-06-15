@@ -29,6 +29,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/dpp.h"
+#include "common/gas_server.h"
 #include "crypto/random.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
@@ -3529,6 +3530,15 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 			 payload, plen, freq) == 0)
 		return;
 #endif /* CONFIG_GAS */
+
+#ifdef CONFIG_GAS_SERVER
+	if ((mgmt->u.action.category == WLAN_ACTION_PUBLIC ||
+	     mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL) &&
+	    gas_server_rx(wpa_s->gas_server, mgmt->da, mgmt->sa, mgmt->bssid,
+			  mgmt->u.action.category,
+			  payload, plen, freq) == 0)
+		return;
+#endif /* CONFIG_GAS_SERVER */
 
 #ifdef CONFIG_TDLS
 	if (category == WLAN_ACTION_PUBLIC && plen >= 4 &&

@@ -287,6 +287,8 @@ NEED_HMAC_SHA512_KDF=y
 NEED_SHA256=y
 NEED_SHA384=y
 NEED_SHA512=y
+NEED_JSON=y
+NEED_GAS_SERVER=y
 endif
 
 ifdef CONFIG_OWE
@@ -1690,6 +1692,12 @@ endif
 ifdef NEED_EXT_PASSWORD
 OBJS += ../src/utils/ext_password.o
 CFLAGS += -DCONFIG_EXT_PASSWORD
+endif
+
+ifdef NEED_GAS_SERVER
+OBJS += ../src/common/gas_server.o
+CFLAGS += -DCONFIG_GAS_SERVER
+NEED_GAS=y
 endif
 
 ifdef NEED_GAS

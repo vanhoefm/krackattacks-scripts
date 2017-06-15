@@ -962,6 +962,7 @@ struct wpa_supplicant {
 	int best_overall_freq;
 
 	struct gas_query *gas;
+	struct gas_server *gas_server;
 
 #ifdef CONFIG_INTERWORKING
 	unsigned int fetch_anqp_in_progress:1;
@@ -1159,6 +1160,7 @@ struct wpa_supplicant {
 
 #ifdef CONFIG_DPP
 	struct dl_list dpp_bootstrap; /* struct dpp_bootstrap_info */
+	struct dl_list dpp_configurator; /* struct dpp_configurator */
 	int dpp_init_done;
 	struct dpp_authentication *dpp_auth;
 	struct wpa_radio_work *dpp_listen_work;
@@ -1166,6 +1168,16 @@ struct wpa_supplicant {
 	unsigned int dpp_listen_freq;
 	u8 dpp_allowed_roles;
 	int dpp_qr_mutual;
+	int dpp_netrole_ap;
+	int dpp_auth_ok_on_ack;
+	int dpp_gas_client;
+#ifdef CONFIG_TESTING_OPTIONS
+	char *dpp_config_obj_override;
+	char *dpp_discovery_override;
+	char *dpp_groups_override;
+	char *dpp_devices_override;
+	unsigned int dpp_ignore_netaccesskey_mismatch:1;
+#endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_DPP */
 };
 

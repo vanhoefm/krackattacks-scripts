@@ -1156,6 +1156,11 @@ struct wpa_supplicant {
 
 	/* RIC elements for FT protocol */
 	struct wpabuf *ric_ies;
+
+#ifdef CONFIG_DPP
+	struct dl_list dpp_bootstrap; /* struct dpp_bootstrap_info */
+	int dpp_init_done;
+#endif /* CONFIG_DPP */
 };
 
 

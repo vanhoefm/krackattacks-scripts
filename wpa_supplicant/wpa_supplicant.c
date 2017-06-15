@@ -59,6 +59,7 @@
 #include "wnm_sta.h"
 #include "wpas_kay.h"
 #include "mesh.h"
+#include "dpp_supplicant.h"
 
 const char *const wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -624,6 +625,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpabuf_free(wpa_s->ric_ies);
 	wpa_s->ric_ies = NULL;
+
+#ifdef CONFIG_DPP
+	wpas_dpp_deinit(wpa_s);
+#endif /* CONFIG_DPP */
 }
 
 
@@ -5177,6 +5182,11 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 
 	if (wpas_wps_init(wpa_s))
 		return -1;
+
+#ifdef CONFIG_DPP
+	if (wpas_dpp_init(wpa_s) < 0)
+		return -1;
+#endif /* CONFIG_DPP */
 
 	if (wpa_supplicant_init_eapol(wpa_s) < 0)
 		return -1;

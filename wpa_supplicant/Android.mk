@@ -243,6 +243,12 @@ NEED_ECC=y
 NEED_DH_GROUPS=y
 endif
 
+ifdef CONFIG_DPP
+L_CFLAGS += -DCONFIG_DPP
+OBJS += src/common/dpp.c
+OBJS += dpp_supplicant.c
+endif
+
 ifdef CONFIG_OWE
 L_CFLAGS += -DCONFIG_OWE
 NEED_ECC=y

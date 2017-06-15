@@ -827,6 +827,7 @@ struct wpa_supplicant {
 					    result);
 	unsigned int roc_waiting_drv_freq;
 	int action_tx_wait_time;
+	int action_tx_wait_time_used;
 
 	int p2p_mgmt;
 

@@ -391,5 +391,6 @@ enum eap_proxy_sim_state {
 
 #define OCE_STA BIT(0)
 #define OCE_STA_CFON BIT(1)
+#define OCE_AP BIT(2)
 
 #endif /* DEFS_H */

@@ -544,21 +544,36 @@ u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid)
 
 u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid, size_t len)
 {
-	u8 mbo[6], *mbo_pos = mbo;
+	u8 mbo[9], *mbo_pos = mbo;
 	u8 *pos = eid;
 
-	if (!hapd->conf->mbo_enabled)
+	if (!hapd->conf->mbo_enabled && !hapd->enable_oce)
 		return eid;
 
-	*mbo_pos++ = MBO_ATTR_ID_AP_CAPA_IND;
-	*mbo_pos++ = 1;
-	/* Not Cellular aware */
-	*mbo_pos++ = 0;
+	if (hapd->conf->mbo_enabled) {
+		*mbo_pos++ = MBO_ATTR_ID_AP_CAPA_IND;
+		*mbo_pos++ = 1;
+		/* Not Cellular aware */
+		*mbo_pos++ = 0;
+	}
 
-	if (hapd->mbo_assoc_disallow) {
+	if (hapd->conf->mbo_enabled && hapd->mbo_assoc_disallow) {
 		*mbo_pos++ = MBO_ATTR_ID_ASSOC_DISALLOW;
 		*mbo_pos++ = 1;
 		*mbo_pos++ = hapd->mbo_assoc_disallow;
+	}
+
+	if (hapd->enable_oce & (OCE_AP | OCE_STA_CFON)) {
+		u8 ctrl;
+
+		ctrl = OCE_RELEASE;
+		if ((hapd->enable_oce & (OCE_AP | OCE_STA_CFON)) ==
+		    OCE_STA_CFON)
+			ctrl |= OCE_IS_STA_CFON;
+
+		*mbo_pos++ = OCE_ATTR_ID_CAPA_IND;
+		*mbo_pos++ = 1;
+		*mbo_pos++ = ctrl;
 	}
 
 	pos += mbo_add_ie(pos, len, mbo, mbo_pos - mbo);
@@ -569,14 +584,24 @@ u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid, size_t len)
 
 u8 hostapd_mbo_ie_len(struct hostapd_data *hapd)
 {
-	if (!hapd->conf->mbo_enabled)
+	u8 len;
+
+	if (!hapd->conf->mbo_enabled && !hapd->enable_oce)
 		return 0;
 
 	/*
 	 * MBO IE header (6) + Capability Indication attribute (3) +
 	 * Association Disallowed attribute (3) = 12
 	 */
-	return 6 + 3 + (hapd->mbo_assoc_disallow ? 3 : 0);
+	len = 6;
+	if (hapd->conf->mbo_enabled)
+		len += 3 + (hapd->mbo_assoc_disallow ? 3 : 0);
+
+	/* OCE capability indication attribute (3) */
+	if (hapd->enable_oce & (OCE_AP | OCE_STA_CFON))
+		len += 3;
+
+	return len;
 }
 
 #endif /* CONFIG_MBO */

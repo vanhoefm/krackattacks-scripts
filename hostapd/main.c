@@ -869,8 +869,27 @@ int main(int argc, char *argv[])
 	 */
 	interfaces.terminate_on_error = interfaces.count;
 	for (i = 0; i < interfaces.count; i++) {
-		if (hostapd_driver_init(interfaces.iface[i]) ||
-		    hostapd_setup_interface(interfaces.iface[i]))
+		if (hostapd_driver_init(interfaces.iface[i]))
+			goto out;
+#ifdef CONFIG_MBO
+		for (j = 0; j < interfaces.iface[i]->num_bss; j++) {
+			struct hostapd_data *hapd = interfaces.iface[i]->bss[j];
+
+			if (hapd && (hapd->conf->oce & OCE_STA_CFON) &&
+			    (interfaces.iface[i]->drv_flags &
+			     WPA_DRIVER_FLAGS_OCE_STA_CFON))
+				hapd->enable_oce = OCE_STA_CFON;
+
+			if (hapd && (hapd->conf->oce & OCE_AP) &&
+			    (interfaces.iface[i]->drv_flags &
+			     WPA_DRIVER_FLAGS_OCE_STA_CFON)) {
+				/* TODO: Need to add OCE-AP support */
+				wpa_printf(MSG_ERROR,
+					   "OCE-AP feature is not yet supported");
+			}
+		}
+#endif /* CONFIG_MBO */
+		if (hostapd_setup_interface(interfaces.iface[i]))
 			goto out;
 	}
 

@@ -605,6 +605,13 @@ struct hostapd_bss_config {
 
 #ifdef CONFIG_MBO
 	int mbo_enabled;
+	/**
+	 * oce - Enable OCE in AP and/or STA-CFON mode
+	 *  - BIT(0) is Reserved
+	 *  - Set BIT(1) to enable OCE in STA-CFON mode
+	 *  - Set BIT(2) to enable OCE in AP mode
+	 */
+	unsigned int oce;
 	int mbo_cell_data_conn_pref;
 #endif /* CONFIG_MBO */
 

@@ -308,6 +308,11 @@ struct hostapd_data {
 
 #ifdef CONFIG_MBO
 	unsigned int mbo_assoc_disallow;
+	/**
+	 * enable_oce - Enable OCE if it is enabled by user and device also
+	 *		supports OCE.
+	 */
+	u8 enable_oce;
 #endif /* CONFIG_MBO */
 
 	struct dl_list nr_db;

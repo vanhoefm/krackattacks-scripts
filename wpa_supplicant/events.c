@@ -305,7 +305,8 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
 	eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE)
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_DPP)
 		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
 	wpa_s->ap_ies_from_associnfo = 0;
 	wpa_s->current_ssid = NULL;
@@ -1211,6 +1212,18 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	skip_assoc_disallow:
 #endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_MBO */
+
+#ifdef CONFIG_DPP
+		if ((ssid->key_mgmt & WPA_KEY_MGMT_DPP) &&
+		    !wpa_sm_pmksa_exists(wpa_s->wpa, bss->bssid, ssid)) {
+			/* TODO: Go through DPP network introduction to generate
+			 * PMKSA entry. */
+			if (debug_print)
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"   skip - no PMKSA entry for DPP");
+			continue;
+		}
+#endif /* CONFIG_DPP */
 
 		/* Matching configuration found */
 		return ssid;
@@ -2541,6 +2554,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
 	}
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_DPP ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE || ft_completed ||
 	    already_authorized)
 		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);

@@ -241,6 +241,13 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		num_suites++;
 	}
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_DPP) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_DPP);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_DPP */
 
 #ifdef CONFIG_RSN_TESTING
 	if (rsn_testing) {
@@ -579,6 +586,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		else if (data.key_mgmt & WPA_KEY_MGMT_OWE)
 			selector = RSN_AUTH_KEY_MGMT_OWE;
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+		else if (data.key_mgmt & WPA_KEY_MGMT_DPP)
+			selector = RSN_AUTH_KEY_MGMT_DPP;
+#endif /* CONFIG_DPP */
 		wpa_auth->dot11RSNAAuthenticationSuiteSelected = selector;
 
 		selector = wpa_cipher_to_suite(WPA_PROTO_RSN,
@@ -675,6 +686,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	else if (key_mgmt & WPA_KEY_MGMT_OWE)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_OWE;
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+	else if (key_mgmt & WPA_KEY_MGMT_DPP)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_DPP;
+#endif /* CONFIG_DPP */
 	else
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 
@@ -803,6 +818,14 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 				 (vlan && vlan->tagged[0]) ? "+" : "");
 		os_memcpy(wpa_auth->dot11RSNAPMKIDUsed, pmkid, PMKID_LEN);
 	}
+
+#ifdef CONFIG_DPP
+	if (sm->wpa_key_mgmt == WPA_KEY_MGMT_DPP && !sm->pmksa) {
+		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
+				 "No PMKSA cache entry found for DPP");
+		return WPA_INVALID_PMKID;
+	}
+#endif /* CONFIG_DPP */
 
 	if (sm->wpa_ie == NULL || sm->wpa_ie_len < wpa_ie_len) {
 		os_free(sm->wpa_ie);

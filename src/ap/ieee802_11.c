@@ -1012,6 +1012,8 @@ static u16 wpa_res_to_status_code(int res)
 #endif /* CONFIG_IEEE80211W */
 	if (res == WPA_INVALID_MDIE)
 		return WLAN_STATUS_INVALID_MDIE;
+	if (res == WPA_INVALID_PMKID)
+		return WLAN_STATUS_INVALID_PMKID;
 	if (res != WPA_IE_OK)
 		return WLAN_STATUS_INVALID_IE;
 	return WLAN_STATUS_SUCCESS;

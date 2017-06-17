@@ -13,7 +13,7 @@
 #define PMKID_LEN 16
 #define PMK_LEN 32
 #define PMK_LEN_SUITE_B_192 48
-#define PMK_LEN_MAX 48
+#define PMK_LEN_MAX 64
 #define WPA_REPLAY_COUNTER_LEN 8
 #define WPA_NONCE_LEN 32
 #define WPA_KEY_RSC_LEN 8
@@ -68,6 +68,7 @@ RSN_SELECTOR(0x00, 0x0f, 0xac, 13)
 #define RSN_AUTH_KEY_MGMT_OWE RSN_SELECTOR(0x00, 0x0f, 0xac, 18)
 #define RSN_AUTH_KEY_MGMT_CCKM RSN_SELECTOR(0x00, 0x40, 0x96, 0x00)
 #define RSN_AUTH_KEY_MGMT_OSEN RSN_SELECTOR(0x50, 0x6f, 0x9a, 0x01)
+#define RSN_AUTH_KEY_MGMT_DPP RSN_SELECTOR(0x50, 0x6f, 0x9a, 0x02)
 
 #define RSN_CIPHER_SUITE_NONE RSN_SELECTOR(0x00, 0x0f, 0xac, 0)
 #define RSN_CIPHER_SUITE_WEP40 RSN_SELECTOR(0x00, 0x0f, 0xac, 1)
@@ -197,8 +198,8 @@ struct wpa_eapol_key {
 	/* followed by Key Data Length bytes of Key Data */
 } STRUCT_PACKED;
 
-#define WPA_EAPOL_KEY_MIC_MAX_LEN 24
-#define WPA_KCK_MAX_LEN 24
+#define WPA_EAPOL_KEY_MIC_MAX_LEN 32
+#define WPA_KCK_MAX_LEN 32
 #define WPA_KEK_MAX_LEN 64
 #define WPA_TK_MAX_LEN 32
 #define FILS_ICK_MAX_LEN 48
@@ -465,7 +466,7 @@ int wpa_pick_group_cipher(int ciphers);
 int wpa_parse_cipher(const char *value);
 int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim);
 int wpa_select_ap_group_cipher(int wpa, int wpa_pairwise, int rsn_pairwise);
-unsigned int wpa_mic_len(int akmp);
+unsigned int wpa_mic_len(int akmp, size_t pmk_len);
 int fils_domain_name_hash(const char *domain, u8 *hash);
 
 #endif /* WPA_COMMON_H */

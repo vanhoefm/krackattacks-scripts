@@ -1018,7 +1018,8 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	 * pkcs11_engine_path, pkcs11_module_path, openssl_ciphers.
 	 */
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_DPP) {
 		/*
 		 * Clear forced success to clear EAP state for next
 		 * authentication.
@@ -1359,6 +1360,11 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_s->key_mgmt = WPA_KEY_MGMT_OWE;
 		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: using KEY_MGMT OWE");
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+	} else if (sel & WPA_KEY_MGMT_DPP) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_DPP;
+		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: using KEY_MGMT DPP");
+#endif /* CONFIG_DPP */
 	} else {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select "
 			"authenticated key management type");
@@ -3751,6 +3757,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	os_memcpy(wpa_s->last_eapol_src, src_addr, ETH_ALEN);
 	if (!wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) &&
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_OWE &&
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_DPP &&
 	    eapol_sm_rx_eapol(wpa_s->eapol, src_addr, buf, len) > 0)
 		return;
 	wpa_drv_poll(wpa_s);

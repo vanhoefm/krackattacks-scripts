@@ -196,6 +196,10 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	} else if (key_mgmt & WPA_KEY_MGMT_OWE) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_OWE);
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+	} else if (key_mgmt & WPA_KEY_MGMT_DPP) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_DPP);
+#endif /* CONFIG_DPP */
 	} else {
 		wpa_printf(MSG_WARNING, "Invalid key management type (%d).",
 			   key_mgmt);

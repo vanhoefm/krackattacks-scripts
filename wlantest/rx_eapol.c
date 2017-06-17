@@ -39,7 +39,7 @@ static int check_mic(const u8 *kck, size_t kck_len, int akmp, int ver,
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
 	u8 rx_mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
-	size_t mic_len = wpa_mic_len(akmp);
+	size_t mic_len = wpa_mic_len(akmp, PMK_LEN);
 
 	buf = os_memdup(data, len);
 	if (buf == NULL)
@@ -244,7 +244,7 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
-	mic_len = wpa_mic_len(sta->key_mgmt);
+	mic_len = wpa_mic_len(sta->key_mgmt, PMK_LEN);
 	mic = (const u8 *) (hdr + 1);
 	if (is_zero(hdr->key_nonce, WPA_NONCE_LEN)) {
 		add_note(wt, MSG_INFO, "EAPOL-Key 2/4 from " MACSTR
@@ -413,7 +413,7 @@ static u8 * decrypt_eapol_key_data(struct wlantest *wt, int akmp, const u8 *kek,
 		return NULL;
 
 	mic = (const u8 *) (hdr + 1);
-	mic_len = wpa_mic_len(akmp);
+	mic_len = wpa_mic_len(akmp, PMK_LEN);
 	keydata = mic + mic_len + 2;
 	keydatalen = WPA_GET_BE16(mic + mic_len);
 
@@ -574,7 +574,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	sta = sta_get(bss, dst);
 	if (sta == NULL)
 		return;
-	mic_len = wpa_mic_len(sta->key_mgmt);
+	mic_len = wpa_mic_len(sta->key_mgmt, PMK_LEN);
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
@@ -805,7 +805,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	sta = sta_get(bss, dst);
 	if (sta == NULL)
 		return;
-	mic_len = wpa_mic_len(sta->key_mgmt);
+	mic_len = wpa_mic_len(sta->key_mgmt, PMK_LEN);
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
@@ -974,7 +974,7 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *bssid,
 	if (bss) {
 		sta = sta_get(bss, sta_addr);
 		if (sta)
-			mic_len = wpa_mic_len(sta->key_mgmt);
+			mic_len = wpa_mic_len(sta->key_mgmt, PMK_LEN);
 	}
 
 	eapol = (const struct ieee802_1x_hdr *) data;

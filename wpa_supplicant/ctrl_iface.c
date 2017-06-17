@@ -2610,6 +2610,16 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 	}
 #endif /* CONFIG_OWE */
 
+#ifdef CONFIG_DPP
+	if (data.key_mgmt & WPA_KEY_MGMT_DPP) {
+		ret = os_snprintf(pos, end - pos, "%sDPP",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+#endif /* CONFIG_DPP */
+
 	if (data.key_mgmt & WPA_KEY_MGMT_OSEN) {
 		ret = os_snprintf(pos, end - pos, "%sOSEN",
 				  pos == start ? "" : "+");
@@ -3836,6 +3846,14 @@ static int ctrl_iface_get_capability_key_mgmt(int res, char *strict,
 		pos += ret;
 	}
 #endif /* CONFIG_OWE */
+#ifdef CONFIG_DPP
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_DPP) {
+		ret = os_snprintf(pos, end - pos, " DPP");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_DPP */
 
 	return pos - buf;
 }

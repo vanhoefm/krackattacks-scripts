@@ -1005,7 +1005,7 @@ int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 		return -1;
 	}
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	if (sm->pairwise_cipher != WPA_CIPHER_TKIP)
 		ver = WPA_KEY_INFO_TYPE_HMAC_SHA1_AES;
 	else

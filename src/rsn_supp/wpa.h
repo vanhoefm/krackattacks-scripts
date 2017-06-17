@@ -160,6 +160,8 @@ wpa_sm_pmksa_cache_add_entry(struct wpa_sm *sm,
 void wpa_sm_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 			    const u8 *pmkid, const u8 *bssid,
 			    const u8 *fils_cache_id);
+int wpa_sm_pmksa_exists(struct wpa_sm *sm, const u8 *bssid,
+			const void *network_ctx);
 void wpa_sm_drop_sa(struct wpa_sm *sm);
 int wpa_sm_has_ptk(struct wpa_sm *sm);
 

@@ -1110,6 +1110,15 @@ static int hostapd_ctrl_iface_get_key_mgmt(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_OWE */
 
+#ifdef CONFIG_DPP
+	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_DPP) {
+		ret = os_snprintf(pos, end - pos, "DPP ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_DPP */
+
 	if (pos > buf && *(pos - 1) == ' ') {
 		*(pos - 1) = '\0';
 		pos--;

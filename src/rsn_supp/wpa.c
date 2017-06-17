@@ -49,7 +49,7 @@ int wpa_eapol_key_send(struct wpa_sm *sm, struct wpa_ptk *ptk,
 		       u8 *msg, size_t msg_len, u8 *key_mic)
 {
 	int ret = -1;
-	size_t mic_len = wpa_mic_len(sm->key_mgmt);
+	size_t mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 
 	wpa_printf(MSG_DEBUG, "WPA: Send EAPOL-Key frame to " MACSTR
 		   " ver=%d mic_len=%d key_mgmt=0x%x",
@@ -197,7 +197,7 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 		return;
 	}
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
@@ -469,7 +469,7 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 
 	wpa_hexdump(MSG_DEBUG, "WPA: WPA IE for msg 2/4", wpa_ie, wpa_ie_len);
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY,
 				  NULL, hdrlen + wpa_ie_len,
@@ -657,6 +657,7 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 			MLME_SETPROTECTION_KEY_TYPE_PAIRWISE);
 		eapol_sm_notify_portValid(sm->eapol, TRUE);
 		if (wpa_key_mgmt_wpa_psk(sm->key_mgmt) ||
+		    sm->key_mgmt == WPA_KEY_MGMT_DPP ||
 		    sm->key_mgmt == WPA_KEY_MGMT_OWE)
 			eapol_sm_notify_eap_success(sm->eapol, TRUE);
 		/*
@@ -1234,7 +1235,7 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	struct wpa_eapol_key *reply;
 	u8 *rbuf, *key_mic;
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
@@ -1543,7 +1544,7 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 	struct wpa_eapol_key *reply;
 	u8 *rbuf, *key_mic;
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	hdrlen = sizeof(*reply) + mic_len + 2;
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
 				  hdrlen, &rlen, (void *) &reply);
@@ -1654,7 +1655,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 {
 	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
 	int ok = 0;
-	size_t mic_len = wpa_mic_len(sm->key_mgmt);
+	size_t mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 
 	os_memcpy(mic, key + 1, mic_len);
 	if (sm->tptk_set) {
@@ -1740,6 +1741,7 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC ||
 		   sm->key_mgmt == WPA_KEY_MGMT_OWE ||
+		   sm->key_mgmt == WPA_KEY_MGMT_DPP ||
 		   sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
 		   wpa_key_mgmt_suite_b(sm->key_mgmt)) {
 		u8 *buf;
@@ -1936,7 +1938,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	sm->ft_completed = 0;
 #endif /* CONFIG_IEEE80211R */
 
-	mic_len = wpa_mic_len(sm->key_mgmt);
+	mic_len = wpa_mic_len(sm->key_mgmt, sm->pmk_len);
 	keyhdrlen = sizeof(*key) + mic_len + 2;
 
 	if (len < sizeof(*hdr) + keyhdrlen) {
@@ -2022,6 +2024,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 	    !wpa_key_mgmt_fils(sm->key_mgmt) &&
 	    sm->key_mgmt != WPA_KEY_MGMT_OWE &&
+	    sm->key_mgmt != WPA_KEY_MGMT_DPP &&
 	    sm->key_mgmt != WPA_KEY_MGMT_OSEN) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: Unsupported EAPOL-Key descriptor version %d",
@@ -2039,6 +2042,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 
 	if ((wpa_key_mgmt_suite_b(sm->key_mgmt) ||
 	     wpa_key_mgmt_fils(sm->key_mgmt) ||
+	     sm->key_mgmt == WPA_KEY_MGMT_DPP ||
 	     sm->key_mgmt == WPA_KEY_MGMT_OWE) &&
 	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
@@ -2074,6 +2078,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 	    !wpa_key_mgmt_fils(sm->key_mgmt) &&
 	    sm->key_mgmt != WPA_KEY_MGMT_OWE &&
+	    sm->key_mgmt != WPA_KEY_MGMT_DPP &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: CCMP is used, but EAPOL-Key "
@@ -3091,6 +3096,13 @@ void wpa_sm_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 	sm->cur_pmksa = pmksa_cache_add(sm->pmksa, pmk, pmk_len, pmkid, NULL, 0,
 					bssid, sm->own_addr, sm->network_ctx,
 					sm->key_mgmt, fils_cache_id);
+}
+
+
+int wpa_sm_pmksa_exists(struct wpa_sm *sm, const u8 *bssid,
+			const void *network_ctx)
+{
+	return pmksa_cache_get(sm->pmksa, bssid, NULL, network_ctx) != NULL;
 }
 
 

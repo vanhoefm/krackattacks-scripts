@@ -625,6 +625,14 @@ struct hostapd_bss_config {
 	int multicast_to_unicast;
 
 	int broadcast_deauth;
+
+#ifdef CONFIG_DPP
+	char *dpp_connector;
+	struct wpabuf *dpp_netaccesskey;
+	unsigned int dpp_netaccesskey_expiry;
+	struct wpabuf *dpp_csign;
+	unsigned int dpp_csign_expiry;
+#endif /* CONFIG_DPP */
 };
 
 /**

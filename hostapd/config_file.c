@@ -3719,6 +3719,21 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->multicast_to_unicast = atoi(pos);
 	} else if (os_strcmp(buf, "broadcast_deauth") == 0) {
 		bss->broadcast_deauth = atoi(pos);
+#ifdef CONFIG_DPP
+	} else if (os_strcmp(buf, "dpp_connector") == 0) {
+		os_free(bss->dpp_connector);
+		bss->dpp_connector = os_strdup(pos);
+	} else if (os_strcmp(buf, "dpp_netaccesskey") == 0) {
+		if (parse_wpabuf_hex(line, buf, &bss->dpp_netaccesskey, pos))
+			return 1;
+	} else if (os_strcmp(buf, "dpp_netaccesskey_expiry") == 0) {
+		bss->dpp_netaccesskey_expiry = strtol(pos, NULL, 0);
+	} else if (os_strcmp(buf, "dpp_csign") == 0) {
+		if (parse_wpabuf_hex(line, buf, &bss->dpp_csign, pos))
+			return 1;
+	} else if (os_strcmp(buf, "dpp_csign_expiry") == 0) {
+		bss->dpp_csign_expiry = strtol(pos, NULL, 0);
+#endif /* CONFIG_DPP */
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

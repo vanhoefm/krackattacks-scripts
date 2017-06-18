@@ -624,6 +624,12 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 
 	hostapd_config_free_fils_realms(conf);
 
+#ifdef CONFIG_DPP
+	os_free(conf->dpp_connector);
+	wpabuf_free(conf->dpp_netaccesskey);
+	wpabuf_free(conf->dpp_csign);
+#endif /* CONFIG_DPP */
+
 	os_free(conf);
 }
 

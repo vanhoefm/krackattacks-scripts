@@ -4146,3 +4146,501 @@ fail:
 	conf = NULL;
 	goto out;
 }
+
+
+static int dpp_compatible_netrole(const char *role1, const char *role2)
+{
+	return (os_strcmp(role1, "sta") == 0 && os_strcmp(role2, "ap") == 0) ||
+		(os_strcmp(role1, "ap") == 0 && os_strcmp(role2, "sta") == 0);
+}
+
+
+static int dpp_connector_compatible_group(struct json_token *root,
+					  const char *group_id,
+					  const char *net_role)
+{
+	struct json_token *groups, *token;
+
+	groups = json_get_member(root, "groups");
+	if (!groups || groups->type != JSON_ARRAY)
+		return 0;
+
+	for (token = groups->child; token; token = token->sibling) {
+		struct json_token *id, *role;
+
+		id = json_get_member(token, "groupId");
+		if (!id || id->type != JSON_STRING)
+			continue;
+
+		role = json_get_member(token, "netRole");
+		if (!role || role->type != JSON_STRING)
+			continue;
+
+		if (os_strcmp(id->string, "*") != 0 &&
+		    os_strcmp(group_id, "*") != 0 &&
+		    os_strcmp(id->string, group_id) != 0)
+			continue;
+
+		if (dpp_compatible_netrole(role->string, net_role))
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int dpp_connector_match_groups(struct json_token *own_root,
+				      struct json_token *peer_root)
+{
+	struct json_token *groups, *token;
+
+	groups = json_get_member(peer_root, "groups");
+	if (!groups || groups->type != JSON_ARRAY) {
+		wpa_printf(MSG_DEBUG, "DPP: No peer groups array found");
+		return 0;
+	}
+
+	for (token = groups->child; token; token = token->sibling) {
+		struct json_token *id, *role;
+
+		id = json_get_member(token, "groupId");
+		if (!id || id->type != JSON_STRING) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Missing peer groupId string");
+			continue;
+		}
+
+		role = json_get_member(token, "netRole");
+		if (!role || role->type != JSON_STRING) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Missing peer groups::netRole string");
+			continue;
+		}
+		wpa_printf(MSG_DEBUG,
+			   "DPP: peer connector group: groupId='%s' netRole='%s'",
+			   id->string, role->string);
+		if (dpp_connector_compatible_group(own_root, id->string,
+						   role->string)) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Compatible group/netRole in own connector");
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+
+static int dpp_connector_compatible_device(struct json_token *root,
+					   const char *device_id,
+					   const char *net_role)
+{
+	struct json_token *groups, *token;
+
+	groups = json_get_member(root, "devices");
+	if (!groups || groups->type != JSON_ARRAY)
+		return 0;
+
+	for (token = groups->child; token; token = token->sibling) {
+		struct json_token *id, *role;
+
+		id = json_get_member(token, "deviceId");
+		if (!id || id->type != JSON_STRING)
+			continue;
+
+		role = json_get_member(token, "netRole");
+		if (!role || role->type != JSON_STRING)
+			continue;
+
+		if (os_strcmp(id->string, device_id) != 0)
+			continue;
+
+		if (dpp_compatible_netrole(role->string, net_role))
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int dpp_connector_match_devices(struct json_token *own_root,
+				       struct json_token *peer_root,
+				       const char *own_deviceid)
+{
+	struct json_token *devices, *token;
+
+	devices = json_get_member(peer_root, "devices");
+	if (!devices || devices->type != JSON_ARRAY) {
+		wpa_printf(MSG_DEBUG, "DPP: No peer devices array found");
+		return 0;
+	}
+
+	for (token = devices->child; token; token = token->sibling) {
+		struct json_token *id, *role;
+
+		id = json_get_member(token, "deviceId");
+		if (!id || id->type != JSON_STRING) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Missing or invalid deviceId string");
+			continue;
+		}
+
+		role = json_get_member(token, "netRole");
+		if (!role || role->type != JSON_STRING) {
+			wpa_printf(MSG_DEBUG, "DPP: Missing netRole string");
+			continue;
+		}
+		wpa_printf(MSG_DEBUG,
+			   "DPP: connector device deviceId='%s' netRole='%s'",
+			   id->string, role->string);
+		if (os_strcmp(id->string, own_deviceid) != 0)
+			continue;
+
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Listed deviceId matches own deviceId");
+		/* TODO: Is this next step required? */
+		if (dpp_connector_compatible_device(own_root, id->string,
+						    role->string)) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Compatible device/netRole in own connector");
+			return 1;
+		}
+		/* TODO: For now, accept this for interop testing purposes based
+		 * on a simple match of deviceId while ignoring netRole. Once
+		 * the spec is clearer on the expected behavior, either this
+		 * comment or the following return 1 statement needs to be
+		 * removed.
+		 */
+		return 1;
+	}
+
+	return 0;
+}
+
+
+static int dpp_connector_match(struct json_token *own_root,
+			       struct json_token *peer_root,
+			       const char *own_deviceid)
+{
+	return dpp_connector_match_groups(own_root, peer_root) ||
+		dpp_connector_match_devices(own_root, peer_root, own_deviceid);
+}
+
+
+static int dpp_derive_pmk(const u8 *Nx, size_t Nx_len, u8 *pmk,
+			  unsigned int hash_len)
+{
+	u8 salt[DPP_MAX_HASH_LEN], prk[DPP_MAX_HASH_LEN];
+	const char *info = "DPP PMK";
+	int res = -1;
+
+	/* PMK = HKDF(<>, "DPP PMK", N.x) */
+
+	/* HKDF-Extract(<>, N.x) */
+	os_memset(salt, 0, hash_len);
+	if (hash_len == 32) {
+		if (hmac_sha256(salt, SHA256_MAC_LEN, Nx, Nx_len, prk) < 0)
+			return -1;
+	} else if (hash_len == 48) {
+		if (hmac_sha384(salt, SHA384_MAC_LEN, Nx, Nx_len, prk) < 0)
+			return -1;
+	} else if (hash_len == 64) {
+		if (hmac_sha512(salt, SHA512_MAC_LEN, Nx, Nx_len, prk) < 0)
+			return -1;
+	} else {
+		return -1;
+	}
+	wpa_hexdump_key(MSG_DEBUG, "DPP: PRK = HKDF-Extract(<>, IKM=N.x)",
+			prk, hash_len);
+
+	/* HKDF-Expand(PRK, info, L) */
+	if (hash_len == 32)
+		res = hmac_sha256_kdf(prk, SHA256_MAC_LEN, NULL,
+				      (const u8 *) info, os_strlen(info),
+				      pmk, SHA256_MAC_LEN);
+	else if (hash_len == 48)
+		res = hmac_sha384_kdf(prk, SHA384_MAC_LEN, NULL,
+				      (const u8 *) info, os_strlen(info),
+				      pmk, SHA384_MAC_LEN);
+	else if (hash_len == 64)
+		res = hmac_sha512_kdf(prk, SHA512_MAC_LEN, NULL,
+				      (const u8 *) info, os_strlen(info),
+				      pmk, SHA512_MAC_LEN);
+	os_memset(prk, 0, hash_len);
+	if (res < 0)
+		return -1;
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: PMK = HKDF-Expand(PRK, info, L)",
+			pmk, hash_len);
+	return 0;
+}
+
+
+static int dpp_derive_pmkid(const struct dpp_curve_params *curve,
+			    EVP_PKEY *own_key, EVP_PKEY *peer_key, u8 *pmkid)
+{
+	struct wpabuf *nkx, *pkx;
+	int ret = -1, res;
+	const u8 *addr[2];
+	size_t len[2];
+	u8 hash[DPP_MAX_HASH_LEN];
+
+	/* PMKID = Truncate-128(H(min(NK.x, PK.x) | max(NK.x, PK.x))) */
+	nkx = dpp_get_pubkey_point(own_key, 0);
+	pkx = dpp_get_pubkey_point(peer_key, 0);
+	if (!nkx || !pkx)
+		goto fail;
+	addr[0] = wpabuf_head(nkx);
+	len[0] = wpabuf_len(nkx) / 2;
+	addr[1] = wpabuf_head(pkx);
+	len[1] = wpabuf_len(pkx) / 2;
+	if (len[0] != len[1])
+		goto fail;
+	if (os_memcmp(addr[0], addr[1], len[0]) > 0) {
+		addr[0] = wpabuf_head(pkx);
+		addr[1] = wpabuf_head(nkx);
+	}
+	wpa_printf(MSG_DEBUG, "DPP: PMKID H=SHA%u",
+		   (unsigned int) curve->hash_len * 8);
+	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash payload 1", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash payload 2", addr[1], len[1]);
+	if (curve->hash_len == 32)
+		res = sha256_vector(2, addr, len, hash);
+	else if (curve->hash_len == 48)
+		res = sha384_vector(2, addr, len, hash);
+	else if (curve->hash_len == 64)
+		res = sha512_vector(2, addr, len, hash);
+	else
+		res = -1;
+	if (res < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash output",
+		    hash, curve->hash_len);
+	os_memcpy(pmkid, hash, PMKID_LEN);
+	wpa_hexdump(MSG_DEBUG, "DPP: PMKID", pmkid, PMKID_LEN);
+	ret = 0;
+fail:
+	wpabuf_free(nkx);
+	wpabuf_free(pkx);
+	return ret;
+}
+
+
+static int dpp_netkey_hash(EVP_PKEY *key, u8 *hash)
+{
+	EC_KEY *eckey;
+	unsigned char *der = NULL;
+	int ret, der_len;
+	const u8 *addr[1];
+	size_t len[1];
+
+	eckey = EVP_PKEY_get1_EC_KEY(key);
+	if (!eckey)
+		return -1;
+	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
+	der_len = i2d_EC_PUBKEY(eckey, &der);
+	EC_KEY_free(eckey);
+	if (der_len <= 0)
+		return -1;
+	addr[0] = der;
+	len[0] = der_len;
+	ret = sha256_vector(1, addr, len, hash);
+	OPENSSL_free(der);
+	return ret;
+}
+
+
+int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
+		   const u8 *net_access_key, size_t net_access_key_len,
+		   const u8 *csign_key, size_t csign_key_len,
+		   const u8 *peer_connector, size_t peer_connector_len)
+{
+	struct json_token *root = NULL, *netkey, *token;
+	struct json_token *own_root = NULL;
+	int ret = -1;
+	EVP_PKEY *own_key = NULL, *peer_key = NULL;
+	struct wpabuf *own_key_pub = NULL;
+	char *own_deviceid = NULL;
+	const struct dpp_curve_params *curve, *own_curve;
+	struct dpp_signed_connector_info info;
+	const unsigned char *p;
+	EVP_PKEY *csign = NULL;
+	char *signed_connector = NULL;
+	const char *pos, *end;
+	unsigned char *own_conn = NULL;
+	size_t own_conn_len;
+	EVP_PKEY_CTX *ctx = NULL;
+	size_t Nx_len;
+	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
+	u8 hash[SHA256_MAC_LEN];
+	const u8 *addr[1];
+	size_t len[1];
+
+	os_memset(intro, 0, sizeof(*intro));
+	os_memset(&info, 0, sizeof(info));
+
+	p = csign_key;
+	csign = d2i_PUBKEY(NULL, &p, csign_key_len);
+	if (!csign) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to parse local C-sign-key information");
+		goto fail;
+	}
+
+	own_key = dpp_set_keypair(&own_curve, net_access_key,
+				  net_access_key_len);
+	if (!own_key) {
+		wpa_printf(MSG_ERROR, "DPP: Failed to parse own netAccessKey");
+		goto fail;
+	}
+	/* deviceId = SHA256(ANSI X9.63 uncompressed netAccessKey) */
+	own_key_pub = dpp_get_pubkey_point(own_key, 1);
+	if (!own_key_pub)
+		goto fail;
+	wpa_hexdump_buf(MSG_DEBUG,
+			"DPP: ANSI X9.63 uncompressed public key of own netAccessKey",
+			own_key_pub);
+	addr[0] = wpabuf_head(own_key_pub);
+	len[0] = wpabuf_len(own_key_pub);
+	if (sha256_vector(1, addr, len, hash) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG,
+		    "DPP: SHA256 hash of ANSI X9.63 uncompressed form",
+		    hash, SHA256_MAC_LEN);
+
+	own_deviceid = (char *) base64_url_encode(hash, sizeof(hash), NULL, 0);
+	if (!own_deviceid)
+		goto fail;
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Own deviceId (base64url encoded hash value): %s",
+		   own_deviceid);
+
+	pos = os_strchr(own_connector, '.');
+	if (!pos)
+		goto fail;
+	pos++;
+	end = os_strchr(pos, '.');
+	if (!end)
+		goto fail;
+	own_conn = base64_url_decode((const unsigned char *) pos,
+				     end - pos, &own_conn_len);
+	if (!own_conn) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Failed to base64url decode own signedConnector JWS Payload");
+		goto fail;
+	}
+
+	own_root = json_parse((const char *) own_conn, own_conn_len);
+	if (!own_root) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to parse local connector");
+		goto fail;
+	}
+
+	wpa_hexdump_ascii(MSG_DEBUG, "DPP: Peer signedConnector",
+			  peer_connector, peer_connector_len);
+	signed_connector = os_malloc(peer_connector_len + 1);
+	if (!signed_connector)
+		goto fail;
+	os_memcpy(signed_connector, peer_connector, peer_connector_len);
+	signed_connector[peer_connector_len] = '\0';
+
+	if (dpp_process_signed_connector(&info, csign, signed_connector) < 0)
+		goto fail;
+
+	root = json_parse((const char *) info.payload, info.payload_len);
+	if (!root) {
+		wpa_printf(MSG_DEBUG, "DPP: JSON parsing of connector failed");
+		goto fail;
+	}
+
+	if (!dpp_connector_match(own_root, root, own_deviceid)) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer connector does not include compatible group/device netrole with own connector");
+		goto fail;
+	}
+
+	token = json_get_member(root, "expiry");
+	if (!token || token->type != JSON_STRING) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No expiry string found - connector does not expire");
+	} else {
+		wpa_printf(MSG_DEBUG, "DPP: expiry = %s", token->string);
+		if (dpp_key_expired(token->string, NULL)) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Connector (netAccessKey) has expired");
+			goto fail;
+		}
+	}
+
+	netkey = json_get_member(root, "netAccessKey");
+	if (!netkey || netkey->type != JSON_OBJECT) {
+		wpa_printf(MSG_DEBUG, "DPP: No netAccessKey object found");
+		goto fail;
+	}
+
+	peer_key = dpp_parse_jwk(netkey, &curve);
+	if (!peer_key)
+		goto fail;
+	dpp_debug_print_key("DPP: Received netAccessKey", peer_key);
+
+	if (own_curve != curve) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Mismatching netAccessKey curves (%s != %s)",
+			   own_curve->name, curve->name);
+		goto fail;
+	}
+
+	/* ECDH: N = nk * PK */
+	ctx = EVP_PKEY_CTX_new(own_key, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, peer_key) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Nx_len) != 1 ||
+	    Nx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Nx, &Nx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (N.x)",
+			Nx, Nx_len);
+
+	/* PMK = HKDF(<>, "DPP PMK", N.x) */
+	if (dpp_derive_pmk(Nx, Nx_len, intro->pmk, curve->hash_len) < 0) {
+		wpa_printf(MSG_ERROR, "DPP: Failed to derive PMK");
+		goto fail;
+	}
+	intro->pmk_len = curve->hash_len;
+
+	/* PMKID = Truncate-128(H(min(NK.x, PK.x) | max(NK.x, PK.x))) */
+	if (dpp_derive_pmkid(curve, own_key, peer_key, intro->pmkid) < 0) {
+		wpa_printf(MSG_ERROR, "DPP: Failed to derive PMKID");
+		goto fail;
+	}
+
+	if (dpp_netkey_hash(own_key, intro->nk_hash) < 0 ||
+	    dpp_netkey_hash(peer_key, intro->pk_hash) < 0) {
+		wpa_printf(MSG_ERROR, "DPP: Failed to derive NK/PK hash");
+		goto fail;
+	}
+
+	ret = 0;
+fail:
+	if (ret < 0)
+		os_memset(intro, 0, sizeof(*intro));
+	os_memset(Nx, 0, sizeof(Nx));
+	EVP_PKEY_CTX_free(ctx);
+	os_free(own_conn);
+	os_free(signed_connector);
+	os_free(info.payload);
+	EVP_PKEY_free(own_key);
+	wpabuf_free(own_key_pub);
+	os_free(own_deviceid);
+	EVP_PKEY_free(peer_key);
+	EVP_PKEY_free(csign);
+	json_free(root);
+	json_free(own_root);
+	return ret;
+}

@@ -12,6 +12,7 @@
 #include <openssl/x509.h>
 
 #include "utils/list.h"
+#include "common/wpa_common.h"
 #include "crypto/sha256.h"
 
 /* DPP Public Action frame identifiers - OUI_WFA */
@@ -176,6 +177,14 @@ struct dpp_configurator {
 	os_time_t csign_expiry;
 };
 
+struct dpp_introduction {
+	u8 pmkid[PMKID_LEN];
+	u8 pmk[PMK_LEN_MAX];
+	size_t pmk_len;
+	u8 pk_hash[SHA256_MAC_LEN];
+	u8 nk_hash[SHA256_MAC_LEN];
+};
+
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);
 int dpp_parse_uri_chan_list(struct dpp_bootstrap_info *bi,
 			    const char *chan_list);
@@ -219,5 +228,9 @@ void dpp_configurator_free(struct dpp_configurator *conf);
 struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,
 			size_t privkey_len);
+int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
+		   const u8 *net_access_key, size_t net_access_key_len,
+		   const u8 *csign_key, size_t csign_key_len,
+		   const u8 *peer_connector, size_t peer_connector_len);
 
 #endif /* DPP_H */

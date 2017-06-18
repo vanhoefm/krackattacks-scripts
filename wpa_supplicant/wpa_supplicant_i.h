@@ -1171,6 +1171,8 @@ struct wpa_supplicant {
 	int dpp_netrole_ap;
 	int dpp_auth_ok_on_ack;
 	int dpp_gas_client;
+	u8 dpp_intro_bssid[ETH_ALEN];
+	void *dpp_intro_network;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

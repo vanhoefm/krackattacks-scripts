@@ -1215,9 +1215,10 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_DPP
 		if ((ssid->key_mgmt & WPA_KEY_MGMT_DPP) &&
-		    !wpa_sm_pmksa_exists(wpa_s->wpa, bss->bssid, ssid)) {
-			/* TODO: Go through DPP network introduction to generate
-			 * PMKSA entry. */
+		    !wpa_sm_pmksa_exists(wpa_s->wpa, bss->bssid, ssid) &&
+		    (!ssid->dpp_connector ||
+		     !ssid->dpp_netaccesskey ||
+		     !ssid->dpp_csign)) {
 			if (debug_print)
 				wpa_dbg(wpa_s, MSG_DEBUG,
 					"   skip - no PMKSA entry for DPP");

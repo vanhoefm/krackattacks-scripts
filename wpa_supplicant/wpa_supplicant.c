@@ -1847,6 +1847,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+#ifdef CONFIG_DPP
+	if (wpas_dpp_check_connect(wpa_s, ssid, bss) != 0)
+		return;
+#endif /* CONFIG_DPP */
+
 #ifdef CONFIG_TDLS
 	if (bss)
 		wpa_tdls_ap_ies(wpa_s->wpa, (const u8 *) (bss + 1),

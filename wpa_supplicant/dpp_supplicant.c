@@ -13,10 +13,15 @@
 #include "common/dpp.h"
 #include "common/gas.h"
 #include "common/gas_server.h"
+#include "rsn_supp/wpa.h"
+#include "rsn_supp/pmksa_cache.h"
 #include "wpa_supplicant_i.h"
+#include "config.h"
 #include "driver_i.h"
 #include "offchannel.h"
 #include "gas_query.h"
+#include "bss.h"
+#include "scan.h"
 #include "dpp_supplicant.h"
 
 
@@ -1079,6 +1084,108 @@ static void wpas_dpp_rx_auth_conf(struct wpa_supplicant *wpa_s, const u8 *src,
 }
 
 
+static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
+				       const u8 *src,
+				       const u8 *buf, size_t len)
+{
+	struct wpa_ssid *ssid;
+	const u8 *connector, *pk_hash, *nk_hash;
+	u16 connector_len, pk_hash_len, nk_hash_len;
+	struct dpp_introduction intro;
+	struct rsn_pmksa_cache_entry *entry;
+
+	wpa_printf(MSG_DEBUG, "DPP: Peer Discovery Response from " MACSTR,
+		   MAC2STR(src));
+	if (is_zero_ether_addr(wpa_s->dpp_intro_bssid) ||
+	    os_memcmp(src, wpa_s->dpp_intro_bssid, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: Not waiting for response from "
+			   MACSTR " - drop", MAC2STR(src));
+		return;
+	}
+	offchannel_send_action_done(wpa_s);
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid == wpa_s->dpp_intro_network)
+			break;
+	}
+	if (!ssid || !ssid->dpp_connector || !ssid->dpp_netaccesskey ||
+	    !ssid->dpp_csign) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Profile not found for network introduction");
+		return;
+	}
+
+	connector = dpp_get_attr(buf, len, DPP_ATTR_CONNECTOR, &connector_len);
+	if (!connector) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer did not include its Connector");
+		return;
+	}
+
+	if (dpp_peer_intro(&intro, ssid->dpp_connector,
+			   ssid->dpp_netaccesskey,
+			   ssid->dpp_netaccesskey_len,
+			   ssid->dpp_csign,
+			   ssid->dpp_csign_len,
+			   connector, connector_len) < 0) {
+		wpa_printf(MSG_INFO,
+			   "DPP: Network Introduction protocol resulted in failure");
+		goto fail;
+	}
+
+	pk_hash = dpp_get_attr(buf, len, DPP_ATTR_PEER_NET_PK_HASH,
+			       &pk_hash_len);
+	if (!pk_hash || pk_hash_len != SHA256_MAC_LEN) {
+		wpa_printf(MSG_DEBUG, "DPP: Peer did not include SHA256(PK)");
+		goto fail;
+	}
+	if (os_memcmp(pk_hash, intro.nk_hash, SHA256_MAC_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: SHA256(PK) mismatch");
+		wpa_hexdump(MSG_DEBUG, "DPP: Received SHA256(PK)",
+			    pk_hash, pk_hash_len);
+		wpa_hexdump(MSG_DEBUG, "DPP: Calculated SHA256(PK)",
+			    intro.nk_hash, SHA256_MAC_LEN);
+		goto fail;
+	}
+
+	nk_hash = dpp_get_attr(buf, len, DPP_ATTR_OWN_NET_NK_HASH,
+			       &nk_hash_len);
+	if (!nk_hash || nk_hash_len != SHA256_MAC_LEN) {
+		wpa_printf(MSG_DEBUG, "DPP: Peer did not include SHA256(NK)");
+		goto fail;
+	}
+	if (os_memcmp(nk_hash, intro.pk_hash, SHA256_MAC_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: SHA256(NK) mismatch");
+		wpa_hexdump(MSG_DEBUG, "DPP: Received SHA256(NK)",
+			    nk_hash, nk_hash_len);
+		wpa_hexdump(MSG_DEBUG, "DPP: Calculated SHA256(NK)",
+			    intro.pk_hash, SHA256_MAC_LEN);
+		goto fail;
+	}
+
+	entry = os_zalloc(sizeof(*entry));
+	if (!entry)
+		goto fail;
+	os_memcpy(entry->aa, src, ETH_ALEN);
+	os_memcpy(entry->pmkid, intro.pmkid, PMKID_LEN);
+	os_memcpy(entry->pmk, intro.pmk, intro.pmk_len);
+	entry->pmk_len = intro.pmk_len;
+	entry->akmp = WPA_KEY_MGMT_DPP;
+	/* TODO: expiration */
+	entry->network_ctx = ssid;
+	wpa_sm_pmksa_cache_add_entry(wpa_s->wpa, entry);
+
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Try connection again after successful network introduction");
+	if (wpa_supplicant_fast_associate(wpa_s) != 1) {
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	}
+fail:
+	os_memset(&intro, 0, sizeof(intro));
+}
+
+
 void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 			const u8 *buf, size_t len, unsigned int freq)
 {
@@ -1107,6 +1214,9 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 		break;
 	case DPP_PA_AUTHENTICATION_CONF:
 		wpas_dpp_rx_auth_conf(wpa_s, src, buf, len);
+		break;
+	case DPP_PA_PEER_DISCOVERY_RESP:
+		wpas_dpp_rx_peer_disc_resp(wpa_s, src, buf, len);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,
@@ -1265,6 +1375,92 @@ int wpas_dpp_configurator_remove(struct wpa_supplicant *wpa_s, const char *id)
 }
 
 
+static void
+wpas_dpp_tx_introduction_status(struct wpa_supplicant *wpa_s,
+				unsigned int freq, const u8 *dst,
+				const u8 *src, const u8 *bssid,
+				const u8 *data, size_t data_len,
+				enum offchannel_send_action_result result)
+{
+	wpa_printf(MSG_DEBUG, "DPP: TX status: freq=%u dst=" MACSTR
+		   " result=%s (DPP Peer Discovery Request)",
+		   freq, MAC2STR(dst),
+		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		    "FAILED"));
+	/* TODO: Time out wait for response more quickly in error cases? */
+}
+
+
+int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+			   struct wpa_bss *bss)
+{
+	struct os_time now;
+	struct wpabuf *msg;
+	unsigned int wait_time;
+
+	if (!(ssid->key_mgmt & WPA_KEY_MGMT_DPP) || !bss)
+		return 0; /* Not using DPP AKM - continue */
+	if (wpa_sm_pmksa_exists(wpa_s->wpa, bss->bssid, ssid))
+		return 0; /* PMKSA exists for DPP AKM - continue */
+
+	if (!ssid->dpp_connector || !ssid->dpp_netaccesskey ||
+	    !ssid->dpp_csign) {
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_MISSING_CONNECTOR
+			"missing %s",
+			!ssid->dpp_connector ? "Connector" :
+			(!ssid->dpp_netaccesskey ? "netAccessKey" :
+			 "C-sign-key"));
+		return -1;
+	}
+
+	os_get_time(&now);
+
+	if (ssid->dpp_csign_expiry && ssid->dpp_csign_expiry < now.sec) {
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_MISSING_CONNECTOR
+			"C-sign-key expired");
+		return -1;
+	}
+
+	if (ssid->dpp_netaccesskey_expiry &&
+	    ssid->dpp_netaccesskey_expiry < now.sec) {
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_MISSING_CONNECTOR
+			"netAccessKey expired");
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Starting network introduction protocol to derive PMKSA for "
+		   MACSTR, MAC2STR(bss->bssid));
+
+	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_REQ,
+			    4 + os_strlen(ssid->dpp_connector));
+	if (!msg)
+		return -1;
+
+	/* DPP Connector */
+	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
+	wpabuf_put_le16(msg, os_strlen(ssid->dpp_connector));
+	wpabuf_put_str(msg, ssid->dpp_connector);
+
+	/* TODO: Timeout on AP response */
+	wait_time = wpa_s->max_remain_on_chan;
+	if (wait_time > 2000)
+		wait_time = 2000;
+	offchannel_send_action(wpa_s, bss->freq, bss->bssid, wpa_s->own_addr,
+			       broadcast,
+			       wpabuf_head(msg), wpabuf_len(msg),
+			       wait_time, wpas_dpp_tx_introduction_status, 0);
+	wpabuf_free(msg);
+
+	/* Request this connection attempt to terminate - new one will be
+	 * started when network introduction protocol completes */
+	os_memcpy(wpa_s->dpp_intro_bssid, bss->bssid, ETH_ALEN);
+	wpa_s->dpp_intro_network = ssid;
+	return 1;
+}
+
+
 int wpas_dpp_init(struct wpa_supplicant *wpa_s)
 {
 	u8 adv_proto_id[7];
@@ -1308,4 +1504,5 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	dpp_configurator_del(wpa_s, 0);
 	dpp_auth_deinit(wpa_s->dpp_auth);
 	wpa_s->dpp_auth = NULL;
+	os_memset(wpa_s->dpp_intro_bssid, 0, ETH_ALEN);
 }

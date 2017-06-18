@@ -16,6 +16,7 @@
 #include "hostapd.h"
 #include "ap_drv_ops.h"
 #include "gas_query_ap.h"
+#include "wpa_auth.h"
 #include "dpp_hostapd.h"
 
 
@@ -796,6 +797,110 @@ static void hostapd_dpp_rx_auth_conf(struct hostapd_data *hapd, const u8 *src,
 }
 
 
+static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
+					 const u8 *src,
+					 const u8 *buf, size_t len,
+					 unsigned int freq)
+{
+	const u8 *connector;
+	u16 connector_len;
+	struct os_time now;
+	struct dpp_introduction intro;
+	int expiration;
+	struct wpabuf *msg;
+
+	wpa_printf(MSG_DEBUG, "DPP: Peer Discovery Request from " MACSTR,
+		   MAC2STR(src));
+	if (!hapd->wpa_auth ||
+	    !(hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_DPP) ||
+	    !(hapd->conf->wpa & WPA_PROTO_RSN)) {
+		wpa_printf(MSG_DEBUG, "DPP: DPP AKM not in use");
+		return;
+	}
+
+	if (!hapd->conf->dpp_connector || !hapd->conf->dpp_netaccesskey ||
+	    !hapd->conf->dpp_csign) {
+		wpa_printf(MSG_DEBUG, "DPP: No own Connector/keys set");
+		return;
+	}
+
+	os_get_time(&now);
+	if (hapd->conf->dpp_csign_expiry &&
+	    hapd->conf->dpp_csign_expiry < now.sec) {
+		wpa_printf(MSG_DEBUG, "DPP: C-sign-key expired");
+		return;
+	}
+
+	if (hapd->conf->dpp_netaccesskey_expiry &&
+	    hapd->conf->dpp_netaccesskey_expiry < now.sec) {
+		wpa_printf(MSG_INFO, "DPP: Own netAccessKey expired");
+		return;
+	}
+
+	connector = dpp_get_attr(buf, len, DPP_ATTR_CONNECTOR, &connector_len);
+	if (!connector) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer did not include its Connector");
+		return;
+	}
+
+	if (dpp_peer_intro(&intro, hapd->conf->dpp_connector,
+			   wpabuf_head(hapd->conf->dpp_netaccesskey),
+			   wpabuf_len(hapd->conf->dpp_netaccesskey),
+			   wpabuf_head(hapd->conf->dpp_csign),
+			   wpabuf_len(hapd->conf->dpp_csign),
+			   connector, connector_len) < 0) {
+		wpa_printf(MSG_INFO,
+			   "DPP: Network Introduction protocol resulted in failure");
+		return;
+	}
+
+	if (hapd->conf->dpp_netaccesskey_expiry &&
+	    (!hapd->conf->dpp_csign_expiry ||
+	     hapd->conf->dpp_netaccesskey_expiry <
+	     hapd->conf->dpp_csign_expiry))
+		expiration = hapd->conf->dpp_netaccesskey_expiry - now.sec;
+	else if (hapd->conf->dpp_csign_expiry)
+		expiration = hapd->conf->dpp_csign_expiry - now.sec;
+	else
+		expiration = 0;
+
+	if (wpa_auth_pmksa_add2(hapd->wpa_auth, src, intro.pmk, intro.pmk_len,
+				intro.pmkid, expiration,
+				WPA_KEY_MGMT_DPP) < 0) {
+		wpa_printf(MSG_ERROR, "DPP: Failed to add PMKSA cache entry");
+		return;
+	}
+
+	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_RESP,
+			    2 * (4 + SHA256_MAC_LEN) +
+			    4 + os_strlen(hapd->conf->dpp_connector));
+	if (!msg)
+		return;
+
+	/* SHA256(PK) */
+	wpabuf_put_le16(msg, DPP_ATTR_PEER_NET_PK_HASH);
+	wpabuf_put_le16(msg, SHA256_MAC_LEN);
+	wpabuf_put_data(msg, intro.pk_hash, SHA256_MAC_LEN);
+
+	/* SHA256(NK) */
+	wpabuf_put_le16(msg, DPP_ATTR_OWN_NET_NK_HASH);
+	wpabuf_put_le16(msg, SHA256_MAC_LEN);
+	wpabuf_put_data(msg, intro.nk_hash, SHA256_MAC_LEN);
+
+	/* DPP Connector */
+	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
+	wpabuf_put_le16(msg, os_strlen(hapd->conf->dpp_connector));
+	wpabuf_put_str(msg, hapd->conf->dpp_connector);
+
+	wpa_printf(MSG_DEBUG, "DPP: Send Peer Discovery Response to " MACSTR,
+		   MAC2STR(src));
+	hostapd_drv_send_action(hapd, freq, 0, src,
+				wpabuf_head(msg), wpabuf_len(msg));
+	wpabuf_free(msg);
+}
+
+
 void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 			   const u8 *buf, size_t len, unsigned int freq)
 {
@@ -824,6 +929,9 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 		break;
 	case DPP_PA_AUTHENTICATION_CONF:
 		hostapd_dpp_rx_auth_conf(hapd, src, buf, len);
+		break;
+	case DPP_PA_PEER_DISCOVERY_REQ:
+		hostapd_dpp_rx_peer_disc_req(hapd, src, buf, len, freq);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,

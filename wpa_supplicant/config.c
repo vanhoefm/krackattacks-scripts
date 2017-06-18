@@ -2239,6 +2239,13 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(pbss, 0, 2) },
 	{ INT_RANGE(wps_disabled, 0, 1) },
 	{ INT_RANGE(fils_dh_group, 0, 65535) },
+#ifdef CONFIG_DPP
+	{ STR(dpp_connector) },
+	{ STR_LEN(dpp_netaccesskey) },
+	{ INT(dpp_netaccesskey_expiry) },
+	{ STR_LEN(dpp_csign) },
+	{ INT(dpp_csign_expiry) },
+#endif /* CONFIG_DPP */
 };
 
 #undef OFFSET
@@ -2424,6 +2431,9 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #ifdef CONFIG_MESH
 	os_free(ssid->mesh_basic_rates);
 #endif /* CONFIG_MESH */
+	os_free(ssid->dpp_connector);
+	bin_clear_free(ssid->dpp_netaccesskey, ssid->dpp_netaccesskey_len);
+	os_free(ssid->dpp_csign);
 	while ((psk = dl_list_first(&ssid->psk_list, struct psk_list_entry,
 				    list))) {
 		dl_list_del(&psk->list);

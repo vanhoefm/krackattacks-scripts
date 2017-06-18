@@ -849,6 +849,13 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(wpa_ptk_rekey);
 	INT(group_rekey);
 	INT(ignore_broadcast_ssid);
+#ifdef CONFIG_DPP
+	STR(dpp_connector),
+	STR(dpp_netaccesskey),
+	INT(dpp_netaccesskey_expiry),
+	STR(dpp_csign),
+	INT(dpp_csign_expiry),
+#endif /* CONFIG_DPP */
 #ifdef CONFIG_HT_OVERRIDES
 	INT_DEF(disable_ht, DEFAULT_DISABLE_HT);
 	INT_DEF(disable_ht40, DEFAULT_DISABLE_HT40);

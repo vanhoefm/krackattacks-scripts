@@ -845,6 +845,45 @@ struct wpa_ssid {
 	 * 1-65535 DH Group to use for FILS PFS
 	 */
 	int fils_dh_group;
+
+	/**
+	 * dpp_connector - DPP Connector (signedConnector as string)
+	 */
+	char *dpp_connector;
+
+	/**
+	 * dpp_netaccesskey - DPP netAccessKey (own private key)
+	 */
+	u8 *dpp_netaccesskey;
+
+	/**
+	 * dpp_netaccesskey_len - DPP netAccessKey length in octets
+	 */
+	size_t dpp_netaccesskey_len;
+
+	/**
+	 * net_access_key_expiry - DPP netAccessKey expiry in UNIX time stamp
+	 *
+	 * 0 indicates no expiration.
+	 */
+	unsigned int dpp_netaccesskey_expiry;
+
+	/**
+	 * dpp_csign - C-sign-key (Configurator public key)
+	 */
+	u8 *dpp_csign;
+
+	/**
+	 * dpp_csign_len - C-sign-key length in octets
+	 */
+	size_t dpp_csign_len;
+
+	/**
+	 * dpp_csign_expiry - C-sign-key expiry in UNIX time stamp
+	 *
+	 * 0 indicates no expiration.
+	 */
+	unsigned int dpp_csign_expiry;
 };
 
 #endif /* CONFIG_SSID_H */

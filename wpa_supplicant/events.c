@@ -3764,9 +3764,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_TESTING_OPTIONS */
 		wpa_supplicant_event_assoc(wpa_s, data);
-		if ((data && data->assoc_info.authorized) ||
-		    (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
-		     wpa_fils_is_completed(wpa_s->wpa)))
+		if (data &&
+		    (data->assoc_info.authorized ||
+		     (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		      wpa_fils_is_completed(wpa_s->wpa))))
 			wpa_supplicant_event_assoc_auth(wpa_s, data);
 		if (data) {
 			wpa_msg(wpa_s, MSG_INFO,

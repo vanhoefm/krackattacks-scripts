@@ -312,7 +312,7 @@ static struct wpa_config_blob * wpa_config_read_blob(FILE *f, int *line,
 		encoded_len += len;
 	}
 
-	if (!end) {
+	if (!end || !encoded) {
 		wpa_printf(MSG_ERROR, "Line %d: blob was not terminated "
 			   "properly", *line);
 		os_free(encoded);

@@ -432,6 +432,9 @@ void wpas_mbo_ie_trans_req(struct wpa_supplicant *wpa_s, const u8 *mbo_ie,
 			} else if (wpa_s->wnm_mode &
 				   WNM_BSS_TM_REQ_DISASSOC_IMMINENT) {
 				disallowed_sec = WPA_GET_LE16(pos);
+				wpa_printf(MSG_DEBUG,
+					   "MBO: Association retry delay: %u",
+					   disallowed_sec);
 			} else {
 				wpa_printf(MSG_DEBUG,
 					   "MBO: Association retry delay attribute not in disassoc imminent mode");

@@ -3966,6 +3966,15 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*ignore_assoc_disallow)(void *priv, int ignore_disallow);
+
+	/**
+	 * set_bssid_blacklist - Set blacklist of BSSIDs to the driver
+	 * @priv: Private driver interface data
+	 * @num_bssid: Number of blacklist BSSIDs
+	 * @bssids: List of blacklisted BSSIDs
+	 */
+	int (*set_bssid_blacklist)(void *priv, unsigned int num_bssid,
+				   const u8 *bssid);
 };
 
 /**

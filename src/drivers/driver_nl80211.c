@@ -8814,6 +8814,67 @@ static int nl80211_roaming(void *priv, int allowed, const u8 *bssid)
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
 }
+
+
+/* Reserved QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID value for wpa_supplicant */
+#define WPA_SUPPLICANT_CLIENT_ID 1
+
+static int nl80211_set_bssid_blacklist(void *priv, unsigned int num_bssid,
+				       const u8 *bssid)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *params, *nlbssids, *attr;
+	unsigned int i;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set blacklist BSSID (num=%u)",
+		   num_bssid);
+
+	if (!drv->roam_vendor_cmd_avail)
+		return -1;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_ROAM) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+			QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BLACKLIST_BSSID) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+			WPA_SUPPLICANT_CLIENT_ID) ||
+	    nla_put_u32(msg,
+			QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID,
+			num_bssid))
+		goto fail;
+
+	nlbssids = nla_nest_start(
+		msg, QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS);
+	if (!nlbssids)
+		goto fail;
+
+	for (i = 0; i < num_bssid; i++) {
+		attr = nla_nest_start(msg, i);
+		if (!attr)
+			goto fail;
+		if (nla_put(msg,
+			    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_BSSID,
+			    ETH_ALEN, &bssid[i * ETH_ALEN]))
+			goto fail;
+		wpa_printf(MSG_DEBUG, "nl80211:   BSSID[%u]: " MACSTR, i,
+			   MAC2STR(&bssid[i * ETH_ALEN]));
+		nla_nest_end(msg, attr);
+	}
+	nla_nest_end(msg, nlbssids);
+	nla_nest_end(msg, params);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+
+fail:
+	nlmsg_free(msg);
+	return -1;
+}
+
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 
 
@@ -10282,6 +10343,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_bss_transition_status = nl80211_get_bss_transition_status,
 	.ignore_assoc_disallow = nl80211_ignore_assoc_disallow,
 #endif /* CONFIG_MBO */
+	.set_bssid_blacklist = nl80211_set_bssid_blacklist,
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 	.configure_data_frame_filters = nl80211_configure_data_frame_filters,
 	.get_ext_capab = nl80211_get_ext_capab,

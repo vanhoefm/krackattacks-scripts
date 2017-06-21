@@ -752,6 +752,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				case QCA_NL80211_VENDOR_SUBCMD_FETCH_BSS_TRANSITION_STATUS:
 					drv->fetch_bss_trans_status = 1;
 					break;
+				case QCA_NL80211_VENDOR_SUBCMD_ROAM:
+					drv->roam_vendor_cmd_avail = 1;
+					break;
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 				}
 			}

@@ -447,7 +447,6 @@ struct icon_entry {
 struct wpa_bss_tmp_disallowed {
 	struct dl_list list;
 	u8 bssid[ETH_ALEN];
-	struct os_reltime disallowed_until;
 };
 
 struct beacon_rep_data {

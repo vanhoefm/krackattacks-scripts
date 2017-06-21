@@ -114,6 +114,10 @@ const char *const wpa_supplicant_full_license5 =
 "\n";
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
+
+static void wpa_bss_tmp_disallow_timeout(void *eloop_ctx, void *timeout_ctx);
+
+
 /* Configure default/group WEP keys for static WEP */
 int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {
@@ -416,6 +420,7 @@ static void free_bss_tmp_disallowed(struct wpa_supplicant *wpa_s)
 
 	dl_list_for_each_safe(bss, prev, &wpa_s->bss_tmp_disallowed,
 			      struct wpa_bss_tmp_disallowed, list) {
+		eloop_cancel_timeout(wpa_bss_tmp_disallow_timeout, wpa_s, bss);
 		dl_list_del(&bss->list);
 		os_free(bss);
 	}
@@ -6706,18 +6711,56 @@ wpa_bss_tmp_disallowed * wpas_get_disallowed_bss(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_set_driver_tmp_disallow_list(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss_tmp_disallowed *tmp;
+	unsigned int num_bssid = 0;
+	u8 *bssids;
+	int ret;
+
+	bssids = os_malloc(dl_list_len(&wpa_s->bss_tmp_disallowed) * ETH_ALEN);
+	if (!bssids)
+		return -1;
+	dl_list_for_each(tmp, &wpa_s->bss_tmp_disallowed,
+			 struct wpa_bss_tmp_disallowed, list) {
+		os_memcpy(&bssids[num_bssid * ETH_ALEN], tmp->bssid,
+			  ETH_ALEN);
+		num_bssid++;
+	}
+	ret = wpa_drv_set_bssid_blacklist(wpa_s, num_bssid, bssids);
+	os_free(bssids);
+	return ret;
+}
+
+
+static void wpa_bss_tmp_disallow_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wpa_bss_tmp_disallowed *tmp, *bss = timeout_ctx;
+
+	/* Make sure the bss is not already freed */
+	dl_list_for_each(tmp, &wpa_s->bss_tmp_disallowed,
+			 struct wpa_bss_tmp_disallowed, list) {
+		if (bss == tmp) {
+			dl_list_del(&tmp->list);
+			os_free(tmp);
+			wpa_set_driver_tmp_disallow_list(wpa_s);
+			break;
+		}
+	}
+}
+
+
 void wpa_bss_tmp_disallow(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			  unsigned int sec)
 {
 	struct wpa_bss_tmp_disallowed *bss;
-	struct os_reltime until;
-
-	os_get_reltime(&until);
-	until.sec += sec;
 
 	bss = wpas_get_disallowed_bss(wpa_s, bssid);
 	if (bss) {
-		bss->disallowed_until = until;
+		eloop_cancel_timeout(wpa_bss_tmp_disallow_timeout, wpa_s, bss);
+		eloop_register_timeout(sec, 0, wpa_bss_tmp_disallow_timeout,
+				       wpa_s, bss);
 		return;
 	}
 
@@ -6728,27 +6771,20 @@ void wpa_bss_tmp_disallow(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return;
 	}
 
-	bss->disallowed_until = until;
 	os_memcpy(bss->bssid, bssid, ETH_ALEN);
 	dl_list_add(&wpa_s->bss_tmp_disallowed, &bss->list);
+	wpa_set_driver_tmp_disallow_list(wpa_s);
+	eloop_register_timeout(sec, 0, wpa_bss_tmp_disallow_timeout,
+			       wpa_s, bss);
 }
 
 
 int wpa_is_bss_tmp_disallowed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
 	struct wpa_bss_tmp_disallowed *bss = NULL, *tmp, *prev;
-	struct os_reltime now, age;
-
-	os_get_reltime(&now);
 
 	dl_list_for_each_safe(tmp, prev, &wpa_s->bss_tmp_disallowed,
 			 struct wpa_bss_tmp_disallowed, list) {
-		if (!os_reltime_before(&now, &tmp->disallowed_until)) {
-			/* This BSS is not disallowed anymore */
-			dl_list_del(&tmp->list);
-			os_free(tmp);
-			continue;
-		}
 		if (os_memcmp(bssid, tmp->bssid, ETH_ALEN) == 0) {
 			bss = tmp;
 			break;
@@ -6757,9 +6793,5 @@ int wpa_is_bss_tmp_disallowed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	if (!bss)
 		return 0;
 
-	os_reltime_sub(&bss->disallowed_until, &now, &age);
-	wpa_printf(MSG_DEBUG,
-		   "BSS " MACSTR " disabled for %ld.%0ld seconds",
-		   MAC2STR(bss->bssid), age.sec, age.usec);
 	return 1;
 }

@@ -1007,4 +1007,14 @@ static inline int wpa_drv_ignore_assoc_disallow(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->ignore_assoc_disallow(wpa_s->drv_priv, val);
 }
 
+static inline int wpa_drv_set_bssid_blacklist(struct wpa_supplicant *wpa_s,
+					      unsigned int num_bssid,
+					      const u8 *bssids)
+{
+	if (!wpa_s->driver->set_bssid_blacklist)
+		return -1;
+	return wpa_s->driver->set_bssid_blacklist(wpa_s->drv_priv, num_bssid,
+						  bssids);
+}
+
 #endif /* DRIVER_I_H */

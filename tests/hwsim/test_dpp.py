@@ -987,3 +987,129 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     logger.info("Check data connection")
     dev[1].select_network(id, freq="2412")
     dev[1].wait_connected()
+
+def test_dpp_auto_connect_1(dev, apdev):
+    """DPP and auto connect (1)"""
+    try:
+        run_dpp_auto_connect(dev, apdev, 1)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_2(dev, apdev):
+    """DPP and auto connect (2)"""
+    try:
+        run_dpp_auto_connect(dev, apdev, 2)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_auto_connect(dev, apdev, processing):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    csign = "30770201010420768240a3fc89d6662d9782f120527fe7fb9edc6366ab0b9c7dde96125cfd250fa00a06082a8648ce3d030107a144034200042908e1baf7bf413cc66f9e878a03e8bb1835ba94b033dbe3d6969fc8575d5eb5dfda1cb81c95cee21d0cd7d92ba30541ffa05cb6296f5dd808b0c1c2a83c0708"
+    csign_pub = "3059301306072a8648ce3d020106082a8648ce3d030107034200042908e1baf7bf413cc66f9e878a03e8bb1835ba94b033dbe3d6969fc8575d5eb5dfda1cb81c95cee21d0cd7d92ba30541ffa05cb6296f5dd808b0c1c2a83c0708"
+    ap_connector = "eyJ0eXAiOiJkcHBDb24iLCJraWQiOiJwYWtZbXVzd1dCdWpSYTl5OEsweDViaTVrT3VNT3dzZHRlaml2UG55ZHZzIiwiYWxnIjoiRVMyNTYifQ.eyJncm91cHMiOlt7Imdyb3VwSWQiOiIqIiwibmV0Um9sZSI6ImFwIn1dLCJuZXRBY2Nlc3NLZXkiOnsia3R5IjoiRUMiLCJjcnYiOiJQLTI1NiIsIngiOiIybU5vNXZuRkI5bEw3d1VWb1hJbGVPYzBNSEE1QXZKbnpwZXZULVVTYzVNIiwieSI6IlhzS3dqVHJlLTg5WWdpU3pKaG9CN1haeUttTU05OTl3V2ZaSVl0bi01Q3MifX0.XhjFpZgcSa7G2lHy0OCYTvaZFRo5Hyx6b7g7oYyusLC7C_73AJ4_BxEZQVYJXAtDuGvb3dXSkHEKxREP9Q6Qeg"
+    ap_netaccesskey = "30770201010420ceba752db2ad5200fa7bc565b9c05c69b7eb006751b0b329b0279de1c19ca67ca00a06082a8648ce3d030107a14403420004da6368e6f9c507d94bef0515a1722578e73430703902f267ce97af4fe51273935ec2b08d3adefbcf588224b3261a01ed76722a630cf7df7059f64862d9fee42b"
+
+    params = { "ssid": "test",
+               "wpa": "2",
+               "wpa_key_mgmt": "DPP",
+               "rsn_pairwise": "CCMP",
+               "dpp_connector": ap_connector,
+               "dpp_csign": csign_pub,
+               "dpp_netaccesskey": ap_netaccesskey }
+    try:
+        hapd = hostapd.add_ap(apdev[0], params)
+    except:
+        raise HwsimSkip("DPP not supported")
+
+    cmd = "DPP_CONFIGURATOR_ADD key=" + csign
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("DPP_CONFIGURATOR_ADD failed")
+    conf_id = int(res)
+
+    dev[0].set("dpp_config_processing", str(processing))
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id1, conf_id)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=2)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    ev = dev[0].wait_event(["DPP-NETWORK-ID"], timeout=1)
+    if ev is None:
+        raise Exception("DPP network profile not generated")
+    id = ev.split(' ')[1]
+
+    if processing == 1:
+        dev[0].select_network(id, freq=2412)
+
+    dev[0].wait_connected()
+
+def test_dpp_auto_connect_legacy(dev, apdev):
+    """DPP and auto connect (legacy)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_auto_connect_legacy(dev, apdev):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    params = hostapd.wpa2_params(ssid="test", passphrase="secret passphrase")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].set("dpp_config_processing", "2")
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk" % id1
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=2)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    ev = dev[0].wait_event(["DPP-NETWORK-ID"], timeout=1)
+    if ev is None:
+        raise Exception("DPP network profile not generated")
+    id = ev.split(' ')[1]
+
+    dev[0].wait_connected()

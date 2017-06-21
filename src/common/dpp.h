@@ -154,6 +154,9 @@ struct dpp_authentication {
 	char *connector; /* received signedConnector */
 	u8 ssid[SSID_MAX_LEN];
 	u8 ssid_len;
+	char passphrase[64];
+	u8 psk[PMK_LEN];
+	int psk_set;
 	struct wpabuf *net_access_key;
 	os_time_t net_access_key_expiry;
 	struct wpabuf *c_sign_key;

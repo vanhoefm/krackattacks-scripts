@@ -1455,6 +1455,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 			config->gas_rand_addr_lifetime);
 	if (config->gas_rand_mac_addr)
 		fprintf(f, "gas_rand_mac_addr=%d\n", config->gas_rand_mac_addr);
+	if (config->dpp_config_processing)
+		fprintf(f, "dpp_config_processing=%d\n",
+			config->dpp_config_processing);
 
 }
 

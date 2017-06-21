@@ -1366,6 +1366,21 @@ struct wpa_config {
 	 * 2 = like 1, but maintain OUI (with local admin bit set)
 	 */
 	int gas_rand_mac_addr;
+
+	/**
+	 * dpp_config_processing - How to process DPP configuration
+	 *
+	 * 0 = report received configuration to an external program for
+	 *	processing; do not generate any network profile internally
+	 * 1 = report received configuration to an external program and generate
+	 *	a network profile internally, but do not automatically connect
+	 *	to the created (disabled) profile; the network profile id is
+	 *	reported to external programs
+	 * 2 = report received configuration to an external program, generate
+	 *	a network profile internally, try to connect to the created
+	 *	profile automatically
+	 */
+	int dpp_config_processing;
 };
 
 

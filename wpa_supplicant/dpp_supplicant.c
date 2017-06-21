@@ -22,6 +22,7 @@
 #include "gas_query.h"
 #include "bss.h"
 #include "scan.h"
+#include "notify.h"
 #include "dpp_supplicant.h"
 
 
@@ -819,6 +820,102 @@ static void wpas_dpp_start_gas_server(struct wpa_supplicant *wpa_s)
 }
 
 
+static struct wpa_ssid * wpas_dpp_add_network(struct wpa_supplicant *wpa_s,
+					      struct dpp_authentication *auth)
+{
+	struct wpa_ssid *ssid;
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (!ssid)
+		return NULL;
+	wpas_notify_network_added(wpa_s, ssid);
+	wpa_config_set_network_defaults(ssid);
+	ssid->disabled = 1;
+
+	ssid->ssid = os_malloc(auth->ssid_len);
+	if (!ssid->ssid)
+		goto fail;
+	os_memcpy(ssid->ssid, auth->ssid, auth->ssid_len);
+	ssid->ssid_len = auth->ssid_len;
+
+	if (auth->connector) {
+		ssid->key_mgmt = WPA_KEY_MGMT_DPP;
+		ssid->dpp_connector = os_strdup(auth->connector);
+		if (!ssid->dpp_connector)
+			goto fail;
+	}
+
+	if (auth->c_sign_key) {
+		ssid->dpp_csign = os_malloc(wpabuf_len(auth->c_sign_key));
+		if (!ssid->dpp_csign)
+			goto fail;
+		os_memcpy(ssid->dpp_csign, wpabuf_head(auth->c_sign_key),
+			  wpabuf_len(auth->c_sign_key));
+		ssid->dpp_csign_len = wpabuf_len(auth->c_sign_key);
+		ssid->dpp_csign_expiry = auth->c_sign_key_expiry;
+	}
+
+	if (auth->net_access_key) {
+		ssid->dpp_netaccesskey =
+			os_malloc(wpabuf_len(auth->net_access_key));
+		if (!ssid->dpp_netaccesskey)
+			goto fail;
+		os_memcpy(ssid->dpp_netaccesskey,
+			  wpabuf_head(auth->net_access_key),
+			  wpabuf_len(auth->net_access_key));
+		ssid->dpp_netaccesskey_len = wpabuf_len(auth->net_access_key);
+		ssid->dpp_netaccesskey_expiry = auth->net_access_key_expiry;
+	}
+
+	if (!auth->connector) {
+		ssid->key_mgmt = WPA_KEY_MGMT_PSK;
+		if (auth->passphrase[0]) {
+			if (wpa_config_set_quoted(ssid, "psk",
+						  auth->passphrase) < 0)
+				goto fail;
+			wpa_config_update_psk(ssid);
+			ssid->export_keys = 1;
+		} else {
+			ssid->psk_set = auth->psk_set;
+			os_memcpy(ssid->psk, auth->psk, PMK_LEN);
+		}
+	}
+
+	return ssid;
+fail:
+	wpas_notify_network_removed(wpa_s, ssid);
+	wpa_config_remove_network(wpa_s->conf, ssid->id);
+	return NULL;
+}
+
+
+static void wpas_dpp_process_config(struct wpa_supplicant *wpa_s,
+				    struct dpp_authentication *auth)
+{
+	struct wpa_ssid *ssid;
+
+	if (wpa_s->conf->dpp_config_processing < 1)
+		return;
+
+	ssid = wpas_dpp_add_network(wpa_s, auth);
+	if (!ssid)
+		return;
+
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_NETWORK_ID "%d", ssid->id);
+	if (wpa_s->conf->dpp_config_processing < 2)
+		return;
+
+	wpa_printf(MSG_DEBUG, "DPP: Trying to connect to the new network");
+	ssid->disabled = 0;
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_s->scan_runs = 0;
+	wpa_s->normal_scans = 0;
+	wpa_supplicant_cancel_sched_scan(wpa_s);
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+}
+
+
 static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 				 enum gas_query_result result,
 				 const struct wpabuf *adv_proto,
@@ -916,6 +1013,9 @@ static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 			os_free(hex);
 		}
 	}
+
+	wpas_dpp_process_config(wpa_s, auth);
+
 	dpp_auth_deinit(wpa_s->dpp_auth);
 	wpa_s->dpp_auth = NULL;
 	return;

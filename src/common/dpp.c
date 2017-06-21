@@ -3294,7 +3294,6 @@ static int dpp_parse_cred_legacy(struct dpp_authentication *auth,
 				 struct json_token *cred)
 {
 	struct json_token *pass, *psk_hex;
-	u8 psk[32];
 
 	wpa_printf(MSG_DEBUG, "DPP: Legacy akm=psk credential");
 
@@ -3302,16 +3301,23 @@ static int dpp_parse_cred_legacy(struct dpp_authentication *auth,
 	psk_hex = json_get_member(cred, "psk_hex");
 
 	if (pass && pass->type == JSON_STRING) {
+		size_t len = os_strlen(pass->string);
+
 		wpa_hexdump_ascii_key(MSG_DEBUG, "DPP: Legacy passphrase",
-				      pass->string, os_strlen(pass->string));
+				      pass->string, len);
+		if (len < 8 || len > 63)
+			return -1;
+		os_strlcpy(auth->passphrase, pass->string,
+			   sizeof(auth->passphrase));
 	} else if (psk_hex && psk_hex->type == JSON_STRING) {
-		if (os_strlen(psk_hex->string) != sizeof(psk) * 2 ||
-		    hexstr2bin(psk_hex->string, psk, sizeof(psk)) < 0) {
+		if (os_strlen(psk_hex->string) != PMK_LEN * 2 ||
+		    hexstr2bin(psk_hex->string, auth->psk, PMK_LEN) < 0) {
 			wpa_printf(MSG_DEBUG, "DPP: Invalid psk_hex encoding");
 			return -1;
 		}
-		wpa_hexdump_key(MSG_DEBUG, "DPP: Legacy PSK", psk, sizeof(psk));
-		os_memset(psk, 0, sizeof(psk));
+		wpa_hexdump_key(MSG_DEBUG, "DPP: Legacy PSK",
+				auth->psk, PMK_LEN);
+		auth->psk_set = 1;
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: No pass or psk_hex strings found");
 		return -1;

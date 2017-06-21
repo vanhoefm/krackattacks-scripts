@@ -4577,6 +4577,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(ftm_initiator, 0, 1), 0 },
 	{ INT(gas_rand_addr_lifetime), 0 },
 	{ INT_RANGE(gas_rand_mac_addr, 0, 2), 0 },
+	{ INT_RANGE(dpp_config_processing, 0, 2), 0 },
 };
 
 #undef FUNC

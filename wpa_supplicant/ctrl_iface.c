@@ -62,6 +62,29 @@ static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
 static int * freq_range_to_channel_list(struct wpa_supplicant *wpa_s,
 					char *val);
 
+
+#ifdef CONFIG_FILS
+
+static int wpa_is_fils_supported(struct wpa_supplicant *wpa_s)
+{
+	return (((wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		 (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_FILS)) ||
+		(!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		 (wpa_s->drv_flags & WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD)));
+}
+
+
+#ifdef CONFIG_FILS_SK_PFS
+static int wpa_is_fils_sk_pfs_supported(struct wpa_supplicant *wpa_s)
+{
+	return (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+		(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_FILS);
+}
+#endif /* CONFIG_FILS_SK_PFS */
+
+#endif /* CONFIG_FILS */
+
+
 static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
 {
 	char *pos;
@@ -3859,6 +3882,34 @@ static int ctrl_iface_get_capability_key_mgmt(int res, char *strict,
 		pos += ret;
 	}
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_FILS
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FILS_SHA256) {
+		ret = os_snprintf(pos, end - pos, " FILS-SHA256");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FILS_SHA384) {
+		ret = os_snprintf(pos, end - pos, " FILS-SHA384");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#ifdef CONFIG_IEEE80211R
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT_FILS_SHA256) {
+		ret = os_snprintf(pos, end - pos, " FT-FILS-SHA256");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT_FILS_SHA384) {
+		ret = os_snprintf(pos, end - pos, " FT-FILS-SHA384");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_IEEE80211R */
+#endif /* CONFIG_FILS */
 
 	return pos - buf;
 }
@@ -3960,6 +4011,26 @@ static int ctrl_iface_get_capability_auth_alg(struct wpa_supplicant *wpa_s,
 		pos += ret;
 	}
 #endif /* CONFIG_SAE */
+
+#ifdef CONFIG_FILS
+	if (wpa_is_fils_supported(wpa_s)) {
+		ret = os_snprintf(pos, end - pos, "%sFILS_SK_WITHOUT_PFS",
+				  pos == buf ? "" : " ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+
+#ifdef CONFIG_FILS_SK_PFS
+	if (wpa_is_fils_sk_pfs_supported(wpa_s)) {
+		ret = os_snprintf(pos, end - pos, "%sFILS_SK_WITH_PFS",
+				  pos == buf ? "" : " ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_FILS_SK_PFS */
+#endif /* CONFIG_FILS */
 
 	return pos - buf;
 }
@@ -4219,16 +4290,23 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 #endif /* CONFIG_ACS */
 
 #ifdef CONFIG_FILS
-	if (os_strcmp(field, "fils") == 0 &&
-	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_FILS)) {
+	if (os_strcmp(field, "fils") == 0) {
 #ifdef CONFIG_FILS_SK_PFS
-		res = os_snprintf(buf, buflen, "FILS FILS-SK-PFS");
-#else /* CONFIG_FILS_SK_PFS */
-		res = os_snprintf(buf, buflen, "FILS");
+		if (wpa_is_fils_supported(wpa_s) &&
+		    wpa_is_fils_sk_pfs_supported(wpa_s)) {
+			res = os_snprintf(buf, buflen, "FILS FILS-SK-PFS");
+			if (os_snprintf_error(buflen, res))
+				return -1;
+			return res;
+		}
 #endif /* CONFIG_FILS_SK_PFS */
-		if (os_snprintf_error(buflen, res))
-			return -1;
-		return res;
+
+		if (wpa_is_fils_supported(wpa_s)) {
+			res = os_snprintf(buf, buflen, "FILS");
+			if (os_snprintf_error(buflen, res))
+				return -1;
+			return res;
+		}
 	}
 #endif /* CONFIG_FILS */
 

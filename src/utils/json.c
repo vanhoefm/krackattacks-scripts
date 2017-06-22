@@ -50,7 +50,7 @@ void json_escape_string(char *txt, size_t maxlen, const char *data, size_t len)
 			if (data[i] >= 32 && data[i] <= 126) {
 				*txt++ = data[i];
 			} else {
-				txt += os_snprintf(txt, end - txt, "\\ux%04x",
+				txt += os_snprintf(txt, end - txt, "\\u%04x",
 						   data[i]);
 			}
 			break;

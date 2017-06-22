@@ -1077,7 +1077,8 @@ def run_dpp_auto_connect_legacy(dev, apdev):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
 
-    params = hostapd.wpa2_params(ssid="test", passphrase="secret passphrase")
+    params = hostapd.wpa2_params(ssid="dpp-legacy",
+                                 passphrase="secret passphrase")
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].set("dpp_config_processing", "2")
@@ -1098,7 +1099,7 @@ def run_dpp_auto_connect_legacy(dev, apdev):
     if "OK" not in dev[0].request(cmd):
         raise Exception("Failed to start listen operation")
 
-    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk" % id1
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk ssid=%s" % (id1, "dpp-legacy".encode("hex"))
     if "OK" not in dev[1].request(cmd):
         raise Exception("Failed to initiate DPP Authentication")
     ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)

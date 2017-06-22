@@ -396,6 +396,8 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	struct dpp_configurator *conf = NULL;
 	u8 ssid[32] = { "test" };
 	size_t ssid_len = 4;
+	char pass[64] = { };
+	size_t pass_len = 0;
 
 	wpa_s->dpp_gas_client = 0;
 
@@ -456,17 +458,26 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 			goto fail;
 	}
 
+	pos = os_strstr(cmd, " pass=");
+	if (pos) {
+		pos += 6;
+		end = os_strchr(pos, ' ');
+		pass_len = end ? (size_t) (end - pos) : os_strlen(pos);
+		pass_len /= 2;
+		if (pass_len > sizeof(pass) - 1 || pass_len < 8 ||
+		    hexstr2bin(pos, (u8 *) pass, pass_len) < 0)
+			goto fail;
+	}
+
 	if (os_strstr(cmd, " conf=sta-")) {
 		conf_sta = os_zalloc(sizeof(struct dpp_configuration));
 		if (!conf_sta)
 			goto fail;
-		/* TODO: Configuration of network parameters from upper layers
-		 */
 		os_memcpy(conf_sta->ssid, ssid, ssid_len);
 		conf_sta->ssid_len = ssid_len;
 		if (os_strstr(cmd, " conf=sta-psk")) {
 			conf_sta->dpp = 0;
-			conf_sta->passphrase = os_strdup("secret passphrase");
+			conf_sta->passphrase = os_strdup(pass);
 			if (!conf_sta->passphrase)
 				goto fail;
 		} else if (os_strstr(cmd, " conf=sta-dpp")) {
@@ -480,13 +491,11 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		conf_ap = os_zalloc(sizeof(struct dpp_configuration));
 		if (!conf_ap)
 			goto fail;
-		/* TODO: Configuration of network parameters from upper layers
-		 */
 		os_memcpy(conf_ap->ssid, ssid, ssid_len);
 		conf_ap->ssid_len = ssid_len;
 		if (os_strstr(cmd, " conf=ap-psk")) {
 			conf_ap->dpp = 0;
-			conf_ap->passphrase = os_strdup("secret passphrase");
+			conf_ap->passphrase = os_strdup(pass);
 			if (!conf_ap->passphrase)
 				goto fail;
 		} else if (os_strstr(cmd, " conf=ap-dpp")) {

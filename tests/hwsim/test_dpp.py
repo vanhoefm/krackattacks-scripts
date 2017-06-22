@@ -475,7 +475,7 @@ def test_dpp_config_fragmentation(dev, apdev):
 def test_dpp_config_legacy_gen(dev, apdev):
     """Generate DPP Config Object for legacy network"""
     run_dpp_qr_code_auth_unicast(dev, apdev, "prime256v1",
-                                 init_extra="conf=sta-psk",
+                                 init_extra="conf=sta-psk pass=%s" % "passphrase".encode("hex"),
                                  require_conf_success=True)
 
 def test_dpp_config_dpp_gen_prime256v1(dev, apdev):
@@ -1099,7 +1099,7 @@ def run_dpp_auto_connect_legacy(dev, apdev):
     if "OK" not in dev[0].request(cmd):
         raise Exception("Failed to start listen operation")
 
-    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk ssid=%s" % (id1, "dpp-legacy".encode("hex"))
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk ssid=%s pass=%s" % (id1, "dpp-legacy".encode("hex"), "secret passphrase".encode("hex"))
     if "OK" not in dev[1].request(cmd):
         raise Exception("Failed to initiate DPP Authentication")
     ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)

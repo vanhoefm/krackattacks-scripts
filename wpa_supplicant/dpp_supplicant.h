@@ -14,6 +14,8 @@ int wpas_dpp_bootstrap_gen(struct wpa_supplicant *wpa_s, const char *cmd);
 int wpas_dpp_bootstrap_remove(struct wpa_supplicant *wpa_s, const char *id);
 const char * wpas_dpp_bootstrap_get_uri(struct wpa_supplicant *wpa_s,
 					unsigned int id);
+int wpas_dpp_bootstrap_info(struct wpa_supplicant *wpa_s, int id,
+			    char *reply, int reply_size);
 int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd);
 int wpas_dpp_listen(struct wpa_supplicant *wpa_s, const char *cmd);
 void wpas_dpp_listen_stop(struct wpa_supplicant *wpa_s);

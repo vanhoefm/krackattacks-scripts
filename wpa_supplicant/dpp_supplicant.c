@@ -276,6 +276,37 @@ const char * wpas_dpp_bootstrap_get_uri(struct wpa_supplicant *wpa_s,
 }
 
 
+static const char * wpas_dpp_bootstrap_type(enum dpp_bootstrap_type type)
+{
+	switch (type) {
+	case DPP_BOOTSTRAP_QR_CODE:
+		return "QRCODE";
+	}
+	return "??";
+}
+
+
+int wpas_dpp_bootstrap_info(struct wpa_supplicant *wpa_s, int id,
+			    char *reply, int reply_size)
+{
+	struct dpp_bootstrap_info *bi;
+
+	bi = dpp_bootstrap_get_id(wpa_s, id);
+	if (!bi)
+		return -1;
+	return os_snprintf(reply, reply_size, "type=%s\n"
+			   "mac_addr=" MACSTR "\n"
+			   "info=%s\n"
+			   "num_freq=%u\n"
+			   "curve=%s\n",
+			   wpas_dpp_bootstrap_type(bi->type),
+			   MAC2STR(bi->mac_addr),
+			   bi->info ? bi->info : "",
+			   bi->num_freq,
+			   bi->curve->name);
+}
+
+
 static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       unsigned int freq, const u8 *dst,
 			       const u8 *src, const u8 *bssid,

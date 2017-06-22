@@ -1225,7 +1225,7 @@ def test_p2p_channel_vht80p80_persistent(dev):
 
 def test_p2p_channel_drv_pref_go_neg(dev):
     """P2P GO Negotiation with GO device channel preference"""
-    dev[0].set("get_pref_freq_list_override", "3:2417 4:2422")
+    dev[0].global_request("SET get_pref_freq_list_override 3:2417 4:2422")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0,
                                            test_data=False)
@@ -1237,8 +1237,8 @@ def test_p2p_channel_drv_pref_go_neg(dev):
 
 def test_p2p_channel_drv_pref_go_neg2(dev):
     """P2P GO Negotiation with P2P client device channel preference"""
-    dev[0].set("get_pref_freq_list_override", "3:2417,2422")
-    dev[1].set("get_pref_freq_list_override", "4:2422")
+    dev[0].global_request("SET get_pref_freq_list_override 3:2417,2422")
+    dev[1].global_request("SET get_pref_freq_list_override 4:2422")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0,
                                            test_data=False)
@@ -1250,7 +1250,7 @@ def test_p2p_channel_drv_pref_go_neg2(dev):
 
 def test_p2p_channel_drv_pref_go_neg3(dev):
     """P2P GO Negotiation with GO device channel preference"""
-    dev[1].set("get_pref_freq_list_override", "3:2417,2427 4:2422")
+    dev[1].global_request("SET get_pref_freq_list_override 3:2417,2427 4:2422")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0,
                                            r_dev=dev[1], r_intent=15,
                                            test_data=False)
@@ -1262,8 +1262,8 @@ def test_p2p_channel_drv_pref_go_neg3(dev):
 
 def test_p2p_channel_drv_pref_go_neg4(dev):
     """P2P GO Negotiation with P2P client device channel preference"""
-    dev[0].set("get_pref_freq_list_override", "3:2417,2422,5180")
-    dev[1].request("P2P_SET override_pref_op_chan 115:36")
+    dev[0].global_request("SET get_pref_freq_list_override 3:2417,2422,5180")
+    dev[1].global_request("P2P_SET override_pref_op_chan 115:36")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0,
                                            test_data=False)
@@ -1275,9 +1275,9 @@ def test_p2p_channel_drv_pref_go_neg4(dev):
 
 def test_p2p_channel_drv_pref_go_neg5(dev):
     """P2P GO Negotiation with P2P client device channel preference"""
-    dev[0].set("get_pref_freq_list_override", "3:2417")
-    dev[1].set("get_pref_freq_list_override", "4:2422")
-    dev[1].request("P2P_SET override_pref_op_chan 115:36")
+    dev[0].global_request("SET get_pref_freq_list_override 3:2417")
+    dev[1].global_request("SET get_pref_freq_list_override 4:2422")
+    dev[1].global_request("P2P_SET override_pref_op_chan 115:36")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0,
                                            test_data=False)
@@ -1289,7 +1289,7 @@ def test_p2p_channel_drv_pref_go_neg5(dev):
 
 def test_p2p_channel_drv_pref_autogo(dev):
     """P2P autonomous GO with driver channel preference"""
-    dev[0].set("get_pref_freq_list_override", "3:2417,2422,5180")
+    dev[0].global_request("SET get_pref_freq_list_override 3:2417,2422,5180")
     res_go = autogo(dev[0])
     if res_go['freq'] != "2417":
         raise Exception("Unexpected operating frequency: " + res_go['freq'])

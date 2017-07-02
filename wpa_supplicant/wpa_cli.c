@@ -2904,6 +2904,20 @@ static int wpa_cli_cmd_dpp_configurator_remove(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_REMOVE", 1, argc, argv);
 }
 
+
+static int wpa_cli_cmd_dpp_pkex_add(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_PKEX_ADD", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_dpp_pkex_remove(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_PKEX_REMOVE", 1, argc, argv);
+}
+
 #endif /* CONFIG_DPP */
 
 
@@ -3550,6 +3564,12 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "dpp_configurator_remove", wpa_cli_cmd_dpp_configurator_remove, NULL,
 	  cli_cmd_flag_none,
 	  "*|<id> = remove DPP configurator" },
+	{ "dpp_pkex_add", wpa_cli_cmd_dpp_pkex_add, NULL,
+	  cli_cmd_flag_sensitive,
+	  "add PKEX code" },
+	{ "dpp_pkex_remove", wpa_cli_cmd_dpp_pkex_remove, NULL,
+	  cli_cmd_flag_none,
+	  "*|<id> = remove DPP pkex information" },
 #endif /* CONFIG_DPP */
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };

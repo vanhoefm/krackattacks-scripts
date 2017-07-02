@@ -51,13 +51,224 @@ static void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr,
 static const struct dpp_curve_params dpp_curves[] = {
 	/* The mandatory to support and the default NIST P-256 curve needs to
 	 * be the first entry on this list. */
-	{ "prime256v1", 32, 32, 16, 32, "P-256" },
-	{ "secp384r1", 48, 48, 24, 48, "P-384" },
-	{ "secp521r1", 64, 64, 32, 66, "P-521" },
-	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256R1" },
-	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384R1" },
-	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512R1" },
-	{ NULL, 0, 0, 0, 0, NULL }
+	{ "prime256v1", 32, 32, 16, 32, "P-256", 19 },
+	{ "secp384r1", 48, 48, 24, 48, "P-384", 20 },
+	{ "secp521r1", 64, 64, 32, 66, "P-521", 21 },
+	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256R1", 28 },
+	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384R1", 29 },
+	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512R1", 30 },
+	{ NULL, 0, 0, 0, 0, NULL, 0 }
+};
+
+
+/* Role-specific elements for PKEX */
+
+/* NIST P-256 */
+static const u8 pkex_init_x_p256[32] = {
+	0x56, 0x26, 0x12, 0xcf, 0x36, 0x48, 0xfe, 0x0b,
+	0x07, 0x04, 0xbb, 0x12, 0x22, 0x50, 0xb2, 0x54,
+	0xb1, 0x94, 0x64, 0x7e, 0x54, 0xce, 0x08, 0x07,
+	0x2e, 0xec, 0xca, 0x74, 0x5b, 0x61, 0x2d, 0x25
+ };
+static const u8 pkex_init_y_p256[32] = {
+	0x3e, 0x44, 0xc7, 0xc9, 0x8c, 0x1c, 0xa1, 0x0b,
+	0x20, 0x09, 0x93, 0xb2, 0xfd, 0xe5, 0x69, 0xdc,
+	0x75, 0xbc, 0xad, 0x33, 0xc1, 0xe7, 0xc6, 0x45,
+	0x4d, 0x10, 0x1e, 0x6a, 0x3d, 0x84, 0x3c, 0xa4
+ };
+static const u8 pkex_resp_x_p256[32] = {
+	0x1e, 0xa4, 0x8a, 0xb1, 0xa4, 0xe8, 0x42, 0x39,
+	0xad, 0x73, 0x07, 0xf2, 0x34, 0xdf, 0x57, 0x4f,
+	0xc0, 0x9d, 0x54, 0xbe, 0x36, 0x1b, 0x31, 0x0f,
+	0x59, 0x91, 0x52, 0x33, 0xac, 0x19, 0x9d, 0x76
+};
+static const u8 pkex_resp_y_p256[32] = {
+	0x26, 0x04, 0x09, 0x45, 0x0a, 0x05, 0x20, 0xe7,
+	0xa7, 0x27, 0xc1, 0x36, 0x76, 0x85, 0xca, 0x3e,
+	0x42, 0x16, 0xf4, 0x89, 0x85, 0x34, 0x6e, 0xd5,
+	0x17, 0xde, 0xc0, 0xb8, 0xad, 0xfd, 0xb2, 0x98
+};
+
+/* NIST P-384 */
+static const u8 pkex_init_x_p384[48] = {
+	0x95, 0x3f, 0x42, 0x9e, 0x50, 0x7f, 0xf9, 0xaa,
+	0xac, 0x1a, 0xf2, 0x85, 0x2e, 0x64, 0x91, 0x68,
+	0x64, 0xc4, 0x3c, 0xb7, 0x5c, 0xf8, 0xc9, 0x53,
+	0x6e, 0x58, 0x4c, 0x7f, 0xc4, 0x64, 0x61, 0xac,
+	0x51, 0x8a, 0x6f, 0xfe, 0xab, 0x74, 0xe6, 0x12,
+	0x81, 0xac, 0x38, 0x5d, 0x41, 0xe6, 0xb9, 0xa3
+};
+static const u8 pkex_init_y_p384[48] = {
+	0x89, 0xd0, 0x97, 0x7b, 0x59, 0x4f, 0xa6, 0xd6,
+	0x7c, 0x5d, 0x93, 0x5b, 0x93, 0xc4, 0x07, 0xa9,
+	0x89, 0xee, 0xd5, 0xcd, 0x6f, 0x42, 0xf8, 0x38,
+	0xc8, 0xc6, 0x62, 0x24, 0x69, 0x0c, 0xd4, 0x48,
+	0xd8, 0x44, 0xd6, 0xc2, 0xe8, 0xcc, 0x62, 0x6b,
+	0x3c, 0x25, 0x53, 0xba, 0x4f, 0x71, 0xf8, 0xe7
+};
+static const u8 pkex_resp_x_p384[48] = {
+	0xad, 0xbe, 0xd7, 0x1d, 0x3a, 0x71, 0x64, 0x98,
+	0x5f, 0xb4, 0xd6, 0x4b, 0x50, 0xd0, 0x84, 0x97,
+	0x4b, 0x7e, 0x57, 0x70, 0xd2, 0xd9, 0xf4, 0x92,
+	0x2a, 0x3f, 0xce, 0x99, 0xc5, 0x77, 0x33, 0x44,
+	0x14, 0x56, 0x92, 0xcb, 0xae, 0x46, 0x64, 0xdf,
+	0xe0, 0xbb, 0xd7, 0xb1, 0x29, 0x20, 0x72, 0xdf
+};
+static const u8 pkex_resp_y_p384[48] = {
+	0x54, 0x58, 0x20, 0xad, 0x55, 0x1d, 0xca, 0xf3,
+	0x1c, 0x8a, 0xcd, 0x19, 0x40, 0xf9, 0x37, 0x83,
+	0xc7, 0xd6, 0xb3, 0x13, 0x7d, 0x53, 0x28, 0x5c,
+	0xf6, 0x2d, 0xf1, 0xdd, 0xa5, 0x8b, 0xad, 0x5d,
+	0x81, 0xab, 0xb1, 0x00, 0x39, 0xd6, 0xcc, 0x9c,
+	0xea, 0x1e, 0x84, 0x1d, 0xbf, 0xe3, 0x35, 0xf9
+};
+
+/* NIST P-521 */
+static const u8 pkex_init_x_p521[66] = {
+	0x00, 0x16, 0x20, 0x45, 0x19, 0x50, 0x95, 0x23,
+	0x0d, 0x24, 0xbe, 0x00, 0x87, 0xdc, 0xfa, 0xf0,
+	0x58, 0x9a, 0x01, 0x60, 0x07, 0x7a, 0xca, 0x76,
+	0x01, 0xab, 0x2d, 0x5a, 0x46, 0xcd, 0x2c, 0xb5,
+	0x11, 0x9a, 0xff, 0xaa, 0x48, 0x04, 0x91, 0x38,
+	0xcf, 0x86, 0xfc, 0xa4, 0xa5, 0x0f, 0x47, 0x01,
+	0x80, 0x1b, 0x30, 0xa3, 0xae, 0xe8, 0x1c, 0x2e,
+	0xea, 0xcc, 0xf0, 0x03, 0x9f, 0x77, 0x4c, 0x8d,
+	0x97, 0x76
+};
+static const u8 pkex_init_y_p521[66] = {
+	0x01, 0x4c, 0x71, 0xfd, 0x1b, 0xd5, 0x9c, 0xa6,
+	0xed, 0x39, 0xef, 0x45, 0xc5, 0x06, 0xfd, 0x66,
+	0xc0, 0xeb, 0x0f, 0xbf, 0x21, 0xa3, 0x36, 0x74,
+	0xfd, 0xaa, 0x05, 0x6e, 0x4e, 0x33, 0x95, 0x42,
+	0x1a, 0x9d, 0x3f, 0x3a, 0x1c, 0x5e, 0xa8, 0x60,
+	0xf7, 0xe5, 0x59, 0x1d, 0x07, 0xaa, 0x6f, 0x40,
+	0x0a, 0x59, 0x3c, 0x27, 0xad, 0xe0, 0x48, 0xfd,
+	0xd1, 0x83, 0x37, 0x4c, 0xdf, 0xe1, 0x86, 0x72,
+	0xfc, 0x57
+};
+static const u8 pkex_resp_x_p521[66] = {
+	0x00, 0x79, 0xe4, 0x4d, 0x6b, 0x5e, 0x12, 0x0a,
+	0x18, 0x2c, 0xb3, 0x05, 0x77, 0x0f, 0xc3, 0x44,
+	0x1a, 0xcd, 0x78, 0x46, 0x14, 0xee, 0x46, 0x3f,
+	0xab, 0xc9, 0x59, 0x7c, 0x85, 0xa0, 0xc2, 0xfb,
+	0x02, 0x32, 0x99, 0xde, 0x5d, 0xe1, 0x0d, 0x48,
+	0x2d, 0x71, 0x7d, 0x8d, 0x3f, 0x61, 0x67, 0x9e,
+	0x2b, 0x8b, 0x12, 0xde, 0x10, 0x21, 0x55, 0x0a,
+	0x5b, 0x2d, 0xe8, 0x05, 0x09, 0xf6, 0x20, 0x97,
+	0x84, 0xb4
+};
+static const u8 pkex_resp_y_p521[66] = {
+	0x01, 0xb9, 0x9c, 0xc6, 0x41, 0x32, 0x5b, 0xd2,
+	0x35, 0xd8, 0x8b, 0x2b, 0xe4, 0x6e, 0xcc, 0xdf,
+	0x7c, 0x38, 0xc4, 0x5b, 0xf6, 0x74, 0x71, 0x5c,
+	0x77, 0x16, 0x8a, 0x80, 0xa9, 0x84, 0xc7, 0x7b,
+	0x9d, 0xfd, 0x83, 0x6f, 0xae, 0xf8, 0x24, 0x16,
+	0x2f, 0x21, 0x25, 0x65, 0xa2, 0x1a, 0x6b, 0x2d,
+	0x30, 0x62, 0xb3, 0xcc, 0x6e, 0x59, 0x3c, 0x7f,
+	0x58, 0x91, 0x81, 0x72, 0x07, 0x8c, 0x91, 0xac,
+	0x31, 0x1e
+};
+
+/* Brainpool P-256r1 */
+static const u8 pkex_init_x_bp_p256r1[32] = {
+	0x46, 0x98, 0x18, 0x6c, 0x27, 0xcd, 0x4b, 0x10,
+	0x7d, 0x55, 0xa3, 0xdd, 0x89, 0x1f, 0x9f, 0xca,
+	0xc7, 0x42, 0x5b, 0x8a, 0x23, 0xed, 0xf8, 0x75,
+	0xac, 0xc7, 0xe9, 0x8d, 0xc2, 0x6f, 0xec, 0xd8
+};
+static const u8 pkex_init_y_bp_p256r1[32] = {
+	0x16, 0x30, 0x68, 0x32, 0x3b, 0xb0, 0x21, 0xee,
+	0xeb, 0xf7, 0xb6, 0x7c, 0xae, 0x52, 0x26, 0x42,
+	0x59, 0x28, 0x58, 0xb6, 0x14, 0x90, 0xed, 0x69,
+	0xd0, 0x67, 0xea, 0x25, 0x60, 0x0f, 0xa9, 0x6c
+};
+static const u8 pkex_resp_x_bp_p256r1[32] = {
+	0x90, 0x18, 0x84, 0xc9, 0xdc, 0xcc, 0xb5, 0x2f,
+	0x4a, 0x3f, 0x4f, 0x18, 0x0a, 0x22, 0x56, 0x6a,
+	0xa9, 0xef, 0xd4, 0xe6, 0xc3, 0x53, 0xc2, 0x1a,
+	0x23, 0x54, 0xdd, 0x08, 0x7e, 0x10, 0xd8, 0xe3
+};
+static const u8 pkex_resp_y_bp_p256r1[32] = {
+	0x2a, 0xfa, 0x98, 0x9b, 0xe3, 0xda, 0x30, 0xfd,
+	0x32, 0x28, 0xcb, 0x66, 0xfb, 0x40, 0x7f, 0xf2,
+	0xb2, 0x25, 0x80, 0x82, 0x44, 0x85, 0x13, 0x7e,
+	0x4b, 0xb5, 0x06, 0xc0, 0x03, 0x69, 0x23, 0x64
+};
+
+/* Brainpool P-384r1 */
+static const u8 pkex_init_x_bp_p384r1[48] = {
+	0x0a, 0x2c, 0xeb, 0x49, 0x5e, 0xb7, 0x23, 0xbd,
+	0x20, 0x5b, 0xe0, 0x49, 0xdf, 0xcf, 0xcf, 0x19,
+	0x37, 0x36, 0xe1, 0x2f, 0x59, 0xdb, 0x07, 0x06,
+	0xb5, 0xeb, 0x2d, 0xae, 0xc2, 0xb2, 0x38, 0x62,
+	0xa6, 0x73, 0x09, 0xa0, 0x6c, 0x0a, 0xa2, 0x30,
+	0x99, 0xeb, 0xf7, 0x1e, 0x47, 0xb9, 0x5e, 0xbe
+};
+static const u8 pkex_init_y_bp_p384r1[48] = {
+	0x54, 0x76, 0x61, 0x65, 0x75, 0x5a, 0x2f, 0x99,
+	0x39, 0x73, 0xca, 0x6c, 0xf9, 0xf7, 0x12, 0x86,
+	0x54, 0xd5, 0xd4, 0xad, 0x45, 0x7b, 0xbf, 0x32,
+	0xee, 0x62, 0x8b, 0x9f, 0x52, 0xe8, 0xa0, 0xc9,
+	0xb7, 0x9d, 0xd1, 0x09, 0xb4, 0x79, 0x1c, 0x3e,
+	0x1a, 0xbf, 0x21, 0x45, 0x66, 0x6b, 0x02, 0x52
+};
+static const u8 pkex_resp_x_bp_p384r1[48] = {
+	0x03, 0xa2, 0x57, 0xef, 0xe8, 0x51, 0x21, 0xa0,
+	0xc8, 0x9e, 0x21, 0x02, 0xb5, 0x9a, 0x36, 0x25,
+	0x74, 0x22, 0xd1, 0xf2, 0x1b, 0xa8, 0x9a, 0x9b,
+	0x97, 0xbc, 0x5a, 0xeb, 0x26, 0x15, 0x09, 0x71,
+	0x77, 0x59, 0xec, 0x8b, 0xb7, 0xe1, 0xe8, 0xce,
+	0x65, 0xb8, 0xaf, 0xf8, 0x80, 0xae, 0x74, 0x6c
+};
+static const u8 pkex_resp_y_bp_p384r1[48] = {
+	0x2f, 0xd9, 0x6a, 0xc7, 0x3e, 0xec, 0x76, 0x65,
+	0x2d, 0x38, 0x7f, 0xec, 0x63, 0x26, 0x3f, 0x04,
+	0xd8, 0x4e, 0xff, 0xe1, 0x0a, 0x51, 0x74, 0x70,
+	0xe5, 0x46, 0x63, 0x7f, 0x5c, 0xc0, 0xd1, 0x7c,
+	0xfb, 0x2f, 0xea, 0xe2, 0xd8, 0x0f, 0x84, 0xcb,
+	0xe9, 0x39, 0x5c, 0x64, 0xfe, 0xcb, 0x2f, 0xf1
+};
+
+/* Brainpool P-512r1 */
+static const u8 pkex_init_x_bp_p512r1[64] = {
+	0x4c, 0xe9, 0xb6, 0x1c, 0xe2, 0x00, 0x3c, 0x9c,
+	0xa9, 0xc8, 0x56, 0x52, 0xaf, 0x87, 0x3e, 0x51,
+	0x9c, 0xbb, 0x15, 0x31, 0x1e, 0xc1, 0x05, 0xfc,
+	0x7c, 0x77, 0xd7, 0x37, 0x61, 0x27, 0xd0, 0x95,
+	0x98, 0xee, 0x5d, 0xa4, 0x3d, 0x09, 0xdb, 0x3d,
+	0xfa, 0x89, 0x9e, 0x7f, 0xa6, 0xa6, 0x9c, 0xff,
+	0x83, 0x5c, 0x21, 0x6c, 0x3e, 0xf2, 0xfe, 0xdc,
+	0x63, 0xe4, 0xd1, 0x0e, 0x75, 0x45, 0x69, 0x0f
+};
+static const u8 pkex_init_y_bp_p512r1[64] = {
+	0x5a, 0x28, 0x01, 0xbe, 0x96, 0x82, 0x4e, 0xf6,
+	0xfa, 0xed, 0x7d, 0xfd, 0x48, 0x8b, 0x48, 0x4e,
+	0xd1, 0x97, 0x87, 0xc4, 0x05, 0x5d, 0x15, 0x2a,
+	0xf4, 0x91, 0x4b, 0x75, 0x90, 0xd9, 0x34, 0x2c,
+	0x3c, 0x12, 0xf2, 0xf5, 0x25, 0x94, 0x24, 0x34,
+	0xa7, 0x6d, 0x66, 0xbc, 0x27, 0xa4, 0xa0, 0x8d,
+	0xd5, 0xe1, 0x54, 0xa3, 0x55, 0x26, 0xd4, 0x14,
+	0x17, 0x0f, 0xc1, 0xc7, 0x3d, 0x68, 0x7f, 0x5a
+};
+static const u8 pkex_resp_x_bp_p512r1[64] = {
+	0x2a, 0x60, 0x32, 0x27, 0xa1, 0xe6, 0x94, 0x72,
+	0x1c, 0x48, 0xbe, 0xc5, 0x77, 0x14, 0x30, 0x76,
+	0xe4, 0xbf, 0xf7, 0x7b, 0xc5, 0xfd, 0xdf, 0x19,
+	0x1e, 0x0f, 0xdf, 0x1c, 0x40, 0xfa, 0x34, 0x9e,
+	0x1f, 0x42, 0x24, 0xa3, 0x2c, 0xd5, 0xc7, 0xc9,
+	0x7b, 0x47, 0x78, 0x96, 0xf1, 0x37, 0x0e, 0x88,
+	0xcb, 0xa6, 0x52, 0x29, 0xd7, 0xa8, 0x38, 0x29,
+	0x8e, 0x6e, 0x23, 0x47, 0xd4, 0x4b, 0x70, 0x3e
+};
+static const u8 pkex_resp_y_bp_p512r1[64] = {
+	0x2a, 0xbe, 0x59, 0xe6, 0xc4, 0xb3, 0xd8, 0x09,
+	0x66, 0x89, 0x0a, 0x2d, 0x19, 0xf0, 0x9c, 0x9f,
+	0xb4, 0xab, 0x8f, 0x50, 0x68, 0x3c, 0x74, 0x64,
+	0x4e, 0x19, 0x55, 0x81, 0x9b, 0x48, 0x5c, 0xf4,
+	0x12, 0x8d, 0xb9, 0xd8, 0x02, 0x5b, 0xe1, 0x26,
+	0x7e, 0x19, 0x5c, 0xfd, 0x70, 0xf7, 0x4b, 0xdc,
+	0xb5, 0x5d, 0xc1, 0x7a, 0xe9, 0xd1, 0x05, 0x2e,
+	0xd1, 0xfd, 0x2f, 0xce, 0x63, 0x77, 0x48, 0x2c
 };
 
 
@@ -890,6 +1101,38 @@ static EVP_PKEY * dpp_set_keypair(const struct dpp_curve_params **curve,
 		return NULL;
 	}
 	return pkey;
+}
+
+
+int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi)
+{
+	unsigned char *der = NULL;
+	int der_len;
+	EC_KEY *eckey;
+	int res;
+	size_t len;
+
+	/* Need to get the compressed form of the public key through EC_KEY, so
+	 * cannot use the simpler i2d_PUBKEY() here. */
+	eckey = EVP_PKEY_get1_EC_KEY(bi->pubkey);
+	if (!eckey)
+		return -1;
+	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
+	der_len = i2d_EC_PUBKEY(eckey, &der);
+	EC_KEY_free(eckey);
+	if (der_len <= 0) {
+		wpa_printf(MSG_ERROR,
+			   "DDP: Failed to build DER encoded public key");
+		OPENSSL_free(der);
+		return -1;
+	}
+
+	len = der_len;
+	res = sha256_vector(1, (const u8 **) &der, &len, bi->pubkey_hash);
+	OPENSSL_free(der);
+	if (res < 0)
+		wpa_printf(MSG_DEBUG, "DPP: Failed to hash public key");
+	return res;
 }
 
 
@@ -4615,4 +4858,1192 @@ fail:
 	json_free(root);
 	json_free(own_root);
 	return ret;
+}
+
+
+static EVP_PKEY * dpp_pkex_get_role_elem(const struct dpp_curve_params *curve,
+					 int init)
+{
+	EC_GROUP *group;
+	size_t len = curve->prime_len;
+	const u8 *x, *y;
+
+	switch (curve->ike_group) {
+	case 19:
+		x = init ? pkex_init_x_p256 : pkex_resp_x_p256;
+		y = init ? pkex_init_y_p256 : pkex_resp_y_p256;
+		break;
+	case 20:
+		x = init ? pkex_init_x_p384 : pkex_resp_x_p384;
+		y = init ? pkex_init_y_p384 : pkex_resp_y_p384;
+		break;
+	case 21:
+		x = init ? pkex_init_x_p521 : pkex_resp_x_p521;
+		y = init ? pkex_init_y_p521 : pkex_resp_y_p521;
+		break;
+	case 28:
+		x = init ? pkex_init_x_bp_p256r1 : pkex_resp_x_bp_p256r1;
+		y = init ? pkex_init_y_bp_p256r1 : pkex_resp_y_bp_p256r1;
+		break;
+	case 29:
+		x = init ? pkex_init_x_bp_p384r1 : pkex_resp_x_bp_p384r1;
+		y = init ? pkex_init_y_bp_p384r1 : pkex_resp_y_bp_p384r1;
+		break;
+	case 30:
+		x = init ? pkex_init_x_bp_p512r1 : pkex_resp_x_bp_p512r1;
+		y = init ? pkex_init_y_bp_p512r1 : pkex_resp_y_bp_p512r1;
+		break;
+	default:
+		return NULL;
+	}
+
+	group = EC_GROUP_new_by_curve_name(OBJ_txt2nid(curve->name));
+	if (!group)
+		return NULL;
+	return dpp_set_pubkey_point_group(group, x, y, len);
+}
+
+
+static EC_POINT * dpp_pkex_derive_Qi(const struct dpp_curve_params *curve,
+				     const u8 *mac_init, const char *code,
+				     const char *identifier, BN_CTX *bnctx,
+				     const EC_GROUP **ret_group)
+{
+	u8 hash[DPP_MAX_HASH_LEN];
+	const u8 *addr[3];
+	size_t len[3];
+	unsigned int num_elem = 0;
+	EC_POINT *Qi = NULL;
+	EVP_PKEY *Pi = NULL;
+	EC_KEY *Pi_ec = NULL;
+	const EC_POINT *Pi_point;
+	BIGNUM *hash_bn = NULL;
+	const EC_GROUP *group = NULL;
+	EC_GROUP *group2 = NULL;
+
+	/* Qi = H(MAC-Initiator | [identifier |] code) * Pi */
+
+	wpa_printf(MSG_DEBUG, "DPP: MAC-Initiator: " MACSTR, MAC2STR(mac_init));
+	addr[num_elem] = mac_init;
+	len[num_elem] = ETH_ALEN;
+	num_elem++;
+	if (identifier) {
+		wpa_printf(MSG_DEBUG, "DPP: code identifier: %s",
+			   identifier);
+		addr[num_elem] = (const u8 *) identifier;
+		len[num_elem] = os_strlen(identifier);
+		num_elem++;
+	}
+	wpa_hexdump_ascii_key(MSG_DEBUG, "DPP: code", code, os_strlen(code));
+	addr[num_elem] = (const u8 *) code;
+	len[num_elem] = os_strlen(code);
+	num_elem++;
+	if (dpp_hash_vector(curve, num_elem, addr, len, hash) < 0)
+		goto fail;
+	wpa_hexdump_key(MSG_DEBUG,
+			"DPP: H(MAC-Initiator | [identifier |] code)",
+			hash, curve->hash_len);
+	Pi = dpp_pkex_get_role_elem(curve, 1);
+	if (!Pi)
+		goto fail;
+	dpp_debug_print_key("DPP: Pi", Pi);
+	Pi_ec = EVP_PKEY_get1_EC_KEY(Pi);
+	if (!Pi_ec)
+		goto fail;
+	Pi_point = EC_KEY_get0_public_key(Pi_ec);
+
+	group = EC_KEY_get0_group(Pi_ec);
+	if (!group)
+		goto fail;
+	group2 = EC_GROUP_dup(group);
+	if (!group2)
+		goto fail;
+	Qi = EC_POINT_new(group2);
+	if (!Qi) {
+		EC_GROUP_free(group2);
+		goto fail;
+	}
+	hash_bn = BN_bin2bn(hash, curve->hash_len, NULL);
+	if (!hash_bn ||
+	    EC_POINT_mul(group2, Qi, NULL, Pi_point, hash_bn, bnctx) != 1)
+		goto fail;
+out:
+	EC_KEY_free(Pi_ec);
+	EVP_PKEY_free(Pi);
+	BN_clear_free(hash_bn);
+	if (ret_group)
+		*ret_group = group2;
+	return Qi;
+fail:
+	EC_POINT_free(Qi);
+	Qi = NULL;
+	goto out;
+}
+
+
+static EC_POINT * dpp_pkex_derive_Qr(const struct dpp_curve_params *curve,
+				     const u8 *mac_resp, const char *code,
+				     const char *identifier, BN_CTX *bnctx,
+				     const EC_GROUP **ret_group)
+{
+	u8 hash[DPP_MAX_HASH_LEN];
+	const u8 *addr[3];
+	size_t len[3];
+	unsigned int num_elem = 0;
+	EC_POINT *Qr = NULL;
+	EVP_PKEY *Pr = NULL;
+	EC_KEY *Pr_ec = NULL;
+	const EC_POINT *Pr_point;
+	BIGNUM *hash_bn = NULL;
+	const EC_GROUP *group = NULL;
+	EC_GROUP *group2 = NULL;
+
+	/* Qr = H(MAC-Responder | | [identifier | ] code) * Pr */
+
+	wpa_printf(MSG_DEBUG, "DPP: MAC-Responder: " MACSTR, MAC2STR(mac_resp));
+	addr[num_elem] = mac_resp;
+	len[num_elem] = ETH_ALEN;
+	num_elem++;
+	if (identifier) {
+		wpa_printf(MSG_DEBUG, "DPP: code identifier: %s",
+			   identifier);
+		addr[num_elem] = (const u8 *) identifier;
+		len[num_elem] = os_strlen(identifier);
+		num_elem++;
+	}
+	wpa_hexdump_ascii_key(MSG_DEBUG, "DPP: code", code, os_strlen(code));
+	addr[num_elem] = (const u8 *) code;
+	len[num_elem] = os_strlen(code);
+	num_elem++;
+	if (dpp_hash_vector(curve, num_elem, addr, len, hash) < 0)
+		goto fail;
+	wpa_hexdump_key(MSG_DEBUG,
+			"DPP: H(MAC-Responder | [identifier |] code)",
+			hash, curve->hash_len);
+	Pr = dpp_pkex_get_role_elem(curve, 0);
+	if (!Pr)
+		goto fail;
+	dpp_debug_print_key("DPP: Pr", Pr);
+	Pr_ec = EVP_PKEY_get1_EC_KEY(Pr);
+	if (!Pr_ec)
+		goto fail;
+	Pr_point = EC_KEY_get0_public_key(Pr_ec);
+
+	group = EC_KEY_get0_group(Pr_ec);
+	if (!group)
+		goto fail;
+	group2 = EC_GROUP_dup(group);
+	if (!group2)
+		goto fail;
+	Qr = EC_POINT_new(group2);
+	if (!Qr) {
+		EC_GROUP_free(group2);
+		goto fail;
+	}
+	hash_bn = BN_bin2bn(hash, curve->hash_len, NULL);
+	if (!hash_bn ||
+	    EC_POINT_mul(group2, Qr, NULL, Pr_point, hash_bn, bnctx) != 1)
+		goto fail;
+out:
+	EC_KEY_free(Pr_ec);
+	EVP_PKEY_free(Pr);
+	BN_clear_free(hash_bn);
+	if (ret_group)
+		*ret_group = group2;
+	return Qr;
+fail:
+	EC_POINT_free(Qr);
+	Qr = NULL;
+	goto out;
+}
+
+
+static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
+{
+	EC_KEY *X_ec = NULL;
+	const EC_POINT *X_point;
+	BN_CTX *bnctx = NULL;
+	const EC_GROUP *group;
+	EC_POINT *Qi = NULL, *M = NULL;
+	struct wpabuf *M_buf = NULL;
+	BIGNUM *Mx = NULL, *My = NULL;
+	struct wpabuf *msg = NULL;
+	size_t attr_len;
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+	int num_bytes, offset;
+
+	wpa_printf(MSG_DEBUG, "DPP: Build PKEX Exchange Request");
+
+	/* Qi = H(MAC-Initiator | [identifier |] code) * Pi */
+	bnctx = BN_CTX_new();
+	if (!bnctx)
+		goto fail;
+	Qi = dpp_pkex_derive_Qi(curve, pkex->own_mac, pkex->code,
+				pkex->identifier, bnctx, &group);
+	if (!Qi)
+		goto fail;
+
+	/* Generate a random ephemeral keypair x/X */
+	pkex->x = dpp_gen_keypair(curve);
+	if (!pkex->x)
+		goto fail;
+
+	/* M = X + Qi */
+	X_ec = EVP_PKEY_get1_EC_KEY(pkex->x);
+	if (!X_ec)
+		goto fail;
+	X_point = EC_KEY_get0_public_key(X_ec);
+	if (!X_point)
+		goto fail;
+	M = EC_POINT_new(group);
+	Mx = BN_new();
+	My = BN_new();
+	if (!M || !Mx || !My ||
+	    EC_POINT_add(group, M, X_point, Qi, bnctx) != 1 ||
+	    EC_POINT_get_affine_coordinates_GFp(group, M, Mx, My, bnctx) != 1)
+		goto fail;
+
+	/* Initiator -> Responder: group, [identifier,] M */
+	attr_len = 4 + 2;
+	if (pkex->identifier)
+		attr_len += 4 + os_strlen(pkex->identifier);
+	attr_len += 4 + 2 * curve->prime_len;
+	msg = dpp_alloc_msg(DPP_PA_PKEX_EXCHANGE_REQ, attr_len);
+	if (!msg)
+		goto fail;
+
+	/* Finite Cyclic Group attribute */
+	wpabuf_put_le16(msg, DPP_ATTR_FINITE_CYCLIC_GROUP);
+	wpabuf_put_le16(msg, 2);
+	wpabuf_put_le16(msg, curve->ike_group);
+
+	/* Code Identifier attribute */
+	if (pkex->identifier) {
+		wpabuf_put_le16(msg, DPP_ATTR_CODE_IDENTIFIER);
+		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
+		wpabuf_put_str(msg, pkex->identifier);
+	}
+
+	/* M in Encrypted Key attribute */
+	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
+	wpabuf_put_le16(msg, 2 * curve->prime_len);
+
+	num_bytes = BN_num_bytes(Mx);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(Mx, wpabuf_put(msg, num_bytes));
+	os_memset(pkex->Mx, 0, offset);
+	BN_bn2bin(Mx, pkex->Mx + offset);
+
+	num_bytes = BN_num_bytes(My);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(My, wpabuf_put(msg, num_bytes));
+
+out:
+	wpabuf_free(M_buf);
+	EC_KEY_free(X_ec);
+	EC_POINT_free(M);
+	EC_POINT_free(Qi);
+	BN_clear_free(Mx);
+	BN_clear_free(My);
+	BN_CTX_free(bnctx);
+	return msg;
+fail:
+	wpa_printf(MSG_INFO, "DPP: Failed to build PKEX Exchange Request");
+	wpabuf_free(msg);
+	msg = NULL;
+	goto out;
+}
+
+
+struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
+				const u8 *own_mac,
+				const char *identifier,
+				const char *code)
+{
+	struct dpp_pkex *pkex;
+
+	pkex = os_zalloc(sizeof(*pkex));
+	if (!pkex)
+		return NULL;
+	pkex->initiator = 1;
+	pkex->own_bi = bi;
+	os_memcpy(pkex->own_mac, own_mac, ETH_ALEN);
+	if (identifier) {
+		pkex->identifier = os_strdup(identifier);
+		if (!pkex->identifier)
+			goto fail;
+	}
+	pkex->code = os_strdup(code);
+	if (!pkex->code)
+		goto fail;
+	pkex->exchange_req = dpp_pkex_build_exchange_req(pkex);
+	if (!pkex->exchange_req)
+		goto fail;
+	return pkex;
+fail:
+	dpp_pkex_free(pkex);
+	return NULL;
+}
+
+
+struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
+					   const u8 *own_mac,
+					   const u8 *peer_mac,
+					   const char *identifier,
+					   const char *code,
+					   const u8 *buf, size_t len)
+{
+	const u8 *attr_group, *attr_id, *attr_key;
+	u16 attr_group_len, attr_id_len, attr_key_len;
+	const struct dpp_curve_params *curve = bi->curve;
+	u16 ike_group;
+	struct dpp_pkex *pkex = NULL;
+	EC_POINT *Qi = NULL, *Qr = NULL, *M = NULL, *X = NULL, *N = NULL;
+	BN_CTX *bnctx = NULL;
+	const EC_GROUP *group;
+	BIGNUM *Mx = NULL, *My = NULL;
+	EC_KEY *Y_ec = NULL, *X_ec = NULL;;
+	const EC_POINT *Y_point;
+	BIGNUM *Nx = NULL, *Ny = NULL;
+	struct wpabuf *msg = NULL;
+	size_t attr_len;
+	int num_bytes, offset;
+
+	attr_id = dpp_get_attr(buf, len, DPP_ATTR_CODE_IDENTIFIER,
+			       &attr_id_len);
+	if (!attr_id && identifier) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No PKEX code identifier received, but expected one");
+		return NULL;
+	}
+	if (attr_id && identifier &&
+	    (os_strlen(identifier) != attr_id_len ||
+	     os_memcmp(identifier, attr_id, attr_id_len) != 0)) {
+		wpa_printf(MSG_DEBUG, "DPP: PKEX code identifier mismatch");
+		return NULL;
+	}
+
+	attr_group = dpp_get_attr(buf, len, DPP_ATTR_FINITE_CYCLIC_GROUP,
+				  &attr_group_len);
+	if (!attr_group || attr_group_len != 2) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Missing or invalid Finite Cyclic Group attribute");
+		return NULL;
+	}
+	ike_group = WPA_GET_LE16(attr_group);
+	if (ike_group != curve->ike_group) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Mismatching PKEX curve: peer=%u own=%u",
+			   ike_group, curve->ike_group);
+		/* TODO: error response with suggested curve:
+		 * DPP Status, group */
+		return NULL;
+	}
+
+	/* M in Encrypted Key attribute */
+	attr_key = dpp_get_attr(buf, len, DPP_ATTR_ENCRYPTED_KEY,
+				&attr_key_len);
+	if (!attr_key || attr_key_len & 0x01 || attr_key_len < 2 ||
+	    attr_key_len / 2 > DPP_MAX_SHARED_SECRET_LEN) {
+		wpa_printf(MSG_DEBUG, "DPP: Missing Encrypted Key attribute");
+		return NULL;
+	}
+
+	/* Qi = H(MAC-Initiator | [identifier |] code) * Pi */
+	bnctx = BN_CTX_new();
+	if (!bnctx)
+		goto fail;
+	Qi = dpp_pkex_derive_Qi(curve, peer_mac, code, identifier, bnctx,
+				&group);
+	if (!Qi)
+		goto fail;
+
+	/* X' = M - Qi */
+	X = EC_POINT_new(group);
+	M = EC_POINT_new(group);
+	Mx = BN_bin2bn(attr_key, attr_key_len / 2, NULL);
+	My = BN_bin2bn(attr_key + attr_key_len / 2, attr_key_len / 2, NULL);
+	if (!X || !M || !Mx || !My ||
+	    EC_POINT_set_affine_coordinates_GFp(group, M, Mx, My, bnctx) != 1 ||
+	    EC_POINT_is_at_infinity(group, M) ||
+	    !EC_POINT_is_on_curve(group, M, bnctx) ||
+	    EC_POINT_invert(group, Qi, bnctx) != 1 ||
+	    EC_POINT_add(group, X, M, Qi, bnctx) != 1 ||
+	    EC_POINT_is_at_infinity(group, X) ||
+	    !EC_POINT_is_on_curve(group, X, bnctx))
+		goto fail;
+
+	pkex = os_zalloc(sizeof(*pkex));
+	if (!pkex)
+		goto fail;
+	pkex->own_bi = bi;
+	os_memcpy(pkex->own_mac, own_mac, ETH_ALEN);
+	os_memcpy(pkex->peer_mac, peer_mac, ETH_ALEN);
+	if (identifier) {
+		pkex->identifier = os_strdup(identifier);
+		if (!pkex->identifier)
+			goto fail;
+	}
+	pkex->code = os_strdup(code);
+	if (!pkex->code)
+		goto fail;
+
+	os_memcpy(pkex->Mx, attr_key, attr_key_len / 2);
+
+	X_ec = EC_KEY_new();
+	if (!X_ec ||
+	    EC_KEY_set_group(X_ec, group) != 1 ||
+	    EC_KEY_set_public_key(X_ec, X) != 1)
+		goto fail;
+	pkex->x = EVP_PKEY_new();
+	if (!pkex->x ||
+	    EVP_PKEY_set1_EC_KEY(pkex->x, X_ec) != 1)
+		goto fail;
+
+	/* Qr = H(MAC-Responder | | [identifier | ] code) * Pr */
+	Qr = dpp_pkex_derive_Qr(curve, own_mac, code, identifier, bnctx, NULL);
+	if (!Qr)
+		goto fail;
+
+	/* Generate a random ephemeral keypair y/Y */
+	pkex->y = dpp_gen_keypair(curve);
+	if (!pkex->y)
+		goto fail;
+
+	/* N = Y + Qr */
+	Y_ec = EVP_PKEY_get1_EC_KEY(pkex->y);
+	if (!Y_ec)
+		goto fail;
+	Y_point = EC_KEY_get0_public_key(Y_ec);
+	if (!Y_point)
+		goto fail;
+	N = EC_POINT_new(group);
+	Nx = BN_new();
+	Ny = BN_new();
+	if (!N || !Nx || !Ny ||
+	    EC_POINT_add(group, N, Y_point, Qr, bnctx) != 1 ||
+	    EC_POINT_get_affine_coordinates_GFp(group, N, Nx, Ny, bnctx) != 1)
+		goto fail;
+
+	/* Initiator -> Responder: DPP Status, [identifier,] N */
+	attr_len = 4 + 1;
+	if (identifier)
+		attr_len += 4 + os_strlen(identifier);
+	attr_len += 4 + 2 * curve->prime_len;
+	msg = dpp_alloc_msg(DPP_PA_PKEX_EXCHANGE_RESP, attr_len);
+	if (!msg)
+		goto fail;
+
+	/* DPP Status */
+	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, DPP_STATUS_OK);
+
+	/* Code Identifier attribute */
+	if (pkex->identifier) {
+		wpabuf_put_le16(msg, DPP_ATTR_CODE_IDENTIFIER);
+		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
+		wpabuf_put_str(msg, pkex->identifier);
+	}
+
+	/* N in Encrypted Key attribute */
+	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
+	wpabuf_put_le16(msg, 2 * curve->prime_len);
+
+	num_bytes = BN_num_bytes(Nx);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(Nx, wpabuf_put(msg, num_bytes));
+	os_memset(pkex->Nx, 0, offset);
+	BN_bn2bin(Nx, pkex->Nx + offset);
+
+	num_bytes = BN_num_bytes(Ny);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
+
+	pkex->exchange_resp = msg;
+	msg = NULL;
+	pkex->exchange_done = 1;
+
+out:
+	wpabuf_free(msg);
+	BN_CTX_free(bnctx);
+	EC_POINT_free(Qi);
+	EC_POINT_free(Qr);
+	BN_free(Mx);
+	BN_free(My);
+	BN_free(Nx);
+	BN_free(Ny);
+	EC_POINT_free(M);
+	EC_POINT_free(N);
+	EC_POINT_free(X);
+	EC_KEY_free(X_ec);
+	EC_KEY_free(Y_ec);
+	return pkex;
+fail:
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Request processing faileed");
+	dpp_pkex_free(pkex);
+	pkex = NULL;
+	goto out;
+}
+
+
+static int dpp_pkex_derive_z(const u8 *mac_init, const u8 *mac_resp,
+			     const u8 *Mx, size_t Mx_len,
+			     const u8 *Nx, size_t Nx_len,
+			     const char *code,
+			     const u8 *Zx, size_t Zx_len,
+			     u8 *z, unsigned int hash_len)
+{
+	u8 salt[DPP_MAX_HASH_LEN], prk[DPP_MAX_HASH_LEN];
+	int res;
+	u8 *info, *pos;
+	size_t info_len;
+
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	 */
+
+	/* HKDF-Extract(<>, IKM=Z.x) */
+	os_memset(salt, 0, hash_len);
+	if (dpp_hmac(hash_len, salt, hash_len, Zx, Zx_len, prk) < 0)
+		return -1;
+	wpa_hexdump_key(MSG_DEBUG, "DPP: PRK = HKDF-Extract(<>, IKM)",
+			prk, hash_len);
+	info_len = 2 * ETH_ALEN + Mx_len + Nx_len + os_strlen(code);
+	info = os_malloc(info_len);
+	if (!info)
+		return -1;
+	pos = info;
+	os_memcpy(pos, mac_init, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, mac_resp, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, Mx, Mx_len);
+	pos += Mx_len;
+	os_memcpy(pos, Nx, Nx_len);
+	pos += Nx_len;
+	os_memcpy(pos, code, os_strlen(code));
+
+	/* HKDF-Expand(PRK, info, L) */
+	if (hash_len == 32)
+		res = hmac_sha256_kdf(prk, hash_len, NULL, info, info_len,
+				      z, hash_len);
+	else if (hash_len == 48)
+		res = hmac_sha384_kdf(prk, hash_len, NULL, info, info_len,
+				      z, hash_len);
+	else if (hash_len == 64)
+		res = hmac_sha512_kdf(prk, hash_len, NULL, info, info_len,
+				      z, hash_len);
+	else
+		res = -1;
+	os_free(info);
+	os_memset(prk, 0, hash_len);
+	if (res < 0)
+		return -1;
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: z = HKDF-Expand(PRK, info, L)",
+			z, hash_len);
+	return 0;
+}
+
+
+struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
+					  const u8 *buf, size_t buflen)
+{
+	const u8 *attr_status, *attr_id, *attr_key;
+	u16 attr_status_len, attr_id_len, attr_key_len;
+	const EC_GROUP *group;
+	BN_CTX *bnctx = NULL;
+	size_t clear_len;
+	struct wpabuf *clear = NULL;
+	u8 *wrapped;
+	struct wpabuf *msg = NULL, *A_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+	EC_POINT *Qr = NULL, *Y = NULL, *N = NULL;
+	BIGNUM *Nx = NULL, *Ny = NULL;
+	EVP_PKEY_CTX *ctx = NULL;
+	EC_KEY *Y_ec = NULL;
+	size_t Jx_len, Zx_len;
+	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Zx[DPP_MAX_SHARED_SECRET_LEN];
+	const u8 *addr[4];
+	size_t len[4];
+	u8 u[DPP_MAX_HASH_LEN];
+	u8 octet;
+
+	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
+				   &attr_status_len);
+	if (!attr_status || attr_status_len != 1) {
+		wpa_printf(MSG_DEBUG, "DPP: No DPP Status attribute");
+		return NULL;
+	}
+	wpa_printf(MSG_DEBUG, "DPP: Status %u", attr_status[0]);
+	if (attr_status[0] != DPP_STATUS_OK) {
+		wpa_printf(MSG_DEBUG, "DPP: PKEX failed");
+		return NULL;
+	}
+
+	attr_id = dpp_get_attr(buf, buflen, DPP_ATTR_CODE_IDENTIFIER,
+			       &attr_id_len);
+	if (!attr_id && pkex->identifier) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No PKEX code identifier received, but expected one");
+		return NULL;
+	}
+	if (attr_id && pkex->identifier &&
+	    (os_strlen(pkex->identifier) != attr_id_len ||
+	     os_memcmp(pkex->identifier, attr_id, attr_id_len) != 0)) {
+		wpa_printf(MSG_DEBUG, "DPP: PKEX code identifier mismatch");
+		return NULL;
+	}
+
+	/* N in Encrypted Key attribute */
+	attr_key = dpp_get_attr(buf, buflen, DPP_ATTR_ENCRYPTED_KEY,
+				&attr_key_len);
+	if (!attr_key || attr_key_len & 0x01 || attr_key_len < 2) {
+		wpa_printf(MSG_DEBUG, "DPP: Missing Encrypted Key attribute");
+		return NULL;
+	}
+
+	/* Qr = H(MAC-Responder | [identifier |] code) * Pr */
+	bnctx = BN_CTX_new();
+	if (!bnctx)
+		goto fail;
+	Qr = dpp_pkex_derive_Qr(curve, pkex->peer_mac, pkex->code,
+				pkex->identifier, bnctx, &group);
+	if (!Qr)
+		goto fail;
+
+	/* Y' = N - Qr */
+	Y = EC_POINT_new(group);
+	N = EC_POINT_new(group);
+	Nx = BN_bin2bn(attr_key, attr_key_len / 2, NULL);
+	Ny = BN_bin2bn(attr_key + attr_key_len / 2, attr_key_len / 2, NULL);
+	if (!Y || !N || !Nx || !Ny ||
+	    EC_POINT_set_affine_coordinates_GFp(group, N, Nx, Ny, bnctx) != 1 ||
+	    EC_POINT_is_at_infinity(group, N) ||
+	    !EC_POINT_is_on_curve(group, N, bnctx) ||
+	    EC_POINT_invert(group, Qr, bnctx) != 1 ||
+	    EC_POINT_add(group, Y, N, Qr, bnctx) != 1 ||
+	    EC_POINT_is_at_infinity(group, Y) ||
+	    !EC_POINT_is_on_curve(group, Y, bnctx))
+		goto fail;
+
+	pkex->exchange_done = 1;
+
+	/* ECDH: J = a * Y’ */
+	Y_ec = EC_KEY_new();
+	if (!Y_ec ||
+	    EC_KEY_set_group(Y_ec, group) != 1 ||
+	    EC_KEY_set_public_key(Y_ec, Y) != 1)
+		goto fail;
+	pkex->y = EVP_PKEY_new();
+	if (!pkex->y ||
+	    EVP_PKEY_set1_EC_KEY(pkex->y, Y_ec) != 1)
+		goto fail;
+	ctx = EVP_PKEY_CTX_new(pkex->own_bi->pubkey, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->y) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Jx_len) != 1 ||
+	    Jx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Jx, &Jx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (J.x)",
+			Jx, Jx_len);
+
+	/* u = HMAC(J.x,  MAC-Initiator | A.x | Y’.x | X.x ) */
+	A_pub = dpp_get_pubkey_point(pkex->own_bi->pubkey, 0);
+	Y_pub = dpp_get_pubkey_point(pkex->y, 0);
+	X_pub = dpp_get_pubkey_point(pkex->x, 0);
+	if (!A_pub || !Y_pub || !X_pub)
+		goto fail;
+	addr[0] = pkex->own_mac;
+	len[0] = ETH_ALEN;
+	addr[1] = wpabuf_head(A_pub);
+	len[1] = wpabuf_len(A_pub) / 2;
+	addr[2] = wpabuf_head(Y_pub);
+	len[2] = wpabuf_len(Y_pub) / 2;
+	addr[3] = wpabuf_head(X_pub);
+	len[3] = wpabuf_len(X_pub) / 2;
+	if (dpp_hmac_vector(curve->hash_len, Jx, Jx_len, 4, addr, len, u) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: u", u, curve->hash_len);
+
+	/* Z = x * Y’ */
+	EVP_PKEY_CTX_free(ctx);
+	ctx = EVP_PKEY_CTX_new(pkex->x, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->y) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Zx_len) != 1 ||
+	    Zx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Zx, &Zx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (Z.x)",
+			Zx, Zx_len);
+
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	 */
+	if (dpp_pkex_derive_z(pkex->own_mac, pkex->peer_mac,
+			      pkex->Mx, curve->prime_len,
+			      attr_key /* N.x */, attr_key_len / 2, pkex->code,
+			      Zx, Zx_len, pkex->z, curve->hash_len) < 0)
+		goto fail;
+
+	/* {A, u, [bootstrapping info]}z */
+	clear_len = 4 + 2 * curve->prime_len + 4 + curve->hash_len;
+	clear = wpabuf_alloc(clear_len);
+	msg = dpp_alloc_msg(DPP_PA_PKEX_COMMIT_REVEAL_REQ,
+			    4 + clear_len + AES_BLOCK_SIZE);
+	if (!clear || !msg)
+		goto fail;
+
+	/* A in Bootstrap Key attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
+	wpabuf_put_le16(clear, wpabuf_len(A_pub));
+	wpabuf_put_buf(clear, A_pub);
+
+	/* u in I-Auth tag attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_I_AUTH_TAG);
+	wpabuf_put_le16(clear, curve->hash_len);
+	wpabuf_put_data(clear, u, curve->hash_len);
+
+	octet = 0;
+	addr[0] = &octet;
+	len[0] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+
+	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+	wrapped = wpabuf_put(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
+	if (aes_siv_encrypt(pkex->z, curve->hash_len,
+			    wpabuf_head(clear), wpabuf_len(clear),
+			    1, addr, len, wrapped) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
+
+out:
+	wpabuf_free(clear);
+	wpabuf_free(A_pub);
+	wpabuf_free(X_pub);
+	wpabuf_free(Y_pub);
+	EC_POINT_free(Qr);
+	EC_POINT_free(Y);
+	EC_POINT_free(N);
+	BN_free(Nx);
+	BN_free(Ny);
+	EC_KEY_free(Y_ec);
+	EVP_PKEY_CTX_free(ctx);
+	BN_CTX_free(bnctx);
+	return msg;
+fail:
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Response processing faileed");
+	wpabuf_free(msg);
+	msg = NULL;
+	goto out;
+}
+
+
+struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
+					      const u8 *buf, size_t buflen)
+{
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+	EVP_PKEY_CTX *ctx;
+	size_t Jx_len, Zx_len, Lx_len;
+	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Zx[DPP_MAX_SHARED_SECRET_LEN];
+	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
+	const u8 *wrapped_data, *b_key, *peer_u;
+	u16 wrapped_data_len, b_key_len, peer_u_len = 0;
+	const u8 *addr[4];
+	size_t len[4];
+	u8 octet;
+	u8 *unwrapped = NULL;
+	size_t unwrapped_len = 0;
+	struct wpabuf *msg = NULL, *A_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
+	struct wpabuf *B_pub = NULL;
+	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
+	size_t clear_len;
+	struct wpabuf *clear = NULL;
+	u8 *wrapped;
+
+	/* Z = y * X' */
+	ctx = EVP_PKEY_CTX_new(pkex->y, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->x) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Zx_len) != 1 ||
+	    Zx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Zx, &Zx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (Z.x)",
+			Zx, Zx_len);
+
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	 */
+	if (dpp_pkex_derive_z(pkex->peer_mac, pkex->own_mac,
+			      pkex->Mx, curve->prime_len,
+			      pkex->Nx, curve->prime_len, pkex->code,
+			      Zx, Zx_len, pkex->z, curve->hash_len) < 0)
+		goto fail;
+
+	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
+				    &wrapped_data_len);
+	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Missing or invalid required Wrapped data attribute");
+		goto fail;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped_data, wrapped_data_len);
+	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
+	unwrapped = os_malloc(unwrapped_len);
+	if (!unwrapped)
+		goto fail;
+
+	octet = 0;
+	addr[0] = &octet;
+	len[0] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+
+	if (aes_siv_decrypt(pkex->z, curve->hash_len,
+			    wrapped_data, wrapped_data_len,
+			    1, addr, len, unwrapped) < 0) {
+		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
+		    unwrapped, unwrapped_len);
+
+	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Invalid attribute in unwrapped data");
+		goto fail;
+	}
+
+	b_key = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_BOOTSTRAP_KEY,
+			     &b_key_len);
+	if (!b_key || b_key_len != 2 * curve->prime_len) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No valid peer bootstrapping key found");
+		goto fail;
+	}
+	pkex->peer_bootstrap_key = dpp_set_pubkey_point(pkex->x, b_key,
+							b_key_len);
+	if (!pkex->peer_bootstrap_key)
+		goto fail;
+	dpp_debug_print_key("DPP: Peer bootstrap public key",
+			    pkex->peer_bootstrap_key);
+
+	/* ECDH: J' = y * A' */
+	EVP_PKEY_CTX_free(ctx);
+	ctx = EVP_PKEY_CTX_new(pkex->y, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->peer_bootstrap_key) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Jx_len) != 1 ||
+	    Jx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Jx, &Jx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (J.x)",
+			Jx, Jx_len);
+
+	/* u' = HMAC(J'.x, MAC-Initiator | A'.x | Y.x | X'.x) */
+	A_pub = dpp_get_pubkey_point(pkex->peer_bootstrap_key, 0);
+	Y_pub = dpp_get_pubkey_point(pkex->y, 0);
+	X_pub = dpp_get_pubkey_point(pkex->x, 0);
+	if (!A_pub || !Y_pub || !X_pub)
+		goto fail;
+	addr[0] = pkex->peer_mac;
+	len[0] = ETH_ALEN;
+	addr[1] = wpabuf_head(A_pub);
+	len[1] = wpabuf_len(A_pub) / 2;
+	addr[2] = wpabuf_head(Y_pub);
+	len[2] = wpabuf_len(Y_pub) / 2;
+	addr[3] = wpabuf_head(X_pub);
+	len[3] = wpabuf_len(X_pub) / 2;
+	if (dpp_hmac_vector(curve->hash_len, Jx, Jx_len, 4, addr, len, u) < 0)
+		goto fail;
+
+	peer_u = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_I_AUTH_TAG,
+			      &peer_u_len);
+	if (!peer_u || peer_u_len != curve->hash_len ||
+	    os_memcmp(peer_u, u, curve->hash_len) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: No valid u (I-Auth tag) found");
+		wpa_hexdump(MSG_DEBUG, "DPP: Calculated u'",
+			    u, curve->hash_len);
+		wpa_hexdump(MSG_DEBUG, "DPP: Received u", peer_u, peer_u_len);
+		goto fail;
+	}
+	wpa_printf(MSG_DEBUG, "DPP: Valid u (I-Auth tag) received");
+
+	/* ECDH: L = b * X' */
+	EVP_PKEY_CTX_free(ctx);
+	ctx = EVP_PKEY_CTX_new(pkex->own_bi->pubkey, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->x) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Lx_len) != 1 ||
+	    Lx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Lx, &Lx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (L.x)",
+			Lx, Lx_len);
+
+	/* v = HMAC(L.x, MAC-Responder | B.x | X'.x | Y.x) */
+	B_pub = dpp_get_pubkey_point(pkex->own_bi->pubkey, 0);
+	if (!B_pub)
+		goto fail;
+	addr[0] = pkex->own_mac;
+	len[0] = ETH_ALEN;
+	addr[1] = wpabuf_head(B_pub);
+	len[1] = wpabuf_len(B_pub) / 2;
+	addr[2] = wpabuf_head(X_pub);
+	len[2] = wpabuf_len(X_pub) / 2;
+	addr[3] = wpabuf_head(Y_pub);
+	len[3] = wpabuf_len(Y_pub) / 2;
+	if (dpp_hmac_vector(curve->hash_len, Lx, Lx_len, 4, addr, len, v) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: v", v, curve->hash_len);
+
+	/* {B, v [bootstrapping info]}z */
+	clear_len = 4 + 2 * curve->prime_len + 4 + curve->hash_len;
+	clear = wpabuf_alloc(clear_len);
+	msg = dpp_alloc_msg(DPP_PA_PKEX_COMMIT_REVEAL_RESP,
+			    4 + clear_len + AES_BLOCK_SIZE);
+	if (!clear || !msg)
+		goto fail;
+
+	/* A in Bootstrap Key attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
+	wpabuf_put_le16(clear, wpabuf_len(B_pub));
+	wpabuf_put_buf(clear, B_pub);
+
+	/* v in R-Auth tag attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_R_AUTH_TAG);
+	wpabuf_put_le16(clear, curve->hash_len);
+	wpabuf_put_data(clear, v, curve->hash_len);
+
+	octet = 1;
+	addr[0] = &octet;
+	len[0] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+
+	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+	wrapped = wpabuf_put(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
+	if (aes_siv_encrypt(pkex->z, curve->hash_len,
+			    wpabuf_head(clear), wpabuf_len(clear),
+			    1, addr, len, wrapped) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
+out:
+	EVP_PKEY_CTX_free(ctx);
+	os_free(unwrapped);
+	wpabuf_free(A_pub);
+	wpabuf_free(B_pub);
+	wpabuf_free(X_pub);
+	wpabuf_free(Y_pub);
+	wpabuf_free(clear);
+	return msg;
+fail:
+	wpabuf_free(msg);
+	msg = NULL;
+	goto out;
+}
+
+
+int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex,
+				   const u8 *buf, size_t buflen)
+{
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+	const u8 *wrapped_data, *b_key, *peer_v;
+	u16 wrapped_data_len, b_key_len, peer_v_len = 0;
+	const u8 *addr[4];
+	size_t len[4];
+	u8 octet;
+	u8 *unwrapped = NULL;
+	size_t unwrapped_len = 0;
+	int ret = -1;
+	u8 v[DPP_MAX_HASH_LEN];
+	size_t Lx_len;
+	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
+	EVP_PKEY_CTX *ctx = NULL;
+	struct wpabuf *B_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
+
+	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
+				    &wrapped_data_len);
+	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Missing or invalid required Wrapped data attribute");
+		goto fail;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped_data, wrapped_data_len);
+	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
+	unwrapped = os_malloc(unwrapped_len);
+	if (!unwrapped)
+		goto fail;
+
+	octet = 1;
+	addr[0] = &octet;
+	len[0] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+
+	if (aes_siv_decrypt(pkex->z, curve->hash_len,
+			    wrapped_data, wrapped_data_len,
+			    1, addr, len, unwrapped) < 0) {
+		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
+		    unwrapped, unwrapped_len);
+
+	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Invalid attribute in unwrapped data");
+		goto fail;
+	}
+
+	b_key = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_BOOTSTRAP_KEY,
+			     &b_key_len);
+	if (!b_key || b_key_len != 2 * curve->prime_len) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No valid peer bootstrapping key found");
+		goto fail;
+	}
+	pkex->peer_bootstrap_key = dpp_set_pubkey_point(pkex->x, b_key,
+							b_key_len);
+	if (!pkex->peer_bootstrap_key)
+		goto fail;
+	dpp_debug_print_key("DPP: Peer bootstrap public key",
+			    pkex->peer_bootstrap_key);
+
+	/* ECDH: L' = x * B' */
+	ctx = EVP_PKEY_CTX_new(pkex->x, NULL);
+	if (!ctx ||
+	    EVP_PKEY_derive_init(ctx) != 1 ||
+	    EVP_PKEY_derive_set_peer(ctx, pkex->peer_bootstrap_key) != 1 ||
+	    EVP_PKEY_derive(ctx, NULL, &Lx_len) != 1 ||
+	    Lx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Lx, &Lx_len) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "DPP: Failed to derive ECDH shared secret: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (L.x)",
+			Lx, Lx_len);
+
+	/* v' = HMAC(L.x, MAC-Responder | B'.x | X.x | Y'.x) */
+	B_pub = dpp_get_pubkey_point(pkex->peer_bootstrap_key, 0);
+	X_pub = dpp_get_pubkey_point(pkex->x, 0);
+	Y_pub = dpp_get_pubkey_point(pkex->y, 0);
+	if (!B_pub || !X_pub || !Y_pub)
+		goto fail;
+	addr[0] = pkex->peer_mac;
+	len[0] = ETH_ALEN;
+	addr[1] = wpabuf_head(B_pub);
+	len[1] = wpabuf_len(B_pub) / 2;
+	addr[2] = wpabuf_head(X_pub);
+	len[2] = wpabuf_len(X_pub) / 2;
+	addr[3] = wpabuf_head(Y_pub);
+	len[3] = wpabuf_len(Y_pub) / 2;
+	if (dpp_hmac_vector(curve->hash_len, Lx, Lx_len, 4, addr, len, v) < 0)
+		goto fail;
+
+	peer_v = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_R_AUTH_TAG,
+			      &peer_v_len);
+	if (!peer_v || peer_v_len != curve->hash_len ||
+	    os_memcmp(peer_v, v, curve->hash_len) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: No valid v (R-Auth tag) found");
+		wpa_hexdump(MSG_DEBUG, "DPP: Calculated v'",
+			    v, curve->hash_len);
+		wpa_hexdump(MSG_DEBUG, "DPP: Received v", peer_v, peer_v_len);
+		goto fail;
+	}
+	wpa_printf(MSG_DEBUG, "DPP: Valid v (R-Auth tag) received");
+
+	ret = 0;
+out:
+	wpabuf_free(B_pub);
+	wpabuf_free(X_pub);
+	wpabuf_free(Y_pub);
+	EVP_PKEY_CTX_free(ctx);
+	os_free(unwrapped);
+	return ret;
+fail:
+	goto out;
+}
+
+
+void dpp_pkex_free(struct dpp_pkex *pkex)
+{
+	if (!pkex)
+		return;
+
+	os_free(pkex->identifier);
+	os_free(pkex->code);
+	EVP_PKEY_free(pkex->x);
+	EVP_PKEY_free(pkex->y);
+	EVP_PKEY_free(pkex->peer_bootstrap_key);
+	wpabuf_free(pkex->exchange_req);
+	wpabuf_free(pkex->exchange_resp);
+	os_free(pkex);
 }

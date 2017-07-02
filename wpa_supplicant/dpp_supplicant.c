@@ -151,6 +151,8 @@ int wpas_dpp_bootstrap_gen(struct wpa_supplicant *wpa_s, const char *cmd)
 
 	if (os_strstr(cmd, "type=qrcode"))
 		bi->type = DPP_BOOTSTRAP_QR_CODE;
+	else if (os_strstr(cmd, "type=pkex"))
+		bi->type = DPP_BOOTSTRAP_PKEX;
 	else
 		goto fail;
 
@@ -281,6 +283,8 @@ static const char * wpas_dpp_bootstrap_type(enum dpp_bootstrap_type type)
 	switch (type) {
 	case DPP_BOOTSTRAP_QR_CODE:
 		return "QRCODE";
+	case DPP_BOOTSTRAP_PKEX:
+		return "PKEX";
 	}
 	return "??";
 }
@@ -1339,6 +1343,226 @@ fail:
 }
 
 
+static void
+wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
+			unsigned int freq, const u8 *dst,
+			const u8 *src, const u8 *bssid,
+			const u8 *data, size_t data_len,
+			enum offchannel_send_action_result result)
+{
+	wpa_printf(MSG_DEBUG, "DPP: TX status: freq=%u dst=" MACSTR
+		   " result=%s (PKEX)",
+		   freq, MAC2STR(dst),
+		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		    "FAILED"));
+	/* TODO: Time out wait for response more quickly in error cases? */
+}
+
+
+static void
+wpas_dpp_rx_pkex_exchange_req(struct wpa_supplicant *wpa_s, const u8 *src,
+			      const u8 *buf, size_t len, unsigned int freq)
+{
+	struct wpabuf *msg;
+	unsigned int wait_time;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Request from " MACSTR,
+		   MAC2STR(src));
+
+	/* TODO: Support multiple PKEX codes by iterating over all the enabled
+	 * values here */
+
+	if (!wpa_s->dpp_pkex_code || !wpa_s->dpp_pkex_bi) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No PKEX code configured - ignore request");
+		return;
+	}
+
+	if (wpa_s->dpp_pkex) {
+		/* TODO: Support parallel operations */
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Already in PKEX session - ignore new request");
+		return;
+	}
+
+	wpa_s->dpp_pkex = dpp_pkex_rx_exchange_req(wpa_s->dpp_pkex_bi,
+						   wpa_s->own_addr, src,
+						   wpa_s->dpp_pkex_identifier,
+						   wpa_s->dpp_pkex_code,
+						   buf, len);
+	if (!wpa_s->dpp_pkex) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Failed to process the request - ignore it");
+		return;
+	}
+
+	msg = wpa_s->dpp_pkex->exchange_resp;
+	wait_time = wpa_s->max_remain_on_chan;
+	if (wait_time > 2000)
+		wait_time = 2000;
+	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
+			       broadcast,
+			       wpabuf_head(msg), wpabuf_len(msg),
+			       wait_time, wpas_dpp_tx_pkex_status, 0);
+}
+
+
+static void
+wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
+			       const u8 *buf, size_t len, unsigned int freq)
+{
+	struct wpabuf *msg;
+	unsigned int wait_time;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Response from " MACSTR,
+		   MAC2STR(src));
+
+	/* TODO: Support multiple PKEX codes by iterating over all the enabled
+	 * values here */
+
+	if (!wpa_s->dpp_pkex || !wpa_s->dpp_pkex->initiator ||
+	    wpa_s->dpp_pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	os_memcpy(wpa_s->dpp_pkex->peer_mac, src, ETH_ALEN);
+	msg = dpp_pkex_rx_exchange_resp(wpa_s->dpp_pkex, buf, len);
+	if (!msg) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Request to " MACSTR,
+		   MAC2STR(src));
+
+	wait_time = wpa_s->max_remain_on_chan;
+	if (wait_time > 2000)
+		wait_time = 2000;
+	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
+			       broadcast,
+			       wpabuf_head(msg), wpabuf_len(msg),
+			       wait_time, wpas_dpp_tx_pkex_status, 0);
+	wpabuf_free(msg);
+}
+
+
+static void
+wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
+				   const u8 *buf, size_t len, unsigned int freq)
+{
+	struct wpabuf *msg;
+	unsigned int wait_time;
+	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
+	struct dpp_bootstrap_info *bi;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Commit-Reveal Request from " MACSTR,
+		   MAC2STR(src));
+
+	if (!pkex || pkex->initiator || !pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	msg = dpp_pkex_rx_commit_reveal_req(pkex, buf, len);
+	if (!msg) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Response to "
+		   MACSTR, MAC2STR(src));
+
+	wait_time = wpa_s->max_remain_on_chan;
+	if (wait_time > 2000)
+		wait_time = 2000;
+	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
+			       broadcast,
+			       wpabuf_head(msg), wpabuf_len(msg),
+			       wait_time, wpas_dpp_tx_pkex_status, 0);
+	wpabuf_free(msg);
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return;
+	bi->id = wpas_dpp_next_id(wpa_s);
+	bi->type = DPP_BOOTSTRAP_PKEX;
+	os_memcpy(bi->mac_addr, src, ETH_ALEN);
+	bi->num_freq = 1;
+	bi->freq[0] = freq;
+	bi->curve = pkex->own_bi->curve;
+	bi->pubkey = pkex->peer_bootstrap_key;
+	pkex->peer_bootstrap_key = NULL;
+	dpp_pkex_free(pkex);
+	wpa_s->dpp_pkex = NULL;
+	if (dpp_bootstrap_key_hash(bi) < 0) {
+		dpp_bootstrap_info_free(bi);
+		return;
+	}
+	dl_list_add(&wpa_s->dpp_bootstrap, &bi->list);
+}
+
+
+static void
+wpas_dpp_rx_pkex_commit_reveal_resp(struct wpa_supplicant *wpa_s, const u8 *src,
+				    const u8 *buf, size_t len,
+				    unsigned int freq)
+{
+	int res;
+	struct dpp_bootstrap_info *bi, *own_bi;
+	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
+	char cmd[500];
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Commit-Reveal Response from " MACSTR,
+		   MAC2STR(src));
+
+	if (!pkex || !pkex->initiator || !pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	res = dpp_pkex_rx_commit_reveal_resp(pkex, buf, len);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
+		return;
+	}
+
+	own_bi = pkex->own_bi;
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return;
+	bi->id = wpas_dpp_next_id(wpa_s);
+	bi->type = DPP_BOOTSTRAP_PKEX;
+	os_memcpy(bi->mac_addr, src, ETH_ALEN);
+	bi->num_freq = 1;
+	bi->freq[0] = freq;
+	bi->curve = own_bi->curve;
+	bi->pubkey = pkex->peer_bootstrap_key;
+	pkex->peer_bootstrap_key = NULL;
+	dpp_pkex_free(pkex);
+	wpa_s->dpp_pkex = NULL;
+	if (dpp_bootstrap_key_hash(bi) < 0) {
+		dpp_bootstrap_info_free(bi);
+		return;
+	}
+	dl_list_add(&wpa_s->dpp_bootstrap, &bi->list);
+
+	os_snprintf(cmd, sizeof(cmd), " peer=%u %s",
+		    bi->id,
+		    wpa_s->dpp_pkex_auth_cmd ? wpa_s->dpp_pkex_auth_cmd : "");
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Start authentication after PKEX with parameters: %s",
+		   cmd);
+	if (wpas_dpp_auth_init(wpa_s, cmd) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Authentication initialization failed");
+		return;
+	}
+}
+
+
 void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 			const u8 *buf, size_t len, unsigned int freq)
 {
@@ -1370,6 +1594,18 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 		break;
 	case DPP_PA_PEER_DISCOVERY_RESP:
 		wpas_dpp_rx_peer_disc_resp(wpa_s, src, buf, len);
+		break;
+	case DPP_PA_PKEX_EXCHANGE_REQ:
+		wpas_dpp_rx_pkex_exchange_req(wpa_s, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_EXCHANGE_RESP:
+		wpas_dpp_rx_pkex_exchange_resp(wpa_s, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_COMMIT_REVEAL_REQ:
+		wpas_dpp_rx_pkex_commit_reveal_req(wpa_s, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_COMMIT_REVEAL_RESP:
+		wpas_dpp_rx_pkex_commit_reveal_resp(wpa_s, src, buf, len, freq);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,
@@ -1614,6 +1850,113 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 }
 
 
+int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	struct dpp_bootstrap_info *own_bi;
+	const char *pos, *end;
+	unsigned int wait_time;
+
+	pos = os_strstr(cmd, " own=");
+	if (!pos)
+		return -1;
+	pos += 5;
+	own_bi = dpp_bootstrap_get_id(wpa_s, atoi(pos));
+	if (!own_bi) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Identified bootstrap info not found");
+		return -1;
+	}
+	if (own_bi->type != DPP_BOOTSTRAP_PKEX) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Identified bootstrap info not for PKEX");
+		return -1;
+	}
+	wpa_s->dpp_pkex_bi = own_bi;
+
+	os_free(wpa_s->dpp_pkex_identifier);
+	wpa_s->dpp_pkex_identifier = NULL;
+	pos = os_strstr(cmd, " identifier=");
+	if (pos) {
+		pos += 12;
+		end = os_strchr(pos, ' ');
+		if (!end)
+			return -1;
+		wpa_s->dpp_pkex_identifier = os_malloc(end - pos + 1);
+		if (!wpa_s->dpp_pkex_identifier)
+			return -1;
+		os_memcpy(wpa_s->dpp_pkex_identifier, pos, end - pos);
+		wpa_s->dpp_pkex_identifier[end - pos] = '\0';
+	}
+
+	pos = os_strstr(cmd, " code=");
+	if (!pos)
+		return -1;
+	os_free(wpa_s->dpp_pkex_code);
+	wpa_s->dpp_pkex_code = os_strdup(pos + 6);
+	if (!wpa_s->dpp_pkex_code)
+		return -1;
+
+	if (os_strstr(cmd, " init=1")) {
+		struct wpabuf *msg;
+
+		wpa_printf(MSG_DEBUG, "DPP: Initiating PKEX");
+		dpp_pkex_free(wpa_s->dpp_pkex);
+		wpa_s->dpp_pkex = dpp_pkex_init(own_bi, wpa_s->own_addr,
+						wpa_s->dpp_pkex_identifier,
+						wpa_s->dpp_pkex_code);
+		if (!wpa_s->dpp_pkex)
+			return -1;
+
+		msg = wpa_s->dpp_pkex->exchange_req;
+		wait_time = wpa_s->max_remain_on_chan;
+		if (wait_time > 2000)
+			wait_time = 2000;
+		/* TODO: Which channel to use? */
+		offchannel_send_action(wpa_s, 2437, broadcast, wpa_s->own_addr,
+				       broadcast,
+				       wpabuf_head(msg), wpabuf_len(msg),
+				       wait_time, wpas_dpp_tx_pkex_status, 0);
+	}
+
+	/* TODO: Support multiple PKEX info entries */
+
+	os_free(wpa_s->dpp_pkex_auth_cmd);
+	wpa_s->dpp_pkex_auth_cmd = os_strdup(cmd);
+
+	return 1;
+}
+
+
+int wpas_dpp_pkex_remove(struct wpa_supplicant *wpa_s, const char *id)
+{
+	unsigned int id_val;
+
+	if (os_strcmp(id, "*") == 0) {
+		id_val = 0;
+	} else {
+		id_val = atoi(id);
+		if (id_val == 0)
+			return -1;
+	}
+
+	if ((id_val != 0 && id_val != 1) || !wpa_s->dpp_pkex_code)
+		return -1;
+
+	/* TODO: Support multiple PKEX entries */
+	os_free(wpa_s->dpp_pkex_code);
+	wpa_s->dpp_pkex_code = NULL;
+	os_free(wpa_s->dpp_pkex_identifier);
+	wpa_s->dpp_pkex_identifier = NULL;
+	os_free(wpa_s->dpp_pkex_auth_cmd);
+	wpa_s->dpp_pkex_auth_cmd = NULL;
+	wpa_s->dpp_pkex_bi = NULL;
+	/* TODO: Remove dpp_pkex only if it is for the identified PKEX code */
+	dpp_pkex_free(wpa_s->dpp_pkex);
+	wpa_s->dpp_pkex = NULL;
+	return 0;
+}
+
+
 int wpas_dpp_init(struct wpa_supplicant *wpa_s)
 {
 	u8 adv_proto_id[7];
@@ -1657,5 +2000,7 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	dpp_configurator_del(wpa_s, 0);
 	dpp_auth_deinit(wpa_s->dpp_auth);
 	wpa_s->dpp_auth = NULL;
+	wpas_dpp_pkex_remove(wpa_s, "*");
+	wpa_s->dpp_pkex = NULL;
 	os_memset(wpa_s->dpp_intro_bssid, 0, ETH_ALEN);
 }

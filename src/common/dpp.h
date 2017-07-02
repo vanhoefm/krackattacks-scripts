@@ -81,10 +81,12 @@ struct dpp_curve_params {
 	size_t nonce_len;
 	size_t prime_len;
 	const char *jwk_crv;
+	u16 ike_group;
 };
 
 enum dpp_bootstrap_type {
 	DPP_BOOTSTRAP_QR_CODE,
+	DPP_BOOTSTRAP_PKEX,
 };
 
 struct dpp_bootstrap_info {
@@ -100,6 +102,24 @@ struct dpp_bootstrap_info {
 	EVP_PKEY *pubkey;
 	u8 pubkey_hash[SHA256_MAC_LEN];
 	const struct dpp_curve_params *curve;
+};
+
+struct dpp_pkex {
+	unsigned int initiator:1;
+	unsigned int exchange_done:1;
+	struct dpp_bootstrap_info *own_bi;
+	u8 own_mac[ETH_ALEN];
+	u8 peer_mac[ETH_ALEN];
+	char *identifier;
+	char *code;
+	EVP_PKEY *x;
+	EVP_PKEY *y;
+	u8 Mx[DPP_MAX_SHARED_SECRET_LEN];
+	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
+	u8 z[DPP_MAX_HASH_LEN];
+	EVP_PKEY *peer_bootstrap_key;
+	struct wpabuf *exchange_req;
+	struct wpabuf *exchange_resp;
 };
 
 struct dpp_configuration {
@@ -189,6 +209,7 @@ struct dpp_introduction {
 };
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);
+int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi);
 int dpp_parse_uri_chan_list(struct dpp_bootstrap_info *bi,
 			    const char *chan_list);
 int dpp_parse_uri_mac(struct dpp_bootstrap_info *bi, const char *mac);
@@ -235,5 +256,22 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   const u8 *net_access_key, size_t net_access_key_len,
 		   const u8 *csign_key, size_t csign_key_len,
 		   const u8 *peer_connector, size_t peer_connector_len);
+struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
+				const u8 *own_mac,
+				const char *identifier,
+				const char *code);
+struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
+					   const u8 *own_mac,
+					   const u8 *peer_mac,
+					   const char *identifier,
+					   const char *code,
+					   const u8 *buf, size_t len);
+struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
+					  const u8 *buf, size_t len);
+struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
+					      const u8 *buf, size_t len);
+int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex,
+				   const u8 *buf, size_t len);
+void dpp_pkex_free(struct dpp_pkex *pkex);
 
 #endif /* DPP_H */

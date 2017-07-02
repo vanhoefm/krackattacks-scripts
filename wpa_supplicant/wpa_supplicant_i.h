@@ -1172,6 +1172,11 @@ struct wpa_supplicant {
 	int dpp_gas_client;
 	u8 dpp_intro_bssid[ETH_ALEN];
 	void *dpp_intro_network;
+	struct dpp_pkex *dpp_pkex;
+	struct dpp_bootstrap_info *dpp_pkex_bi;
+	char *dpp_pkex_code;
+	char *dpp_pkex_identifier;
+	char *dpp_pkex_auth_cmd;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

@@ -1024,7 +1024,7 @@ static char ** hostapd_complete_interface(const char *str, int pos)
 
 static int hostapd_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
+	char cmd[2048];
 	int res;
 
 	if (argc != 2) {
@@ -1610,7 +1610,7 @@ static void hostapd_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 	if (ctrl_conn == NULL)
 		return;
 	while (wpa_ctrl_pending(ctrl)) {
-		char buf[256];
+		char buf[4096];
 		size_t len = sizeof(buf) - 1;
 		if (wpa_ctrl_recv(ctrl, buf, &len) == 0) {
 			buf[len] = '\0';

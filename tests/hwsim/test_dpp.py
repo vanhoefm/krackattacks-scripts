@@ -1357,3 +1357,110 @@ def run_dpp_pkex2(dev, apdev, curve=None, init_extra=""):
     ev = dev[1].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
     if ev is None:
         raise Exception("DPP configuration not completed (Enrollee)")
+
+def test_dpp_pkex_hostapd_responder(dev, apdev):
+    """DPP PKEX with hostapd as responder"""
+    check_dpp_capab(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured",
+                                      "channel": "6" })
+    check_dpp_capab(hapd)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info (hostapd)")
+    id_h = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id_h)
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder/hostapd)")
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info (wpa_supplicant)")
+    id0 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 conf=ap-dpp configurator=%d code=secret" % (id0, conf_id)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator/wpa_supplicant)")
+
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = hapd.wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = hapd.wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    dev[0].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+
+def test_dpp_pkex_hostapd_initiator(dev, apdev):
+    """DPP PKEX with hostapd as initiator"""
+    check_dpp_capab(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured",
+                                      "channel": "6" })
+    check_dpp_capab(hapd)
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info (wpa_supplicant)")
+    id0 = int(res)
+
+    dev[0].set("dpp_configurator_params",
+               " conf=ap-dpp configurator=%d" % conf_id);
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder/wpa_supplicant)")
+
+    cmd = "DPP_LISTEN 2437 role=configurator"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info (hostapd)")
+    id_h = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 role=enrollee code=secret" % (id_h)
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator/hostapd)")
+
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = hapd.wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = hapd.wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    dev[0].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()

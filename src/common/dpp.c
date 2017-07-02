@@ -51,13 +51,13 @@ static void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr,
 static const struct dpp_curve_params dpp_curves[] = {
 	/* The mandatory to support and the default NIST P-256 curve needs to
 	 * be the first entry on this list. */
-	{ "prime256v1", 32, 32, 16, 32, "P-256", 19 },
-	{ "secp384r1", 48, 48, 24, 48, "P-384", 20 },
-	{ "secp521r1", 64, 64, 32, 66, "P-521", 21 },
-	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256", 28 },
-	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384", 29 },
-	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512", 30 },
-	{ NULL, 0, 0, 0, 0, NULL, 0 }
+	{ "prime256v1", 32, 32, 16, 32, "P-256", 19, "ES256" },
+	{ "secp384r1", 48, 48, 24, 48, "P-384", 20, "ES384" },
+	{ "secp521r1", 64, 64, 32, 66, "P-521", 21, "ES512" },
+	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256", 28, "BS256" },
+	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384", 29, "BS384" },
+	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512", 30, "BS512" },
+	{ NULL, 0, 0, 0, 0, NULL, 0, NULL }
 };
 
 
@@ -2988,7 +2988,6 @@ dpp_build_conf_obj_dpp(struct dpp_authentication *auth, int ap,
 	EVP_MD_CTX *md_ctx = NULL;
 	ECDSA_SIG *sig = NULL;
 	char *dot = ".";
-	const char *alg;
 	const EVP_MD *sign_md;
 	const BIGNUM *r, *s;
 	size_t extra_len = 1000;
@@ -3000,13 +2999,10 @@ dpp_build_conf_obj_dpp(struct dpp_authentication *auth, int ap,
 	}
 	curve = auth->conf->curve;
 	if (curve->hash_len == SHA256_MAC_LEN) {
-		alg = "ES256";
 		sign_md = EVP_sha256();
 	} else if (curve->hash_len == SHA384_MAC_LEN) {
-		alg = "ES384";
 		sign_md = EVP_sha384();
 	} else if (curve->hash_len == SHA512_MAC_LEN) {
-		alg = "ES512";
 		sign_md = EVP_sha512();
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: Unknown signature algorithm");
@@ -3075,7 +3071,7 @@ skip_groups:
 
 	os_snprintf(jws_prot_hdr, sizeof(jws_prot_hdr),
 		    "{\"typ\":\"dppCon\",\"kid\":\"%s\",\"alg\":\"%s\"}",
-		    auth->conf->kid, alg);
+		    auth->conf->kid, curve->jws_alg);
 	signed1 = (char *) base64_url_encode((unsigned char *) jws_prot_hdr,
 					     os_strlen(jws_prot_hdr),
 					     &signed1_len, 0);
@@ -3494,11 +3490,14 @@ dpp_parse_jws_prot_hdr(const u8 *prot_hdr, u16 prot_hdr_len,
 	}
 	wpa_printf(MSG_DEBUG, "DPP: JWS Protected Header alg=%s",
 		   token->string);
-	if (os_strcmp(token->string, "ES256") == 0)
+	if (os_strcmp(token->string, "ES256") == 0 ||
+	    os_strcmp(token->string, "BS256") == 0)
 		*ret_md = EVP_sha256();
-	else if (os_strcmp(token->string, "ES384") == 0)
+	else if (os_strcmp(token->string, "ES384") == 0 ||
+		 os_strcmp(token->string, "BS384") == 0)
 		*ret_md = EVP_sha384();
-	else if (os_strcmp(token->string, "ES512") == 0)
+	else if (os_strcmp(token->string, "ES512") == 0 ||
+		 os_strcmp(token->string, "BS512") == 0)
 		*ret_md = EVP_sha512();
 	else
 		*ret_md = NULL;

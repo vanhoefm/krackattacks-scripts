@@ -82,6 +82,7 @@ struct dpp_curve_params {
 	size_t prime_len;
 	const char *jwk_crv;
 	u16 ike_group;
+	const char *jws_alg;
 };
 
 enum dpp_bootstrap_type {

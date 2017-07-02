@@ -256,7 +256,8 @@ dpp_keygen_configurator(const char *curve, const u8 *privkey,
 int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   const u8 *net_access_key, size_t net_access_key_len,
 		   const u8 *csign_key, size_t csign_key_len,
-		   const u8 *peer_connector, size_t peer_connector_len);
+		   const u8 *peer_connector, size_t peer_connector_len,
+		   os_time_t *expiry);
 struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
 				const u8 *own_mac,
 				const char *identifier,

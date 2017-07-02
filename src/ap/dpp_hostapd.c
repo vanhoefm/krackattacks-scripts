@@ -880,6 +880,7 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	u16 connector_len;
 	struct os_time now;
 	struct dpp_introduction intro;
+	os_time_t expire;
 	int expiration;
 	struct wpabuf *msg;
 
@@ -923,19 +924,18 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 			   wpabuf_len(hapd->conf->dpp_netaccesskey),
 			   wpabuf_head(hapd->conf->dpp_csign),
 			   wpabuf_len(hapd->conf->dpp_csign),
-			   connector, connector_len) < 0) {
+			   connector, connector_len, &expire) < 0) {
 		wpa_printf(MSG_INFO,
 			   "DPP: Network Introduction protocol resulted in failure");
 		return;
 	}
 
-	if (hapd->conf->dpp_netaccesskey_expiry &&
-	    (!hapd->conf->dpp_csign_expiry ||
-	     hapd->conf->dpp_netaccesskey_expiry <
-	     hapd->conf->dpp_csign_expiry))
-		expiration = hapd->conf->dpp_netaccesskey_expiry - now.sec;
-	else if (hapd->conf->dpp_csign_expiry)
-		expiration = hapd->conf->dpp_csign_expiry - now.sec;
+	if (!expire || hapd->conf->dpp_netaccesskey_expiry < expire)
+		expire = hapd->conf->dpp_netaccesskey_expiry;
+	if (!expire || hapd->conf->dpp_csign_expiry < expire)
+		expire = hapd->conf->dpp_csign_expiry;
+	if (expire)
+		expiration = expire - now.sec;
 	else
 		expiration = 0;
 

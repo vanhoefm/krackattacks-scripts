@@ -1269,6 +1269,10 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	u16 connector_len, pk_hash_len, nk_hash_len;
 	struct dpp_introduction intro;
 	struct rsn_pmksa_cache_entry *entry;
+	struct os_time now;
+	struct os_reltime rnow;
+	os_time_t expiry;
+	unsigned int seconds;
 
 	wpa_printf(MSG_DEBUG, "DPP: Peer Discovery Response from " MACSTR,
 		   MAC2STR(src));
@@ -1303,7 +1307,7 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 			   ssid->dpp_netaccesskey_len,
 			   ssid->dpp_csign,
 			   ssid->dpp_csign_len,
-			   connector, connector_len) < 0) {
+			   connector, connector_len, &expiry) < 0) {
 		wpa_printf(MSG_INFO,
 			   "DPP: Network Introduction protocol resulted in failure");
 		goto fail;
@@ -1347,7 +1351,17 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	os_memcpy(entry->pmk, intro.pmk, intro.pmk_len);
 	entry->pmk_len = intro.pmk_len;
 	entry->akmp = WPA_KEY_MGMT_DPP;
-	/* TODO: expiration */
+	if (!expiry || expiry > ssid->dpp_csign_expiry)
+		expiry = ssid->dpp_csign_expiry;
+	if (expiry) {
+		os_get_time(&now);
+		seconds = expiry - now.sec;
+	} else {
+		seconds = 86400 * 7;
+	}
+	os_get_reltime(&rnow);
+	entry->expiration = rnow.sec + seconds;
+	entry->reauth_time = rnow.sec + seconds;
 	entry->network_ctx = ssid;
 	wpa_sm_pmksa_cache_add_entry(wpa_s->wpa, entry);
 

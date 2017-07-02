@@ -4686,7 +4686,8 @@ static int dpp_netkey_hash(EVP_PKEY *key, u8 *hash)
 int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   const u8 *net_access_key, size_t net_access_key_len,
 		   const u8 *csign_key, size_t csign_key_len,
-		   const u8 *peer_connector, size_t peer_connector_len)
+		   const u8 *peer_connector, size_t peer_connector_len,
+		   os_time_t *expiry)
 {
 	struct json_token *root = NULL, *netkey, *token;
 	struct json_token *own_root = NULL;
@@ -4711,6 +4712,8 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 
 	os_memset(intro, 0, sizeof(*intro));
 	os_memset(&info, 0, sizeof(info));
+	if (expiry)
+		*expiry = 0;
 
 	p = csign_key;
 	csign = d2i_PUBKEY(NULL, &p, csign_key_len);
@@ -4802,7 +4805,7 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 			   "DPP: No expiry string found - connector does not expire");
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: expiry = %s", token->string);
-		if (dpp_key_expired(token->string, NULL)) {
+		if (dpp_key_expired(token->string, expiry)) {
 			wpa_printf(MSG_DEBUG,
 				   "DPP: Connector (netAccessKey) has expired");
 			goto fail;

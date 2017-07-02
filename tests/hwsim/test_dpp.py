@@ -1114,3 +1114,150 @@ def run_dpp_auto_connect_legacy(dev, apdev):
     id = ev.split(' ')[1]
 
     dev[0].wait_connected()
+
+def test_dpp_pkex(dev, apdev):
+    """DPP and PKEX"""
+    run_dpp_pkex(dev, apdev)
+
+def test_dpp_pkex_p256(dev, apdev):
+    """DPP and PKEX (P-256)"""
+    run_dpp_pkex(dev, apdev, "P-256")
+
+def test_dpp_pkex_p384(dev, apdev):
+    """DPP and PKEX (P-384)"""
+    run_dpp_pkex(dev, apdev, "P-384")
+
+def test_dpp_pkex_p521(dev, apdev):
+    """DPP and PKEX (P-521)"""
+    run_dpp_pkex(dev, apdev, "P-521")
+
+def test_dpp_pkex_bp256(dev, apdev):
+    """DPP and PKEX (BP-256)"""
+    run_dpp_pkex(dev, apdev, "brainpoolP256r1")
+
+def test_dpp_pkex_bp384(dev, apdev):
+    """DPP and PKEX (BP-384)"""
+    run_dpp_pkex(dev, apdev, "brainpoolP384r1")
+
+def test_dpp_pkex_bp512(dev, apdev):
+    """DPP and PKEX (BP-512)"""
+    run_dpp_pkex(dev, apdev, "brainpoolP512r1")
+
+def test_dpp_pkex_config(dev, apdev):
+    """DPP and PKEX with initiator as the configurator"""
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[1].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    run_dpp_pkex(dev, apdev,
+                 init_extra="conf=sta-dpp configurator=%d" % (conf_id),
+                 check_config=True)
+
+def run_dpp_pkex(dev, apdev, curve=None, init_extra="", check_config=False):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    if curve:
+        cmd += " curve=" + curve
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    if curve:
+        cmd += " curve=" + curve
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 %s code=secret" % (id1, init_extra)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
+    if check_config:
+        ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=5)
+        if ev is None:
+            raise Exception("DPP configuration not completed (Configurator)")
+        ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+        if ev is None:
+            raise Exception("DPP configuration not completed (Enrollee)")
+
+def test_dpp_pkex_config2(dev, apdev):
+    """DPP and PKEX with responder as the configurator"""
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    dev[0].set("dpp_configurator_params",
+               " conf=sta-dpp configurator=%d" % conf_id);
+    run_dpp_pkex2(dev, apdev)
+
+def run_dpp_pkex2(dev, apdev, curve=None, init_extra=""):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    if curve:
+        cmd += " curve=" + curve
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    if curve:
+        cmd += " curve=" + curve
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437 role=configurator"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 role=enrollee %s code=secret" % (id1, init_extra)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[1].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")

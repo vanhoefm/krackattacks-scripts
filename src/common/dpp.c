@@ -3364,10 +3364,10 @@ static EVP_PKEY * dpp_parse_jwk(struct json_token *jwk,
 		wpa_printf(MSG_DEBUG, "DPP: No x in JWK");
 		goto fail;
 	}
-	wpa_hexdump_buf(MSG_DEBUG, "DPP: C-sign x", x);
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: JWK x", x);
 	if (wpabuf_len(x) != curve->prime_len) {
 		wpa_printf(MSG_DEBUG,
-			   "DPP: Unexpected C-sign x length %u (expected %u for curve %s)",
+			   "DPP: Unexpected JWK x length %u (expected %u for curve %s)",
 			   (unsigned int) wpabuf_len(x),
 			   (unsigned int) curve->prime_len, curve->name);
 		goto fail;
@@ -3378,10 +3378,10 @@ static EVP_PKEY * dpp_parse_jwk(struct json_token *jwk,
 		wpa_printf(MSG_DEBUG, "DPP: No y in JWK");
 		goto fail;
 	}
-	wpa_hexdump_buf(MSG_DEBUG, "DPP: C-sign y", y);
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: JWK y", y);
 	if (wpabuf_len(y) != curve->prime_len) {
 		wpa_printf(MSG_DEBUG,
-			   "DPP: Unexpected C-sign y length %u (expected %u for curve %s)",
+			   "DPP: Unexpected JWK y length %u (expected %u for curve %s)",
 			   (unsigned int) wpabuf_len(y),
 			   (unsigned int) curve->prime_len, curve->name);
 		goto fail;

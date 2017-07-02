@@ -54,9 +54,9 @@ static const struct dpp_curve_params dpp_curves[] = {
 	{ "prime256v1", 32, 32, 16, 32, "P-256", 19 },
 	{ "secp384r1", 48, 48, 24, 48, "P-384", 20 },
 	{ "secp521r1", 64, 64, 32, 66, "P-521", 21 },
-	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256R1", 28 },
-	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384R1", 29 },
-	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512R1", 30 },
+	{ "brainpoolP256r1", 32, 32, 16, 32, "BP-256", 28 },
+	{ "brainpoolP384r1", 48, 48, 24, 48, "BP-384", 29 },
+	{ "brainpoolP512r1", 64, 64, 32, 64, "BP-512", 30 },
 	{ NULL, 0, 0, 0, 0, NULL, 0 }
 };
 

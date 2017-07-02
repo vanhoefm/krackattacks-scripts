@@ -4522,12 +4522,16 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   own_deviceid);
 
 	pos = os_strchr(own_connector, '.');
-	if (!pos)
+	if (!pos) {
+		wpa_printf(MSG_DEBUG, "DPP: Own connector is missing the first dot (.)");
 		goto fail;
+	}
 	pos++;
 	end = os_strchr(pos, '.');
-	if (!end)
+	if (!end) {
+		wpa_printf(MSG_DEBUG, "DPP: Own connector is missing the second dot (.)");
 		goto fail;
+	}
 	own_conn = base64_url_decode((const unsigned char *) pos,
 				     end - pos, &own_conn_len);
 	if (!own_conn) {

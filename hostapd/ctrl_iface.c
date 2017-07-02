@@ -2688,6 +2688,18 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "DPP_AUTH_INIT ", 14) == 0) {
 		if (hostapd_dpp_auth_init(hapd, buf + 13) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "DPP_PKEX_ADD ", 13) == 0) {
+		res = hostapd_dpp_pkex_add(hapd, buf + 12);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_PKEX_REMOVE ", 16) == 0) {
+		if (hostapd_dpp_pkex_remove(hapd, buf + 16) < 0)
+			reply_len = -1;
 #endif /* CONFIG_DPP */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

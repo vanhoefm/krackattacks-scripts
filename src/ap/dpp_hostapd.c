@@ -121,6 +121,8 @@ int hostapd_dpp_bootstrap_gen(struct hostapd_data *hapd, const char *cmd)
 
 	if (os_strstr(cmd, "type=qrcode"))
 		bi->type = DPP_BOOTSTRAP_QR_CODE;
+	else if (os_strstr(cmd, "type=pkex"))
+		bi->type = DPP_BOOTSTRAP_PKEX;
 	else
 		goto fail;
 
@@ -901,6 +903,192 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 }
 
 
+static void
+hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
+				 const u8 *buf, size_t len, unsigned int freq)
+{
+	struct wpabuf *msg;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Request from " MACSTR,
+		   MAC2STR(src));
+
+	/* TODO: Support multiple PKEX codes by iterating over all the enabled
+	 * values here */
+
+	if (!hapd->dpp_pkex_code || !hapd->dpp_pkex_bi) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: No PKEX code configured - ignore request");
+		return;
+	}
+
+	if (hapd->dpp_pkex) {
+		/* TODO: Support parallel operations */
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Already in PKEX session - ignore new request");
+		return;
+	}
+
+	hapd->dpp_pkex = dpp_pkex_rx_exchange_req(hapd->dpp_pkex_bi,
+						  hapd->own_addr, src,
+						  hapd->dpp_pkex_identifier,
+						  hapd->dpp_pkex_code,
+						  buf, len);
+	if (!hapd->dpp_pkex) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Failed to process the request - ignore it");
+		return;
+	}
+
+	msg = hapd->dpp_pkex->exchange_resp;
+	hostapd_drv_send_action(hapd, freq, 0, src,
+				wpabuf_head(msg), wpabuf_len(msg));
+}
+
+
+static void
+hostapd_dpp_rx_pkex_exchange_resp(struct hostapd_data *hapd, const u8 *src,
+				  const u8 *buf, size_t len, unsigned int freq)
+{
+	struct wpabuf *msg;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Response from " MACSTR,
+		   MAC2STR(src));
+
+	/* TODO: Support multiple PKEX codes by iterating over all the enabled
+	 * values here */
+
+	if (!hapd->dpp_pkex || !hapd->dpp_pkex->initiator ||
+	    hapd->dpp_pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	os_memcpy(hapd->dpp_pkex->peer_mac, src, ETH_ALEN);
+	msg = dpp_pkex_rx_exchange_resp(hapd->dpp_pkex, buf, len);
+	if (!msg) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Request to " MACSTR,
+		   MAC2STR(src));
+
+	hostapd_drv_send_action(hapd, freq, 0, src,
+				wpabuf_head(msg), wpabuf_len(msg));
+	wpabuf_free(msg);
+}
+
+
+static void
+hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
+				      const u8 *buf, size_t len,
+				      unsigned int freq)
+{
+	struct wpabuf *msg;
+	struct dpp_pkex *pkex = hapd->dpp_pkex;
+	struct dpp_bootstrap_info *bi;
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Commit-Reveal Request from " MACSTR,
+		   MAC2STR(src));
+
+	if (!pkex || pkex->initiator || !pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	msg = dpp_pkex_rx_commit_reveal_req(pkex, buf, len);
+	if (!msg) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Response to "
+		   MACSTR, MAC2STR(src));
+
+	hostapd_drv_send_action(hapd, freq, 0, src,
+				wpabuf_head(msg), wpabuf_len(msg));
+	wpabuf_free(msg);
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return;
+	bi->id = hapd_dpp_next_id(hapd);
+	bi->type = DPP_BOOTSTRAP_PKEX;
+	os_memcpy(bi->mac_addr, src, ETH_ALEN);
+	bi->num_freq = 1;
+	bi->freq[0] = freq;
+	bi->curve = pkex->own_bi->curve;
+	bi->pubkey = pkex->peer_bootstrap_key;
+	pkex->peer_bootstrap_key = NULL;
+	dpp_pkex_free(pkex);
+	hapd->dpp_pkex = NULL;
+	if (dpp_bootstrap_key_hash(bi) < 0) {
+		dpp_bootstrap_info_free(bi);
+		return;
+	}
+	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+}
+
+
+static void
+hostapd_dpp_rx_pkex_commit_reveal_resp(struct hostapd_data *hapd, const u8 *src,
+				       const u8 *buf, size_t len,
+				       unsigned int freq)
+{
+	int res;
+	struct dpp_bootstrap_info *bi, *own_bi;
+	struct dpp_pkex *pkex = hapd->dpp_pkex;
+	char cmd[500];
+
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Commit-Reveal Response from " MACSTR,
+		   MAC2STR(src));
+
+	if (!pkex || !pkex->initiator || !pkex->exchange_done) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
+		return;
+	}
+
+	res = dpp_pkex_rx_commit_reveal_resp(pkex, buf, len);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
+		return;
+	}
+
+	own_bi = pkex->own_bi;
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return;
+	bi->id = hapd_dpp_next_id(hapd);
+	bi->type = DPP_BOOTSTRAP_PKEX;
+	os_memcpy(bi->mac_addr, src, ETH_ALEN);
+	bi->num_freq = 1;
+	bi->freq[0] = freq;
+	bi->curve = own_bi->curve;
+	bi->pubkey = pkex->peer_bootstrap_key;
+	pkex->peer_bootstrap_key = NULL;
+	dpp_pkex_free(pkex);
+	hapd->dpp_pkex = NULL;
+	if (dpp_bootstrap_key_hash(bi) < 0) {
+		dpp_bootstrap_info_free(bi);
+		return;
+	}
+	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+
+	os_snprintf(cmd, sizeof(cmd), " peer=%u %s",
+		    bi->id,
+		    hapd->dpp_pkex_auth_cmd ? hapd->dpp_pkex_auth_cmd : "");
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Start authentication after PKEX with parameters: %s",
+		   cmd);
+	if (hostapd_dpp_auth_init(hapd, cmd) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Authentication initialization failed");
+		return;
+	}
+}
+
+
 void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 			   const u8 *buf, size_t len, unsigned int freq)
 {
@@ -933,11 +1121,125 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 	case DPP_PA_PEER_DISCOVERY_REQ:
 		hostapd_dpp_rx_peer_disc_req(hapd, src, buf, len, freq);
 		break;
+	case DPP_PA_PKEX_EXCHANGE_REQ:
+		hostapd_dpp_rx_pkex_exchange_req(hapd, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_EXCHANGE_RESP:
+		hostapd_dpp_rx_pkex_exchange_resp(hapd, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_COMMIT_REVEAL_REQ:
+		hostapd_dpp_rx_pkex_commit_reveal_req(hapd, src, buf, len, freq);
+		break;
+	case DPP_PA_PKEX_COMMIT_REVEAL_RESP:
+		hostapd_dpp_rx_pkex_commit_reveal_resp(hapd, src, buf, len,
+						       freq);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Ignored unsupported frame subtype %d", type);
 		break;
 	}
+}
+
+
+int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
+{
+	struct dpp_bootstrap_info *own_bi;
+	const char *pos, *end;
+
+	pos = os_strstr(cmd, " own=");
+	if (!pos)
+		return -1;
+	pos += 5;
+	own_bi = dpp_bootstrap_get_id(hapd, atoi(pos));
+	if (!own_bi) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Identified bootstrap info not found");
+		return -1;
+	}
+	if (own_bi->type != DPP_BOOTSTRAP_PKEX) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Identified bootstrap info not for PKEX");
+		return -1;
+	}
+	hapd->dpp_pkex_bi = own_bi;
+
+	os_free(hapd->dpp_pkex_identifier);
+	hapd->dpp_pkex_identifier = NULL;
+	pos = os_strstr(cmd, " identifier=");
+	if (pos) {
+		pos += 12;
+		end = os_strchr(pos, ' ');
+		if (!end)
+			return -1;
+		hapd->dpp_pkex_identifier = os_malloc(end - pos + 1);
+		if (!hapd->dpp_pkex_identifier)
+			return -1;
+		os_memcpy(hapd->dpp_pkex_identifier, pos, end - pos);
+		hapd->dpp_pkex_identifier[end - pos] = '\0';
+	}
+
+	pos = os_strstr(cmd, " code=");
+	if (!pos)
+		return -1;
+	os_free(hapd->dpp_pkex_code);
+	hapd->dpp_pkex_code = os_strdup(pos + 6);
+	if (!hapd->dpp_pkex_code)
+		return -1;
+
+	if (os_strstr(cmd, " init=1")) {
+		struct wpabuf *msg;
+
+		wpa_printf(MSG_DEBUG, "DPP: Initiating PKEX");
+		dpp_pkex_free(hapd->dpp_pkex);
+		hapd->dpp_pkex = dpp_pkex_init(own_bi, hapd->own_addr,
+					       hapd->dpp_pkex_identifier,
+					       hapd->dpp_pkex_code);
+		if (!hapd->dpp_pkex)
+			return -1;
+
+		msg = hapd->dpp_pkex->exchange_req;
+		/* TODO: Which channel to use? */
+		hostapd_drv_send_action(hapd, 2437, 0, broadcast,
+					wpabuf_head(msg), wpabuf_len(msg));
+	}
+
+	/* TODO: Support multiple PKEX info entries */
+
+	os_free(hapd->dpp_pkex_auth_cmd);
+	hapd->dpp_pkex_auth_cmd = os_strdup(cmd);
+
+	return 1;
+}
+
+
+int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id)
+{
+	unsigned int id_val;
+
+	if (os_strcmp(id, "*") == 0) {
+		id_val = 0;
+	} else {
+		id_val = atoi(id);
+		if (id_val == 0)
+			return -1;
+	}
+
+	if ((id_val != 0 && id_val != 1) || !hapd->dpp_pkex_code)
+		return -1;
+
+	/* TODO: Support multiple PKEX entries */
+	os_free(hapd->dpp_pkex_code);
+	hapd->dpp_pkex_code = NULL;
+	os_free(hapd->dpp_pkex_identifier);
+	hapd->dpp_pkex_identifier = NULL;
+	os_free(hapd->dpp_pkex_auth_cmd);
+	hapd->dpp_pkex_auth_cmd = NULL;
+	hapd->dpp_pkex_bi = NULL;
+	/* TODO: Remove dpp_pkex only if it is for the identified PKEX code */
+	dpp_pkex_free(hapd->dpp_pkex);
+	hapd->dpp_pkex = NULL;
+	return 0;
 }
 
 
@@ -968,4 +1270,6 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
 	dpp_bootstrap_del(hapd, 0);
 	dpp_auth_deinit(hapd->dpp_auth);
 	hapd->dpp_auth = NULL;
+	hostapd_dpp_pkex_remove(hapd, "*");
+	hapd->dpp_pkex = NULL;
 }

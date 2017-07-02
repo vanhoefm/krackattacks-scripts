@@ -19,6 +19,8 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 			   const u8 *buf, size_t len, unsigned int freq);
 void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 			   const u8 *data, size_t data_len, int ok);
+int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd);
+int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id);
 int hostapd_dpp_init(struct hostapd_data *hapd);
 void hostapd_dpp_deinit(struct hostapd_data *hapd);
 

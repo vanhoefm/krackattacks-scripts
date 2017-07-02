@@ -328,6 +328,11 @@ struct hostapd_data {
 	int dpp_qr_mutual;
 	int dpp_auth_ok_on_ack;
 	struct gas_query_ap *gas;
+	struct dpp_pkex *dpp_pkex;
+	struct dpp_bootstrap_info *dpp_pkex_bi;
+	char *dpp_pkex_code;
+	char *dpp_pkex_identifier;
+	char *dpp_pkex_auth_cmd;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

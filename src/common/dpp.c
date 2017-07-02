@@ -3450,7 +3450,8 @@ fail:
 
 
 static struct wpabuf *
-dpp_parse_jws_prot_hdr(const u8 *prot_hdr, u16 prot_hdr_len,
+dpp_parse_jws_prot_hdr(const struct dpp_curve_params *curve,
+		       const u8 *prot_hdr, u16 prot_hdr_len,
 		       const EVP_MD **ret_md)
 {
 	struct json_token *root, *token;
@@ -3490,6 +3491,12 @@ dpp_parse_jws_prot_hdr(const u8 *prot_hdr, u16 prot_hdr_len,
 	}
 	wpa_printf(MSG_DEBUG, "DPP: JWS Protected Header alg=%s",
 		   token->string);
+	if (os_strcmp(token->string, curve->jws_alg) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Unexpected JWS Protected Header alg=%s (expected %s based on C-sign-key)",
+			   token->string, curve->jws_alg);
+		goto fail;
+	}
 	if (os_strcmp(token->string, "ES256") == 0 ||
 	    os_strcmp(token->string, "BS256") == 0)
 		*ret_md = EVP_sha256();
@@ -3936,7 +3943,22 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	EVP_MD_CTX *md_ctx = NULL;
 	ECDSA_SIG *sig = NULL;
 	BIGNUM *r = NULL, *s = NULL;
+	const struct dpp_curve_params *curve;
+	EC_KEY *eckey;
+	const EC_GROUP *group;
+	int nid;
 
+	eckey = EVP_PKEY_get1_EC_KEY(csign_pub);
+	if (!eckey)
+		goto fail;
+	group = EC_KEY_get0_group(eckey);
+	if (!group)
+		goto fail;
+	nid = EC_GROUP_get_curve_name(group);
+	curve = dpp_get_curve_nid(nid);
+	if (!curve)
+		goto fail;
+	wpa_printf(MSG_DEBUG, "DPP: C-sign-key group: %s", curve->jwk_crv);
 	os_memset(info, 0, sizeof(*info));
 
 	signed_start = pos = connector;
@@ -3955,7 +3977,7 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	wpa_hexdump_ascii(MSG_DEBUG,
 			  "DPP: signedConnector - JWS Protected Header",
 			  prot_hdr, prot_hdr_len);
-	kid = dpp_parse_jws_prot_hdr(prot_hdr, prot_hdr_len, &sign_md);
+	kid = dpp_parse_jws_prot_hdr(curve, prot_hdr, prot_hdr_len, &sign_md);
 	if (!kid)
 		goto fail;
 	if (wpabuf_len(kid) != SHA256_MAC_LEN) {
@@ -4046,6 +4068,7 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 
 	ret = 0;
 fail:
+	EC_KEY_free(eckey);
 	EVP_MD_CTX_destroy(md_ctx);
 	os_free(prot_hdr);
 	wpabuf_free(kid);

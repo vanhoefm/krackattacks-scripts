@@ -577,6 +577,11 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = set_disallow_aps(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "no_keep_alive") == 0) {
 		wpa_s->no_keep_alive = !!atoi(value);
+#ifdef CONFIG_DPP
+	} else if (os_strcasecmp(cmd, "dpp_configurator_params") == 0) {
+		os_free(wpa_s->dpp_configurator_params);
+		wpa_s->dpp_configurator_params = os_strdup(value);
+#endif /* CONFIG_DPP */
 #ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
 		wpa_s->ext_mgmt_frame_handling = !!atoi(value);

@@ -387,15 +387,11 @@ static void wpas_dpp_set_testing_options(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
+static void wpas_dpp_set_configurator(struct wpa_supplicant *wpa_s,
+				      struct dpp_authentication *auth,
+				      const char *cmd)
 {
 	const char *pos, *end;
-	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
-	struct wpabuf *msg;
-	const u8 *dst;
-	int res;
-	int configurator = 1;
-	unsigned int wait_time;
 	struct dpp_configuration *conf_sta = NULL, *conf_ap = NULL;
 	struct dpp_configurator *conf = NULL;
 	u8 ssid[32] = { "test" };
@@ -403,54 +399,10 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	char pass[64] = { };
 	size_t pass_len = 0;
 
-	wpa_s->dpp_gas_client = 0;
+	if (!cmd)
+		return;
 
-	pos = os_strstr(cmd, " peer=");
-	if (!pos)
-		return -1;
-	pos += 6;
-	peer_bi = dpp_bootstrap_get_id(wpa_s, atoi(pos));
-	if (!peer_bi) {
-		wpa_printf(MSG_INFO,
-			   "DPP: Could not find bootstrapping info for the identified peer");
-		return -1;
-	}
-
-	pos = os_strstr(cmd, " own=");
-	if (pos) {
-		pos += 5;
-		own_bi = dpp_bootstrap_get_id(wpa_s, atoi(pos));
-		if (!own_bi) {
-			wpa_printf(MSG_INFO,
-				   "DPP: Could not find bootstrapping info for the identified local entry");
-			return -1;
-		}
-
-		if (peer_bi->curve != own_bi->curve) {
-			wpa_printf(MSG_INFO,
-				   "DPP: Mismatching curves in bootstrapping info (peer=%s own=%s)",
-				   peer_bi->curve->name, own_bi->curve->name);
-			return -1;
-		}
-	}
-
-	pos = os_strstr(cmd, " role=");
-	if (pos) {
-		pos += 6;
-		if (os_strncmp(pos, "configurator", 12) == 0)
-			configurator = 1;
-		else if (os_strncmp(pos, "enrollee", 8) == 0)
-			configurator = 0;
-		else
-			goto fail;
-	}
-
-	pos = os_strstr(cmd, " netrole=");
-	if (pos) {
-		pos += 9;
-		wpa_s->dpp_netrole_ap = os_strncmp(pos, "ap", 2) == 0;
-	}
-
+	wpa_printf(MSG_DEBUG, "DPP: Set configurator parameters: %s", cmd);
 	pos = os_strstr(cmd, " ssid=");
 	if (pos) {
 		pos += 6;
@@ -533,6 +485,75 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 			goto fail;
 		}
 	}
+	auth->conf_sta = conf_sta;
+	auth->conf_ap = conf_ap;
+	auth->conf = conf;
+	return;
+
+fail:
+	wpa_printf(MSG_DEBUG, "DPP: Failed to set configurator parameters");
+	dpp_configuration_free(conf_sta);
+	dpp_configuration_free(conf_ap);
+}
+
+
+int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	const char *pos;
+	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
+	struct wpabuf *msg;
+	const u8 *dst;
+	int res;
+	int configurator = 1;
+	unsigned int wait_time;
+
+	wpa_s->dpp_gas_client = 0;
+
+	pos = os_strstr(cmd, " peer=");
+	if (!pos)
+		return -1;
+	pos += 6;
+	peer_bi = dpp_bootstrap_get_id(wpa_s, atoi(pos));
+	if (!peer_bi) {
+		wpa_printf(MSG_INFO,
+			   "DPP: Could not find bootstrapping info for the identified peer");
+		return -1;
+	}
+
+	pos = os_strstr(cmd, " own=");
+	if (pos) {
+		pos += 5;
+		own_bi = dpp_bootstrap_get_id(wpa_s, atoi(pos));
+		if (!own_bi) {
+			wpa_printf(MSG_INFO,
+				   "DPP: Could not find bootstrapping info for the identified local entry");
+			return -1;
+		}
+
+		if (peer_bi->curve != own_bi->curve) {
+			wpa_printf(MSG_INFO,
+				   "DPP: Mismatching curves in bootstrapping info (peer=%s own=%s)",
+				   peer_bi->curve->name, own_bi->curve->name);
+			return -1;
+		}
+	}
+
+	pos = os_strstr(cmd, " role=");
+	if (pos) {
+		pos += 6;
+		if (os_strncmp(pos, "configurator", 12) == 0)
+			configurator = 1;
+		else if (os_strncmp(pos, "enrollee", 8) == 0)
+			configurator = 0;
+		else
+			goto fail;
+	}
+
+	pos = os_strstr(cmd, " netrole=");
+	if (pos) {
+		pos += 9;
+		wpa_s->dpp_netrole_ap = os_strncmp(pos, "ap", 2) == 0;
+	}
 
 	if (wpa_s->dpp_auth) {
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
@@ -543,9 +564,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	if (!wpa_s->dpp_auth)
 		goto fail;
 	wpas_dpp_set_testing_options(wpa_s, wpa_s->dpp_auth);
-	wpa_s->dpp_auth->conf_sta = conf_sta;
-	wpa_s->dpp_auth->conf_ap = conf_ap;
-	wpa_s->dpp_auth->conf = conf;
+	wpas_dpp_set_configurator(wpa_s, wpa_s->dpp_auth, cmd);
 
 	/* TODO: Support iteration over all frequencies and filtering of
 	 * frequencies based on locally enabled channels that allow initiation
@@ -584,8 +603,6 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 
 	return res;
 fail:
-	dpp_configuration_free(conf_sta);
-	dpp_configuration_free(conf_ap);
 	return -1;
 }
 
@@ -855,6 +872,8 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 	wpas_dpp_set_testing_options(wpa_s, wpa_s->dpp_auth);
+	wpas_dpp_set_configurator(wpa_s, wpa_s->dpp_auth,
+				  wpa_s->dpp_configurator_params);
 	os_memcpy(wpa_s->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
 	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
@@ -2003,4 +2022,6 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	wpas_dpp_pkex_remove(wpa_s, "*");
 	wpa_s->dpp_pkex = NULL;
 	os_memset(wpa_s->dpp_intro_bssid, 0, ETH_ALEN);
+	os_free(wpa_s->dpp_configurator_params);
+	wpa_s->dpp_configurator_params = NULL;
 }

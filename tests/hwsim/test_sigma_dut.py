@@ -114,6 +114,12 @@ def test_sigma_dut_basic(dev, apdev):
 
 def test_sigma_dut_open(dev, apdev):
     """sigma_dut controlled open network association"""
+    try:
+        run_sigma_dut_open(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_open(dev, apdev):
     ifname = dev[0].ifname
     sigma = start_sigma_dut(ifname)
 
@@ -131,6 +137,12 @@ def test_sigma_dut_open(dev, apdev):
 
 def test_sigma_dut_psk_pmf(dev, apdev):
     """sigma_dut controlled PSK+PMF association"""
+    try:
+        run_sigma_dut_psk_pmf(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_psk_pmf(dev, apdev):
     ifname = dev[0].ifname
     sigma = start_sigma_dut(ifname)
 
@@ -153,6 +165,12 @@ def test_sigma_dut_psk_pmf(dev, apdev):
 
 def test_sigma_dut_sta_override_rsne(dev, apdev):
     """sigma_dut and RSNE override on STA"""
+    try:
+        run_sigma_dut_sta_override_rsne(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_sta_override_rsne(dev, apdev):
     ifname = dev[0].ifname
     sigma = start_sigma_dut(ifname)
 

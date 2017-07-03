@@ -1620,6 +1620,10 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 		return "FT-FILS-SHA256";
 	case WPA_KEY_MGMT_FT_FILS_SHA384:
 		return "FT-FILS-SHA384";
+	case WPA_KEY_MGMT_OWE:
+		return "OWE";
+	case WPA_KEY_MGMT_DPP:
+		return "DPP";
 	default:
 		return "UNKNOWN";
 	}

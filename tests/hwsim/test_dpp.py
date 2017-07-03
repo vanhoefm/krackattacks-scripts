@@ -758,6 +758,9 @@ def run_dpp_akm(dev, apdev, pmk_len):
 
     dev[0].select_network(id, freq="2412")
     dev[0].wait_connected()
+    val = dev[0].get_status_field("key_mgmt")
+    if val != "DPP":
+        raise Exception("Unexpected key_mgmt: " + val)
 
 def test_dpp_network_introduction(dev, apdev):
     """DPP network introduction"""
@@ -786,6 +789,9 @@ def test_dpp_network_introduction(dev, apdev):
                         dpp_csign=csign,
                         dpp_connector=sta_connector,
                         dpp_netaccesskey=sta_netaccesskey)
+    val = dev[0].get_status_field("key_mgmt")
+    if val != "DPP":
+        raise Exception("Unexpected key_mgmt: " + val)
 
 def test_dpp_ap_config(dev, apdev):
     """DPP and AP configuration"""

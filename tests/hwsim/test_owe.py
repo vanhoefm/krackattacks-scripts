@@ -26,6 +26,9 @@ def test_owe(dev, apdev):
 
     dev[0].connect("owe", key_mgmt="OWE")
     hwsim_utils.test_connectivity(dev[0], hapd)
+    val = dev[0].get_status_field("key_mgmt")
+    if val != "OWE":
+        raise Exception("Unexpected key_mgmt: " + val)
 
 def test_owe_and_psk(dev, apdev):
     """Opportunistic Wireless Encryption and WPA2-PSK enabled"""

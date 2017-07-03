@@ -11,12 +11,30 @@
 #include "common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
+#include "common/dpp.h"
+#include "common/wpa_ctrl.h"
 #include "utils/eloop.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "ap_drv_ops.h"
+#include "dpp_hostapd.h"
 #include "sta_info.h"
 #include "gas_serv.h"
+
+
+#ifdef CONFIG_DPP
+static void gas_serv_write_dpp_adv_proto(struct wpabuf *buf)
+{
+	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
+	wpabuf_put_u8(buf, 8); /* Length */
+	wpabuf_put_u8(buf, 0x7f);
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(buf, 5);
+	wpabuf_put_be24(buf, OUI_WFA);
+	wpabuf_put_u8(buf, DPP_OUI_TYPE);
+	wpabuf_put_u8(buf, 0x01);
+}
+#endif /* CONFIG_DPP */
 
 
 static void convert_to_protected_dual(struct wpabuf *msg)
@@ -1393,6 +1411,72 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_DPP
+static void gas_serv_req_dpp_processing(struct hostapd_data *hapd,
+					const u8 *sa, u8 dialog_token,
+					int prot, struct wpabuf *buf)
+{
+	struct wpabuf *tx_buf;
+
+	if (wpabuf_len(buf) > hapd->conf->gas_frag_limit ||
+	    hapd->conf->gas_comeback_delay) {
+		struct gas_dialog_info *di;
+		u16 comeback_delay = 1;
+
+		if (hapd->conf->gas_comeback_delay) {
+			/* Testing - allow overriding of the delay value */
+			comeback_delay = hapd->conf->gas_comeback_delay;
+		}
+
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Too long response to fit in initial response - use GAS comeback");
+		di = gas_dialog_create(hapd, sa, dialog_token);
+		if (!di) {
+			wpa_printf(MSG_INFO, "DPP: Could not create dialog for "
+				   MACSTR " (dialog token %u)",
+				   MAC2STR(sa), dialog_token);
+			wpabuf_free(buf);
+			tx_buf = gas_build_initial_resp(
+				dialog_token, WLAN_STATUS_UNSPECIFIED_FAILURE,
+				0, 10);
+			if (tx_buf)
+				gas_serv_write_dpp_adv_proto(tx_buf);
+		} else {
+			di->prot = prot;
+			di->sd_resp = buf;
+			di->sd_resp_pos = 0;
+			tx_buf = gas_build_initial_resp(
+				dialog_token, WLAN_STATUS_SUCCESS,
+				comeback_delay, 10);
+			if (tx_buf)
+				gas_serv_write_dpp_adv_proto(tx_buf);
+		}
+	} else {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: GAS Initial response (no comeback)");
+		tx_buf = gas_build_initial_resp(
+			dialog_token, WLAN_STATUS_SUCCESS, 0,
+			10 + 2 + wpabuf_len(buf));
+		if (tx_buf) {
+			gas_serv_write_dpp_adv_proto(tx_buf);
+			wpabuf_put_le16(tx_buf, wpabuf_len(buf));
+			wpabuf_put_buf(tx_buf, buf);
+			wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_SENT);
+		}
+		wpabuf_free(buf);
+	}
+	if (!tx_buf)
+		return;
+	if (prot)
+		convert_to_protected_dual(tx_buf);
+	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
+				wpabuf_head(tx_buf),
+				wpabuf_len(tx_buf));
+	wpabuf_free(tx_buf);
+}
+#endif /* CONFIG_DPP */
+
+
 static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 					const u8 *sa,
 					const u8 *data, size_t len, int prot,
@@ -1405,6 +1489,9 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 	u16 slen;
 	struct anqp_query_info qi;
 	const u8 *adv_proto;
+#ifdef CONFIG_DPP
+	int dpp = 0;
+#endif /* CONFIG_DPP */
 
 	if (len < 1 + 2)
 		return;
@@ -1431,6 +1518,15 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 	}
 	next = pos + slen;
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
+
+#ifdef CONFIG_DPP
+	if (slen == 8 && *pos == WLAN_EID_VENDOR_SPECIFIC &&
+	    pos[1] == 5 && WPA_GET_BE24(&pos[2]) == OUI_WFA &&
+	    pos[5] == DPP_OUI_TYPE && pos[6] == 0x01) {
+		wpa_printf(MSG_DEBUG, "DPP: Configuration Request");
+		dpp = 1;
+	} else
+#endif /* CONFIG_DPP */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
 		struct wpabuf *buf;
@@ -1470,6 +1566,18 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 	if (slen > end - pos)
 		return;
 	end = pos + slen;
+
+#ifdef CONFIG_DPP
+	if (dpp) {
+		struct wpabuf *msg;
+
+		msg = hostapd_dpp_gas_req_handler(hapd, sa, pos, slen);
+		if (!msg)
+			return;
+		gas_serv_req_dpp_processing(hapd, sa, dialog_token, prot, msg);
+		return;
+	}
+#endif /* CONFIG_DPP */
 
 	/* ANQP Query Request */
 	while (pos < end) {
@@ -1558,6 +1666,18 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 		gas_serv_dialog_clear(dialog);
 		return;
 	}
+#ifdef CONFIG_DPP
+	if (dialog->dpp) {
+		tx_buf = gas_build_comeback_resp(dialog_token,
+						 WLAN_STATUS_SUCCESS,
+						 dialog->sd_frag_id, more, 0,
+						 10 + frag_len);
+		if (tx_buf) {
+			gas_serv_write_dpp_adv_proto(tx_buf);
+			wpabuf_put_buf(tx_buf, buf);
+		}
+	} else
+#endif /* CONFIG_DPP */
 	tx_buf = gas_anqp_build_comeback_resp_buf(dialog_token,
 						  WLAN_STATUS_SUCCESS,
 						  dialog->sd_frag_id,
@@ -1581,6 +1701,10 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 	} else {
 		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: All fragments of "
 			"SD response sent");
+#ifdef CONFIG_DPP
+		if (dialog->dpp)
+			wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_SENT);
+#endif /* CONFIG_DPP */
 		gas_serv_dialog_clear(dialog);
 		gas_serv_free_dialogs(hapd, sa);
 	}

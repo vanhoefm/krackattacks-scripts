@@ -322,6 +322,7 @@ struct hostapd_data {
 
 #ifdef CONFIG_DPP
 	struct dl_list dpp_bootstrap; /* struct dpp_bootstrap_info */
+	struct dl_list dpp_configurator; /* struct dpp_configurator */
 	int dpp_init_done;
 	struct dpp_authentication *dpp_auth;
 	u8 dpp_allowed_roles;

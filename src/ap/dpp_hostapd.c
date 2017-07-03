@@ -1142,6 +1142,127 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 }
 
 
+struct wpabuf *
+hostapd_dpp_gas_req_handler(struct hostapd_data *hapd, const u8 *sa,
+			    const u8 *query, size_t query_len)
+{
+	struct dpp_authentication *auth = hapd->dpp_auth;
+	struct wpabuf *resp;
+
+	wpa_printf(MSG_DEBUG, "DPP: GAS request from " MACSTR, MAC2STR(sa));
+	if (!auth || !auth->auth_success ||
+	    os_memcmp(sa, auth->peer_mac_addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching exchange in progress");
+		return NULL;
+	}
+	wpa_hexdump(MSG_DEBUG,
+		    "DPP: Received Configuration Request (GAS Query Request)",
+		    query, query_len);
+	resp = dpp_conf_req_rx(auth, query, query_len);
+	if (!resp)
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_FAILED);
+	return resp;
+}
+
+
+static unsigned int hostapd_dpp_next_configurator_id(struct hostapd_data *hapd)
+{
+	struct dpp_configurator *conf;
+	unsigned int max_id = 0;
+
+	dl_list_for_each(conf, &hapd->dpp_configurator,
+			 struct dpp_configurator, list) {
+		if (conf->id > max_id)
+			max_id = conf->id;
+	}
+	return max_id + 1;
+}
+
+
+int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd)
+{
+	char *expiry = NULL, *curve = NULL;
+	char *key = NULL;
+	u8 *privkey = NULL;
+	size_t privkey_len = 0;
+	int ret = -1;
+	struct dpp_configurator *conf = NULL;
+
+	expiry = get_param(cmd, " expiry=");
+	curve = get_param(cmd, " curve=");
+	key = get_param(cmd, " key=");
+
+	if (key) {
+		privkey_len = os_strlen(key) / 2;
+		privkey = os_malloc(privkey_len);
+		if (!privkey ||
+		    hexstr2bin(key, privkey, privkey_len) < 0)
+			goto fail;
+	}
+
+	conf = dpp_keygen_configurator(curve, privkey, privkey_len);
+	if (!conf)
+		goto fail;
+
+	if (expiry) {
+		long int val;
+
+		val = strtol(expiry, NULL, 0);
+		if (val <= 0)
+			goto fail;
+		conf->csign_expiry = val;
+	}
+
+	conf->id = hostapd_dpp_next_configurator_id(hapd);
+	dl_list_add(&hapd->dpp_configurator, &conf->list);
+	ret = conf->id;
+	conf = NULL;
+fail:
+	os_free(curve);
+	os_free(expiry);
+	str_clear_free(key);
+	bin_clear_free(privkey, privkey_len);
+	dpp_configurator_free(conf);
+	return ret;
+}
+
+
+static int dpp_configurator_del(struct hostapd_data *hapd, unsigned int id)
+{
+	struct dpp_configurator *conf, *tmp;
+	int found = 0;
+
+	dl_list_for_each_safe(conf, tmp, &hapd->dpp_configurator,
+			      struct dpp_configurator, list) {
+		if (id && conf->id != id)
+			continue;
+		found = 1;
+		dl_list_del(&conf->list);
+		dpp_configurator_free(conf);
+	}
+
+	if (id == 0)
+		return 0; /* flush succeeds regardless of entries found */
+	return found ? 0 : -1;
+}
+
+
+int hostapd_dpp_configurator_remove(struct hostapd_data *hapd, const char *id)
+{
+	unsigned int id_val;
+
+	if (os_strcmp(id, "*") == 0) {
+		id_val = 0;
+	} else {
+		id_val = atoi(id);
+		if (id_val == 0)
+			return -1;
+	}
+
+	return dpp_configurator_del(hapd, id_val);
+}
+
+
 int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
 {
 	struct dpp_bootstrap_info *own_bi;
@@ -1246,6 +1367,7 @@ int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id)
 int hostapd_dpp_init(struct hostapd_data *hapd)
 {
 	dl_list_init(&hapd->dpp_bootstrap);
+	dl_list_init(&hapd->dpp_configurator);
 	hapd->dpp_allowed_roles = DPP_CAPAB_CONFIGURATOR | DPP_CAPAB_ENROLLEE;
 	hapd->dpp_init_done = 1;
 	return 0;
@@ -1268,6 +1390,7 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
 	if (!hapd->dpp_init_done)
 		return;
 	dpp_bootstrap_del(hapd, 0);
+	dpp_configurator_del(hapd, 0);
 	dpp_auth_deinit(hapd->dpp_auth);
 	hapd->dpp_auth = NULL;
 	hostapd_dpp_pkex_remove(hapd, "*");

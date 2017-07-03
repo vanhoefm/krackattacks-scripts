@@ -327,6 +327,7 @@ struct hostapd_bss_config {
 	int wpa_pairwise;
 	int wpa_group;
 	int wpa_group_rekey;
+	int wpa_group_rekey_set;
 	int wpa_strict_rekey;
 	int wpa_gmk_rekey;
 	int wpa_ptk_rekey;

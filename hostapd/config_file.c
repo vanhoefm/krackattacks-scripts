@@ -2513,6 +2513,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->wpa = atoi(pos);
 	} else if (os_strcmp(buf, "wpa_group_rekey") == 0) {
 		bss->wpa_group_rekey = atoi(pos);
+		bss->wpa_group_rekey_set = 1;
 	} else if (os_strcmp(buf, "wpa_strict_rekey") == 0) {
 		bss->wpa_strict_rekey = atoi(pos);
 	} else if (os_strcmp(buf, "wpa_gmk_rekey") == 0) {

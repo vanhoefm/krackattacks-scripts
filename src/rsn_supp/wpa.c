@@ -2858,9 +2858,12 @@ int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 		    >= 0 &&
 		    rsn.capabilities & (WPA_CAPABILITY_MFPR |
 					WPA_CAPABILITY_MFPC)) {
-			ret = os_snprintf(pos, end - pos, "pmf=%d\n",
+			ret = os_snprintf(pos, end - pos, "pmf=%d\n"
+					  "mgmt_group_cipher=%s\n",
 					  (rsn.capabilities &
-					   WPA_CAPABILITY_MFPR) ? 2 : 1);
+					   WPA_CAPABILITY_MFPR) ? 2 : 1,
+					  wpa_cipher_txt(
+						  sm->mgmt_group_cipher));
 			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;

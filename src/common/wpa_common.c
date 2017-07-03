@@ -1547,6 +1547,14 @@ const char * wpa_cipher_txt(int cipher)
 		return "GCMP-256";
 	case WPA_CIPHER_CCMP_256:
 		return "CCMP-256";
+	case WPA_CIPHER_AES_128_CMAC:
+		return "BIP";
+	case WPA_CIPHER_BIP_GMAC_128:
+		return "BIP-GMAC-128";
+	case WPA_CIPHER_BIP_GMAC_256:
+		return "BIP-GMAC-256";
+	case WPA_CIPHER_BIP_CMAC_256:
+		return "BIP-CMAC-256";
 	case WPA_CIPHER_GTK_NOT_USED:
 		return "GTK_NOT_USED";
 	default:

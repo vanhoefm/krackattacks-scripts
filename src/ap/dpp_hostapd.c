@@ -25,6 +25,20 @@ static void hostapd_dpp_auth_success(struct hostapd_data *hapd, int initiator);
 static const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 
+static struct dpp_configurator *
+hostapd_dpp_configurator_get_id(struct hostapd_data *hapd, unsigned int id)
+{
+	struct dpp_configurator *conf;
+
+	dl_list_for_each(conf, &hapd->dpp_configurator,
+			 struct dpp_configurator, list) {
+		if (conf->id == id)
+			return conf;
+	}
+	return NULL;
+}
+
+
 static unsigned int hapd_dpp_next_id(struct hostapd_data *hapd)
 {
 	struct dpp_bootstrap_info *bi;
@@ -293,6 +307,117 @@ static void hostapd_dpp_set_testing_options(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_dpp_set_configurator(struct hostapd_data *hapd,
+					 struct dpp_authentication *auth,
+					 const char *cmd)
+{
+	const char *pos, *end;
+	struct dpp_configuration *conf_sta = NULL, *conf_ap = NULL;
+	struct dpp_configurator *conf = NULL;
+	u8 ssid[32] = { "test" };
+	size_t ssid_len = 4;
+	char pass[64] = { };
+	size_t pass_len = 0;
+
+	if (!cmd)
+		return;
+
+	wpa_printf(MSG_DEBUG, "DPP: Set configurator parameters: %s", cmd);
+	pos = os_strstr(cmd, " ssid=");
+	if (pos) {
+		pos += 6;
+		end = os_strchr(pos, ' ');
+		ssid_len = end ? (size_t) (end - pos) : os_strlen(pos);
+		ssid_len /= 2;
+		if (ssid_len > sizeof(ssid) ||
+		    hexstr2bin(pos, ssid, ssid_len) < 0)
+			goto fail;
+	}
+
+	pos = os_strstr(cmd, " pass=");
+	if (pos) {
+		pos += 6;
+		end = os_strchr(pos, ' ');
+		pass_len = end ? (size_t) (end - pos) : os_strlen(pos);
+		pass_len /= 2;
+		if (pass_len > sizeof(pass) - 1 || pass_len < 8 ||
+		    hexstr2bin(pos, (u8 *) pass, pass_len) < 0)
+			goto fail;
+	}
+
+	if (os_strstr(cmd, " conf=sta-")) {
+		conf_sta = os_zalloc(sizeof(struct dpp_configuration));
+		if (!conf_sta)
+			goto fail;
+		os_memcpy(conf_sta->ssid, ssid, ssid_len);
+		conf_sta->ssid_len = ssid_len;
+		if (os_strstr(cmd, " conf=sta-psk")) {
+			conf_sta->dpp = 0;
+			conf_sta->passphrase = os_strdup(pass);
+			if (!conf_sta->passphrase)
+				goto fail;
+		} else if (os_strstr(cmd, " conf=sta-dpp")) {
+			conf_sta->dpp = 1;
+		} else {
+			goto fail;
+		}
+	}
+
+	if (os_strstr(cmd, " conf=ap-")) {
+		conf_ap = os_zalloc(sizeof(struct dpp_configuration));
+		if (!conf_ap)
+			goto fail;
+		os_memcpy(conf_ap->ssid, ssid, ssid_len);
+		conf_ap->ssid_len = ssid_len;
+		if (os_strstr(cmd, " conf=ap-psk")) {
+			conf_ap->dpp = 0;
+			conf_ap->passphrase = os_strdup(pass);
+			if (!conf_ap->passphrase)
+				goto fail;
+		} else if (os_strstr(cmd, " conf=ap-dpp")) {
+			conf_ap->dpp = 1;
+		} else {
+			goto fail;
+		}
+	}
+
+	pos = os_strstr(cmd, " expiry=");
+	if (pos) {
+		long int val;
+
+		pos += 8;
+		val = strtol(pos, NULL, 0);
+		if (val <= 0)
+			goto fail;
+		if (conf_sta)
+			conf_sta->netaccesskey_expiry = val;
+		if (conf_ap)
+			conf_ap->netaccesskey_expiry = val;
+	}
+
+	pos = os_strstr(cmd, " configurator=");
+	if (pos) {
+		auth->configurator = 1;
+		pos += 14;
+		conf = hostapd_dpp_configurator_get_id(hapd, atoi(pos));
+		if (!conf) {
+			wpa_printf(MSG_INFO,
+				   "DPP: Could not find the specified configurator");
+			goto fail;
+		}
+	}
+	auth->conf_sta = conf_sta;
+	auth->conf_ap = conf_ap;
+	auth->conf = conf;
+	return;
+
+fail:
+	wpa_printf(MSG_DEBUG, "DPP: Failed to set configurator parameters");
+	dpp_configuration_free(conf_sta);
+	dpp_configuration_free(conf_ap);
+}
+
+
 int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 {
 	const char *pos;
@@ -343,68 +468,13 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 			goto fail;
 	}
 
-	if (os_strstr(cmd, " conf=sta-")) {
-		conf_sta = os_zalloc(sizeof(struct dpp_configuration));
-		if (!conf_sta)
-			goto fail;
-		/* TODO: Configuration of network parameters from upper layers
-		 */
-		os_memcpy(conf_sta->ssid, "test", 4);
-		conf_sta->ssid_len = 4;
-		if (os_strstr(cmd, " conf=sta-psk")) {
-			conf_sta->dpp = 0;
-			conf_sta->passphrase = os_strdup("secret passphrase");
-			if (!conf_sta->passphrase)
-				goto fail;
-		} else if (os_strstr(cmd, " conf=sta-dpp")) {
-			conf_sta->dpp = 1;
-		} else {
-			goto fail;
-		}
-	}
-
-	if (os_strstr(cmd, " conf=ap-")) {
-		conf_ap = os_zalloc(sizeof(struct dpp_configuration));
-		if (!conf_ap)
-			goto fail;
-		/* TODO: Configuration of network parameters from upper layers
-		 */
-		os_memcpy(conf_ap->ssid, "test", 4);
-		conf_ap->ssid_len = 4;
-		if (os_strstr(cmd, " conf=ap-psk")) {
-			conf_ap->dpp = 0;
-			conf_ap->passphrase = os_strdup("secret passphrase");
-			if (!conf_ap->passphrase)
-				goto fail;
-		} else if (os_strstr(cmd, " conf=ap-dpp")) {
-			conf_ap->dpp = 1;
-		} else {
-			goto fail;
-		}
-	}
-
-	pos = os_strstr(cmd, " expiry=");
-	if (pos) {
-		long int val;
-
-		pos += 8;
-		val = strtol(pos, NULL, 0);
-		if (val <= 0)
-			goto fail;
-		if (conf_sta)
-			conf_sta->netaccesskey_expiry = val;
-		if (conf_ap)
-			conf_ap->netaccesskey_expiry = val;
-	}
-
 	if (hapd->dpp_auth)
 		dpp_auth_deinit(hapd->dpp_auth);
 	hapd->dpp_auth = dpp_auth_init(hapd, peer_bi, own_bi, configurator);
 	if (!hapd->dpp_auth)
 		goto fail;
 	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);
-	hapd->dpp_auth->conf_sta = conf_sta;
-	hapd->dpp_auth->conf_ap = conf_ap;
+	hostapd_dpp_set_configurator(hapd, hapd->dpp_auth, cmd);
 
 	/* TODO: Support iteration over all frequencies and filtering of
 	 * frequencies based on locally enabled channels that allow initiation
@@ -530,6 +600,8 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);
+	hostapd_dpp_set_configurator(hapd, hapd->dpp_auth,
+				     hapd->dpp_configurator_params);
 	os_memcpy(hapd->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
 	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
@@ -1395,4 +1467,6 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
 	hapd->dpp_auth = NULL;
 	hostapd_dpp_pkex_remove(hapd, "*");
 	hapd->dpp_pkex = NULL;
+	os_free(hapd->dpp_configurator_params);
+	hapd->dpp_configurator_params = NULL;
 }

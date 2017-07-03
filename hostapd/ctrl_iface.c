@@ -1325,6 +1325,11 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		 * disallowing station logic.
 		 */
 #endif /* CONFIG_MBO */
+#ifdef CONFIG_DPP
+	} else if (os_strcasecmp(cmd, "dpp_configurator_params") == 0) {
+		os_free(hapd->dpp_configurator_params);
+		hapd->dpp_configurator_params = os_strdup(value);
+#endif /* CONFIG_DPP */
 	} else {
 		struct sta_info *sta;
 		struct vlan_description vlan_id;

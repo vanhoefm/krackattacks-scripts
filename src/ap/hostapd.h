@@ -334,6 +334,7 @@ struct hostapd_data {
 	char *dpp_pkex_code;
 	char *dpp_pkex_identifier;
 	char *dpp_pkex_auth_cmd;
+	char *dpp_configurator_params;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

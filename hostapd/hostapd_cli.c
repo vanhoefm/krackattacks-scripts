@@ -1364,6 +1364,80 @@ static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_DPP
+
+static int hostapd_cli_cmd_dpp_qr_code(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_QR_CODE", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_bootstrap_gen(struct wpa_ctrl *ctrl, int argc,
+					     char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_BOOTSTRAP_GEN", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_bootstrap_remove(struct wpa_ctrl *ctrl, int argc,
+						char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_BOOTSTRAP_REMOVE", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_bootstrap_get_uri(struct wpa_ctrl *ctrl,
+						 int argc, char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_BOOTSTRAP_GET_URI", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_bootstrap_info(struct wpa_ctrl *ctrl, int argc,
+					      char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_BOOTSTRAP_INFO", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_auth_init(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_AUTH_INIT", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_configurator_add(struct wpa_ctrl *ctrl, int argc,
+						char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_CONFIGURATOR_ADD", 0, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_configurator_remove(struct wpa_ctrl *ctrl,
+						   int argc, char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_CONFIGURATOR_REMOVE", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_pkex_add(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_PKEX_ADD", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_pkex_remove(struct wpa_ctrl *ctrl, int argc,
+					   char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_PKEX_REMOVE", 1, argc, argv);
+}
+
+#endif /* CONFIG_DPP */
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1499,6 +1573,29 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  " = send FTM range request"},
 	{ "driver_flags", hostapd_cli_cmd_driver_flags, NULL,
 	  " = show supported driver flags"},
+#ifdef CONFIG_DPP
+	{ "dpp_qr_code", hostapd_cli_cmd_dpp_qr_code, NULL,
+	  "report a scanned DPP URI from a QR Code" },
+	{ "dpp_bootstrap_gen", hostapd_cli_cmd_dpp_bootstrap_gen, NULL,
+	  "type=<qrcode> [chan=..] [mac=..] [info=..] [curve=..] [key=..] = generate DPP bootstrap information" },
+	{ "dpp_bootstrap_remove", hostapd_cli_cmd_dpp_bootstrap_remove, NULL,
+	  "*|<id> = remove DPP bootstrap information" },
+	{ "dpp_bootstrap_get_uri", hostapd_cli_cmd_dpp_bootstrap_get_uri, NULL,
+	  "<id> = get DPP bootstrap URI" },
+	{ "dpp_bootstrap_info", hostapd_cli_cmd_dpp_bootstrap_info, NULL,
+	  "<id> = show DPP bootstrap information" },
+	{ "dpp_auth_init", hostapd_cli_cmd_dpp_auth_init, NULL,
+	  "peer=<id> [own=<id>] = initiate DPP bootstrapping" },
+	{ "dpp_configurator_add", hostapd_cli_cmd_dpp_configurator_add, NULL,
+	  "[curve=..] [key=..] = add DPP configurator" },
+	{ "dpp_configurator_remove", hostapd_cli_cmd_dpp_configurator_remove,
+	  NULL,
+	  "*|<id> = remove DPP configurator" },
+	{ "dpp_pkex_add", hostapd_cli_cmd_dpp_pkex_add, NULL,
+	  "add PKEX code" },
+	{ "dpp_pkex_remove", hostapd_cli_cmd_dpp_pkex_remove, NULL,
+	  "*|<id> = remove DPP pkex information" },
+#endif /* CONFIG_DPP */
 	{ NULL, NULL, NULL, NULL }
 };
 

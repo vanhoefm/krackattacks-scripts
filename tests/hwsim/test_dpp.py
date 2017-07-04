@@ -833,6 +833,46 @@ def test_dpp_ap_config_p521_p521(dev, apdev):
     """DPP and AP configuration (P-521 + P-521)"""
     run_dpp_ap_config(dev, apdev, curve="P-521", conf_curve="P-521")
 
+def update_hapd_config(hapd):
+    ev = hapd.wait_event(["DPP-CONFOBJ-SSID"], timeout=1)
+    if ev is None:
+        raise Exception("SSID not reported (AP)")
+    ssid = ev.split(' ')[1]
+
+    ev = hapd.wait_event(["DPP-CONNECTOR"], timeout=1)
+    if ev is None:
+        raise Exception("Connector not reported (AP)")
+    connector = ev.split(' ')[1]
+
+    ev = hapd.wait_event(["DPP-C-SIGN-KEY"], timeout=1)
+    if ev is None:
+        raise Exception("C-sign-key not reported (AP)")
+    p = ev.split(' ')
+    csign = p[1]
+    csign_expiry = p[2] if len(p) > 2 else None
+
+    ev = hapd.wait_event(["DPP-NET-ACCESS-KEY"], timeout=1)
+    if ev is None:
+        raise Exception("netAccessKey not reported (AP)")
+    p = ev.split(' ')
+    net_access_key = p[1]
+    net_access_key_expiry = p[2] if len(p) > 2 else None
+
+    logger.info("Update AP configuration to use key_mgmt=DPP")
+    hapd.disable()
+    hapd.set("ssid", ssid)
+    hapd.set("wpa", "2")
+    hapd.set("wpa_key_mgmt", "DPP")
+    hapd.set("rsn_pairwise", "CCMP")
+    hapd.set("dpp_connector", connector)
+    hapd.set("dpp_csign", csign)
+    if csign_expiry:
+        hapd.set("dpp_csign_expiry", csign_expiry)
+    hapd.set("dpp_netaccesskey", net_access_key)
+    if net_access_key_expiry:
+        hapd.set("dpp_netaccesskey_expiry", net_access_key_expiry)
+    hapd.enable()
+
 def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
@@ -880,44 +920,7 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     if "DPP-CONF-FAILED" in ev:
         raise Exception("DPP configuration failed")
 
-    ev = hapd.wait_event(["DPP-CONFOBJ-SSID"], timeout=1)
-    if ev is None:
-        raise Exception("SSID not reported (AP)")
-    ssid = ev.split(' ')[1]
-
-    ev = hapd.wait_event(["DPP-CONNECTOR"], timeout=1)
-    if ev is None:
-        raise Exception("Connector not reported (AP)")
-    connector = ev.split(' ')[1]
-
-    ev = hapd.wait_event(["DPP-C-SIGN-KEY"], timeout=1)
-    if ev is None:
-        raise Exception("C-sign-key not reported (AP)")
-    p = ev.split(' ')
-    csign = p[1]
-    csign_expiry = p[2] if len(p) > 2 else None
-
-    ev = hapd.wait_event(["DPP-NET-ACCESS-KEY"], timeout=1)
-    if ev is None:
-        raise Exception("netAccessKey not reported (AP)")
-    p = ev.split(' ')
-    net_access_key = p[1]
-    net_access_key_expiry = p[2] if len(p) > 2 else None
-
-    logger.info("Update AP configuration to use key_mgmt=DPP")
-    hapd.disable()
-    hapd.set("ssid", ssid)
-    hapd.set("wpa", "2")
-    hapd.set("wpa_key_mgmt", "DPP")
-    hapd.set("rsn_pairwise", "CCMP")
-    hapd.set("dpp_connector", connector)
-    hapd.set("dpp_csign", csign)
-    if csign_expiry:
-        hapd.set("dpp_csign_expiry", csign_expiry)
-    hapd.set("dpp_netaccesskey", net_access_key)
-    if net_access_key_expiry:
-        hapd.set("dpp_netaccesskey_expiry", net_access_key_expiry)
-    hapd.enable()
+    update_hapd_config(hapd)
 
     addr = dev[1].own_addr().replace(':', '')
     cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
@@ -1574,3 +1577,80 @@ def test_dpp_hostapd_configurator_responder(dev, apdev):
         raise Exception("DPP configuration not completed (Enrollee)")
     dev[0].request("DPP_STOP_LISTEN")
     dev[0].dump_monitor()
+
+def test_dpp_own_config(dev, apdev):
+    """DPP configurator signing own connector"""
+    try:
+        run_dpp_own_config(dev, apdev)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_own_config_curve_mismatch(dev, apdev):
+    """DPP configurator signing own connector using mismatching curve"""
+    try:
+        run_dpp_own_config(dev, apdev, own_curve="BP-384", expect_failure=True)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_own_config(dev, apdev, own_curve=None, expect_failure=False):
+    check_dpp_capab(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
+    check_dpp_capab(hapd)
+
+    addr = hapd.own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id_h = int(res)
+    uri = hapd.request("DPP_BOOTSTRAP_GET_URI %d" % id_h)
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    res = dev[0].request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id = int(res)
+
+    cmd = "DPP_AUTH_INIT peer=%d conf=ap-dpp configurator=%d" % (id, conf_id)
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = hapd.wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = hapd.wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+
+    update_hapd_config(hapd)
+
+    dev[0].set("dpp_config_processing", "1")
+    cmd = "DPP_CONFIGURATOR_SIGN  conf=sta-dpp configurator=%d" % (conf_id)
+    if own_curve:
+        cmd += " curve=" + own_curve
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate own configuration")
+
+    ev = dev[0].wait_event(["DPP-NETWORK-ID"], timeout=1)
+    if ev is None:
+        raise Exception("DPP network profile not generated")
+    id = ev.split(' ')[1]
+    dev[0].select_network(id, freq="2412")
+    if expect_failure:
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+        if ev is not None:
+            raise Exception("Unexpected connection");
+        dev[0].request("DISCONNECT")
+    else:
+        dev[0].wait_connected()

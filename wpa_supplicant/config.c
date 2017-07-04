@@ -4571,7 +4571,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(mbo_cell_capa, MBO_CELL_CAPA_AVAILABLE,
 		    MBO_CELL_CAPA_NOT_SUPPORTED), 0 },
 	{ INT_RANGE(disassoc_imminent_rssi_threshold, -120, 0), 0 },
-#endif /*CONFIG_MBO */
+#endif /* CONFIG_MBO */
 	{ INT(gas_address3), 0 },
 	{ INT_RANGE(ftm_responder, 0, 1), 0 },
 	{ INT_RANGE(ftm_initiator, 0, 1), 0 },

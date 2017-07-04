@@ -1313,7 +1313,7 @@ struct wpa_config {
 	 * disassoc_imminent_rssi_threshold - RSSI threshold of candidate AP
 	 * when disassociation imminent is set.
 	 */
-	 int disassoc_imminent_rssi_threshold;
+	int disassoc_imminent_rssi_threshold;
 #endif /* CONFIG_MBO */
 
 	/**

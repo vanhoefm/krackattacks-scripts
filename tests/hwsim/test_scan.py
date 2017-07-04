@@ -1425,3 +1425,33 @@ def test_scan_parsing(dev, apdev):
         raise Exception("DRIVER_EVENT SCAN_RES END failed")
     res = dev[0].request("BSS 02:ff:00:00:00:09")
     logger.info("Updated BSS:\n" + res)
+
+def test_scan_specific_bssid(dev, apdev):
+    """Scan for a specific BSSID"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "beacon_int": "1000" })
+    bssid = hapd.own_addr()
+
+    time.sleep(0.1)
+    dev[0].request("SCAN TYPE=ONLY freq=2412 bssid=02:ff:ff:ff:ff:ff")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+    bss1 = dev[0].get_bss(bssid)
+
+    for i in range(10):
+        dev[0].request("SCAN TYPE=ONLY freq=2412 bssid=" + bssid)
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+        if ev is None:
+            raise Exception("Scan did not complete")
+        bss2 = dev[0].get_bss(bssid)
+        if bss2:
+            break
+
+    if not bss2:
+        raise Exception("Did not find BSS")
+    if bss1 and 'beacon_ie' in bss1 and 'ie' in bss1 and bss1['beacon_ie'] != bss2['ie']:
+        raise Exception("First scan for unknown BSSID returned unexpected response")
+    if bss2 and 'beacon_ie' in bss2 and 'ie' in bss2 and bss2['beacon_ie'] == bss2['ie']:
+        raise Exception("Second scan did find Probe Response frame")

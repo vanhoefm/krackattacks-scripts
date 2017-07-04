@@ -210,6 +210,7 @@ struct dpp_introduction {
 };
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);
+const char * dpp_bootstrap_type_txt(enum dpp_bootstrap_type type);
 int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi);
 int dpp_parse_uri_chan_list(struct dpp_bootstrap_info *bi,
 			    const char *chan_list);

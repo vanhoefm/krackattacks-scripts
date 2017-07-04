@@ -564,6 +564,18 @@ void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info)
 }
 
 
+const char * dpp_bootstrap_type_txt(enum dpp_bootstrap_type type)
+{
+	switch (type) {
+	case DPP_BOOTSTRAP_QR_CODE:
+		return "QRCODE";
+	case DPP_BOOTSTRAP_PKEX:
+		return "PKEX";
+	}
+	return "??";
+}
+
+
 static int dpp_uri_valid_info(const char *info)
 {
 	while (*info) {

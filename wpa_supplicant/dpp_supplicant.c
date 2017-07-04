@@ -278,18 +278,6 @@ const char * wpas_dpp_bootstrap_get_uri(struct wpa_supplicant *wpa_s,
 }
 
 
-static const char * wpas_dpp_bootstrap_type(enum dpp_bootstrap_type type)
-{
-	switch (type) {
-	case DPP_BOOTSTRAP_QR_CODE:
-		return "QRCODE";
-	case DPP_BOOTSTRAP_PKEX:
-		return "PKEX";
-	}
-	return "??";
-}
-
-
 int wpas_dpp_bootstrap_info(struct wpa_supplicant *wpa_s, int id,
 			    char *reply, int reply_size)
 {
@@ -303,7 +291,7 @@ int wpas_dpp_bootstrap_info(struct wpa_supplicant *wpa_s, int id,
 			   "info=%s\n"
 			   "num_freq=%u\n"
 			   "curve=%s\n",
-			   wpas_dpp_bootstrap_type(bi->type),
+			   dpp_bootstrap_type_txt(bi->type),
 			   MAC2STR(bi->mac_addr),
 			   bi->info ? bi->info : "",
 			   bi->num_freq,

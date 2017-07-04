@@ -1497,6 +1497,14 @@ def test_dpp_hostapd_configurator(dev, apdev):
         raise Exception("Failed to parse QR Code URI")
     id1 = int(res)
 
+    res = hapd.request("DPP_BOOTSTRAP_INFO %d" % id0)
+    if "FAIL" in res:
+        raise Exception("DPP_BOOTSTRAP_INFO failed")
+    if "type=QRCODE" not in res:
+        raise Exception("DPP_BOOTSTRAP_INFO did not report correct type")
+    if "mac_addr=" + dev[0].own_addr() not in res:
+        raise Exception("DPP_BOOTSTRAP_INFO did not report correct mac_addr")
+
     cmd = "DPP_LISTEN 2412"
     if "OK" not in dev[0].request(cmd):
         raise Exception("Failed to start listen operation")

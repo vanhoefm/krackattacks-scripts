@@ -2894,7 +2894,7 @@ static int wpa_cli_cmd_dpp_stop_listen(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_dpp_configurator_add(struct wpa_ctrl *ctrl, int argc,
 					    char *argv[])
 {
-	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_ADD", 1, argc, argv);
+	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_ADD", 0, argc, argv);
 }
 
 

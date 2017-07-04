@@ -262,6 +262,27 @@ const char * hostapd_dpp_bootstrap_get_uri(struct hostapd_data *hapd,
 }
 
 
+int hostapd_dpp_bootstrap_info(struct hostapd_data *hapd, int id,
+			       char *reply, int reply_size)
+{
+	struct dpp_bootstrap_info *bi;
+
+	bi = dpp_bootstrap_get_id(hapd, id);
+	if (!bi)
+		return -1;
+	return os_snprintf(reply, reply_size, "type=%s\n"
+			   "mac_addr=" MACSTR "\n"
+			   "info=%s\n"
+			   "num_freq=%u\n"
+			   "curve=%s\n",
+			   dpp_bootstrap_type_txt(bi->type),
+			   MAC2STR(bi->mac_addr),
+			   bi->info ? bi->info : "",
+			   bi->num_freq,
+			   bi->curve->name);
+}
+
+
 void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 			   const u8 *data, size_t data_len, int ok)
 {

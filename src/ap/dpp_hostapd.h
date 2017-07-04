@@ -14,6 +14,8 @@ int hostapd_dpp_bootstrap_gen(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_bootstrap_remove(struct hostapd_data *hapd, const char *id);
 const char * hostapd_dpp_bootstrap_get_uri(struct hostapd_data *hapd,
 					   unsigned int id);
+int hostapd_dpp_bootstrap_info(struct hostapd_data *hapd, int id,
+			       char *reply, int reply_size);
 int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd);
 void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 			   const u8 *buf, size_t len, unsigned int freq);

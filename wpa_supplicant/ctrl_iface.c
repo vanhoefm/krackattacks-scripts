@@ -10256,6 +10256,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_REMOVE ", 24) == 0) {
 		if (wpas_dpp_configurator_remove(wpa_s, buf + 24) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_SIGN ", 22) == 0) {
+		if (wpas_dpp_configurator_sign(wpa_s, buf + 22) < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "DPP_PKEX_ADD ", 13) == 0) {
 		int res;
 

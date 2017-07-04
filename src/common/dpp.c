@@ -4421,6 +4421,50 @@ fail:
 }
 
 
+int dpp_configurator_own_config(struct dpp_authentication *auth,
+				const char *curve)
+{
+	struct wpabuf *conf_obj;
+	int ret = -1;
+
+	if (!auth->conf) {
+		wpa_printf(MSG_DEBUG, "DPP: No configurator specified");
+		return -1;
+	}
+
+	if (!curve) {
+		auth->curve = &dpp_curves[0];
+	} else {
+		auth->curve = dpp_get_curve_name(curve);
+		if (!auth->curve) {
+			wpa_printf(MSG_INFO, "DPP: Unsupported curve: %s",
+				   curve);
+			return -1;
+		}
+	}
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Building own configuration/connector with curve %s",
+		   auth->curve->name);
+
+	auth->own_protocol_key = dpp_gen_keypair(auth->curve);
+	if (!auth->own_protocol_key)
+		return -1;
+	dpp_copy_netaccesskey(auth);
+	auth->peer_protocol_key = auth->own_protocol_key;
+	dpp_copy_csign(auth, auth->conf->csign);
+
+	conf_obj = dpp_build_conf_obj(auth, 0);
+	if (!conf_obj)
+		goto fail;
+	ret = dpp_parse_conf_obj(auth, wpabuf_head(conf_obj),
+				 wpabuf_len(conf_obj));
+fail:
+	wpabuf_free(conf_obj);
+	auth->peer_protocol_key = NULL;
+	return ret;
+}
+
+
 static int dpp_compatible_netrole(const char *role1, const char *role2)
 {
 	return (os_strcmp(role1, "sta") == 0 && os_strcmp(role2, "ap") == 0) ||

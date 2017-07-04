@@ -980,48 +980,9 @@ static void wpas_dpp_process_config(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
-				 enum gas_query_result result,
-				 const struct wpabuf *adv_proto,
-				 const struct wpabuf *resp, u16 status_code)
+static void wpas_dpp_handle_config_obj(struct wpa_supplicant *wpa_s,
+				       struct dpp_authentication *auth)
 {
-	struct wpa_supplicant *wpa_s = ctx;
-	const u8 *pos;
-	struct dpp_authentication *auth = wpa_s->dpp_auth;
-
-	if (!auth || !auth->auth_success) {
-		wpa_printf(MSG_DEBUG, "DPP: No matching exchange in progress");
-		return;
-	}
-	if (!resp || status_code != WLAN_STATUS_SUCCESS) {
-		wpa_printf(MSG_DEBUG, "DPP: GAS query did not succeed");
-		goto fail;
-	}
-
-	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response adv_proto",
-			adv_proto);
-	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response (GAS response)",
-			resp);
-
-	if (wpabuf_len(adv_proto) != 10 ||
-	    !(pos = wpabuf_head(adv_proto)) ||
-	    pos[0] != WLAN_EID_ADV_PROTO ||
-	    pos[1] != 8 ||
-	    pos[3] != WLAN_EID_VENDOR_SPECIFIC ||
-	    pos[4] != 5 ||
-	    WPA_GET_BE24(&pos[5]) != OUI_WFA ||
-	    pos[8] != 0x1a ||
-	    pos[9] != 1) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Not a DPP Advertisement Protocol ID");
-		goto fail;
-	}
-
-	if (dpp_conf_resp_rx(auth, resp) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: Configuration attempt failed");
-		goto fail;
-	}
-
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_RECEIVED);
 	if (auth->ssid_len)
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONFOBJ_SSID "%s",
@@ -1079,7 +1040,52 @@ static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 	}
 
 	wpas_dpp_process_config(wpa_s, auth);
+}
 
+
+static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
+				 enum gas_query_result result,
+				 const struct wpabuf *adv_proto,
+				 const struct wpabuf *resp, u16 status_code)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	const u8 *pos;
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
+
+	if (!auth || !auth->auth_success) {
+		wpa_printf(MSG_DEBUG, "DPP: No matching exchange in progress");
+		return;
+	}
+	if (!resp || status_code != WLAN_STATUS_SUCCESS) {
+		wpa_printf(MSG_DEBUG, "DPP: GAS query did not succeed");
+		goto fail;
+	}
+
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response adv_proto",
+			adv_proto);
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response (GAS response)",
+			resp);
+
+	if (wpabuf_len(adv_proto) != 10 ||
+	    !(pos = wpabuf_head(adv_proto)) ||
+	    pos[0] != WLAN_EID_ADV_PROTO ||
+	    pos[1] != 8 ||
+	    pos[3] != WLAN_EID_VENDOR_SPECIFIC ||
+	    pos[4] != 5 ||
+	    WPA_GET_BE24(&pos[5]) != OUI_WFA ||
+	    pos[8] != 0x1a ||
+	    pos[9] != 1) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Not a DPP Advertisement Protocol ID");
+		goto fail;
+	}
+
+	if (dpp_conf_resp_rx(auth, resp) < 0) {
+		wpa_printf(MSG_DEBUG, "DPP: Configuration attempt failed");
+		goto fail;
+	}
+
+	wpas_dpp_handle_config_obj(wpa_s, auth);
 	dpp_auth_deinit(wpa_s->dpp_auth);
 	wpa_s->dpp_auth = NULL;
 	return;
@@ -1782,6 +1788,31 @@ int wpas_dpp_configurator_remove(struct wpa_supplicant *wpa_s, const char *id)
 	}
 
 	return dpp_configurator_del(wpa_s, id_val);
+}
+
+
+int wpas_dpp_configurator_sign(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	struct dpp_authentication *auth;
+	int ret = -1;
+	char *curve = NULL;
+
+	auth = os_zalloc(sizeof(*auth));
+	if (!auth)
+		return -1;
+
+	curve = get_param(cmd, " curve=");
+	wpas_dpp_set_configurator(wpa_s, auth, cmd);
+
+	if (dpp_configurator_own_config(auth, curve) == 0) {
+		wpas_dpp_handle_config_obj(wpa_s, auth);
+		ret = 0;
+	}
+
+	dpp_auth_deinit(auth);
+	os_free(curve);
+
+	return ret;
 }
 
 

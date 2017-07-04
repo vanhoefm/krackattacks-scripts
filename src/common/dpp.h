@@ -254,6 +254,8 @@ void dpp_configurator_free(struct dpp_configurator *conf);
 struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,
 			size_t privkey_len);
+int dpp_configurator_own_config(struct dpp_authentication *auth,
+				const char *curve);
 int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   const u8 *net_access_key, size_t net_access_key_len,
 		   const u8 *csign_key, size_t csign_key_len,

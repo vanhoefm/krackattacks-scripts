@@ -1229,6 +1229,14 @@ void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_printf(MSG_DEBUG,
 				   "FILS: Will send Authentication frame once the response from authentication server is available");
 			sta->flags |= WLAN_STA_PENDING_FILS_ERP;
+			/* Calculate pending PMKID here so that we do not need
+			 * to maintain a copy of the EAP-Initiate/Reauth
+			 * message. */
+			if (fils_pmkid_erp(wpa_auth_sta_key_mgmt(sta->wpa_sm),
+					   elems.fils_wrapped_data,
+					   elems.fils_wrapped_data_len,
+					   sta->fils_erp_pmkid) == 0)
+				sta->fils_erp_pmkid_set = 1;
 			return;
 #else /* CONFIG_NO_RADIUS */
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1388,6 +1396,24 @@ prepare_auth_resp_fils(struct hostapd_data *hapd,
 			goto fail;
 		}
 		pmk = pmk_buf;
+
+		if (sta->fils_erp_pmkid_set) {
+			/* TODO: get PMKLifetime from WPA parameters */
+			unsigned int dot11RSNAConfigPMKLifetime = 43200;
+
+			sta->fils_erp_pmkid_set = 0;
+			if (wpa_auth_pmksa_add2(
+				    hapd->wpa_auth, sta->addr,
+				    pmk, pmk_len,
+				    sta->fils_erp_pmkid,
+				    sta->session_timeout_set ?
+				    sta->session_timeout :
+				    dot11RSNAConfigPMKLifetime,
+				    wpa_auth_sta_key_mgmt(sta->wpa_sm)) < 0) {
+				wpa_printf(MSG_ERROR,
+					   "FILS: Failed to add PMKSA cache entry based on ERP");
+			}
+		}
 	} else if (pmksa) {
 		pmk = pmksa->pmk;
 		pmk_len = pmksa->pmk_len;

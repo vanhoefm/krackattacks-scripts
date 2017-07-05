@@ -12,11 +12,11 @@
 #ifdef CONFIG_MESH
 /* needed for mesh_plink_state enum */
 #include "common/defs.h"
-#include "common/wpa_common.h"
 #endif /* CONFIG_MESH */
 
 #include "list.h"
 #include "vlan.h"
+#include "common/wpa_common.h"
 #include "common/ieee802_11_defs.h"
 
 /* STA flags */
@@ -226,10 +226,12 @@ struct sta_info {
 #ifdef CONFIG_FILS
 	u8 fils_snonce[FILS_NONCE_LEN];
 	u8 fils_session[FILS_SESSION_LEN];
+	u8 fils_erp_pmkid[PMKID_LEN];
 	u8 *fils_pending_assoc_req;
 	size_t fils_pending_assoc_req_len;
 	unsigned int fils_pending_assoc_is_reassoc:1;
 	unsigned int fils_dhcp_rapid_commit_proxy:1;
+	unsigned int fils_erp_pmkid_set:1;
 	struct wpabuf *fils_hlp_resp;
 	struct wpabuf *hlp_dhcp_discover;
 	void (*fils_pending_cb)(struct hostapd_data *hapd, struct sta_info *sta,

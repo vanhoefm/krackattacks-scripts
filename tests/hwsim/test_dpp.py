@@ -1250,6 +1250,8 @@ def test_dpp_pkex_bp512(dev, apdev):
 
 def test_dpp_pkex_config(dev, apdev):
     """DPP and PKEX with initiator as the configurator"""
+    check_dpp_capab(dev[1])
+
     cmd = "DPP_CONFIGURATOR_ADD"
     res = dev[1].request(cmd);
     if "FAIL" in res:
@@ -1310,6 +1312,8 @@ def run_dpp_pkex(dev, apdev, curve=None, init_extra="", check_config=False):
 
 def test_dpp_pkex_config2(dev, apdev):
     """DPP and PKEX with responder as the configurator"""
+    check_dpp_capab(dev[0])
+
     cmd = "DPP_CONFIGURATOR_ADD"
     res = dev[0].request(cmd);
     if "FAIL" in res:

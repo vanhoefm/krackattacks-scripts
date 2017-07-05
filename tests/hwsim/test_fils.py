@@ -366,6 +366,74 @@ def run_fils_sk_erp(dev, apdev, key_mgmt):
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_fils_sk_erp_followed_by_pmksa_caching(dev, apdev):
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # Force the second connection to use ERP by deleting the PMKSA entry.
+    dev[0].request("PMKSA_FLUSH")
+
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    pmksa = dev[0].get_pmksa(bssid)
+    if pmksa is None:
+	    raise Exception("No PMKSA cache entry created")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # The third connection is expected to use PMKSA caching for FILS
+    # authentication.
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using PMKSA caching timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    pmksa2 = dev[0].get_pmksa(bssid)
+    if pmksa2 is None:
+	    raise Exception("No PMKSA cache entry found")
+    if pmksa['pmkid'] != pmksa2['pmkid']:
+	    raise Exception("Unexpected PMKID change")
+
 def test_fils_sk_erp_another_ssid(dev, apdev):
     """FILS SK using ERP and roam to another SSID"""
     check_fils_capa(dev[0])

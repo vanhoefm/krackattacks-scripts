@@ -1221,7 +1221,7 @@ void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 					ieee802_1x_alloc_eapol_sm(hapd, sta);
 			}
 			wpa_printf(MSG_DEBUG,
-				   "FILS: Forward EAP-Identity/Re-auth Start to authentication server");
+				   "FILS: Forward EAP-Initiate/Re-auth to authentication server");
 			ieee802_1x_encapsulate_radius(
 				hapd, sta, elems.fils_wrapped_data,
 				elems.fils_wrapped_data_len);

@@ -11,7 +11,6 @@
 #include "common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
-#include "common/dpp.h"
 #include "common/wpa_ctrl.h"
 #include "utils/eloop.h"
 #include "hostapd.h"

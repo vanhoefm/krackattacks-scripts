@@ -15,9 +15,6 @@
 #include "common/wpa_common.h"
 #include "crypto/sha256.h"
 
-/* DPP Public Action frame identifiers - OUI_WFA */
-#define DPP_OUI_TYPE 0x1A
-
 enum dpp_public_action_frame_type {
 	DPP_PA_AUTHENTICATION_REQ = 0,
 	DPP_PA_AUTHENTICATION_RESP = 1,

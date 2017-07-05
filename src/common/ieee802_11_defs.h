@@ -2025,4 +2025,7 @@ struct ieee80211_he_operation {
 #define HE_OPERATION_BSS_COLOR_DISABLED		((u32) BIT(30))
 #define HE_OPERATION_BSS_DUAL_BEACON		((u32) BIT(31))
 
+/* DPP Public Action frame identifiers - OUI_WFA */
+#define DPP_OUI_TYPE 0x1A
+
 #endif /* IEEE802_11_DEFS_H */

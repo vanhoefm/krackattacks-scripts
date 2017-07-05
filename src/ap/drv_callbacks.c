@@ -14,7 +14,6 @@
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "common/dpp.h"
 #include "common/wpa_ctrl.h"
 #include "crypto/random.h"
 #include "p2p/p2p.h"

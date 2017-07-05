@@ -28,7 +28,6 @@
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "common/dpp.h"
 #include "common/gas_server.h"
 #include "crypto/random.h"
 #include "blacklist.h"

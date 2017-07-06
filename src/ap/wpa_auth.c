@@ -2282,6 +2282,11 @@ int wpa_fils_validate_key_confirm(struct wpa_state_machine *sm, const u8 *ies,
 		return -1;
 	}
 
+	if (!elems.fils_session) {
+		wpa_printf(MSG_DEBUG, "FILS: No FILS Session element");
+		return -1;
+	}
+
 	if (!elems.fils_key_confirm) {
 		wpa_printf(MSG_DEBUG, "FILS: No FILS Key Confirm element");
 		return -1;
@@ -2565,7 +2570,7 @@ int fils_set_tk(struct wpa_state_machine *sm)
 
 
 u8 * hostapd_eid_assoc_fils_session(struct wpa_state_machine *sm, u8 *buf,
-				    const u8 *fils_session)
+				    const u8 *fils_session, struct wpabuf *hlp)
 {
 	struct wpabuf *plain;
 	u8 *pos = buf;
@@ -2577,7 +2582,7 @@ u8 * hostapd_eid_assoc_fils_session(struct wpa_state_machine *sm, u8 *buf,
 	os_memcpy(pos, fils_session, FILS_SESSION_LEN);
 	pos += FILS_SESSION_LEN;
 
-	plain = fils_prepare_plainbuf(sm, NULL);
+	plain = fils_prepare_plainbuf(sm, hlp);
 	if (!plain) {
 		wpa_printf(MSG_DEBUG, "FILS: Plain buffer prep failed");
 		return NULL;

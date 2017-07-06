@@ -2850,7 +2850,10 @@ void fils_hlp_timeout(void *eloop_ctx, void *eloop_data)
 	wpa_printf(MSG_DEBUG,
 		   "FILS: HLP response timeout - continue with association response for "
 		   MACSTR, MAC2STR(sta->addr));
-	fils_hlp_finish_assoc(hapd, sta);
+	if (sta->fils_drv_assoc_finish)
+		hostapd_notify_assoc_fils_finish(hapd, sta);
+	else
+		fils_hlp_finish_assoc(hapd, sta);
 }
 
 #endif /* CONFIG_FILS */
@@ -3204,6 +3207,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		sta->fils_pending_assoc_req = tmp;
 		sta->fils_pending_assoc_req_len = left;
 		sta->fils_pending_assoc_is_reassoc = reassoc;
+		sta->fils_drv_assoc_finish = 0;
 		wpa_printf(MSG_DEBUG,
 			   "FILS: Waiting for HLP processing before sending (Re)Association Response frame to "
 			   MACSTR, MAC2STR(sta->addr));

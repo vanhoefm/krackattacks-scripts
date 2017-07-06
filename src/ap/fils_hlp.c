@@ -314,7 +314,11 @@ static void fils_dhcp_handler(int sd, void *eloop_ctx, void *sock_ctx)
 		left -= len;
 	}
 	wpabuf_free(resp);
-	fils_hlp_finish_assoc(hapd, sta);
+
+	if (sta->fils_drv_assoc_finish)
+		hostapd_notify_assoc_fils_finish(hapd, sta);
+	else
+		fils_hlp_finish_assoc(hapd, sta);
 }
 
 

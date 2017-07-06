@@ -409,7 +409,8 @@ int fils_encrypt_assoc(struct wpa_state_machine *sm, u8 *buf,
 		       const struct wpabuf *hlp);
 int fils_set_tk(struct wpa_state_machine *sm);
 u8 * hostapd_eid_assoc_fils_session(struct wpa_state_machine *sm, u8 *eid,
-				    const u8 *fils_session);
+				    const u8 *fils_session,
+				    struct wpabuf *fils_hlp_resp);
 const u8 *  wpa_fils_validate_fils_session(struct wpa_state_machine *sm,
 					   const u8 *ies, size_t ies_len,
 					   const u8 *fils_session);

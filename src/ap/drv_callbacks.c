@@ -38,6 +38,68 @@
 #include "beacon.h"
 #include "mbo_ap.h"
 #include "dpp_hostapd.h"
+#include "fils_hlp.h"
+
+
+#ifdef CONFIG_FILS
+void hostapd_notify_assoc_fils_finish(struct hostapd_data *hapd,
+				      struct sta_info *sta)
+{
+	u16 reply_res = WLAN_STATUS_SUCCESS;
+	struct ieee802_11_elems elems;
+	u8 buf[IEEE80211_MAX_MMPDU_SIZE], *p = buf;
+	int new_assoc;
+
+	wpa_printf(MSG_DEBUG, "%s FILS: Finish association with " MACSTR,
+		   __func__, MAC2STR(sta->addr));
+	eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+	if (!sta->fils_pending_assoc_req)
+		return;
+
+	ieee802_11_parse_elems(sta->fils_pending_assoc_req,
+			       sta->fils_pending_assoc_req_len, &elems, 0);
+	if (!elems.fils_session) {
+		wpa_printf(MSG_DEBUG, "%s failed to find FILS Session element",
+			   __func__);
+		return;
+	}
+
+	p = hostapd_eid_assoc_fils_session(sta->wpa_sm, p,
+					   elems.fils_session,
+					   sta->fils_hlp_resp);
+
+	reply_res = hostapd_sta_assoc(hapd, sta->addr,
+				      sta->fils_pending_assoc_is_reassoc,
+				      WLAN_STATUS_SUCCESS,
+				      buf, p - buf);
+	ap_sta_set_authorized(hapd, sta, 1);
+	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
+	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;
+	sta->flags &= ~WLAN_STA_WNM_SLEEP_MODE;
+	hostapd_set_sta_flags(hapd, sta);
+	wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FILS);
+	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
+	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
+	os_free(sta->fils_pending_assoc_req);
+	sta->fils_pending_assoc_req = NULL;
+	sta->fils_pending_assoc_req_len = 0;
+	wpabuf_free(sta->fils_hlp_resp);
+	sta->fils_hlp_resp = NULL;
+	wpabuf_free(sta->hlp_dhcp_discover);
+	sta->hlp_dhcp_discover = NULL;
+	fils_hlp_deinit(hapd);
+
+	/*
+	 * Remove the station in case transmission of a success response fails
+	 * (the STA was added associated to the driver) or if the station was
+	 * previously added unassociated.
+	 */
+	if (reply_res != WLAN_STATUS_SUCCESS || sta->added_unassoc) {
+		hostapd_drv_sta_remove(hapd, sta->addr);
+		sta->added_unassoc = 0;
+	}
+}
+#endif /* CONFIG_FILS */
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
@@ -388,6 +450,8 @@ skip_wpa_check:
 	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
 	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
 	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		int delay_assoc = 0;
+
 		if (!wpa_fils_validate_fils_session(sta->wpa_sm, req_ies,
 						    req_ies_len,
 						    sta->fils_session)) {
@@ -404,14 +468,51 @@ skip_wpa_check:
 			return WLAN_STATUS_UNSPECIFIED_FAILURE;
 		}
 
-		if (!elems.fils_session) {
+		if (fils_process_hlp(hapd, sta, req_ies, req_ies_len) > 0) {
 			wpa_printf(MSG_DEBUG,
-				   "FILS: Session element not found");
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+				   "FILS: Delaying Assoc Response (HLP)");
+			delay_assoc = 1;
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Going ahead with Assoc Response (no HLP)");
 		}
 
+		if (sta) {
+			wpa_printf(MSG_DEBUG, "FILS: HLP callback cleanup");
+			eloop_cancel_timeout(fils_hlp_timeout, hapd, sta);
+			os_free(sta->fils_pending_assoc_req);
+			sta->fils_pending_assoc_req = NULL;
+			sta->fils_pending_assoc_req_len = 0;
+			wpabuf_free(sta->fils_hlp_resp);
+			sta->fils_hlp_resp = NULL;
+			sta->fils_drv_assoc_finish = 0;
+		}
+
+		if (sta && delay_assoc && status == WLAN_STATUS_SUCCESS) {
+			u8 *req_tmp;
+
+			req_tmp = os_malloc(req_ies_len);
+			if (!req_tmp) {
+				wpa_printf(MSG_DEBUG,
+					   "FILS: buffer allocation failed for assoc req");
+				goto fail;
+			}
+			os_memcpy(req_tmp, req_ies, req_ies_len);
+			sta->fils_pending_assoc_req = req_tmp;
+			sta->fils_pending_assoc_req_len = req_ies_len;
+			sta->fils_pending_assoc_is_reassoc = reassoc;
+			sta->fils_drv_assoc_finish = 1;
+			wpa_printf(MSG_DEBUG,
+				   "FILS: Waiting for HLP processing before sending (Re)Association Response frame to "
+				   MACSTR, MAC2STR(sta->addr));
+			eloop_register_timeout(
+				0, hapd->conf->fils_hlp_wait_time * 1024,
+				fils_hlp_timeout, hapd, sta);
+			return 0;
+		}
 		p = hostapd_eid_assoc_fils_session(sta->wpa_sm, p,
-						   elems.fils_session);
+						   elems.fils_session,
+						   sta->fils_hlp_resp);
 		wpa_hexdump(MSG_DEBUG, "FILS Assoc Resp BUF (IEs)",
 			    buf, p - buf);
 	}

@@ -552,6 +552,8 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr);
 
 /* drv_callbacks.c (TODO: move to somewhere else?) */
+void hostapd_notify_assoc_fils_finish(struct hostapd_data *hapd,
+				      struct sta_info *sta);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen, int reassoc);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);

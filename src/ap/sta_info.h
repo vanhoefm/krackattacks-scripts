@@ -232,6 +232,7 @@ struct sta_info {
 	unsigned int fils_pending_assoc_is_reassoc:1;
 	unsigned int fils_dhcp_rapid_commit_proxy:1;
 	unsigned int fils_erp_pmkid_set:1;
+	unsigned int fils_drv_assoc_finish:1;
 	struct wpabuf *fils_hlp_resp;
 	struct wpabuf *hlp_dhcp_discover;
 	void (*fils_pending_cb)(struct hostapd_data *hapd, struct sta_info *sta,

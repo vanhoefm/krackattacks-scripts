@@ -263,6 +263,7 @@ static void fils_dhcp_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	iph->ihl = sizeof(*iph) / 4;
 	iph->tot_len = htons(sizeof(*iph) + sizeof(*udph) + (end - pos));
 	iph->ttl = 1;
+	iph->protocol = 17; /* UDP */
 	iph->saddr = hapd->conf->dhcp_server.u.v4.s_addr;
 	iph->daddr = dhcp->client_ip;
 	iph->check = ip_checksum(iph, sizeof(*iph));

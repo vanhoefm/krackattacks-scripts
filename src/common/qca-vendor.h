@@ -764,6 +764,15 @@ enum qca_wlan_vendor_acs_hw_mode {
  *	Devices whilst in Listen state, rather than having the user space
  *	wpa_supplicant do it. Information from received P2P requests are
  *	forwarded from firmware to host whenever the host processor wakes up.
+ * @QCA_WLAN_VENDOR_FEATURE_OCE_STA: Device supports all OCE non-AP STA
+ *	specific features.
+ * @QCA_WLAN_VENDOR_FEATURE_OCE_AP: Device supports all OCE AP specific
+ *	features.
+ * @QCA_WLAN_VENDOR_FEATURE_OCE_STA_CFON: Device supports OCE STA-CFON
+ *	specific features only. If a Device sets this bit but not the
+ *	%QCA_WLAN_VENDOR_FEATURE_OCE_AP, the userspace shall assume that
+ *	this Device may not support all OCE AP functionalities but can support
+ *	only OCE STA-CFON functionalities.
  * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
  */
 enum qca_wlan_vendor_features {
@@ -771,6 +780,9 @@ enum qca_wlan_vendor_features {
 	QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY     = 1,
 	QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS = 2,
 	QCA_WLAN_VENDOR_FEATURE_P2P_LISTEN_OFFLOAD	= 3,
+	QCA_WLAN_VENDOR_FEATURE_OCE_STA                 = 4,
+	QCA_WLAN_VENDOR_FEATURE_OCE_AP                  = 5,
+	QCA_WLAN_VENDOR_FEATURE_OCE_STA_CFON            = 6,
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 

@@ -2664,7 +2664,7 @@ enum qca_vendor_attr_sar_limits_spec_modulations {
 /**
  * enum qca_vendor_attr_sar_limits - Attributes for SAR power limits
  *
- * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT: Optional (u32) value to
+ * @QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE: Optional (u32) value to
  *	select which SAR power limit table should be used. Valid
  *	values are enumerated in enum
  *	%qca_vendor_attr_sar_limits_selections. The existing SAR

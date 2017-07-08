@@ -1218,6 +1218,14 @@ def test_eap_proto_leap_errors(dev, apdev):
                                0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
                                0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
 
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+
         return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
     srv = start_radius_server(leap_handler2)
@@ -1310,6 +1318,15 @@ def test_eap_proto_leap_errors(dev, apdev):
             dev[0].wait_disconnected()
 
         with fail_test(dev[0], 1, "hash_nt_password_hash;eap_leap_getKey"):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            wait_fail_trigger(dev[0], "GET_FAIL")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+        with fail_test(dev[0], 1,
+                       "nt_challenge_response;eap_leap_process_request"):
             dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
                            eap="LEAP", identity="user", password="password",
                            wait_connect=False)

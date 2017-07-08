@@ -6951,6 +6951,23 @@ def test_eap_proto_ttls_errors(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
             dev[0].wait_disconnected()
 
+    tests = [ (1, "nt_challenge_response;eap_ttls_phase2_request_mschap") ]
+    for count, func in tests:
+        with fail_test(dev[0], count, func):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="TTLS", anonymous_identity="ttls",
+                           identity="mschap user", password="password",
+                           ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                           erp="1", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            wait_fail_trigger(dev[0], "GET_FAIL",
+                              note="Test failure not triggered for: %d:%s" % (count, func))
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
 def test_eap_proto_expanded(dev, apdev):
     """EAP protocol tests with expanded header"""
     global eap_proto_expanded_test_done

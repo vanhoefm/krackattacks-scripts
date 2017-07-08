@@ -629,6 +629,7 @@ static int eap_ttls_phase2_request_mschap(struct eap_sm *sm,
 			wpa_printf(MSG_ERROR,
 				   "EAP-TTLS/MSCHAP: Failed derive password hash");
 			wpabuf_free(msg);
+			os_free(challenge);
 			return -1;
 		}
 
@@ -641,6 +642,7 @@ static int eap_ttls_phase2_request_mschap(struct eap_sm *sm,
 			wpa_printf(MSG_ERROR,
 				   "EAP-TTLS/MSCHAP: Failed derive password");
 			wpabuf_free(msg);
+			os_free(challenge);
 			return -1;
 		}
 

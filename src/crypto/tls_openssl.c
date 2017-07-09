@@ -2796,6 +2796,15 @@ static int tls_connection_private_key(struct tls_data *data,
 	} else
 		passwd = NULL;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+	/*
+	 * In OpenSSL >= 1.1.0f SSL_use_PrivateKey_file() uses the callback
+	 * from the SSL object. See OpenSSL commit d61461a75253.
+	 */
+	SSL_set_default_passwd_cb(conn->ssl, tls_passwd_cb);
+	SSL_set_default_passwd_cb_userdata(conn->ssl, passwd);
+#endif /* >= 1.1.0f && !LibreSSL */
+	/* Keep these for OpenSSL < 1.1.0f */
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, tls_passwd_cb);
 	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, passwd);
 
@@ -2886,6 +2895,9 @@ static int tls_connection_private_key(struct tls_data *data,
 		return -1;
 	}
 	ERR_clear_error();
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+	SSL_set_default_passwd_cb(conn->ssl, NULL);
+#endif /* >= 1.1.0f && !LibreSSL */
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
 	os_free(passwd);
 

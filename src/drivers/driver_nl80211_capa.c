@@ -1114,6 +1114,12 @@ static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_SIMULTANEOUS;
 	if (check_feature(QCA_WLAN_VENDOR_FEATURE_P2P_LISTEN_OFFLOAD, &info))
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_LISTEN_OFFLOAD;
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_OCE_STA, &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_OCE_STA;
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_OCE_AP, &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_OCE_AP;
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_OCE_STA_CFON, &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_OCE_STA_CFON;
 	os_free(info.flags);
 }
 

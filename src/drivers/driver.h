@@ -1582,6 +1582,17 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_HE_CAPABILITIES	0x0002000000000000ULL
 /** Driver supports FILS shared key offload */
 #define WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD	0x0004000000000000ULL
+/** Driver supports all OCE STA specific mandatory features */
+#define WPA_DRIVER_FLAGS_OCE_STA		0x0008000000000000ULL
+/** Driver supports all OCE AP specific mandatory features */
+#define WPA_DRIVER_FLAGS_OCE_AP			0x0010000000000000ULL
+/**
+ * Driver supports all OCE STA-CFON specific mandatory features only.
+ * If a driver sets this bit but not the %WPA_DRIVER_FLAGS_OCE_AP, the
+ * userspace shall assume that this driver may not support all OCE AP
+ * functionality but can support only OCE STA-CFON functionality.
+ */
+#define WPA_DRIVER_FLAGS_OCE_STA_CFON		0x0020000000000000ULL
 	u64 flags;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \

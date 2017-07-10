@@ -1430,6 +1430,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	    DEFAULT_DISASSOC_IMMINENT_RSSI_THRESHOLD)
 		fprintf(f, "disassoc_imminent_rssi_threshold=%d\n",
 			config->disassoc_imminent_rssi_threshold);
+	if (config->oce != DEFAULT_OCE_SUPPORT)
+		fprintf(f, "oce=%u\n", config->oce);
 #endif /* CONFIG_MBO */
 
 	if (config->gas_address3)

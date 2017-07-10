@@ -389,4 +389,7 @@ enum eap_proxy_sim_state {
 	SIM_STATE_ERROR,
 };
 
+#define OCE_STA BIT(0)
+#define OCE_STA_CFON BIT(1)
+
 #endif /* DEFS_H */

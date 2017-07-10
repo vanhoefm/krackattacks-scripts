@@ -154,7 +154,8 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 	struct wpabuf *mbo;
 	int res;
 
-	if (len < MBO_IE_HEADER + 3 + 7)
+	if (len < MBO_IE_HEADER + 3 + 7 +
+	    ((wpa_s->enable_oce & OCE_STA) ? 3 : 0))
 		return 0;
 
 	/* Leave room for the MBO IE header */
@@ -173,9 +174,16 @@ int wpas_mbo_ie(struct wpa_supplicant *wpa_s, u8 *buf, size_t len)
 	wpabuf_put_u8(mbo, 1);
 	wpabuf_put_u8(mbo, wpa_s->conf->mbo_cell_capa);
 
+	/* Add OCE capability indication attribute if OCE is enabled */
+	if (wpa_s->enable_oce & OCE_STA) {
+		wpabuf_put_u8(mbo, OCE_ATTR_ID_CAPA_IND);
+		wpabuf_put_u8(mbo, 1);
+		wpabuf_put_u8(mbo, OCE_RELEASE);
+	}
+
 	res = mbo_add_ie(buf, len, wpabuf_head_u8(mbo), wpabuf_len(mbo));
 	if (!res)
-		wpa_printf(MSG_ERROR, "Failed to add MBO IE");
+		wpa_printf(MSG_ERROR, "Failed to add MBO/OCE IE");
 
 	wpabuf_free(mbo);
 	return res;
@@ -368,14 +376,23 @@ fail:
 
 void wpas_mbo_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ie)
 {
+	u8 *len;
+
 	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	wpabuf_put_u8(ie, 7);
+	len = wpabuf_put(ie, 1);
+
 	wpabuf_put_be24(ie, OUI_WFA);
 	wpabuf_put_u8(ie, MBO_OUI_TYPE);
 
 	wpabuf_put_u8(ie, MBO_ATTR_ID_CELL_DATA_CAPA);
 	wpabuf_put_u8(ie, 1);
 	wpabuf_put_u8(ie, wpa_s->conf->mbo_cell_capa);
+	if (wpa_s->enable_oce & OCE_STA) {
+		wpabuf_put_u8(ie, OCE_ATTR_ID_CAPA_IND);
+		wpabuf_put_u8(ie, 1);
+		wpabuf_put_u8(ie, OCE_RELEASE);
+	}
+	*len = (u8 *) wpabuf_put(ie, 0) - len - 1;
 }
 
 

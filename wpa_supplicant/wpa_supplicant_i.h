@@ -1101,6 +1101,14 @@ struct wpa_supplicant {
 	} *non_pref_chan;
 	size_t non_pref_chan_num;
 	u8 mbo_wnm_token;
+	/**
+	 * enable_oce - Enable OCE if it is enabled by user and device also
+	 *		supports OCE.
+	 * User can enable OCE with wpa_config's 'oce' parameter as follows -
+	 *  - Set BIT(0) to enable OCE in non-AP STA mode.
+	 *  - Set BIT(1) to enable OCE in STA-CFON mode.
+	 */
+	u8 enable_oce;
 #endif /* CONFIG_MBO */
 
 	/*

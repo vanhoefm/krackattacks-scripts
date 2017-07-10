@@ -42,6 +42,7 @@
 #define DEFAULT_WPA_RSC_RELAXATION 1
 #define DEFAULT_MBO_CELL_CAPA MBO_CELL_CAPA_NOT_SUPPORTED
 #define DEFAULT_DISASSOC_IMMINENT_RSSI_THRESHOLD -75
+#define DEFAULT_OCE_SUPPORT OCE_STA
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1314,6 +1315,13 @@ struct wpa_config {
 	 * when disassociation imminent is set.
 	 */
 	int disassoc_imminent_rssi_threshold;
+
+	/**
+	 * oce - Enable OCE in STA and/or STA-CFON mode
+	 *  - Set BIT(0) to enable OCE in non-AP STA mode
+	 *  - Set BIT(1) to enable OCE in STA-CFON mode
+	 */
+	unsigned int oce;
 #endif /* CONFIG_MBO */
 
 	/**

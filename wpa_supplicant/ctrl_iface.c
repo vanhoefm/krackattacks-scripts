@@ -669,6 +669,24 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		}
 	} else if (os_strcasecmp(cmd, "mbo_cell_capa") == 0) {
 		wpas_mbo_update_cell_capa(wpa_s, atoi(value));
+	} else if (os_strcasecmp(cmd, "oce") == 0) {
+		wpa_s->conf->oce = atoi(value);
+		if (wpa_s->conf->oce) {
+			if ((wpa_s->conf->oce & OCE_STA) &&
+			    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OCE_STA))
+				wpa_s->enable_oce = OCE_STA;
+
+			if ((wpa_s->conf->oce & OCE_STA_CFON) &&
+			    (wpa_s->drv_flags &
+			     WPA_DRIVER_FLAGS_OCE_STA_CFON)) {
+				/* TODO: Need to add STA-CFON support */
+				wpa_printf(MSG_ERROR,
+					   "OCE STA-CFON feature is not yet supported");
+				return -1;
+			}
+		} else {
+			wpa_s->enable_oce = 0;
+		}
 #endif /* CONFIG_MBO */
 	} else if (os_strcasecmp(cmd, "lci") == 0) {
 		ret = wpas_ctrl_iface_set_lci(wpa_s, value);

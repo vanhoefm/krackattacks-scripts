@@ -471,8 +471,8 @@ void wpa_supplicant_set_default_scan_ies(struct wpa_supplicant *wpa_s)
 		wpabuf_put_data(default_ies, ext_capab, ext_capab_len);
 
 #ifdef CONFIG_MBO
-	/* Send cellular capabilities for potential MBO STAs */
-	if (wpabuf_resize(&default_ies, 9) == 0)
+	/* Send MBO and OCE capabilities */
+	if (wpabuf_resize(&default_ies, 12) == 0)
 		wpas_mbo_scan_ie(wpa_s, default_ies);
 #endif /* CONFIG_MBO */
 
@@ -553,8 +553,8 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_FST */
 
 #ifdef CONFIG_MBO
-	/* Send cellular capabilities for potential MBO STAs */
-	if (wpabuf_resize(&extra_ie, 9) == 0)
+	/* Send MBO and OCE capabilities */
+	if (wpabuf_resize(&extra_ie, 12) == 0)
 		wpas_mbo_scan_ie(wpa_s, extra_ie);
 #endif /* CONFIG_MBO */
 

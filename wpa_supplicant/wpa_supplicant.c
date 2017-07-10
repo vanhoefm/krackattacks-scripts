@@ -5323,6 +5323,17 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	hs20_init(wpa_s);
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_MBO
+	if (wpa_s->conf->oce) {
+		if ((wpa_s->conf->oce & OCE_STA) &&
+		    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OCE_STA))
+			wpa_s->enable_oce = OCE_STA;
+		if ((wpa_s->conf->oce & OCE_STA_CFON) &&
+		    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OCE_STA_CFON)) {
+			/* TODO: Need to add STA-CFON support */
+			wpa_printf(MSG_ERROR,
+				   "OCE STA-CFON feature is not yet supported");
+		}
+	}
 	wpas_mbo_update_non_pref_chan(wpa_s, wpa_s->conf->non_pref_chan);
 #endif /* CONFIG_MBO */
 

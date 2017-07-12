@@ -2305,6 +2305,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	const u8 *realm, *username, *rrk;
 	size_t realm_len, username_len, rrk_len;
 	u16 next_seq_num;
+	struct fils_hlp_req *req;
 #endif /* CONFIG_FILS */
 
 	if (deinit) {
@@ -2384,56 +2385,14 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	 * previous association. */
 	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
-#ifdef IEEE8021X_EAPOL
-	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
-		if (ssid->leap) {
-			if (ssid->non_leap == 0)
-				algs = WPA_AUTH_ALG_LEAP;
-			else
-				algs |= WPA_AUTH_ALG_LEAP;
-		}
-	}
-
 #ifdef CONFIG_FILS
-	/* Clear FILS association */
-	wpa_sm_set_reset_fils_completed(wpa_s->wpa, 0);
-
-	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD) &&
-	    ssid->eap.erp && wpa_key_mgmt_fils(ssid->key_mgmt) &&
-	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap, &username,
-				  &username_len, &realm, &realm_len,
-				  &next_seq_num, &rrk, &rrk_len) == 0) {
-		algs = WPA_AUTH_ALG_FILS;
-		params.fils_erp_username = username;
-		params.fils_erp_username_len = username_len;
-		params.fils_erp_realm = realm;
-		params.fils_erp_realm_len = realm_len;
-		params.fils_erp_next_seq_num = next_seq_num;
-		params.fils_erp_rrk = rrk;
-		params.fils_erp_rrk_len = rrk_len;
+	dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
+			 list) {
+		max_wpa_ie_len += 3 + 2 * ETH_ALEN + 6 + wpabuf_len(req->pkt) +
+				  2 + 2 * wpabuf_len(req->pkt) / 255;
 	}
 #endif /* CONFIG_FILS */
-#endif /* IEEE8021X_EAPOL */
 
-	wpa_dbg(wpa_s, MSG_DEBUG, "Automatic auth_alg selection: 0x%x", algs);
-	if (ssid->auth_alg) {
-		algs = ssid->auth_alg;
-		wpa_dbg(wpa_s, MSG_DEBUG, "Overriding auth_alg selection: "
-			"0x%x", algs);
-	}
-
-#ifdef CONFIG_FILS
-	if (algs == WPA_AUTH_ALG_FILS) {
-		struct fils_hlp_req *req;
-
-		dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
-				 list) {
-			max_wpa_ie_len += 3 + 2 * ETH_ALEN + 6 +
-				wpabuf_len(req->pkt) +
-				2 + 2 * wpabuf_len(req->pkt) / 255;
-		}
-	}
-#endif /* CONFIG_FILS */
 	wpa_ie = os_malloc(max_wpa_ie_len);
 	if (!wpa_ie) {
 		wpa_printf(MSG_ERROR,
@@ -2512,6 +2471,44 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 		wpa_ie_len = 0;
 		wpa_s->wpa_proto = 0;
+	}
+
+#ifdef IEEE8021X_EAPOL
+	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
+		if (ssid->leap) {
+			if (ssid->non_leap == 0)
+				algs = WPA_AUTH_ALG_LEAP;
+			else
+				algs |= WPA_AUTH_ALG_LEAP;
+		}
+	}
+
+#ifdef CONFIG_FILS
+	/* Clear FILS association */
+	wpa_sm_set_reset_fils_completed(wpa_s->wpa, 0);
+
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_FILS_SK_OFFLOAD) &&
+	    ssid->eap.erp && wpa_key_mgmt_fils(wpa_s->key_mgmt) &&
+	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap, &username,
+				  &username_len, &realm, &realm_len,
+				  &next_seq_num, &rrk, &rrk_len) == 0) {
+		algs = WPA_AUTH_ALG_FILS;
+		params.fils_erp_username = username;
+		params.fils_erp_username_len = username_len;
+		params.fils_erp_realm = realm;
+		params.fils_erp_realm_len = realm_len;
+		params.fils_erp_next_seq_num = next_seq_num;
+		params.fils_erp_rrk = rrk;
+		params.fils_erp_rrk_len = rrk_len;
+	}
+#endif /* CONFIG_FILS */
+#endif /* IEEE8021X_EAPOL */
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Automatic auth_alg selection: 0x%x", algs);
+	if (ssid->auth_alg) {
+		algs = ssid->auth_alg;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Overriding auth_alg selection: 0x%x", algs);
 	}
 
 #ifdef CONFIG_P2P

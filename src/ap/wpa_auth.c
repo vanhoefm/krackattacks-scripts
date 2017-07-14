@@ -1784,6 +1784,9 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, enum wpa_event event)
 #else /* CONFIG_FILS */
 		break;
 #endif /* CONFIG_FILS */
+	case WPA_DRV_STA_REMOVED:
+		sm->tk_already_set = FALSE;
+		return 0;
 	}
 
 #ifdef CONFIG_IEEE80211R_AP
@@ -3938,6 +3941,14 @@ int wpa_auth_sta_wpa_version(struct wpa_state_machine *sm)
 	if (sm == NULL)
 		return 0;
 	return sm->wpa;
+}
+
+
+int wpa_auth_sta_ft_tk_already_set(struct wpa_state_machine *sm)
+{
+	if (!sm || !wpa_key_mgmt_ft(sm->wpa_key_mgmt))
+		return 0;
+	return sm->tk_already_set;
 }
 
 

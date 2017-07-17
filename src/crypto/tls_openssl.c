@@ -2775,6 +2775,19 @@ static int tls_connection_engine_private_key(struct tls_connection *conn)
 }
 
 
+static void tls_clear_default_passwd_cb(SSL_CTX *ssl_ctx, SSL *ssl)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+	if (ssl) {
+		SSL_set_default_passwd_cb(ssl, NULL);
+		SSL_set_default_passwd_cb_userdata(ssl, NULL);
+	}
+#endif /* >= 1.1.0f && !LibreSSL */
+	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
+	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, NULL);
+}
+
+
 static int tls_connection_private_key(struct tls_data *data,
 				      struct tls_connection *conn,
 				      const char *private_key,
@@ -2891,14 +2904,12 @@ static int tls_connection_private_key(struct tls_data *data,
 	if (!ok) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to load private key");
+		tls_clear_default_passwd_cb(ssl_ctx, conn->ssl);
 		os_free(passwd);
 		return -1;
 	}
 	ERR_clear_error();
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
-	SSL_set_default_passwd_cb(conn->ssl, NULL);
-#endif /* >= 1.1.0f && !LibreSSL */
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
+	tls_clear_default_passwd_cb(ssl_ctx, conn->ssl);
 	os_free(passwd);
 
 	if (!SSL_check_private_key(conn->ssl)) {
@@ -2941,13 +2952,14 @@ static int tls_global_private_key(struct tls_data *data,
 	    tls_read_pkcs12(data, NULL, private_key, passwd)) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to load private key");
+		tls_clear_default_passwd_cb(ssl_ctx, NULL);
 		os_free(passwd);
 		ERR_clear_error();
 		return -1;
 	}
+	tls_clear_default_passwd_cb(ssl_ctx, NULL);
 	os_free(passwd);
 	ERR_clear_error();
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
 
 	if (!SSL_CTX_check_private_key(ssl_ctx)) {
 		tls_show_errors(MSG_INFO, __func__,

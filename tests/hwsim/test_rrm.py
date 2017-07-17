@@ -1794,6 +1794,17 @@ def test_rrm_req_proto(dev, apdev):
             raise Exception("No response seen at the AP")
         hapd.dump_monitor()
 
+    # Verify rejection of a group-addressed request frame
+    hdr = "d0003a01" + "ffffffffffff" + 2*bssid.replace(':', '') + "1000"
+    # "RRM: Parallel measurements are not supported, reject"
+    t = "05000100002603010105"
+    if "OK" not in dev[0].request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + hdr + t):
+        raise Exception("MGMT_RX_PROCESS failed")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected response seen at the AP (broadcast request rejected)")
+    hapd.dump_monitor()
+
     hapd.set("ext_mgmt_frame_handling", "0")
     dev[0].request("SET ext_mgmt_frame_handling 0")
     dev[0].request("SET LCI ")

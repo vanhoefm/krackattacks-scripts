@@ -730,7 +730,11 @@ static int dpp_parse_uri_pk(struct dpp_bootstrap_info *bi, const char *info)
 	const unsigned char *pk;
 	int ppklen;
 	X509_ALGOR *pa;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ASN1_OBJECT *pa_oid;
+#else
+	const ASN1_OBJECT *pa_oid;
+#endif
 	const void *pval;
 	int ptype;
 	const ASN1_OBJECT *poid;

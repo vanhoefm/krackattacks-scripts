@@ -875,4 +875,14 @@ void wpas_notify_mesh_group_removed(struct wpa_supplicant *wpa_s,
 					    reason_code);
 }
 
+
+void wpas_notify_mesh_peer_connected(struct wpa_supplicant *wpa_s,
+				     const u8 *peer_addr)
+{
+	if (wpa_s->p2p_mgmt)
+		return;
+
+	wpas_dbus_signal_mesh_peer_connected(wpa_s, peer_addr);
+}
+
 #endif /* CONFIG_MESH */

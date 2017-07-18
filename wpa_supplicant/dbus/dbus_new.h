@@ -243,6 +243,9 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					      int op_freq);
 void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
 					 struct wpa_ssid *ssid);
+void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
+					 const u8 *meshid, u8 meshid_len,
+					 int reason);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -561,6 +564,13 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 static inline
 void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
 					 struct wpa_ssid *ssid)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
+					 const u8 *meshid, u8 meshid_len,
+					 int reason)
 {
 }
 

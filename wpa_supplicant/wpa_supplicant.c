@@ -61,6 +61,10 @@
 #include "wpas_kay.h"
 #include "mesh.h"
 #include "dpp_supplicant.h"
+#ifdef CONFIG_MESH
+#include "ap/ap_config.h"
+#include "ap/hostapd.h"
+#endif /* CONFIG_MESH */
 
 const char *const wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -2983,8 +2987,13 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_MESH
 	if (wpa_s->ifmsh) {
+		struct mesh_conf *mconf;
+
+		mconf = wpa_s->ifmsh->mconf;
 		wpa_msg(wpa_s, MSG_INFO, MESH_GROUP_REMOVED "%s",
 			wpa_s->ifname);
+		wpas_notify_mesh_group_removed(wpa_s, mconf->meshid,
+					       mconf->meshid_len, reason_code);
 		wpa_supplicant_leave_mesh(wpa_s);
 	}
 #endif /* CONFIG_MESH */

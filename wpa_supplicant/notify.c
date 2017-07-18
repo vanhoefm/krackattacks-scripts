@@ -853,6 +853,7 @@ void wpas_notify_network_type_changed(struct wpa_supplicant *wpa_s,
 
 
 #ifdef CONFIG_MESH
+
 void wpas_notify_mesh_group_started(struct wpa_supplicant *wpa_s,
 				    struct wpa_ssid *ssid)
 {
@@ -861,4 +862,17 @@ void wpas_notify_mesh_group_started(struct wpa_supplicant *wpa_s,
 
 	wpas_dbus_signal_mesh_group_started(wpa_s, ssid);
 }
+
+
+void wpas_notify_mesh_group_removed(struct wpa_supplicant *wpa_s,
+				    const u8 *meshid, u8 meshid_len,
+				    int reason_code)
+{
+	if (wpa_s->p2p_mgmt)
+		return;
+
+	wpas_dbus_signal_mesh_group_removed(wpa_s, meshid, meshid_len,
+					    reason_code);
+}
+
 #endif /* CONFIG_MESH */

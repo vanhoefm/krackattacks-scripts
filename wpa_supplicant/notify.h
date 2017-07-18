@@ -143,5 +143,8 @@ void wpas_notify_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					 const u8 *bssid, int id, int op_freq);
 void wpas_notify_mesh_group_started(struct wpa_supplicant *wpa_s,
 				    struct wpa_ssid *ssid);
+void wpas_notify_mesh_group_removed(struct wpa_supplicant *wpa_s,
+				    const u8 *meshid, u8 meshid_len,
+				    int reason_code);
 
 #endif /* NOTIFY_H */

@@ -2270,6 +2270,15 @@ Interface for performing mesh operations.
       <dd>A dictionary containing information of the started mesh group.</dd>
     </dl>
   </li>
+  <li>
+    <h3>MeshGroupRemoved ( a{sv} : args )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>A dictionary containing information of the removed mesh group.</dd>
+    </dl>
+  </li>
 </ul>
 
 */

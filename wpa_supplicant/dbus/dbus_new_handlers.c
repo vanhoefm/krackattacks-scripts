@@ -4805,6 +4805,7 @@ DBusMessage * wpas_dbus_handler_vendor_elem_remove(DBusMessage *message,
 
 
 #ifdef CONFIG_MESH
+
 /**
  * wpas_dbus_getter_mesh_peers - Get connected mesh peers
  * @iter: Pointer to incoming dbus message iter
@@ -4865,4 +4866,36 @@ dbus_bool_t wpas_dbus_getter_mesh_peers(
 
 	return TRUE;
 }
+
+
+/**
+ * wpas_dbus_getter_mesh_group - Get mesh group
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "MeshGroup" property.
+ */
+dbus_bool_t wpas_dbus_getter_mesh_group(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (!wpa_s->ifmsh || !ssid)
+		return FALSE;
+
+	if (!wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+						    (char *) ssid->ssid,
+						    ssid->ssid_len, error)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "%s: error constructing reply", __func__);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 #endif /* CONFIG_MESH */

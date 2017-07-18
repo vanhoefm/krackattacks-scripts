@@ -2264,6 +2264,10 @@ Interface for performing mesh operations.
   <li>
     <h3>MeshPeers - aay - (read)</h3>
   </li>
+
+  <li>
+    <h3>MeshGroup - ay - (read)</h3>
+  </li>
 </ul>
 
 \subsection dbus_mesh_signals Signals

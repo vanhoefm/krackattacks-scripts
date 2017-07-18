@@ -3489,6 +3489,11 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  NULL,
 	  NULL
 	},
+	{ "MeshGroup", WPAS_DBUS_NEW_IFACE_MESH, "ay",
+	  wpas_dbus_getter_mesh_group,
+	  NULL,
+	  NULL
+	},
 #endif /* CONFIG_MESH */
 	{ NULL, NULL, NULL, NULL, NULL, NULL }
 };

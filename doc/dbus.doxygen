@@ -2258,6 +2258,14 @@ Interface implemented by objects representing persistent P2P groups.
 
 Interface for performing mesh operations.
 
+\subsection dbus_mesh_properties Properties
+
+<ul>
+  <li>
+    <h3>MeshPeers - aay - (read)</h3>
+  </li>
+</ul>
+
 \subsection dbus_mesh_signals Signals
 
 <ul>

@@ -3483,6 +3483,13 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  NULL,
 	  NULL
 	},
+#ifdef CONFIG_MESH
+	{ "MeshPeers", WPAS_DBUS_NEW_IFACE_MESH, "aay",
+	  wpas_dbus_getter_mesh_peers,
+	  NULL,
+	  NULL
+	},
+#endif /* CONFIG_MESH */
 	{ NULL, NULL, NULL, NULL, NULL, NULL }
 };
 

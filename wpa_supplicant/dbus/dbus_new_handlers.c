@@ -28,6 +28,10 @@
 #include "dbus_dict_helpers.h"
 #include "dbus_common_i.h"
 #include "drivers/driver.h"
+#ifdef CONFIG_MESH
+#include "ap/hostapd.h"
+#include "ap/sta_info.h"
+#endif /* CONFIG_MESH */
 
 static const char * const debug_strings[] = {
 	"excessive", "msgdump", "debug", "info", "warning", "error", NULL
@@ -4798,3 +4802,67 @@ DBusMessage * wpas_dbus_handler_vendor_elem_remove(DBusMessage *message,
 	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 				      "Not found");
 }
+
+
+#ifdef CONFIG_MESH
+/**
+ * wpas_dbus_getter_mesh_peers - Get connected mesh peers
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "MeshPeers" property.
+ */
+dbus_bool_t wpas_dbus_getter_mesh_peers(
+	const struct wpa_dbus_property_desc *property_desc,
+	DBusMessageIter *iter, DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	struct hostapd_data *hapd;
+	struct sta_info *sta;
+	DBusMessageIter variant_iter, array_iter;
+	int i;
+	DBusMessageIter inner_array_iter;
+
+	if (!wpa_s->ifmsh)
+		return FALSE;
+	hapd = wpa_s->ifmsh->bss[0];
+
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &array_iter))
+		return FALSE;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (!dbus_message_iter_open_container(
+			    &array_iter, DBUS_TYPE_ARRAY,
+			    DBUS_TYPE_BYTE_AS_STRING,
+			    &inner_array_iter))
+			return FALSE;
+
+		for (i = 0; i < ETH_ALEN; i++) {
+			if (!dbus_message_iter_append_basic(&inner_array_iter,
+							    DBUS_TYPE_BYTE,
+							    &(sta->addr[i])))
+				return FALSE;
+		}
+
+		if (!dbus_message_iter_close_container(
+			    &array_iter, &inner_array_iter))
+			return FALSE;
+	}
+
+	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter))
+		return FALSE;
+
+	return TRUE;
+}
+#endif /* CONFIG_MESH */

@@ -2288,6 +2288,15 @@ Interface for performing mesh operations.
       <dd>A dictionary containing information of the connected mesh peer.</dd>
     </dl>
   </li>
+  <li>
+    <h3>MeshPeerDisconnected ( a{sv} : args )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>A dictionary containing information of the disconnected mesh peer.</dd>
+    </dl>
+  </li>
 </ul>
 
 */

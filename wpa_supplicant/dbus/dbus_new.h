@@ -248,6 +248,8 @@ void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
 					 int reason);
 void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
 					  const u8 *peer_addr);
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -579,6 +581,12 @@ void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
 static inline
 void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
 					  const u8 *peer_addr)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason)
 {
 }
 

@@ -148,5 +148,7 @@ void wpas_notify_mesh_group_removed(struct wpa_supplicant *wpa_s,
 				    int reason_code);
 void wpas_notify_mesh_peer_connected(struct wpa_supplicant *wpa_s,
 				     const u8 *peer_addr);
+void wpas_notify_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					const u8 *peer_addr, int reason_code);
 
 #endif /* NOTIFY_H */

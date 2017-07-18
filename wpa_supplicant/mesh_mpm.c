@@ -1013,6 +1013,10 @@ static void mesh_mpm_fsm(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			wpa_msg(wpa_s, MSG_INFO, MESH_PEER_DISCONNECTED MACSTR,
 				MAC2STR(sta->addr));
 
+			/* Send D-Bus event */
+			wpas_notify_mesh_peer_disconnected(wpa_s, sta->addr,
+							   reason);
+
 			hapd->num_plinks--;
 
 			mesh_mpm_send_plink_action(wpa_s, sta,

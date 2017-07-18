@@ -894,6 +894,40 @@ void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
 	dbus_message_unref(msg);
 }
 
+
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshPeerDisconnected");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "PeerAddress",
+					     (const char *) peer_addr,
+					     ETH_ALEN) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "DisconnectReason",
+					reason) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+
 #endif /* CONFIG_MESH */
 
 
@@ -3740,6 +3774,12 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  }
 	},
 	{ "MeshPeerConnected", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "MeshPeerDisconnected", WPAS_DBUS_NEW_IFACE_MESH,
 	  {
 		  { "args", "a{sv}", ARG_OUT },
 		  END_ARGS

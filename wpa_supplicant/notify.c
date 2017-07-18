@@ -885,4 +885,14 @@ void wpas_notify_mesh_peer_connected(struct wpa_supplicant *wpa_s,
 	wpas_dbus_signal_mesh_peer_connected(wpa_s, peer_addr);
 }
 
+
+void wpas_notify_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					const u8 *peer_addr, int reason_code)
+{
+	if (wpa_s->p2p_mgmt)
+		return;
+
+	wpas_dbus_signal_mesh_peer_disconnected(wpa_s, peer_addr, reason_code);
+}
+
 #endif /* CONFIG_MESH */

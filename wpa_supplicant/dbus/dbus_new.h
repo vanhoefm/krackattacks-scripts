@@ -65,6 +65,8 @@ enum wpas_dbus_bss_prop {
 #define WPAS_DBUS_NEW_IFACE_P2PDEVICE	\
 		WPAS_DBUS_NEW_IFACE_INTERFACE ".P2PDevice"
 
+#define WPAS_DBUS_NEW_IFACE_MESH WPAS_DBUS_NEW_IFACE_INTERFACE ".Mesh"
+
 /*
  * Groups correspond to P2P groups where this device is a GO (owner)
  */
@@ -239,6 +241,8 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					      const u8 *sa, const u8 *dev_addr,
 					      const u8 *bssid, int id,
 					      int op_freq);
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -551,6 +555,12 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					      const u8 *sa, const u8 *dev_addr,
 					      const u8 *bssid, int id,
 					      int op_freq)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid)
 {
 }
 

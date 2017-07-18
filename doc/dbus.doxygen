@@ -16,6 +16,7 @@ Interfaces:
 - \ref dbus_peer
 - \ref dbus_group
 - \ref dbus_persistent_group
+- \ref dbus_mesh
 
 
 \section dbus_main fi.w1.wpa_supplicant1
@@ -2250,6 +2251,24 @@ Interface implemented by objects representing persistent P2P groups.
       <tr><td>disabled</td><td>s</td><td>Set to "2" to indicate special network block use as a P2P persistent group information</td></tr>
       <tr><td>mode</td><td>s</td><td>"3" on GO or "0" on P2P Client</td></tr>
     </table>
+  </li>
+</ul>
+
+\section dbus_mesh fi.w1.wpa_supplicant1.Interface.Mesh
+
+Interface for performing mesh operations.
+
+\subsection dbus_mesh_signals Signals
+
+<ul>
+  <li>
+    <h3>MeshGroupStarted ( a{sv} : args )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>A dictionary containing information of the started mesh group.</dd>
+    </dl>
   </li>
 </ul>
 

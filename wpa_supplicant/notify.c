@@ -850,3 +850,15 @@ void wpas_notify_network_type_changed(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_P2P */
 }
+
+
+#ifdef CONFIG_MESH
+void wpas_notify_mesh_group_started(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid)
+{
+	if (wpa_s->p2p_mgmt)
+		return;
+
+	wpas_dbus_signal_mesh_group_started(wpa_s, ssid);
+}
+#endif /* CONFIG_MESH */

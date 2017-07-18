@@ -1845,6 +1845,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, MESH_GROUP_STARTED "ssid=\"%s\" id=%d",
 			wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
 			ssid->id);
+		wpas_notify_mesh_group_started(wpa_s, ssid);
 #else /* CONFIG_MESH */
 		wpa_msg(wpa_s, MSG_ERROR,
 			"mesh mode support not included in the build");

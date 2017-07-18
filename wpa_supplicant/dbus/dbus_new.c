@@ -793,6 +793,41 @@ nomem:
 
 #endif /* CONFIG_WPS */
 
+
+#ifdef CONFIG_MESH
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshGroupStarted");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
+					     (const char *) ssid->ssid,
+					     ssid->ssid_len) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+#endif /* CONFIG_MESH */
+
+
 void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 				    int depth, const char *subject,
 				    const char *altsubject[],
@@ -3622,6 +3657,14 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+#ifdef CONFIG_MESH
+	{ "MeshGroupStarted", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_MESH */
 	{ NULL, NULL, { END_ARGS } }
 };
 

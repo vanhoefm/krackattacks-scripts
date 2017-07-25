@@ -574,7 +574,7 @@ static struct wpabuf * eap_aka_authentication_reject(struct eap_aka_data *data,
 
 
 static struct wpabuf * eap_aka_synchronization_failure(
-	struct eap_aka_data *data, u8 id)
+	struct eap_aka_data *data, u8 id, struct eap_sim_attrs *attr)
 {
 	struct eap_sim_msg *msg;
 
@@ -588,6 +588,15 @@ static struct wpabuf * eap_aka_synchronization_failure(
 	wpa_printf(MSG_DEBUG, "   AT_AUTS");
 	eap_sim_msg_add_full(msg, EAP_SIM_AT_AUTS, data->auts,
 			     EAP_AKA_AUTS_LEN);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		size_t i;
+
+		for (i = 0; i < attr->kdf_count; i++) {
+			wpa_printf(MSG_DEBUG, "   AT_KDF");
+			eap_sim_msg_add(msg, EAP_SIM_AT_KDF, attr->kdf[i],
+					NULL, 0);
+		}
+	}
 	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
@@ -969,7 +978,7 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 	} else if (res == -2) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: UMTS authentication "
 			   "failed (AUTN seq# -> AUTS)");
-		return eap_aka_synchronization_failure(data, id);
+		return eap_aka_synchronization_failure(data, id, attr);
 	} else if (res > 0) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Wait for external USIM processing");
 		return NULL;

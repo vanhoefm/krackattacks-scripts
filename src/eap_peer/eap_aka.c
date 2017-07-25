@@ -54,6 +54,8 @@ struct eap_aka_data {
 	size_t network_name_len;
 	u16 kdf;
 	int kdf_negotiation;
+	u16 last_kdf_attrs[EAP_AKA_PRIME_KDF_MAX];
+	size_t last_kdf_count;
 };
 
 
@@ -830,9 +832,13 @@ static struct wpabuf * eap_aka_prime_kdf_neg(struct eap_aka_data *data,
 	size_t i;
 
 	for (i = 0; i < attr->kdf_count; i++) {
-		if (attr->kdf[i] == EAP_AKA_PRIME_KDF)
+		if (attr->kdf[i] == EAP_AKA_PRIME_KDF) {
+			os_memcpy(data->last_kdf_attrs, attr->kdf,
+				  sizeof(u16) * attr->kdf_count);
+			data->last_kdf_count = attr->kdf_count;
 			return eap_aka_prime_kdf_select(data, id,
 							EAP_AKA_PRIME_KDF);
+		}
 	}
 
 	/* No matching KDF found - fail authentication as if AUTN had been
@@ -853,26 +859,32 @@ static int eap_aka_prime_kdf_valid(struct eap_aka_data *data,
 	 * of the selected KDF into the beginning of the list. */
 
 	if (data->kdf_negotiation) {
+		/* When the peer receives the new EAP-Request/AKA'-Challenge
+		 * message, must check only requested change occurred in the
+		 * list of AT_KDF attributes. If there are any other changes,
+		 * the peer must behave like the case that AT_MAC had been
+		 * incorrect and authentication is failed. These are defined in
+		 * EAP-AKA' specification RFC 5448, Section 3.2. */
 		if (attr->kdf[0] != data->kdf) {
 			wpa_printf(MSG_WARNING, "EAP-AKA': The server did not "
 				   "accept the selected KDF");
-			return 0;
+			return -1;
+		}
+
+		if (attr->kdf_count > EAP_AKA_PRIME_KDF_MAX ||
+		    attr->kdf_count != data->last_kdf_count + 1) {
+			wpa_printf(MSG_WARNING,
+				   "EAP-AKA': The length of KDF attributes is wrong");
+			return -1;
 		}
 
 		for (i = 1; i < attr->kdf_count; i++) {
-			if (attr->kdf[i] == data->kdf)
-				break;
+			if (attr->kdf[i] != data->last_kdf_attrs[i - 1]) {
+				wpa_printf(MSG_WARNING,
+					   "EAP-AKA': The KDF attributes except selected KDF are not same as original one");
+				return -1;
+			}
 		}
-		if (i == attr->kdf_count &&
-		    attr->kdf_count < EAP_AKA_PRIME_KDF_MAX) {
-			wpa_printf(MSG_WARNING, "EAP-AKA': The server did not "
-				   "duplicate the selected KDF");
-			return 0;
-		}
-
-		/* TODO: should check that the list is identical to the one
-		 * used in the previous Challenge message apart from the added
-		 * entry in the beginning. */
 	}
 
 	for (i = data->kdf ? 1 : 0; i < attr->kdf_count; i++) {
@@ -934,8 +946,12 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 				  data->network_name, data->network_name_len);
 		/* TODO: check Network Name per 3GPP.33.402 */
 
-		if (!eap_aka_prime_kdf_valid(data, attr))
+		res = eap_aka_prime_kdf_valid(data, attr);
+		if (res == 0)
 			return eap_aka_authentication_reject(data, id);
+		else if (res == -1)
+			return eap_aka_client_error(
+				data, id, EAP_AKA_UNABLE_TO_PROCESS_PACKET);
 
 		if (attr->kdf[0] != EAP_AKA_PRIME_KDF)
 			return eap_aka_prime_kdf_neg(data, id, attr);

@@ -1292,6 +1292,17 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->access_network_type != DEFAULT_ACCESS_NETWORK_TYPE)
 		fprintf(f, "access_network_type=%d\n",
 			config->access_network_type);
+	if (config->go_interworking)
+		fprintf(f, "go_interworking=%d\n", config->go_interworking);
+	if (config->go_access_network_type)
+		fprintf(f, "go_access_network_type=%d\n",
+			config->go_access_network_type);
+	if (config->go_internet)
+		fprintf(f, "go_internet=%d\n", config->go_internet);
+	if (config->go_venue_group)
+		fprintf(f, "go_venue_group=%d\n", config->go_venue_group);
+	if (config->go_venue_type)
+		fprintf(f, "go_venue_type=%d\n", config->go_venue_type);
 #endif /* CONFIG_INTERWORKING */
 	if (config->pbc_in_m1)
 		fprintf(f, "pbc_in_m1=%d\n", config->pbc_in_m1);

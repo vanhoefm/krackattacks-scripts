@@ -882,6 +882,34 @@ struct wpa_config {
 	 */
 	int access_network_type;
 
+	 /**
+	  * go_interworking - Whether Interworking for P2P GO is enabled
+	  */
+	int go_interworking;
+
+	/**
+	 * go_access_network_type - P2P GO Access Network Type
+	 *
+	 * This indicates which access network type to advertise if Interworking
+	 * is enabled for P2P GO.
+	 */
+	int go_access_network_type;
+
+	/**
+	 * go_internet - Interworking: Internet connectivity (0 or 1)
+	 */
+	int go_internet;
+
+	/**
+	 * go_venue_group - Interworking: Venue group
+	 */
+	int go_venue_group;
+
+	/**
+	 * go_venue_type: Interworking: Venue type
+	 */
+	int go_venue_type;
+
 	/**
 	 * hessid - Homogenous ESS identifier
 	 *

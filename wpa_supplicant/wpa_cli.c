@@ -479,6 +479,8 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"hs20",
 #endif /* CONFIG_HS20 */
 		"interworking", "hessid", "access_network_type", "pbc_in_m1",
+		"go_interworking", "go_access_network_type", "go_internet",
+		"go_venue_group", "go_venue_type",
 		"autoscan", "wps_nfc_dev_pw_id", "wps_nfc_dh_pubkey",
 		"wps_nfc_dh_privkey", "wps_nfc_dev_pw", "ext_password_backend",
 		"p2p_go_max_inactivity", "auto_interworking", "okc", "pmf",
@@ -574,6 +576,8 @@ static char ** wpa_cli_complete_get(const char *str, int pos)
 		"hs20",
 #endif /* CONFIG_HS20 */
 		"interworking", "access_network_type", "pbc_in_m1", "autoscan",
+		"go_interworking", "go_access_network_type", "go_internet",
+		"go_venue_group", "go_venue_type",
 		"wps_nfc_dev_pw_id", "ext_password_backend",
 		"p2p_go_max_inactivity", "auto_interworking", "okc", "pmf",
 		"dtim_period", "beacon_int", "ignore_old_scan_res",

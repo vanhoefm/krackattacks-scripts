@@ -354,6 +354,24 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		wep->keys_set = 1;
 	}
 
+	if (wpa_s->conf->go_interworking) {
+		wpa_printf(MSG_DEBUG,
+			   "P2P: Enable Interworking with access_network_type: %d",
+			   wpa_s->conf->go_access_network_type);
+		bss->interworking = wpa_s->conf->go_interworking;
+		bss->access_network_type = wpa_s->conf->go_access_network_type;
+		bss->internet = wpa_s->conf->go_internet;
+		if (wpa_s->conf->go_venue_group) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Venue group: %d  Venue type: %d",
+				   wpa_s->conf->go_venue_group,
+				   wpa_s->conf->go_venue_type);
+			bss->venue_group = wpa_s->conf->go_venue_group;
+			bss->venue_type = wpa_s->conf->go_venue_type;
+			bss->venue_info_set = 1;
+		}
+	}
+
 	if (ssid->ap_max_inactivity)
 		bss->ap_max_inactivity = ssid->ap_max_inactivity;
 

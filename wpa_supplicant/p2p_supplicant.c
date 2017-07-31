@@ -2002,6 +2002,11 @@ do {                                    \
 		d->wps_nfc_dh_pubkey = wpabuf_dup(s->wps_nfc_dh_pubkey);
 	}
 	d->p2p_cli_probe = s->p2p_cli_probe;
+	d->go_interworking = s->go_interworking;
+	d->go_access_network_type = s->go_access_network_type;
+	d->go_internet = s->go_internet;
+	d->go_venue_group = s->go_venue_group;
+	d->go_venue_type = s->go_venue_type;
 }
 
 

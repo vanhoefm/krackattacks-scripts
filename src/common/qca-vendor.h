@@ -684,6 +684,20 @@ enum qca_wlan_vendor_attr_roam_auth {
 	 * This attribute is applicable only for re-association failure cases.
 	 */
 	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_RETAIN_CONNECTION,
+	/* This attribute specifies the PMK if one was newly generated during
+	 * FILS roaming. This is added to the PMKSA cache and is used in
+	 * subsequent connections with PMKSA caching.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PMK = 11,
+	/* This attribute specifies the PMKID used/generated for the current
+	 * FILS roam. This is used in subsequent connections with PMKSA caching.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PMKID = 12,
+	/* A 16-bit unsigned value specifying the next sequence number to use
+	 * in ERP message in the currently associated realm. This is used in
+	 * doing subsequent ERP based connections in the same realm.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_FILS_ERP_NEXT_SEQ_NUM = 13,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_MAX =

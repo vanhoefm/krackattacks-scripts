@@ -14,6 +14,7 @@ import struct
 
 import hwsim_utils
 import hostapd
+from tshark import run_tshark
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger, skip_with_fips, parse_ie
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
@@ -1907,3 +1908,89 @@ def test_ap_ft_reassoc_local_fail(dev, apdev):
         dev[0].request("DISCONNECT")
         if ev is None:
             raise Exception("Association reject not seen")
+
+def test_ap_ft_reassoc_replay(dev, apdev, params):
+    """WPA2-PSK-FT AP and replayed Reassociation Request frame"""
+    capfile = os.path.join(params['logdir'], "hwsim0.pcapng")
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    if dev[0].get_status_field('bssid') == hapd0.own_addr():
+        hapd1ap = hapd0
+        hapd2ap = hapd1
+    else:
+        hapd1ap = hapd1
+        hapd2ap = hapd0
+
+    dev[0].scan_for_bss(hapd2ap.own_addr(), freq="2412")
+    hapd2ap.set("ext_mgmt_frame_handling", "1")
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("ROAM " + hapd2ap.own_addr()):
+        raise Exception("ROAM failed")
+
+    reassocreq = None
+    count = 0
+    while count < 100:
+        req = hapd2ap.mgmt_rx()
+        count += 1
+        hapd2ap.dump_monitor()
+        hapd2ap.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+        if req['subtype'] == 2:
+            reassocreq = req
+            ev = hapd2ap.wait_event(["MGMT-TX-STATUS"], timeout=5)
+            if ev is None:
+                raise Exception("No TX status seen")
+            cmd = "MGMT_TX_STATUS_PROCESS %s" % (" ".join(ev.split(' ')[1:4]))
+            if "OK" not in hapd2ap.request(cmd):
+                raise Exception("MGMT_TX_STATUS_PROCESS failed")
+            break
+    hapd2ap.set("ext_mgmt_frame_handling", "0")
+    if reassocreq is None:
+        raise Exception("No Reassociation Request frame seen")
+    dev[0].wait_connected()
+    dev[0].dump_monitor()
+    hapd2ap.dump_monitor()
+
+    hwsim_utils.test_connectivity(dev[0], hapd2ap)
+
+    logger.info("Replay the last Reassociation Request frame")
+    hapd2ap.dump_monitor()
+    hapd2ap.set("ext_mgmt_frame_handling", "1")
+    hapd2ap.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+    ev = hapd2ap.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("No TX status seen")
+    cmd = "MGMT_TX_STATUS_PROCESS %s" % (" ".join(ev.split(' ')[1:4]))
+    if "OK" not in hapd2ap.request(cmd):
+        raise Exception("MGMT_TX_STATUS_PROCESS failed")
+    hapd2ap.set("ext_mgmt_frame_handling", "0")
+
+    try:
+        hwsim_utils.test_connectivity(dev[0], hapd2ap)
+        ok = True
+    except:
+        ok = False
+
+    ap = hapd2ap.own_addr()
+    sta = dev[0].own_addr()
+    filt = "wlan.fc.type == 2 && " + \
+           "wlan.da == " + sta + " && " + \
+           "wlan.sa == " + ap
+    fields = [ "wlan.ccmp.extiv" ]
+    res = run_tshark(capfile, filt, fields)
+    vals = res.splitlines()
+    logger.info("CCMP PN: " + str(vals))
+    if len(vals) < 2:
+        raise Exception("Could not find all CCMP protected frames from capture")
+    if len(set(vals)) < len(vals):
+        raise Exception("Duplicate CCMP PN used")
+
+    if not ok:
+        raise Exception("The second hwsim connectivity test failed")

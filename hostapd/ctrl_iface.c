@@ -1509,6 +1509,67 @@ static int hostapd_ctrl_iface_mgmt_tx(struct hostapd_data *hapd, char *cmd)
 }
 
 
+static int hostapd_ctrl_iface_mgmt_tx_status_process(struct hostapd_data *hapd,
+						     char *cmd)
+{
+	char *pos, *param;
+	size_t len;
+	u8 *buf;
+	int stype = 0, ok = 0;
+	union wpa_event_data event;
+
+	if (!hapd->ext_mgmt_frame_handling)
+		return -1;
+
+	/* stype=<val> ok=<0/1> buf=<frame hexdump> */
+
+	wpa_printf(MSG_DEBUG, "External MGMT TX status process: %s", cmd);
+
+	pos = cmd;
+	param = os_strstr(pos, "stype=");
+	if (param) {
+		param += 6;
+		stype = atoi(param);
+	}
+
+	param = os_strstr(pos, " ok=");
+	if (param) {
+		param += 4;
+		ok = atoi(param);
+	}
+
+	param = os_strstr(pos, " buf=");
+	if (!param)
+		return -1;
+	param += 5;
+
+	len = os_strlen(param);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (!buf || hexstr2bin(param, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	os_memset(&event, 0, sizeof(event));
+	event.tx_status.type = WLAN_FC_TYPE_MGMT;
+	event.tx_status.data = buf;
+	event.tx_status.data_len = len;
+	event.tx_status.stype = stype;
+	event.tx_status.ack = ok;
+	hapd->ext_mgmt_frame_handling = 0;
+	wpa_supplicant_event(hapd, EVENT_TX_STATUS, &event);
+	hapd->ext_mgmt_frame_handling = 1;
+
+	os_free(buf);
+
+	return 0;
+}
+
+
 static int hostapd_ctrl_iface_mgmt_rx_process(struct hostapd_data *hapd,
 					      char *cmd)
 {
@@ -2573,6 +2634,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "MGMT_TX ", 8) == 0) {
 		if (hostapd_ctrl_iface_mgmt_tx(hapd, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "MGMT_TX_STATUS_PROCESS ", 23) == 0) {
+		if (hostapd_ctrl_iface_mgmt_tx_status_process(hapd,
+							      buf + 23) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "MGMT_RX_PROCESS ", 16) == 0) {
 		if (hostapd_ctrl_iface_mgmt_rx_process(hapd, buf + 16) < 0)

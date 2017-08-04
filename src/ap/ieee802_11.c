@@ -4161,8 +4161,16 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->ext_mgmt_frame_handling) {
-		wpa_msg(hapd->msg_ctx, MSG_INFO, "MGMT-TX-STATUS stype=%u ok=%d",
-			stype, ok);
+		size_t hex_len = 2 * len + 1;
+		char *hex = os_malloc(hex_len);
+
+		if (hex) {
+			wpa_snprintf_hex(hex, hex_len, buf, len);
+			wpa_msg(hapd->msg_ctx, MSG_INFO,
+				"MGMT-TX-STATUS stype=%u ok=%d buf=%s",
+				stype, ok, hex);
+			os_free(hex);
+		}
 		return;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */

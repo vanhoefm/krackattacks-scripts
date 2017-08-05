@@ -1839,9 +1839,6 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
         raise Exception("KEK not found while associated")
     if tk in buf:
         raise Exception("TK found from memory")
-    if gtk in buf:
-        get_key_locations(buf, gtk, "GTK")
-        raise Exception("GTK found from memory")
 
     logger.info("Checking keys in memory after disassociation")
     buf = read_process_memory(pid, pmk)
@@ -1854,6 +1851,8 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
+    if gtk in buf:
+        get_key_locations(buf, gtk, "GTK")
     verify_not_present(buf, gtk, fname, "GTK")
 
     dev[0].request("REMOVE_NETWORK all")

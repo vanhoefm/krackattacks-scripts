@@ -346,9 +346,6 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
         raise Exception("KEK not found while associated")
     if tk in buf:
         raise Exception("TK found from memory")
-    if gtk in buf:
-        get_key_locations(buf, gtk, "GTK")
-        raise Exception("GTK found from memory")
     verify_not_present(buf, sae_k, fname, "SAE(k)")
     verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
     verify_not_present(buf, sae_kck, fname, "SAE(KCK)")
@@ -364,6 +361,8 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
+    if gtk in buf:
+        get_key_locations(buf, gtk, "GTK")
     verify_not_present(buf, gtk, fname, "GTK")
     verify_not_present(buf, sae_k, fname, "SAE(k)")
     verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")

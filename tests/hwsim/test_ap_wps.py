@@ -554,6 +554,25 @@ def test_ap_wps_reg_connect(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def test_ap_wps_reg_connect_zero_len_ap_pin(dev, apdev):
+    """hostapd with zero length ap_pin parameter"""
+    ssid = "test-wps-reg-ap-pin"
+    appin = ""
+    hostapd.add_ap(apdev[0],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "ap_pin": appin})
+    logger.info("WPS provisioning step")
+    dev[0].dump_monitor()
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].wps_reg(apdev[0]['bssid'], appin, no_wait=True)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("No WPS-FAIL reported")
+    if "msg=5 config_error=15" not in ev:
+        raise Exception("Unexpected WPS-FAIL: " + ev)
+
 def test_ap_wps_reg_connect_mixed_mode(dev, apdev):
     """WPS registrar using AP PIN to connect (WPA+WPA2)"""
     ssid = "test-wps-reg-ap-pin"

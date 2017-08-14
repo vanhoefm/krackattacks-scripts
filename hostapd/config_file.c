@@ -3147,7 +3147,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 	} else if (os_strcmp(buf, "ap_pin") == 0) {
 		os_free(bss->ap_pin);
-		bss->ap_pin = os_strdup(pos);
+		if (*pos == '\0')
+			bss->ap_pin = NULL;
+		else
+			bss->ap_pin = os_strdup(pos);
 	} else if (os_strcmp(buf, "skip_cred_build") == 0) {
 		bss->skip_cred_build = atoi(pos);
 	} else if (os_strcmp(buf, "extra_cred") == 0) {

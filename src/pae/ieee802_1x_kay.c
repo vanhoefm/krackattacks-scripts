@@ -964,20 +964,18 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 		body_len = get_mka_param_body_len(hdr);
 		body_type = get_mka_param_body_type(hdr);
 
-		if (body_type != MKA_LIVE_PEER_LIST &&
-		    body_type != MKA_POTENTIAL_PEER_LIST)
-			continue;
-
-		ieee802_1x_mka_dump_peer_body(
-			(struct ieee802_1x_mka_peer_body *)pos);
-
-		if (left_len < (MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN)) {
+		if (left_len < (MKA_HDR_LEN + MKA_ALIGN_LENGTH(body_len) + DEFAULT_ICV_LEN)) {
 			wpa_printf(MSG_ERROR,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
 				   left_len, MKA_HDR_LEN,
-				   body_len, DEFAULT_ICV_LEN);
-			continue;
+				   MKA_ALIGN_LENGTH(body_len),
+				   DEFAULT_ICV_LEN);
+			return FALSE;
 		}
+
+		if (body_type != MKA_LIVE_PEER_LIST &&
+		    body_type != MKA_POTENTIAL_PEER_LIST)
+			continue;
 
 		if ((body_len % 16) != 0) {
 			wpa_printf(MSG_ERROR,
@@ -985,6 +983,9 @@ ieee802_1x_mka_i_in_peerlist(struct ieee802_1x_mka_participant *participant,
 				   body_len);
 			continue;
 		}
+
+		ieee802_1x_mka_dump_peer_body(
+			(struct ieee802_1x_mka_peer_body *)pos);
 
 		for (i = 0; i < body_len;
 		     i += sizeof(struct ieee802_1x_mka_peer_id)) {
@@ -3018,7 +3019,7 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",
 				   left_len, MKA_HDR_LEN,
 				   body_len, DEFAULT_ICV_LEN);
-			continue;
+			return -1;
 		}
 
 		if (handled[body_type])

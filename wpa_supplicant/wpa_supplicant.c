@@ -2322,116 +2322,21 @@ static size_t wpas_add_fils_hlp_req(struct wpa_supplicant *wpa_s, u8 *ie_buf,
 #endif /* CONFIG_FILS */
 
 
-static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
+static u8 * wpas_populate_assoc_ies(
+	struct wpa_supplicant *wpa_s,
+	struct wpa_bss *bss, struct wpa_ssid *ssid,
+	struct wpa_driver_associate_params *params)
 {
-	struct wpa_connect_work *cwork = work->ctx;
-	struct wpa_bss *bss = cwork->bss;
-	struct wpa_ssid *ssid = cwork->ssid;
-	struct wpa_supplicant *wpa_s = work->wpa_s;
 	u8 *wpa_ie;
 	size_t max_wpa_ie_len = 500;
 	size_t wpa_ie_len;
-	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
-	unsigned int cipher_pairwise, cipher_group, cipher_group_mgmt;
-	struct wpa_driver_associate_params params;
-	int wep_keys_set = 0;
-	int assoc_failed = 0;
-	struct wpa_ssid *old_ssid;
-	u8 prev_bssid[ETH_ALEN];
-#ifdef CONFIG_HT_OVERRIDES
-	struct ieee80211_ht_capabilities htcaps;
-	struct ieee80211_ht_capabilities htcaps_mask;
-#endif /* CONFIG_HT_OVERRIDES */
-#ifdef CONFIG_VHT_OVERRIDES
-       struct ieee80211_vht_capabilities vhtcaps;
-       struct ieee80211_vht_capabilities vhtcaps_mask;
-#endif /* CONFIG_VHT_OVERRIDES */
 #ifdef CONFIG_FILS
 	const u8 *realm, *username, *rrk;
 	size_t realm_len, username_len, rrk_len;
 	u16 next_seq_num;
 	struct fils_hlp_req *req;
-#endif /* CONFIG_FILS */
 
-	if (deinit) {
-		if (work->started) {
-			wpa_s->connect_work = NULL;
-
-			/* cancel possible auth. timeout */
-			eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s,
-					     NULL);
-		}
-		wpas_connect_work_free(cwork);
-		return;
-	}
-
-	wpa_s->connect_work = work;
-
-	if (cwork->bss_removed || !wpas_valid_bss_ssid(wpa_s, bss, ssid) ||
-	    wpas_network_disabled(wpa_s, ssid)) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "BSS/SSID entry for association not valid anymore - drop connection attempt");
-		wpas_connect_work_done(wpa_s);
-		return;
-	}
-
-	os_memcpy(prev_bssid, wpa_s->bssid, ETH_ALEN);
-	os_memset(&params, 0, sizeof(params));
-	wpa_s->reassociate = 0;
-	wpa_s->eap_expected_failure = 0;
-	if (bss &&
-	    (!wpas_driver_bss_selection(wpa_s) || wpas_wps_searching(wpa_s))) {
-#ifdef CONFIG_IEEE80211R
-		const u8 *ie, *md = NULL;
-#endif /* CONFIG_IEEE80211R */
-		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
-			" (SSID='%s' freq=%d MHz)", MAC2STR(bss->bssid),
-			wpa_ssid_txt(bss->ssid, bss->ssid_len), bss->freq);
-		bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
-		os_memset(wpa_s->bssid, 0, ETH_ALEN);
-		os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
-		if (bssid_changed)
-			wpas_notify_bssid_changed(wpa_s);
-#ifdef CONFIG_IEEE80211R
-		ie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
-		if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
-			md = ie + 2;
-		wpa_sm_set_ft_params(wpa_s->wpa, ie, ie ? 2 + ie[1] : 0);
-		if (md) {
-			/* Prepare for the next transition */
-			wpa_ft_prepare_auth_request(wpa_s->wpa, ie);
-		}
-#endif /* CONFIG_IEEE80211R */
-#ifdef CONFIG_WPS
-	} else if ((ssid->ssid == NULL || ssid->ssid_len == 0) &&
-		   wpa_s->conf->ap_scan == 2 &&
-		   (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
-		/* Use ap_scan==1 style network selection to find the network
-		 */
-		wpas_connect_work_done(wpa_s);
-		wpa_s->scan_req = MANUAL_SCAN_REQ;
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-		return;
-#endif /* CONFIG_WPS */
-	} else {
-		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with SSID '%s'",
-			wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
-		if (bss)
-			os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
-		else
-			os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
-	}
-	if (!wpa_s->pno)
-		wpa_supplicant_cancel_sched_scan(wpa_s);
-
-	wpa_supplicant_cancel_scan(wpa_s);
-
-	/* Starting new association, so clear the possibly used WPA IE from the
-	 * previous association. */
-	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
-
-#ifdef CONFIG_FILS
 	dl_list_for_each(req, &wpa_s->fils_hlp_req, struct fils_hlp_req,
 			 list) {
 		max_wpa_ie_len += 3 + 2 * ETH_ALEN + 6 + wpabuf_len(req->pkt) +
@@ -2444,8 +2349,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		wpa_printf(MSG_ERROR,
 			   "Failed to allocate connect IE buffer for %lu bytes",
 			   (unsigned long) max_wpa_ie_len);
-		wpas_connect_work_done(wpa_s);
-		return;
+		return NULL;
 	}
 
 	if (bss && (wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
@@ -2471,9 +2375,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 					      wpa_ie, &wpa_ie_len)) {
 			wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to set WPA "
 				"key management and encryption suites");
-			wpas_connect_work_done(wpa_s);
 			os_free(wpa_ie);
-			return;
+			return NULL;
 		}
 	} else if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) && bss &&
 		   wpa_key_mgmt_wpa_ieee8021x(ssid->key_mgmt)) {
@@ -2492,9 +2395,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to set WPA "
 				"key management and encryption suites (no "
 				"scan results)");
-			wpas_connect_work_done(wpa_s);
 			os_free(wpa_ie);
-			return;
+			return NULL;
 		}
 #ifdef CONFIG_WPS
 	} else if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
@@ -2508,9 +2410,9 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		wpabuf_free(wps_ie);
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 		if (!bss || (bss->caps & IEEE80211_CAP_PRIVACY))
-			params.wps = WPS_MODE_PRIVACY;
+			params->wps = WPS_MODE_PRIVACY;
 		else
-			params.wps = WPS_MODE_OPEN;
+			params->wps = WPS_MODE_OPEN;
 		wpa_s->wpa_proto = 0;
 #endif /* CONFIG_WPS */
 	} else {
@@ -2539,13 +2441,13 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 				  &username_len, &realm, &realm_len,
 				  &next_seq_num, &rrk, &rrk_len) == 0) {
 		algs = WPA_AUTH_ALG_FILS;
-		params.fils_erp_username = username;
-		params.fils_erp_username_len = username_len;
-		params.fils_erp_realm = realm;
-		params.fils_erp_realm_len = realm_len;
-		params.fils_erp_next_seq_num = next_seq_num;
-		params.fils_erp_rrk = rrk;
-		params.fils_erp_rrk_len = rrk_len;
+		params->fils_erp_username = username;
+		params->fils_erp_username_len = username_len;
+		params->fils_erp_realm = realm;
+		params->fils_erp_realm_len = realm_len;
+		params->fils_erp_next_seq_num = next_seq_num;
+		params->fils_erp_rrk = rrk;
+		params->fils_erp_rrk_len = rrk_len;
 	}
 #endif /* CONFIG_FILS */
 #endif /* IEEE8021X_EAPOL */
@@ -2712,6 +2614,120 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 #endif /* CONFIG_OWE */
 
+	params->wpa_ie = wpa_ie;
+	params->wpa_ie_len = wpa_ie_len;
+	params->auth_alg = algs;
+
+	return wpa_ie;
+}
+
+
+static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_connect_work *cwork = work->ctx;
+	struct wpa_bss *bss = cwork->bss;
+	struct wpa_ssid *ssid = cwork->ssid;
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	u8 *wpa_ie;
+	int use_crypt, ret, i, bssid_changed;
+	unsigned int cipher_pairwise, cipher_group, cipher_group_mgmt;
+	struct wpa_driver_associate_params params;
+	int wep_keys_set = 0;
+	int assoc_failed = 0;
+	struct wpa_ssid *old_ssid;
+	u8 prev_bssid[ETH_ALEN];
+#ifdef CONFIG_HT_OVERRIDES
+	struct ieee80211_ht_capabilities htcaps;
+	struct ieee80211_ht_capabilities htcaps_mask;
+#endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+       struct ieee80211_vht_capabilities vhtcaps;
+       struct ieee80211_vht_capabilities vhtcaps_mask;
+#endif /* CONFIG_VHT_OVERRIDES */
+
+	if (deinit) {
+		if (work->started) {
+			wpa_s->connect_work = NULL;
+
+			/* cancel possible auth. timeout */
+			eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s,
+					     NULL);
+		}
+		wpas_connect_work_free(cwork);
+		return;
+	}
+
+	wpa_s->connect_work = work;
+
+	if (cwork->bss_removed || !wpas_valid_bss_ssid(wpa_s, bss, ssid) ||
+	    wpas_network_disabled(wpa_s, ssid)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "BSS/SSID entry for association not valid anymore - drop connection attempt");
+		wpas_connect_work_done(wpa_s);
+		return;
+	}
+
+	os_memcpy(prev_bssid, wpa_s->bssid, ETH_ALEN);
+	os_memset(&params, 0, sizeof(params));
+	wpa_s->reassociate = 0;
+	wpa_s->eap_expected_failure = 0;
+	if (bss &&
+	    (!wpas_driver_bss_selection(wpa_s) || wpas_wps_searching(wpa_s))) {
+#ifdef CONFIG_IEEE80211R
+		const u8 *ie, *md = NULL;
+#endif /* CONFIG_IEEE80211R */
+		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
+			" (SSID='%s' freq=%d MHz)", MAC2STR(bss->bssid),
+			wpa_ssid_txt(bss->ssid, bss->ssid_len), bss->freq);
+		bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
+		os_memset(wpa_s->bssid, 0, ETH_ALEN);
+		os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
+		if (bssid_changed)
+			wpas_notify_bssid_changed(wpa_s);
+#ifdef CONFIG_IEEE80211R
+		ie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
+		if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
+			md = ie + 2;
+		wpa_sm_set_ft_params(wpa_s->wpa, ie, ie ? 2 + ie[1] : 0);
+		if (md) {
+			/* Prepare for the next transition */
+			wpa_ft_prepare_auth_request(wpa_s->wpa, ie);
+		}
+#endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_WPS
+	} else if ((ssid->ssid == NULL || ssid->ssid_len == 0) &&
+		   wpa_s->conf->ap_scan == 2 &&
+		   (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
+		/* Use ap_scan==1 style network selection to find the network
+		 */
+		wpas_connect_work_done(wpa_s);
+		wpa_s->scan_req = MANUAL_SCAN_REQ;
+		wpa_s->reassociate = 1;
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		return;
+#endif /* CONFIG_WPS */
+	} else {
+		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with SSID '%s'",
+			wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+		if (bss)
+			os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
+		else
+			os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+	}
+	if (!wpa_s->pno)
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+
+	wpa_supplicant_cancel_scan(wpa_s);
+
+	/* Starting new association, so clear the possibly used WPA IE from the
+	 * previous association. */
+	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
+
+	wpa_ie = wpas_populate_assoc_ies(wpa_s, bss, ssid, &params);
+	if (!wpa_ie) {
+		wpas_connect_work_done(wpa_s);
+		return;
+	}
+
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
 	cipher_pairwise = wpa_s->pairwise_cipher;
@@ -2796,14 +2812,11 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			params.beacon_int = wpa_s->conf->beacon_int;
 	}
 
-	params.wpa_ie = wpa_ie;
-	params.wpa_ie_len = wpa_ie_len;
 	params.pairwise_suite = cipher_pairwise;
 	params.group_suite = cipher_group;
 	params.mgmt_group_suite = cipher_group_mgmt;
 	params.key_mgmt_suite = wpa_s->key_mgmt;
 	params.wpa_proto = wpa_s->wpa_proto;
-	params.auth_alg = algs;
 	wpa_s->auth_alg = params.auth_alg;
 	params.mode = ssid->mode;
 	params.bg_scan_period = ssid->bg_scan_period;

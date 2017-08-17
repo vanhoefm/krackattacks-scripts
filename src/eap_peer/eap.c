@@ -610,7 +610,10 @@ int eap_peer_get_erp_info(struct eap_sm *sm, struct eap_peer_config *config,
 	char *home_realm;
 	char *pos;
 
-	home_realm = eap_get_realm(sm, config);
+	if (config)
+		home_realm = eap_get_realm(sm, config);
+	else
+		home_realm = eap_home_realm(sm);
 	if (!home_realm || os_strlen(home_realm) == 0) {
 		os_free(home_realm);
 		return -1;

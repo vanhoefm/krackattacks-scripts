@@ -3755,6 +3755,7 @@ static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_portValid(wpa_s->eapol, TRUE);
 		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
 	}
+	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
 	wpa_sm_set_ptk_kck_kek(wpa_s->wpa, data->assoc_info.ptk_kck,
 			       data->assoc_info.ptk_kck_len,
 			       data->assoc_info.ptk_kek,
@@ -3781,12 +3782,7 @@ static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
 						data->assoc_info.fils_pmkid,
 						NULL, NULL, 0, NULL);
 		}
-	} else {
-		wpa_sm_set_rx_replay_ctr(wpa_s->wpa,
-					 data->assoc_info.key_replay_ctr);
 	}
-#else /* CONFIG_FILS */
-	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
 #endif /* CONFIG_FILS */
 }
 

@@ -3155,6 +3155,27 @@ static void nl80211_unmask_11b_rates(struct i802_bss *bss)
 }
 
 
+static enum nl80211_auth_type get_nl_auth_type(int wpa_auth_alg)
+{
+	if (wpa_auth_alg & WPA_AUTH_ALG_OPEN)
+		return NL80211_AUTHTYPE_OPEN_SYSTEM;
+	if (wpa_auth_alg & WPA_AUTH_ALG_SHARED)
+		return NL80211_AUTHTYPE_SHARED_KEY;
+	if (wpa_auth_alg & WPA_AUTH_ALG_LEAP)
+		return NL80211_AUTHTYPE_NETWORK_EAP;
+	if (wpa_auth_alg & WPA_AUTH_ALG_FT)
+		return NL80211_AUTHTYPE_FT;
+	if (wpa_auth_alg & WPA_AUTH_ALG_SAE)
+		return NL80211_AUTHTYPE_SAE;
+	if (wpa_auth_alg & WPA_AUTH_ALG_FILS)
+		return NL80211_AUTHTYPE_FILS_SK;
+	if (wpa_auth_alg & WPA_AUTH_ALG_FILS_SK_PFS)
+		return NL80211_AUTHTYPE_FILS_SK_PFS;
+
+	return NL80211_AUTHTYPE_MAX;
+}
+
+
 static int wpa_driver_nl80211_authenticate(
 	struct i802_bss *bss, struct wpa_driver_auth_params *params)
 {
@@ -3237,24 +3258,10 @@ retry:
 			    params->auth_data))
 			goto fail;
 	}
-	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
-		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
-		type = NL80211_AUTHTYPE_SHARED_KEY;
-	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
-		type = NL80211_AUTHTYPE_NETWORK_EAP;
-	else if (params->auth_alg & WPA_AUTH_ALG_FT)
-		type = NL80211_AUTHTYPE_FT;
-	else if (params->auth_alg & WPA_AUTH_ALG_SAE)
-		type = NL80211_AUTHTYPE_SAE;
-	else if (params->auth_alg & WPA_AUTH_ALG_FILS)
-		type = NL80211_AUTHTYPE_FILS_SK;
-	else if (params->auth_alg & WPA_AUTH_ALG_FILS_SK_PFS)
-		type = NL80211_AUTHTYPE_FILS_SK_PFS;
-	else
-		goto fail;
+	type = get_nl_auth_type(params->auth_alg);
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
-	if (nla_put_u32(msg, NL80211_ATTR_AUTH_TYPE, type))
+	if (type == NL80211_AUTHTYPE_MAX ||
+	    nla_put_u32(msg, NL80211_ATTR_AUTH_TYPE, type))
 		goto fail;
 	if (params->local_state_change) {
 		wpa_printf(MSG_DEBUG, "  * Local state change only");
@@ -5402,21 +5409,10 @@ static int wpa_driver_nl80211_try_connect(
 		goto skip_auth_type;
 	}
 
-	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
-		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
-		type = NL80211_AUTHTYPE_SHARED_KEY;
-	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
-		type = NL80211_AUTHTYPE_NETWORK_EAP;
-	else if (params->auth_alg & WPA_AUTH_ALG_FT)
-		type = NL80211_AUTHTYPE_FT;
-	else if (params->auth_alg & WPA_AUTH_ALG_FILS)
-		type = NL80211_AUTHTYPE_FILS_SK;
-	else
-		goto fail;
-
+	type = get_nl_auth_type(params->auth_alg);
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
-	if (nla_put_u32(msg, NL80211_ATTR_AUTH_TYPE, type))
+	if (type == NL80211_AUTHTYPE_MAX ||
+	    nla_put_u32(msg, NL80211_ATTR_AUTH_TYPE, type))
 		goto fail;
 
 skip_auth_type:
@@ -10295,6 +10291,56 @@ static int nl80211_get_ext_capab(void *priv, enum wpa_driver_if_type type,
 }
 
 
+static int nl80211_update_connection_params(
+	void *priv, struct wpa_driver_associate_params *params,
+	enum wpa_drv_update_connect_params_mask mask)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret = -1;
+	enum nl80211_auth_type type;
+
+	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_UPDATE_CONNECT_PARAMS);
+	if (!msg)
+		goto fail;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Update connection params (ifindex=%d)",
+		   drv->ifindex);
+
+	if ((mask & WPA_DRV_UPDATE_ASSOC_IES) && params->wpa_ie) {
+		if (nla_put(msg, NL80211_ATTR_IE, params->wpa_ie_len,
+			    params->wpa_ie))
+			goto fail;
+		wpa_hexdump(MSG_DEBUG, "  * IEs", params->wpa_ie,
+			    params->wpa_ie_len);
+	}
+
+	if (mask & WPA_DRV_UPDATE_AUTH_TYPE) {
+		type = get_nl_auth_type(params->auth_alg);
+		if (type == NL80211_AUTHTYPE_MAX ||
+		    nla_put_u32(msg, NL80211_ATTR_AUTH_TYPE, type))
+			goto fail;
+		wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
+	}
+
+	if ((mask & WPA_DRV_UPDATE_FILS_ERP_INFO) &&
+	    nl80211_put_fils_connect_params(drv, params, msg))
+		goto fail;
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret)
+		wpa_dbg(drv->ctx, MSG_DEBUG,
+			"nl80211: Update connect params command failed: ret=%d (%s)",
+			ret, strerror(-ret));
+
+fail:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -10420,4 +10466,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* CONFIG_DRIVER_NL80211_QCA */
 	.configure_data_frame_filters = nl80211_configure_data_frame_filters,
 	.get_ext_capab = nl80211_get_ext_capab,
+	.update_connect_params = nl80211_update_connection_params,
 };

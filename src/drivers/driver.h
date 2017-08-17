@@ -2044,6 +2044,13 @@ struct wpa_pmkid_params {
 	size_t pmk_len;
 };
 
+/* Mask used to specify which connection parameters have to be updated */
+enum wpa_drv_update_connect_params_mask {
+	WPA_DRV_UPDATE_ASSOC_IES	= BIT(0),
+	WPA_DRV_UPDATE_FILS_ERP_INFO	= BIT(1),
+	WPA_DRV_UPDATE_AUTH_TYPE	= BIT(2),
+};
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -3977,6 +3984,23 @@ struct wpa_driver_ops {
 	 */
 	int (*set_bssid_blacklist)(void *priv, unsigned int num_bssid,
 				   const u8 *bssid);
+
+	/**
+	 * update_connect_params - Update the connection parameters
+	 * @priv: Private driver interface data
+	 * @params: Association parameters
+	 * @mask: Bit mask indicating which parameters in @params have to be
+	 *	updated
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * Update the connection parameters when in connected state so that the
+	 * driver uses the updated parameters for subsequent roaming. This is
+	 * used only with drivers that implement internal BSS selection and
+	 * roaming.
+	 */
+	int (*update_connect_params)(
+		void *priv, struct wpa_driver_associate_params *params,
+		enum wpa_drv_update_connect_params_mask mask);
 };
 
 /**

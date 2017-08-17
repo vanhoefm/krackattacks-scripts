@@ -120,6 +120,9 @@ const char *const wpa_supplicant_full_license5 =
 
 
 static void wpa_bss_tmp_disallow_timeout(void *eloop_ctx, void *timeout_ctx);
+#if defined(CONFIG_FILS) && defined(IEEE8021X_EAPOL)
+static void wpas_update_fils_connect_params(struct wpa_supplicant *wpa_s);
+#endif /* CONFIG_FILS && IEEE8021X_EAPOL */
 
 
 /* Configure default/group WEP keys for static WEP */
@@ -888,6 +891,11 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpas_p2p_completed(wpa_s);
 
 		sme_sched_obss_scan(wpa_s, 1);
+
+#if defined(CONFIG_FILS) && defined(IEEE8021X_EAPOL)
+		if (!fils_hlp_sent && ssid && ssid->eap.erp)
+			wpas_update_fils_connect_params(wpa_s);
+#endif /* CONFIG_FILS && IEEE8021X_EAPOL */
 	} else if (state == WPA_DISCONNECTED || state == WPA_ASSOCIATING ||
 		   state == WPA_ASSOCIATED) {
 		wpa_s->new_connection = 1;
@@ -2325,7 +2333,8 @@ static size_t wpas_add_fils_hlp_req(struct wpa_supplicant *wpa_s, u8 *ie_buf,
 static u8 * wpas_populate_assoc_ies(
 	struct wpa_supplicant *wpa_s,
 	struct wpa_bss *bss, struct wpa_ssid *ssid,
-	struct wpa_driver_associate_params *params)
+	struct wpa_driver_associate_params *params,
+	enum wpa_drv_update_connect_params_mask *mask)
 {
 	u8 *wpa_ie;
 	size_t max_wpa_ie_len = 500;
@@ -2448,6 +2457,9 @@ static u8 * wpas_populate_assoc_ies(
 		params->fils_erp_next_seq_num = next_seq_num;
 		params->fils_erp_rrk = rrk;
 		params->fils_erp_rrk_len = rrk_len;
+
+		if (mask)
+			*mask |= WPA_DRV_UPDATE_FILS_ERP_INFO;
 	}
 #endif /* CONFIG_FILS */
 #endif /* IEEE8021X_EAPOL */
@@ -2617,9 +2629,39 @@ static u8 * wpas_populate_assoc_ies(
 	params->wpa_ie = wpa_ie;
 	params->wpa_ie_len = wpa_ie_len;
 	params->auth_alg = algs;
+	if (mask)
+		*mask |= WPA_DRV_UPDATE_ASSOC_IES | WPA_DRV_UPDATE_AUTH_TYPE;
 
 	return wpa_ie;
 }
+
+
+#if defined(CONFIG_FILS) && defined(IEEE8021X_EAPOL)
+static void wpas_update_fils_connect_params(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_driver_associate_params params;
+	enum wpa_drv_update_connect_params_mask mask = 0;
+	u8 *wpa_ie;
+
+	if (wpa_s->auth_alg != WPA_AUTH_ALG_OPEN)
+		return; /* nothing to do */
+
+	os_memset(&params, 0, sizeof(params));
+	wpa_ie = wpas_populate_assoc_ies(wpa_s, wpa_s->current_bss,
+					 wpa_s->current_ssid, &params, &mask);
+	if (!wpa_ie)
+		return;
+
+	if (params.auth_alg != WPA_AUTH_ALG_FILS) {
+		os_free(wpa_ie);
+		return;
+	}
+
+	wpa_s->auth_alg = params.auth_alg;
+	wpa_drv_update_connect_params(wpa_s, &params, mask);
+	os_free(wpa_ie);
+}
+#endif /* CONFIG_FILS && IEEE8021X_EAPOL */
 
 
 static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
@@ -2722,7 +2764,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	 * previous association. */
 	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
-	wpa_ie = wpas_populate_assoc_ies(wpa_s, bss, ssid, &params);
+	wpa_ie = wpas_populate_assoc_ies(wpa_s, bss, ssid, &params, NULL);
 	if (!wpa_ie) {
 		wpas_connect_work_done(wpa_s);
 		return;

@@ -1017,4 +1017,15 @@ static inline int wpa_drv_set_bssid_blacklist(struct wpa_supplicant *wpa_s,
 						  bssids);
 }
 
+static inline int wpa_drv_update_connect_params(
+	struct wpa_supplicant *wpa_s,
+	struct wpa_driver_associate_params *params,
+	enum wpa_drv_update_connect_params_mask mask)
+{
+	if (!wpa_s->driver->update_connect_params)
+		return -1;
+	return wpa_s->driver->update_connect_params(wpa_s->drv_priv, params,
+						    mask);
+}
+
 #endif /* DRIVER_I_H */

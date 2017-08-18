@@ -66,6 +66,9 @@ static void random_write_entropy(void);
 
 static u32 __ROL32(u32 x, u32 y)
 {
+	if (y == 0)
+		return x;
+
 	return (x << (y & 31)) | (x >> (32 - (y & 31)));
 }
 

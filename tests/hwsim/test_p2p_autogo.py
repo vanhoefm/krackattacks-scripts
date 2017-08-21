@@ -140,7 +140,7 @@ def test_autogo_m2d(dev):
     autogo(dev[0], freq=2412)
     go_addr = dev[0].p2p_dev_addr()
 
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     if not dev[1].discover_peer(go_addr, social=True):
         raise Exception("GO " + go_addr + " not found")
     dev[1].dump_monitor()

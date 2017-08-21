@@ -1640,3 +1640,4 @@ def test_radius_acct_failure_sta_data(dev, apdev):
         dev[0].connect("radius-acct-open", key_mgmt="NONE", scan_freq="2412")
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
+        hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=1)

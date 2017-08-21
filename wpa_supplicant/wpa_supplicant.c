@@ -2572,7 +2572,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		int ext_capab_len;
 		ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
 						     sizeof(ext_capab));
-		if (ext_capab_len > 0) {
+		if (ext_capab_len > 0 &&
+		    wpa_ie_len + ext_capab_len <= max_wpa_ie_len) {
 			u8 *pos = wpa_ie;
 			if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
 				pos += 2 + pos[1];

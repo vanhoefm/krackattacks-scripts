@@ -2860,14 +2860,11 @@ void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta)
 	sta->hlp_dhcp_discover = NULL;
 
 	/*
-	 * Remove the station in case tranmission of a success response fails
-	 * (the STA was added associated to the driver) or if the station was
-	 * previously added unassociated.
+	 * Remove the station in case transmission of a success response fails.
+	 * At this point the station was already added associated to the driver.
 	 */
-	if (reply_res != WLAN_STATUS_SUCCESS || sta->added_unassoc) {
+	if (reply_res != WLAN_STATUS_SUCCESS)
 		hostapd_drv_sta_remove(hapd, sta->addr);
-		sta->added_unassoc = 0;
-	}
 }
 
 

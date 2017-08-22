@@ -646,9 +646,6 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "dpp_groups_override") == 0) {
 		os_free(wpa_s->dpp_groups_override);
 		wpa_s->dpp_groups_override = os_strdup(value);
-	} else if (os_strcasecmp(cmd, "dpp_devices_override") == 0) {
-		os_free(wpa_s->dpp_devices_override);
-		wpa_s->dpp_devices_override = os_strdup(value);
 	} else if (os_strcasecmp(cmd,
 				 "dpp_ignore_netaccesskey_mismatch") == 0) {
 		wpa_s->dpp_ignore_netaccesskey_mismatch = atoi(value);

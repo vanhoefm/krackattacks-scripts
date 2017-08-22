@@ -1193,7 +1193,6 @@ struct wpa_supplicant {
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;
 	char *dpp_groups_override;
-	char *dpp_devices_override;
 	unsigned int dpp_ignore_netaccesskey_mismatch:1;
 #endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_DPP */

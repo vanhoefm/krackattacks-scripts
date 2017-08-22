@@ -320,8 +320,6 @@ static void hostapd_dpp_set_testing_options(struct hostapd_data *hapd,
 			os_strdup(hapd->dpp_discovery_override);
 	if (hapd->dpp_groups_override)
 		auth->groups_override = os_strdup(hapd->dpp_groups_override);
-	if (hapd->dpp_devices_override)
-		auth->devices_override = os_strdup(hapd->dpp_devices_override);
 	auth->ignore_netaccesskey_mismatch =
 		hapd->dpp_ignore_netaccesskey_mismatch;
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -1476,8 +1474,6 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
 	hapd->dpp_discovery_override = NULL;
 	os_free(hapd->dpp_groups_override);
 	hapd->dpp_groups_override = NULL;
-	os_free(hapd->dpp_devices_override);
-	hapd->dpp_devices_override = NULL;
 	hapd->dpp_ignore_netaccesskey_mismatch = 0;
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (!hapd->dpp_init_done)

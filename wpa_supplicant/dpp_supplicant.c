@@ -366,9 +366,6 @@ static void wpas_dpp_set_testing_options(struct wpa_supplicant *wpa_s,
 	if (wpa_s->dpp_groups_override)
 		auth->groups_override =
 			os_strdup(wpa_s->dpp_groups_override);
-	if (wpa_s->dpp_devices_override)
-		auth->devices_override =
-			os_strdup(wpa_s->dpp_devices_override);
 	auth->ignore_netaccesskey_mismatch =
 		wpa_s->dpp_ignore_netaccesskey_mismatch;
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -2039,8 +2036,6 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	wpa_s->dpp_discovery_override = NULL;
 	os_free(wpa_s->dpp_groups_override);
 	wpa_s->dpp_groups_override = NULL;
-	os_free(wpa_s->dpp_devices_override);
-	wpa_s->dpp_devices_override = NULL;
 	wpa_s->dpp_ignore_netaccesskey_mismatch = 0;
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (!wpa_s->dpp_init_done)

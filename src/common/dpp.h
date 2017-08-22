@@ -128,7 +128,7 @@ struct dpp_configuration {
 	/* For DPP configuration (connector) */
 	os_time_t netaccesskey_expiry;
 
-	/* TODO: groups, devices */
+	/* TODO: groups */
 
 	/* For legacy configuration */
 	char *passphrase;
@@ -183,7 +183,6 @@ struct dpp_authentication {
 	char *config_obj_override;
 	char *discovery_override;
 	char *groups_override;
-	char *devices_override;
 	unsigned int ignore_netaccesskey_mismatch:1;
 #endif /* CONFIG_TESTING_OPTIONS */
 };

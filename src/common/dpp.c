@@ -2890,7 +2890,6 @@ void dpp_auth_deinit(struct dpp_authentication *auth)
 	os_free(auth->config_obj_override);
 	os_free(auth->discovery_override);
 	os_free(auth->groups_override);
-	os_free(auth->devices_override);
 #endif /* CONFIG_TESTING_OPTIONS */
 	bin_clear_free(auth, sizeof(*auth));
 }
@@ -3028,8 +3027,6 @@ dpp_build_conf_obj_dpp(struct dpp_authentication *auth, int ap,
 #ifdef CONFIG_TESTING_OPTIONS
 	if (auth->groups_override)
 		extra_len += os_strlen(auth->groups_override);
-	if (auth->devices_override)
-		extra_len += os_strlen(auth->devices_override);
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Connector (JSON dppCon object) */
@@ -3037,7 +3034,7 @@ dpp_build_conf_obj_dpp(struct dpp_authentication *auth, int ap,
 	if (!dppcon)
 		goto fail;
 #ifdef CONFIG_TESTING_OPTIONS
-	if (auth->groups_override || auth->devices_override) {
+	if (auth->groups_override) {
 		wpabuf_put_u8(dppcon, '{');
 		if (auth->groups_override) {
 			wpa_printf(MSG_DEBUG,
@@ -3045,14 +3042,6 @@ dpp_build_conf_obj_dpp(struct dpp_authentication *auth, int ap,
 				   auth->groups_override);
 			wpabuf_put_str(dppcon, "\"groups\":");
 			wpabuf_put_str(dppcon, auth->groups_override);
-			wpabuf_put_u8(dppcon, ',');
-		}
-		if (auth->devices_override) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: TESTING - devices override: '%s'",
-				   auth->devices_override);
-			wpabuf_put_str(dppcon, "\"devices\":");
-			wpabuf_put_str(dppcon, auth->devices_override);
 			wpabuf_put_u8(dppcon, ',');
 		}
 		goto skip_groups;
@@ -3743,7 +3732,7 @@ static int dpp_parse_connector(struct dpp_authentication *auth,
 			       const unsigned char *payload,
 			       u16 payload_len)
 {
-	struct json_token *root, *groups, *devices, *netkey, *token;
+	struct json_token *root, *groups, *netkey, *token;
 	int ret = -1;
 	EVP_PKEY *key = NULL;
 	const struct dpp_curve_params *curve;
@@ -3781,44 +3770,9 @@ static int dpp_parse_connector(struct dpp_authentication *auth,
 	}
 skip_groups:
 
-	devices = json_get_member(root, "devices");
-	if (!devices || devices->type != JSON_ARRAY) {
-		wpa_printf(MSG_DEBUG, "DPP: No devices array found");
-		goto skip_devices;
-	}
-	for (token = devices->child; token; token = token->sibling) {
-		struct wpabuf *id;
-		struct json_token *role;
-
-		id = json_get_member_base64url(token, "deviceId");
-		if (!id) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Missing or invalid deviceId string");
-			goto fail;
-		}
-		wpa_hexdump_buf(MSG_DEBUG, "DPP: deviceId", id);
-		if (wpabuf_len(id) != SHA256_MAC_LEN) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Unexpected deviceId length");
-			wpabuf_free(id);
-			goto fail;
-		}
-		wpabuf_free(id);
-
-		role = json_get_member(token, "netRole");
-		if (!role || role->type != JSON_STRING) {
-			wpa_printf(MSG_DEBUG, "DPP: Missing netRole string");
-			goto fail;
-		}
-		wpa_printf(MSG_DEBUG, "DPP: connector device netRole='%s'",
-			   role->string);
-		rules++;
-	}
-
-skip_devices:
 	if (!rules) {
 		wpa_printf(MSG_DEBUG,
-			   "DPP: Connector includes no groups or devices");
+			   "DPP: Connector includes no groups");
 		goto fail;
 	}
 
@@ -4552,102 +4506,6 @@ static int dpp_connector_match_groups(struct json_token *own_root,
 }
 
 
-static int dpp_connector_compatible_device(struct json_token *root,
-					   const char *device_id,
-					   const char *net_role)
-{
-	struct json_token *groups, *token;
-
-	groups = json_get_member(root, "devices");
-	if (!groups || groups->type != JSON_ARRAY)
-		return 0;
-
-	for (token = groups->child; token; token = token->sibling) {
-		struct json_token *id, *role;
-
-		id = json_get_member(token, "deviceId");
-		if (!id || id->type != JSON_STRING)
-			continue;
-
-		role = json_get_member(token, "netRole");
-		if (!role || role->type != JSON_STRING)
-			continue;
-
-		if (os_strcmp(id->string, device_id) != 0)
-			continue;
-
-		if (dpp_compatible_netrole(role->string, net_role))
-			return 1;
-	}
-
-	return 0;
-}
-
-
-static int dpp_connector_match_devices(struct json_token *own_root,
-				       struct json_token *peer_root,
-				       const char *own_deviceid)
-{
-	struct json_token *devices, *token;
-
-	devices = json_get_member(peer_root, "devices");
-	if (!devices || devices->type != JSON_ARRAY) {
-		wpa_printf(MSG_DEBUG, "DPP: No peer devices array found");
-		return 0;
-	}
-
-	for (token = devices->child; token; token = token->sibling) {
-		struct json_token *id, *role;
-
-		id = json_get_member(token, "deviceId");
-		if (!id || id->type != JSON_STRING) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Missing or invalid deviceId string");
-			continue;
-		}
-
-		role = json_get_member(token, "netRole");
-		if (!role || role->type != JSON_STRING) {
-			wpa_printf(MSG_DEBUG, "DPP: Missing netRole string");
-			continue;
-		}
-		wpa_printf(MSG_DEBUG,
-			   "DPP: connector device deviceId='%s' netRole='%s'",
-			   id->string, role->string);
-		if (os_strcmp(id->string, own_deviceid) != 0)
-			continue;
-
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Listed deviceId matches own deviceId");
-		/* TODO: Is this next step required? */
-		if (dpp_connector_compatible_device(own_root, id->string,
-						    role->string)) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Compatible device/netRole in own connector");
-			return 1;
-		}
-		/* TODO: For now, accept this for interop testing purposes based
-		 * on a simple match of deviceId while ignoring netRole. Once
-		 * the spec is clearer on the expected behavior, either this
-		 * comment or the following return 1 statement needs to be
-		 * removed.
-		 */
-		return 1;
-	}
-
-	return 0;
-}
-
-
-static int dpp_connector_match(struct json_token *own_root,
-			       struct json_token *peer_root,
-			       const char *own_deviceid)
-{
-	return dpp_connector_match_groups(own_root, peer_root) ||
-		dpp_connector_match_devices(own_root, peer_root, own_deviceid);
-}
-
-
 static int dpp_derive_pmk(const u8 *Nx, size_t Nx_len, u8 *pmk,
 			  unsigned int hash_len)
 {
@@ -4754,7 +4612,6 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	int ret = -1;
 	EVP_PKEY *own_key = NULL, *peer_key = NULL;
 	struct wpabuf *own_key_pub = NULL;
-	char *own_deviceid = NULL;
 	const struct dpp_curve_params *curve, *own_curve;
 	struct dpp_signed_connector_info info;
 	const unsigned char *p;
@@ -4766,9 +4623,6 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	EVP_PKEY_CTX *ctx = NULL;
 	size_t Nx_len;
 	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
-	u8 hash[SHA256_MAC_LEN];
-	const u8 *addr[1];
-	size_t len[1];
 
 	os_memset(intro, 0, sizeof(*intro));
 	os_memset(&info, 0, sizeof(info));
@@ -4789,27 +4643,6 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		wpa_printf(MSG_ERROR, "DPP: Failed to parse own netAccessKey");
 		goto fail;
 	}
-	/* deviceId = SHA256(ANSI X9.63 uncompressed netAccessKey) */
-	own_key_pub = dpp_get_pubkey_point(own_key, 1);
-	if (!own_key_pub)
-		goto fail;
-	wpa_hexdump_buf(MSG_DEBUG,
-			"DPP: ANSI X9.63 uncompressed public key of own netAccessKey",
-			own_key_pub);
-	addr[0] = wpabuf_head(own_key_pub);
-	len[0] = wpabuf_len(own_key_pub);
-	if (sha256_vector(1, addr, len, hash) < 0)
-		goto fail;
-	wpa_hexdump(MSG_DEBUG,
-		    "DPP: SHA256 hash of ANSI X9.63 uncompressed form",
-		    hash, SHA256_MAC_LEN);
-
-	own_deviceid = (char *) base64_url_encode(hash, sizeof(hash), NULL, 0);
-	if (!own_deviceid)
-		goto fail;
-	wpa_printf(MSG_DEBUG,
-		   "DPP: Own deviceId (base64url encoded hash value): %s",
-		   own_deviceid);
 
 	pos = os_strchr(own_connector, '.');
 	if (!pos) {
@@ -4853,9 +4686,9 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		goto fail;
 	}
 
-	if (!dpp_connector_match(own_root, root, own_deviceid)) {
+	if (!dpp_connector_match_groups(own_root, root)) {
 		wpa_printf(MSG_DEBUG,
-			   "DPP: Peer connector does not include compatible group/device netrole with own connector");
+			   "DPP: Peer connector does not include compatible group netrole with own connector");
 		goto fail;
 	}
 
@@ -4937,7 +4770,6 @@ fail:
 	os_free(info.payload);
 	EVP_PKEY_free(own_key);
 	wpabuf_free(own_key_pub);
-	os_free(own_deviceid);
 	EVP_PKEY_free(peer_key);
 	EVP_PKEY_free(csign);
 	json_free(root);

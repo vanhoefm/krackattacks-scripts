@@ -296,6 +296,16 @@ struct json_token * json_parse(const char *data, size_t data_len)
 				token->type = JSON_STRING;
 				token->string = str;
 				token->state = JSON_COMPLETED;
+			} else if (curr_token->parent &&
+				   curr_token->parent->type == JSON_ARRAY &&
+				   curr_token->parent->state == JSON_STARTED &&
+				   curr_token->state == JSON_EMPTY) {
+				curr_token->string = str;
+				curr_token->state = JSON_COMPLETED;
+				curr_token->type = JSON_STRING;
+				wpa_printf(MSG_MSGDUMP,
+					   "JSON: String value: '%s'",
+					   curr_token->string);
 			} else if (curr_token->state == JSON_EMPTY) {
 				curr_token->type = JSON_VALUE;
 				curr_token->name = str;
@@ -358,6 +368,12 @@ struct json_token * json_parse(const char *data, size_t data_len)
 				wpa_printf(MSG_MSGDUMP,
 					   "JSON: Literal name: '%s' = %c",
 					   curr_token->name, *pos);
+			} else if (curr_token->parent &&
+				   curr_token->parent->type == JSON_ARRAY &&
+				   curr_token->parent->state == JSON_STARTED &&
+				   curr_token->state == JSON_EMPTY) {
+				wpa_printf(MSG_MSGDUMP,
+					   "JSON: Literal name: %c", *pos);
 			} else {
 				wpa_printf(MSG_DEBUG,
 					   "JSON: Invalid state for a literal name");
@@ -409,6 +425,16 @@ struct json_token * json_parse(const char *data, size_t data_len)
 				wpa_printf(MSG_MSGDUMP,
 					   "JSON: Number value: '%s' = '%d'",
 					   curr_token->name,
+					   curr_token->number);
+			} else if (curr_token->parent &&
+				   curr_token->parent->type == JSON_ARRAY &&
+				   curr_token->parent->state == JSON_STARTED &&
+				   curr_token->state == JSON_EMPTY) {
+				curr_token->number = num;
+				curr_token->state = JSON_COMPLETED;
+				curr_token->type = JSON_NUMBER;
+				wpa_printf(MSG_MSGDUMP,
+					   "JSON: Number value: %d",
 					   curr_token->number);
 			} else {
 				wpa_printf(MSG_DEBUG,

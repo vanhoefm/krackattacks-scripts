@@ -620,10 +620,8 @@ def test_dpp_config_override_objects(dev, apdev):
     check_dpp_capab(dev[1])
     discovery = '{\n"ssid":"mywifi",\n"op_cl":81,\n"ch_list":\n[\n{"ch":1},\n{"ch":6},\n{"ch":11}\n]\n}'
     groups = '[\n  {"groupId":"home","netRole":"sta"},\n  {"groupId":"cottage","netRole":"sta"}\n]'
-    devices = '[\n{"deviceId":"G1YaJYMbA9029ocP3BVCg5kj3yGHWYi3M2hJqyOmcxQ","netRole":"sta"},\n{"deviceId":"Azs-ksefien1CA8EYIliu6N6vGrTa3qowqCHKK8Iu0Y","netRole":"sta"}\n]'
     dev[1].set("dpp_discovery_override", discovery)
     dev[1].set("dpp_groups_override", groups)
-    dev[1].set("dpp_devices_override", devices)
     run_dpp_qr_code_auth_unicast(dev, apdev, "prime256v1",
                                  init_extra="conf=sta-dpp",
                                  require_conf_success=True,

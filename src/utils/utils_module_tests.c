@@ -875,6 +875,10 @@ static const struct json_test_data json_test_cases[] = {
 	{ "{:}", NULL },
 	{ "[:]", NULL },
 	{ "{ \"\\u005c\" : \"\\u005c\" }", "[1:OBJECT:][2:STRING:\\]" },
+	{ "[{},{}]", "[1:ARRAY:][2:OBJECT:][2:OBJECT:]" },
+	{ "[1,2]", "[1:ARRAY:][2:NUMBER:][2:NUMBER:]" },
+	{ "[\"1\",\"2\"]", "[1:ARRAY:][2:STRING:][2:STRING:]" },
+	{ "[true,false]", "[1:ARRAY:][2:BOOLEAN:][2:BOOLEAN:]" },
 };
 #endif /* CONFIG_JSON */
 

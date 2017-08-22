@@ -163,6 +163,43 @@ def run_sigma_dut_psk_pmf(dev, apdev):
 
     stop_sigma_dut(sigma)
 
+def test_sigma_dut_sae(dev, apdev):
+    """sigma_dut controlled SAE association"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname)
+
+    ssid = "test-sae"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    sigma_dut_cmd_check("sta_reset_default,interface,%s" % ifname)
+    sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+    sigma_dut_cmd_check("sta_set_security,interface,%s,ssid,%s,passphrase,%s,type,SAE,encpType,aes-ccmp,keymgmttype,wpa2" % (ifname, "test-sae", "12345678"))
+    sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-sae"))
+    sigma_dut_wait_connected(ifname)
+    sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+    if dev[0].get_status_field('sae_group') != '19':
+            raise Exception("Expected default SAE group not used")
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+    sigma_dut_cmd_check("sta_set_security,interface,%s,ssid,%s,passphrase,%s,type,SAE,encpType,aes-ccmp,keymgmttype,wpa2,ECGroupID,20" % (ifname, "test-sae", "12345678"))
+    sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-sae"))
+    sigma_dut_wait_connected(ifname)
+    sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+    if dev[0].get_status_field('sae_group') != '20':
+            raise Exception("Expected SAE group not used")
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    stop_sigma_dut(sigma)
+
 def test_sigma_dut_sta_override_rsne(dev, apdev):
     """sigma_dut and RSNE override on STA"""
     try:
@@ -232,6 +269,65 @@ def test_sigma_dut_ap_override_rsne(dev, apdev):
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
             dev[0].connect("test-psk", psk="12345678", scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_sae(dev, apdev):
+    """sigma_dut controlled AP with SAE"""
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface)
+        try:
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,WPA2-SAE,PSK,12345678")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].request("SET sae_groups ")
+            dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
+                           scan_freq="2412")
+            if dev[0].get_status_field('sae_group') != '19':
+                raise Exception("Expected default SAE group not used")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_sae_group(dev, apdev):
+    """sigma_dut controlled AP with SAE and specific group"""
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface)
+        try:
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,WPA2-SAE,PSK,12345678,ECGroupID,20")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].request("SET sae_groups ")
+            dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
+                           scan_freq="2412")
+            if dev[0].get_status_field('sae_group') != '20':
+                raise Exception("Expected SAE group not used")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_psk_sae(dev, apdev):
+    """sigma_dut controlled AP with PSK+SAE"""
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface)
+        try:
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,WPA2-PSK-SAE,PSK,12345678")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].request("SET sae_groups ")
+            dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
+                           scan_freq="2412")
+            dev[1].connect("test-sae", psk="12345678", scan_freq="2412")
 
             sigma_dut_cmd_check("ap_reset_default")
         finally:

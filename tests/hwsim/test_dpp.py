@@ -618,7 +618,7 @@ def test_dpp_config_dpp_override_secp521r1(dev, apdev):
 def test_dpp_config_override_objects(dev, apdev):
     """Generate DPP Config Object and override objects)"""
     check_dpp_capab(dev[1])
-    discovery = '{\n"ssid":"mywifi",\n"op_cl":81,\n"ch_list":\n[\n{"ch":1},\n{"ch":6},\n{"ch":11}\n]\n}'
+    discovery = '{\n"ssid":"mywifi",\n"op_cl":81,\n"ch_list":\n[1,6]\n}'
     groups = '[\n  {"groupId":"home","netRole":"sta"},\n  {"groupId":"cottage","netRole":"sta"}\n]'
     dev[1].set("dpp_discovery_override", discovery)
     dev[1].set("dpp_groups_override", groups)

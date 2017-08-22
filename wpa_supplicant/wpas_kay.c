@@ -235,10 +235,9 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	res = ieee802_1x_kay_init(kay_ctx, policy, ssid->macsec_port,
 				  ssid->mka_priority, wpa_s->ifname,
 				  wpa_s->own_addr);
-	if (res == NULL) {
-		os_free(kay_ctx);
+	/* ieee802_1x_kay_init() frees kay_ctx on failure */
+	if (res == NULL)
 		return -1;
-	}
 
 	wpa_s->kay = res;
 

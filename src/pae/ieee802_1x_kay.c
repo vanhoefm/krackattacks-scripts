@@ -3100,6 +3100,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	kay = os_zalloc(sizeof(*kay));
 	if (!kay) {
 		wpa_printf(MSG_ERROR, "KaY-%s: out of memory", __func__);
+		os_free(ctx);
 		return NULL;
 	}
 
@@ -3134,10 +3135,8 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	dl_list_init(&kay->participant_list);
 
 	if (policy != DO_NOT_SECURE &&
-	    secy_get_capability(kay, &kay->macsec_capable) < 0) {
-		os_free(kay);
-		return NULL;
-	}
+	    secy_get_capability(kay, &kay->macsec_capable) < 0)
+		goto error;
 
 	if (policy == DO_NOT_SECURE ||
 	    kay->macsec_capable == MACSEC_CAP_NOT_IMPLEMENTED) {
@@ -3164,16 +3163,17 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	wpa_printf(MSG_DEBUG, "KaY: state machine created");
 
 	/* Initialize the SecY must be prio to CP, as CP will control SecY */
-	secy_init_macsec(kay);
+	if (secy_init_macsec(kay) < 0) {
+		wpa_printf(MSG_DEBUG, "KaY: Could not initialize MACsec");
+		goto error;
+	}
 
 	wpa_printf(MSG_DEBUG, "KaY: secy init macsec done");
 
 	/* init CP */
 	kay->cp = ieee802_1x_cp_sm_init(kay);
-	if (kay->cp == NULL) {
-		ieee802_1x_kay_deinit(kay);
-		return NULL;
-	}
+	if (kay->cp == NULL)
+		goto error;
 
 	if (policy == DO_NOT_SECURE) {
 		ieee802_1x_cp_connect_authenticated(kay->cp);
@@ -3184,12 +3184,15 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		if (kay->l2_mka == NULL) {
 			wpa_printf(MSG_WARNING,
 				   "KaY: Failed to initialize L2 packet processing for MKA packet");
-			ieee802_1x_kay_deinit(kay);
-			return NULL;
+			goto error;
 		}
 	}
 
 	return kay;
+
+error:
+	ieee802_1x_kay_deinit(kay);
+	return NULL;
 }
 
 

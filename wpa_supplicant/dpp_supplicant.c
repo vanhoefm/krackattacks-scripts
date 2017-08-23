@@ -38,6 +38,10 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 
 static const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+/* Use a hardcoded Transaction ID 1 in Peer Discovery frames since there is only
+ * a single transaction in progress at any point in time. */
+static const u8 TRANSACTION_ID = 1;
+
 
 static struct dpp_configurator *
 dpp_configurator_get_id(struct wpa_supplicant *wpa_s, unsigned int id)
@@ -1256,8 +1260,8 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 				       const u8 *buf, size_t len)
 {
 	struct wpa_ssid *ssid;
-	const u8 *connector, *pk_hash, *nk_hash;
-	u16 connector_len, pk_hash_len, nk_hash_len;
+	const u8 *connector, *trans_id;
+	u16 connector_len, trans_id_len;
 	struct dpp_introduction intro;
 	struct rsn_pmksa_cache_entry *entry;
 	struct os_time now;
@@ -1286,6 +1290,20 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	trans_id = dpp_get_attr(buf, len, DPP_ATTR_TRANSACTION_ID,
+			       &trans_id_len);
+	if (!trans_id || trans_id_len != 1) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer did not include Transaction ID");
+		goto fail;
+	}
+	if (trans_id[0] != TRANSACTION_ID) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Ignore frame with unexpected Transaction ID %u",
+			   trans_id[0]);
+		goto fail;
+	}
+
 	connector = dpp_get_attr(buf, len, DPP_ATTR_CONNECTOR, &connector_len);
 	if (!connector) {
 		wpa_printf(MSG_DEBUG,
@@ -1301,36 +1319,6 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 			   connector, connector_len, &expiry) < 0) {
 		wpa_printf(MSG_INFO,
 			   "DPP: Network Introduction protocol resulted in failure");
-		goto fail;
-	}
-
-	pk_hash = dpp_get_attr(buf, len, DPP_ATTR_PEER_NET_PK_HASH,
-			       &pk_hash_len);
-	if (!pk_hash || pk_hash_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG, "DPP: Peer did not include SHA256(PK)");
-		goto fail;
-	}
-	if (os_memcmp(pk_hash, intro.nk_hash, SHA256_MAC_LEN) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: SHA256(PK) mismatch");
-		wpa_hexdump(MSG_DEBUG, "DPP: Received SHA256(PK)",
-			    pk_hash, pk_hash_len);
-		wpa_hexdump(MSG_DEBUG, "DPP: Calculated SHA256(PK)",
-			    intro.nk_hash, SHA256_MAC_LEN);
-		goto fail;
-	}
-
-	nk_hash = dpp_get_attr(buf, len, DPP_ATTR_OWN_NET_NK_HASH,
-			       &nk_hash_len);
-	if (!nk_hash || nk_hash_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG, "DPP: Peer did not include SHA256(NK)");
-		goto fail;
-	}
-	if (os_memcmp(nk_hash, intro.pk_hash, SHA256_MAC_LEN) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: SHA256(NK) mismatch");
-		wpa_hexdump(MSG_DEBUG, "DPP: Received SHA256(NK)",
-			    nk_hash, nk_hash_len);
-		wpa_hexdump(MSG_DEBUG, "DPP: Calculated SHA256(NK)",
-			    intro.pk_hash, SHA256_MAC_LEN);
 		goto fail;
 	}
 
@@ -1872,9 +1860,14 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 		   MACSTR, MAC2STR(bss->bssid));
 
 	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_REQ,
-			    4 + os_strlen(ssid->dpp_connector));
+			    5 + 4 + os_strlen(ssid->dpp_connector));
 	if (!msg)
 		return -1;
+
+	/* Transaction ID */
+	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, TRANSACTION_ID);
 
 	/* DPP Connector */
 	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);

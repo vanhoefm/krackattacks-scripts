@@ -44,12 +44,12 @@ enum dpp_attribute_id {
 	DPP_ATTR_CONNECTOR = 0x100D,
 	DPP_ATTR_CONFIG_ATTR_OBJ = 0x100E,
 	DPP_ATTR_BOOTSTRAP_KEY = 0x100F,
-	DPP_ATTR_PEER_NET_PK_HASH = 0x1010,
 	DPP_ATTR_OWN_NET_NK_HASH = 0x1011,
 	DPP_ATTR_FINITE_CYCLIC_GROUP = 0x1012,
 	DPP_ATTR_ENCRYPTED_KEY = 0x1013,
 	DPP_ATTR_ENROLLEE_NONCE = 0x1014,
 	DPP_ATTR_CODE_IDENTIFIER = 0x1015,
+	DPP_ATTR_TRANSACTION_ID = 0x1016,
 };
 
 enum dpp_status_error {
@@ -201,8 +201,6 @@ struct dpp_introduction {
 	u8 pmkid[PMKID_LEN];
 	u8 pmk[PMK_LEN_MAX];
 	size_t pmk_len;
-	u8 pk_hash[SHA256_MAC_LEN];
-	u8 nk_hash[SHA256_MAC_LEN];
 };
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);

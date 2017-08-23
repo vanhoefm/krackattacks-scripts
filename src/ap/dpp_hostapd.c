@@ -895,8 +895,8 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 					 const u8 *buf, size_t len,
 					 unsigned int freq)
 {
-	const u8 *connector;
-	u16 connector_len;
+	const u8 *connector, *trans_id;
+	u16 connector_len, trans_id_len;
 	struct os_time now;
 	struct dpp_introduction intro;
 	os_time_t expire;
@@ -928,6 +928,14 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	if (hapd->conf->dpp_netaccesskey_expiry &&
 	    hapd->conf->dpp_netaccesskey_expiry < now.sec) {
 		wpa_printf(MSG_INFO, "DPP: Own netAccessKey expired");
+		return;
+	}
+
+	trans_id = dpp_get_attr(buf, len, DPP_ATTR_TRANSACTION_ID,
+			       &trans_id_len);
+	if (!trans_id || trans_id_len != 1) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer did not include Transaction ID");
 		return;
 	}
 
@@ -966,20 +974,14 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	}
 
 	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_RESP,
-			    2 * (4 + SHA256_MAC_LEN) +
-			    4 + os_strlen(hapd->conf->dpp_connector));
+			    5 + 4 + os_strlen(hapd->conf->dpp_connector));
 	if (!msg)
 		return;
 
-	/* SHA256(PK) */
-	wpabuf_put_le16(msg, DPP_ATTR_PEER_NET_PK_HASH);
-	wpabuf_put_le16(msg, SHA256_MAC_LEN);
-	wpabuf_put_data(msg, intro.pk_hash, SHA256_MAC_LEN);
-
-	/* SHA256(NK) */
-	wpabuf_put_le16(msg, DPP_ATTR_OWN_NET_NK_HASH);
-	wpabuf_put_le16(msg, SHA256_MAC_LEN);
-	wpabuf_put_data(msg, intro.nk_hash, SHA256_MAC_LEN);
+	/* Transaction ID */
+	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, trans_id[0]);
 
 	/* DPP Connector */
 	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);

@@ -4577,30 +4577,6 @@ fail:
 }
 
 
-static int dpp_netkey_hash(EVP_PKEY *key, u8 *hash)
-{
-	EC_KEY *eckey;
-	unsigned char *der = NULL;
-	int ret, der_len;
-	const u8 *addr[1];
-	size_t len[1];
-
-	eckey = EVP_PKEY_get1_EC_KEY(key);
-	if (!eckey)
-		return -1;
-	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
-	der_len = i2d_EC_PUBKEY(eckey, &der);
-	EC_KEY_free(eckey);
-	if (der_len <= 0)
-		return -1;
-	addr[0] = der;
-	len[0] = der_len;
-	ret = sha256_vector(1, addr, len, hash);
-	OPENSSL_free(der);
-	return ret;
-}
-
-
 int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		   const u8 *net_access_key, size_t net_access_key_len,
 		   const u8 *csign_key, size_t csign_key_len,
@@ -4750,12 +4726,6 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	/* PMKID = Truncate-128(H(min(NK.x, PK.x) | max(NK.x, PK.x))) */
 	if (dpp_derive_pmkid(curve, own_key, peer_key, intro->pmkid) < 0) {
 		wpa_printf(MSG_ERROR, "DPP: Failed to derive PMKID");
-		goto fail;
-	}
-
-	if (dpp_netkey_hash(own_key, intro->nk_hash) < 0 ||
-	    dpp_netkey_hash(peer_key, intro->pk_hash) < 0) {
-		wpa_printf(MSG_ERROR, "DPP: Failed to derive NK/PK hash");
 		goto fail;
 	}
 

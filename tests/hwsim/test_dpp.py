@@ -406,6 +406,14 @@ def test_dpp_qr_code_auth_initiator_enrollee(dev, apdev):
     ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
     if ev is None:
         raise Exception("DPP authentication did not succeed (Initiator)")
+
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration did not succeed (Configurator)")
+    ev = dev[1].wait_event(["DPP-CONF-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration did not succeed (Enrollee)")
+
     dev[0].request("DPP_STOP_LISTEN")
 
 def test_dpp_qr_code_auth_incompatible_roles(dev, apdev):

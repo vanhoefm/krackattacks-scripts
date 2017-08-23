@@ -986,7 +986,7 @@ static int curl_cb_ssl_verify(int preverify_ok, X509_STORE_CTX *x509_ctx)
 
 	ssl = X509_STORE_CTX_get_ex_data(x509_ctx,
 					 SSL_get_ex_data_X509_STORE_CTX_idx());
-	ssl_ctx = ssl->ctx;
+	ssl_ctx = SSL_get_SSL_CTX(ssl);
 	ctx = SSL_CTX_get_app_data(ssl_ctx);
 
 	wpa_printf(MSG_DEBUG, "curl_cb_ssl_verify, preverify_ok: %d",

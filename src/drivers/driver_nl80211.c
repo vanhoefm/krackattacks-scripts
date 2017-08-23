@@ -6416,7 +6416,7 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 			wpa_printf(MSG_ERROR, "nl80211: Failed to "
 				   "remove interface %s from bridge "
 				   "%s: %s",
-				   ifname, brname, strerror(errno));
+				   ifname, in_br, strerror(errno));
 			return -1;
 		}
 	}

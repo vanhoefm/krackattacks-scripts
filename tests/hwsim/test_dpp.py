@@ -9,6 +9,7 @@ logger = logging.getLogger()
 import time
 
 import hostapd
+import hwsim_utils
 from utils import HwsimSkip
 from wpasupplicant import WpaSupplicant
 
@@ -1091,6 +1092,7 @@ def run_dpp_auto_connect(dev, apdev, processing):
         dev[0].select_network(id, freq=2412)
 
     dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_dpp_auto_connect_legacy(dev, apdev):
     """DPP and auto connect (legacy)"""

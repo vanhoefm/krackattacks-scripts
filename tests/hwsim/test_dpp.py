@@ -10,6 +10,7 @@ import time
 
 import hostapd
 from utils import HwsimSkip
+from wpasupplicant import WpaSupplicant
 
 def check_dpp_capab(dev):
     if "UNKNOWN COMMAND" in dev.request("DPP_BOOTSTRAP_GET_URI 0"):
@@ -1016,6 +1017,16 @@ def test_dpp_auto_connect_2(dev, apdev):
         run_dpp_auto_connect(dev, apdev, 2)
     finally:
         dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_2_connect_cmd(dev, apdev):
+    """DPP and auto connect (2) using connect_cmd"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    dev_new = [ wpas, dev[1] ]
+    try:
+        run_dpp_auto_connect(dev_new, apdev, 2)
+    finally:
+        wpas.set("dpp_config_processing", "0")
 
 def run_dpp_auto_connect(dev, apdev, processing):
     check_dpp_capab(dev[0])

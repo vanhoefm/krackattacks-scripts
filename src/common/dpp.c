@@ -4541,7 +4541,7 @@ static int dpp_derive_pmkid(const struct dpp_curve_params *curve,
 	int ret = -1, res;
 	const u8 *addr[2];
 	size_t len[2];
-	u8 hash[DPP_MAX_HASH_LEN];
+	u8 hash[SHA256_MAC_LEN];
 
 	/* PMKID = Truncate-128(H(min(NK.x, PK.x) | max(NK.x, PK.x))) */
 	nkx = dpp_get_pubkey_point(own_key, 0);
@@ -4558,15 +4558,12 @@ static int dpp_derive_pmkid(const struct dpp_curve_params *curve,
 		addr[0] = wpabuf_head(pkx);
 		addr[1] = wpabuf_head(nkx);
 	}
-	wpa_printf(MSG_DEBUG, "DPP: PMKID H=SHA%u",
-		   (unsigned int) curve->hash_len * 8);
 	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash payload 1", addr[0], len[0]);
 	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash payload 2", addr[1], len[1]);
-	res = dpp_hash_vector(curve, 2, addr, len, hash);
+	res = sha256_vector(2, addr, len, hash);
 	if (res < 0)
 		goto fail;
-	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash output",
-		    hash, curve->hash_len);
+	wpa_hexdump(MSG_DEBUG, "DPP: PMKID hash output", hash, SHA256_MAC_LEN);
 	os_memcpy(pmkid, hash, PMKID_LEN);
 	wpa_hexdump(MSG_DEBUG, "DPP: PMKID", pmkid, PMKID_LEN);
 	ret = 0;

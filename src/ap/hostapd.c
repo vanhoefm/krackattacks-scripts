@@ -2961,6 +2961,9 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	ieee802_1x_new_station(hapd, sta);
 	if (reassoc) {
 		if (sta->auth_alg != WLAN_AUTH_FT &&
+		    sta->auth_alg != WLAN_AUTH_FILS_SK &&
+		    sta->auth_alg != WLAN_AUTH_FILS_SK_PFS &&
+		    sta->auth_alg != WLAN_AUTH_FILS_PK &&
 		    !(sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS)))
 			wpa_auth_sm_event(sta->wpa_sm, WPA_REAUTH);
 	} else

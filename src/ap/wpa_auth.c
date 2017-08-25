@@ -2152,6 +2152,7 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 	if (res < 0)
 		return res;
 	sm->PTK_valid = TRUE;
+	sm->tk_already_set = FALSE;
 
 #ifdef CONFIG_IEEE80211R_AP
 	if (fils_ft_len) {
@@ -2585,8 +2586,14 @@ int fils_set_tk(struct wpa_state_machine *sm)
 	enum wpa_alg alg;
 	int klen;
 
-	if (!sm || !sm->PTK_valid)
+	if (!sm || !sm->PTK_valid) {
+		wpa_printf(MSG_DEBUG, "FILS: No valid PTK available to set TK");
 		return -1;
+	}
+	if (sm->tk_already_set) {
+		wpa_printf(MSG_DEBUG, "FILS: TK already set to the driver");
+		return -1;
+	}
 
 	alg = wpa_cipher_to_alg(sm->pairwise);
 	klen = wpa_cipher_key_len(sm->pairwise);
@@ -2597,6 +2604,7 @@ int fils_set_tk(struct wpa_state_machine *sm)
 		wpa_printf(MSG_DEBUG, "FILS: Failed to set TK to the driver");
 		return -1;
 	}
+	sm->tk_already_set = TRUE;
 
 	return 0;
 }
@@ -3965,6 +3973,14 @@ int wpa_auth_sta_wpa_version(struct wpa_state_machine *sm)
 int wpa_auth_sta_ft_tk_already_set(struct wpa_state_machine *sm)
 {
 	if (!sm || !wpa_key_mgmt_ft(sm->wpa_key_mgmt))
+		return 0;
+	return sm->tk_already_set;
+}
+
+
+int wpa_auth_sta_fils_tk_already_set(struct wpa_state_machine *sm)
+{
+	if (!sm || !wpa_key_mgmt_fils(sm->wpa_key_mgmt))
 		return 0;
 	return sm->tk_already_set;
 }

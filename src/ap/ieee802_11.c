@@ -2645,7 +2645,8 @@ static int add_associated_sta(struct hostapd_data *hapd,
 	 */
 	if (!sta->added_unassoc &&
 	    (!(sta->flags & WLAN_STA_AUTHORIZED) ||
-	     !wpa_auth_sta_ft_tk_already_set(sta->wpa_sm))) {
+	     (!wpa_auth_sta_ft_tk_already_set(sta->wpa_sm) &&
+	      !wpa_auth_sta_fils_tk_already_set(sta->wpa_sm)))) {
 		hostapd_drv_sta_remove(hapd, sta->addr);
 		wpa_auth_sm_event(sta->wpa_sm, WPA_DRV_STA_REMOVED);
 		set = 0;

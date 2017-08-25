@@ -14,6 +14,7 @@ import struct
 import time
 
 import hostapd
+from tshark import run_tshark
 from wpasupplicant import WpaSupplicant
 import hwsim_utils
 from utils import HwsimSkip, alloc_fail
@@ -1723,3 +1724,93 @@ def test_fils_and_ft(dev, apdev, params):
     # FIX: Cannot use FT-over-DS without the FTE MIC issue addressed
     #dev[0].roam_over_ds(apdev[1]['bssid'])
     dev[0].roam(apdev[1]['bssid'])
+
+def test_fils_assoc_replay(dev, apdev, params):
+    """FILS AP and replayed Association Request frame"""
+    capfile = os.path.join(params['logdir'], "hwsim0.pcapng")
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1])
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+
+    assocreq = None
+    count = 0
+    while count < 100:
+        req = hapd.mgmt_rx()
+        count += 1
+        hapd.dump_monitor()
+        hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+        if req['subtype'] == 0:
+            assocreq = req
+            ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+            if ev is None:
+                raise Exception("No TX status seen")
+            cmd = "MGMT_TX_STATUS_PROCESS %s" % (" ".join(ev.split(' ')[1:4]))
+            if "OK" not in hapd.request(cmd):
+                raise Exception("MGMT_TX_STATUS_PROCESS failed")
+            break
+    hapd.set("ext_mgmt_frame_handling", "0")
+    if assocreq is None:
+        raise Exception("No Association Request frame seen")
+    dev[0].wait_connected()
+    dev[0].dump_monitor()
+    hapd.dump_monitor()
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    logger.info("Replay the last Association Request frame")
+    hapd.dump_monitor()
+    hapd.set("ext_mgmt_frame_handling", "1")
+    hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=" + binascii.hexlify(req['frame']))
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("No TX status seen")
+    cmd = "MGMT_TX_STATUS_PROCESS %s" % (" ".join(ev.split(' ')[1:4]))
+    if "OK" not in hapd.request(cmd):
+        raise Exception("MGMT_TX_STATUS_PROCESS failed")
+    hapd.set("ext_mgmt_frame_handling", "0")
+
+    try:
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        ok = True
+    except:
+        ok = False
+
+    ap = hapd.own_addr()
+    sta = dev[0].own_addr()
+    filt = "wlan.fc.type == 2 && " + \
+           "wlan.da == " + sta + " && " + \
+           "wlan.sa == " + ap + " && wlan.ccmp.extiv"
+    fields = [ "wlan.ccmp.extiv" ]
+    res = run_tshark(capfile, filt, fields)
+    vals = res.splitlines()
+    logger.info("CCMP PN: " + str(vals))
+    if len(vals) < 2:
+        raise Exception("Could not find all CCMP protected frames from capture")
+    if len(set(vals)) < len(vals):
+        raise Exception("Duplicate CCMP PN used")
+
+    if not ok:
+        raise Exception("The second hwsim connectivity test failed")

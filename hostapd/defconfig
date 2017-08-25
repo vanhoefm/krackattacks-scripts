@@ -31,7 +31,7 @@ CONFIG_DRIVER_NL80211=y
 #CONFIG_LIBNL20=y
 
 # Use libnl 3.2 libraries (if this is selected, CONFIG_LIBNL20 is ignored)
-#CONFIG_LIBNL32=y
+CONFIG_LIBNL32=y
 
 
 # Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)

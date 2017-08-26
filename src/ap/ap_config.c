@@ -53,7 +53,7 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->broadcast_key_idx_max = 2;
 	bss->eap_reauth_period = 3600;
 
-	bss->wpa_group_rekey = 600;
+	bss->wpa_group_rekey = 86400;
 	bss->wpa_gmk_rekey = 86400;
 	bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 	bss->wpa_pairwise = WPA_CIPHER_TKIP;

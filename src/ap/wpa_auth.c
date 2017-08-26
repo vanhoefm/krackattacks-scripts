@@ -65,6 +65,10 @@ static const int dot11RSNAConfigPMKLifetime = 43200;
 static const int dot11RSNAConfigPMKReauthThreshold = 70;
 static const int dot11RSNAConfigSATimeout = 60;
 
+/* globals to control the handshake being tested */
+#define TEST_4WAY	1
+#define TEST_GROUP	2
+int poc_testing_handshake = TEST_4WAY;
 
 static inline int wpa_auth_mic_failure_report(
 	struct wpa_authenticator *wpa_auth, const u8 *addr)
@@ -164,7 +168,7 @@ static inline int wpa_auth_start_ampe(struct wpa_authenticator *wpa_auth,
 }
 #endif /* CONFIG_MESH */
 
-void poc_log(const u8 *clientmac, const char *format, ...)
+static void poc_log(const u8 *clientmac, const char *format, ...)
 {
 	time_t rawtime;
 	struct tm *timeinfo;
@@ -174,8 +178,13 @@ void poc_log(const u8 *clientmac, const char *format, ...)
 
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
-	printf("[%02d:%02d:%02d] " MACSTR ": Hostapd: ", timeinfo->tm_hour,
-		timeinfo->tm_min, timeinfo->tm_sec, MAC2STR(clientmac));
+	if (clientmac == NULL) {
+		printf("[%02d:%02d:%02d] Hostapd: ", timeinfo->tm_hour,
+			timeinfo->tm_min, timeinfo->tm_sec);
+	} else {
+		printf("[%02d:%02d:%02d] " MACSTR ": Hostapd: ", timeinfo->tm_hour,
+			timeinfo->tm_min, timeinfo->tm_sec, MAC2STR(clientmac));
+	}
 
 	vprintf(format, arg);
 
@@ -309,6 +318,18 @@ static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
 				       0, wpa_rekey_gtk, wpa_auth, NULL);
 	}
+}
+
+void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth)
+{
+	// Start to periodically execute the group key handshake every 2 seconds
+	wpa_auth->conf.wpa_group_rekey = 2;
+	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
+	eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
+			       0, wpa_rekey_gtk, wpa_auth, NULL);
+
+	poc_testing_handshake = TEST_GROUP;
+	poc_log(NULL, "starting group key handshake tests\n");
 }
 
 
@@ -990,14 +1011,17 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		msg = PAIRWISE_4;
 		msgtxt = "4/4 Pairwise";
 
-		// Still mark connection as complete, so we do receive and accept encrypted data
-		if (sm->keycount <= 0) {
-			wpa_auth_set_eapol(sm->wpa_auth, sm->addr, WPA_EAPOL_authorized, 1);
-			sm->keycount = 1;
-		}
+		if (poc_testing_handshake == TEST_4WAY)
+		{
+			// Still mark connection as complete, so we do receive and accept encrypted data
+			if (sm->keycount <= 0) {
+				wpa_auth_set_eapol(sm->wpa_auth, sm->addr, WPA_EAPOL_authorized, 1);
+				sm->keycount = 1;
+			}
 
-		//poc_log(sm->addr, "Ignoring Msg4/4\n");
-		return;
+			//poc_log(sm->addr, "Ignoring Msg4/4\n");
+			return;
+		}
 	} else {
 		msg = PAIRWISE_2;
 		msgtxt = "2/4 Pairwise";
@@ -2244,7 +2268,7 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		return;
 	}
 
-	if (sm->TimeoutCtr > 1 && !sm->pairwise_set) {
+	if (poc_testing_handshake == TEST_4WAY && sm->TimeoutCtr > 1 && !sm->pairwise_set) {
 		poc_log(sm->addr, "already installing pairwise key\n");
 		enum wpa_alg alg = wpa_cipher_to_alg(sm->pairwise);
 		int klen = wpa_cipher_key_len(sm->pairwise);
@@ -2418,7 +2442,8 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	}
 #endif /* CONFIG_P2P */
 
-	poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg4/4\n");
+	if (poc_testing_handshake == TEST_4WAY)
+		poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg4/4\n");
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) | WPA_KEY_INFO_MIC |
@@ -2736,12 +2761,17 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 {
 	int ret = 0;
 
-	os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
-	inc_byte_array(group->Counter, WPA_NONCE_LEN);
-	if (wpa_gmk_to_gtk(group->GMK, "Group key expansion",
-			   wpa_auth->addr, group->GNonce,
-			   group->GTK[group->GN - 1], group->GTK_len) < 0)
-		ret = -1;
+	if (poc_testing_handshake == TEST_GROUP) {
+		//printf(">>> Reusing previous GTK as new GTK: %02X %02X %02X %02X ..\n", group->GTK[group->GN - 1][0],
+		//	group->GTK[group->GN - 1][1], group->GTK[group->GN - 1][2], group->GTK[group->GN - 1][3]);
+	} else {
+		os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
+		inc_byte_array(group->Counter, WPA_NONCE_LEN);
+		if (wpa_gmk_to_gtk(group->GMK, "Group key expansion",
+				   wpa_auth->addr, group->GNonce,
+				   group->GTK[group->GN - 1], group->GTK_len) < 0)
+			ret = -1;
+	}
 	wpa_hexdump_key(MSG_DEBUG, "GTK",
 			group->GTK[group->GN - 1], group->GTK_len);
 
@@ -2911,9 +2941,13 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 	group->changed = TRUE;
 	group->wpa_group_state = WPA_GROUP_SETKEYS;
 	group->GTKReKey = FALSE;
-	tmp = group->GM;
-	group->GM = group->GN;
-	group->GN = tmp;
+	if (poc_testing_handshake == TEST_GROUP) {
+		//printf(">>> %s: not chaning keyidx of new group key\n", __FUNCTION__);
+	} else {
+		tmp = group->GM;
+		group->GM = group->GN;
+		group->GN = tmp;
+	}
 #ifdef CONFIG_IEEE80211W
 	tmp = group->GM_igtk;
 	group->GM_igtk = group->GN_igtk;

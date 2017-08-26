@@ -347,4 +347,6 @@ void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth);
 int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 
+void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth);
+
 #endif /* WPA_AUTH_H */

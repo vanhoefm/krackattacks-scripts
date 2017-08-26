@@ -55,6 +55,7 @@
 #include "fst/fst_ctrl_iface.h"
 #include "config_file.h"
 #include "ctrl_iface.h"
+#include "../src/ap/wpa_auth_i.h"
 
 
 #define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
@@ -2285,6 +2286,31 @@ static int hostapd_ctrl_driver_flags(struct hostapd_iface *iface, char *buf,
 }
 
 
+static int hostapd_get_tk(struct hostapd_data *hapd, const char *txtaddr, char *buf, size_t buflen)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+	int klen;
+	int res;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE GET_TK %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr)) return -1;
+	sta = ap_get_sta(hapd, addr);
+	if (!sta) return -1;
+
+	if (sta->wpa_sm == NULL) return -1;
+	klen = wpa_cipher_key_len(sta->wpa_sm->pairwise);
+	if (klen <= 0) return -1;
+
+	res = wpa_snprintf_hex(buf, buflen, sta->wpa_sm->PTK.tk, klen);
+	buf[res++] = '\n';
+	buf[res] = '\0';
+
+	return res;
+}
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2549,6 +2575,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strcmp(buf, "DRIVER_FLAGS") == 0) {
 		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
 						      reply_size);
+	} else if (os_strcmp(buf, "START_GROUP_TESTS") == 0) {
+		poc_start_testing_group_handshake(hapd->wpa_auth);
+	} else if (os_strncmp(buf, "GET_TK ", 7) == 0) {
+		reply_len = hostapd_get_tk(hapd, buf + 7, reply, reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

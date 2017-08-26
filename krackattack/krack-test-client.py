@@ -516,6 +516,9 @@ class KRAckAttackClient():
 	def configure_interfaces(self):
 		log(STATUS, "Note: disable Wi-Fi in network manager & disable hardware encryption. Both may interfere with this script.")
 
+		# 0. Some users may forget this otherwise
+		subprocess.check_output(["rfkill", "unblock", "wifi"])
+
 		# 1. Remove unused virtual interfaces to start from a clean state
 		subprocess.call(["iw", self.nic_mon, "del"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
@@ -536,8 +539,13 @@ class KRAckAttackClient():
 		self.hostapd = subprocess.Popen(["../hostapd/hostapd", "hostapd.conf"] + sys.argv[1:])
 		time.sleep(1)
 
-		self.hostapd_ctrl = Ctrl("hostapd_ctrl/" + self.nic_iface)
-		self.hostapd_ctrl.attach()
+		try:
+			self.hostapd_ctrl = Ctrl("hostapd_ctrl/" + self.nic_iface)
+			self.hostapd_ctrl.attach()
+		except:
+			log(ERROR, "It seems hostapd did not start properly, please inspect its output.")
+			log(ERROR, "Did you disable Wi-Fi in the network manager? Otherwise hostapd won't work.")
+			raise
 
 		self.sock_mon = MitmSocket(type=ETH_P_ALL, iface=self.nic_mon)
 		self.sock_eth = L2Socket(type=ETH_P_ALL, iface=self.nic_iface)

@@ -21,6 +21,7 @@ the 4-way handshake or group key handshake, take the following steps:
 2. The hardware encryption engine of some Wi-Fi NICs have bugs that interfere
    with our script. So disable hardware encryption by executing:
 
+      cd ../krackattack/
       ./disable-hwcrypto.sh
 
    This only needs to be done once. It's recommended to reboot after executing
@@ -34,75 +35,76 @@ the 4-way handshake or group key handshake, take the following steps:
       --debug   Show more debug messages
 
    All other supplied arguments are passed on to hostapd.
-   The two examples you will always need are:
+   The only two examples you will normally need are:
 
       {name}
       {name} --group
 
    The first one tests for key reinstallations in the 4-way handshake (see
-   step 5), and the second one for key reinstallations in the group key
-   handshake (see step 6).
+   step 4), and the second one for key reinstallations in the group key
+   handshake (see step 5).
 
-4. Connect with the client being tested to the network testnetwork using
-   password abcdefgh.
+   !! The default network name is testnetwork with password abcdefgh !!
 
-   Note that you can change these and other settings of the AP by modifying
-   hostapd.conf. You will probably have to edit the line `interface=` to
-   specify a Wi-Fi interface to use for the AP.
+   Note that you can change settings of the AP by modifying hostapd.conf.
+   You will probably have to edit the line `interface=` to specify a Wi-Fi
+   interface to use for the AP.
 
-
-5. To test key reinstallations in the 4-way handshake, the script will keep
+4. To test key reinstallations in the 4-way handshake, the script will keep
    sending encrypted message 3's to the client. To start the script execute:
 
       {name}
 
-5a. Our tool retransmits encrypted message 3's of the 4-way handshake. Hence
-   vulnerable clients to reinstall keys. The then script monitors traffic sent
-   by the client to see if the pairwise key is being reinstalled. To assure the
-   client is sending enough frames, you can ping the AP: ping 192.168.100.254 .
+   Connect the the AP and all tests will be performed automatically.
 
-   If the client is vulnerable, the script will show something like:
-      [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
+   4a. Our tool retransmits encrypted message 3's of the 4-way handshake. The
+     script monitors traffic sent by the client to see if the pairwise key is
+     being reinstalled. To assure the client is sending enough frames, you can
+     optionally ping the AP: ping 192.168.100.254 .
 
-   If the client is patched, the script will show (this can take a minute):
-      [18:58:11] 90:18:7c:6e:6b:20: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake.
+     If the client is vulnerable, the script will show something like:
+        [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
 
-5b. Once the client has requested an IP using DHCP, the script tests for
-   reinstallations of the group key by sending broadcast ARP requests to the
-   client using an already used (replayed) packet number (= IV). The client
-   *must* request an IP using DHCP for this test to start.
+     If the client is patched, the script will show (this can take a minute):
+        [18:58:11] 90:18:7c:6e:6b:20: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake.
 
-   If the client is vulnerable, the script will show something like:
-      [19:03:08] 78:31:c1:c4:88:92: Received 5 unique replies to replayed broadcast ARP requests. Client is vulnerable to group
-      [19:03:08]                    key reinstallations in the 4-way handshake (or client accepts replayed broadcast frames)!
+   4b. Once the client has requested an IP using DHCP, the script tests for
+     reinstallations of the group key by sending broadcast ARP requests to the
+     client using an already used (replayed) packet number (= IV). The client
+     *must* request an IP using DHCP for this test to start.
 
-   If the client is patched, the script will show (this can take a minute):
-      [19:03:08] 78:31:c1:c4:88:92: client DOESN'T seem vulnerable to group key reinstallation in the 4-way handshake handshake.
+     If the client is vulnerable, the script will show something like:
+        [19:03:08] 78:31:c1:c4:88:92: Received 5 unique replies to replayed broadcast ARP requests. Client is vulnerable to group
+        [19:03:08]                    key reinstallations in the 4-way handshake (or client accepts replayed broadcast frames)!
 
-   Note that this scripts *indirectly* tests for reinstallations of the group
-   key, by testing if replayed broadcast frames are accepted by the client.
+     If the client is patched, the script will show (this can take a minute):
+        [19:03:08] 78:31:c1:c4:88:92: client DOESN'T seem vulnerable to group key reinstallation in the 4-way handshake handshake.
+
+     Note that this scripts *indirectly* tests for reinstallations of the group
+     key, by testing if replayed broadcast frames are accepted by the client.
 
 
-6. To test key reinstallations in the group key handshake, the script will keep
+5. To test key reinstallations in the group key handshake, the script will keep
    performing new group key handshakes using an identical (static) group key.
    The client *must* request an IP using DHCP for this test to start. To start
    the script execute:
 
       {name} --group
 
-   The working and output of the script is similar to the one of step 5b.
+   Connect the the AP and all tests will be performed automatically. The
+   working and output of the script is similar as in step 4b.
 
 
-7. Some final recommendations:
+6. Some final recommendations:
 
-   7a. Perform these tests in a room with little interference. A *high* amount
+   6a. Perform these tests in a room with little interference. A *high* amount
        of packet loss will make this script unreliable!
-   7b. Manually inspect network traffic to confirm the output of the script:
+   6b. Manually inspect network traffic to confirm the output of the script:
        - Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls
          by monitoring the IVs of frames sent by the client.
        - Capture traffic on the client to see if the replayed broadcast ARP
          requests are accepted or not.
-   7c. If the client can use multiple Wi-Fi radios/NICs, test using a few
+   6c. If the client can use multiple Wi-Fi radios/NICs, test using a few
        different ones.
 """
 

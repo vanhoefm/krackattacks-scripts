@@ -13,6 +13,7 @@
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/attacks.h"
 
 #define MAX_OWN_IE_OVERRIDE 256
 
@@ -347,6 +348,8 @@ void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth);
 int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 
+#ifdef KRACK_TEST_CLIENT
 void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth);
+#endif
 
 #endif /* WPA_AUTH_H */

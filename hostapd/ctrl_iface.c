@@ -55,6 +55,7 @@
 #include "fst/fst_ctrl_iface.h"
 #include "config_file.h"
 #include "ctrl_iface.h"
+#include "common/attacks.h"
 #include "../src/ap/wpa_auth_i.h"
 
 
@@ -2286,6 +2287,7 @@ static int hostapd_ctrl_driver_flags(struct hostapd_iface *iface, char *buf,
 }
 
 
+#ifdef KRACK_TEST_CLIENT
 static int hostapd_get_tk(struct hostapd_data *hapd, const char *txtaddr, char *buf, size_t buflen)
 {
 	u8 addr[ETH_ALEN];
@@ -2309,6 +2311,7 @@ static int hostapd_get_tk(struct hostapd_data *hapd, const char *txtaddr, char *
 
 	return res;
 }
+#endif
 
 
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
@@ -2575,10 +2578,12 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strcmp(buf, "DRIVER_FLAGS") == 0) {
 		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
 						      reply_size);
+#ifdef KRACK_TEST_CLIENT
 	} else if (os_strcmp(buf, "START_GROUP_TESTS") == 0) {
 		poc_start_testing_group_handshake(hapd->wpa_auth);
 	} else if (os_strncmp(buf, "GET_TK ", 7) == 0) {
 		reply_len = hostapd_get_tk(hapd, buf + 7, reply, reply_size);
+#endif
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

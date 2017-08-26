@@ -24,8 +24,9 @@ the 4-way handshake or group key handshake, take the following steps:
       ./disable-hwcrypto.sh
 
    This only needs to be done once. It's recommended to reboot after executing
-   this script. We tested this script with an Intel Dual Band Wireless-AC 7260
-   and a TP-Link TL-WN722N.
+   this script. After plugging in your Wi-Fi NIC, use `systool -vm ath9k_htc`
+   or similar to confirm the nohwcript/.. param has been set. We tested this
+   script with an Intel Dual Band Wireless-AC 7260 and a TP-Link TL-WN722N.
 
 3. Execute this script. Accepted parameters are:
 
@@ -46,7 +47,8 @@ the 4-way handshake or group key handshake, take the following steps:
    password abcdefgh.
 
    Note that you can change these and other settings of the AP by modifying
-   hostapd.conf.
+   hostapd.conf. You will probably have to edit the line `interface=` to
+   specify a Wi-Fi interface to use for the AP.
 
 
 5. To test key reinstallations in the 4-way handshake, the script will keep
@@ -54,9 +56,10 @@ the 4-way handshake or group key handshake, take the following steps:
 
       {name}
 
-5a. The script monitors traffic sent by the client to see if the pairwise
-   key is being reinstalled. To assure the client is sending enough frames,
-   you can ping the AP: ping 192.168.100.254 .
+5a. Our tool retransmits encrypted message 3's of the 4-way handshake. Hence
+   vulnerable clients to reinstall keys. The then script monitors traffic sent
+   by the client to see if the pairwise key is being reinstalled. To assure the
+   client is sending enough frames, you can ping the AP: ping 192.168.100.254 .
 
    If the client is vulnerable, the script will show something like:
       [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!

@@ -420,9 +420,13 @@ class KRAckAttackClient():
 	def run(self, test_grouphs=False):
 		self.configure_interfaces()
 
-		# Open the hostapd instance that carries out tests and let it start
-		self.hostapd = subprocess.Popen(sys.argv[1:])
-		time.sleep(0.5)
+		# Open the patched hostapd instance that carries out tests and let it start
+		log(STATUS, "Starting hostapd ...")
+		self.hostapd = subprocess.Popen(["../hostapd/hostapd", "hostapd.conf"] + sys.argv[1:])
+		time.sleep(1)
+
+		self.hostapd_ctrl = Ctrl("hostapd_ctrl/" + self.nic_iface)
+		self.hostapd_ctrl.attach()
 
 		self.sock_mon = MitmSocket(type=ETH_P_ALL, iface=self.nic_mon)
 		self.sock_eth = L2Socket(type=ETH_P_ALL, iface=self.nic_iface)
@@ -438,18 +442,12 @@ class KRAckAttackClient():
 		self.group_ip = self.dhcp.pool.pop()
 		self.group_arp = ARP_sock(sock=self.sock_eth, IP_addr=self.group_ip, ARP_addr=self.apmac)
 
-		log(STATUS, "Giving the rogue hostapd one second to initialize ...")
-		time.sleep(1)
-
-		self.hostapd_ctrl = Ctrl("hostapd_ctrl/" + self.nic_iface)
-		self.hostapd_ctrl.attach()
-
 		# Inform hostapd that we are testing the group key, if applicalbe
 		if test_grouphs:
 			self.hostapd_ctrl.request("START_GROUP_TESTS")
 			self.test_grouphs = True
 
-		log(STATUS, "Ready. Connect to this Access Point to start the tests. Make sure the client requests an IP using DHCP!")
+		log(STATUS, "Ready. Connect to this Access Point to start the tests. Make sure the client requests an IP using DHCP!", color="green")
 
 		# Monitor the virtual monitor interface of the AP and perform the needed actions
 		self.next_arp = time.time() + 1
@@ -499,14 +497,10 @@ def argv_pop_argument(argument):
 	del sys.argv[idx]
 	return True
 
-def hostapd_read_config():
-	# FIXME: Detect and display warning when multiple interfaces are used
-	if len(sys.argv) <= 1: return None
-
-	# Read the config, get the interface name, and verify some settings
-	interface = argv_get_interface()
-	confpath = sys.argv[-1]
-	with open(confpath) as fp:
+def hostapd_read_config(config):
+	# Read the config, get the interface name, and verify some settings.
+	interface = None
+	with open(config) as fp:
 		for line in fp.readlines():
 			line = line.strip()
 			if line.startswith("interface="):
@@ -517,14 +511,15 @@ def hostapd_read_config():
 					log(ERROR, "       >%s<" % line, showtime=False)
 					quit(1)
 
-	# Parameter -i overrides interface in config
+	# FIXME: Display warning when multiple interfaces are used
+	# Parameter -i overrides interface in config.
 	if argv_get_interface() is not None:
 		interface = argv_get_interface()
 
 	return interface
 
 if __name__ == "__main__":
-	if len(sys.argv) <= 1 or "--help" in sys.argv or "-h" in sys.argv:
+	if "--help" in sys.argv or "-h" in sys.argv:
 		# TODO
 		#print USAGE.format(name=sys.argv[0])
 		quit(1)
@@ -534,7 +529,7 @@ if __name__ == "__main__":
 		global_log_level -= 1
 
 	try:
-		interface = hostapd_read_config()
+		interface = hostapd_read_config("hostapd.conf")
 	except Exception as ex:
 		log(ERROR, "Failed to parse the hostapd config file")
 		raise

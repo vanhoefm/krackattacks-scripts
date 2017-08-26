@@ -55,10 +55,11 @@ static void wpa_group_put(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
 
 #ifdef KRACK_TEST_CLIENT
+#define HANDSHAKE_TRANSMIT_INTERVAL 2
 static const u32 dot11RSNAConfigGroupUpdateCount = 4000;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4000;
-static const u32 eapol_key_timeout_first = 2000; /* ms */
-static const u32 eapol_key_timeout_subseq = 2000; /* ms */
+static const u32 eapol_key_timeout_first = HANDSHAKE_TRANSMIT_INTERVAL * 1000; /* ms */
+static const u32 eapol_key_timeout_subseq = HANDSHAKE_TRANSMIT_INTERVAL * 1000; /* ms */
 #else
 static const u32 dot11RSNAConfigGroupUpdateCount = 4;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
@@ -335,7 +336,7 @@ static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth)
 {
 	// Start to periodically execute the group key handshake every 2 seconds
-	wpa_auth->conf.wpa_group_rekey = 2;
+	wpa_auth->conf.wpa_group_rekey = HANDSHAKE_TRANSMIT_INTERVAL;
 	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
 	eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
 			       0, wpa_rekey_gtk, wpa_auth, NULL);

@@ -109,6 +109,7 @@ the 4-way handshake or group key handshake, take the following steps:
 # - Individual test to see if the client accepts replayed broadcast traffic (without performing key reinstallation)
 
 # After how many seconds a new message 3, or new group key message 1, is sent.
+# This value must match the one in `../src/ap/wpa_auth.c` (same variable name).
 HANDSHAKE_TRANSMIT_INTERVAL = 2
 
 #### Basic output and logging functionality ####
@@ -280,7 +281,7 @@ class ClientState():
 		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
 			# On some kernels, the virtual interface associated to the real AP interface will return
 			# frames where the payload is already decrypted. So if the payload seems decrypted, just
-			# extract the full plaintext of the frame.
+			# extract the full plaintext from the frame.
 			plaintext = payload
 		else:
 			client    = self.mac

@@ -7,25 +7,111 @@ from datetime import datetime
 from wpaspy import Ctrl
 from Cryptodome.Cipher import AES
 
-# TODO: !!!! Testing the group key handshake against one client, interferes with 4-way handshake tests against another client !!!!
+# TODO: Clean up code
 
-# TODO: Keep testing if the client is marked as secure
+USAGE = """{name} - Tool to test Key Reinstallation Attacks against clients
 
-# TODO: Test for (broadcast) replay attacks without *without* reinstalling the key (might just be a shitty client not detected replays)
-# - Sitecom NIC accepts replayed broadcast frames on Windows 10
-# - netr82ux, 802.11n USB Wireless LAN Card, "WIRELESS 150 Mbps ADAPTER" accepts replayed broadcast frames on Windows 10
-# - WNDA3200 rejects them on Windows 10
+To test wheter a client is vulnerable to Key Reinstallation Attack against
+the 4-way handshake or group key handshake, take the following steps:
 
-# TODO: Try to decrypt using all-zero TK to detect the Android case?
+1. Compile our modified hostapd instance. This only needs to be done once.
 
-# TODO: In the description, mention how to generate unicast traffic
-# TODO: Also mention the "saw no reset of X intervals" has to be displayed several times
-# TODO: Mention that it's recommended to test group key reset using multiple Wi-Fi dongles (hardware encryption of some might interfere making it seem the client is patched, while it's actually vulnerable).
+      cd ../hostapd
+      cp defconfig .config
+      make -j 2
 
-# TODO: Test against OpenBSD
+2. The hardware encryption engine of some Wi-Fi NICs have bugs that interfere
+   with our script. So disable hardware encryption by executing:
 
-# After how many seconds a new message 3 is sent
-MSG3_TRANSMIT_INTERVAL = 2
+      ./disable-hwcrypto.sh
+
+   This only needs to be done once. It's recommended to reboot after executing
+   this script. We tested this script with an Intel Dual Band Wireless-AC 7260
+   and a TP-Link TL-WN722N.
+
+3. Execute this script. Accepted parameters are:
+
+      --group   Test the group key handshake instead of the 4-way handshake
+      --debug   Show more debug messages
+
+   All other supplied arguments are passed on to hostapd.
+   The two examples you will always need are:
+
+      {name}
+      {name} --group
+
+   The first one tests for key reinstallations in the 4-way handshake (see
+   step 5), and the second one for key reinstallations in the group key
+   handshake (see step 6).
+
+4. Connect with the client being tested to the network testnetwork using
+   password abcdefgh.
+
+   Note that you can change these and other settings of the AP by modifying
+   hostapd.conf.
+
+
+5. To test key reinstallations in the 4-way handshake, the script will keep
+   sending encrypted message 3's to the client. To start the script execute:
+
+      {name}
+
+5a. The script monitors traffic sent by the client to see if the pairwise
+   key is being reinstalled. To assure the client is sending enough frames,
+   you can ping the AP: ping 192.168.100.254 .
+
+   If the client is vulnerable, the script will show something like:
+      [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
+
+   If the client is patched, the script will show (this can take a minute):
+      [18:58:11] 90:18:7c:6e:6b:20: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake.
+
+5b. Once the client has requested an IP using DHCP, the script tests for
+   reinstallations of the group key by sending broadcast ARP requests to the
+   client using an already used (replayed) packet number (= IV). The client
+   *must* request an IP using DHCP for this test to start.
+
+   If the client is vulnerable, the script will show something like:
+      [19:03:08] 78:31:c1:c4:88:92: Received 5 unique replies to replayed broadcast ARP requests. Client is vulnerable to group
+      [19:03:08]                    key reinstallations in the 4-way handshake (or client accepts replayed broadcast frames)!
+
+   If the client is patched, the script will show (this can take a minute):
+      [19:03:08] 78:31:c1:c4:88:92: client DOESN'T seem vulnerable to group key reinstallation in the 4-way handshake handshake.
+
+   Note that this scripts *indirectly* tests for reinstallations of the group
+   key, by testing if replayed broadcast frames are accepted by the client.
+
+
+6. To test key reinstallations in the group key handshake, the script will keep
+   performing new group key handshakes using an identical (static) group key.
+   The client *must* request an IP using DHCP for this test to start. To start
+   the script execute:
+
+      {name} --group
+
+   The working and output of the script is similar to the one of step 5b.
+
+
+7. Some final recommendations:
+
+   7a. Perform these tests in a room with little interference. A *high* amount
+       of packet loss will make this script unreliable!
+   7b. Manually inspect network traffic to confirm the output of the script:
+       - Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls
+         by monitoring the IVs of frames sent by the client.
+       - Capture traffic on the client to see if the replayed broadcast ARP
+         requests are accepted or not.
+   7c. If the client can use multiple Wi-Fi radios/NICs, test using a few
+       different ones.
+"""
+
+# Future work:
+# - Detect if the client reinstalls an all-zero encryption key (wpa_supplicant v2.4 and 2.5)
+# - Ability to test the group key handshake against specific clients only
+# - Individual test to see if the client accepts replayed broadcast traffic (without key reinstallation)
+
+# After how many seconds a new message 3, or new group key message 1, is sent.
+HANDSHAKE_TRANSMIT_INTERVAL = 2
 
 #### Basic output and logging functionality ####
 
@@ -131,6 +217,7 @@ def dot11_get_priority(p):
 	if not Dot11QoS in p: return 0
 	return ord(str(p[Dot11QoS])[0])
 
+
 #### Main Testing Code ####
 
 class IvInfo():
@@ -152,7 +239,8 @@ class ClientState():
 		self.mac = clientmac
 		self.TK = None
 		self.vuln_4way = ClientState.UNKNOWN
-		self.vuln_group = ClientState.UNKNOWN # TODO: Own one for group handshake
+		self.vuln_group = ClientState.UNKNOWN
+		# FIXME: Own variable for group handshake result?
 
 		self.ivs = dict() # key is the IV value
 		self.encdata_prev = None
@@ -162,7 +250,6 @@ class ClientState():
 		self.groupkey_grouphs = test_group_hs
 
 	def groupkey_reset(self):
-		# FIXME: Rename variable to groupkey (to make difference with grouphs)
 		self.groupkey_state = ClientState.IDLE
 		self.groupkey_prev_canary_time = 0
 		self.groupkey_num_canaries = 0
@@ -175,18 +262,26 @@ class ClientState():
 
 	def get_encryption_key(self, hostapd_ctrl):
 		if self.TK is None:
+			# Clear old replies and messages from the hostapd control interface
 			while hostapd_ctrl.pending():
 				hostapd_ctrl.recv()
+			# Contact our modified Hostapd instrance to request the pairwise key
 			response = hostapd_ctrl.request("GET_TK " + self.mac)
 			if not "FAIL" in response:
 				self.TK = response.strip().decode("hex")
 		return self.TK
 
 	def decrypt(self, p, hostapd_ctrl):
+		# Extract encrypted payload:
+		# - Skip extended IV (4 bytes in total)
+		# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
 		payload = str(p.wepdata[4:-4])
 		llcsnap, packet = payload[:8], payload[8:]
 
 		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
+			# On some kernels, the virtual interface associated to the real AP interface will return
+			# frames where the payload is already decrypted. So if the payload seems decrypted, just
+			# extract the full plaintext of the frame.
 			plaintext = payload
 		else:
 			client    = self.mac
@@ -216,7 +311,7 @@ class ClientState():
 		return iv > max(self.ivs.keys())
 
 	def check_pairwise_reinstall(self, p):
-		# If this is gaurenteed to be IV reuse
+		# If this is gaurenteed to be IV reuse, mark the client as vulnerable
 		if self.is_iv_reused(p):
 			if self.vuln_4way != ClientState.VULNERABLE:
 				iv = dot11_get_iv(p)
@@ -225,13 +320,13 @@ class ClientState():
 					"Client is vulnerable to pairwise key reinstallations in the 4-way handshake!") % (self.mac, iv, seq), color="green")
 			self.vuln_4way = ClientState.VULNERABLE
 
-		# If it's a higher IV than all previous ones, try to check if it seems patched
+		# If it's a higher IV than all previous ones, try to check if the client seems patched
 		elif self.vuln_4way == ClientState.UNKNOWN and self.is_new_iv(p):
-			# Save how many intervals we received a data packet without IV reset.
-			# Use twice the transmission interval of message 3, in case one message 3 is lost due to noise.
+			# Save how many intervals we received a data packet without IV reset. Use twice the
+			# transmission interval of message 3, in case one message 3 is lost due to noise.
 			if self.encdata_prev is None:
 				self.encdata_prev = p.time
-			elif self.encdata_prev + 2 * MSG3_TRANSMIT_INTERVAL + 1 <= p.time:
+			elif self.encdata_prev + 2 * HANDSHAKE_TRANSMIT_INTERVAL + 1 <= p.time:
 				self.encdata_intervals += 1
 				self.encdata_prev = p.time
 				log(DEBUG, "%s: no pairwise IV resets seem to have occured for one interval" % self.mac)
@@ -271,12 +366,13 @@ class ClientState():
 			log(STATUS, "%s: client has IP address -> testing for group key reinstallation in the %s handshake" % (self.mac, hstype))
 			self.groupkey_state = ClientState.STARTED
 
-		# We got no response for a while, indication that client is secure
 		if self.groupkey_requests_sent == 3:
+			# Seems like the client DID reinstall the group key in this interval
 			if self.groupkey_state == ClientState.GOT_CANARY:
 				log(DEBUG, "%s: got a reply to broadcast ARP during this interval" % self.mac)
 				self.groupkey_state = ClientState.STARTED
 
+			# Seems like the client DIDN'T reinstall the group key in this interval
 			elif self.groupkey_state == ClientState.STARTED:
 				self.groupkey_patched_intervals += 1
 				log(DEBUG, "%s: no group IV resets seem to have occured for %d interval(s)" % (self.mac, self.groupkey_patched_intervals))
@@ -284,7 +380,7 @@ class ClientState():
 
 			self.groupkey_requests_sent = 0
 
-		# If several intervals appear secure, the client is likely patched
+		# If the client appears secure for several intervals, it's likely patched
 		if self.groupkey_patched_intervals >= 5 and self.vuln_group == ClientState.UNKNOWN:
 			log(INFO, "%s: client DOESN'T seem vulnerable to group key reinstallation in the %s handshake." % (self.mac, hstype), color="green")
 			self.vuln_group = ClientState.PATCHED
@@ -310,7 +406,6 @@ class KRAckAttackClient():
 		self.hostapd_ctrl = None
 
 		self.dhcp = None
-		self.arp = None
 		self.group_ip = None
 		self.group_arp = None
 
@@ -325,20 +420,12 @@ class KRAckAttackClient():
 			log(DEBUG, "%s: Removing ClientState object" % clientmac)
 
 	def handle_replay(self, p):
-		# HACK: Our virtual monitor interface will still decrypt the CCMP payload for us. This means we
-		# can reconstruct the Ethernet header, and extract the decrypted payload form the Wi-Fi frame.
-		# Use this to handle frames with an already used IV (replays) that were rejected by the kernel.
 		if not Dot11WEP in p: return
 
 		# Reconstruct Ethernet header
 		clientmac = p.addr2
 		header = Ether(dst=self.apmac, src=clientmac)
 		header.time = p.time
-
-		# Extract encrypted data
-		# - Skip extended IV (4 bytes in total)
-		# - Do not include first 4 remaining CCMP MIC bytes (last 4 are already the WEP ICV)
-		payload = str(p.wepdata[4:-4])
 
 		# Decrypt the payload and obtain LLC/SNAP header and packet content
 		client = self.clients[clientmac]
@@ -391,7 +478,6 @@ class KRAckAttackClient():
 
 	def process_eth_rx(self, p):
 		self.dhcp.reply(p)
-		self.arp.reply(p)
 		self.group_arp.reply(p)
 
 		clientmac = p[Ether].src
@@ -435,13 +521,15 @@ class KRAckAttackClient():
 		self.sock_mon = MitmSocket(type=ETH_P_ALL, iface=self.nic_mon)
 		self.sock_eth = L2Socket(type=ETH_P_ALL, iface=self.nic_iface)
 
+		# Let scapy handle DHCP requests
 		self.dhcp = DHCP_sock(sock=self.sock_eth,
 						domain='krackattack.com',
 						pool=Net('192.168.100.0/24'),
 						network='192.168.100.0/24',
 						gw='192.168.100.254',
 						renewal_time=600, lease_time=3600)
-		self.arp = ARP_sock(sock=self.sock_eth, IP_addr='192.168.100.254', ARP_addr=self.apmac)
+		# Configure gateway IP: reply to ARP and ping requests
+		subprocess.check_output(["ifconfig", self.nic_iface, "192.168.100.254"])
 
 		self.group_ip = self.dhcp.pool.pop()
 		self.group_arp = ARP_sock(sock=self.sock_eth, IP_addr=self.group_ip, ARP_addr=self.apmac)
@@ -461,7 +549,7 @@ class KRAckAttackClient():
 			if self.sock_eth in sel[0]: self.handle_eth_rx()
 
 			if time.time() > self.next_arp:
-				self.next_arp = time.time() + MSG3_TRANSMIT_INTERVAL
+				self.next_arp = time.time() + HANDSHAKE_TRANSMIT_INTERVAL
 				for client in self.clients.values():
 					# Also keep injecting to PATCHED clients (just to be sure they keep rejecting replayed frames)
 					if client.vuln_group != ClientState.VULNERABLE and client.mac in self.dhcp.leases:
@@ -515,8 +603,8 @@ def hostapd_read_config(config):
 					log(ERROR, "       >%s<" % line, showtime=False)
 					quit(1)
 
-	# FIXME: Display warning when multiple interfaces are used
 	# Parameter -i overrides interface in config.
+	# FIXME: Display warning when multiple interfaces are used.
 	if argv_get_interface() is not None:
 		interface = argv_get_interface()
 
@@ -524,8 +612,7 @@ def hostapd_read_config(config):
 
 if __name__ == "__main__":
 	if "--help" in sys.argv or "-h" in sys.argv:
-		# TODO
-		#print USAGE.format(name=sys.argv[0])
+		print USAGE.format(name=sys.argv[0])
 		quit(1)
 
 	test_grouphs = argv_pop_argument("--group")

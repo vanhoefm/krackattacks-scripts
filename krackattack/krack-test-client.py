@@ -35,13 +35,13 @@ the 4-way handshake or group key handshake, take the following steps:
       --debug   Show more debug messages
 
    All other supplied arguments are passed on to hostapd.
-   The only two examples you will normally need are:
+   The only two commands you will normally have to execute are:
 
       {name}
       {name} --group
 
    The first one tests for key reinstallations in the 4-way handshake (see
-   step 4), and the second one for key reinstallations in the group key
+   step 4), and the second tests one for key reinstallations in the group key
    handshake (see step 5).
 
    !! The default network name is testnetwork with password abcdefgh !!
@@ -55,12 +55,11 @@ the 4-way handshake or group key handshake, take the following steps:
 
       {name}
 
-   Connect the the AP and all tests will be performed automatically.
+   Connect the the AP and the following tests will be performed automatically:
 
-   4a. Our tool retransmits encrypted message 3's of the 4-way handshake. The
-     script monitors traffic sent by the client to see if the pairwise key is
-     being reinstalled. To assure the client is sending enough frames, you can
-     optionally ping the AP: ping 192.168.100.254 .
+   4a. The script monitors traffic sent by the client to see if the pairwise
+     key is being reinstalled. To assure the client is sending enough frames,
+     you can optionally ping the AP: ping 192.168.100.254 .
 
      If the client is vulnerable, the script will show something like:
         [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
@@ -83,7 +82,6 @@ the 4-way handshake or group key handshake, take the following steps:
      Note that this scripts *indirectly* tests for reinstallations of the group
      key, by testing if replayed broadcast frames are accepted by the client.
 
-
 5. To test key reinstallations in the group key handshake, the script will keep
    performing new group key handshakes using an identical (static) group key.
    The client *must* request an IP using DHCP for this test to start. To start
@@ -92,12 +90,11 @@ the 4-way handshake or group key handshake, take the following steps:
       {name} --group
 
    Connect the the AP and all tests will be performed automatically. The
-   working and output of the script is similar as in step 4b.
-
+   working and output of the script is now similar as in step 4b.
 
 6. Some final recommendations:
 
-   6a. Perform these tests in a room with little interference. A *high* amount
+   6a. Perform these tests in a room with little interference. A high amount
        of packet loss will make this script unreliable!
    6b. Manually inspect network traffic to confirm the output of the script:
        - Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls

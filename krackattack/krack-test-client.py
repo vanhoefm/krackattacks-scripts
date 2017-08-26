@@ -176,7 +176,7 @@ class MitmSocket(L2Socket):
 			rawframe = str(p[RadioTap])
 			pos = 8
 			while ord(rawframe[pos - 1]) & 0x80 != 0: pos += 4
-		
+
 			# If the TSFT field is present, it must be 8-bytes aligned
 			if p[RadioTap].present & 1 != 0:
 				pos += (8 - (pos % 8))
@@ -257,7 +257,7 @@ class ClientState():
 		self.groupkey_prev_canary_time = 0
 		self.groupkey_num_canaries = 0
 		self.groupkey_requests_sent = 0
-		self.groupkey_patched_intervals = -1 # -1 because the first broadcast ARP requests are still valid		
+		self.groupkey_patched_intervals = -1 # -1 because the first broadcast ARP requests are still valid
 
 	def start_grouphs_test():
 		self.groupkey_reset()
@@ -637,7 +637,7 @@ if __name__ == "__main__":
 		quit(1)
 
 	test_grouphs = argv_pop_argument("--group")
-	while argv_pop_argument("--debug"):	
+	while argv_pop_argument("--debug"):
 		global_log_level -= 1
 
 	try:
@@ -652,4 +652,3 @@ if __name__ == "__main__":
 	attack = KRAckAttackClient(interface)
 	atexit.register(cleanup)
 	attack.run(test_grouphs=test_grouphs)
-

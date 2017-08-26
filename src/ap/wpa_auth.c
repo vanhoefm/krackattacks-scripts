@@ -199,7 +199,7 @@ static void poc_log(const u8 *clientmac, const char *format, ...)
 
 	vprintf(format, arg);
 
-	va_end(arg); 
+	va_end(arg);
 }
 #endif
 

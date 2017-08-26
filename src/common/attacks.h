@@ -6,4 +6,3 @@
 #define KRACK_TEST_CLIENT
 
 #endif // ATTACKS_H_
-

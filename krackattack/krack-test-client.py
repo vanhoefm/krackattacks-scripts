@@ -251,10 +251,10 @@ class ClientState():
 
 		if self.groupkey_num_canaries >= 5:
 			assert self.vuln_group != ClientState.VULNERABLE
-			# TODO: Either accepts replayed messages, or vulnerable to group key reinstallation attack
-			log(INFO, ("%s: Received %d unique replies to replayed broadcast ARP requests. " +
-				"Client is vulnerable to group key reinstallations in the %s handshake!") \
-				% (self.mac, self.groupkey_num_canaries, "group key" if self.groupkey_grouphs else "4-way"), color="green")
+			log(INFO, "%s: Received %d unique replies to replayed broadcast ARP requests. Client is vulnerable to group" \
+				% (self.mac, self.groupkey_num_canaries), color="green")
+			log(INFO, "                   key reinstallations in the %s handshake (or client accepts replayed broadcast frames)!" \
+				% ("group key" if self.groupkey_grouphs else "4-way"),  color="green")
 			self.vuln_group = ClientState.VULNERABLE
 			self.groupkey_state = ClientState.FINISHED
 
@@ -297,8 +297,12 @@ class KRAckAttackClient():
 	def __init__(self, interface):
 		self.nic_iface = interface
 		self.nic_mon = interface + "mon"
-		self.apmac = scapy.arch.get_if_hwaddr(interface)
 		self.test_grouphs = False
+		try:
+			self.apmac = scapy.arch.get_if_hwaddr(interface)
+		except:
+			log(ERROR, "Failed to get MAC address of %s. Does this interface exist?" % interface)
+			raise
 
 		self.sock_mon = None
 		self.sock_eth = None
@@ -403,7 +407,7 @@ class KRAckAttackClient():
 		self.process_eth_rx(p)
 
 	def configure_interfaces(self):
-		log(STATUS, "Note: disable Wi-Fi in your network manager so it doesn't interfere with this script")
+		log(STATUS, "Note: disable Wi-Fi in network manager & disable hardware encryption. Both may interfere with this script.")
 
 		# 1. Remove unused virtual interfaces to start from a clean state
 		subprocess.call(["iw", self.nic_mon, "del"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)

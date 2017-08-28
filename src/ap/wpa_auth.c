@@ -2296,12 +2296,12 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		}
 		sm->pairwise_set = TRUE;
 	}
-#endif
 
 	// Reset transmit packet number of the group key, so we can detect if clients
 	// will accept re-used packet numbers (IVs) in broadcast data frames. Debug
 	// output is printed below.
 	wpa_group_config_group_keys(sm->wpa_auth, sm->group);
+#endif
 
 	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, [MDIE],
 	   GTK[GN], IGTK, [FTIE], [TIE * 2])

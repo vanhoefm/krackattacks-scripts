@@ -433,8 +433,8 @@ class KRAckAttackClient():
 			log(DEBUG, "%s: Removing ClientState object" % clientmac)
 
 	def handle_replay(self, p):
-		"""Replayed frames (caused by a pairwise key reinstallation) are rejected by the kernel.
-		This process these frames manually so we can still test reinstallations of the group key."""
+		"""Replayed frames (caused by a pairwise key reinstallation) are rejected by the kernel. This
+		function processes these frames manually so we can still test reinstallations of the group key."""
 		if not Dot11WEP in p: return
 
 		# Reconstruct Ethernet header
@@ -650,7 +650,7 @@ if __name__ == "__main__":
 	try:
 		interface = hostapd_read_config("hostapd.conf")
 	except Exception as ex:
-		log(ERROR, "Failed to parse the hostapd config file")
+		log(ERROR, "Failed to parse the hostapd.conf config file")
 		raise
 	if not interface:
 		log(ERROR, "Failed to determine wireless interface. Specify one in the hostapd config file.")

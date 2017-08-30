@@ -1427,6 +1427,11 @@ enum qca_wlan_vendor_attr_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS_BTC = 53,
 
+	/* 8-bit unsigned value to configure the driver and below layers to
+	 * enable/disable all FILS features.
+	 * 0-enable, 1-disable */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_DISABLE_FILS = 54,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =

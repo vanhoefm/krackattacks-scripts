@@ -690,6 +690,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		} else {
 			wpa_s->enable_oce = 0;
 		}
+		wpa_supplicant_set_default_scan_ies(wpa_s);
 #endif /* CONFIG_MBO */
 	} else if (os_strcasecmp(cmd, "lci") == 0) {
 		ret = wpas_ctrl_iface_set_lci(wpa_s, value);

@@ -797,6 +797,15 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 				auth_transaction, resp, pos, end - pos);
 		goto remove_sta;
 	}
+
+	if (hapd->conf->sae_commit_override && auth_transaction == 1) {
+		wpa_printf(MSG_DEBUG, "SAE: TESTING - commit override");
+		send_auth_reply(hapd, mgmt->sa, mgmt->bssid, WLAN_AUTH_SAE,
+				auth_transaction, resp,
+				wpabuf_head(hapd->conf->sae_commit_override),
+				wpabuf_len(hapd->conf->sae_commit_override));
+		goto remove_sta;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (!sta->sae) {
 		if (auth_transaction != 1 ||

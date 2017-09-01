@@ -852,7 +852,8 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 
 	os_memset(&PTK, 0, sizeof(PTK));
 	for (;;) {
-		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
+		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) &&
+		    !wpa_key_mgmt_sae(sm->wpa_key_mgmt)) {
 			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
 					       sm->p2p_dev_addr, pmk);
 			if (pmk == NULL)
@@ -2028,6 +2029,13 @@ SM_STATE(WPA_PTK, INITPSK)
 		sm->xxkey_len = PMK_LEN;
 #endif /* CONFIG_IEEE80211R_AP */
 	}
+#ifdef CONFIG_SAE
+	if (wpa_auth_uses_sae(sm) && sm->pmksa) {
+		wpa_printf(MSG_DEBUG, "SAE: PMK from PMKSA cache");
+		os_memcpy(sm->PMK, sm->pmksa->pmk, sm->pmksa->pmk_len);
+		sm->pmk_len = sm->pmksa->pmk_len;
+	}
+#endif /* CONFIG_SAE */
 	sm->req_replay_counter_used = 0;
 }
 
@@ -2056,7 +2064,8 @@ SM_STATE(WPA_PTK, PTKSTART)
 	 * one possible PSK for this STA.
 	 */
 	if (sm->wpa == WPA_VERSION_WPA2 &&
-	    wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt) &&
+	    (wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt) ||
+	     wpa_key_mgmt_sae(sm->wpa_key_mgmt)) &&
 	    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN) {
 		pmkid = buf;
 		pmkid_len = 2 + RSN_SELECTOR_LEN + PMKID_LEN;
@@ -2627,7 +2636,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	 * WPA-PSK: iterate through possible PSKs and select the one matching
 	 * the packet */
 	for (;;) {
-		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
+		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) &&
+		    !wpa_key_mgmt_sae(sm->wpa_key_mgmt)) {
 			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
 					       sm->p2p_dev_addr, pmk);
 			if (pmk == NULL)
@@ -3156,9 +3166,13 @@ SM_STEP(WPA_PTK)
 		break;
 	case WPA_PTK_INITPSK:
 		if (wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr,
-				     NULL))
+				     NULL)) {
 			SM_ENTER(WPA_PTK, PTKSTART);
-		else {
+#ifdef CONFIG_SAE
+		} else if (wpa_auth_uses_sae(sm) && sm->pmksa) {
+			SM_ENTER(WPA_PTK, PTKSTART);
+#endif /* CONFIG_SAE */
+		} else {
 			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,
 					"no PSK configured for the STA");
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;

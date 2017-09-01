@@ -250,6 +250,11 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 			return NULL;
 		return sta->sae->pmk;
 	}
+	if (sta && wpa_auth_uses_sae(sta->wpa_sm)) {
+		wpa_printf(MSG_DEBUG,
+			   "No PSK for STA trying to use SAE with PMKSA caching");
+		return NULL;
+	}
 #endif /* CONFIG_SAE */
 
 #ifdef CONFIG_OWE

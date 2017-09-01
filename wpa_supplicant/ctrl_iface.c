@@ -636,6 +636,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			wpa_s->get_pref_freq_list_override = NULL;
 		else
 			wpa_s->get_pref_freq_list_override = os_strdup(value);
+	} else if (os_strcasecmp(cmd, "sae_commit_override") == 0) {
+		wpabuf_free(wpa_s->sae_commit_override);
+		if (value[0] == '\0')
+			wpa_s->sae_commit_override = NULL;
+		else
+			wpa_s->sae_commit_override = wpabuf_parse_bin(value);
 #ifdef CONFIG_DPP
 	} else if (os_strcasecmp(cmd, "dpp_config_obj_override") == 0) {
 		os_free(wpa_s->dpp_config_obj_override);
@@ -7766,6 +7772,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_sm_set_test_assoc_ie(wpa_s->wpa, NULL);
 	os_free(wpa_s->get_pref_freq_list_override);
 	wpa_s->get_pref_freq_list_override = NULL;
+	wpabuf_free(wpa_s->sae_commit_override);
+	wpa_s->sae_commit_override = NULL;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_s->disconnected = 0;

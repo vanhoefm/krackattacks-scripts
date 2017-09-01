@@ -716,6 +716,34 @@ def test_sae_reflection_attack_ffc(dev, apdev):
     """SAE reflection attack (FFC)"""
     sae_reflection_attack(apdev[0], dev[0], 5)
 
+def sae_reflection_attack_internal(apdev, dev, group):
+    if "SAE" not in dev.get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="no-knowledge-of-passphrase")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_reflection_attack'] = '1'
+    hapd = hostapd.add_ap(apdev, params)
+    bssid = apdev['bssid']
+
+    dev.scan_for_bss(bssid, freq=2412)
+    dev.request("SET sae_groups %d" % group)
+    dev.connect("test-sae", psk="reflection-attack", key_mgmt="SAE",
+                scan_freq="2412", wait_connect=False)
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+
+@remote_compatible
+def test_sae_reflection_attack_ecc_internal(dev, apdev):
+    """SAE reflection attack (ECC) - internal"""
+    sae_reflection_attack_internal(apdev[0], dev[0], 19)
+
+@remote_compatible
+def test_sae_reflection_attack_ffc_internal(dev, apdev):
+    """SAE reflection attack (FFC) - internal"""
+    sae_reflection_attack_internal(apdev[0], dev[0], 5)
+
 @remote_compatible
 def test_sae_anti_clogging_proto(dev, apdev):
     """SAE anti clogging protocol testing"""

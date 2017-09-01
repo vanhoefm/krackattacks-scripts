@@ -786,6 +786,18 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	int resp = WLAN_STATUS_SUCCESS;
 	struct wpabuf *data = NULL;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->conf->sae_reflection_attack && auth_transaction == 1) {
+		const u8 *pos, *end;
+
+		wpa_printf(MSG_DEBUG, "SAE: TESTING - reflection attack");
+		pos = mgmt->u.auth.variable;
+		end = ((const u8 *) mgmt) + len;
+		send_auth_reply(hapd, mgmt->sa, mgmt->bssid, WLAN_AUTH_SAE,
+				auth_transaction, resp, pos, end - pos);
+		goto remove_sta;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!sta->sae) {
 		if (auth_transaction != 1 ||
 		    status_code != WLAN_STATUS_SUCCESS) {

@@ -3561,6 +3561,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 
 		wpabuf_free(bss->own_ie_override);
 		bss->own_ie_override = tmp;
+	} else if (os_strcmp(buf, "sae_reflection_attack") == 0) {
+		bss->sae_reflection_attack = atoi(pos);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
 		if (parse_wpabuf_hex(line, buf, &bss->vendor_elements, pos))

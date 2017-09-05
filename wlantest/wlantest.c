@@ -146,7 +146,8 @@ static void add_secret(struct wlantest *wt, const char *secret)
 static int add_pmk_file(struct wlantest *wt, const char *pmk_file)
 {
 	FILE *f;
-	u8 pmk[32];
+	u8 pmk[PMK_LEN_MAX];
+	size_t pmk_len;
 	char buf[300], *pos;
 	struct wlantest_pmk *p;
 
@@ -163,25 +164,30 @@ static int add_pmk_file(struct wlantest *wt, const char *pmk_file)
 		*pos = '\0';
 		if (pos - buf < 2 * 32)
 			continue;
-		if (hexstr2bin(buf, pmk, 32) < 0)
+		pmk_len = (pos - buf) / 2;
+		if (pmk_len > PMK_LEN_MAX)
+			pmk_len = PMK_LEN_MAX;
+		if (hexstr2bin(buf, pmk, pmk_len) < 0)
 			continue;
 		p = os_zalloc(sizeof(*p));
 		if (p == NULL)
 			break;
-		os_memcpy(p->pmk, pmk, 32);
+		os_memcpy(p->pmk, pmk, pmk_len);
+		p->pmk_len = pmk_len;
 		dl_list_add(&wt->pmk, &p->list);
-		wpa_hexdump(MSG_DEBUG, "Added PMK from file", pmk, 32);
+		wpa_hexdump(MSG_DEBUG, "Added PMK from file", pmk, pmk_len);
 
 		/* For FT, the send half of MSK is used */
-		if (hexstr2bin(&buf[64], pmk, 32) < 0)
+		if (hexstr2bin(&buf[2 * PMK_LEN], pmk, PMK_LEN) < 0)
 			continue;
 		p = os_zalloc(sizeof(*p));
 		if (p == NULL)
 			break;
-		os_memcpy(p->pmk, pmk, 32);
+		os_memcpy(p->pmk, pmk, PMK_LEN);
+		p->pmk_len = PMK_LEN;
 		dl_list_add(&wt->pmk, &p->list);
 		wpa_hexdump(MSG_DEBUG, "Added PMK from file (2nd half of MSK)",
-			    pmk, 32);
+			    pmk, PMK_LEN);
 	}
 
 	fclose(f);

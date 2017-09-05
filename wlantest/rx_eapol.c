@@ -106,7 +106,7 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 		u8 pmk_r1_name[WPA_PMK_NAME_LEN];
 		u8 ptk_name[WPA_PMK_NAME_LEN];
 
-		wpa_derive_pmk_r0(pmk->pmk, sizeof(pmk->pmk),
+		wpa_derive_pmk_r0(pmk->pmk, PMK_LEN,
 				  bss->ssid, bss->ssid_len, bss->mdid,
 				  bss->r0kh_id, bss->r0kh_id_len,
 				  sta->addr, pmk_r0, pmk_r0_name);
@@ -126,7 +126,7 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 		    check_mic(ptk.kck, ptk.kck_len, sta->key_mgmt, ver, data,
 			      len) < 0)
 			return -1;
-	} else if (wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
+	} else if (wpa_pmk_to_ptk(pmk->pmk, PMK_LEN,
 				  "Pairwise key expansion",
 				  bss->bssid, sta->addr, sta->anonce,
 				  sta->snonce, &ptk, sta->key_mgmt,

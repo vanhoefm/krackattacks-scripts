@@ -35,7 +35,8 @@ struct wlantest_passphrase {
 
 struct wlantest_pmk {
 	struct dl_list list;
-	u8 pmk[32];
+	u8 pmk[PMK_LEN_MAX];
+	size_t pmk_len;
 };
 
 struct wlantest_ptk {

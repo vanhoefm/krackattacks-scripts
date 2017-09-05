@@ -107,7 +107,7 @@ def test_erp_server_no_match(dev, apdev):
         raise Exception("Unexpected use of ERP")
     dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
-def start_erp_as(apdev, erp_domain="example.com"):
+def start_erp_as(apdev, erp_domain="example.com", msk_dump=None):
     params = { "ssid": "as", "beacon_int": "2000",
                "radius_server_clients": "auth_serv/radius_clients.conf",
                "radius_server_auth_port": '18128',
@@ -123,6 +123,8 @@ def start_erp_as(apdev, erp_domain="example.com"):
                "eap_fast_a_id_info": "test server",
                "eap_server_erp": "1",
                "erp_domain": erp_domain }
+    if msk_dump:
+        params["dump_msk_file"] = msk_dump
     return hostapd.add_ap(apdev, params)
 
 def test_erp_radius(dev, apdev):

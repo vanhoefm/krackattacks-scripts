@@ -30,12 +30,12 @@ def check_fils_sk_pfs_capa(dev):
     if capa is None or "FILS-SK-PFS" not in capa:
         raise HwsimSkip("FILS-SK-PFS not supported")
 
-def test_fils_sk_full_auth(dev, apdev):
+def test_fils_sk_full_auth(dev, apdev, params):
     """FILS SK full authentication"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -78,12 +78,12 @@ def test_fils_sk_full_auth(dev, apdev):
     if conf['key_mgmt'] != 'FILS-SHA256':
         raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
 
-def test_fils_sk_sha384_full_auth(dev, apdev):
+def test_fils_sk_sha384_full_auth(dev, apdev, params):
     """FILS SK full authentication (SHA384)"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -126,12 +126,12 @@ def test_fils_sk_sha384_full_auth(dev, apdev):
     if conf['key_mgmt'] != 'FILS-SHA384':
         raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
 
-def test_fils_sk_pmksa_caching(dev, apdev):
+def test_fils_sk_pmksa_caching(dev, apdev, params):
     """FILS SK and PMKSA caching"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -259,12 +259,13 @@ def test_fils_sk_pmksa_caching_and_cache_id(dev, apdev):
     if pmksa['pmkid'] != pmksa2['pmkid']:
         raise Exception("Unexpected PMKID change")
 
-def test_fils_sk_pmksa_caching_ctrl_ext(dev, apdev):
+def test_fils_sk_pmksa_caching_ctrl_ext(dev, apdev, params):
     """FILS SK and PMKSA caching with Cache Identifier and external management"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    hapd_as = start_erp_as(apdev[1])
+    hapd_as = start_erp_as(apdev[1],
+                           msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -320,19 +321,20 @@ def test_fils_sk_pmksa_caching_ctrl_ext(dev, apdev):
     if bssid2 not in ev:
         raise Exception("Unexpected BSS selected")
 
-def test_fils_sk_erp(dev, apdev):
+def test_fils_sk_erp(dev, apdev, params):
     """FILS SK using ERP"""
-    run_fils_sk_erp(dev, apdev, "FILS-SHA256")
+    run_fils_sk_erp(dev, apdev, "FILS-SHA256", params)
 
-def test_fils_sk_erp_sha384(dev, apdev):
+def test_fils_sk_erp_sha384(dev, apdev, params):
     """FILS SK using ERP and SHA384"""
-    run_fils_sk_erp(dev, apdev, "FILS-SHA384")
+    run_fils_sk_erp(dev, apdev, "FILS-SHA384", params)
 
-def run_fils_sk_erp(dev, apdev, key_mgmt):
+def run_fils_sk_erp(dev, apdev, key_mgmt, params):
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1],
+                 msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -366,11 +368,11 @@ def run_fils_sk_erp(dev, apdev, key_mgmt):
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
-def test_fils_sk_erp_followed_by_pmksa_caching(dev, apdev):
+def test_fils_sk_erp_followed_by_pmksa_caching(dev, apdev, params):
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -434,12 +436,12 @@ def test_fils_sk_erp_followed_by_pmksa_caching(dev, apdev):
     if pmksa['pmkid'] != pmksa2['pmkid']:
 	    raise Exception("Unexpected PMKID change")
 
-def test_fils_sk_erp_another_ssid(dev, apdev):
+def test_fils_sk_erp_another_ssid(dev, apdev, params):
     """FILS SK using ERP and roam to another SSID"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -490,12 +492,12 @@ def test_fils_sk_erp_another_ssid(dev, apdev):
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
-def test_fils_sk_multiple_realms(dev, apdev):
+def test_fils_sk_multiple_realms(dev, apdev, params):
     """FILS SK and multiple realms"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -669,19 +671,19 @@ def fils_hlp_config(fils_hlp_wait_time=10000):
     params['fils_hlp_wait_time'] = str(fils_hlp_wait_time)
     return params
 
-def test_fils_sk_hlp(dev, apdev):
+def test_fils_sk_hlp(dev, apdev, params):
     """FILS SK HLP (rapid commit server)"""
-    run_fils_sk_hlp(dev, apdev, True)
+    run_fils_sk_hlp(dev, apdev, True, params)
 
-def test_fils_sk_hlp_no_rapid_commit(dev, apdev):
+def test_fils_sk_hlp_no_rapid_commit(dev, apdev, params):
     """FILS SK HLP (no rapid commit server)"""
-    run_fils_sk_hlp(dev, apdev, False)
+    run_fils_sk_hlp(dev, apdev, False, params)
 
-def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
+def run_fils_sk_hlp(dev, apdev, rapid_commit_server, params):
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -781,12 +783,12 @@ def run_fils_sk_hlp(dev, apdev, rapid_commit_server):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-def test_fils_sk_hlp_timeout(dev, apdev):
+def test_fils_sk_hlp_timeout(dev, apdev, params):
     """FILS SK HLP (rapid commit server timeout)"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -824,12 +826,12 @@ def test_fils_sk_hlp_timeout(dev, apdev):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-def test_fils_sk_hlp_oom(dev, apdev):
+def test_fils_sk_hlp_oom(dev, apdev, params):
     """FILS SK HLP and hostapd OOM"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -916,12 +918,12 @@ def test_fils_sk_hlp_oom(dev, apdev):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-def test_fils_sk_hlp_req_parsing(dev, apdev):
+def test_fils_sk_hlp_req_parsing(dev, apdev, params):
     """FILS SK HLP request parsing"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = fils_hlp_config(fils_hlp_wait_time=30)
@@ -1085,12 +1087,12 @@ def test_fils_sk_hlp_req_parsing(dev, apdev):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-def test_fils_sk_hlp_dhcp_parsing(dev, apdev):
+def test_fils_sk_hlp_dhcp_parsing(dev, apdev, params):
     """FILS SK HLP and DHCP response parsing"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1247,12 +1249,12 @@ def test_fils_sk_hlp_dhcp_parsing(dev, apdev):
 
     dev[0].request("FILS_HLP_REQ_FLUSH")
 
-def test_fils_sk_erp_and_reauth(dev, apdev):
+def test_fils_sk_erp_and_reauth(dev, apdev, params):
     """FILS SK using ERP and AP going away"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1286,13 +1288,14 @@ def test_fils_sk_erp_and_reauth(dev, apdev):
     if "EVENT-ASSOC-REJECT" in ev:
         raise Exception("Association failed")
 
-def test_fils_sk_erp_sim(dev, apdev):
+def test_fils_sk_erp_sim(dev, apdev, params):
     """FILS SK using ERP with SIM"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
     realm='wlan.mnc001.mcc232.3gppnetwork.org'
-    start_erp_as(apdev[1], erp_domain=realm)
+    start_erp_as(apdev[1], erp_domain=realm,
+                 msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1324,43 +1327,43 @@ def test_fils_sk_erp_sim(dev, apdev):
     if "EVENT-ASSOC-REJECT" in ev:
         raise Exception("Association failed")
 
-def test_fils_sk_pfs_19(dev, apdev):
+def test_fils_sk_pfs_19(dev, apdev, params):
     """FILS SK with PFS (DH group 19)"""
-    rul_fils_sk_pfs(dev, apdev, "19")
+    run_fils_sk_pfs(dev, apdev, "19", params)
 
-def test_fils_sk_pfs_20(dev, apdev):
+def test_fils_sk_pfs_20(dev, apdev, params):
     """FILS SK with PFS (DH group 20)"""
-    rul_fils_sk_pfs(dev, apdev, "20")
+    run_fils_sk_pfs(dev, apdev, "20", params)
 
-def test_fils_sk_pfs_21(dev, apdev):
+def test_fils_sk_pfs_21(dev, apdev, params):
     """FILS SK with PFS (DH group 21)"""
-    rul_fils_sk_pfs(dev, apdev, "21")
+    run_fils_sk_pfs(dev, apdev, "21", params)
 
-def test_fils_sk_pfs_25(dev, apdev):
+def test_fils_sk_pfs_25(dev, apdev, params):
     """FILS SK with PFS (DH group 25)"""
-    rul_fils_sk_pfs(dev, apdev, "25")
+    run_fils_sk_pfs(dev, apdev, "25", params)
 
-def test_fils_sk_pfs_26(dev, apdev):
+def test_fils_sk_pfs_26(dev, apdev, params):
     """FILS SK with PFS (DH group 26)"""
-    rul_fils_sk_pfs(dev, apdev, "26")
+    run_fils_sk_pfs(dev, apdev, "26", params)
 
-def test_fils_sk_pfs_27(dev, apdev):
+def test_fils_sk_pfs_27(dev, apdev, params):
     """FILS SK with PFS (DH group 27)"""
-    rul_fils_sk_pfs(dev, apdev, "27")
+    run_fils_sk_pfs(dev, apdev, "27", params)
 
-def test_fils_sk_pfs_28(dev, apdev):
+def test_fils_sk_pfs_28(dev, apdev, params):
     """FILS SK with PFS (DH group 28)"""
-    rul_fils_sk_pfs(dev, apdev, "28")
+    run_fils_sk_pfs(dev, apdev, "28", params)
 
-def test_fils_sk_pfs_29(dev, apdev):
+def test_fils_sk_pfs_29(dev, apdev, params):
     """FILS SK with PFS (DH group 29)"""
-    rul_fils_sk_pfs(dev, apdev, "29")
+    run_fils_sk_pfs(dev, apdev, "29", params)
 
-def test_fils_sk_pfs_30(dev, apdev):
+def test_fils_sk_pfs_30(dev, apdev, params):
     """FILS SK with PFS (DH group 30)"""
-    rul_fils_sk_pfs(dev, apdev, "30")
+    run_fils_sk_pfs(dev, apdev, "30", params)
 
-def rul_fils_sk_pfs(dev, apdev, group):
+def run_fils_sk_pfs(dev, apdev, group, params):
     check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
@@ -1369,7 +1372,7 @@ def rul_fils_sk_pfs(dev, apdev, group):
         if not (tls.startswith("OpenSSL") and ("build=OpenSSL 1.0.2" in tls or "build=OpenSSL 1.1" in tls) and ("run=OpenSSL 1.0.2" in tls or "run=OpenSSL 1.1" in tls)):
             raise HwsimSkip("Brainpool EC group not supported")
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1404,12 +1407,12 @@ def rul_fils_sk_pfs(dev, apdev, group):
         raise Exception("Association failed")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
-def test_fils_sk_pfs_group_mismatch(dev, apdev):
+def test_fils_sk_pfs_group_mismatch(dev, apdev, params):
     """FILS SK PFS DH group mismatch"""
     check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1440,12 +1443,12 @@ def test_fils_sk_pfs_group_mismatch(dev, apdev):
     if "auth_type=5 auth_transaction=2 status_code=77" not in ev:
         raise Exception("Unexpected auth reject value: " + ev)
 
-def test_fils_sk_auth_mismatch(dev, apdev):
+def test_fils_sk_auth_mismatch(dev, apdev, params):
     """FILS SK authentication type mismatch (PFS not supported)"""
     check_fils_sk_pfs_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1478,12 +1481,12 @@ def test_fils_sk_auth_mismatch(dev, apdev):
     dev[0].wait_connected()
     hwsim_utils.test_connectivity(dev[0], hapd)
 
-def test_fils_auth_gtk_rekey(dev, apdev):
+def test_fils_auth_gtk_rekey(dev, apdev, params):
     """GTK rekeying after FILS authentication"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    start_erp_as(apdev[1])
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")
@@ -1525,12 +1528,13 @@ def test_fils_auth_gtk_rekey(dev, apdev):
         raise Exception("Rekeying failed - disconnected")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
-def test_fils_and_ft(dev, apdev):
+def test_fils_and_ft(dev, apdev, params):
     """FILS SK using ERP and FT initial mobility domain association"""
     check_fils_capa(dev[0])
     check_erp_capa(dev[0])
 
-    er = start_erp_as(apdev[1])
+    er = start_erp_as(apdev[1],
+                      msk_dump=os.path.join(params['logdir'], "msk.lst"))
 
     bssid = apdev[0]['bssid']
     params = hostapd.wpa2_eap_params(ssid="fils")

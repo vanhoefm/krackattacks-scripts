@@ -60,6 +60,7 @@ struct wlantest_sta {
 		STATE2 /* authenticated */,
 		STATE3 /* associated */
 	} state;
+	u16 auth_alg;
 	u16 aid;
 	u8 rsnie[257]; /* WPA/RSN IE */
 	u8 osenie[257]; /* OSEN IE */

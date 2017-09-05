@@ -12,6 +12,9 @@
 #include "common/defs.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/wpa_common.h"
+#include "crypto/aes.h"
+#include "crypto/aes_siv.h"
 #include "crypto/aes_wrap.h"
 #include "wlantest.h"
 
@@ -110,6 +113,55 @@ static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
+static void process_fils_auth(struct wlantest *wt, struct wlantest_bss *bss,
+			      struct wlantest_sta *sta,
+			      const struct ieee80211_mgmt *mgmt, size_t len)
+{
+	struct ieee802_11_elems elems;
+	u16 trans;
+	struct wpa_ie_data data;
+
+	if (sta->auth_alg != WLAN_AUTH_FILS_SK ||
+	    len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth))
+		return;
+
+	trans = le_to_host16(mgmt->u.auth.auth_transaction);
+
+	if (ieee802_11_parse_elems(mgmt->u.auth.variable,
+				   len - IEEE80211_HDRLEN -
+				   sizeof(mgmt->u.auth), &elems, 0) ==
+	    ParseFailed)
+		return;
+
+	if (trans == 1) {
+		if (!elems.rsn_ie) {
+			add_note(wt, MSG_INFO,
+				 "FILS Authentication frame missing RSNE");
+			return;
+		}
+		if (wpa_parse_wpa_ie_rsn(elems.rsn_ie - 2,
+					 elems.rsn_ie_len + 2, &data) < 0) {
+			add_note(wt, MSG_INFO,
+				 "Invalid RSNE in FILS Authentication frame");
+			return;
+		}
+		sta->key_mgmt = data.key_mgmt;
+		sta->pairwise_cipher = data.pairwise_cipher;
+	}
+
+	if (!elems.fils_nonce) {
+		add_note(wt, MSG_INFO,
+			 "FILS Authentication frame missing nonce");
+		return;
+	}
+
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		os_memcpy(sta->anonce, elems.fils_nonce, FILS_NONCE_LEN);
+	else
+		os_memcpy(sta->snonce, elems.fils_nonce, FILS_NONCE_LEN);
+}
+
+
 static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_mgmt *mgmt;
@@ -135,6 +187,7 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 	}
 
 	alg = le_to_host16(mgmt->u.auth.auth_alg);
+	sta->auth_alg = alg;
 	trans = le_to_host16(mgmt->u.auth.auth_transaction);
 	status = le_to_host16(mgmt->u.auth.status_code);
 
@@ -155,6 +208,8 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 		sta->counters[WLANTEST_STA_COUNTER_AUTH_RX]++;
 	else
 		sta->counters[WLANTEST_STA_COUNTER_AUTH_TX]++;
+
+	process_fils_auth(wt, bss, sta, mgmt, len);
 }
 
 
@@ -257,12 +312,137 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 }
 
 
+static const u8 * get_fils_session(const u8 *ies, size_t ies_len)
+{
+	const u8 *ie, *end;
+
+	ie = ies;
+	end = ((const u8 *) ie) + ies_len;
+	while (ie + 1 < end) {
+		if (ie + 2 + ie[1] > end)
+			break;
+		if (ie[0] == WLAN_EID_EXTENSION &&
+		    ie[1] >= 1 + FILS_SESSION_LEN &&
+		    ie[2] == WLAN_EID_EXT_FILS_SESSION)
+			return ie;
+		ie += 2 + ie[1];
+	}
+	return NULL;
+}
+
+
+static int try_rmsk(struct wlantest *wt, struct wlantest_bss *bss,
+		    struct wlantest_sta *sta, struct wlantest_pmk *pmk,
+		    const u8 *frame_start, const u8 *frame_ad,
+		    const u8 *frame_ad_end, const u8 *encr_end)
+{
+	size_t pmk_len = 0;
+	u8 pmk_buf[PMK_LEN_MAX];
+	struct wpa_ptk ptk;
+	u8 ick[FILS_ICK_MAX_LEN];
+	size_t ick_len;
+	const u8 *aad[5];
+	size_t aad_len[5];
+	u8 buf[2000];
+
+	if (fils_rmsk_to_pmk(sta->key_mgmt, pmk->pmk, pmk->pmk_len,
+			     sta->snonce, sta->anonce, NULL, 0,
+			     pmk_buf, &pmk_len) < 0)
+		return -1;
+
+	if (fils_pmk_to_ptk(pmk_buf, pmk_len, sta->addr, bss->bssid,
+			    sta->snonce, sta->anonce, &ptk, ick, &ick_len,
+			    sta->key_mgmt, sta->pairwise_cipher,
+			    NULL, NULL) < 0)
+		return -1;
+
+	/* Check AES-SIV decryption with the derived key */
+
+	/* AES-SIV AAD vectors */
+
+	/* The STA's MAC address */
+	aad[0] = sta->addr;
+	aad_len[0] = ETH_ALEN;
+	/* The AP's BSSID */
+	aad[1] = bss->bssid;
+	aad_len[1] = ETH_ALEN;
+	/* The STA's nonce */
+	aad[2] = sta->snonce;
+	aad_len[2] = FILS_NONCE_LEN;
+	/* The AP's nonce */
+	aad[3] = sta->anonce;
+	aad_len[3] = FILS_NONCE_LEN;
+	/*
+	 * The (Re)Association Request frame from the Capability Information
+	 * field to the FILS Session element (both inclusive).
+	 */
+	aad[4] = frame_ad;
+	aad_len[4] = frame_ad_end - frame_ad;
+
+	if (encr_end - frame_ad_end < AES_BLOCK_SIZE ||
+	    encr_end - frame_ad_end > sizeof(buf))
+		return -1;
+	if (aes_siv_decrypt(ptk.kek, ptk.kek_len,
+			    frame_ad_end, encr_end - frame_ad_end,
+			    5, aad, aad_len, buf) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Derived PTK did not match AES-SIV data");
+		return -1;
+	}
+
+	add_note(wt, MSG_DEBUG, "Derived FILS PTK");
+	os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
+	sta->ptk_set = 1;
+	sta->counters[WLANTEST_STA_COUNTER_PTK_LEARNED]++;
+	wpa_hexdump(MSG_DEBUG, "FILS: Decrypted Association Request elements",
+		    buf, encr_end - frame_ad_end - AES_BLOCK_SIZE);
+
+	if (wt->write_pcap_dumper || wt->pcapng) {
+		write_pcap_decrypted(wt, frame_start,
+				     frame_ad_end - frame_start,
+				     buf,
+				     encr_end - frame_ad_end - AES_BLOCK_SIZE);
+	}
+
+	return 0;
+}
+
+
+static void derive_fils_keys(struct wlantest *wt, struct wlantest_bss *bss,
+			     struct wlantest_sta *sta, const u8 *frame_start,
+			     const u8 *frame_ad, const u8 *frame_ad_end,
+			     const u8 *encr_end)
+{
+	struct wlantest_pmk *pmk;
+
+	wpa_printf(MSG_DEBUG, "Trying to derive PTK for " MACSTR
+		   " from FILS rMSK", MAC2STR(sta->addr));
+
+	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk,
+			 list) {
+		wpa_printf(MSG_DEBUG, "Try per-BSS PMK");
+		if (try_rmsk(wt, bss, sta, pmk, frame_start, frame_ad,
+			     frame_ad_end, encr_end) == 0)
+			return;
+	}
+
+	dl_list_for_each(pmk, &wt->pmk, struct wlantest_pmk, list) {
+		wpa_printf(MSG_DEBUG, "Try global PMK");
+		if (try_rmsk(wt, bss, sta, pmk, frame_start, frame_ad,
+			     frame_ad_end, encr_end) == 0)
+			return;
+	}
+}
+
+
 static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 	struct ieee802_11_elems elems;
+	const u8 *ie;
+	size_t ie_len;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -286,9 +466,24 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 
 	sta->counters[WLANTEST_STA_COUNTER_ASSOCREQ_TX]++;
 
-	if (ieee802_11_parse_elems(mgmt->u.assoc_req.variable,
-				   len - (mgmt->u.assoc_req.variable - data),
-				   &elems, 0) == ParseFailed) {
+	ie = mgmt->u.assoc_req.variable;
+	ie_len = len - (mgmt->u.assoc_req.variable - data);
+
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK) {
+		const u8 *session, *frame_ad, *frame_ad_end, *encr_end;
+
+		session = get_fils_session(ie, ie_len);
+		if (session) {
+			frame_ad = (const u8 *) &mgmt->u.assoc_req.capab_info;
+			frame_ad_end = session + 2 + session[1];
+			encr_end = data + len;
+			derive_fils_keys(wt, bss, sta, data, frame_ad,
+					 frame_ad_end, encr_end);
+			ie_len = session - ie;
+		}
+	}
+
+	if (ieee802_11_parse_elems(ie, ie_len, &elems, 0) == ParseFailed) {
 		add_note(wt, MSG_INFO, "Invalid IEs in Association Request "
 			 "frame from " MACSTR, MAC2STR(mgmt->sa));
 		return;
@@ -305,6 +500,65 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 			  sta->assocreq_ies_len);
 
 	sta_update_assoc(sta, &elems);
+}
+
+
+static void decrypt_fils_assoc_resp(struct wlantest *wt,
+				    struct wlantest_bss *bss,
+				    struct wlantest_sta *sta,
+				    const u8 *frame_start, const u8 *frame_ad,
+				    const u8 *frame_ad_end, const u8 *encr_end)
+{
+	const u8 *aad[5];
+	size_t aad_len[5];
+	u8 buf[2000];
+
+	if (!sta->ptk_set)
+		return;
+
+	/* Check AES-SIV decryption with the derived key */
+
+	/* AES-SIV AAD vectors */
+
+	/* The AP's BSSID */
+	aad[0] = bss->bssid;
+	aad_len[0] = ETH_ALEN;
+	/* The STA's MAC address */
+	aad[1] = sta->addr;
+	aad_len[1] = ETH_ALEN;
+	/* The AP's nonce */
+	aad[2] = sta->anonce;
+	aad_len[2] = FILS_NONCE_LEN;
+	/* The STA's nonce */
+	aad[3] = sta->snonce;
+	aad_len[3] = FILS_NONCE_LEN;
+	/*
+	 * The (Re)Association Response frame from the Capability Information
+	 * field to the FILS Session element (both inclusive).
+	 */
+	aad[4] = frame_ad;
+	aad_len[4] = frame_ad_end - frame_ad;
+
+	if (encr_end - frame_ad_end < AES_BLOCK_SIZE ||
+	    encr_end - frame_ad_end > sizeof(buf))
+		return;
+	if (aes_siv_decrypt(sta->ptk.kek, sta->ptk.kek_len,
+			    frame_ad_end, encr_end - frame_ad_end,
+			    5, aad, aad_len, buf) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Derived PTK did not match AES-SIV data");
+		return;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "FILS: Decrypted Association Response elements",
+		    buf, encr_end - frame_ad_end - AES_BLOCK_SIZE);
+
+	if (wt->write_pcap_dumper || wt->pcapng) {
+		write_pcap_decrypted(wt, frame_start,
+				     frame_ad_end - frame_start,
+				     buf,
+				     encr_end - frame_ad_end - AES_BLOCK_SIZE);
+	}
 }
 
 
@@ -343,6 +597,20 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 		   " (capab=0x%x status=%u aid=%u)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
 		   aid & 0x3fff);
+
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK) {
+		const u8 *session, *frame_ad, *frame_ad_end, *encr_end;
+
+		session = get_fils_session(ies, ies_len);
+		if (session) {
+			frame_ad = (const u8 *) &mgmt->u.assoc_resp.capab_info;
+			frame_ad_end = session + 2 + session[1];
+			encr_end = data + len;
+			decrypt_fils_assoc_resp(wt, bss, sta, data, frame_ad,
+						frame_ad_end, encr_end);
+			ies_len = session - ies;
+		}
+	}
 
 	if (status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
 		struct ieee802_11_elems elems;
@@ -406,6 +674,8 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 	struct ieee802_11_elems elems;
+	const u8 *ie;
+	size_t ie_len;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -430,9 +700,24 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 
 	sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX]++;
 
-	if (ieee802_11_parse_elems(mgmt->u.reassoc_req.variable,
-				   len - (mgmt->u.reassoc_req.variable - data),
-				   &elems, 0) == ParseFailed) {
+	ie = mgmt->u.reassoc_req.variable;
+	ie_len = len - (mgmt->u.reassoc_req.variable - data);
+
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK) {
+		const u8 *session, *frame_ad, *frame_ad_end, *encr_end;
+
+		session = get_fils_session(ie, ie_len);
+		if (session) {
+			frame_ad = (const u8 *) &mgmt->u.reassoc_req.capab_info;
+			frame_ad_end = session + 2 + session[1];
+			encr_end = data + len;
+			derive_fils_keys(wt, bss, sta, data, frame_ad,
+					 frame_ad_end, encr_end);
+			ie_len = session - ie;
+		}
+	}
+
+	if (ieee802_11_parse_elems(ie, ie_len, &elems, 0) == ParseFailed) {
 		add_note(wt, MSG_INFO, "Invalid IEs in Reassociation Request "
 			 "frame from " MACSTR, MAC2STR(mgmt->sa));
 		return;
@@ -460,6 +745,8 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 	u16 capab, status, aid;
+	const u8 *ies;
+	size_t ies_len;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -475,6 +762,9 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 		return;
 	}
 
+	ies = mgmt->u.reassoc_resp.variable;
+	ies_len = len - (mgmt->u.reassoc_resp.variable - data);
+
 	capab = le_to_host16(mgmt->u.reassoc_resp.capab_info);
 	status = le_to_host16(mgmt->u.reassoc_resp.status_code);
 	aid = le_to_host16(mgmt->u.reassoc_resp.aid);
@@ -484,10 +774,24 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
 		   aid & 0x3fff);
 
+	if (sta->auth_alg == WLAN_AUTH_FILS_SK) {
+		const u8 *session, *frame_ad, *frame_ad_end, *encr_end;
+
+		session = get_fils_session(ies, ies_len);
+		if (session) {
+			frame_ad = (const u8 *)
+				&mgmt->u.reassoc_resp.capab_info;
+			frame_ad_end = session + 2 + session[1];
+			encr_end = data + len;
+			decrypt_fils_assoc_resp(wt, bss, sta, data, frame_ad,
+						frame_ad_end, encr_end);
+			ies_len = session - ies;
+		}
+	}
+
 	if (status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
 		struct ieee802_11_elems elems;
-		const u8 *ies = mgmt->u.reassoc_resp.variable;
-		size_t ies_len = len - (mgmt->u.reassoc_resp.variable - data);
+
 		if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) ==
 		    ParseFailed) {
 			add_note(wt, MSG_INFO, "Failed to parse IEs in "

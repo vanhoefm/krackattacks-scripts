@@ -451,6 +451,9 @@ skip_wpa_check:
 	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
 		int delay_assoc = 0;
 
+		if (!req_ies)
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+
 		if (!wpa_fils_validate_fils_session(sta->wpa_sm, req_ies,
 						    req_ies_len,
 						    sta->fils_session)) {

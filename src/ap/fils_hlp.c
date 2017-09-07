@@ -232,7 +232,7 @@ static void fils_dhcp_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	sta = ap_get_sta(hapd, dhcp->hw_addr);
 	if (!sta || !sta->fils_pending_assoc_req) {
 		wpa_printf(MSG_DEBUG,
-			   "FILS: No pending HLP DHCP exchange with hw_addr"
+			   "FILS: No pending HLP DHCP exchange with hw_addr "
 			   MACSTR, MAC2STR(dhcp->hw_addr));
 		return;
 	}

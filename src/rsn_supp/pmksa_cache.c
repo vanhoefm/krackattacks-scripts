@@ -367,6 +367,7 @@ pmksa_cache_clone_entry(struct rsn_pmksa_cache *pmksa,
 			const u8 *aa)
 {
 	struct rsn_pmksa_cache_entry *new_entry;
+	os_time_t old_expiration = old_entry->expiration;
 
 	new_entry = pmksa_cache_add(pmksa, old_entry->pmk, old_entry->pmk_len,
 				    NULL, NULL, 0,
@@ -378,7 +379,7 @@ pmksa_cache_clone_entry(struct rsn_pmksa_cache *pmksa,
 		return NULL;
 
 	/* TODO: reorder entries based on expiration time? */
-	new_entry->expiration = old_entry->expiration;
+	new_entry->expiration = old_expiration;
 	new_entry->opportunistic = 1;
 
 	return new_entry;

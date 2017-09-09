@@ -24,6 +24,7 @@ from p2p_utils import *
 from test_ap_tdls import connect_2sta_open
 from test_ap_eap import check_altsubject_match_support
 from test_nfc_p2p import set_ip_addr_info
+from test_wpas_mesh import check_mesh_support, add_open_mesh_network
 
 WPAS_DBUS_SERVICE = "fi.w1.wpa_supplicant1"
 WPAS_DBUS_PATH = "/fi/w1/wpa_supplicant1"
@@ -35,6 +36,7 @@ WPAS_DBUS_IFACE_P2PDEVICE = WPAS_DBUS_IFACE + ".P2PDevice"
 WPAS_DBUS_P2P_PEER = "fi.w1.wpa_supplicant1.Peer"
 WPAS_DBUS_GROUP = "fi.w1.wpa_supplicant1.Group"
 WPAS_DBUS_PERSISTENT_GROUP = "fi.w1.wpa_supplicant1.PersistentGroup"
+WPAS_DBUS_IFACE_MESH = WPAS_DBUS_IFACE + ".Mesh"
 
 def prepare_dbus(dev):
     if not dbus_imported:
@@ -5604,5 +5606,80 @@ def test_dbus_assoc_reject(dev, apdev):
             return self.assoc_status_seen
 
     with TestDbusConnect(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
+def test_dbus_mesh(dev, apdev):
+    """D-Bus mesh"""
+    check_mesh_support(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    mesh = dbus.Interface(if_obj, WPAS_DBUS_IFACE_MESH)
+
+    add_open_mesh_network(dev[1])
+    addr1 = dev[1].own_addr()
+
+    class TestDbusMesh(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.done = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_test)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.meshGroupStarted, WPAS_DBUS_IFACE_MESH,
+                            "MeshGroupStarted")
+            self.add_signal(self.meshGroupRemoved, WPAS_DBUS_IFACE_MESH,
+                            "MeshGroupRemoved")
+            self.add_signal(self.meshPeerConnected, WPAS_DBUS_IFACE_MESH,
+                            "MeshPeerConnected")
+            self.add_signal(self.meshPeerDisconnected, WPAS_DBUS_IFACE_MESH,
+                            "MeshPeerDisconnected")
+            self.loop.run()
+            return self
+
+        def meshGroupStarted(self, args):
+            logger.debug("MeshGroupStarted: " + str(args))
+
+        def meshGroupRemoved(self, args):
+            logger.debug("MeshGroupRemoved: " + str(args))
+            self.done = True
+            self.loop.quit()
+
+        def meshPeerConnected(self, args):
+            logger.debug("MeshPeerConnected: " + str(args))
+
+            res = if_obj.Get(WPAS_DBUS_IFACE_MESH, 'MeshPeers',
+                             dbus_interface=dbus.PROPERTIES_IFACE,
+                             byte_arrays=True)
+            logger.debug("MeshPeers: " + str(res))
+            if len(res) != 1:
+                raise Exception("Unexpected number of MeshPeer values")
+            if binascii.hexlify(res[0]) != addr1.replace(':', ''):
+                raise Exception("Unexpected peer address")
+
+            res = if_obj.Get(WPAS_DBUS_IFACE_MESH, 'MeshGroup',
+                             dbus_interface=dbus.PROPERTIES_IFACE,
+                             byte_arrays=True)
+            logger.debug("MeshGroup: " + str(res))
+            if res != "wpas-mesh-open":
+                raise Exception("Unexpected MeshGroup")
+            dev1 = WpaSupplicant('wlan1', '/tmp/wpas-wlan1')
+            dev1.mesh_group_remove()
+
+        def meshPeerDisconnected(self, args):
+            logger.debug("MeshPeerDisconnected: " + str(args))
+            dev0 = WpaSupplicant('wlan0', '/tmp/wpas-wlan0')
+            dev0.mesh_group_remove()
+
+        def run_test(self, *args):
+            logger.debug("run_test")
+            dev0 = WpaSupplicant('wlan0', '/tmp/wpas-wlan0')
+            add_open_mesh_network(dev0)
+            return False
+
+        def success(self):
+            return self.done
+
+    with TestDbusMesh(bus) as t:
         if not t.success():
             raise Exception("Expected signals not seen")

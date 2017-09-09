@@ -4775,7 +4775,6 @@ def test_ap_wpa2_eap_sim_zero_db_timeout(dev, apdev):
     # Run multiple iterations to make it more likely to hit the case where the
     # DB request times out and response is lost.
     for i in range(20):
-        print i
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
                        identity="1232010000000000",
                        password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",

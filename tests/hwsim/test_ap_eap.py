@@ -1185,6 +1185,40 @@ def _test_ap_wpa2_eap_aka_prime_ext_auth_fail(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     dev[0].wait_disconnected()
 
+def test_ap_wpa2_eap_aka_prime_ext(dev, apdev):
+    """EAP-AKA' with external UMTS auth to hit Synchronization-Failure"""
+    try:
+        _test_ap_wpa2_eap_aka_prime_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_aka_prime_ext(dev, apdev):
+    check_hlr_auc_gw_support()
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="AKA'", key_mgmt="WPA-EAP",
+                        identity="6555444333222111",
+                        password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                        wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    if ev is None:
+        raise Exception("Network connected timed out")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "UMTS-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during UMTS auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTS:112233445566778899aabbccddee"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

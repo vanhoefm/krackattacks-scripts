@@ -386,6 +386,42 @@ def test_pmksa_cache_and_cui(dev, apdev):
     if state != "COMPLETED":
         raise Exception("Reauthentication did not complete")
 
+def test_pmksa_cache_preauth_auto(dev, apdev):
+    """RSN pre-authentication based on pre-connection scan results"""
+    try:
+        run_pmksa_cache_preauth_auto(dev, apdev)
+    finally:
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev',
+                                       'ap-br0', 'down', '2>', '/dev/null'],
+                            shell=True)
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0',
+                                       '2>', '/dev/null'], shell=True)
+
+def run_pmksa_cache_preauth_auto(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['bridge'] = 'ap-br0'
+    params['rsn_preauth'] = '1'
+    params['rsn_preauth_interfaces'] = 'ap-br0'
+
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.cmd_execute(['brctl', 'setfd', 'ap-br0', '0'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+
+    found = False
+    for i in range(20):
+        time.sleep(0.5)
+        res1 = dev[0].get_pmksa(apdev[0]['bssid'])
+        res2 = dev[0].get_pmksa(apdev[1]['bssid'])
+        if res1 and res2:
+            found = True
+            break
+    if not found:
+        raise Exception("The expected PMKSA cache entries not found")
+
 def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
                                 force_disconnect=False):
     if not extraparams:

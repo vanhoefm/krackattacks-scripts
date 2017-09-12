@@ -1857,6 +1857,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	/*
+	 * Set WPA state machine configuration to match the selected network now
+	 * so that the information is available before wpas_start_assoc_cb()
+	 * gets called. This is needed at least for RSN pre-authentication where
+	 * candidate APs are added to a list based on scan result processing
+	 * before completion of the first association.
+	 */
+	wpa_supplicant_rsn_supp_set_config(wpa_s, ssid);
+
 #ifdef CONFIG_DPP
 	if (wpas_dpp_check_connect(wpa_s, ssid, bss) != 0)
 		return;

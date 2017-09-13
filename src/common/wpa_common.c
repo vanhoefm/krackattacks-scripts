@@ -1428,29 +1428,48 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
  * @aa: Authenticator address
  * @spa: Supplicant address
  * @pmkid: Buffer for PMKID
- * @use_sha256: Whether to use SHA256-based KDF
+ * @akmp: Negotiated key management protocol
  *
- * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
- * PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AA || SPA)
+ * IEEE Std 802.11-2016 - 12.7.1.3 Pairwise key hierarchy
+ * AKM: 00-0F-AC:5, 00-0F-AC:6, 00-0F-AC:14, 00-0F-AC:16
+ * PMKID = Truncate-128(HMAC-SHA-256(PMK, "PMK Name" || AA || SPA))
+ * AKM: 00-0F-AC:11
+ * See rsn_pmkid_suite_b()
+ * AKM: 00-0F-AC:12
+ * See rsn_pmkid_suite_b_192()
+ * AKM: 00-0F-AC:15, 00-0F-AC:17
+ * PMKID = Truncate-128(HMAC-SHA-384(PMK, "PMK Name" || AA || SPA))
+ * Otherwise:
+ * PMKID = Truncate-128(HMAC-SHA-1(PMK, "PMK Name" || AA || SPA))
  */
 void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
-	       u8 *pmkid, int use_sha256)
+	       u8 *pmkid, int akmp)
 {
 	char *title = "PMK Name";
 	const u8 *addr[3];
 	const size_t len[3] = { 8, ETH_ALEN, ETH_ALEN };
-	unsigned char hash[SHA256_MAC_LEN];
+	unsigned char hash[SHA384_MAC_LEN];
 
 	addr[0] = (u8 *) title;
 	addr[1] = aa;
 	addr[2] = spa;
 
-#ifdef CONFIG_IEEE80211W
-	if (use_sha256)
+	if (0) {
+#ifdef CONFIG_FILS
+	} else if (wpa_key_mgmt_sha384(akmp)) {
+		wpa_printf(MSG_DEBUG, "RSN: Derive PMKID using HMAC-SHA-384");
+		hmac_sha384_vector(pmk, pmk_len, 3, addr, len, hash);
+#endif /* CONFIG_FILS */
+#if defined(CONFIG_IEEE80211W) || defined(CONFIG_FILS)
+	} else if (wpa_key_mgmt_sha256(akmp)) {
+		wpa_printf(MSG_DEBUG, "RSN: Derive PMKID using HMAC-SHA-256");
 		hmac_sha256_vector(pmk, pmk_len, 3, addr, len, hash);
-	else
-#endif /* CONFIG_IEEE80211W */
+#endif /* CONFIG_IEEE80211W || CONFIG_FILS */
+	} else {
+		wpa_printf(MSG_DEBUG, "RSN: Derive PMKID using HMAC-SHA-1");
 		hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+	}
+	wpa_hexdump(MSG_DEBUG, "RSN: Derived PMKID", hash, PMKID_LEN);
 	os_memcpy(pmkid, hash, PMKID_LEN);
 }
 

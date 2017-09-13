@@ -2085,7 +2085,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 			 */
 			rsn_pmkid(sm->PMK, sm->pmk_len, sm->wpa_auth->addr,
 				  sm->addr, &pmkid[2 + RSN_SELECTOR_LEN],
-				  wpa_key_mgmt_sha256(sm->wpa_key_mgmt));
+				  sm->wpa_key_mgmt);
 		}
 	}
 	wpa_send_eapol(sm->wpa_auth, sm,

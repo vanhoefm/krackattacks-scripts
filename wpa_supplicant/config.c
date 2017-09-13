@@ -4550,7 +4550,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(sched_scan_start_delay), 0 },
 	{ INT(tdls_external_control), 0},
 	{ STR(osu_dir), 0 },
-	{ STR(wowlan_triggers), 0 },
+	{ STR(wowlan_triggers), CFG_CHANGED_WOWLAN_TRIGGERS },
 	{ INT(p2p_search_delay), 0},
 	{ INT(mac_addr), 0 },
 	{ INT(rand_addr_lifetime), 0 },

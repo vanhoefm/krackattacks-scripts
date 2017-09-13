@@ -6018,6 +6018,16 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SCHED_SCAN_PLANS)
 		wpas_sched_scan_plans_set(wpa_s, wpa_s->conf->sched_scan_plans);
 
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_WOWLAN_TRIGGERS) {
+		struct wpa_driver_capa capa;
+		int res = wpa_drv_get_capa(wpa_s, &capa);
+
+		if (res == 0 && wpas_set_wowlan_triggers(wpa_s, &capa) < 0)
+			wpa_printf(MSG_ERROR,
+				   "Failed to update wowlan_triggers to '%s'",
+				   wpa_s->conf->wowlan_triggers);
+	}
+
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);
 #endif /* CONFIG_WPS */

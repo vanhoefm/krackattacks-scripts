@@ -351,7 +351,8 @@ static int try_rmsk(struct wlantest *wt, struct wlantest_bss *bss,
 		return -1;
 
 	if (fils_pmk_to_ptk(pmk_buf, pmk_len, sta->addr, bss->bssid,
-			    sta->snonce, sta->anonce, &ptk, ick, &ick_len,
+			    sta->snonce, sta->anonce, NULL, 0,
+			    &ptk, ick, &ick_len,
 			    sta->key_mgmt, sta->pairwise_cipher,
 			    NULL, NULL) < 0)
 		return -1;

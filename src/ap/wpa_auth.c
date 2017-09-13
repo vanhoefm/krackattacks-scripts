@@ -2113,6 +2113,7 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 
 int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 			 size_t pmk_len, const u8 *snonce, const u8 *anonce,
+			 const u8 *dhss, size_t dhss_len,
 			 struct wpabuf *g_sta, struct wpabuf *g_ap)
 {
 	u8 ick[FILS_ICK_MAX_LEN];
@@ -2122,7 +2123,8 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 	size_t fils_ft_len = 0;
 
 	res = fils_pmk_to_ptk(pmk, pmk_len, sm->addr, sm->wpa_auth->addr,
-			      snonce, anonce, &sm->PTK, ick, &ick_len,
+			      snonce, anonce, dhss, dhss_len,
+			      &sm->PTK, ick, &ick_len,
 			      sm->wpa_key_mgmt, sm->pairwise,
 			      fils_ft, &fils_ft_len);
 	if (res < 0)

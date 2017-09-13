@@ -1417,6 +1417,11 @@ prepare_auth_resp_fils(struct hostapd_data *hapd,
 		}
 		pmk = pmk_buf;
 
+		/* Don't use DHss in PTK derivation if PMKSA caching is not
+		 * used. */
+		wpabuf_clear_free(sta->fils_dh_ss);
+		sta->fils_dh_ss = NULL;
+
 		if (sta->fils_erp_pmkid_set) {
 			/* TODO: get PMKLifetime from WPA parameters */
 			unsigned int dot11RSNAConfigPMKLifetime = 43200;
@@ -1449,6 +1454,10 @@ prepare_auth_resp_fils(struct hostapd_data *hapd,
 
 	if (fils_auth_pmk_to_ptk(sta->wpa_sm, pmk, pmk_len,
 				 sta->fils_snonce, fils_nonce,
+				 sta->fils_dh_ss ?
+				 wpabuf_head(sta->fils_dh_ss) : NULL,
+				 sta->fils_dh_ss ?
+				 wpabuf_len(sta->fils_dh_ss) : 0,
 				 sta->fils_g_sta, pub) < 0) {
 		*resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		wpabuf_free(data);

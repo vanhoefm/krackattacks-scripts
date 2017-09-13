@@ -3639,8 +3639,12 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 				       dh_ss ? wpabuf_len(dh_ss) : 0,
 				       sm->pmk, &sm->pmk_len);
 		os_memset(rmsk, 0, sizeof(rmsk));
+
+		/* Don't use DHss in PTK derivation if PMKSA caching is not
+		 * used. */
 		wpabuf_clear_free(dh_ss);
 		dh_ss = NULL;
+
 		if (res)
 			goto fail;
 
@@ -3665,12 +3669,19 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	}
 
 	if (fils_pmk_to_ptk(sm->pmk, sm->pmk_len, sm->own_addr, sm->bssid,
-			    sm->fils_nonce, sm->fils_anonce, &sm->ptk,
-			    ick, &ick_len, sm->key_mgmt, sm->pairwise_cipher,
+			    sm->fils_nonce, sm->fils_anonce,
+			    dh_ss ? wpabuf_head(dh_ss) : NULL,
+			    dh_ss ? wpabuf_len(dh_ss) : 0,
+			    &sm->ptk, ick, &ick_len,
+			    sm->key_mgmt, sm->pairwise_cipher,
 			    sm->fils_ft, &sm->fils_ft_len) < 0) {
 		wpa_printf(MSG_DEBUG, "FILS: Failed to derive PTK");
 		goto fail;
 	}
+
+	wpabuf_clear_free(dh_ss);
+	dh_ss = NULL;
+
 	sm->ptk_set = 1;
 	sm->tptk_set = 0;
 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));

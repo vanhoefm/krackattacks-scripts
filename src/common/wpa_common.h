@@ -347,7 +347,8 @@ int fils_rmsk_to_pmk(int akmp, const u8 *rmsk, size_t rmsk_len,
 int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
 		   u8 *pmkid);
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
-		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
+		    const u8 *snonce, const u8 *anonce, const u8 *dhss,
+		    size_t dhss_len, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher,
 		    u8 *fils_ft, size_t *fils_ft_len);
 int fils_key_auth_sk(const u8 *ick, size_t ick_len, const u8 *snonce,

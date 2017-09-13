@@ -389,19 +389,22 @@ int fils_pmkid_erp(int akmp, const u8 *reauth, size_t reauth_len,
 
 
 int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
-		    const u8 *snonce, const u8 *anonce, struct wpa_ptk *ptk,
+		    const u8 *snonce, const u8 *anonce, const u8 *dhss,
+		    size_t dhss_len, struct wpa_ptk *ptk,
 		    u8 *ick, size_t *ick_len, int akmp, int cipher,
 		    u8 *fils_ft, size_t *fils_ft_len)
 {
-	u8 data[2 * ETH_ALEN + 2 * FILS_NONCE_LEN];
+	u8 *data, *pos;
+	size_t data_len;
 	u8 tmp[FILS_ICK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN +
 	       FILS_FT_MAX_LEN];
 	size_t key_data_len;
 	const char *label = "FILS PTK Derivation";
+	int ret = -1;
 
 	/*
 	 * FILS-Key-Data = PRF-X(PMK, "FILS PTK Derivation",
-	 *                       SPA || AA || SNonce || ANonce)
+	 *                       SPA || AA || SNonce || ANonce [ || DHss ])
 	 * ICK = L(FILS-Key-Data, 0, ICK_bits)
 	 * KEK = L(FILS-Key-Data, ICK_bits, KEK_bits)
 	 * TK = L(FILS-Key-Data, ICK_bits + KEK_bits, TK_bits)
@@ -409,10 +412,21 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 	 * FILS-FT = L(FILS-Key-Data, ICK_bits + KEK_bits + TK_bits,
 	 *             FILS-FT_bits)
 	 */
-	os_memcpy(data, spa, ETH_ALEN);
-	os_memcpy(data + ETH_ALEN, aa, ETH_ALEN);
-	os_memcpy(data + 2 * ETH_ALEN, snonce, FILS_NONCE_LEN);
-	os_memcpy(data + 2 * ETH_ALEN + FILS_NONCE_LEN, anonce, FILS_NONCE_LEN);
+	data_len = 2 * ETH_ALEN + 2 * FILS_NONCE_LEN + dhss_len;
+	data = os_malloc(data_len);
+	if (!data)
+		goto err;
+	pos = data;
+	os_memcpy(pos, spa, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, aa, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, snonce, FILS_NONCE_LEN);
+	pos += FILS_NONCE_LEN;
+	os_memcpy(pos, anonce, FILS_NONCE_LEN);
+	pos += FILS_NONCE_LEN;
+	if (dhss)
+		os_memcpy(pos, dhss, dhss_len);
 
 	ptk->kck_len = 0;
 	ptk->kek_len = wpa_kek_len(akmp, pmk_len);
@@ -422,7 +436,7 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 	else if (wpa_key_mgmt_sha256(akmp))
 		*ick_len = 32;
 	else
-		return -1;
+		goto err;
 	key_data_len = *ick_len + ptk->kek_len + ptk->tk_len;
 
 	if (fils_ft && fils_ft_len) {
@@ -439,20 +453,22 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 
 	if (wpa_key_mgmt_sha384(akmp)) {
 		wpa_printf(MSG_DEBUG, "FILS: PTK derivation using PRF(SHA384)");
-		if (sha384_prf(pmk, pmk_len, label, data, sizeof(data),
+		if (sha384_prf(pmk, pmk_len, label, data, data_len,
 			       tmp, key_data_len) < 0)
-			return -1;
+			goto err;
 	} else {
 		wpa_printf(MSG_DEBUG, "FILS: PTK derivation using PRF(SHA256)");
-		if (sha256_prf(pmk, pmk_len, label, data, sizeof(data),
+		if (sha256_prf(pmk, pmk_len, label, data, data_len,
 			       tmp, key_data_len) < 0)
-			return -1;
+			goto err;
 	}
 
 	wpa_printf(MSG_DEBUG, "FILS: PTK derivation - SPA=" MACSTR
 		   " AA=" MACSTR, MAC2STR(spa), MAC2STR(aa));
 	wpa_hexdump(MSG_DEBUG, "FILS: SNonce", snonce, FILS_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", anonce, FILS_NONCE_LEN);
+	if (dhss)
+		wpa_hexdump_key(MSG_DEBUG, "FILS: DHss", dhss, dhss_len);
 	wpa_hexdump_key(MSG_DEBUG, "FILS: PMK", pmk, pmk_len);
 	wpa_hexdump_key(MSG_DEBUG, "FILS: FILS-Key-Data", tmp, key_data_len);
 
@@ -473,7 +489,10 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 	}
 
 	os_memset(tmp, 0, sizeof(tmp));
-	return 0;
+	ret = 0;
+err:
+	bin_clear_free(data, data_len);
+	return ret;
 }
 
 

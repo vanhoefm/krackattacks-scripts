@@ -1443,6 +1443,113 @@ def test_fils_sk_pfs_group_mismatch(dev, apdev, params):
     if "auth_type=5 auth_transaction=2 status_code=77" not in ev:
         raise Exception("Unexpected auth reject value: " + ev)
 
+def test_fils_sk_pfs_pmksa_caching(dev, apdev, params):
+    """FILS SK with PFS and PMKSA caching"""
+    check_fils_sk_pfs_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    start_erp_as(apdev[1], msk_dump=os.path.join(params['logdir'], "msk.lst"))
+
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = "FILS-SHA256"
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['fils_dh_group'] = "19"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("fils", key_mgmt="FILS-SHA256",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", fils_dh_group="19", scan_freq="2412")
+    pmksa = dev[0].get_pmksa(bssid)
+    if pmksa is None:
+        raise Exception("No PMKSA cache entry created")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS authentication with PMKSA caching and PFS
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using PMKSA caching timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa2 = dev[0].get_pmksa(bssid)
+    if pmksa2 is None:
+        raise Exception("No PMKSA cache entry found")
+    if pmksa['pmkid'] != pmksa2['pmkid']:
+        raise Exception("Unexpected PMKID change")
+
+    # Verify EAPOL reauthentication after FILS authentication
+    hapd.request("EAPOL_REAUTH " + dev[0].own_addr())
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not start")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("EAP authentication did not succeed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS authentication with ERP and PFS
+    dev[0].request("PMKSA_FLUSH")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using ERP and PFS timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "CTRL-EVENT-EAP-SUCCESS" not in ev:
+        raise Exception("ERP success not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "SME: Trying to authenticate",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using ERP and PFS timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "SME: Trying to authenticate" in ev:
+        raise Exception("Unexpected extra authentication round with ERP and PFS")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa3 = dev[0].get_pmksa(bssid)
+    if pmksa3 is None:
+        raise Exception("No PMKSA cache entry found")
+    if pmksa2['pmkid'] == pmksa3['pmkid']:
+        raise Exception("PMKID did not change")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    # FILS authentication with PMKSA caching and PFS
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq=2412)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using PMKSA caching timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa4 = dev[0].get_pmksa(bssid)
+    if pmksa4 is None:
+        raise Exception("No PMKSA cache entry found")
+    if pmksa3['pmkid'] != pmksa4['pmkid']:
+        raise Exception("Unexpected PMKID change (2)")
+
 def test_fils_sk_auth_mismatch(dev, apdev, params):
     """FILS SK authentication type mismatch (PFS not supported)"""
     check_fils_sk_pfs_capa(dev[0])

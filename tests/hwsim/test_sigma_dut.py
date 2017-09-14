@@ -14,6 +14,7 @@ import time
 import hostapd
 from utils import HwsimSkip
 from hwsim import HWSimRadio
+from test_suite_b import check_suite_b_192_capa, suite_b_as_params
 
 def check_sigma_dut():
     if not os.path.exists("./sigma_dut"):
@@ -56,7 +57,7 @@ def sigma_dut_cmd_check(cmd):
         raise Exception("sigma_dut command failed: " + cmd)
     return res
 
-def start_sigma_dut(ifname, debug=False):
+def start_sigma_dut(ifname, debug=False, hostapd_logdir=None, cert_path=None):
     check_sigma_dut()
     cmd = [ './sigma_dut',
             '-M', ifname,
@@ -66,6 +67,10 @@ def start_sigma_dut(ifname, debug=False):
             '-j', ifname ]
     if debug:
         cmd += [ '-d' ]
+    if hostapd_logdir:
+        cmd += [ '-H', hostapd_logdir ]
+    if cert_path:
+        cmd += [ '-C', cert_path ]
     sigma = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     for i in range(20):
@@ -252,6 +257,144 @@ def test_sigma_dut_ap_psk(dev, apdev):
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
             dev[0].connect("test-psk", psk="12345678", scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_suite_b(dev, apdev, params):
+    """sigma_dut controlled STA Suite B"""
+    check_suite_b_192_capa(dev)
+    logdir = params['logdir']
+
+    with open("auth_serv/ec2-ca.pem", "r") as f:
+        with open(os.path.join(logdir, "suite_b_ca.pem"), "w") as f2:
+            f2.write(f.read())
+
+    with open("auth_serv/ec2-user.pem", "r") as f:
+        with open("auth_serv/ec2-user.key", "r") as f2:
+            with open(os.path.join(logdir, "suite_b.pem"), "w") as f3:
+                f3.write(f.read())
+                f3.write(f2.read())
+
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/ec2-ca.pem'
+    params['server_cert'] = 'auth_serv/ec2-server.pem'
+    params['private_key'] = 'auth_serv/ec2-server.key'
+    params['openssl_ciphers'] = 'SUITEB192'
+    hostapd.add_ap(apdev[1], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname, cert_path=logdir)
+
+    sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,PMF" % ifname)
+    sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+    sigma_dut_cmd_check("sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b.pem,trustedRootCA,suite_b_ca.pem" % (ifname, "test-suite-b"))
+    sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-suite-b"))
+    sigma_dut_wait_connected(ifname)
+    sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_suite_b(dev, apdev, params):
+    """sigma_dut controlled AP Suite B"""
+    check_suite_b_192_capa(dev)
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_suite_b.sigma-hostapd")
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/ec2-ca.pem'
+    params['server_cert'] = 'auth_serv/ec2-server.pem'
+    params['private_key'] = 'auth_serv/ec2-server.key'
+    params['openssl_ciphers'] = 'SUITEB192'
+    hostapd.add_ap(apdev[1], params)
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-suite-b,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_radius,NAME,AP,IPADDR,127.0.0.1,PORT,18129,PASSWORD,radius")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                           ieee80211w="2",
+                           openssl_ciphers="SUITEB192",
+                           eap="TLS", identity="tls user",
+                           ca_cert="auth_serv/ec2-ca.pem",
+                           client_cert="auth_serv/ec2-user.pem",
+                           private_key="auth_serv/ec2-user.key",
+                           pairwise="GCMP-256", group="GCMP-256",
+                           scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_cipher_gcmp_128(dev, apdev, params):
+    """sigma_dut controlled AP with GCMP-128/BIP-GMAC-128 cipher"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-GCMP-128", "BIP-GMAC-128",
+                            "GCMP")
+
+def test_sigma_dut_ap_cipher_gcmp_256(dev, apdev, params):
+    """sigma_dut controlled AP with GCMP-256/BIP-GMAC-256 cipher"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-GCMP-256", "BIP-GMAC-256",
+                            "GCMP-256")
+
+def test_sigma_dut_ap_cipher_ccmp_128(dev, apdev, params):
+    """sigma_dut controlled AP with CCMP-128/BIP-CMAC-128 cipher"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-128", "BIP-CMAC-128",
+                            "CCMP")
+
+def test_sigma_dut_ap_cipher_ccmp_256(dev, apdev, params):
+    """sigma_dut controlled AP with CCMP-256/BIP-CMAC-256 cipher"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-256", "BIP-CMAC-256",
+                            "CCMP-256")
+
+def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
+                            sta_cipher):
+    check_suite_b_192_capa(dev)
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_cipher.sigma-hostapd")
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/ec2-ca.pem'
+    params['server_cert'] = 'auth_serv/ec2-server.pem'
+    params['private_key'] = 'auth_serv/ec2-server.key'
+    params['openssl_ciphers'] = 'SUITEB192'
+    hostapd.add_ap(apdev[1], params)
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-suite-b,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_radius,NAME,AP,IPADDR,127.0.0.1,PORT,18129,PASSWORD,radius")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required,PairwiseCipher,%s,GroupMgntCipher,%s" % (ap_pairwise, ap_group_mgmt))
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                           ieee80211w="2",
+                           openssl_ciphers="SUITEB192",
+                           eap="TLS", identity="tls user",
+                           ca_cert="auth_serv/ec2-ca.pem",
+                           client_cert="auth_serv/ec2-user.pem",
+                           private_key="auth_serv/ec2-user.key",
+                           pairwise=sta_cipher, group=sta_cipher,
+                           scan_freq="2412")
 
             sigma_dut_cmd_check("ap_reset_default")
         finally:

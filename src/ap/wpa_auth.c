@@ -1024,6 +1024,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			}
 
 			if (!wpa_use_aes_cmac(sm) &&
+			    !wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
 			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
 			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OWE &&
 			    sm->wpa_key_mgmt != WPA_KEY_MGMT_DPP &&

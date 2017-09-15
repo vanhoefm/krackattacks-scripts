@@ -337,6 +337,8 @@ static void hostapd_dpp_set_configurator(struct hostapd_data *hapd,
 	size_t ssid_len = 4;
 	char pass[64] = { };
 	size_t pass_len = 0;
+	u8 psk[PMK_LEN];
+	int psk_set = 0;
 
 	if (!cmd)
 		return;
@@ -364,6 +366,14 @@ static void hostapd_dpp_set_configurator(struct hostapd_data *hapd,
 			goto fail;
 	}
 
+	pos = os_strstr(cmd, " psk=");
+	if (pos) {
+		pos += 5;
+		if (hexstr2bin(pos, psk, PMK_LEN) < 0)
+			goto fail;
+		psk_set = 1;
+	}
+
 	if (os_strstr(cmd, " conf=sta-")) {
 		conf_sta = os_zalloc(sizeof(struct dpp_configuration));
 		if (!conf_sta)
@@ -372,9 +382,13 @@ static void hostapd_dpp_set_configurator(struct hostapd_data *hapd,
 		conf_sta->ssid_len = ssid_len;
 		if (os_strstr(cmd, " conf=sta-psk")) {
 			conf_sta->dpp = 0;
-			conf_sta->passphrase = os_strdup(pass);
-			if (!conf_sta->passphrase)
-				goto fail;
+			if (psk_set) {
+				os_memcpy(conf_sta->psk, psk, PMK_LEN);
+			} else {
+				conf_sta->passphrase = os_strdup(pass);
+				if (!conf_sta->passphrase)
+					goto fail;
+			}
 		} else if (os_strstr(cmd, " conf=sta-dpp")) {
 			conf_sta->dpp = 1;
 		} else {
@@ -390,9 +404,13 @@ static void hostapd_dpp_set_configurator(struct hostapd_data *hapd,
 		conf_ap->ssid_len = ssid_len;
 		if (os_strstr(cmd, " conf=ap-psk")) {
 			conf_ap->dpp = 0;
-			conf_ap->passphrase = os_strdup(pass);
-			if (!conf_ap->passphrase)
-				goto fail;
+			if (psk_set) {
+				os_memcpy(conf_ap->psk, psk, PMK_LEN);
+			} else {
+				conf_ap->passphrase = os_strdup(pass);
+				if (!conf_ap->passphrase)
+					goto fail;
+			}
 		} else if (os_strstr(cmd, " conf=ap-dpp")) {
 			conf_ap->dpp = 1;
 		} else {

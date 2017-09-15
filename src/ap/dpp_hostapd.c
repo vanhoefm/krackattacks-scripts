@@ -689,6 +689,20 @@ static void hostapd_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 		 * message. */
 		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONNECTOR "%s",
 			auth->connector);
+	} else if (auth->passphrase[0]) {
+		char hex[64 * 2 + 1];
+
+		wpa_snprintf_hex(hex, sizeof(hex),
+				 (const u8 *) auth->passphrase,
+				 os_strlen(auth->passphrase));
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONFOBJ_PASS "%s",
+			hex);
+	} else if (auth->psk_set) {
+		char hex[PMK_LEN * 2 + 1];
+
+		wpa_snprintf_hex(hex, sizeof(hex), auth->psk, PMK_LEN);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONFOBJ_PSK "%s",
+			hex);
 	}
 	if (auth->c_sign_key) {
 		char *hex;

@@ -302,3 +302,130 @@ def test_suite_b_192_mic_failure(dev, apdev):
                        pairwise="GCMP-256", group="GCMP-256", scan_freq="2412",
                        wait_connect=False)
         dev[0].wait_disconnected()
+
+def suite_b_192_rsa_ap_params():
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               "tls_flags": "[SUITEB]",
+               "dh_file": "auth_serv/dh_param_3072.pem",
+               "eap_server": "1",
+               "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/rsa3072-ca.pem",
+               "server_cert": "auth_serv/rsa3072-server.pem",
+               "private_key": "auth_serv/rsa3072-server.key" }
+    return params
+
+def test_suite_b_192_rsa(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA"""
+    run_suite_b_192_rsa(dev, apdev)
+
+def test_suite_b_192_rsa_ecdhe(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA (ECDHE)"""
+    run_suite_b_192_rsa(dev, apdev, no_dhe=True)
+
+def test_suite_b_192_rsa_dhe(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA (DHE)"""
+    run_suite_b_192_rsa(dev, apdev, no_ecdh=True)
+
+def run_suite_b_192_rsa(dev, apdev, no_ecdh=False, no_dhe=False):
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_192_rsa_ap_params()
+    if no_ecdh:
+        params["tls_flags"] = "[SUITEB-NO-ECDH]"
+    if no_dhe:
+        del params["dh_file"]
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   phase1="tls_suiteb=1",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/rsa3072-ca.pem",
+                   client_cert="auth_serv/rsa3072-user.pem",
+                   private_key="auth_serv/rsa3072-user.key",
+                   pairwise="GCMP-256", group="GCMP-256", scan_freq="2412")
+    tls_cipher = dev[0].get_status_field("EAP TLS cipher")
+    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384" and tls_cipher != "DHE-RSA-AES256-GCM-SHA384":
+        raise Exception("Unexpected TLS cipher: " + tls_cipher)
+    cipher = dev[0].get_status_field("mgmt_group_cipher")
+    if cipher != "BIP-GMAC-256":
+        raise Exception("Unexpected mgmt_group_cipher: " + cipher)
+
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WPA2-EAP-SUITE-B-192-GCMP-256]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=20)
+    dev[0].dump_monitor()
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+
+    conf = hapd.get_config()
+    if conf['key_mgmt'] != 'WPA-EAP-SUITE-B-192':
+        raise Exception("Unexpected config key_mgmt: " + conf['key_mgmt'])
+
+def test_suite_b_192_rsa_insufficient_key(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA with insufficient key length"""
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_192_rsa_ap_params()
+    params["ca_cert"] = "auth_serv/ca.pem"
+    params["server_cert"] = "auth_serv/server.pem"
+    params["private_key"] = "auth_serv/server.key"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   phase1="tls_suiteb=1",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/ca.pem",
+                   client_cert="auth_serv/user.pem",
+                   private_key="auth_serv/user.key",
+                   pairwise="GCMP-256", group="GCMP-256", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"], timeout=10)
+    dev[0].request("DISCONNECT")
+    if ev is None:
+        raise Exception("Certificate error not reported")
+    if "reason=11" not in ev or "err='Insufficient RSA modulus size'" not in ev:
+        raise Exception("Unexpected error reason: " + ev)
+
+def test_suite_b_192_rsa_insufficient_dh(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA with insufficient DH key length"""
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_192_rsa_ap_params()
+    params["tls_flags"] = "[SUITEB-NO-ECDH]"
+    params["dh_file"] = "auth_serv/dh.conf"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   phase1="tls_suiteb=1",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/rsa3072-ca.pem",
+                   client_cert="auth_serv/rsa3072-user.pem",
+                   private_key="auth_serv/rsa3072-user.key",
+                   pairwise="GCMP-256", group="GCMP-256", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='local TLS alert'"],
+                           timeout=10)
+    dev[0].request("DISCONNECT")
+    if ev is None:
+        raise Exception("DH error not reported")
+    if "insufficient security" not in ev and "internal error" not in ev:
+        raise Exception("Unexpected error reason: " + ev)

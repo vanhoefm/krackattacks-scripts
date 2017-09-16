@@ -2257,7 +2257,7 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 }
 
 
-static void tls_set_conn_flags(SSL *ssl, unsigned int flags)
+static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 {
 #ifdef SSL_OP_NO_TICKET
 	if (flags & TLS_CONN_DISABLE_SESSION_TICKET)
@@ -2284,6 +2284,45 @@ static void tls_set_conn_flags(SSL *ssl, unsigned int flags)
 	else
 		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_2);
 #endif /* SSL_OP_NO_TLSv1_2 */
+#ifdef CONFIG_SUITEB
+	if (flags & TLS_CONN_SUITEB) {
+		EC_KEY *ecdh;
+		const char *ciphers =
+			"ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384";
+
+		if (SSL_set_cipher_list(ssl, ciphers) != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B ciphers");
+			return -1;
+		}
+
+		if (SSL_set1_curves_list(ssl, "P-384") != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B curves");
+			return -1;
+		}
+		/* ECDSA+SHA384 if need to add EC support here */
+		if (SSL_set1_sigalgs_list(ssl, "RSA+SHA384") != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B sigalgs");
+			return -1;
+		}
+
+		ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
+		if (!ecdh || SSL_set_tmp_ecdh(ssl, ecdh) != 1) {
+			EC_KEY_free(ecdh);
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set ECDH parameter");
+			return -1;
+		}
+		EC_KEY_free(ecdh);
+
+		SSL_set_options(ssl, SSL_OP_NO_TLSv1);
+		SSL_set_options(ssl, SSL_OP_NO_TLSv1_1);
+	}
+#endif /* CONFIG_SUITEB */
+
+	return 0;
 }
 
 
@@ -2307,7 +2346,8 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
 	}
 
-	tls_set_conn_flags(conn->ssl, flags);
+	if (tls_set_conn_flags(conn->ssl, flags) < 0)
+		return -1;
 	conn->flags = flags;
 
 	SSL_set_accept_state(conn->ssl);
@@ -4111,7 +4151,8 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-	tls_set_conn_flags(conn->ssl, params->flags);
+	if (tls_set_conn_flags(conn->ssl, params->flags) < 0)
+		return -1;
 
 #ifdef OPENSSL_IS_BORINGSSL
 	if (params->flags & TLS_CONN_REQUEST_OCSP) {

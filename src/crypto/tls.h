@@ -97,6 +97,7 @@ struct tls_config {
 #define TLS_CONN_DISABLE_TLSv1_0 BIT(8)
 #define TLS_CONN_EXT_CERT_CHECK BIT(9)
 #define TLS_CONN_REQUIRE_OCSP_ALL BIT(10)
+#define TLS_CONN_SUITEB BIT(11)
 
 /**
  * struct tls_connection_params - Parameters for TLS connection

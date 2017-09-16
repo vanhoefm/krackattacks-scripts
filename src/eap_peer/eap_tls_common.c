@@ -84,6 +84,10 @@ static void eap_tls_params_flags(struct tls_connection_params *params,
 		params->flags |= TLS_CONN_EXT_CERT_CHECK;
 	if (os_strstr(txt, "tls_ext_cert_check=0"))
 		params->flags &= ~TLS_CONN_EXT_CERT_CHECK;
+	if (os_strstr(txt, "tls_suiteb=1"))
+		params->flags |= TLS_CONN_SUITEB;
+	if (os_strstr(txt, "tls_suiteb=0"))
+		params->flags &= ~TLS_CONN_SUITEB;
 }
 
 

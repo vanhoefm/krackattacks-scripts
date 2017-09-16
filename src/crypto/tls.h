@@ -80,6 +80,7 @@ struct tls_config {
 	int cert_in_cb;
 	const char *openssl_ciphers;
 	unsigned int tls_session_lifetime;
+	unsigned int tls_flags;
 
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);

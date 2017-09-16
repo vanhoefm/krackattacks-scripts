@@ -172,6 +172,8 @@ struct radius_server_conf {
 
 	unsigned int tls_session_lifetime;
 
+	unsigned int tls_flags;
+
 	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *

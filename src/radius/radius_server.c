@@ -272,6 +272,8 @@ struct radius_server_data {
 
 	unsigned int tls_session_lifetime;
 
+	unsigned int tls_flags;
+
 	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *
@@ -696,6 +698,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.server_id_len = os_strlen(data->server_id);
 	eap_conf.erp = data->erp;
 	eap_conf.tls_session_lifetime = data->tls_session_lifetime;
+	eap_conf.tls_flags = data->tls_flags;
 	radius_server_testing_options(sess, &eap_conf);
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
@@ -1754,6 +1757,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->erp = conf->erp;
 	data->erp_domain = conf->erp_domain;
 	data->tls_session_lifetime = conf->tls_session_lifetime;
+	data->tls_flags = conf->tls_flags;
 
 	if (conf->subscr_remediation_url) {
 		data->subscr_remediation_url =

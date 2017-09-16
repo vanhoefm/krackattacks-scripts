@@ -848,6 +848,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.server_id_len = eapol->conf.server_id_len;
 	eap_conf.erp = eapol->conf.erp;
 	eap_conf.tls_session_lifetime = eapol->conf.tls_session_lifetime;
+	eap_conf.tls_flags = eapol->conf.tls_flags;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {
 		eapol_auth_free(sm);
@@ -1246,6 +1247,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	dst->erp_send_reauth_start = src->erp_send_reauth_start;
 	dst->erp = src->erp;
 	dst->tls_session_lifetime = src->tls_session_lifetime;
+	dst->tls_flags = src->tls_flags;
 
 	return 0;
 

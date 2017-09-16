@@ -15,6 +15,7 @@
 #include "utils/uuid.h"
 #include "common/ieee802_11_defs.h"
 #include "crypto/sha256.h"
+#include "crypto/tls.h"
 #include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
@@ -2059,6 +2060,29 @@ static int parse_fils_realm(struct hostapd_bss_config *bss, const char *val)
 #endif /* CONFIG_FILS */
 
 
+#ifdef EAP_SERVER
+static unsigned int parse_tls_flags(const char *val)
+{
+	unsigned int flags = 0;
+
+	if (os_strstr(val, "[ALLOW-SIGN-RSA-MD5]"))
+		flags |= TLS_CONN_ALLOW_SIGN_RSA_MD5;
+	if (os_strstr(val, "[DISABLE-TIME-CHECKS]"))
+		flags |= TLS_CONN_DISABLE_TIME_CHECKS;
+	if (os_strstr(val, "[DISABLE-TLSv1.0]"))
+		flags |= TLS_CONN_DISABLE_TLSv1_0;
+	if (os_strstr(val, "[DISABLE-TLSv1.1]"))
+		flags |= TLS_CONN_DISABLE_TLSv1_1;
+	if (os_strstr(val, "[DISABLE-TLSv1.2]"))
+		flags |= TLS_CONN_DISABLE_TLSv1_2;
+	if (os_strstr(val, "[SUITEB]"))
+		flags |= TLS_CONN_SUITEB;
+
+	return flags;
+}
+#endif /* EAP_SERVER */
+
+
 static int hostapd_config_fill(struct hostapd_config *conf,
 			       struct hostapd_bss_config *bss,
 			       const char *buf, char *pos, int line)
@@ -2212,6 +2236,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->check_crl = atoi(pos);
 	} else if (os_strcmp(buf, "tls_session_lifetime") == 0) {
 		bss->tls_session_lifetime = atoi(pos);
+	} else if (os_strcmp(buf, "tls_flags") == 0) {
+		bss->tls_flags = parse_tls_flags(pos);
 	} else if (os_strcmp(buf, "ocsp_stapling_response") == 0) {
 		os_free(bss->ocsp_stapling_response);
 		bss->ocsp_stapling_response = os_strdup(pos);

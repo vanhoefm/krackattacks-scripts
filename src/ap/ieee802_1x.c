@@ -2230,6 +2230,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	conf.erp_domain = hapd->conf->erp_domain;
 	conf.erp = hapd->conf->eap_server_erp;
 	conf.tls_session_lifetime = hapd->conf->tls_session_lifetime;
+	conf.tls_flags = hapd->conf->tls_flags;
 	conf.pac_opaque_encr_key = hapd->conf->pac_opaque_encr_key;
 	conf.eap_fast_a_id = hapd->conf->eap_fast_a_id;
 	conf.eap_fast_a_id_len = hapd->conf->eap_fast_a_id_len;

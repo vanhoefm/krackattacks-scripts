@@ -2077,6 +2077,8 @@ static unsigned int parse_tls_flags(const char *val)
 		flags |= TLS_CONN_DISABLE_TLSv1_2;
 	if (os_strstr(val, "[SUITEB]"))
 		flags |= TLS_CONN_SUITEB;
+	if (os_strstr(val, "[SUITEB-NO-ECDH]"))
+		flags |= TLS_CONN_SUITEB_NO_ECDH | TLS_CONN_SUITEB;
 
 	return flags;
 }

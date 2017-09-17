@@ -2325,7 +2325,15 @@ static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_2);
 #endif /* SSL_OP_NO_TLSv1_2 */
 #ifdef CONFIG_SUITEB
-	if (flags & TLS_CONN_SUITEB) {
+	if (flags & TLS_CONN_SUITEB_NO_ECDH) {
+		const char *ciphers = "DHE-RSA-AES256-GCM-SHA384";
+
+		if (SSL_set_cipher_list(ssl, ciphers) != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B ciphers");
+			return -1;
+		}
+	} else if (flags & TLS_CONN_SUITEB) {
 		EC_KEY *ecdh;
 		const char *ciphers =
 			"ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384";
@@ -2341,12 +2349,6 @@ static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 				   "OpenSSL: Failed to set Suite B curves");
 			return -1;
 		}
-		/* ECDSA+SHA384 if need to add EC support here */
-		if (SSL_set1_sigalgs_list(ssl, "RSA+SHA384") != 1) {
-			wpa_printf(MSG_INFO,
-				   "OpenSSL: Failed to set Suite B sigalgs");
-			return -1;
-		}
 
 		ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
 		if (!ecdh || SSL_set_tmp_ecdh(ssl, ecdh) != 1) {
@@ -2356,6 +2358,14 @@ static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 			return -1;
 		}
 		EC_KEY_free(ecdh);
+	}
+	if (flags & (TLS_CONN_SUITEB | TLS_CONN_SUITEB_NO_ECDH)) {
+		/* ECDSA+SHA384 if need to add EC support here */
+		if (SSL_set1_sigalgs_list(ssl, "RSA+SHA384") != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B sigalgs");
+			return -1;
+		}
 
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1);
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1_1);

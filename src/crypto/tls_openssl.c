@@ -242,6 +242,9 @@ struct tls_connection {
 
 	unsigned char client_random[SSL3_RANDOM_SIZE];
 	unsigned char server_random[SSL3_RANDOM_SIZE];
+
+	u16 cipher_suite;
+	int server_dh_prime_len;
 };
 
 
@@ -1313,6 +1316,95 @@ static const char * openssl_handshake_type(int content_type, const u8 *buf,
 }
 
 
+#ifdef CONFIG_SUITEB
+
+static void check_server_hello(struct tls_connection *conn,
+			       const u8 *pos, const u8 *end)
+{
+	size_t payload_len, id_len;
+
+	/*
+	 * Parse ServerHello to get the selected cipher suite since OpenSSL does
+	 * not make it cleanly available during handshake and we need to know
+	 * whether DHE was selected.
+	 */
+
+	if (end - pos < 3)
+		return;
+	payload_len = WPA_GET_BE24(pos);
+	pos += 3;
+
+	if ((size_t) (end - pos) < payload_len)
+		return;
+	end = pos + payload_len;
+
+	/* Skip Version and Random */
+	if (end - pos < 2 + SSL3_RANDOM_SIZE)
+		return;
+	pos += 2 + SSL3_RANDOM_SIZE;
+
+	/* Skip Session ID */
+	if (end - pos < 1)
+		return;
+	id_len = *pos++;
+	if ((size_t) (end - pos) < id_len)
+		return;
+	pos += id_len;
+
+	if (end - pos < 2)
+		return;
+	conn->cipher_suite = WPA_GET_BE16(pos);
+	wpa_printf(MSG_DEBUG, "OpenSSL: Server selected cipher suite 0x%x",
+		   conn->cipher_suite);
+}
+
+
+static void check_server_key_exchange(SSL *ssl, struct tls_connection *conn,
+				      const u8 *pos, const u8 *end)
+{
+	size_t payload_len;
+	u16 dh_len;
+	BIGNUM *p;
+	int bits;
+
+	if (!(conn->flags & TLS_CONN_SUITEB))
+		return;
+
+	/* DHE is enabled only with DHE-RSA-AES256-GCM-SHA384 */
+	if (conn->cipher_suite != 0x9f)
+		return;
+
+	if (end - pos < 3)
+		return;
+	payload_len = WPA_GET_BE24(pos);
+	pos += 3;
+
+	if ((size_t) (end - pos) < payload_len)
+		return;
+	end = pos + payload_len;
+
+	if (end - pos < 2)
+		return;
+	dh_len = WPA_GET_BE16(pos);
+	pos += 2;
+
+	if ((size_t) (end - pos) < dh_len)
+		return;
+	p = BN_bin2bn(pos, dh_len, NULL);
+	if (!p)
+		return;
+
+	bits = BN_num_bits(p);
+	BN_free(p);
+
+	conn->server_dh_prime_len = bits;
+	wpa_printf(MSG_DEBUG, "OpenSSL: Server DH prime length: %d bits",
+		   conn->server_dh_prime_len);
+}
+
+#endif /* CONFIG_SUITEB */
+
+
 static void tls_msg_cb(int write_p, int version, int content_type,
 		       const void *buf, size_t len, SSL *ssl, void *arg)
 {
@@ -1339,6 +1431,18 @@ static void tls_msg_cb(int write_p, int version, int content_type,
 			conn->invalid_hb_used = 1;
 		}
 	}
+
+#ifdef CONFIG_SUITEB
+	/*
+	 * Need to parse these handshake messages to be able to check DH prime
+	 * length since OpenSSL does not expose the new cipher suite and DH
+	 * parameters during handshake (e.g., for cert_cb() callback).
+	 */
+	if (content_type == 22 && pos && len > 0 && pos[0] == 2)
+		check_server_hello(conn, pos + 1, pos + len);
+	if (content_type == 22 && pos && len > 0 && pos[0] == 12)
+		check_server_key_exchange(ssl, conn, pos + 1, pos + len);
+#endif /* CONFIG_SUITEB */
 }
 
 
@@ -2297,8 +2401,42 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 }
 
 
-static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
+#ifdef CONFIG_SUITEB
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+static int suiteb_cert_cb(SSL *ssl, void *arg)
 {
+	struct tls_connection *conn = arg;
+
+	/*
+	 * This cert_cb() is not really the best location for doing a
+	 * constraint check for the ServerKeyExchange message, but this seems to
+	 * be the only place where the current OpenSSL sequence can be
+	 * terminated cleanly with an TLS alert going out to the server.
+	 */
+
+	if (!(conn->flags & TLS_CONN_SUITEB))
+		return 1;
+
+	/* DHE is enabled only with DHE-RSA-AES256-GCM-SHA384 */
+	if (conn->cipher_suite != 0x9f)
+		return 1;
+
+	if (conn->server_dh_prime_len >= 3072)
+		return 1;
+
+	wpa_printf(MSG_DEBUG,
+		   "OpenSSL: Server DH prime length (%d bits) not sufficient for Suite B RSA - reject handshake",
+		   conn->server_dh_prime_len);
+	return 0;
+}
+#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* CONFIG_SUITEB */
+
+
+static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags)
+{
+	SSL *ssl = conn->ssl;
+
 #ifdef SSL_OP_NO_TICKET
 	if (flags & TLS_CONN_DISABLE_SESSION_TICKET)
 		SSL_set_options(ssl, SSL_OP_NO_TICKET);
@@ -2325,6 +2463,7 @@ static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_2);
 #endif /* SSL_OP_NO_TLSv1_2 */
 #ifdef CONFIG_SUITEB
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	if (flags & TLS_CONN_SUITEB_NO_ECDH) {
 		const char *ciphers = "DHE-RSA-AES256-GCM-SHA384";
 
@@ -2369,7 +2508,15 @@ static int tls_set_conn_flags(SSL *ssl, unsigned int flags)
 
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1);
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1_1);
+		SSL_set_cert_cb(ssl, suiteb_cert_cb, conn);
 	}
+#else /* OPENSSL_VERSION_NUMBER < 0x10002000L */
+	if (flags & (TLS_CONN_SUITEB | TLS_CONN_SUITEB_NO_ECDH)) {
+		wpa_printf(MSG_ERROR,
+			   "OpenSSL: Suite B RSA case not supported with this OpenSSL version");
+		return -1;
+	}
+#endif /* OPENSSL_VERSION_NUMBER */
 #endif /* CONFIG_SUITEB */
 
 	return 0;
@@ -2396,7 +2543,7 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
 	}
 
-	if (tls_set_conn_flags(conn->ssl, flags) < 0)
+	if (tls_set_conn_flags(conn, flags) < 0)
 		return -1;
 	conn->flags = flags;
 
@@ -3420,6 +3567,41 @@ openssl_handshake(struct tls_connection *conn, const struct wpabuf *in_data,
 		}
 	}
 
+#ifdef CONFIG_SUITEB
+	if ((conn->flags & TLS_CONN_SUITEB) && !server &&
+	    os_strncmp(SSL_get_cipher(conn->ssl), "DHE-", 4) == 0 &&
+	    conn->server_dh_prime_len < 3072) {
+		struct tls_context *context = conn->context;
+
+		/*
+		 * This should not be reached since earlier cert_cb should have
+		 * terminated the handshake. Keep this check here for extra
+		 * protection if anything goes wrong with the more low-level
+		 * checks based on having to parse the TLS handshake messages.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "OpenSSL: Server DH prime length: %d bits",
+			   conn->server_dh_prime_len);
+
+		if (context->event_cb) {
+			union tls_event_data ev;
+
+			os_memset(&ev, 0, sizeof(ev));
+			ev.alert.is_local = 1;
+			ev.alert.type = "fatal";
+			ev.alert.description = "insufficient security";
+			context->event_cb(context->cb_ctx, TLS_ALERT, &ev);
+		}
+		/*
+		 * Could send a TLS Alert to the server, but for now, simply
+		 * terminate handshake.
+		 */
+		conn->failed++;
+		conn->write_alerts++;
+		return NULL;
+	}
+#endif /* CONFIG_SUITEB */
+
 	/* Get the TLS handshake data to be sent to the server */
 	res = BIO_ctrl_pending(conn->ssl_out);
 	wpa_printf(MSG_DEBUG, "SSL: %d bytes pending from ssl_out", res);
@@ -4201,7 +4383,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-	if (tls_set_conn_flags(conn->ssl, params->flags) < 0)
+	if (tls_set_conn_flags(conn, params->flags) < 0)
 		return -1;
 
 #ifdef OPENSSL_IS_BORINGSSL

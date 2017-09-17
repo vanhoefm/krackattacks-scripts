@@ -103,6 +103,15 @@ static size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
 
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#ifdef CONFIG_SUITEB
+static int RSA_bits(const RSA *r)
+{
+	return BN_num_bits(r->n);
+}
+#endif /* CONFIG_SUITEB */
+#endif
+
 #ifdef ANDROID
 #include <openssl/pem.h>
 #include <keystore/keystore_get.h>
@@ -1923,6 +1932,37 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 				       "Server certificate chain probe",
 				       TLS_FAIL_SERVER_CHAIN_PROBE);
 	}
+
+#ifdef CONFIG_SUITEB
+	if (conn->flags & TLS_CONN_SUITEB) {
+		EVP_PKEY *pk;
+		RSA *rsa;
+		int len = -1;
+
+		pk = X509_get_pubkey(err_cert);
+		if (pk) {
+			rsa = EVP_PKEY_get1_RSA(pk);
+			if (rsa) {
+				len = RSA_bits(rsa);
+				RSA_free(rsa);
+			}
+			EVP_PKEY_free(pk);
+		}
+
+		if (len >= 0) {
+			wpa_printf(MSG_DEBUG,
+				   "OpenSSL: RSA modulus size: %d bits", len);
+			if (len < 3072) {
+				preverify_ok = 0;
+				openssl_tls_fail_event(
+					conn, err_cert, err,
+					depth, buf,
+					"Insufficient RSA modulus size",
+					TLS_FAIL_INSUFFICIENT_KEY_LEN);
+			}
+		}
+	}
+#endif /* CONFIG_SUITEB */
 
 #ifdef OPENSSL_IS_BORINGSSL
 	if (depth == 0 && (conn->flags & TLS_CONN_REQUEST_OCSP) &&

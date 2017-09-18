@@ -2686,16 +2686,6 @@ static int tls_global_client_cert(struct tls_data *data,
 }
 
 
-static int tls_passwd_cb(char *buf, int size, int rwflag, void *password)
-{
-	if (password == NULL) {
-		return 0;
-	}
-	os_strlcpy(buf, (char *) password, size);
-	return os_strlen(buf);
-}
-
-
 #ifdef PKCS12_FUNCS
 static int tls_parse_pkcs12(struct tls_data *data, SSL *ssl, PKCS12 *p12,
 			    const char *passwd)
@@ -3014,20 +3004,61 @@ static int tls_connection_engine_private_key(struct tls_connection *conn)
 }
 
 
-static void tls_clear_default_passwd_cb(SSL_CTX *ssl_ctx, SSL *ssl)
+#ifndef OPENSSL_NO_STDIO
+static int tls_passwd_cb(char *buf, int size, int rwflag, void *password)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#ifndef LIBRESSL_VERSION_NUMBER
-#ifndef OPENSSL_IS_BORINGSSL
-	if (ssl) {
-		SSL_set_default_passwd_cb(ssl, NULL);
-		SSL_set_default_passwd_cb_userdata(ssl, NULL);
+	if (!password)
+		return 0;
+	os_strlcpy(buf, (const char *) password, size);
+	return os_strlen(buf);
+}
+#endif /* OPENSSL_NO_STDIO */
+
+
+static int tls_use_private_key_file(struct tls_data *data, SSL *ssl,
+				    const char *private_key,
+				    const char *private_key_passwd)
+{
+#ifndef OPENSSL_NO_STDIO
+	BIO *bio;
+	EVP_PKEY *pkey;
+	int ret;
+
+	/* First try ASN.1 (DER). */
+	bio = BIO_new_file(private_key, "r");
+	if (!bio)
+		return -1;
+	pkey = d2i_PrivateKey_bio(bio, NULL);
+	BIO_free(bio);
+
+	if (pkey) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: %s (DER) --> loaded", __func__);
+	} else {
+		/* Try PEM with the provided password. */
+		bio = BIO_new_file(private_key, "r");
+		if (!bio)
+			return -1;
+		pkey = PEM_read_bio_PrivateKey(bio, NULL, tls_passwd_cb,
+					       (void *) private_key_passwd);
+		BIO_free(bio);
+		if (!pkey)
+			return -1;
+		wpa_printf(MSG_DEBUG, "OpenSSL: %s (PEM) --> loaded", __func__);
+		/* Clear errors from the previous failed load. */
+		ERR_clear_error();
 	}
-#endif /* !BoringSSL */
-#endif /* !LibreSSL */
-#endif /* >= 1.1.0f */
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
-	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, NULL);
+
+	if (ssl)
+		ret = SSL_use_PrivateKey(ssl, pkey);
+	else
+		ret = SSL_CTX_use_PrivateKey(data->ssl, pkey);
+
+	EVP_PKEY_free(pkey);
+	return ret == 1 ? 0 : -1;
+#else /* OPENSSL_NO_STDIO */
+	wpa_printf(MSG_DEBUG, "OpenSSL: %s - OPENSSL_NO_STDIO", __func__);
+	return -1;
+#endif /* OPENSSL_NO_STDIO */
 }
 
 
@@ -3038,29 +3069,10 @@ static int tls_connection_private_key(struct tls_data *data,
 				      const u8 *private_key_blob,
 				      size_t private_key_blob_len)
 {
-	SSL_CTX *ssl_ctx = data->ssl;
 	int ok;
 
 	if (private_key == NULL && private_key_blob == NULL)
 		return 0;
-
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#ifndef LIBRESSL_VERSION_NUMBER
-#ifndef OPENSSL_IS_BORINGSSL
-	/*
-	 * In OpenSSL >= 1.1.0f SSL_use_PrivateKey_file() uses the callback
-	 * from the SSL object. See OpenSSL commit d61461a75253.
-	 */
-	SSL_set_default_passwd_cb(conn->ssl, tls_passwd_cb);
-	SSL_set_default_passwd_cb_userdata(conn->ssl,
-					   (void *) private_key_passwd);
-#endif /* !BoringSSL */
-#endif /* !LibreSSL */
-#endif /* >= 1.1.0f && */
-	/* Keep these for OpenSSL < 1.1.0f */
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, tls_passwd_cb);
-	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx,
-					       (void *) private_key_passwd);
 
 	ok = 0;
 	while (private_key_blob) {
@@ -3104,26 +3116,11 @@ static int tls_connection_private_key(struct tls_data *data,
 	}
 
 	while (!ok && private_key) {
-#ifndef OPENSSL_NO_STDIO
-		if (SSL_use_PrivateKey_file(conn->ssl, private_key,
-					    SSL_FILETYPE_ASN1) == 1) {
-			wpa_printf(MSG_DEBUG, "OpenSSL: "
-				   "SSL_use_PrivateKey_File (DER) --> OK");
+		if (tls_use_private_key_file(data, conn->ssl, private_key,
+					     private_key_passwd) == 0) {
 			ok = 1;
 			break;
 		}
-
-		if (SSL_use_PrivateKey_file(conn->ssl, private_key,
-					    SSL_FILETYPE_PEM) == 1) {
-			wpa_printf(MSG_DEBUG, "OpenSSL: "
-				   "SSL_use_PrivateKey_File (PEM) --> OK");
-			ok = 1;
-			break;
-		}
-#else /* OPENSSL_NO_STDIO */
-		wpa_printf(MSG_DEBUG, "OpenSSL: %s - OPENSSL_NO_STDIO",
-			   __func__);
-#endif /* OPENSSL_NO_STDIO */
 
 		if (tls_read_pkcs12(data, conn->ssl, private_key,
 				    private_key_passwd) == 0) {
@@ -3146,11 +3143,9 @@ static int tls_connection_private_key(struct tls_data *data,
 	if (!ok) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to load private key");
-		tls_clear_default_passwd_cb(ssl_ctx, conn->ssl);
 		return -1;
 	}
 	ERR_clear_error();
-	tls_clear_default_passwd_cb(ssl_ctx, conn->ssl);
 
 	if (!SSL_check_private_key(conn->ssl)) {
 		tls_show_errors(MSG_INFO, __func__, "Private key failed "
@@ -3172,24 +3167,14 @@ static int tls_global_private_key(struct tls_data *data,
 	if (private_key == NULL)
 		return 0;
 
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, tls_passwd_cb);
-	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx,
-					       (void *) private_key_passwd);
-	if (
-#ifndef OPENSSL_NO_STDIO
-	    SSL_CTX_use_PrivateKey_file(ssl_ctx, private_key,
-					SSL_FILETYPE_ASN1) != 1 &&
-	    SSL_CTX_use_PrivateKey_file(ssl_ctx, private_key,
-					SSL_FILETYPE_PEM) != 1 &&
-#endif /* OPENSSL_NO_STDIO */
+	if (tls_use_private_key_file(data, NULL, private_key,
+				     private_key_passwd) &&
 	    tls_read_pkcs12(data, NULL, private_key, private_key_passwd)) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to load private key");
-		tls_clear_default_passwd_cb(ssl_ctx, NULL);
 		ERR_clear_error();
 		return -1;
 	}
-	tls_clear_default_passwd_cb(ssl_ctx, NULL);
 	ERR_clear_error();
 
 	if (!SSL_CTX_check_private_key(ssl_ctx)) {

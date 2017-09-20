@@ -282,8 +282,9 @@ class ClientState():
 
 		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
 			# On some kernels, the virtual interface associated to the real AP interface will return
-			# frames where the payload is already decrypted. So if the payload seems decrypted, just
-			# extract the full plaintext from the frame.
+			# frames where the payload is already decrypted (my hypothesis is that this happens when
+			# hardware decryption is used). So if the payload seems decrypted, just extract the full
+			# plaintext from the frame.
 			plaintext = payload
 		else:
 			client    = self.mac

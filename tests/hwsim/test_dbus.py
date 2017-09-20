@@ -1179,6 +1179,10 @@ def test_dbus_scan_abort(dev, apdev):
         raise Exception("Scan start timed out")
 
     iface.AbortScan()
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan abort result timed out")
+    dev[0].dump_monitor()
     iface.Scan({'Type': 'active', 'AllowRoam': False})
     iface.AbortScan()
 

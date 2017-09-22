@@ -2628,7 +2628,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		if (bss->wpa_pairwise &
 		    (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)) {
 			wpa_printf(MSG_ERROR, "Line %d: unsupported pairwise cipher suite '%s'",
-				   bss->wpa_pairwise, pos);
+				   line, pos);
 			return 1;
 		}
 	} else if (os_strcmp(buf, "rsn_pairwise") == 0) {
@@ -2638,7 +2638,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		if (bss->rsn_pairwise &
 		    (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)) {
 			wpa_printf(MSG_ERROR, "Line %d: unsupported pairwise cipher suite '%s'",
-				   bss->rsn_pairwise, pos);
+				   line, pos);
 			return 1;
 		}
 #ifdef CONFIG_RSN_PREAUTH

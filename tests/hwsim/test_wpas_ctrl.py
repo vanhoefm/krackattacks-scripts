@@ -644,14 +644,6 @@ def test_wpas_ctrl_preauth(dev):
         raise Exception("Unexpected failure on PREAUTH")
 
 @remote_compatible
-def test_wpas_ctrl_stkstart(dev):
-    """wpa_supplicant ctrl_iface strkstart"""
-    if "FAIL" not in dev[0].request("STKSTART "):
-        raise Exception("Unexpected success on invalid STKSTART")
-    if "FAIL" not in dev[0].request("STKSTART 00:11:22:33:44:55"):
-        raise Exception("Unexpected success on STKSTART")
-
-@remote_compatible
 def test_wpas_ctrl_tdls_discover(dev):
     """wpa_supplicant ctrl_iface tdls_discover"""
     if "FAIL" not in dev[0].request("TDLS_DISCOVER "):

@@ -4068,6 +4068,12 @@ int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
 		return -1;
 	}
 
+	if (sm->fils_completed) {
+		wpa_printf(MSG_DEBUG,
+			   "FILS: Association has already been completed for this FILS authentication - ignore unexpected retransmission");
+		return -1;
+	}
+
 	wpa_hexdump(MSG_DEBUG, "FILS: (Re)Association Response frame",
 		    resp, len);
 

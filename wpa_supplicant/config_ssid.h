@@ -425,17 +425,6 @@ struct wpa_ssid {
 	int disabled_for_connect;
 
 	/**
-	 * peerkey -  Whether PeerKey handshake for direct links is allowed
-	 *
-	 * This is only used when both RSN/WPA2 and IEEE 802.11e (QoS) are
-	 * enabled.
-	 *
-	 * 0 = disabled (default)
-	 * 1 = enabled
-	 */
-	int peerkey;
-
-	/**
 	 * id_str - Network identifier string for external scripts
 	 *
 	 * This value is passed to external ctrl_iface monitors in

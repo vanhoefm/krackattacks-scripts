@@ -48,7 +48,6 @@ LIB_OBJS= \
 	neighbor_db.o \
 	ndisc_snoop.o \
 	p2p_hostapd.o \
-	peerkey_auth.o \
 	pmksa_cache_auth.o \
 	preauth_auth.o \
 	rrm.o \

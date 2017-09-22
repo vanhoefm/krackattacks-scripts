@@ -35,7 +35,6 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(ASSOCINFO);
 	E2S(INTERFACE_STATUS);
 	E2S(PMKID_CANDIDATE);
-	E2S(STKSTART);
 	E2S(TDLS);
 	E2S(FT_RESPONSE);
 	E2S(IBSS_RSN_START);

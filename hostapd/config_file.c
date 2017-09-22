@@ -2648,10 +2648,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_free(bss->rsn_preauth_interfaces);
 		bss->rsn_preauth_interfaces = os_strdup(pos);
 #endif /* CONFIG_RSN_PREAUTH */
-#ifdef CONFIG_PEERKEY
 	} else if (os_strcmp(buf, "peerkey") == 0) {
-		bss->peerkey = atoi(pos);
-#endif /* CONFIG_PEERKEY */
+		wpa_printf(MSG_INFO,
+			   "Line %d: Obsolete peerkey parameter ignored", line);
 #ifdef CONFIG_IEEE80211R_AP
 	} else if (os_strcmp(buf, "mobility_domain") == 0) {
 		if (os_strlen(pos) != 2 * MOBILITY_DOMAIN_ID_LEN ||

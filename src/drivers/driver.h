@@ -4087,17 +4087,6 @@ enum wpa_event_type {
 	EVENT_PMKID_CANDIDATE,
 
 	/**
-	 * EVENT_STKSTART - Request STK handshake (MLME-STKSTART.request)
-	 *
-	 * This event can be used to inform wpa_supplicant about desire to set
-	 * up secure direct link connection between two stations as defined in
-	 * IEEE 802.11e with a new PeerKey mechanism that replaced the original
-	 * STAKey negotiation. The caller will need to set peer address for the
-	 * event.
-	 */
-	EVENT_STKSTART,
-
-	/**
 	 * EVENT_TDLS - Request TDLS operation
 	 *
 	 * This event can be used to request a TDLS operation to be performed.
@@ -4800,13 +4789,6 @@ union wpa_event_data {
 		/** Whether RSN IE includes pre-authenticate flag */
 		int preauth;
 	} pmkid_candidate;
-
-	/**
-	 * struct stkstart - Data for EVENT_STKSTART
-	 */
-	struct stkstart {
-		u8 peer[ETH_ALEN];
-	} stkstart;
 
 	/**
 	 * struct tdls - Data for EVENT_TDLS

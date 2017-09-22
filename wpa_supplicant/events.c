@@ -3160,18 +3160,6 @@ wpa_supplicant_event_interface_status(struct wpa_supplicant *wpa_s,
 }
 
 
-#ifdef CONFIG_PEERKEY
-static void
-wpa_supplicant_event_stkstart(struct wpa_supplicant *wpa_s,
-			      union wpa_event_data *data)
-{
-	if (data == NULL)
-		return;
-	wpa_sm_stkstart(wpa_s->wpa, data->stkstart.peer);
-}
-#endif /* CONFIG_PEERKEY */
-
-
 #ifdef CONFIG_TDLS
 static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 				      union wpa_event_data *data)
@@ -3947,11 +3935,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_PMKID_CANDIDATE:
 		wpa_supplicant_event_pmkid_candidate(wpa_s, data);
 		break;
-#ifdef CONFIG_PEERKEY
-	case EVENT_STKSTART:
-		wpa_supplicant_event_stkstart(wpa_s, data);
-		break;
-#endif /* CONFIG_PEERKEY */
 #ifdef CONFIG_TDLS
 	case EVENT_TDLS:
 		wpa_supplicant_event_tdls(wpa_s, data);

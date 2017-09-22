@@ -50,7 +50,6 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->rsn_pairwise = conf->rsn_pairwise;
 	wconf->rsn_preauth = conf->rsn_preauth;
 	wconf->eapol_version = conf->eapol_version;
-	wconf->peerkey = conf->peerkey;
 	wconf->wmm_enabled = conf->wmm_enabled;
 	wconf->wmm_uapsd = conf->wmm_uapsd;
 	wconf->disable_pmksa_caching = conf->disable_pmksa_caching;

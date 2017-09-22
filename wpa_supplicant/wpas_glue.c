@@ -1235,7 +1235,6 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 	if (ssid) {
 		os_memset(&conf, 0, sizeof(conf));
 		conf.network_ctx = ssid;
-		conf.peerkey_enabled = ssid->peerkey;
 		conf.allowed_pairwise_cipher = ssid->pairwise_cipher;
 #ifdef IEEE8021X_EAPOL
 		conf.proactive_key_caching = ssid->proactive_key_caching < 0 ?

@@ -290,15 +290,6 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 	done:
 		os_free(resp_ies);
 		os_free(req_ies);
-#ifdef CONFIG_PEERKEY
-	} else if (os_strncmp(custom, "STKSTART.request=", 17) == 0) {
-		if (hwaddr_aton(custom + 17, data.stkstart.peer)) {
-			wpa_printf(MSG_DEBUG, "WEXT: unrecognized "
-				   "STKSTART.request '%s'", custom + 17);
-			return;
-		}
-		wpa_supplicant_event(ctx, EVENT_STKSTART, &data);
-#endif /* CONFIG_PEERKEY */
 	}
 }
 
@@ -470,7 +461,7 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 				drv->assoc_resp_ies = NULL;
 				wpa_supplicant_event(drv->ctx, EVENT_DISASSOC,
 						     NULL);
-			
+
 			} else {
 				wpa_driver_wext_event_assoc_ies(drv);
 				wpa_supplicant_event(drv->ctx, EVENT_ASSOC,

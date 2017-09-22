@@ -3755,16 +3755,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-#ifdef CONFIG_PEERKEY
-	if (wpa_s->wpa_state > WPA_ASSOCIATED && wpa_s->current_ssid &&
-	    wpa_s->current_ssid->peerkey &&
-	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) &&
-	    wpa_sm_rx_eapol_peerkey(wpa_s->wpa, src_addr, buf, len) == 1) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: Processed PeerKey EAPOL-Key");
-		return;
-	}
-#endif /* CONFIG_PEERKEY */
-
 	if (wpa_s->wpa_state < WPA_ASSOCIATED ||
 	    (wpa_s->last_eapol_matches_bssid &&
 #ifdef CONFIG_AP

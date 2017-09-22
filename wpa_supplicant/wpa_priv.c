@@ -1081,12 +1081,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				    &data->pmkid_candidate,
 				    sizeof(struct pmkid_candidate));
 		break;
-	case EVENT_STKSTART:
-		if (data == NULL)
-			return;
-		wpa_priv_send_event(iface, PRIVSEP_EVENT_STKSTART,
-				    &data->stkstart.peer, ETH_ALEN);
-		break;
 	case EVENT_FT_RESPONSE:
 		wpa_priv_send_ft_response(iface, data);
 		break;

@@ -100,7 +100,6 @@ enum wpa_sm_conf_params {
 
 struct rsn_supp_config {
 	void *network_ctx;
-	int peerkey_enabled;
 	int allowed_pairwise_cipher; /* bitfield of WPA_CIPHER_* */
 	int proactive_key_caching;
 	int eap_workaround;
@@ -349,23 +348,6 @@ static inline int wpa_fils_is_completed(struct wpa_sm *sm)
 }
 
 #endif /* CONFIG_NO_WPA */
-
-#ifdef CONFIG_PEERKEY
-int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer);
-int wpa_sm_rx_eapol_peerkey(struct wpa_sm *sm, const u8 *src_addr,
-			    const u8 *buf, size_t len);
-#else /* CONFIG_PEERKEY */
-static inline int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
-{
-	return -1;
-}
-
-static inline int wpa_sm_rx_eapol_peerkey(struct wpa_sm *sm, const u8 *src_addr,
-					  const u8 *buf, size_t len)
-{
-	return 0;
-}
-#endif /* CONFIG_PEERKEY */
 
 #ifdef CONFIG_IEEE80211R
 

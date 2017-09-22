@@ -782,27 +782,6 @@ static int wpa_supplicant_ctrl_iface_preauth(struct wpa_supplicant *wpa_s,
 #endif /* IEEE8021X_EAPOL */
 
 
-#ifdef CONFIG_PEERKEY
-/* MLME-STKSTART.request(peer) */
-static int wpa_supplicant_ctrl_iface_stkstart(
-	struct wpa_supplicant *wpa_s, char *addr)
-{
-	u8 peer[ETH_ALEN];
-
-	if (hwaddr_aton(addr, peer)) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE STKSTART: invalid "
-			   "address '%s'", addr);
-		return -1;
-	}
-
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE STKSTART " MACSTR,
-		   MAC2STR(peer));
-
-	return wpa_sm_stkstart(wpa_s->wpa, peer);
-}
-#endif /* CONFIG_PEERKEY */
-
-
 #ifdef CONFIG_TDLS
 
 static int wpa_supplicant_ctrl_iface_tdls_discover(
@@ -9723,11 +9702,6 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_preauth(wpa_s, buf + 8))
 			reply_len = -1;
 #endif /* IEEE8021X_EAPOL */
-#ifdef CONFIG_PEERKEY
-	} else if (os_strncmp(buf, "STKSTART ", 9) == 0) {
-		if (wpa_supplicant_ctrl_iface_stkstart(wpa_s, buf + 9))
-			reply_len = -1;
-#endif /* CONFIG_PEERKEY */
 #ifdef CONFIG_IEEE80211R
 	} else if (os_strncmp(buf, "FT_DS ", 6) == 0) {
 		if (wpa_supplicant_ctrl_iface_ft_ds(wpa_s, buf + 6))

@@ -1488,6 +1488,11 @@ def test_wnm_action_proto_no_pmf(dev, apdev):
     dev[0].request("WNM_SLEEP enter")
     time.sleep(0.1)
     hapd.set("ext_mgmt_frame_handling", "1")
+    hapd.dump_monitor()
+    dev[0].request("WNM_SLEEP exit")
+    ev = hapd.wait_event(['MGMT-RX'], timeout=5)
+    if ev is None:
+        raise Exception("WNM-Sleep Mode Request not seen")
 
     msg = {}
     msg['fc'] = MGMT_SUBTYPE_ACTION << 4

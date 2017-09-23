@@ -3413,6 +3413,30 @@ enum qca_wlan_vendor_channel_prop_flags {
 	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT160        = 1 << 26,
 	/* VHT 80+80 channel */
 	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT80_80      = 1 << 27,
+	/* HE 20 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE20          = 1 << 28,
+	/* HE 40 with extension channel above */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE40PLUS      = 1 << 29,
+	/* HE 40 with extension channel below */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE40MINUS     = 1 << 30,
+	/* HE 40 intolerant */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE40INTOL     = 1 << 31,
+};
+
+/**
+ * qca_wlan_vendor_channel_prop_flags_2: This represents the flags for a
+ * channel, and is a continuation of qca_wlan_vendor_channel_prop_flags. This is
+ * used by QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAGS_2.
+ */
+enum qca_wlan_vendor_channel_prop_flags_2 {
+	/* HE 40 intolerant mark bit for ACS use */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE40INTOLMARK = 1 << 0,
+	/* HE 80 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE80          = 1 << 1,
+	/* HE 160 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE160         = 1 << 2,
+	/* HE 80+80 channel */
+	QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE80_80       = 1 << 3,
 };
 
 /**
@@ -3476,6 +3500,10 @@ enum qca_wlan_vendor_external_acs_event_chan_info_attr {
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_VHT_SEG_0 = 9,
 	/* VHT segment 1 (u8) */
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_VHT_SEG_1 = 10,
+	/* A bitmask (u32) with flags specified in
+	 * enum qca_wlan_vendor_channel_prop_flags_2.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FLAGS_2 = 11,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_LAST,

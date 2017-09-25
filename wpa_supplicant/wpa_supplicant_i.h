@@ -897,6 +897,7 @@ struct wpa_supplicant {
 
 	unsigned int p2p_auto_join:1;
 	unsigned int p2p_auto_pd:1;
+	unsigned int p2p_go_do_acs:1;
 	unsigned int p2p_persistent_group:1;
 	unsigned int p2p_fallback_to_go_neg:1;
 	unsigned int p2p_pd_before_go_neg:1;
@@ -912,6 +913,7 @@ struct wpa_supplicant {
 	unsigned int p2p_disable_ip_addr_req:1;
 	unsigned int p2ps_method_config_any:1;
 	unsigned int p2p_cli_probe:1;
+	enum hostapd_hw_mode p2p_go_acs_band;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;
 	int p2p_go_intent;

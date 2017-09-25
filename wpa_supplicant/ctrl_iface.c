@@ -6241,12 +6241,20 @@ static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 	int ht40 = wpa_s->conf->p2p_go_ht40 || vht;
 	int max_oper_chwidth, chwidth = 0, freq2 = 0;
 	char *token, *context = NULL;
+#ifdef CONFIG_ACS
+	int acs = 0;
+#endif /* CONFIG_ACS */
 
 	while ((token = str_token(cmd, " ", &context))) {
-		if (sscanf(token, "freq=%d", &freq) == 1 ||
-		    sscanf(token, "freq2=%d", &freq2) == 1 ||
+		if (sscanf(token, "freq2=%d", &freq2) == 1 ||
 		    sscanf(token, "persistent=%d", &group_id) == 1 ||
 		    sscanf(token, "max_oper_chwidth=%d", &chwidth) == 1) {
+			continue;
+#ifdef CONFIG_ACS
+		} else if (os_strcmp(token, "freq=acs") == 0) {
+			acs = 1;
+#endif /* CONFIG_ACS */
+		} else if (sscanf(token, "freq=%d", &freq) == 1) {
 			continue;
 		} else if (os_strcmp(token, "ht40") == 0) {
 			ht40 = 1;
@@ -6262,6 +6270,24 @@ static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 			return -1;
 		}
 	}
+
+#ifdef CONFIG_ACS
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_ACS_OFFLOAD) &&
+	    (acs || freq == 2 || freq == 5)) {
+		if (freq == 2 && wpa_s->best_24_freq <= 0) {
+			wpa_s->p2p_go_acs_band = HOSTAPD_MODE_IEEE80211G;
+			wpa_s->p2p_go_do_acs = 1;
+			freq = 0;
+		} else if (freq == 5 && wpa_s->best_5_freq <= 0) {
+			wpa_s->p2p_go_acs_band = HOSTAPD_MODE_IEEE80211A;
+			wpa_s->p2p_go_do_acs = 1;
+			freq = 0;
+		} else {
+			wpa_s->p2p_go_acs_band = HOSTAPD_MODE_IEEE80211ANY;
+			wpa_s->p2p_go_do_acs = 1;
+		}
+	}
+#endif /* CONFIG_ACS */
 
 	max_oper_chwidth = parse_freq(chwidth, freq2);
 	if (max_oper_chwidth < 0)

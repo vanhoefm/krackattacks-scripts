@@ -631,8 +631,10 @@ static void wpas_ap_configured_cb(void *ctx)
 	struct wpa_supplicant *wpa_s = ctx;
 
 #ifdef CONFIG_ACS
-	if (wpa_s->current_ssid && wpa_s->current_ssid->acs)
+	if (wpa_s->current_ssid && wpa_s->current_ssid->acs) {
 		wpa_s->assoc_freq = wpa_s->ap_iface->freq;
+		wpa_s->current_ssid->frequency = wpa_s->ap_iface->freq;
+	}
 #endif /* CONFIG_ACS */
 
 	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
@@ -814,6 +816,14 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
 	wpa_s->assoc_freq = ssid->frequency;
+
+#if defined(CONFIG_P2P) && defined(CONFIG_ACS)
+	if (wpa_s->p2p_go_do_acs) {
+		wpa_s->ap_iface->conf->channel = 0;
+		wpa_s->ap_iface->conf->hw_mode = wpa_s->p2p_go_acs_band;
+		ssid->acs = 1;
+	}
+#endif /* CONFIG_P2P && CONFIG_ACS */
 
 	if (hostapd_setup_interface(wpa_s->ap_iface)) {
 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");

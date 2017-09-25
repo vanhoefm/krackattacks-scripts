@@ -6065,6 +6065,12 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 		return NULL;
 	}
 
+	if (go && wpa_s->p2p_go_do_acs) {
+		group_wpa_s->p2p_go_do_acs = wpa_s->p2p_go_do_acs;
+		group_wpa_s->p2p_go_acs_band = wpa_s->p2p_go_acs_band;
+		wpa_s->p2p_go_do_acs = 0;
+	}
+
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use separate group interface %s",
 		group_wpa_s->ifname);
 	group_wpa_s->p2p_first_connection_timeout = 0;
@@ -6102,9 +6108,11 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 	wpa_printf(MSG_DEBUG, "P2P: Stop any on-going P2P FIND");
 	wpas_p2p_stop_find_oper(wpa_s);
 
-	freq = wpas_p2p_select_go_freq(wpa_s, freq);
-	if (freq < 0)
-		return -1;
+	if (!wpa_s->p2p_go_do_acs) {
+		freq = wpas_p2p_select_go_freq(wpa_s, freq);
+		if (freq < 0)
+			return -1;
+	}
 
 	if (wpas_p2p_init_go_params(wpa_s, &params, freq, vht_center_freq2,
 				    ht40, vht, max_oper_chwidth, NULL))

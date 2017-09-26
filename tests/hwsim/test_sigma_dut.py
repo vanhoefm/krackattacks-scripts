@@ -168,6 +168,77 @@ def run_sigma_dut_psk_pmf(dev, apdev):
 
     stop_sigma_dut(sigma)
 
+def test_sigma_dut_psk_pmf_bip_cmac_128(dev, apdev):
+    """sigma_dut controlled PSK+PMF association with BIP-CMAC-128"""
+    try:
+        run_sigma_dut_psk_pmf_cipher(dev, apdev, "BIP-CMAC-128", "AES-128-CMAC")
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def test_sigma_dut_psk_pmf_bip_cmac_256(dev, apdev):
+    """sigma_dut controlled PSK+PMF association with BIP-CMAC-256"""
+    try:
+        run_sigma_dut_psk_pmf_cipher(dev, apdev, "BIP-CMAC-256", "BIP-CMAC-256")
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def test_sigma_dut_psk_pmf_bip_gmac_128(dev, apdev):
+    """sigma_dut controlled PSK+PMF association with BIP-GMAC-128"""
+    try:
+        run_sigma_dut_psk_pmf_cipher(dev, apdev, "BIP-GMAC-128", "BIP-GMAC-128")
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def test_sigma_dut_psk_pmf_bip_gmac_256(dev, apdev):
+    """sigma_dut controlled PSK+PMF association with BIP-GMAC-256"""
+    try:
+        run_sigma_dut_psk_pmf_cipher(dev, apdev, "BIP-GMAC-256", "BIP-GMAC-256")
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def test_sigma_dut_psk_pmf_bip_gmac_256_mismatch(dev, apdev):
+    """sigma_dut controlled PSK+PMF association with BIP-GMAC-256 mismatch"""
+    try:
+        run_sigma_dut_psk_pmf_cipher(dev, apdev, "BIP-GMAC-256", "AES-128-CMAC",
+                                     failure=True)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_psk_pmf_cipher(dev, apdev, sigma_cipher, hostapd_cipher,
+                                 failure=False):
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname)
+
+    ssid = "test-pmf-required"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
+    params["group_mgmt_cipher"] = hostapd_cipher
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,PMF" % ifname)
+    sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+    sigma_dut_cmd_check("sta_set_psk,interface,%s,ssid,%s,passphrase,%s,encpType,aes-ccmp,keymgmttype,wpa2,PMF,Required,GroupMgntCipher,%s" % (ifname, "test-pmf-required", "12345678", sigma_cipher))
+    sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-pmf-required"))
+    if failure:
+        ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND",
+                                "CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Network selection result not indicated")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Unexpected connection")
+        res = sigma_dut_cmd("sta_is_connected,interface," + ifname)
+        if "connected,1" in res:
+            raise Exception("Connection reported")
+    else:
+        sigma_dut_wait_connected(ifname)
+        sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    stop_sigma_dut(sigma)
+
 def test_sigma_dut_sae(dev, apdev):
     """sigma_dut controlled SAE association"""
     if "SAE" not in dev[0].get_capability("auth_alg"):

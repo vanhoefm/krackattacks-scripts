@@ -28,7 +28,7 @@ def check_cipher(dev, ap, cipher):
                 pairwise=cipher, group=cipher, scan_freq="2412")
     hwsim_utils.test_connectivity(dev, hapd)
 
-def check_group_mgmt_cipher(dev, ap, cipher):
+def check_group_mgmt_cipher(dev, ap, cipher, sta_req_cipher=None):
     if cipher not in dev.get_capability("group_mgmt"):
         raise HwsimSkip("Cipher %s not supported" % cipher)
     params = { "ssid": "test-wpa2-psk-pmf",
@@ -46,7 +46,7 @@ def check_group_mgmt_cipher(dev, ap, cipher):
     wt.add_passphrase("12345678")
 
     dev.connect("test-wpa2-psk-pmf", psk="12345678", ieee80211w="2",
-                key_mgmt="WPA-PSK-SHA256",
+                key_mgmt="WPA-PSK-SHA256", group_mgmt=sta_req_cipher,
                 pairwise="CCMP", group="CCMP", scan_freq="2412")
     hwsim_utils.test_connectivity(dev, hapd)
     hapd.request("DEAUTHENTICATE ff:ff:ff:ff:ff:ff")
@@ -278,14 +278,68 @@ def test_ap_cipher_bip(dev, apdev):
     """WPA2-PSK with BIP"""
     check_group_mgmt_cipher(dev[0], apdev[0], "AES-128-CMAC")
 
+def test_ap_cipher_bip_req(dev, apdev):
+    """WPA2-PSK with BIP required"""
+    check_group_mgmt_cipher(dev[0], apdev[0], "AES-128-CMAC", "AES-128-CMAC")
+
+def test_ap_cipher_bip_req2(dev, apdev):
+    """WPA2-PSK with BIP required (2)"""
+    check_group_mgmt_cipher(dev[0], apdev[0], "AES-128-CMAC",
+                            "AES-128-CMAC BIP-GMAC-128 BIP-GMAC-256 BIP-CMAC-256")
+
 def test_ap_cipher_bip_gmac_128(dev, apdev):
     """WPA2-PSK with BIP-GMAC-128"""
     check_group_mgmt_cipher(dev[0], apdev[0], "BIP-GMAC-128")
+
+def test_ap_cipher_bip_gmac_128_req(dev, apdev):
+    """WPA2-PSK with BIP-GMAC-128 required"""
+    check_group_mgmt_cipher(dev[0], apdev[0], "BIP-GMAC-128", "BIP-GMAC-128")
 
 def test_ap_cipher_bip_gmac_256(dev, apdev):
     """WPA2-PSK with BIP-GMAC-256"""
     check_group_mgmt_cipher(dev[0], apdev[0], "BIP-GMAC-256")
 
+def test_ap_cipher_bip_gmac_256_req(dev, apdev):
+    """WPA2-PSK with BIP-GMAC-256 required"""
+    check_group_mgmt_cipher(dev[0], apdev[0], "BIP-GMAC-256", "BIP-GMAC-256")
+
 def test_ap_cipher_bip_cmac_256(dev, apdev):
     """WPA2-PSK with BIP-CMAC-256"""
     check_group_mgmt_cipher(dev[0], apdev[0], "BIP-CMAC-256")
+
+def test_ap_cipher_bip_cmac_256_req(dev, apdev):
+    """WPA2-PSK with BIP-CMAC-256 required"""
+    check_group_mgmt_cipher(dev[0], apdev[0], "BIP-CMAC-256", "BIP-CMAC-256")
+
+def test_ap_cipher_bip_req_mismatch(dev, apdev):
+    """WPA2-PSK with BIP cipher mismatch"""
+    group_mgmt = dev[0].get_capability("group_mgmt")
+    for cipher in [ "AES-128-CMAC", "BIP-GMAC-256" ]:
+        if cipher not in group_mgmt:
+            raise HwsimSkip("Cipher %s not supported" % cipher)
+
+    params = { "ssid": "test-wpa2-psk-pmf",
+               "wpa_passphrase": "12345678",
+               "wpa": "2",
+               "ieee80211w": "2",
+               "wpa_key_mgmt": "WPA-PSK-SHA256",
+               "rsn_pairwise": "CCMP",
+               "group_mgmt_cipher": "AES-128-CMAC" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].scan_for_bss(hapd.own_addr(), 2412)
+    id = dev[0].connect("test-wpa2-psk-pmf", psk="12345678", ieee80211w="2",
+                        key_mgmt="WPA-PSK-SHA256", group_mgmt="BIP-GMAC-256",
+                        pairwise="CCMP", group="CCMP", scan_freq="2412",
+                        wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Network selection result not indicated")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection")
+
+    dev[0].request("DISCONNECT")
+    dev[0].set_network(id, "group_mgmt", "AES-128-CMAC")
+    dev[0].select_network(id)
+    dev[0].wait_connected()

@@ -5941,6 +5941,16 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 		[NL80211_STA_INFO_TX_FAILED] = { .type = NLA_U32 },
 		[NL80211_STA_INFO_RX_BYTES64] = { .type = NLA_U64 },
 		[NL80211_STA_INFO_TX_BYTES64] = { .type = NLA_U64 },
+		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
+	};
+	struct nlattr *rate[NL80211_RATE_INFO_MAX + 1];
+	static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1] = {
+		[NL80211_RATE_INFO_BITRATE] = { .type = NLA_U16 },
+		[NL80211_RATE_INFO_BITRATE32] = { .type = NLA_U32 },
+		[NL80211_RATE_INFO_MCS] = { .type = NLA_U8 },
+		[NL80211_RATE_INFO_VHT_MCS] = { .type = NLA_U8 },
+		[NL80211_RATE_INFO_SHORT_GI] = { .type = NLA_FLAG },
+		[NL80211_RATE_INFO_VHT_NSS] = { .type = NLA_U8 },
 	};
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
@@ -5992,6 +6002,67 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 	if (stats[NL80211_STA_INFO_TX_FAILED])
 		data->tx_retry_failed =
 			nla_get_u32(stats[NL80211_STA_INFO_TX_FAILED]);
+	if (stats[NL80211_STA_INFO_SIGNAL])
+		data->signal = nla_get_u8(stats[NL80211_STA_INFO_SIGNAL]);
+
+	if (stats[NL80211_STA_INFO_TX_BITRATE] &&
+	    nla_parse_nested(rate, NL80211_RATE_INFO_MAX,
+			     stats[NL80211_STA_INFO_TX_BITRATE],
+			     rate_policy) == 0) {
+		if (rate[NL80211_RATE_INFO_BITRATE32])
+			data->current_tx_rate =
+				nla_get_u32(rate[NL80211_RATE_INFO_BITRATE32]);
+		else if (rate[NL80211_RATE_INFO_BITRATE])
+			data->current_tx_rate =
+				nla_get_u16(rate[NL80211_RATE_INFO_BITRATE]);
+
+		if (rate[NL80211_RATE_INFO_MCS]) {
+			data->tx_mcs = nla_get_u8(rate[NL80211_RATE_INFO_MCS]);
+			data->flags |= STA_DRV_DATA_TX_MCS;
+		}
+		if (rate[NL80211_RATE_INFO_VHT_MCS]) {
+			data->tx_vhtmcs =
+				nla_get_u8(rate[NL80211_RATE_INFO_VHT_MCS]);
+			data->flags |= STA_DRV_DATA_TX_VHT_MCS;
+		}
+		if (rate[NL80211_RATE_INFO_SHORT_GI])
+			data->flags |= STA_DRV_DATA_TX_SHORT_GI;
+		if (rate[NL80211_RATE_INFO_VHT_NSS]) {
+			data->tx_vht_nss =
+				nla_get_u8(rate[NL80211_RATE_INFO_VHT_NSS]);
+			data->flags |= STA_DRV_DATA_TX_VHT_NSS;
+		}
+	}
+
+	if (stats[NL80211_STA_INFO_RX_BITRATE] &&
+	    nla_parse_nested(rate, NL80211_RATE_INFO_MAX,
+			     stats[NL80211_STA_INFO_RX_BITRATE],
+			     rate_policy) == 0) {
+		if (rate[NL80211_RATE_INFO_BITRATE32])
+			data->current_rx_rate =
+				nla_get_u32(rate[NL80211_RATE_INFO_BITRATE32]);
+		else if (rate[NL80211_RATE_INFO_BITRATE])
+			data->current_rx_rate =
+				nla_get_u16(rate[NL80211_RATE_INFO_BITRATE]);
+
+		if (rate[NL80211_RATE_INFO_MCS]) {
+			data->rx_mcs =
+				nla_get_u8(rate[NL80211_RATE_INFO_MCS]);
+			data->flags |= STA_DRV_DATA_RX_MCS;
+		}
+		if (rate[NL80211_RATE_INFO_VHT_MCS]) {
+			data->rx_vhtmcs =
+				nla_get_u8(rate[NL80211_RATE_INFO_VHT_MCS]);
+			data->flags |= STA_DRV_DATA_RX_VHT_MCS;
+		}
+		if (rate[NL80211_RATE_INFO_SHORT_GI])
+			data->flags |= STA_DRV_DATA_RX_SHORT_GI;
+		if (rate[NL80211_RATE_INFO_VHT_NSS]) {
+			data->rx_vht_nss =
+				nla_get_u8(rate[NL80211_RATE_INFO_VHT_NSS]);
+			data->flags |= STA_DRV_DATA_RX_VHT_NSS;
+		}
+	}
 
 	return NL_SKIP;
 }

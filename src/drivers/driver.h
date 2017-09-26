@@ -1684,18 +1684,35 @@ struct wpa_driver_capa {
 
 struct hostapd_data;
 
+#define STA_DRV_DATA_TX_MCS BIT(0)
+#define STA_DRV_DATA_RX_MCS BIT(1)
+#define STA_DRV_DATA_TX_VHT_MCS BIT(2)
+#define STA_DRV_DATA_RX_VHT_MCS BIT(3)
+#define STA_DRV_DATA_TX_VHT_NSS BIT(4)
+#define STA_DRV_DATA_RX_VHT_NSS BIT(5)
+#define STA_DRV_DATA_TX_SHORT_GI BIT(6)
+#define STA_DRV_DATA_RX_SHORT_GI BIT(7)
+
 struct hostap_sta_driver_data {
 	unsigned long rx_packets, tx_packets;
 	unsigned long long rx_bytes, tx_bytes;
 	int bytes_64bit; /* whether 64-bit byte counters are supported */
 	unsigned long current_tx_rate;
+	unsigned long current_rx_rate;
 	unsigned long inactive_msec;
-	unsigned long flags;
+	unsigned long flags; /* bitfield of STA_DRV_DATA_* */
 	unsigned long num_ps_buf_frames;
 	unsigned long tx_retry_failed;
 	unsigned long tx_retry_count;
 	int last_rssi;
 	int last_ack_rssi;
+	s8 signal;
+	u8 rx_vhtmcs;
+	u8 tx_vhtmcs;
+	u8 rx_mcs;
+	u8 tx_mcs;
+	u8 rx_vht_nss;
+	u8 tx_vht_nss;
 };
 
 struct hostapd_sta_add_params {

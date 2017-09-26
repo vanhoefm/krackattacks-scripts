@@ -32,17 +32,86 @@ static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
 {
 	struct hostap_sta_driver_data data;
 	int ret;
+	int len = 0;
 
 	if (hostapd_drv_read_sta_data(hapd, &data, sta->addr) < 0)
 		return 0;
 
 	ret = os_snprintf(buf, buflen, "rx_packets=%lu\ntx_packets=%lu\n"
-			  "rx_bytes=%llu\ntx_bytes=%llu\ninactive_msec=%lu\n",
+			  "rx_bytes=%llu\ntx_bytes=%llu\ninactive_msec=%lu\n"
+			  "signal=%d\n",
 			  data.rx_packets, data.tx_packets,
-			  data.rx_bytes, data.tx_bytes, data.inactive_msec);
+			  data.rx_bytes, data.tx_bytes, data.inactive_msec,
+			  data.signal);
 	if (os_snprintf_error(buflen, ret))
 		return 0;
-	return ret;
+	len += ret;
+
+	ret = os_snprintf(buf + len, buflen - len, "rx_rate_info=%lu",
+			  data.current_rx_rate);
+	if (os_snprintf_error(buflen - len, ret))
+		return len;
+	len += ret;
+	if (data.flags & STA_DRV_DATA_RX_MCS) {
+		ret = os_snprintf(buf + len, buflen - len, " mcs %u",
+				  data.rx_mcs);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_RX_VHT_MCS) {
+		ret = os_snprintf(buf + len, buflen - len, " vhtmcs %u",
+				  data.rx_vhtmcs);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_RX_VHT_NSS) {
+		ret = os_snprintf(buf + len, buflen - len, " vhtnss %u",
+				  data.rx_vht_nss);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_RX_SHORT_GI) {
+		ret = os_snprintf(buf + len, buflen - len, " shortGI");
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	ret = os_snprintf(buf + len, buflen - len, "\n");
+	if (!os_snprintf_error(buflen - len, ret))
+		len += ret;
+
+	ret = os_snprintf(buf + len, buflen - len, "tx_rate_info=%lu",
+			  data.current_tx_rate);
+	if (os_snprintf_error(buflen - len, ret))
+		return len;
+	len += ret;
+	if (data.flags & STA_DRV_DATA_TX_MCS) {
+		ret = os_snprintf(buf + len, buflen - len, " mcs %u",
+				  data.tx_mcs);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_TX_VHT_MCS) {
+		ret = os_snprintf(buf + len, buflen - len, " vhtmcs %u",
+				  data.tx_vhtmcs);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_TX_VHT_NSS) {
+		ret = os_snprintf(buf + len, buflen - len, " vhtnss %u",
+				  data.tx_vht_nss);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	if (data.flags & STA_DRV_DATA_TX_SHORT_GI) {
+		ret = os_snprintf(buf + len, buflen - len, " shortGI");
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+	ret = os_snprintf(buf + len, buflen - len, "\n");
+	if (!os_snprintf_error(buflen - len, ret))
+		len += ret;
+
+	return len;
 }
 
 

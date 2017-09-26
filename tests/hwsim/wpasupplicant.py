@@ -1027,7 +1027,8 @@ class WpaSupplicant:
                        "bssid_whitelist", "mem_only_psk", "eap_workaround",
                        "engine", "fils_dh_group", "bssid_hint",
                        "dpp_csign", "dpp_csign_expiry",
-                       "dpp_netaccesskey", "dpp_netaccesskey_expiry" ]
+                       "dpp_netaccesskey", "dpp_netaccesskey_expiry",
+                       "group_mgmt" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

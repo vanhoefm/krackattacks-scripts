@@ -1148,6 +1148,40 @@ static char * wpa_config_write_group(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
+static int wpa_config_parse_group_mgmt(const struct parse_data *data,
+				       struct wpa_ssid *ssid, int line,
+				       const char *value)
+{
+	int val;
+
+	val = wpa_config_parse_cipher(line, value);
+	if (val == -1)
+		return -1;
+
+	if (val & ~WPA_ALLOWED_GROUP_MGMT_CIPHERS) {
+		wpa_printf(MSG_ERROR,
+			   "Line %d: not allowed group management cipher (0x%x).",
+			   line, val);
+		return -1;
+	}
+
+	if (ssid->group_mgmt_cipher == val)
+		return 1;
+	wpa_printf(MSG_MSGDUMP, "group_mgmt: 0x%x", val);
+	ssid->group_mgmt_cipher = val;
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_group_mgmt(const struct parse_data *data,
+					  struct wpa_ssid *ssid)
+{
+	return wpa_config_write_cipher(ssid->group_mgmt_cipher);
+}
+#endif /* NO_CONFIG_WRITE */
+
+
 static int wpa_config_parse_auth_alg(const struct parse_data *data,
 				     struct wpa_ssid *ssid, int line,
 				     const char *value)
@@ -2086,6 +2120,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT(bg_scan_period) },
 	{ FUNC(pairwise) },
 	{ FUNC(group) },
+	{ FUNC(group_mgmt) },
 	{ FUNC(auth_alg) },
 	{ FUNC(scan_freq) },
 	{ FUNC(freq_list) },

@@ -1232,9 +1232,24 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			ie.pairwise_cipher = ssid->pairwise_cipher;
 			ie.key_mgmt = ssid->key_mgmt;
 #ifdef CONFIG_IEEE80211W
-			ie.mgmt_group_cipher =
-				ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION ?
-				WPA_CIPHER_AES_128_CMAC : 0;
+			ie.mgmt_group_cipher = 0;
+			if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+				if (ssid->group_mgmt_cipher &
+				    WPA_CIPHER_BIP_GMAC_256)
+					ie.mgmt_group_cipher =
+						WPA_CIPHER_BIP_GMAC_256;
+				else if (ssid->group_mgmt_cipher &
+					 WPA_CIPHER_BIP_CMAC_256)
+					ie.mgmt_group_cipher =
+						WPA_CIPHER_BIP_CMAC_256;
+				else if (ssid->group_mgmt_cipher &
+					 WPA_CIPHER_BIP_GMAC_128)
+					ie.mgmt_group_cipher =
+						WPA_CIPHER_BIP_GMAC_128;
+				else
+					ie.mgmt_group_cipher =
+						WPA_CIPHER_AES_128_CMAC;
+			}
 #endif /* CONFIG_IEEE80211W */
 			wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Set cipher suites "
 				"based on configuration");
@@ -1387,6 +1402,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	sel = ie.mgmt_group_cipher;
+	if (ssid->group_mgmt_cipher)
+		sel &= ssid->group_mgmt_cipher;
 	if (wpas_get_ssid_pmf(wpa_s, ssid) == NO_MGMT_FRAME_PROTECTION ||
 	    !(ie.capabilities & WPA_CAPABILITY_MFPC))
 		sel = 0;
@@ -2301,7 +2318,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
-	unsigned int cipher_pairwise, cipher_group;
+	unsigned int cipher_pairwise, cipher_group, cipher_group_mgmt;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
 	int assoc_failed = 0;
@@ -2665,6 +2682,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	use_crypt = 1;
 	cipher_pairwise = wpa_s->pairwise_cipher;
 	cipher_group = wpa_s->group_cipher;
+	cipher_group_mgmt = wpa_s->mgmt_group_cipher;
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE)
@@ -2748,6 +2766,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	params.wpa_ie_len = wpa_ie_len;
 	params.pairwise_suite = cipher_pairwise;
 	params.group_suite = cipher_group;
+	params.mgmt_group_suite = cipher_group_mgmt;
 	params.key_mgmt_suite = wpa_s->key_mgmt;
 	params.wpa_proto = wpa_s->wpa_proto;
 	params.auth_alg = algs;

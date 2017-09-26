@@ -2072,6 +2072,14 @@ int wpa_parse_cipher(const char *value)
 			val |= WPA_CIPHER_NONE;
 		else if (os_strcmp(start, "GTK_NOT_USED") == 0)
 			val |= WPA_CIPHER_GTK_NOT_USED;
+		else if (os_strcmp(start, "AES-128-CMAC") == 0)
+			val |= WPA_CIPHER_AES_128_CMAC;
+		else if (os_strcmp(start, "BIP-GMAC-128") == 0)
+			val |= WPA_CIPHER_BIP_GMAC_128;
+		else if (os_strcmp(start, "BIP-GMAC-256") == 0)
+			val |= WPA_CIPHER_BIP_GMAC_256;
+		else if (os_strcmp(start, "BIP-CMAC-256") == 0)
+			val |= WPA_CIPHER_BIP_CMAC_256;
 		else {
 			os_free(buf);
 			return -1;
@@ -2122,6 +2130,34 @@ int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim)
 	}
 	if (ciphers & WPA_CIPHER_TKIP) {
 		ret = os_snprintf(pos, end - pos, "%sTKIP",
+				  pos == start ? "" : delim);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+	if (ciphers & WPA_CIPHER_AES_128_CMAC) {
+		ret = os_snprintf(pos, end - pos, "%sAES-128-CMAC",
+				  pos == start ? "" : delim);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+	if (ciphers & WPA_CIPHER_BIP_GMAC_128) {
+		ret = os_snprintf(pos, end - pos, "%sBIP-GMAC-128",
+				  pos == start ? "" : delim);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+	if (ciphers & WPA_CIPHER_BIP_GMAC_256) {
+		ret = os_snprintf(pos, end - pos, "%sBIP-GMAC-256",
+				  pos == start ? "" : delim);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+	if (ciphers & WPA_CIPHER_BIP_CMAC_256) {
+		ret = os_snprintf(pos, end - pos, "%sBIP-CMAC-256",
 				  pos == start ? "" : delim);
 		if (os_snprintf_error(end - pos, ret))
 			return -1;

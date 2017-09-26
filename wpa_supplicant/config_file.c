@@ -593,6 +593,22 @@ static void write_group(FILE *f, struct wpa_ssid *ssid)
 }
 
 
+static void write_group_mgmt(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value;
+
+	if (!ssid->group_mgmt_cipher)
+		return;
+
+	value = wpa_config_get(ssid, "group_mgmt");
+	if (!value)
+		return;
+	if (value[0])
+		fprintf(f, "\tgroup_mgmt=%s\n", value);
+	os_free(value);
+}
+
+
 static void write_auth_alg(FILE *f, struct wpa_ssid *ssid)
 {
 	char *value;
@@ -734,6 +750,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT_DEF(bg_scan_period, DEFAULT_BG_SCAN_PERIOD);
 	write_pairwise(f, ssid);
 	write_group(f, ssid);
+	write_group_mgmt(f, ssid);
 	write_auth_alg(f, ssid);
 	STR(bgscan);
 	STR(autoscan);

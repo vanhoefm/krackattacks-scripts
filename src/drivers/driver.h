@@ -814,7 +814,7 @@ struct wpa_driver_associate_params {
 	 * WPA information element to be included in (Re)Association
 	 * Request (including information element id and length). Use
 	 * of this WPA IE is optional. If the driver generates the WPA
-	 * IE, it can use pairwise_suite, group_suite, and
+	 * IE, it can use pairwise_suite, group_suite, group_mgmt_suite, and
 	 * key_mgmt_suite to select proper algorithms. In this case,
 	 * the driver has to notify wpa_supplicant about the used WPA
 	 * IE by generating an event that the interface code will
@@ -852,6 +852,13 @@ struct wpa_driver_associate_params {
 	 * This is usually ignored if @wpa_ie is used.
 	 */
 	unsigned int group_suite;
+
+	/**
+	 * mgmt_group_suite - Selected group management cipher suite (WPA_CIPHER_*)
+	 *
+	 * This is usually ignored if @wpa_ie is used.
+	 */
+	unsigned int mgmt_group_suite;
 
 	/**
 	 * key_mgmt_suite - Selected key management suite (WPA_KEY_MGMT_*)

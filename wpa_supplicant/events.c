@@ -565,6 +565,14 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			break;
 		}
 
+		if (ssid->group_mgmt_cipher &&
+		    !(ie.mgmt_group_cipher & ssid->group_mgmt_cipher)) {
+			if (debug_print)
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"   skip RSN IE - group mgmt cipher mismatch");
+			break;
+		}
+
 		if (!(ie.key_mgmt & ssid->key_mgmt)) {
 			if (debug_print)
 				wpa_dbg(wpa_s, MSG_DEBUG,

@@ -210,6 +210,15 @@ struct wpa_ssid {
 	int group_cipher;
 
 	/**
+	 * group_mgmt_cipher - Bitfield of allowed group management ciphers
+	 *
+	 * This is a bitfield of WPA_CIPHER_AES_128_CMAC and WPA_CIPHER_BIP_*
+	 * values. If 0, no constraint is used for the cipher, i.e., whatever
+	 * the AP uses is accepted.
+	 */
+	int group_mgmt_cipher;
+
+	/**
 	 * key_mgmt - Bitfield of allowed key management protocols
 	 *
 	 * WPA_KEY_MGMT_*

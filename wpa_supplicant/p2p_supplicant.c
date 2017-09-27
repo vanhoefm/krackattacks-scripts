@@ -9073,16 +9073,20 @@ static void wpas_p2p_consider_moving_one_go(struct wpa_supplicant *wpa_s,
 	unsigned int i, invalid_freq = 0, policy_move = 0, flags = 0;
 	unsigned int timeout;
 	int freq;
+	int dfs_offload;
 
 	wpas_p2p_go_update_common_freqs(wpa_s);
 
 	freq = wpa_s->current_ssid->frequency;
+	dfs_offload = (wpa_s->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+		ieee80211_is_dfs(freq);
 	for (i = 0, invalid_freq = 0; i < num; i++) {
 		if (freqs[i].freq == freq) {
 			flags = freqs[i].flags;
 
 			/* The channel is invalid, must change it */
-			if (!p2p_supported_freq_go(wpa_s->global->p2p, freq)) {
+			if (!p2p_supported_freq_go(wpa_s->global->p2p, freq) &&
+			    !dfs_offload) {
 				wpa_dbg(wpa_s, MSG_DEBUG,
 					"P2P: Freq=%d MHz no longer valid for GO",
 					freq);
@@ -9092,7 +9096,7 @@ static void wpas_p2p_consider_moving_one_go(struct wpa_supplicant *wpa_s,
 			/* Freq is not used by any other station interface */
 			continue;
 		} else if (!p2p_supported_freq(wpa_s->global->p2p,
-					       freqs[i].freq)) {
+					       freqs[i].freq) && !dfs_offload) {
 			/* Freq is not valid for P2P use cases */
 			continue;
 		} else if (wpa_s->conf->p2p_go_freq_change_policy ==

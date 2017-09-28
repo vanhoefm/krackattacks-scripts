@@ -880,6 +880,7 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 					const u8 *uuid, size_t *pin_len)
 {
 	struct wps_uuid_pin *pin, *found = NULL;
+	int wildcard = 0;
 
 	wps_registrar_expire_pins(reg);
 
@@ -899,7 +900,7 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 			    pin->wildcard_uuid == 2) {
 				wpa_printf(MSG_DEBUG, "WPS: Found a wildcard "
 					   "PIN. Assigned it for this UUID-E");
-				pin->wildcard_uuid++;
+				wildcard = 1;
 				os_memcpy(pin->uuid, uuid, WPS_UUID_LEN);
 				found = pin;
 				break;
@@ -921,6 +922,8 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 	}
 	*pin_len = found->pin_len;
 	found->flags |= PIN_LOCKED;
+	if (wildcard)
+		found->wildcard_uuid++;
 	return found->pin;
 }
 

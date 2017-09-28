@@ -50,10 +50,18 @@ extern "C" {
 #define WPA_EVENT_EAP_TLS_CERT_ERROR "CTRL-EVENT-EAP-TLS-CERT-ERROR "
 /** EAP status */
 #define WPA_EVENT_EAP_STATUS "CTRL-EVENT-EAP-STATUS "
+/** Retransmit the previous request packet */
+#define WPA_EVENT_EAP_RETRANSMIT "CTRL-EVENT-EAP-RETRANSMIT "
+#define WPA_EVENT_EAP_RETRANSMIT2 "CTRL-EVENT-EAP-RETRANSMIT2 "
 /** EAP authentication completed successfully */
 #define WPA_EVENT_EAP_SUCCESS "CTRL-EVENT-EAP-SUCCESS "
+#define WPA_EVENT_EAP_SUCCESS2 "CTRL-EVENT-EAP-SUCCESS2 "
 /** EAP authentication failed (EAP-Failure received) */
 #define WPA_EVENT_EAP_FAILURE "CTRL-EVENT-EAP-FAILURE "
+#define WPA_EVENT_EAP_FAILURE2 "CTRL-EVENT-EAP-FAILURE2 "
+/** EAP authentication failed due to no response received */
+#define WPA_EVENT_EAP_TIMEOUT_FAILURE "CTRL-EVENT-EAP-TIMEOUT-FAILURE "
+#define WPA_EVENT_EAP_TIMEOUT_FAILURE2 "CTRL-EVENT-EAP-TIMEOUT-FAILURE2 "
 /** Network block temporarily disabled (e.g., due to authentication failure) */
 #define WPA_EVENT_TEMP_DISABLED "CTRL-EVENT-SSID-TEMP-DISABLED "
 /** Temporarily disabled network block re-enabled */

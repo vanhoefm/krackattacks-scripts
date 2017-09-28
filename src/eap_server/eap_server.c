@@ -326,6 +326,9 @@ SM_STATE(EAP, RETRANSMIT)
 		if (eap_copy_buf(&sm->eap_if.eapReqData, sm->lastReqData) == 0)
 			sm->eap_if.eapReq = TRUE;
 	}
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_RETRANSMIT MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 
@@ -634,6 +637,9 @@ SM_STATE(EAP, TIMEOUT_FAILURE)
 	SM_ENTRY(EAP, TIMEOUT_FAILURE);
 
 	sm->eap_if.eapTimeout = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_TIMEOUT_FAILURE MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 
@@ -1011,6 +1017,9 @@ SM_STATE(EAP, RETRANSMIT2)
 		if (eap_copy_buf(&sm->eap_if.eapReqData, sm->lastReqData) == 0)
 			sm->eap_if.eapReq = TRUE;
 	}
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_RETRANSMIT2 MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 
@@ -1101,6 +1110,9 @@ SM_STATE(EAP, TIMEOUT_FAILURE2)
 	SM_ENTRY(EAP, TIMEOUT_FAILURE2);
 
 	sm->eap_if.eapTimeout = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_TIMEOUT_FAILURE2 MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 
@@ -1110,6 +1122,9 @@ SM_STATE(EAP, FAILURE2)
 
 	eap_copy_buf(&sm->eap_if.eapReqData, sm->eap_if.aaaEapReqData);
 	sm->eap_if.eapFail = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE2 MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 
@@ -1136,6 +1151,9 @@ SM_STATE(EAP, SUCCESS2)
 	 * started properly.
 	 */
 	sm->start_reauth = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS2 MACSTR,
+		MAC2STR(sm->peer_addr));
 }
 
 

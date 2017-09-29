@@ -1684,6 +1684,12 @@ enum qca_wlan_vendor_attr_get_hw_capability {
  * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_ANT_NF: per antenna NF value
  * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_IFACE_RSSI_BEACON: RSSI of beacon
  * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_IFACE_SNR_BEACON: SNR of beacon
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_REPORT_TIME: u64
+ *    Absolute timestamp from 1970/1/1, unit in ms. After receiving the
+ *    message, user layer APP could call gettimeofday to get another
+ *    timestamp and calculate transfer delay for the message.
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_MEASUREMENT_TIME: u32
+ *    Real period for this measurement, unit in us.
  */
 enum qca_wlan_vendor_attr_ll_stats_ext {
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_INVALID = 0,
@@ -1776,6 +1782,9 @@ enum qca_wlan_vendor_attr_ll_stats_ext {
 	/* Sub-attributes for IFACE_BSS */
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_IFACE_RSSI_BEACON,
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_IFACE_SNR_BEACON,
+
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_REPORT_TIME,
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_MEASUREMENT_TIME,
 
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_LAST,
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_EXT_MAX =

@@ -463,6 +463,8 @@
 #define WLAN_EID_EXT_FILS_NONCE 13
 #define WLAN_EID_EXT_FUTURE_CHANNEL_GUIDANCE 14
 #define WLAN_EID_EXT_OWE_DH_PARAM 32
+#define WLAN_EID_EXT_HE_CAPABILITIES 35
+#define WLAN_EID_EXT_HE_OPERATION 36
 
 
 /* Action frame categories (IEEE Std 802.11-2016, 9.4.1.11, Table 9-76) */
@@ -1980,18 +1982,17 @@ enum nr_chan_width {
 struct ieee80211_he_capabilities {
 	u8 he_mac_capab_info[5];
 	u8 he_phy_capab_info[9];
-	u16 he_txrx_mcs_support;
-	/* possibly followed by Tx Rx MCS NSS descriptor */
-	u8 variable[];
+	u8 he_txrx_mcs_support[12]; /* TODO: 4, 8, or 12 octets */
 	/* PPE Thresholds (optional) */
 } STRUCT_PACKED;
 
 struct ieee80211_he_operation {
 	u32 he_oper_params;
-	u8 he_mcs_nss_set[3];
+	u8 he_mcs_nss_set[2];
 	u8 vht_op_info_chwidth;
 	u8 vht_op_info_chan_center_freq_seg0_idx;
 	u8 vht_op_info_chan_center_freq_seg1_idx;
+	/* Followed by conditional MaxBSSID Indicator subfield (u8) */
 } STRUCT_PACKED;
 
 /* HE Capabilities Information defines */

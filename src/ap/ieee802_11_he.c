@@ -10,14 +10,13 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
-#include "common/qca-vendor.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "beacon.h"
 #include "ieee802_11.h"
 #include "dfs.h"
 
-u8 * hostapd_eid_vendor_he_capab(struct hostapd_data *hapd, u8 *eid)
+u8 * hostapd_eid_he_capab(struct hostapd_data *hapd, u8 *eid)
 {
 	struct ieee80211_he_capabilities *cap;
 	u8 *pos = eid;
@@ -25,17 +24,10 @@ u8 * hostapd_eid_vendor_he_capab(struct hostapd_data *hapd, u8 *eid)
 	if (!hapd->iface->current_mode)
 		return eid;
 
-	/* For now, use a vendor specific element since the P802.11ax draft is
-	 * still subject to changes and the contents of this element may change.
-	 * This can be replaced with the actual element once P802.11ax is
-	 * finalized. */
-	/* Vendor HE Capabilities element */
-	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
-	*pos++ = 4 /* The Vendor OUI, subtype */ +
-		sizeof(struct ieee80211_he_capabilities);
+	*pos++ = WLAN_EID_EXTENSION;
+	*pos++ = 1 + sizeof(struct ieee80211_he_capabilities);
+	*pos++ = WLAN_EID_EXT_HE_CAPABILITIES;
 
-	WPA_PUT_BE32(pos, (OUI_QCA << 8) | QCA_VENDOR_ELEM_HE_CAPAB);
-	pos += 4;
 	cap = (struct ieee80211_he_capabilities *) pos;
 	os_memset(cap, 0, sizeof(*cap));
 
@@ -57,7 +49,7 @@ u8 * hostapd_eid_vendor_he_capab(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-u8 * hostapd_eid_vendor_he_operation(struct hostapd_data *hapd, u8 *eid)
+u8 * hostapd_eid_he_operation(struct hostapd_data *hapd, u8 *eid)
 {
 	struct ieee80211_he_operation *oper;
 	u8 *pos = eid;
@@ -65,17 +57,10 @@ u8 * hostapd_eid_vendor_he_operation(struct hostapd_data *hapd, u8 *eid)
 	if (!hapd->iface->current_mode)
 		return eid;
 
-	/* For now, use a vendor specific element since the P802.11ax draft is
-	 * still subject to changes and the contents of this element may change.
-	 * This can be replaced with the actual element once P802.11ax is
-	 * finalized. */
-	/* Vendor HE Operation element */
-	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
-	*pos++ = 4 /* The Vendor OUI, subtype */ +
-		sizeof(struct ieee80211_he_operation);
+	*pos++ = WLAN_EID_EXTENSION;
+	*pos++ = 1 + sizeof(struct ieee80211_he_operation);
+	*pos++ = WLAN_EID_EXT_HE_OPERATION;
 
-	WPA_PUT_BE32(pos, (OUI_QCA << 8) | QCA_VENDOR_ELEM_HE_OPER);
-	pos += 4;
 	oper = (struct ieee80211_he_operation *) pos;
 	os_memset(oper, 0, sizeof(*oper));
 
@@ -94,6 +79,8 @@ u8 * hostapd_eid_vendor_he_operation(struct hostapd_data *hapd, u8 *eid)
 		oper->he_oper_params |=
 			(hapd->iface->conf->he_op.he_rts_threshold <<
 			 HE_OPERATION_RTS_THRESHOLD_OFFSET);
+
+	/* TODO: conditional MaxBSSID Indicator subfield */
 
 	pos += sizeof(*oper);
 

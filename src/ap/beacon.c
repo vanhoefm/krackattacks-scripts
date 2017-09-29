@@ -394,10 +394,10 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211AX
 	if (hapd->iconf->ieee80211ax) {
-		buflen += 4 + sizeof (struct ieee80211_he_capabilities) +
-			4 + sizeof (struct ieee80211_he_operation);
+		buflen += 3 + sizeof(struct ieee80211_he_capabilities) +
+			3 + sizeof(struct ieee80211_he_operation);
 	}
-#endif
+#endif /* CONFIG_IEEE80211AX */
 
 	buflen += hostapd_mbo_ie_len(hapd);
 
@@ -502,17 +502,17 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	pos = hostapd_eid_fils_indic(hapd, pos, 0);
 
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		pos = hostapd_eid_he_capab(hapd, pos);
+		pos = hostapd_eid_he_operation(hapd, pos);
+	}
+#endif /* CONFIG_IEEE80211AX */
+
 #ifdef CONFIG_IEEE80211AC
 	if (hapd->conf->vendor_vht)
 		pos = hostapd_eid_vendor_vht(hapd, pos);
 #endif /* CONFIG_IEEE80211AC */
-
-#ifdef CONFIG_IEEE80211AX
-	if (hapd->iconf->ieee80211ax) {
-		pos = hostapd_eid_vendor_he_capab(hapd, pos);
-		pos = hostapd_eid_vendor_he_operation(hapd, pos);
-	}
-#endif /* CONFIG_IEEE80211AX */
 
 	/* Wi-Fi Alliance WMM */
 	pos = hostapd_eid_wmm(hapd, pos);
@@ -1056,10 +1056,10 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211AX
 	if (hapd->iconf->ieee80211ax) {
-		tail_len += 4 + sizeof (struct ieee80211_he_capabilities) +
-			4 + sizeof (struct ieee80211_he_operation);
+		tail_len += 3 + sizeof(struct ieee80211_he_capabilities) +
+			3 + sizeof(struct ieee80211_he_operation);
 	}
-#endif
+#endif /* CONFIG_IEEE80211AX */
 
 	tail_len += hostapd_mbo_ie_len(hapd);
 
@@ -1187,17 +1187,17 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 
 	tailpos = hostapd_eid_fils_indic(hapd, tailpos, 0);
 
+#ifdef CONFIG_IEEE80211AX
+	if (hapd->iconf->ieee80211ax) {
+		tailpos = hostapd_eid_he_capab(hapd, tailpos);
+		tailpos = hostapd_eid_he_operation(hapd, tailpos);
+	}
+#endif /* CONFIG_IEEE80211AX */
+
 #ifdef CONFIG_IEEE80211AC
 	if (hapd->conf->vendor_vht)
 		tailpos = hostapd_eid_vendor_vht(hapd, tailpos);
 #endif /* CONFIG_IEEE80211AC */
-
-#ifdef CONFIG_IEEE80211AX
-	if (hapd->iconf->ieee80211ax) {
-		tailpos = hostapd_eid_vendor_he_capab(hapd, tailpos);
-		tailpos = hostapd_eid_vendor_he_operation(hapd, tailpos);
-	}
-#endif /* CONFIG_IEEE80211AX */
 
 	/* Wi-Fi Alliance WMM */
 	tailpos = hostapd_eid_wmm(hapd, tailpos);

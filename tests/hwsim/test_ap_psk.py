@@ -652,6 +652,299 @@ def test_ap_wpa2_psk_ext_retry_msg_3b(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ap_wpa2_psk_ext_retry_msg_3c(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (c)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    # and replace nonce (this results in "WPA: ANonce from message 1 of
+    # 4-Way Handshake differs from 3 of 4-Way Handshake - drop packet" when
+    # wpa_supplicant processed msg 3/4 afterwards)
+    #msg1b = msg1[0:18] + msg3[18:34] + 32*"ff" + msg1[98:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # Send previously received msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3d(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (d)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # EAPOL-Key msg 3/4 (retry 2)
+    # New one needed to get the correct Replay Counter value
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3e(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (e)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter and replace ANonce)
+    msg1b = msg1[0:18] + msg3[18:34] + 32*"ff" + msg1[98:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    # Do not send msg 2/4 to hostapd
+
+    # Send a forged msg 1/4 to STA (back to previously used ANonce)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # EAPOL-Key msg 3/4 (retry 2)
+    # New one needed to get the correct Replay Counter value
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
 def parse_eapol(data):
     (version, type, length) = struct.unpack('>BBH', data[0:4])
     payload = data[4:]

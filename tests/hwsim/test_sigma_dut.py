@@ -14,7 +14,7 @@ import time
 import hostapd
 from utils import HwsimSkip
 from hwsim import HWSimRadio
-from test_suite_b import check_suite_b_192_capa, suite_b_as_params
+from test_suite_b import check_suite_b_192_capa, suite_b_as_params, suite_b_192_rsa_ap_params
 
 def check_sigma_dut():
     if not os.path.exists("./sigma_dut"):
@@ -374,12 +374,51 @@ def test_sigma_dut_suite_b(dev, apdev, params):
 
     sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,PMF" % ifname)
     sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
-    sigma_dut_cmd_check("sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b.pem,trustedRootCA,suite_b_ca.pem" % (ifname, "test-suite-b"))
+    sigma_dut_cmd_check("sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b.pem,trustedRootCA,suite_b_ca.pem,CertType,ECC" % (ifname, "test-suite-b"))
     sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-suite-b"))
     sigma_dut_wait_connected(ifname)
     sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
     sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
     sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    stop_sigma_dut(sigma)
+
+def test_sigma_dut_suite_b_rsa(dev, apdev, params):
+    """sigma_dut controlled STA Suite B (RSA)"""
+    check_suite_b_192_capa(dev)
+    logdir = params['logdir']
+
+    with open("auth_serv/rsa3072-ca.pem", "r") as f:
+        with open(os.path.join(logdir, "suite_b_ca_rsa.pem"), "w") as f2:
+            f2.write(f.read())
+
+    with open("auth_serv/rsa3072-user.pem", "r") as f:
+        with open("auth_serv/rsa3072-user.key", "r") as f2:
+            with open(os.path.join(logdir, "suite_b_rsa.pem"), "w") as f3:
+                f3.write(f.read())
+                f3.write(f2.read())
+
+    dev[0].flush_scan_cache()
+    params = suite_b_192_rsa_ap_params()
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname, cert_path=logdir)
+
+    cmd = "sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b_rsa.pem,trustedRootCA,suite_b_ca_rsa.pem,CertType,RSA" % (ifname, "test-suite-b")
+
+    tests = [ "",
+              ",TLSCipher,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+              ",TLSCipher,TLS_DHE_RSA_WITH_AES_256_GCM_SHA384" ]
+    for extra in tests:
+        sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,PMF" % ifname)
+        sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+        sigma_dut_cmd_check(cmd + extra)
+        sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-suite-b"))
+        sigma_dut_wait_connected(ifname)
+        sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+        sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+        sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
 
     stop_sigma_dut(sigma)
 

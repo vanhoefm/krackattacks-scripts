@@ -2461,8 +2461,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 #endif /* CONFIG_P2P */
 
 #ifdef KRACK_TEST_CLIENT
+	// Note: this was done in the beginning of the function, but we want the
+	//       output only to occur at this point.
 	if (poc_testing_handshake == TEST_4WAY)
-		poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg4/4\n");
+		poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg3/4\n");
 #endif
 
 	wpa_send_eapol(sm->wpa_auth, sm,

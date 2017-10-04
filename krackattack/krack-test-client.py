@@ -135,6 +135,15 @@ def log(level, msg, color=None, showtime=True):
 	if level == ERROR   and color is None: color="red"
 	print (datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m"
 
+#### Utility Commands ####
+
+def hostapd_command(hostapd_ctrl, cmd):
+	rval = hostapd_ctrl.request(cmd)
+	if "UNKNOWN COMMAND" in rval:
+		log(ERROR, "Hostapd did not recognize the command %s. Did you (re)compile hostapd?" % cmd.split()[0])
+		quit(1)
+	return rval
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
@@ -290,7 +299,7 @@ class ClientState():
 			while hostapd_ctrl.pending():
 				hostapd_ctrl.recv()
 			# Contact our modified Hostapd instance to request the pairwise key
-			response = hostapd_ctrl.request("GET_TK " + self.mac)
+			response = hostapd_command(hostapd_ctrl, "GET_TK " + self.mac)
 			if not "FAIL" in response:
 				self.TK = response.strip().decode("hex")
 		return self.TK
@@ -372,7 +381,7 @@ class ClientState():
 			iv = dot11_get_iv(p)
 			seq = dot11_get_seqnum(p)
 			log(INFO, ("%s: usage of all-zero key detected (IV=%d, seq=%d). " +
-				"Client is vulnerable to installation of all-zero key in the 4-way handshake!") % (self.mac, iv, seq), color="green")
+				"Client is vulnerable to installation of an all-zero key in the 4-way handshake!") % (self.mac, iv, seq), color="green")
 			log(WARNING, "%s: !!! Other tests are unreliable due to all-zero key usage, please fix this first !!!" % self.mac)
 		self.vuln_4way = ClientState.VULNERABLE
 
@@ -603,15 +612,15 @@ class KRAckAttackClient():
 
 		# If applicable, inform hostapd that we are testing the group key handshake
 		if test_grouphs:
-			self.hostapd_ctrl.request("START_GROUP_TESTS")
-
+			hostapd_command(self.hostapd_ctrl, "START_GROUP_TESTS")
 			self.test_grouphs = True
+
 		# If applicable, inform hostapd that we are testing for Temporal PTK (TPTK) construction behaviour
 		self.test_tptk = test_tptk
 		if self.test_tptk == KRAckAttackClient.TPTK_REPLAY:
-			self.hostapd_ctrl.request("TEST_TPTK")
+			hostapd_command(self.hostapd_ctrl, "TEST_TPTK")
 		elif self.test_tptk == KRAckAttackClient.TPTK_RAND:
-			self.hostapd_ctrl.request("TEST_TPTK_RAND")
+			hostapd_command(self.hostapd_ctrl, "TEST_TPTK_RAND")
 
 		log(STATUS, "Ready. Connect to this Access Point to start the tests. Make sure the client requests an IP using DHCP!", color="green")
 

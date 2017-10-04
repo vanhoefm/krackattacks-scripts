@@ -83,7 +83,18 @@ the 4-way handshake or group key handshake, take the following steps:
      Note that this scripts *indirectly* tests for reinstallations of the group
      key, by testing if replayed broadcast frames are accepted by the client.
 
-5. To test key reinstallations in the group key handshake, the script will keep
+5. Some supplicants (e.g. wpa_supplicant v2.6) are only vulnerable to pairwise
+   key reinstallations in the 4-way handshake when a forged message 1 is
+   injected before sending a retransmitted message 3. To test for this variant
+   of the attack, you can execute:
+
+      {name} --tptk			# Inject message 1 with a replayed ANonce
+      {name} --tptk-rand	# Inject message 1 with a random ANonce
+
+   Now follow the same steps as in step 4 to see if a supplicant is vulnerable.
+   Try both these attack variants after running the normal tests of step 4.
+
+6. To test key reinstallations in the group key handshake, the script will keep
    performing new group key handshakes using an identical (static) group key.
    The client *must* request an IP using DHCP for this test to start. To start
    the script execute:
@@ -93,7 +104,7 @@ the 4-way handshake or group key handshake, take the following steps:
    Connect the the AP and all tests will be performed automatically. The
    working and output of the script is now similar as in step 4b.
 
-6. Some final recommendations:
+7. Some final recommendations:
 
    6a. Perform these tests in a room with little interference. A high amount
        of packet loss will make this script unreliable!

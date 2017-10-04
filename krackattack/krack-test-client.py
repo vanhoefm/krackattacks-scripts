@@ -7,6 +7,7 @@ from datetime import datetime
 from wpaspy import Ctrl
 from Cryptodome.Cipher import AES
 
+# FIXME: We are repeating the "disable hw encryption" of FT tests
 USAGE = """{name} - Tool to test Key Reinstallation Attacks against clients
 
 To test wheter a client is vulnerable to Key Reinstallation Attack against
@@ -104,6 +105,10 @@ the 4-way handshake or group key handshake, take the following steps:
    6c. If the client can use multiple Wi-Fi radios/NICs, test using a few
        different ones.
 """
+
+# FIXME:
+# - If the client installs an all-zero key, we cannot reliably test the group key handshake
+# - We should test decryption using an all-zero key, and warn if this seems to succeed
 
 # Future work:
 # - Detect if the client reinstalls an all-zero encryption key (wpa_supplicant v2.4 and 2.5)
@@ -282,9 +287,8 @@ class ClientState():
 
 		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
 			# On some kernels, the virtual interface associated to the real AP interface will return
-			# frames where the payload is already decrypted (my hypothesis is that this happens when
-			# hardware decryption is used). So if the payload seems decrypted, just extract the full
-			# plaintext from the frame.
+			# frames where the payload is already decrypted (this happens when hardware decryption is
+			# used). So if the payload seems decrypted, just extract the full plaintext from the frame.
 			plaintext = payload
 		else:
 			client    = self.mac
@@ -350,7 +354,7 @@ class ClientState():
 		if self.groupkey_prev_canary_time + 1 > p.time: return
 
 		self.groupkey_num_canaries += 1
-		log(DEBUG, "%s: received %d replies to the replayed broadcast ARP requests\n" % (self.mac, self.groupkey_num_canaries))
+		log(DEBUG, "%s: received %d replies to the replayed broadcast ARP requests" % (self.mac, self.groupkey_num_canaries))
 
 		# We wait for several replies before marking the client as vulnerable, because
 		# the first few broadcast ARP requests still use a valid (not yet used) IV.
@@ -411,7 +415,7 @@ class KRAckAttackClient():
 		try:
 			self.apmac = scapy.arch.get_if_hwaddr(interface)
 		except:
-			log(ERROR, "Failed to get MAC address of %s. Does this interface exist?" % interface)
+			log(ERROR, 'Failed to get MAC address of %s. Specify an existing interface in hostapd.conf at the line "interface=NAME".' % interface)
 			raise
 
 		self.sock_mon = None
@@ -628,7 +632,7 @@ def hostapd_read_config(config):
 				interface = line.split('=')[1]
 			elif line.startswith("wpa_pairwise=") or line.startswith("rsn_pairwise"):
 				if "TKIP" in line:
-					log(ERROR, "ERROR: This scripts only support tests using CCMP. Only include CCMP in the following config line:")
+					log(ERROR, "ERROR: We only support tests using CCMP. Only include CCMP in %s config at the following line:" % config)
 					log(ERROR, "       >%s<" % line, showtime=False)
 					quit(1)
 

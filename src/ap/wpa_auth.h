@@ -349,7 +349,11 @@ int wpa_auth_ensure_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 int wpa_auth_release_group(struct wpa_authenticator *wpa_auth, int vlan_id);
 
 #ifdef KRACK_TEST_CLIENT
+#define TEST_TPTK_NONE		0
+#define TEST_TPTK_REPLAY	1
+#define TEST_TPTK_RAND		2
 void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth);
+void poc_test_tptk_construction(struct wpa_authenticator *wpa_auth, int test_type);
 #endif
 
 #endif /* WPA_AUTH_H */

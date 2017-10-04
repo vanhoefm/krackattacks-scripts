@@ -2579,6 +2579,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
 						      reply_size);
 #ifdef KRACK_TEST_CLIENT
+	} else if (os_strcmp(buf, "TEST_TPTK") == 0) {
+		poc_test_tptk_construction(hapd->wpa_auth, TEST_TPTK_REPLAY);
+	} else if (os_strcmp(buf, "TEST_TPTK_RAND") == 0) {
+		poc_test_tptk_construction(hapd->wpa_auth, TEST_TPTK_RAND);
 	} else if (os_strcmp(buf, "START_GROUP_TESTS") == 0) {
 		poc_start_testing_group_handshake(hapd->wpa_auth);
 	} else if (os_strncmp(buf, "GET_TK ", 7) == 0) {

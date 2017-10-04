@@ -394,13 +394,13 @@ class ClientState():
 			log(STATUS, "%s: client has IP address -> testing for group key reinstallation in the %s handshake" % (self.mac, hstype))
 			self.groupkey_state = ClientState.STARTED
 
-		if self.groupkey_requests_sent == 3:
-			# We sent three broadcast ARP requests, and at least one got a reply. Indication that client is vulnerable.
+		if self.groupkey_requests_sent == 4:
+			# We sent four broadcast ARP requests, and at least one got a reply. Indication that client is vulnerable.
 			if self.groupkey_state == ClientState.GOT_CANARY:
 				log(DEBUG, "%s: got a reply to broadcast ARP during this interval" % self.mac)
 				self.groupkey_state = ClientState.STARTED
 
-			# We sent three broadcast ARP requests, and didn't get a reply to any. Indication that client is patched.
+			# We sent four broadcast ARP requests, and didn't get a reply to any. Indication that client is patched.
 			elif self.groupkey_state == ClientState.STARTED:
 				self.groupkey_patched_intervals += 1
 				log(DEBUG, "%s: no group IV resets seem to have occured for %d interval(s)" % (self.mac, self.groupkey_patched_intervals))

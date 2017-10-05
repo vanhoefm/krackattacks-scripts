@@ -1729,6 +1729,14 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 			sm->ptk_set = 1;
 			os_memcpy(&sm->ptk, &sm->tptk, sizeof(sm->ptk));
 			os_memset(&sm->tptk, 0, sizeof(sm->tptk));
+			/*
+			 * This assures the same TPTK in sm->tptk can never be
+			 * copied twice to sm->pkt as the new PTK. In
+			 * combination with the installed flag in the wpa_ptk
+			 * struct, this assures the same PTK is only installed
+			 * once.
+			 */
+			sm->renew_snonce = 1;
 		}
 	}
 

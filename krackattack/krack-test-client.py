@@ -32,8 +32,10 @@ the 4-way handshake or group key handshake, take the following steps:
 
 3. Execute this script. Accepted parameters are:
 
-      --group   Test the group key handshake instead of the 4-way handshake
-      --debug   Show more debug messages
+      --group      Test the group key handshake instead of the 4-way handshake
+      --debug      Show more debug messages
+      --tptk       See step 5 (forge Msg1/4 with replayed ANonce before Msg3/4)
+      --tptk-rand  See step 5 (forge Msg1/4 with random ANonce before Msg3/4)
 
    All other supplied arguments are passed on to hostapd.
    The only two commands you will normally have to execute are:
@@ -48,8 +50,8 @@ the 4-way handshake or group key handshake, take the following steps:
    !! The default network name is testnetwork with password abcdefgh !!
 
    Note that you can change settings of the AP by modifying hostapd.conf.
-   You will probably have to edit the line `interface=` to specify a Wi-Fi
-   interface to use for the AP.
+   You will probably have to edit the line `interface=` to specify the
+   correct Wi-Fi interface to use for the AP.
 
 4. To test key reinstallations in the 4-way handshake, the script will keep
    sending encrypted message 3's to the client. To start the script execute:
@@ -88,8 +90,8 @@ the 4-way handshake or group key handshake, take the following steps:
    injected before sending a retransmitted message 3. To test for this variant
    of the attack, you can execute:
 
-      {name} --tptk			# Inject message 1 with a replayed ANonce
-      {name} --tptk-rand	# Inject message 1 with a random ANonce
+      {name} --tptk         # Inject message 1 with a replayed ANonce
+      {name} --tptk-rand    # Inject message 1 with a random ANonce
 
    Now follow the same steps as in step 4 to see if a supplicant is vulnerable.
    Try both these attack variants after running the normal tests of step 4.
@@ -113,8 +115,8 @@ the 4-way handshake or group key handshake, take the following steps:
          by monitoring the IVs of frames sent by the client.
        - Capture traffic on the client to see if the replayed broadcast ARP
          requests are accepted or not.
-   6c. If the client can use multiple Wi-Fi radios/NICs, test using a few
-       different ones.
+   6c. If the client being tested can use multiple Wi-Fi radios/NICs, test
+       using a few different ones.
 """
 
 # FIXME:

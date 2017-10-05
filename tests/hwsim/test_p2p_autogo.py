@@ -878,3 +878,24 @@ def test_autogo_noa(dev):
         dev[1].request("SET p2p_disabled 0")
 
     dev[0].group_request("P2P_SET noa 0,0,0")
+
+def test_autogo_interworking(dev):
+    """P2P autonomous GO and Interworking"""
+    try:
+        run_autogo_interworking(dev)
+    finally:
+        dev[0].set("go_interworking", "0")
+
+def run_autogo_interworking(dev):
+    dev[0].set("go_interworking", "1")
+    dev[0].set("go_access_network_type", "1")
+    dev[0].set("go_internet", "1")
+    dev[0].set("go_venue_group", "2")
+    dev[0].set("go_venue_type", "3")
+    res = autogo(dev[0])
+    bssid = dev[0].p2p_interface_addr()
+    dev[1].scan_for_bss(bssid, freq=res['freq'])
+    bss = dev[1].get_bss(bssid)
+    dev[0].remove_group()
+    if '6b03110203' not in bss['ie']:
+        raise Exception("Interworking element not seen")

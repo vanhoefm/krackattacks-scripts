@@ -120,6 +120,11 @@ config_checks = [ ("ap_scan", "0"),
                   ("fst_group_id", "bond0"),
                   ("fst_priority", "5"),
                   ("fst_llt", "7"),
+                  ("go_interworking", "1"),
+                  ("go_access_network_type", "2"),
+                  ("go_internet", "1"),
+                  ("go_venue_group", "3"),
+                  ("go_venue_type", "4"),
                   ("openssl_ciphers", "DEFAULT") ]
 def check_config(config):
     with open(config, "r") as f:

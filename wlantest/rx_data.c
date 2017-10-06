@@ -137,6 +137,7 @@ static u8 * try_all_ptk(struct wlantest *wt, int pairwise_cipher,
 
 static void rx_data_bss_prot_group(struct wlantest *wt,
 				   const struct ieee80211_hdr *hdr,
+				   size_t hdrlen,
 				   const u8 *qos, const u8 *dst, const u8 *src,
 				   const u8 *data, size_t len)
 {
@@ -233,7 +234,7 @@ skip_replay_det:
 		rx_data_process(wt, bss->bssid, NULL, dst, src, decrypted,
 				dlen, 1, NULL);
 		os_memcpy(bss->rsc[keyid], pn, 6);
-		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
+		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,
 				     decrypted, dlen);
 	} else
 		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
@@ -242,9 +243,9 @@ skip_replay_det:
 
 
 static void rx_data_bss_prot(struct wlantest *wt,
-			     const struct ieee80211_hdr *hdr, const u8 *qos,
-			     const u8 *dst, const u8 *src, const u8 *data,
-			     size_t len)
+			     const struct ieee80211_hdr *hdr, size_t hdrlen,
+			     const u8 *qos, const u8 *dst, const u8 *src,
+			     const u8 *data, size_t len)
 {
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta, *sta2;
@@ -260,11 +261,26 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	int try_ptk_iter = 0;
 
 	if (hdr->addr1[0] & 0x01) {
-		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
+		rx_data_bss_prot_group(wt, hdr, hdrlen, qos, dst, src,
+				       data, len);
 		return;
 	}
 
-	if (fc & WLAN_FC_TODS) {
+	if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+	    (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
+		bss = bss_find(wt, hdr->addr1);
+		if (bss) {
+			sta = sta_find(bss, hdr->addr2);
+			if (sta)
+				sta->counters[
+					WLANTEST_STA_COUNTER_PROT_DATA_TX]++;
+		} else {
+			bss = bss_find(wt, hdr->addr2);
+			if (!bss)
+				return;
+			sta = sta_find(bss, hdr->addr1);
+		}
+	} else if (fc & WLAN_FC_TODS) {
 		bss = bss_get(wt, hdr->addr1);
 		if (bss == NULL)
 			return;
@@ -444,7 +460,7 @@ skip_replay_det:
 		os_memcpy(rsc, pn, 6);
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
 				dlen, 1, peer_addr);
-		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
+		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,
 				     decrypted, dlen);
 	} else if (!try_ptk_iter)
 		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
@@ -453,8 +469,8 @@ skip_replay_det:
 
 
 static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
-			const u8 *qos, const u8 *dst, const u8 *src,
-			const u8 *data, size_t len)
+			size_t hdrlen, const u8 *qos, const u8 *dst,
+			const u8 *src, const u8 *data, size_t len)
 {
 	u16 fc = le_to_host16(hdr->frame_control);
 	int prot = !!(fc & WLAN_FC_ISWEP);
@@ -477,7 +493,7 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 	}
 
 	if (prot)
-		rx_data_bss_prot(wt, hdr, qos, dst, src, data, len);
+		rx_data_bss_prot(wt, hdr, hdrlen, qos, dst, src, data, len);
 	else {
 		const u8 *bssid, *sta_addr, *peer_addr;
 		struct wlantest_bss *bss;
@@ -620,7 +636,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_direct_link(wt, hdr->addr3, hdr->addr1, hdr->addr2);
-		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_FROMDS:
@@ -632,7 +648,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_ap_path(wt, hdr->addr2, hdr->addr1, hdr->addr3);
-		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr3,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr3,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_TODS:
@@ -644,7 +660,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_ap_path(wt, hdr->addr1, hdr->addr3, hdr->addr2);
-		rx_data_bss(wt, hdr, qos, hdr->addr3, hdr->addr2,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr3, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_TODS | WLAN_FC_FROMDS:
@@ -656,6 +672,8 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3),
 			   MAC2STR((const u8 *) (hdr + 1)));
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr2,
+			    data + hdrlen, len - hdrlen);
 		break;
 	}
 }

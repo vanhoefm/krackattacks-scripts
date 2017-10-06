@@ -254,6 +254,28 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 			len += ret;
 	}
 
+#ifdef CONFIG_IEEE80211AC
+	if ((sta->flags & WLAN_STA_VHT) && sta->vht_capabilities) {
+		res = os_snprintf(buf + len, buflen - len,
+				  "vht_caps_info=0x%08x\n",
+				  le_to_host32(sta->vht_capabilities->
+					       vht_capabilities_info));
+		if (!os_snprintf_error(buflen - len, res))
+			len += res;
+	}
+#endif /* CONFIG_IEEE80211AC */
+
+#ifdef CONFIG_IEEE80211N
+	if ((sta->flags & WLAN_STA_HT) && sta->ht_capabilities) {
+		res = os_snprintf(buf + len, buflen - len,
+				  "ht_caps_info=0x%04x\n",
+				  le_to_host16(sta->ht_capabilities->
+					       ht_capabilities_info));
+		if (!os_snprintf_error(buflen - len, res))
+			len += res;
+	}
+#endif /* CONFIG_IEEE80211N */
+
 	if (sta->ext_capability &&
 	    buflen - len > (unsigned) (11 + 2 * sta->ext_capability[0])) {
 		len += os_snprintf(buf + len, buflen - len, "ext_capab=");

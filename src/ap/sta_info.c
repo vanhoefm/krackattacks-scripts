@@ -1344,7 +1344,7 @@ int ap_sta_flags_txt(u32 flags, char *buf, size_t buflen)
 	int res;
 
 	buf[0] = '\0';
-	res = os_snprintf(buf, buflen, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+	res = os_snprintf(buf, buflen, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 			  (flags & WLAN_STA_AUTH ? "[AUTH]" : ""),
 			  (flags & WLAN_STA_ASSOC ? "[ASSOC]" : ""),
 			  (flags & WLAN_STA_AUTHORIZED ? "[AUTHORIZED]" : ""),
@@ -1361,6 +1361,7 @@ int ap_sta_flags_txt(u32 flags, char *buf, size_t buflen)
 			  (flags & WLAN_STA_NONERP ? "[NonERP]" : ""),
 			  (flags & WLAN_STA_WPS2 ? "[WPS2]" : ""),
 			  (flags & WLAN_STA_GAS ? "[GAS]" : ""),
+			  (flags & WLAN_STA_HT ? "[HT]" : ""),
 			  (flags & WLAN_STA_VHT ? "[VHT]" : ""),
 			  (flags & WLAN_STA_VENDOR_VHT ? "[VENDOR_VHT]" : ""),
 			  (flags & WLAN_STA_WNM_SLEEP_MODE ?

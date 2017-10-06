@@ -245,6 +245,15 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 		len += os_snprintf(buf + len, buflen - len, "\n");
 	}
 
+	if (sta->power_capab) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "min_txpower=%d\n"
+				  "max_txpower=%d\n",
+				  sta->min_tx_power, sta->max_tx_power);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+
 	return len;
 }
 

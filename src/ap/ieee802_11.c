@@ -2599,6 +2599,14 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		os_memcpy(sta->rrm_enabled_capa, elems.rrm_enabled,
 			  sizeof(sta->rrm_enabled_capa));
 
+	if (elems.power_capab) {
+		sta->min_tx_power = elems.power_capab[0];
+		sta->max_tx_power = elems.power_capab[1];
+		sta->power_capab = 1;
+	} else {
+		sta->power_capab = 0;
+	}
+
 	return WLAN_STATUS_SUCCESS;
 }
 

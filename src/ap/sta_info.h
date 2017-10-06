@@ -113,6 +113,7 @@ struct sta_info {
 	unsigned int ecsa_supported:1;
 	unsigned int added_unassoc:1;
 	unsigned int pending_wds_enable:1;
+	unsigned int power_capab:1;
 
 	u16 auth_alg;
 
@@ -213,6 +214,9 @@ struct sta_info {
 			      * received, starting from the Length field */
 
 	u8 rrm_enabled_capa[5];
+
+	s8 min_tx_power;
+	s8 max_tx_power;
 
 #ifdef CONFIG_TAXONOMY
 	struct wpabuf *probe_ie_taxonomy;

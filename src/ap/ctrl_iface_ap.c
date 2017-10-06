@@ -586,7 +586,8 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			      size_t buflen)
 {
 	struct hostapd_iface *iface = hapd->iface;
-	int len = 0, ret;
+	struct hostapd_hw_modes *mode = iface->current_mode;
+	int len = 0, ret, j;
 	size_t i;
 
 	ret = os_snprintf(buf + len, buflen - len,
@@ -682,6 +683,18 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
+	}
+
+	for (j = 0; mode && j < mode->num_channels; j++) {
+		if (mode->channels[j].freq == iface->freq) {
+			ret = os_snprintf(buf + len, buflen - len,
+					  "max_txpower=%u\n",
+					  mode->channels[j].max_tx_power);
+			if (os_snprintf_error(buflen - len, ret))
+				return len;
+			len += ret;
+			break;
+		}
 	}
 
 	for (i = 0; i < iface->num_bss; i++) {

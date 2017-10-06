@@ -251,6 +251,8 @@ struct sta_info {
 	u16 owe_group;
 #endif /* CONFIG_OWE */
 
+	u8 *ext_capability;
+
 #ifdef CONFIG_TESTING_OPTIONS
 	enum wpa_alg last_tk_alg;
 	int last_tk_key_idx;

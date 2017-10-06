@@ -359,6 +359,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	crypto_ecdh_deinit(sta->owe_ecdh);
 #endif /* CONFIG_OWE */
 
+	os_free(sta->ext_capability);
+
 	os_free(sta);
 }
 

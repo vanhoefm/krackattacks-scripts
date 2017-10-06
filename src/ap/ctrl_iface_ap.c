@@ -254,6 +254,15 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 			len += ret;
 	}
 
+	if (sta->ext_capability &&
+	    buflen - len > (unsigned) (11 + 2 * sta->ext_capability[0])) {
+		len += os_snprintf(buf + len, buflen - len, "ext_capab=");
+		len += wpa_snprintf_hex(buf + len, buflen - len,
+					sta->ext_capability + 1,
+					sta->ext_capability[0]);
+		len += os_snprintf(buf + len, buflen - len, "\n");
+	}
+
 	return len;
 }
 

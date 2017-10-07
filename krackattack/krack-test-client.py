@@ -394,7 +394,7 @@ class ClientState():
 			iv = dot11_get_iv(p)
 			seq = dot11_get_seqnum(p)
 			log(INFO, ("%s: usage of all-zero key detected (IV=%d, seq=%d). " +
-				"Client is vulnerable to installation of an all-zero key in the 4-way handshake!") % (self.mac, iv, seq), color="green")
+				"Client is vulnerable to (re)installation of an all-zero key in the 4-way handshake!") % (self.mac, iv, seq), color="green")
 			log(WARNING, "%s: !!! Other tests are unreliable due to all-zero key usage, please fix this first !!!" % self.mac)
 		self.vuln_4way = ClientState.VULNERABLE
 
@@ -437,12 +437,12 @@ class ClientState():
 			self.groupkey_state = ClientState.STARTED
 
 		if self.groupkey_requests_sent == 4:
-			# We sent four broadcast ARP requests, and at least one got a reply. Indication that client is vulnerable.
+			# We sent four broadcast ARP requests, and got at least one got a reply. This indicates the client is vulnerable.
 			if self.groupkey_state == ClientState.GOT_CANARY:
 				log(DEBUG, "%s: got a reply to broadcast ARP during this interval" % self.mac)
 				self.groupkey_state = ClientState.STARTED
 
-			# We sent four broadcast ARP requests, and didn't get a reply to any. Indication that client is patched.
+			# We sent four broadcast ARP requests, and didn't get a reply to any. This indicates the client is patched.
 			elif self.groupkey_state == ClientState.STARTED:
 				self.groupkey_patched_intervals += 1
 				log(DEBUG, "%s: no group IV resets seem to have occured for %d interval(s)" % (self.mac, self.groupkey_patched_intervals))
@@ -732,7 +732,7 @@ if __name__ == "__main__":
 		log(ERROR, "Failed to parse the hostapd.conf config file")
 		raise
 	if not interface:
-		log(ERROR, "Failed to determine wireless interface. Specify one in the hostapd config file.")
+		log(ERROR, 'Failed to determine wireless interface. Specify one in hostapd.conf at the line "interface=NAME".')
 		quit(1)
 
 	attack = KRAckAttackClient(interface)

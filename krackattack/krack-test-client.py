@@ -1,4 +1,11 @@
 #!/usr/bin/env python2
+
+# Tests for key reinstallation vulnerabilities in Wi-Fi clients
+# Copyright (c) 2017, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
+#
+# This code may be distributed under the terms of the BSD license.
+# See README for more details.
+
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *

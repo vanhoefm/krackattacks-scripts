@@ -1,5 +1,6 @@
 /*
  * IEEE 802.11 RSN / WPA Authenticator
+ * Copyright (c) 2017, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
  * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.

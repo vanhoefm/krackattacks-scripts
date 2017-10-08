@@ -443,7 +443,7 @@ static const u8 * wpa_ft_get_psk(struct wpa_authenticator *wpa_auth,
 	if (wpa_auth->cb->get_psk == NULL)
 		return NULL;
 	return wpa_auth->cb->get_psk(wpa_auth->cb_ctx, addr, p2p_dev_addr,
-				     prev_psk);
+				     prev_psk, NULL);
 }
 
 

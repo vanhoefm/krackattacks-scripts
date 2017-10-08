@@ -238,11 +238,14 @@ static int hostapd_wpa_auth_get_eapol(void *ctx, const u8 *addr,
 
 static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 					   const u8 *p2p_dev_addr,
-					   const u8 *prev_psk)
+					   const u8 *prev_psk, size_t *psk_len)
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 	const u8 *psk;
+
+	if (psk_len)
+		*psk_len = PMK_LEN;
 
 #ifdef CONFIG_SAE
 	if (sta && sta->auth_alg == WLAN_AUTH_SAE) {
@@ -259,8 +262,11 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 
 #ifdef CONFIG_OWE
 	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
-	    sta && sta->owe_pmk)
+	    sta && sta->owe_pmk) {
+		if (psk_len)
+			*psk_len = sta->owe_pmk_len;
 		return sta->owe_pmk;
+	}
 #endif /* CONFIG_OWE */
 
 	psk = hostapd_get_psk(hapd->conf, addr, p2p_dev_addr, prev_psk);

@@ -110,12 +110,12 @@ static inline int wpa_auth_get_eapol(struct wpa_authenticator *wpa_auth,
 static inline const u8 * wpa_auth_get_psk(struct wpa_authenticator *wpa_auth,
 					  const u8 *addr,
 					  const u8 *p2p_dev_addr,
-					  const u8 *prev_psk)
+					  const u8 *prev_psk, size_t *psk_len)
 {
 	if (wpa_auth->cb->get_psk == NULL)
 		return NULL;
 	return wpa_auth->cb->get_psk(wpa_auth->cb_ctx, addr, p2p_dev_addr,
-				     prev_psk);
+				     prev_psk, psk_len);
 }
 
 
@@ -848,17 +848,16 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 	struct wpa_ptk PTK;
 	int ok = 0;
 	const u8 *pmk = NULL;
-	unsigned int pmk_len;
+	size_t pmk_len;
 
 	os_memset(&PTK, 0, sizeof(PTK));
 	for (;;) {
 		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) &&
 		    !wpa_key_mgmt_sae(sm->wpa_key_mgmt)) {
 			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
-					       sm->p2p_dev_addr, pmk);
+					       sm->p2p_dev_addr, pmk, &pmk_len);
 			if (pmk == NULL)
 				break;
-			pmk_len = PMK_LEN;
 		} else {
 			pmk = sm->PMK;
 			pmk_len = sm->pmk_len;
@@ -2020,11 +2019,14 @@ SM_STATE(WPA_PTK, INITPMK)
 SM_STATE(WPA_PTK, INITPSK)
 {
 	const u8 *psk;
+	size_t psk_len;
+
 	SM_ENTRY_MA(WPA_PTK, INITPSK, wpa_ptk);
-	psk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr, NULL);
+	psk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr, NULL,
+			       &psk_len);
 	if (psk) {
-		os_memcpy(sm->PMK, psk, PMK_LEN);
-		sm->pmk_len = PMK_LEN;
+		os_memcpy(sm->PMK, psk, psk_len);
+		sm->pmk_len = psk_len;
 #ifdef CONFIG_IEEE80211R_AP
 		os_memcpy(sm->xxkey, psk, PMK_LEN);
 		sm->xxkey_len = PMK_LEN;
@@ -2619,7 +2621,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	struct wpa_ptk PTK;
 	int ok = 0, psk_found = 0;
 	const u8 *pmk = NULL;
-	unsigned int pmk_len;
+	size_t pmk_len;
 	int ft;
 	const u8 *eapol_key_ie, *key_data, *mic;
 	u16 key_data_length;
@@ -2642,11 +2644,10 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) &&
 		    !wpa_key_mgmt_sae(sm->wpa_key_mgmt)) {
 			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
-					       sm->p2p_dev_addr, pmk);
+					       sm->p2p_dev_addr, pmk, &pmk_len);
 			if (pmk == NULL)
 				break;
 			psk_found = 1;
-			pmk_len = PMK_LEN;
 		} else {
 			pmk = sm->PMK;
 			pmk_len = sm->pmk_len;
@@ -3169,7 +3170,7 @@ SM_STEP(WPA_PTK)
 		break;
 	case WPA_PTK_INITPSK:
 		if (wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr,
-				     NULL)) {
+				     NULL, NULL)) {
 			SM_ENTER(WPA_PTK, PTKSTART);
 #ifdef CONFIG_SAE
 		} else if (wpa_auth_uses_sae(sm) && sm->pmksa) {

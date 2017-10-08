@@ -33,6 +33,8 @@ static unsigned int wpa_kck_len(int akmp, size_t pmk_len)
 		return 0;
 	case WPA_KEY_MGMT_DPP:
 		return pmk_len / 2;
+	case WPA_KEY_MGMT_OWE:
+		return pmk_len / 2;
 	default:
 		return 16;
 	}
@@ -51,6 +53,8 @@ static unsigned int wpa_kek_len(int akmp, size_t pmk_len)
 		return 32;
 	case WPA_KEY_MGMT_DPP:
 		return pmk_len <= 32 ? 16 : 32;
+	case WPA_KEY_MGMT_OWE:
+		return pmk_len <= 32 ? 16 : 32;
 	default:
 		return 16;
 	}
@@ -68,6 +72,8 @@ unsigned int wpa_mic_len(int akmp, size_t pmk_len)
 	case WPA_KEY_MGMT_FT_FILS_SHA384:
 		return 0;
 	case WPA_KEY_MGMT_DPP:
+		return pmk_len / 2;
+	case WPA_KEY_MGMT_OWE:
 		return pmk_len / 2;
 	default:
 		return 16;
@@ -146,10 +152,24 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 #ifdef CONFIG_OWE
 		case WPA_KEY_MGMT_OWE:
 			wpa_printf(MSG_DEBUG,
-				   "WPA: EAPOL-Key MIC using HMAC-SHA256 (AKM-defined - OWE)");
-			if (hmac_sha256(key, key_len, buf, len, hash))
+				   "WPA: EAPOL-Key MIC using HMAC-SHA%u (AKM-defined - OWE)",
+				   (unsigned int) key_len * 8 * 2);
+			if (key_len == 128 / 8) {
+				if (hmac_sha256(key, key_len, buf, len, hash))
+					return -1;
+			} else if (key_len == 192 / 8) {
+				if (hmac_sha384(key, key_len, buf, len, hash))
+					return -1;
+			} else if (key_len == 256 / 8) {
+				if (hmac_sha512(key, key_len, buf, len, hash))
+					return -1;
+			} else {
+				wpa_printf(MSG_INFO,
+					   "OWE: Unsupported KCK length: %u",
+					   (unsigned int) key_len);
 				return -1;
-			os_memcpy(mic, hash, MD5_MAC_LEN);
+			}
+			os_memcpy(mic, hash, key_len);
 			break;
 #endif /* CONFIG_OWE */
 #ifdef CONFIG_DPP

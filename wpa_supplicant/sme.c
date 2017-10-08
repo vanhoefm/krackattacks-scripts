@@ -1195,8 +1195,11 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	if (auth_type == WLAN_AUTH_OPEN &&
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *owe_ie;
+		u16 group = OWE_DH_GROUP;
 
-		owe_ie = owe_build_assoc_req(wpa_s->wpa);
+		if (wpa_s->current_ssid && wpa_s->current_ssid->owe_group)
+			group = wpa_s->current_ssid->owe_group;
+		owe_ie = owe_build_assoc_req(wpa_s->wpa, group);
 		if (!owe_ie) {
 			wpa_printf(MSG_ERROR,
 				   "OWE: Failed to build IE for Association Request frame");

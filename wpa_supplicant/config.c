@@ -2281,6 +2281,7 @@ static const struct parse_data ssid_fields[] = {
 	{ STR_LEN(dpp_csign) },
 	{ INT(dpp_csign_expiry) },
 #endif /* CONFIG_DPP */
+	{ INT_RANGE(owe_group, 0, 65535) },
 };
 
 #undef OFFSET

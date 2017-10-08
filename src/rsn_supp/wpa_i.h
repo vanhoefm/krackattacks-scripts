@@ -161,6 +161,7 @@ struct wpa_sm {
 
 #ifdef CONFIG_OWE
 	struct crypto_ecdh *owe_ecdh;
+	u16 owe_group;
 #endif /* CONFIG_OWE */
 };
 

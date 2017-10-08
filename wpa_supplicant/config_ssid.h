@@ -893,6 +893,17 @@ struct wpa_ssid {
 	 * 0 indicates no expiration.
 	 */
 	unsigned int dpp_csign_expiry;
+
+	/**
+	 * owe_group - OWE DH Group
+	 *
+	 * 0 = use default (19)
+	 * 1-65535 DH Group to use for OWE
+	 *
+	 * Groups 19 (NIST P-256), 20 (NIST P-384), and 21 (NIST P-521) are
+	 * currently supported.
+	 */
+	int owe_group;
 };
 
 #endif /* CONFIG_SSID_H */

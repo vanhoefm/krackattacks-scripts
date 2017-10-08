@@ -16,6 +16,8 @@
 #include "crypto/random.h"
 #include "crypto/aes_siv.h"
 #include "crypto/sha256.h"
+#include "crypto/sha384.h"
+#include "crypto/sha512.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "eap_common/eap_defs.h"
@@ -4168,15 +4170,27 @@ int wpa_fils_is_completed(struct wpa_sm *sm)
 
 #ifdef CONFIG_OWE
 
-struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm)
+struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm, u16 group)
 {
 	struct wpabuf *ie = NULL, *pub = NULL;
+	size_t prime_len;
+
+	if (group == 19)
+		prime_len = 32;
+	else if (group == 20)
+		prime_len = 48;
+	else if (group == 21)
+		prime_len = 66;
+	else
+		return NULL;
 
 	crypto_ecdh_deinit(sm->owe_ecdh);
-	sm->owe_ecdh = crypto_ecdh_init(OWE_DH_GROUP);
+	sm->owe_ecdh = crypto_ecdh_init(group);
 	if (!sm->owe_ecdh)
 		goto fail;
+	sm->owe_group = group;
 	pub = crypto_ecdh_get_pubkey(sm->owe_ecdh, 0);
+	pub = wpabuf_zeropad(pub, prime_len);
 	if (!pub)
 		goto fail;
 
@@ -4186,7 +4200,7 @@ struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm)
 	wpabuf_put_u8(ie, WLAN_EID_EXTENSION);
 	wpabuf_put_u8(ie, 1 + 2 + wpabuf_len(pub));
 	wpabuf_put_u8(ie, WLAN_EID_EXT_OWE_DH_PARAM);
-	wpabuf_put_le16(ie, OWE_DH_GROUP);
+	wpabuf_put_le16(ie, group);
 	wpabuf_put_buf(ie, pub);
 	wpabuf_free(pub);
 	wpa_hexdump_buf(MSG_DEBUG, "OWE: Diffie-Hellman Parameter element",
@@ -4208,10 +4222,11 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	u16 group;
 	struct wpabuf *secret, *pub, *hkey;
 	int res;
-	u8 prk[SHA256_MAC_LEN], pmkid[SHA256_MAC_LEN];
+	u8 prk[SHA512_MAC_LEN], pmkid[SHA512_MAC_LEN];
 	const char *info = "OWE Key Generation";
 	const u8 *addr[2];
 	size_t len[2];
+	size_t hash_len, prime_len;
 
 	if (!resp_ies ||
 	    ieee802_11_parse_elems(resp_ies, resp_ies_len, &elems, 1) ==
@@ -4223,7 +4238,7 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	}
 
 	group = WPA_GET_LE16(elems.owe_dh);
-	if (group != OWE_DH_GROUP) {
+	if (group != sm->owe_group) {
 		wpa_printf(MSG_INFO,
 			   "OWE: Unexpected Diffie-Hellman group in response: %u",
 			   group);
@@ -4235,9 +4250,19 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 		return -1;
 	}
 
+	if (group == 19)
+		prime_len = 32;
+	else if (group == 20)
+		prime_len = 48;
+	else if (group == 21)
+		prime_len = 66;
+	else
+		return -1;
+
 	secret = crypto_ecdh_set_peerkey(sm->owe_ecdh, 0,
 					 elems.owe_dh + 2,
 					 elems.owe_dh_len - 2);
+	secret = wpabuf_zeropad(secret, prime_len);
 	if (!secret) {
 		wpa_printf(MSG_DEBUG, "OWE: Invalid peer DH public key");
 		return -1;
@@ -4257,8 +4282,21 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	len[0] = wpabuf_len(pub);
 	addr[1] = elems.owe_dh + 2;
 	len[1] = elems.owe_dh_len - 2;
-	res = sha256_vector(2, addr, len, pmkid);
-	if (res < 0) {
+	if (group == 19) {
+		res = sha256_vector(2, addr, len, pmkid);
+		hash_len = SHA256_MAC_LEN;
+	} else if (group == 20) {
+		res = sha384_vector(2, addr, len, pmkid);
+		hash_len = SHA384_MAC_LEN;
+	} else if (group == 21) {
+		res = sha512_vector(2, addr, len, pmkid);
+		hash_len = SHA512_MAC_LEN;
+	} else {
+		res = -1;
+		hash_len = 0;
+	}
+	pub = wpabuf_zeropad(pub, prime_len);
+	if (res < 0 || !pub) {
 		wpabuf_free(pub);
 		wpabuf_clear_free(secret);
 		return -1;
@@ -4274,26 +4312,40 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	wpabuf_put_buf(hkey, pub); /* C */
 	wpabuf_free(pub);
 	wpabuf_put_data(hkey, elems.owe_dh + 2, elems.owe_dh_len - 2); /* A */
-	wpabuf_put_le16(hkey, OWE_DH_GROUP); /* group */
-	res = hmac_sha256(wpabuf_head(hkey), wpabuf_len(hkey),
-			  wpabuf_head(secret), wpabuf_len(secret), prk);
+	wpabuf_put_le16(hkey, sm->owe_group); /* group */
+	if (group == 19)
+		res = hmac_sha256(wpabuf_head(hkey), wpabuf_len(hkey),
+				  wpabuf_head(secret), wpabuf_len(secret), prk);
+	else if (group == 20)
+		res = hmac_sha384(wpabuf_head(hkey), wpabuf_len(hkey),
+				  wpabuf_head(secret), wpabuf_len(secret), prk);
+	else if (group == 21)
+		res = hmac_sha512(wpabuf_head(hkey), wpabuf_len(hkey),
+				  wpabuf_head(secret), wpabuf_len(secret), prk);
 	wpabuf_clear_free(hkey);
 	wpabuf_clear_free(secret);
 	if (res < 0)
 		return -1;
 
-	wpa_hexdump_key(MSG_DEBUG, "OWE: prk", prk, SHA256_MAC_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "OWE: prk", prk, hash_len);
 
 	/* PMK = HKDF-expand(prk, "OWE Key Generation", n) */
 
-	res = hmac_sha256_kdf(prk, SHA256_MAC_LEN, NULL, (const u8 *) info,
-			      os_strlen(info), sm->pmk, PMK_LEN);
-	os_memset(prk, 0, SHA256_MAC_LEN);
+	if (group == 19)
+		res = hmac_sha256_kdf(prk, hash_len, NULL, (const u8 *) info,
+				      os_strlen(info), sm->pmk, hash_len);
+	else if (group == 20)
+		res = hmac_sha384_kdf(prk, hash_len, NULL, (const u8 *) info,
+				      os_strlen(info), sm->pmk, hash_len);
+	else if (group == 21)
+		res = hmac_sha512_kdf(prk, hash_len, NULL, (const u8 *) info,
+				      os_strlen(info), sm->pmk, hash_len);
+	os_memset(prk, 0, SHA512_MAC_LEN);
 	if (res < 0)
 		return -1;
-	sm->pmk_len = PMK_LEN;
+	sm->pmk_len = hash_len;
 
-	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, PMK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, sm->pmk_len);
 	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);
 	/* TODO: Add PMKSA cache entry */
 

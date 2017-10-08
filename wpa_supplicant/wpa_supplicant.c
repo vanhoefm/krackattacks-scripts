@@ -3533,6 +3533,41 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 }
 
 
+#ifdef CONFIG_OWE
+static int owe_trans_ssid_match(struct wpa_supplicant *wpa_s, const u8 *bssid,
+				const u8 *entry_ssid, size_t entry_ssid_len)
+{
+	const u8 *owe, *pos, *end;
+	u8 ssid_len;
+	struct wpa_bss *bss;
+
+	/* Check network profile SSID aganst the SSID in the
+	 * OWE Transition Mode element. */
+
+	bss = wpa_bss_get_bssid_latest(wpa_s, bssid);
+	if (!bss)
+		return 0;
+
+	owe = wpa_bss_get_vendor_ie(bss, OWE_IE_VENDOR_TYPE);
+	if (!owe)
+		return 0;
+
+	pos = owe + 6;
+	end = owe + 2 + owe[1];
+
+	if (end - pos < ETH_ALEN + 1)
+		return 0;
+	pos += ETH_ALEN;
+	ssid_len = *pos++;
+	if (end - pos < ssid_len || ssid_len > SSID_MAX_LEN)
+		return 0;
+
+	return entry_ssid_len == ssid_len &&
+		os_memcmp(pos, entry_ssid, ssid_len) == 0;
+}
+#endif /* CONFIG_OWE */
+
+
 /**
  * wpa_supplicant_get_ssid - Get a pointer to the current network structure
  * @wpa_s: Pointer to wpa_supplicant data
@@ -3580,6 +3615,15 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_OWE
+		if (!wpas_network_disabled(wpa_s, entry) &&
+		    owe_trans_ssid_match(wpa_s, bssid, entry->ssid,
+		    entry->ssid_len) &&
+		    (!entry->bssid_set ||
+		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
+			return entry;
+#endif /* CONFIG_OWE */
 
 		if (!wpas_network_disabled(wpa_s, entry) && entry->bssid_set &&
 		    entry->ssid_len == 0 &&

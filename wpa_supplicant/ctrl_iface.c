@@ -2745,7 +2745,7 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 {
 	char *pos, *end;
 	int ret;
-	const u8 *ie, *ie2, *osen_ie, *p2p, *mesh;
+	const u8 *ie, *ie2, *osen_ie, *p2p, *mesh, *owe;
 
 	mesh = wpa_bss_get_ie(bss, WLAN_EID_MESH_ID);
 	p2p = wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE);
@@ -2776,6 +2776,14 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	if (osen_ie)
 		pos = wpa_supplicant_ie_txt(pos, end, "OSEN",
 					    osen_ie, 2 + osen_ie[1]);
+	owe = wpa_bss_get_vendor_ie(bss, OWE_IE_VENDOR_TYPE);
+	if (owe) {
+		ret = os_snprintf(pos, end - pos,
+				  ie2 ? "[OWE-TRANS]" : "[OWE-TRANS-OPEN]");
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
 	pos = wpa_supplicant_wps_ie_txt(wpa_s, pos, end, bss);
 	if (!ie && !ie2 && !osen_ie && (bss->caps & IEEE80211_CAP_PRIVACY)) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
@@ -4452,7 +4460,7 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	size_t i;
 	int ret;
 	char *pos, *end;
-	const u8 *ie, *ie2, *osen_ie, *mesh;
+	const u8 *ie, *ie2, *osen_ie, *mesh, *owe;
 
 	pos = buf;
 	end = buf + buflen;
@@ -4576,6 +4584,15 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		if (osen_ie)
 			pos = wpa_supplicant_ie_txt(pos, end, "OSEN",
 						    osen_ie, 2 + osen_ie[1]);
+		owe = wpa_bss_get_vendor_ie(bss, OWE_IE_VENDOR_TYPE);
+		if (owe) {
+			ret = os_snprintf(
+				pos, end - pos,
+				ie2 ? "[OWE-TRANS]" : "[OWE-TRANS-OPEN]");
+			if (os_snprintf_error(end - pos, ret))
+				return 0;
+			pos += ret;
+		}
 		pos = wpa_supplicant_wps_ie_txt(wpa_s, pos, end, bss);
 		if (!ie && !ie2 && !osen_ie &&
 		    (bss->caps & IEEE80211_CAP_PRIVACY)) {

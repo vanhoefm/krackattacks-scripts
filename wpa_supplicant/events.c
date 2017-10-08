@@ -879,6 +879,80 @@ static int addr_in_list(const u8 *addr, const u8 *list, size_t num)
 }
 
 
+static void owe_trans_ssid(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
+			   const u8 **ret_ssid, size_t *ret_ssid_len)
+{
+#ifdef CONFIG_OWE
+	const u8 *owe, *pos, *end, *bssid;
+	u8 ssid_len;
+	struct wpa_bss *open_bss;
+
+	owe = wpa_bss_get_vendor_ie(bss, OWE_IE_VENDOR_TYPE);
+	if (!owe || !wpa_bss_get_ie(bss, WLAN_EID_RSN))
+		return;
+
+	pos = owe + 6;
+	end = owe + 2 + owe[1];
+
+	if (end - pos < ETH_ALEN + 1)
+		return;
+	bssid = pos;
+	pos += ETH_ALEN;
+	ssid_len = *pos++;
+	if (end - pos < ssid_len || ssid_len > SSID_MAX_LEN)
+		return;
+
+	/* Match the profile SSID against the OWE transition mode SSID on the
+	 * open network. */
+	wpa_dbg(wpa_s, MSG_DEBUG, "OWE: transition mode BSSID: " MACSTR
+		" SSID: %s", MAC2STR(bssid), wpa_ssid_txt(pos, ssid_len));
+	*ret_ssid = pos;
+	*ret_ssid_len = ssid_len;
+
+	if (bss->ssid_len > 0)
+		return;
+
+	open_bss = wpa_bss_get_bssid_latest(wpa_s, bssid);
+	if (!open_bss)
+		return;
+	if (ssid_len != open_bss->ssid_len ||
+	    os_memcmp(pos, open_bss->ssid, ssid_len) != 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"OWE: transition mode SSID mismatch: %s",
+			wpa_ssid_txt(open_bss->ssid, open_bss->ssid_len));
+		return;
+	}
+
+	owe = wpa_bss_get_vendor_ie(open_bss, OWE_IE_VENDOR_TYPE);
+	if (!owe || wpa_bss_get_ie(open_bss, WLAN_EID_RSN)) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"OWE: transition mode open BSS unexpected info");
+		return;
+	}
+
+	pos = owe + 6;
+	end = owe + 2 + owe[1];
+
+	if (end - pos < ETH_ALEN + 1)
+		return;
+	if (os_memcmp(pos, bss->bssid, ETH_ALEN) != 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"OWE: transition mode BSSID mismatch: " MACSTR,
+			MAC2STR(pos));
+		return;
+	}
+	pos += ETH_ALEN;
+	ssid_len = *pos++;
+	if (end - pos < ssid_len || ssid_len > SSID_MAX_LEN)
+		return;
+	wpa_dbg(wpa_s, MSG_DEBUG, "OWE: learned transition mode OWE SSID: %s",
+		wpa_ssid_txt(pos, ssid_len));
+	os_memcpy(bss->ssid, pos, ssid_len);
+	bss->ssid_len = ssid_len;
+#endif /* CONFIG_OWE */
+}
+
+
 struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 				     int i, struct wpa_bss *bss,
 				     struct wpa_ssid *group,
@@ -893,6 +967,8 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_MBO
 	const u8 *assoc_disallow;
 #endif /* CONFIG_MBO */
+	const u8 *match_ssid;
+	size_t match_ssid_len;
 
 	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	wpa_ie_len = ie ? ie[1] : 0;
@@ -942,7 +1018,11 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (bss->ssid_len == 0) {
+	match_ssid = bss->ssid;
+	match_ssid_len = bss->ssid_len;
+	owe_trans_ssid(wpa_s, bss, &match_ssid, &match_ssid_len);
+
+	if (match_ssid_len == 0) {
 		if (debug_print)
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - SSID not known");
 		return NULL;
@@ -954,7 +1034,7 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
-	if (disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {
+	if (disallowed_ssid(wpa_s, match_ssid, match_ssid_len)) {
 		if (debug_print)
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - SSID disallowed");
 		return NULL;
@@ -1009,8 +1089,8 @@ struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			check_ssid = 0;
 
 		if (check_ssid &&
-		    (bss->ssid_len != ssid->ssid_len ||
-		     os_memcmp(bss->ssid, ssid->ssid, bss->ssid_len) != 0)) {
+		    (match_ssid_len != ssid->ssid_len ||
+		     os_memcmp(match_ssid, ssid->ssid, match_ssid_len) != 0)) {
 			if (debug_print)
 				wpa_dbg(wpa_s, MSG_DEBUG,
 					"   skip - SSID mismatch");

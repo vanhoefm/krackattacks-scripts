@@ -33,6 +33,25 @@ def test_owe(dev, apdev):
     if val != "OWE":
         raise Exception("Unexpected key_mgmt: " + val)
 
+def test_owe_groups(dev, apdev):
+    """Opportunistic Wireless Encryption - DH groups"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    params = { "ssid": "owe",
+               "wpa": "2",
+               "wpa_key_mgmt": "OWE",
+               "rsn_pairwise": "CCMP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    for group in [ 19, 20, 21 ]:
+        dev[0].connect("owe", key_mgmt="OWE", owe_group=str(group))
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
 def test_owe_and_psk(dev, apdev):
     """Opportunistic Wireless Encryption and WPA2-PSK enabled"""
     if "OWE" not in dev[0].get_capability("key_mgmt"):

@@ -2620,6 +2620,8 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 	if (sm == NULL)
 		return;
 
+	wpa_hexdump_key(MSG_DEBUG, "WPA: Set PMK based on external data",
+			pmk, pmk_len);
 	sm->pmk_len = pmk_len;
 	os_memcpy(sm->pmk, pmk, pmk_len);
 
@@ -2650,9 +2652,13 @@ void wpa_sm_set_pmk_from_pmksa(struct wpa_sm *sm)
 		return;
 
 	if (sm->cur_pmksa) {
+		wpa_hexdump_key(MSG_DEBUG,
+				"WPA: Set PMK based on current PMKSA",
+				sm->cur_pmksa->pmk, sm->cur_pmksa->pmk_len);
 		sm->pmk_len = sm->cur_pmksa->pmk_len;
 		os_memcpy(sm->pmk, sm->cur_pmksa->pmk, sm->pmk_len);
 	} else {
+		wpa_printf(MSG_DEBUG, "WPA: No current PMKSA - clear PMK");
 		sm->pmk_len = PMK_LEN;
 		os_memset(sm->pmk, 0, PMK_LEN);
 	}

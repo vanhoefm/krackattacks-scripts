@@ -5730,30 +5730,6 @@ static void wpas_p2p_select_go_freq_no_pref(struct wpa_supplicant *wpa_s,
 {
 	unsigned int i, r;
 
-	/* first try some random selection of the social channels */
-	if (os_get_random((u8 *) &r, sizeof(r)) < 0)
-		return;
-
-	for (i = 0; i < 3; i++) {
-		params->freq = 2412 + ((r + i) % 3) * 25;
-		if (wpas_p2p_supported_freq_go(wpa_s, channels, params->freq))
-			goto out;
-	}
-
-	/* try all other channels in operating class 81 */
-	for (i = 0; i < 11; i++) {
-		params->freq = 2412 + i * 5;
-
-		/* skip social channels; covered in the previous loop */
-		if (params->freq == 2412 ||
-		    params->freq == 2437 ||
-		    params->freq == 2462)
-			continue;
-
-		if (wpas_p2p_supported_freq_go(wpa_s, channels, params->freq))
-			goto out;
-	}
-
 	/* try all channels in operating class 115 */
 	for (i = 0; i < 4; i++) {
 		params->freq = 5180 + i * 20;
@@ -5785,6 +5761,30 @@ static void wpas_p2p_select_go_freq_no_pref(struct wpa_supplicant *wpa_s,
 		if (!wpas_p2p_disallowed_freq(wpa_s->global, params->freq) &&
 		    freq_included(wpa_s, channels, params->freq) &&
 		    p2p_supported_freq(wpa_s->global->p2p, params->freq))
+			goto out;
+	}
+
+	/* try some random selection of the social channels */
+	if (os_get_random((u8 *) &r, sizeof(r)) < 0)
+		return;
+
+	for (i = 0; i < 3; i++) {
+		params->freq = 2412 + ((r + i) % 3) * 25;
+		if (wpas_p2p_supported_freq_go(wpa_s, channels, params->freq))
+			goto out;
+	}
+
+	/* try all other channels in operating class 81 */
+	for (i = 0; i < 11; i++) {
+		params->freq = 2412 + i * 5;
+
+		/* skip social channels; covered in the previous loop */
+		if (params->freq == 2412 ||
+		    params->freq == 2437 ||
+		    params->freq == 2462)
+			continue;
+
+		if (wpas_p2p_supported_freq_go(wpa_s, channels, params->freq))
 			goto out;
 	}
 

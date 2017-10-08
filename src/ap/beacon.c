@@ -363,6 +363,63 @@ static u8 * hostapd_eid_supported_op_classes(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+#ifdef CONFIG_OWE
+static int hostapd_eid_owe_trans_enabled(struct hostapd_data *hapd)
+{
+	return hapd->conf->owe_transition_ssid_len > 0 &&
+		!is_zero_ether_addr(hapd->conf->owe_transition_bssid);
+}
+#endif /* CONFIG_OWE */
+
+
+static size_t hostapd_eid_owe_trans_len(struct hostapd_data *hapd)
+{
+#ifdef CONFIG_OWE
+	if (!hostapd_eid_owe_trans_enabled(hapd))
+		return 0;
+	return 6 + ETH_ALEN + 1 + hapd->conf->owe_transition_ssid_len;
+#else /* CONFIG_OWE */
+	return 0;
+#endif /* CONFIG_OWE */
+}
+
+
+static u8 * hostapd_eid_owe_trans(struct hostapd_data *hapd, u8 *eid,
+				  size_t len)
+{
+#ifdef CONFIG_OWE
+	u8 *pos = eid;
+	size_t elen;
+
+	if (!hostapd_eid_owe_trans_enabled(hapd))
+		return pos;
+
+	elen = hostapd_eid_owe_trans_len(hapd);
+	if (len < elen) {
+		wpa_printf(MSG_DEBUG,
+			   "OWE: Not enough room in the buffer for OWE IE");
+		return pos;
+	}
+
+	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
+	*pos++ = elen - 2;
+	WPA_PUT_BE24(pos, OUI_WFA);
+	pos += 3;
+	*pos++ = OWE_OUI_TYPE;
+	os_memcpy(pos, hapd->conf->owe_transition_bssid, ETH_ALEN);
+	pos += ETH_ALEN;
+	*pos++ = hapd->conf->owe_transition_ssid_len;
+	os_memcpy(pos, hapd->conf->owe_transition_ssid,
+		  hapd->conf->owe_transition_ssid_len);
+	pos += hapd->conf->owe_transition_ssid_len;
+
+	return pos;
+#else /* CONFIG_OWE */
+	return eid;
+#endif /* CONFIG_OWE */
+}
+
+
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
@@ -400,6 +457,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211AX */
 
 	buflen += hostapd_mbo_ie_len(hapd);
+	buflen += hostapd_eid_owe_trans_len(hapd);
 
 	resp = os_zalloc(buflen);
 	if (resp == NULL)
@@ -545,6 +603,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 #endif /* CONFIG_HS20 */
 
 	pos = hostapd_eid_mbo(hapd, pos, (u8 *) resp + buflen - pos);
+	pos = hostapd_eid_owe_trans(hapd, pos, (u8 *) resp + buflen - pos);
 
 	if (hapd->conf->vendor_elements) {
 		os_memcpy(pos, wpabuf_head(hapd->conf->vendor_elements),
@@ -1062,6 +1121,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211AX */
 
 	tail_len += hostapd_mbo_ie_len(hapd);
+	tail_len += hostapd_eid_owe_trans_len(hapd);
 
 	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
@@ -1229,6 +1289,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 #endif /* CONFIG_HS20 */
 
 	tailpos = hostapd_eid_mbo(hapd, tailpos, tail + tail_len - tailpos);
+	tailpos = hostapd_eid_owe_trans(hapd, tailpos,
+					tail + tail_len - tailpos);
 
 	if (hapd->conf->vendor_elements) {
 		os_memcpy(tailpos, wpabuf_head(hapd->conf->vendor_elements),

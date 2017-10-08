@@ -644,6 +644,12 @@ struct hostapd_bss_config {
 	struct wpabuf *dpp_csign;
 	unsigned int dpp_csign_expiry;
 #endif /* CONFIG_DPP */
+
+#ifdef CONFIG_OWE
+	macaddr owe_transition_bssid;
+	u8 owe_transition_ssid[SSID_MAX_LEN];
+	size_t owe_transition_ssid_len;
+#endif /* CONFIG_OWE */
 };
 
 /**

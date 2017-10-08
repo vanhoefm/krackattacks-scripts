@@ -3773,6 +3773,28 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "dpp_csign_expiry") == 0) {
 		bss->dpp_csign_expiry = strtol(pos, NULL, 0);
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_OWE
+	} else if (os_strcmp(buf, "owe_transition_bssid") == 0) {
+		if (hwaddr_aton(pos, bss->owe_transition_bssid)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid owe_transition_bssid",
+				   line);
+			return 1;
+		}
+	} else if (os_strcmp(buf, "owe_transition_ssid") == 0) {
+		size_t slen;
+		char *str = wpa_config_parse_string(pos, &slen);
+
+		if (!str || slen < 1 || slen > SSID_MAX_LEN) {
+			wpa_printf(MSG_ERROR, "Line %d: invalid SSID '%s'",
+				   line, pos);
+			os_free(str);
+			return 1;
+		}
+		os_memcpy(bss->owe_transition_ssid, str, slen);
+		bss->owe_transition_ssid_len = slen;
+		os_free(str);
+#endif /* CONFIG_OWE */
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

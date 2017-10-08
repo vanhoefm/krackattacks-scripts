@@ -1528,6 +1528,12 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				"No PSK available for association");
 			return -1;
 		}
+#ifdef CONFIG_OWE
+	} else if (wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
+		/* OWE Diffie-Hellman exchange in (Re)Association
+		 * Request/Response frames set the PMK, so do not override it
+		 * here. */
+#endif /* CONFIG_OWE */
 	} else
 		wpa_sm_set_pmk_from_pmksa(wpa_s->wpa);
 

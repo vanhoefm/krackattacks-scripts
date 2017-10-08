@@ -4291,6 +4291,7 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	os_memset(prk, 0, SHA256_MAC_LEN);
 	if (res < 0)
 		return -1;
+	sm->pmk_len = PMK_LEN;
 
 	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, PMK_LEN);
 	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);

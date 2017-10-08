@@ -184,7 +184,7 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 				if (hmac_sha384(key, key_len, buf, len, hash))
 					return -1;
 			} else if (key_len == 256 / 8) {
-				if (hmac_sha256(key, key_len, buf, len, hash))
+				if (hmac_sha512(key, key_len, buf, len, hash))
 					return -1;
 			} else {
 				wpa_printf(MSG_INFO,
@@ -192,7 +192,7 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 					   (unsigned int) key_len);
 				return -1;
 			}
-			os_memcpy(mic, hash, key_len / 8);
+			os_memcpy(mic, hash, key_len);
 			break;
 #endif /* CONFIG_DPP */
 		default:

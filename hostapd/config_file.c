@@ -3770,8 +3770,6 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "dpp_csign") == 0) {
 		if (parse_wpabuf_hex(line, buf, &bss->dpp_csign, pos))
 			return 1;
-	} else if (os_strcmp(buf, "dpp_csign_expiry") == 0) {
-		bss->dpp_csign_expiry = strtol(pos, NULL, 0);
 #endif /* CONFIG_DPP */
 #ifdef CONFIG_OWE
 	} else if (os_strcmp(buf, "owe_transition_bssid") == 0) {

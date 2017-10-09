@@ -3156,19 +3156,6 @@ skip_groups:
 		wpa_printf(MSG_DEBUG, "DPP: Failed to build csign JWK");
 		goto fail;
 	}
-	if (auth->conf->csign_expiry) {
-		struct os_tm tm;
-
-		if (os_gmtime(auth->conf->csign_expiry, &tm) < 0) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Failed to generate expiry string");
-			goto fail;
-		}
-		wpabuf_printf(buf,
-			      ",\"expiry\":\"%04u-%02u-%02uT%02u:%02u:%02uZ\"",
-			      tm.year, tm.month, tm.day,
-			      tm.hour, tm.min, tm.sec);
-	}
 
 	wpabuf_put_str(buf, "}}");
 
@@ -4077,18 +4064,6 @@ static int dpp_parse_cred_dpp(struct dpp_authentication *auth,
 		goto fail;
 	}
 	dpp_debug_print_key("DPP: Received C-sign-key", csign_pub);
-
-	token = json_get_member(cred, "expiry");
-	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No expiry string found - C-sign-key does not expire");
-	} else {
-		wpa_printf(MSG_DEBUG, "DPP: expiry = %s", token->string);
-		if (dpp_key_expired(token->string, &auth->c_sign_key_expiry)) {
-			wpa_printf(MSG_DEBUG, "DPP: C-sign-key has expired");
-			goto fail;
-		}
-	}
 
 	token = json_get_member(cred, "signedConnector");
 	if (!token || token->type != JSON_STRING) {

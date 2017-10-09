@@ -935,7 +935,6 @@ static struct wpa_ssid * wpas_dpp_add_network(struct wpa_supplicant *wpa_s,
 		os_memcpy(ssid->dpp_csign, wpabuf_head(auth->c_sign_key),
 			  wpabuf_len(auth->c_sign_key));
 		ssid->dpp_csign_len = wpabuf_len(auth->c_sign_key);
-		ssid->dpp_csign_expiry = auth->c_sign_key_expiry;
 	}
 
 	if (auth->net_access_key) {
@@ -1025,14 +1024,8 @@ static void wpas_dpp_handle_config_obj(struct wpa_supplicant *wpa_s,
 			wpa_snprintf_hex(hex, hexlen,
 					 wpabuf_head(auth->c_sign_key),
 					 wpabuf_len(auth->c_sign_key));
-			if (auth->c_sign_key_expiry)
-				wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_C_SIGN_KEY
-					"%s %lu", hex,
-					(long unsigned)
-					auth->c_sign_key_expiry);
-			else
-				wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_C_SIGN_KEY
-					"%s", hex);
+			wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_C_SIGN_KEY "%s",
+				hex);
 			os_free(hex);
 		}
 	}
@@ -1348,8 +1341,6 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	os_memcpy(entry->pmk, intro.pmk, intro.pmk_len);
 	entry->pmk_len = intro.pmk_len;
 	entry->akmp = WPA_KEY_MGMT_DPP;
-	if (!expiry || expiry > ssid->dpp_csign_expiry)
-		expiry = ssid->dpp_csign_expiry;
 	if (expiry) {
 		os_get_time(&now);
 		seconds = expiry - now.sec;
@@ -1712,14 +1703,13 @@ static unsigned int wpas_dpp_next_configurator_id(struct wpa_supplicant *wpa_s)
 
 int wpas_dpp_configurator_add(struct wpa_supplicant *wpa_s, const char *cmd)
 {
-	char *expiry = NULL, *curve = NULL;
+	char *curve = NULL;
 	char *key = NULL;
 	u8 *privkey = NULL;
 	size_t privkey_len = 0;
 	int ret = -1;
 	struct dpp_configurator *conf = NULL;
 
-	expiry = get_param(cmd, " expiry=");
 	curve = get_param(cmd, " curve=");
 	key = get_param(cmd, " key=");
 
@@ -1735,22 +1725,12 @@ int wpas_dpp_configurator_add(struct wpa_supplicant *wpa_s, const char *cmd)
 	if (!conf)
 		goto fail;
 
-	if (expiry) {
-		long int val;
-
-		val = strtol(expiry, NULL, 0);
-		if (val <= 0)
-			goto fail;
-		conf->csign_expiry = val;
-	}
-
 	conf->id = wpas_dpp_next_configurator_id(wpa_s);
 	dl_list_add(&wpa_s->dpp_configurator, &conf->list);
 	ret = conf->id;
 	conf = NULL;
 fail:
 	os_free(curve);
-	os_free(expiry);
 	str_clear_free(key);
 	bin_clear_free(privkey, privkey_len);
 	dpp_configurator_free(conf);
@@ -1859,12 +1839,6 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 	}
 
 	os_get_time(&now);
-
-	if (ssid->dpp_csign_expiry && ssid->dpp_csign_expiry < now.sec) {
-		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_MISSING_CONNECTOR
-			"C-sign-key expired");
-		return -1;
-	}
 
 	if (ssid->dpp_netaccesskey_expiry &&
 	    ssid->dpp_netaccesskey_expiry < now.sec) {

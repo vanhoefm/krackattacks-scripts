@@ -178,7 +178,6 @@ struct dpp_authentication {
 	struct wpabuf *net_access_key;
 	os_time_t net_access_key_expiry;
 	struct wpabuf *c_sign_key;
-	os_time_t c_sign_key_expiry;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *config_obj_override;
 	char *discovery_override;
@@ -194,7 +193,6 @@ struct dpp_configurator {
 	EVP_PKEY *csign;
 	char *kid;
 	const struct dpp_curve_params *curve;
-	os_time_t csign_expiry;
 };
 
 struct dpp_introduction {

@@ -642,7 +642,6 @@ struct hostapd_bss_config {
 	struct wpabuf *dpp_netaccesskey;
 	unsigned int dpp_netaccesskey_expiry;
 	struct wpabuf *dpp_csign;
-	unsigned int dpp_csign_expiry;
 #endif /* CONFIG_DPP */
 
 #ifdef CONFIG_OWE

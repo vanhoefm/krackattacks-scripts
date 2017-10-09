@@ -732,14 +732,8 @@ static void hostapd_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 			wpa_snprintf_hex(hex, hexlen,
 					 wpabuf_head(auth->c_sign_key),
 					 wpabuf_len(auth->c_sign_key));
-			if (auth->c_sign_key_expiry)
-				wpa_msg(hapd->msg_ctx, MSG_INFO,
-					DPP_EVENT_C_SIGN_KEY "%s %lu", hex,
-					(unsigned long)
-					auth->c_sign_key_expiry);
-			else
-				wpa_msg(hapd->msg_ctx, MSG_INFO,
-					DPP_EVENT_C_SIGN_KEY "%s", hex);
+			wpa_msg(hapd->msg_ctx, MSG_INFO,
+				DPP_EVENT_C_SIGN_KEY "%s", hex);
 			os_free(hex);
 		}
 	}
@@ -951,11 +945,6 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	}
 
 	os_get_time(&now);
-	if (hapd->conf->dpp_csign_expiry &&
-	    hapd->conf->dpp_csign_expiry < now.sec) {
-		wpa_printf(MSG_DEBUG, "DPP: C-sign-key expired");
-		return;
-	}
 
 	if (hapd->conf->dpp_netaccesskey_expiry &&
 	    hapd->conf->dpp_netaccesskey_expiry < now.sec) {
@@ -991,8 +980,6 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 
 	if (!expire || hapd->conf->dpp_netaccesskey_expiry < expire)
 		expire = hapd->conf->dpp_netaccesskey_expiry;
-	if (!expire || hapd->conf->dpp_csign_expiry < expire)
-		expire = hapd->conf->dpp_csign_expiry;
 	if (expire)
 		expiration = expire - now.sec;
 	else
@@ -1306,14 +1293,13 @@ static unsigned int hostapd_dpp_next_configurator_id(struct hostapd_data *hapd)
 
 int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd)
 {
-	char *expiry = NULL, *curve = NULL;
+	char *curve = NULL;
 	char *key = NULL;
 	u8 *privkey = NULL;
 	size_t privkey_len = 0;
 	int ret = -1;
 	struct dpp_configurator *conf = NULL;
 
-	expiry = get_param(cmd, " expiry=");
 	curve = get_param(cmd, " curve=");
 	key = get_param(cmd, " key=");
 
@@ -1329,22 +1315,12 @@ int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd)
 	if (!conf)
 		goto fail;
 
-	if (expiry) {
-		long int val;
-
-		val = strtol(expiry, NULL, 0);
-		if (val <= 0)
-			goto fail;
-		conf->csign_expiry = val;
-	}
-
 	conf->id = hostapd_dpp_next_configurator_id(hapd);
 	dl_list_add(&hapd->dpp_configurator, &conf->list);
 	ret = conf->id;
 	conf = NULL;
 fail:
 	os_free(curve);
-	os_free(expiry);
 	str_clear_free(key);
 	bin_clear_free(privkey, privkey_len);
 	dpp_configurator_free(conf);

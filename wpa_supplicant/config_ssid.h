@@ -888,13 +888,6 @@ struct wpa_ssid {
 	size_t dpp_csign_len;
 
 	/**
-	 * dpp_csign_expiry - C-sign-key expiry in UNIX time stamp
-	 *
-	 * 0 indicates no expiration.
-	 */
-	unsigned int dpp_csign_expiry;
-
-	/**
 	 * owe_group - OWE DH Group
 	 *
 	 * 0 = use default (19)

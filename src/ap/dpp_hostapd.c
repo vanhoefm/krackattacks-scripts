@@ -1204,18 +1204,24 @@ hostapd_dpp_rx_pkex_commit_reveal_resp(struct hostapd_data *hapd, const u8 *src,
 void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 			   const u8 *buf, size_t len, unsigned int freq)
 {
+	u8 crypto_suite;
 	enum dpp_public_action_frame_type type;
 
-	if (len < 1)
+	if (len < 2)
 		return;
-	type = buf[0];
-	buf++;
-	len--;
+	crypto_suite = *buf++;
+	type = *buf++;
+	len -= 2;
 
 	wpa_printf(MSG_DEBUG,
-		   "DPP: Received DPP Public Action frame type %d from "
+		   "DPP: Received DPP Public Action frame crypto suite %u type %d from "
 		   MACSTR " freq=%u",
-		   type, MAC2STR(src), freq);
+		   crypto_suite, type, MAC2STR(src), freq);
+	if (crypto_suite != 1) {
+		wpa_printf(MSG_DEBUG, "DPP: Unsupported crypto suite %u",
+			   crypto_suite);
+		return;
+	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Received message attributes", buf, len);
 	if (dpp_check_attrs(buf, len) < 0)
 		return;

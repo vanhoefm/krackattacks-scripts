@@ -484,13 +484,14 @@ struct wpabuf * dpp_alloc_msg(enum dpp_public_action_frame_type type,
 {
 	struct wpabuf *msg;
 
-	msg = wpabuf_alloc(7 + len);
+	msg = wpabuf_alloc(8 + len);
 	if (!msg)
 		return NULL;
 	wpabuf_put_u8(msg, WLAN_ACTION_PUBLIC);
 	wpabuf_put_u8(msg, WLAN_PA_VENDOR_SPECIFIC);
 	wpabuf_put_be24(msg, OUI_WFA);
 	wpabuf_put_u8(msg, DPP_OUI_TYPE);
+	wpabuf_put_u8(msg, 1); /* Crypto Suite */
 	wpabuf_put_u8(msg, type);
 	return msg;
 }

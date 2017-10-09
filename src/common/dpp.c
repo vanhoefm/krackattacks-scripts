@@ -5380,6 +5380,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	size_t len[4];
 	u8 u[DPP_MAX_HASH_LEN];
 	u8 octet;
+	int res;
 
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
 				   &attr_status_len);
@@ -5505,10 +5506,13 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 
 	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, K.x)
 	 */
-	if (dpp_pkex_derive_z(pkex->own_mac, pkex->peer_mac,
-			      pkex->Mx, curve->prime_len,
-			      attr_key /* N.x */, attr_key_len / 2, pkex->code,
-			      Kx, Kx_len, pkex->z, curve->hash_len) < 0)
+	res = dpp_pkex_derive_z(pkex->own_mac, pkex->peer_mac,
+				pkex->Mx, curve->prime_len,
+				attr_key /* N.x */, attr_key_len / 2,
+				pkex->code, Kx, Kx_len,
+				pkex->z, curve->hash_len);
+	os_memset(Kx, 0, Kx_len);
+	if (res < 0)
 		goto fail;
 
 	/* {A, u, [bootstrapping info]}z */
@@ -5589,6 +5593,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	size_t clear_len;
 	struct wpabuf *clear = NULL;
 	u8 *wrapped;
+	int res;
 
 	/* K = y * X' */
 	ctx = EVP_PKEY_CTX_new(pkex->y, NULL);
@@ -5609,10 +5614,12 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 
 	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, K.x)
 	 */
-	if (dpp_pkex_derive_z(pkex->peer_mac, pkex->own_mac,
-			      pkex->Mx, curve->prime_len,
-			      pkex->Nx, curve->prime_len, pkex->code,
-			      Kx, Kx_len, pkex->z, curve->hash_len) < 0)
+	res = dpp_pkex_derive_z(pkex->peer_mac, pkex->own_mac,
+				pkex->Mx, curve->prime_len,
+				pkex->Nx, curve->prime_len, pkex->code,
+				Kx, Kx_len, pkex->z, curve->hash_len);
+	os_memset(Kx, 0, Kx_len);
+	if (res < 0)
 		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,

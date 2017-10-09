@@ -857,7 +857,6 @@ def update_hapd_config(hapd):
         raise Exception("C-sign-key not reported (AP)")
     p = ev.split(' ')
     csign = p[1]
-    csign_expiry = p[2] if len(p) > 2 else None
 
     ev = hapd.wait_event(["DPP-NET-ACCESS-KEY"], timeout=1)
     if ev is None:
@@ -874,8 +873,6 @@ def update_hapd_config(hapd):
     hapd.set("rsn_pairwise", "CCMP")
     hapd.set("dpp_connector", connector)
     hapd.set("dpp_csign", csign)
-    if csign_expiry:
-        hapd.set("dpp_csign_expiry", csign_expiry)
     hapd.set("dpp_netaccesskey", net_access_key)
     if net_access_key_expiry:
         hapd.set("dpp_netaccesskey_expiry", net_access_key_expiry)
@@ -897,7 +894,7 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     id_h = int(res)
     uri = hapd.request("DPP_BOOTSTRAP_GET_URI %d" % id_h)
 
-    cmd = "DPP_CONFIGURATOR_ADD expiry=%d" % (time.time() + 100000)
+    cmd = "DPP_CONFIGURATOR_ADD"
     if conf_curve:
         cmd += " curve=" + conf_curve
     res = dev[0].request(cmd);
@@ -980,7 +977,6 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
         raise Exception("C-sign-key not reported")
     p = ev.split(' ')
     csign = p[1]
-    csign_expiry = p[2] if len(p) > 2 else None
 
     ev = dev[1].wait_event(["DPP-NET-ACCESS-KEY"], timeout=1)
     if ev is None:
@@ -995,8 +991,6 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
                         only_add_network=True)
     dev[1].set_network_quoted(id, "dpp_connector", connector)
     dev[1].set_network(id, "dpp_csign", csign)
-    if csign_expiry:
-        dev[1].set_network(id, "dpp_csign_expiry", csign_expiry)
     dev[1].set_network(id, "dpp_netaccesskey", net_access_key)
     if net_access_key_expiry:
         dev[1].set_network(id, "dpp_netaccess_expiry", net_access_key_expiry)

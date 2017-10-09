@@ -585,3 +585,69 @@ def test_sigma_dut_ap_psk_sae(dev, apdev):
             sigma_dut_cmd_check("ap_reset_default")
         finally:
             stop_sigma_dut(sigma)
+
+def test_sigma_dut_owe(dev, apdev):
+    """sigma_dut controlled OWE station"""
+    try:
+        run_sigma_dut_owe(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_owe(dev, apdev):
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname)
+
+    try:
+        params = { "ssid": "owe",
+                   "wpa": "2",
+                   "wpa_key_mgmt": "OWE",
+                   "rsn_pairwise": "CCMP" }
+        hapd = hostapd.add_ap(apdev[0], params)
+        bssid = hapd.own_addr()
+
+        sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,WPA3" % ifname)
+        sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+        sigma_dut_cmd_check("sta_set_security,interface,%s,ssid,owe,Type,OWE" % ifname)
+        sigma_dut_cmd_check("sta_associate,interface,%s,ssid,owe,channel,1" % ifname)
+        sigma_dut_wait_connected(ifname)
+        sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+
+        dev[0].dump_monitor()
+        sigma_dut_cmd("sta_reassoc,interface,%s,Channel,1,bssid,%s" % (ifname, bssid))
+        dev[0].wait_connected()
+        sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+        sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,WPA3" % ifname)
+        sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+        sigma_dut_cmd_check("sta_set_security,interface,%s,ssid,owe,Type,OWE,ECGroupID,20" % ifname)
+        sigma_dut_cmd_check("sta_associate,interface,%s,ssid,owe,channel,1" % ifname)
+        sigma_dut_wait_connected(ifname)
+        sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+
+        sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+    finally:
+        stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_owe(dev, apdev):
+    """sigma_dut controlled AP with OWE"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface)
+        try:
+            sigma_dut_cmd_check("ap_reset_default,NAME,AP,Program,WPA3")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,owe,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,OWE")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].request("SET sae_groups ")
+            dev[0].connect("owe", key_mgmt="OWE", scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)

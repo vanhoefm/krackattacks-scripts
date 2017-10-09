@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import time
 
 import hostapd
 from wpasupplicant import WpaSupplicant
@@ -193,3 +194,35 @@ def run_owe_transition_mode(dev, apdev):
     dev[0].select_network(id, 2412)
     dev[0].wait_connected()
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_owe_transition_mode_multi_bss(dev, apdev):
+    """Opportunistic Wireless Encryption transition mode (multi BSS)"""
+    try:
+        run_owe_transition_mode_multi_bss(dev, apdev)
+    finally:
+        dev[0].request("SCAN_INTERVAL 5")
+
+def run_owe_transition_mode_multi_bss(dev, apdev):
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    hapd1 = hostapd.add_bss(apdev[0], ifname1, 'owe-bss-1.conf')
+    hapd2 = hostapd.add_bss(apdev[0], ifname2, 'owe-bss-2.conf')
+
+    bssid = hapd1.own_addr()
+    bssid2 = hapd2.own_addr()
+
+    # Beaconing with the OWE Transition Mode element can start only once both
+    # BSSs are enabled, so the very first Beacon frame may go out without this
+    # element. Wait a bit to avoid getting incomplete scan results.
+    time.sleep(0.1)
+
+    dev[0].request("SCAN_INTERVAL 1")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("transition-mode-open", key_mgmt="OWE")
+    hwsim_utils.test_connectivity(dev[0], hapd2)
+    val = dev[0].get_status_field("key_mgmt")
+    if val != "OWE":
+        raise Exception("Unexpected key_mgmt: " + val)

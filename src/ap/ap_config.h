@@ -649,6 +649,7 @@ struct hostapd_bss_config {
 	macaddr owe_transition_bssid;
 	u8 owe_transition_ssid[SSID_MAX_LEN];
 	size_t owe_transition_ssid_len;
+	char owe_transition_ifname[IFNAMSIZ + 1];
 #endif /* CONFIG_OWE */
 };
 

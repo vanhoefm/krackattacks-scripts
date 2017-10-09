@@ -391,6 +391,10 @@ static u8 * hostapd_eid_owe_trans(struct hostapd_data *hapd, u8 *eid,
 	u8 *pos = eid;
 	size_t elen;
 
+	if (hapd->conf->owe_transition_ifname[0] &&
+	    !hostapd_eid_owe_trans_enabled(hapd))
+		hostapd_owe_trans_get_info(hapd);
+
 	if (!hostapd_eid_owe_trans_enabled(hapd))
 		return pos;
 

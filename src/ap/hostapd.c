@@ -1680,6 +1680,108 @@ static void hostapd_set_own_neighbor_report(struct hostapd_data *hapd)
 }
 
 
+#ifdef CONFIG_OWE
+
+static int hostapd_owe_iface_iter(struct hostapd_iface *iface, void *ctx)
+{
+	struct hostapd_data *hapd = ctx;
+	size_t i;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		struct hostapd_data *bss = iface->bss[i];
+
+		if (os_strcmp(hapd->conf->owe_transition_ifname,
+			      bss->conf->iface) != 0)
+			continue;
+
+		wpa_printf(MSG_DEBUG,
+			   "OWE: ifname=%s found transition mode ifname=%s BSSID "
+			   MACSTR " SSID %s",
+			   hapd->conf->iface, bss->conf->iface,
+			   MAC2STR(bss->own_addr),
+			   wpa_ssid_txt(bss->conf->ssid.ssid,
+					bss->conf->ssid.ssid_len));
+		if (!bss->conf->ssid.ssid_set || !bss->conf->ssid.ssid_len ||
+		    is_zero_ether_addr(bss->own_addr))
+			continue;
+
+		os_memcpy(hapd->conf->owe_transition_bssid, bss->own_addr,
+			  ETH_ALEN);
+		os_memcpy(hapd->conf->owe_transition_ssid,
+			  bss->conf->ssid.ssid, bss->conf->ssid.ssid_len);
+		hapd->conf->owe_transition_ssid_len = bss->conf->ssid.ssid_len;
+		wpa_printf(MSG_DEBUG,
+			   "OWE: Copied transition mode information");
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int hostapd_owe_trans_get_info(struct hostapd_data *hapd)
+{
+	if (hapd->conf->owe_transition_ssid_len > 0 &&
+	    !is_zero_ether_addr(hapd->conf->owe_transition_bssid))
+		return 0;
+
+	/* Find transition mode SSID/BSSID information from a BSS operated by
+	 * this hostapd instance. */
+	if (!hapd->iface->interfaces ||
+	    !hapd->iface->interfaces->for_each_interface)
+		return hostapd_owe_iface_iter(hapd->iface, hapd);
+	else
+		return hapd->iface->interfaces->for_each_interface(
+			hapd->iface->interfaces, hostapd_owe_iface_iter, hapd);
+}
+
+
+static int hostapd_owe_iface_iter2(struct hostapd_iface *iface, void *ctx)
+{
+	size_t i;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		struct hostapd_data *bss = iface->bss[i];
+		int res;
+
+		wpa_printf(MSG_DEBUG, "JKM:%s:iface=%s trans_ifname=%s",
+			   __func__, bss->conf->iface,
+			   bss->conf->owe_transition_ifname);
+		if (!bss->conf->owe_transition_ifname[0])
+			continue;
+		res = hostapd_owe_trans_get_info(bss);
+		wpa_printf(MSG_DEBUG, "JKM:%s:iface=%s trans_ifname=%s res=%d",
+			   __func__, bss->conf->iface,
+			   bss->conf->owe_transition_ifname, res);
+		if (res == 0)
+			continue;
+		wpa_printf(MSG_DEBUG,
+			   "OWE: Matching transition mode interface enabled - update beacon data for %s",
+			   bss->conf->iface);
+		ieee802_11_set_beacon(bss);
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_OWE */
+
+
+static void hostapd_owe_update_trans(struct hostapd_iface *iface)
+{
+#ifdef CONFIG_OWE
+	/* Check whether the enabled BSS can complete OWE transition mode
+	 * configuration for any pending interface. */
+	if (!iface->interfaces ||
+	    !iface->interfaces->for_each_interface)
+		hostapd_owe_iface_iter2(iface, NULL);
+	else
+		iface->interfaces->for_each_interface(
+			iface->interfaces, hostapd_owe_iface_iter2, NULL);
+#endif /* CONFIG_OWE */
+}
+
+
 static int hostapd_setup_interface_complete_sync(struct hostapd_iface *iface,
 						 int err)
 {
@@ -1855,6 +1957,7 @@ dfs_offload:
 #endif /* CONFIG_FST */
 
 	hostapd_set_state(iface, HAPD_IFACE_ENABLED);
+	hostapd_owe_update_trans(iface);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, AP_EVENT_ENABLED);
 	if (hapd->setup_complete_cb)
 		hapd->setup_complete_cb(hapd->setup_complete_cb_ctx);
@@ -2646,6 +2749,7 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 				return -1;
 			}
 		}
+		hostapd_owe_update_trans(hapd_iface);
 		return 0;
 	}
 

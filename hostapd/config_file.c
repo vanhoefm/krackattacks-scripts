@@ -3794,6 +3794,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_memcpy(bss->owe_transition_ssid, str, slen);
 		bss->owe_transition_ssid_len = slen;
 		os_free(str);
+	} else if (os_strcmp(buf, "owe_transition_ifname") == 0) {
+		os_strlcpy(bss->owe_transition_ifname, pos,
+			   sizeof(bss->owe_transition_ifname));
+
 #endif /* CONFIG_OWE */
 	} else {
 		wpa_printf(MSG_ERROR,

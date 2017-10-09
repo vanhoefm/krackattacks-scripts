@@ -545,6 +545,7 @@ hostapd_switch_channel_fallback(struct hostapd_iface *iface,
 				const struct hostapd_freq_params *freq_params);
 void hostapd_cleanup_cs_params(struct hostapd_data *hapd);
 void hostapd_periodic_iface(struct hostapd_iface *iface);
+int hostapd_owe_trans_get_info(struct hostapd_data *hapd);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

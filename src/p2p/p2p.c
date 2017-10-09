@@ -3889,6 +3889,19 @@ int p2p_listen_end(struct p2p_data *p2p, unsigned int freq)
 	if (p2p->in_listen)
 		return 0; /* Internal timeout will trigger the next step */
 
+	if (p2p->state == P2P_WAIT_PEER_CONNECT && p2p->go_neg_peer &&
+	    p2p->pending_listen_freq) {
+		/*
+		 * Better wait a bit if the driver is unable to start
+		 * offchannel operation for some reason to continue with
+		 * P2P_WAIT_PEER_(IDLE/CONNECT) state transitions.
+		 */
+		p2p_dbg(p2p,
+			"Listen operation did not seem to start - delay idle phase to avoid busy loop");
+		p2p_set_timeout(p2p, 0, 100000);
+		return 1;
+	}
+
 	if (p2p->state == P2P_CONNECT_LISTEN && p2p->go_neg_peer) {
 		if (p2p->go_neg_peer->connect_reqs >= 120) {
 			p2p_dbg(p2p, "Timeout on sending GO Negotiation Request without getting response");

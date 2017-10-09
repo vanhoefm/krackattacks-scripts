@@ -4851,6 +4851,10 @@ static EC_POINT * dpp_pkex_derive_Qi(const struct dpp_curve_params *curve,
 	if (!hash_bn ||
 	    EC_POINT_mul(group2, Qi, NULL, Pi_point, hash_bn, bnctx) != 1)
 		goto fail;
+	if (EC_POINT_is_at_infinity(group, Qi)) {
+		wpa_printf(MSG_INFO, "PDP: Qi is the point-at-infinity");
+		goto fail;
+	}
 out:
 	EC_KEY_free(Pi_ec);
 	EVP_PKEY_free(Pi);

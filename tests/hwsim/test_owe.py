@@ -52,6 +52,51 @@ def test_owe_groups(dev, apdev):
         dev[0].wait_disconnected()
         dev[0].dump_monitor()
 
+def test_owe_pmksa_caching(dev, apdev):
+    """Opportunistic Wireless Encryption and PMKSA caching"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    params = { "ssid": "owe",
+               "wpa": "2",
+               "wpa_key_mgmt": "OWE",
+               "rsn_pairwise": "CCMP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    id = dev[0].connect("owe", key_mgmt="OWE")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa = dev[0].get_pmksa(bssid)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    dev[0].select_network(id, 2412)
+    dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa2 = dev[0].get_pmksa(bssid)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    if "OK" not in hapd.request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+
+    dev[0].select_network(id, 2412)
+    dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    pmksa3 = dev[0].get_pmksa(bssid)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+
+    if pmksa is None or pmksa2 is None or pmksa3 is None:
+        raise Exception("PMKSA entry missing")
+    if pmksa['pmkid'] != pmksa2['pmkid']:
+        raise Exception("Unexpected PMKID change when using PMKSA caching")
+    if pmksa['pmkid'] == pmksa3['pmkid']:
+        raise Exception("PMKID did not change after PMKSA cache flush")
+
 def test_owe_and_psk(dev, apdev):
     """Opportunistic Wireless Encryption and WPA2-PSK enabled"""
     if "OWE" not in dev[0].get_capability("key_mgmt"):

@@ -2320,7 +2320,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	struct wpa_ssid *ssid = cwork->ssid;
 	struct wpa_supplicant *wpa_s = work->wpa_s;
 	u8 *wpa_ie;
-	size_t max_wpa_ie_len = 200;
+	size_t max_wpa_ie_len = 500;
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
@@ -2683,6 +2683,25 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		wpa_ie_len += len;
 	}
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_OWE
+	if (algs == WPA_AUTH_ALG_OPEN &&
+	    ssid->key_mgmt == WPA_KEY_MGMT_OWE) {
+		struct wpabuf *owe_ie;
+		u16 group = OWE_DH_GROUP;
+
+		if (ssid->owe_group)
+			group = ssid->owe_group;
+		owe_ie = owe_build_assoc_req(wpa_s->wpa, group);
+		if (owe_ie &&
+		    wpabuf_len(owe_ie) <= max_wpa_ie_len - wpa_ie_len) {
+			os_memcpy(wpa_ie + wpa_ie_len,
+				  wpabuf_head(owe_ie), wpabuf_len(owe_ie));
+			wpa_ie_len += wpabuf_len(owe_ie);
+			wpabuf_free(owe_ie);
+		}
+	}
+#endif /* CONFIG_OWE */
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;

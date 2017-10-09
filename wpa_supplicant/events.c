@@ -2336,9 +2336,10 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_OWE
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_OWE &&
-	    owe_process_assoc_resp(wpa_s->wpa,
-				   data->assoc_info.resp_ies,
-				   data->assoc_info.resp_ies_len) < 0) {
+	    (wpa_drv_get_bssid(wpa_s, bssid) < 0 ||
+	     owe_process_assoc_resp(wpa_s->wpa, bssid,
+				    data->assoc_info.resp_ies,
+				    data->assoc_info.resp_ies_len) < 0)) {
 		wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_UNSPECIFIED);
 		return -1;
 	}

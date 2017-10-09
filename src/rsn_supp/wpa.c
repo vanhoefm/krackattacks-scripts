@@ -4215,8 +4215,8 @@ fail:
 }
 
 
-int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
-			   size_t resp_ies_len)
+int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *bssid,
+			   const u8 *resp_ies, size_t resp_ies_len)
 {
 	struct ieee802_11_elems elems;
 	u16 group;
@@ -4227,11 +4227,27 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 	const u8 *addr[2];
 	size_t len[2];
 	size_t hash_len, prime_len;
+	struct wpa_ie_data data;
 
 	if (!resp_ies ||
 	    ieee802_11_parse_elems(resp_ies, resp_ies_len, &elems, 1) ==
-	    ParseFailed ||
-	    !elems.owe_dh) {
+	    ParseFailed) {
+		wpa_printf(MSG_INFO,
+			   "OWE: Could not parse Association Response frame elements");
+		return -1;
+	}
+
+	if (sm->cur_pmksa && elems.rsn_ie &&
+	    wpa_parse_wpa_ie_rsn(elems.rsn_ie - 2, 2 + elems.rsn_ie_len,
+				 &data) == 0 &&
+	    data.num_pmkid == 1 && data.pmkid &&
+	    os_memcmp(sm->cur_pmksa->pmkid, data.pmkid, PMKID_LEN) == 0) {
+		wpa_printf(MSG_DEBUG, "OWE: Use PMKSA caching");
+		wpa_sm_set_pmk_from_pmksa(sm);
+		return 0;
+	}
+
+	if (!elems.owe_dh) {
 		wpa_printf(MSG_INFO,
 			   "OWE: No Diffie-Hellman Parameter element found in Association Response frame");
 		return -1;
@@ -4347,7 +4363,9 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
 
 	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, sm->pmk_len);
 	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);
-	/* TODO: Add PMKSA cache entry */
+	pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len, pmkid, NULL, 0,
+			bssid, sm->own_addr, sm->network_ctx, sm->key_mgmt,
+			NULL);
 
 	return 0;
 }

@@ -458,8 +458,8 @@ struct wpabuf * fils_build_assoc_req(struct wpa_sm *sm, const u8 **kek,
 int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len);
 
 struct wpabuf * owe_build_assoc_req(struct wpa_sm *sm, u16 group);
-int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *resp_ies,
-			   size_t resp_ies_len);
+int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *bssid,
+			   const u8 *resp_ies, size_t resp_ies_len);
 
 void wpa_sm_set_reset_fils_completed(struct wpa_sm *sm, int set);
 void wpa_sm_set_fils_cache_id(struct wpa_sm *sm, const u8 *fils_cache_id);

@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 import hwsim_utils
 from utils import HwsimSkip
 
@@ -54,6 +55,15 @@ def test_owe_groups(dev, apdev):
 
 def test_owe_pmksa_caching(dev, apdev):
     """Opportunistic Wireless Encryption and PMKSA caching"""
+    run_owe_pmksa_caching(dev, apdev)
+
+def test_owe_pmksa_caching_connect_cmd(dev, apdev):
+    """Opportunistic Wireless Encryption and PMKSA caching using cfg80211 connect command"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    run_owe_pmksa_caching([ wpas ], apdev)
+
+def run_owe_pmksa_caching(dev, apdev):
     if "OWE" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("OWE not supported")
     params = { "ssid": "owe",
@@ -119,6 +129,15 @@ def test_owe_and_psk(dev, apdev):
 
 def test_owe_transition_mode(dev, apdev):
     """Opportunistic Wireless Encryption transition mode"""
+    run_owe_transition_mode(dev, apdev)
+
+def test_owe_transition_mode_connect_cmd(dev, apdev):
+    """Opportunistic Wireless Encryption transition mode using cfg80211 connect command"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    run_owe_transition_mode([ wpas ], apdev)
+
+def run_owe_transition_mode(dev, apdev):
     if "OWE" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("OWE not supported")
     params = { "ssid": "owe-random",

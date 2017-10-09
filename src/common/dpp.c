@@ -5303,7 +5303,7 @@ static int dpp_pkex_derive_z(const u8 *mac_init, const u8 *mac_resp,
 			     const u8 *Mx, size_t Mx_len,
 			     const u8 *Nx, size_t Nx_len,
 			     const char *code,
-			     const u8 *Zx, size_t Zx_len,
+			     const u8 *Kx, size_t Kx_len,
 			     u8 *z, unsigned int hash_len)
 {
 	u8 salt[DPP_MAX_HASH_LEN], prk[DPP_MAX_HASH_LEN];
@@ -5311,12 +5311,12 @@ static int dpp_pkex_derive_z(const u8 *mac_init, const u8 *mac_resp,
 	u8 *info, *pos;
 	size_t info_len;
 
-	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, K.x)
 	 */
 
-	/* HKDF-Extract(<>, IKM=Z.x) */
+	/* HKDF-Extract(<>, IKM=K.x) */
 	os_memset(salt, 0, hash_len);
-	if (dpp_hmac(hash_len, salt, hash_len, Zx, Zx_len, prk) < 0)
+	if (dpp_hmac(hash_len, salt, hash_len, Kx, Kx_len, prk) < 0)
 		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "DPP: PRK = HKDF-Extract(<>, IKM)",
 			prk, hash_len);
@@ -5374,8 +5374,8 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	BIGNUM *Nx = NULL, *Ny = NULL;
 	EVP_PKEY_CTX *ctx = NULL;
 	EC_KEY *Y_ec = NULL;
-	size_t Jx_len, Zx_len;
-	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Zx[DPP_MAX_SHARED_SECRET_LEN];
+	size_t Jx_len, Kx_len;
+	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Kx[DPP_MAX_SHARED_SECRET_LEN];
 	const u8 *addr[4];
 	size_t len[4];
 	u8 u[DPP_MAX_HASH_LEN];
@@ -5485,30 +5485,30 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: u", u, curve->hash_len);
 
-	/* Z = x * Y’ */
+	/* K = x * Y’ */
 	EVP_PKEY_CTX_free(ctx);
 	ctx = EVP_PKEY_CTX_new(pkex->x, NULL);
 	if (!ctx ||
 	    EVP_PKEY_derive_init(ctx) != 1 ||
 	    EVP_PKEY_derive_set_peer(ctx, pkex->y) != 1 ||
-	    EVP_PKEY_derive(ctx, NULL, &Zx_len) != 1 ||
-	    Zx_len > DPP_MAX_SHARED_SECRET_LEN ||
-	    EVP_PKEY_derive(ctx, Zx, &Zx_len) != 1) {
+	    EVP_PKEY_derive(ctx, NULL, &Kx_len) != 1 ||
+	    Kx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Kx, &Kx_len) != 1) {
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to derive ECDH shared secret: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
 		goto fail;
 	}
 
-	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (Z.x)",
-			Zx, Zx_len);
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (K.x)",
+			Kx, Kx_len);
 
-	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, K.x)
 	 */
 	if (dpp_pkex_derive_z(pkex->own_mac, pkex->peer_mac,
 			      pkex->Mx, curve->prime_len,
 			      attr_key /* N.x */, attr_key_len / 2, pkex->code,
-			      Zx, Zx_len, pkex->z, curve->hash_len) < 0)
+			      Kx, Kx_len, pkex->z, curve->hash_len) < 0)
 		goto fail;
 
 	/* {A, u, [bootstrapping info]}z */
@@ -5573,8 +5573,8 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 {
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
 	EVP_PKEY_CTX *ctx;
-	size_t Jx_len, Zx_len, Lx_len;
-	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Zx[DPP_MAX_SHARED_SECRET_LEN];
+	size_t Jx_len, Kx_len, Lx_len;
+	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Kx[DPP_MAX_SHARED_SECRET_LEN];
 	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
 	const u8 *wrapped_data, *b_key, *peer_u;
 	u16 wrapped_data_len, b_key_len, peer_u_len = 0;
@@ -5590,29 +5590,29 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	struct wpabuf *clear = NULL;
 	u8 *wrapped;
 
-	/* Z = y * X' */
+	/* K = y * X' */
 	ctx = EVP_PKEY_CTX_new(pkex->y, NULL);
 	if (!ctx ||
 	    EVP_PKEY_derive_init(ctx) != 1 ||
 	    EVP_PKEY_derive_set_peer(ctx, pkex->x) != 1 ||
-	    EVP_PKEY_derive(ctx, NULL, &Zx_len) != 1 ||
-	    Zx_len > DPP_MAX_SHARED_SECRET_LEN ||
-	    EVP_PKEY_derive(ctx, Zx, &Zx_len) != 1) {
+	    EVP_PKEY_derive(ctx, NULL, &Kx_len) != 1 ||
+	    Kx_len > DPP_MAX_SHARED_SECRET_LEN ||
+	    EVP_PKEY_derive(ctx, Kx, &Kx_len) != 1) {
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to derive ECDH shared secret: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
 		goto fail;
 	}
 
-	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (Z.x)",
-			Zx, Zx_len);
+	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (K.x)",
+			Kx, Kx_len);
 
-	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, Z.x)
+	/* z = HKDF(<>, MAC-Initiator | MAC-Responder | M.x | N.x | code, K.x)
 	 */
 	if (dpp_pkex_derive_z(pkex->peer_mac, pkex->own_mac,
 			      pkex->Mx, curve->prime_len,
 			      pkex->Nx, curve->prime_len, pkex->code,
-			      Zx, Zx_len, pkex->z, curve->hash_len) < 0)
+			      Kx, Kx_len, pkex->z, curve->hash_len) < 0)
 		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,

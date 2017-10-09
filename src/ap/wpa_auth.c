@@ -2068,6 +2068,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 	 */
 	if (sm->wpa == WPA_VERSION_WPA2 &&
 	    (wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt) ||
+	     (sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE && sm->pmksa) ||
 	     wpa_key_mgmt_sae(sm->wpa_key_mgmt)) &&
 	    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN) {
 		pmkid = buf;

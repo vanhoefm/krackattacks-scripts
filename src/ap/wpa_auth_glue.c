@@ -27,6 +27,7 @@
 #include "tkip_countermeasures.h"
 #include "ap_drv_ops.h"
 #include "ap_config.h"
+#include "pmksa_cache_auth.h"
 #include "wpa_auth.h"
 #include "wpa_auth_glue.h"
 
@@ -266,6 +267,16 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 		if (psk_len)
 			*psk_len = sta->owe_pmk_len;
 		return sta->owe_pmk;
+	}
+	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) && sta) {
+		struct rsn_pmksa_cache_entry *sa;
+
+		sa = wpa_auth_sta_get_pmksa(sta->wpa_sm);
+		if (sa && sa->akmp == WPA_KEY_MGMT_OWE) {
+			if (psk_len)
+				*psk_len = sa->pmk_len;
+			return sa->pmk;
+		}
 	}
 #endif /* CONFIG_OWE */
 

@@ -1051,7 +1051,8 @@ u8 * wpa_auth_write_assoc_resp_owe(struct wpa_state_machine *sm,
 {
 	int res;
 
-	res = wpa_write_rsn_ie(&sm->wpa_auth->conf, pos, max_len, NULL);
+	res = wpa_write_rsn_ie(&sm->wpa_auth->conf, pos, max_len,
+			       sm->pmksa ? sm->pmksa->pmkid : NULL);
 	if (res < 0)
 		return pos;
 	return pos + res;

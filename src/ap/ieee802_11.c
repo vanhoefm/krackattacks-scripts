@@ -2128,7 +2128,8 @@ static u16 check_ext_capab(struct hostapd_data *hapd, struct sta_info *sta,
 
 
 #ifdef CONFIG_OWE
-static u16 owe_process_assoc_req(struct sta_info *sta, const u8 *owe_dh,
+static u16 owe_process_assoc_req(struct hostapd_data *hapd,
+				 struct sta_info *sta, const u8 *owe_dh,
 				 u8 owe_dh_len)
 {
 	struct wpabuf *secret, *pub, *hkey;
@@ -2139,6 +2140,11 @@ static u16 owe_process_assoc_req(struct sta_info *sta, const u8 *owe_dh,
 	size_t len[2];
 	u16 group;
 	size_t hash_len, prime_len;
+
+	if (wpa_auth_sta_get_pmksa(sta->wpa_sm)) {
+		wpa_printf(MSG_DEBUG, "OWE: Using PMKSA caching");
+		return WLAN_STATUS_SUCCESS;
+	}
 
 	group = WPA_GET_LE16(owe_dh);
 	if (group == 19)
@@ -2254,7 +2260,8 @@ static u16 owe_process_assoc_req(struct sta_info *sta, const u8 *owe_dh,
 
 	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sta->owe_pmk, sta->owe_pmk_len);
 	wpa_hexdump(MSG_DEBUG, "OWE: PMKID", pmkid, PMKID_LEN);
-	/* TODO: Add PMKSA cache entry */
+	wpa_auth_pmksa_add2(hapd->wpa_auth, sta->addr, sta->owe_pmk,
+			    sta->owe_pmk_len, pmkid, 0, WPA_KEY_MGMT_OWE);
 
 	return WLAN_STATUS_SUCCESS;
 }
@@ -2477,7 +2484,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
 		    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_OWE &&
 		    elems.owe_dh) {
-			resp = owe_process_assoc_req(sta, elems.owe_dh,
+			resp = owe_process_assoc_req(hapd, sta, elems.owe_dh,
 						     elems.owe_dh_len);
 			if (resp != WLAN_STATUS_SUCCESS)
 				return resp;

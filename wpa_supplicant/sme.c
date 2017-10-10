@@ -1192,6 +1192,12 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE
+#ifdef CONFIG_TESTING_OPTIONS
+	if (get_ie_ext(wpa_s->sme.assoc_req_ie, wpa_s->sme.assoc_req_ie_len,
+		       WLAN_EID_EXT_OWE_DH_PARAM)) {
+		wpa_printf(MSG_INFO, "TESTING: Override OWE DH element");
+	} else
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (auth_type == WLAN_AUTH_OPEN &&
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *owe_ie;

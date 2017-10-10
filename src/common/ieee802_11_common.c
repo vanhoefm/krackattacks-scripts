@@ -1433,6 +1433,40 @@ const u8 * get_ie(const u8 *ies, size_t len, u8 eid)
 }
 
 
+/**
+ * get_ie_ext - Fetch a specified extended information element from IEs buffer
+ * @ies: Information elements buffer
+ * @len: Information elements buffer length
+ * @ext: Information element extension identifier (WLAN_EID_EXT_*)
+ * Returns: Pointer to the information element (id field) or %NULL if not found
+ *
+ * This function returns the first matching information element in the IEs
+ * buffer or %NULL in case the element is not found.
+ */
+const u8 * get_ie_ext(const u8 *ies, size_t len, u8 ext)
+{
+	const u8 *end;
+
+	if (!ies)
+		return NULL;
+
+	end = ies + len;
+
+	while (end - ies > 1) {
+		if (2 + ies[1] > end - ies)
+			break;
+
+		if (ies[0] == WLAN_EID_EXTENSION && ies[1] >= 1 &&
+		    ies[2] == ext)
+			return ies;
+
+		ies += 2 + ies[1];
+	}
+
+	return NULL;
+}
+
+
 size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len)
 {
 	/*

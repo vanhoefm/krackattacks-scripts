@@ -2128,6 +2128,27 @@ static u16 check_ext_capab(struct hostapd_data *hapd, struct sta_info *sta,
 
 
 #ifdef CONFIG_OWE
+
+static int owe_group_supported(struct hostapd_data *hapd, u16 group)
+{
+	int i;
+	int *groups = hapd->conf->owe_groups;
+
+	if (group != 19 && group != 20 && group != 21)
+		return 0;
+
+	if (!groups)
+		return 1;
+
+	for (i = 0; groups[i] > 0; i++) {
+		if (groups[i] == group)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 static u16 owe_process_assoc_req(struct hostapd_data *hapd,
 				 struct sta_info *sta, const u8 *owe_dh,
 				 u8 owe_dh_len)
@@ -2147,6 +2168,10 @@ static u16 owe_process_assoc_req(struct hostapd_data *hapd,
 	}
 
 	group = WPA_GET_LE16(owe_dh);
+	if (!owe_group_supported(hapd, group)) {
+		wpa_printf(MSG_DEBUG, "OWE: Unsupported DH group %u", group);
+		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+	}
 	if (group == 19)
 		prime_len = 32;
 	else if (group == 20)
@@ -2265,6 +2290,7 @@ static u16 owe_process_assoc_req(struct hostapd_data *hapd,
 
 	return WLAN_STATUS_SUCCESS;
 }
+
 #endif /* CONFIG_OWE */
 
 

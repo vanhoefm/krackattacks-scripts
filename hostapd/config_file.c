@@ -3795,7 +3795,13 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "owe_transition_ifname") == 0) {
 		os_strlcpy(bss->owe_transition_ifname, pos,
 			   sizeof(bss->owe_transition_ifname));
-
+	} else if (os_strcmp(buf, "owe_groups") == 0) {
+		if (hostapd_parse_intlist(&bss->owe_groups, pos)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid owe_groups value '%s'",
+				   line, pos);
+			return 1;
+		}
 #endif /* CONFIG_OWE */
 	} else {
 		wpa_printf(MSG_ERROR,

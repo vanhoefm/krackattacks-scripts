@@ -610,6 +610,9 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	wpabuf_free(conf->assocresp_elements);
 
 	os_free(conf->sae_groups);
+#ifdef CONFIG_OWE
+	os_free(conf->owe_groups);
+#endif /* CONFIG_OWE */
 
 	os_free(conf->wowlan_triggers);
 

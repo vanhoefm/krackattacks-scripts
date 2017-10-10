@@ -628,6 +628,20 @@ def run_sigma_dut_owe(dev, apdev):
         sigma_dut_cmd_check("sta_associate,interface,%s,ssid,owe,channel,1" % ifname)
         sigma_dut_wait_connected(ifname)
         sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+        sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+        sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,WPA3" % ifname)
+        sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+        sigma_dut_cmd_check("sta_set_security,interface,%s,ssid,owe,Type,OWE,ECGroupID,0" % ifname)
+        sigma_dut_cmd_check("sta_associate,interface,%s,ssid,owe,channel,1" % ifname)
+        ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+        sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+        if ev is None:
+            raise Exception("Association not rejected")
+        if "status_code=77" not in ev:
+            raise Exception("Unexpected rejection reason: " + ev)
 
         sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
     finally:

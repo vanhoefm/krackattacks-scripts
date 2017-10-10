@@ -226,3 +226,34 @@ def run_owe_transition_mode_multi_bss(dev, apdev):
     val = dev[0].get_status_field("key_mgmt")
     if val != "OWE":
         raise Exception("Unexpected key_mgmt: " + val)
+
+def test_owe_unsupported_group(dev, apdev):
+    """Opportunistic Wireless Encryption and unsupported group"""
+    try:
+        run_owe_unsupported_group(dev, apdev)
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_owe_unsupported_group(dev, apdev):
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    # Override OWE Dh Parameters element with a payload that uses invalid group
+    # 0 (and actual group 19 data) to make the AP reject this with the specific
+    # status code 77.
+    dev[0].request("VENDOR_ELEM_ADD 13 ff23200000783590fb7440e03d5b3b33911f86affdcc6b4411b707846ac4ff08ddc8831ccd")
+
+    params = { "ssid": "owe",
+               "wpa": "2",
+               "wpa_key_mgmt": "OWE",
+               "rsn_pairwise": "CCMP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("owe", key_mgmt="OWE", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    dev[0].request("DISCONNECT")
+    if ev is None:
+        raise Exception("Association not rejected")
+    if "status_code=77" not in ev:
+        raise Exception("Unexpected rejection reason: " + ev)

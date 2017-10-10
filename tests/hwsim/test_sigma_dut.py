@@ -659,8 +659,43 @@ def test_sigma_dut_ap_owe(dev, apdev):
             sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,OWE")
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
-            dev[0].request("SET sae_groups ")
             dev[0].connect("owe", key_mgmt="OWE", scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_owe_ecgroupid(dev, apdev):
+    """sigma_dut controlled AP with OWE and ECGroupID"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface)
+        try:
+            sigma_dut_cmd_check("ap_reset_default,NAME,AP,Program,WPA3")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,owe,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,OWE,ECGroupID,20 21,PMF,Required")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           owe_group="20", scan_freq="2412")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           owe_group="21", scan_freq="2412")
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           owe_group="19", scan_freq="2412", wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+            dev[0].request("DISCONNECT")
+            if ev is None:
+                raise Exception("Association not rejected")
+            if "status_code=77" not in ev:
+                raise Exception("Unexpected rejection reason: " + ev)
+            dev[0].dump_monitor()
 
             sigma_dut_cmd_check("ap_reset_default")
         finally:

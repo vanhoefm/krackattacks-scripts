@@ -257,3 +257,31 @@ def run_owe_unsupported_group(dev, apdev):
         raise Exception("Association not rejected")
     if "status_code=77" not in ev:
         raise Exception("Unexpected rejection reason: " + ev)
+
+def test_owe_limited_group_set(dev, apdev):
+    """Opportunistic Wireless Encryption and limited group set"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    params = { "ssid": "owe",
+               "wpa": "2",
+               "wpa_key_mgmt": "OWE",
+               "rsn_pairwise": "CCMP",
+               "owe_groups": "20 21" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("owe", key_mgmt="OWE", owe_group="19", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    dev[0].request("DISCONNECT")
+    if ev is None:
+        raise Exception("Association not rejected")
+    if "status_code=77" not in ev:
+        raise Exception("Unexpected rejection reason: " + ev)
+    dev[0].dump_monitor()
+
+    for group in [ 20, 21 ]:
+        dev[0].connect("owe", key_mgmt="OWE", owe_group=str(group))
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()

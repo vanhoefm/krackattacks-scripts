@@ -1744,15 +1744,9 @@ static int hostapd_owe_iface_iter2(struct hostapd_iface *iface, void *ctx)
 		struct hostapd_data *bss = iface->bss[i];
 		int res;
 
-		wpa_printf(MSG_DEBUG, "JKM:%s:iface=%s trans_ifname=%s",
-			   __func__, bss->conf->iface,
-			   bss->conf->owe_transition_ifname);
 		if (!bss->conf->owe_transition_ifname[0])
 			continue;
 		res = hostapd_owe_trans_get_info(bss);
-		wpa_printf(MSG_DEBUG, "JKM:%s:iface=%s trans_ifname=%s res=%d",
-			   __func__, bss->conf->iface,
-			   bss->conf->owe_transition_ifname, res);
 		if (res == 0)
 			continue;
 		wpa_printf(MSG_DEBUG,

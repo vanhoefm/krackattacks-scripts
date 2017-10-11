@@ -361,16 +361,19 @@ static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 					     struct sta_info *sta, int update)
 {
 	struct wpabuf *buf;
+	const char *password;
 
-	if (hapd->conf->ssid.wpa_passphrase == NULL) {
+	password = hapd->conf->sae_password;
+	if (!password)
+		password = hapd->conf->ssid.wpa_passphrase;
+	if (!password) {
 		wpa_printf(MSG_DEBUG, "SAE: No password available");
 		return NULL;
 	}
 
 	if (update &&
 	    sae_prepare_commit(hapd->own_addr, sta->addr,
-			       (u8 *) hapd->conf->ssid.wpa_passphrase,
-			       os_strlen(hapd->conf->ssid.wpa_passphrase),
+			       (u8 *) password, os_strlen(password),
 			       sta->sae) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
 		return NULL;

@@ -634,6 +634,8 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	wpabuf_free(conf->dpp_csign);
 #endif /* CONFIG_DPP */
 
+	os_free(conf->sae_password);
+
 	os_free(conf);
 }
 

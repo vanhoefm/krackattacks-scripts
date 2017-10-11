@@ -1033,3 +1033,47 @@ def test_sae_invalid_anti_clogging_token_req(dev, apdev):
     dev[0].dump_monitor()
 
     dev[0].request("DISCONNECT")
+
+def test_sae_password(dev, apdev):
+    """SAE and sae_password in hostapd configuration"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE WPA-PSK'
+    params['sae_password'] = "sae-password"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", psk="sae-password", key_mgmt="SAE",
+                   scan_freq="2412")
+    dev[1].connect("test-sae", psk="12345678", scan_freq="2412")
+    dev[2].request("SET sae_groups ")
+    dev[2].connect("test-sae", sae_password="sae-password", key_mgmt="SAE",
+                   scan_freq="2412")
+
+def test_sae_password_short(dev, apdev):
+    """SAE and short password"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_password'] = "secret"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", sae_password="secret", key_mgmt="SAE",
+                   scan_freq="2412")
+
+def test_sae_password_long(dev, apdev):
+    """SAE and long password"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_password'] = 100*"A"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", sae_password=100*"A", key_mgmt="SAE",
+                   scan_freq="2412")

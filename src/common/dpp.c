@@ -1203,6 +1203,7 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 
 	base64 = base64_encode(der, der_len, &len);
 	OPENSSL_free(der);
+	der = NULL;
 	if (!base64)
 		goto fail;
 	pos = (char *) base64;
@@ -2962,6 +2963,8 @@ static int dpp_build_jwk(struct wpabuf *buf, const char *name, EVP_PKEY *key,
 	x = (char *) base64_url_encode(pos, curve->prime_len, NULL, 0);
 	pos += curve->prime_len;
 	y = (char *) base64_url_encode(pos, curve->prime_len, NULL, 0);
+	if (!x || !y)
+		goto fail;
 
 	wpabuf_put_str(buf, "\"");
 	wpabuf_put_str(buf, name);
@@ -2977,13 +2980,11 @@ static int dpp_build_jwk(struct wpabuf *buf, const char *name, EVP_PKEY *key,
 	}
 	wpabuf_put_str(buf, "\"}");
 	ret = 0;
-out:
+fail:
 	wpabuf_free(pub);
 	os_free(x);
 	os_free(y);
 	return ret;
-fail:
-	goto out;
 }
 
 

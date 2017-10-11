@@ -317,7 +317,12 @@ static int mesh_rsn_build_sae_commit(struct wpa_supplicant *wpa_s,
 				     struct wpa_ssid *ssid,
 				     struct sta_info *sta)
 {
-	if (ssid->passphrase == NULL) {
+	const char *password;
+
+	password = ssid->sae_password;
+	if (!password)
+		password = ssid->passphrase;
+	if (!password) {
 		wpa_msg(wpa_s, MSG_DEBUG, "SAE: No password available");
 		return -1;
 	}
@@ -328,8 +333,8 @@ static int mesh_rsn_build_sae_commit(struct wpa_supplicant *wpa_s,
 	}
 
 	return sae_prepare_commit(wpa_s->own_addr, sta->addr,
-				  (u8 *) ssid->passphrase,
-				  os_strlen(ssid->passphrase), sta->sae);
+				  (u8 *) password, os_strlen(password),
+				  sta->sae);
 }
 
 

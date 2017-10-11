@@ -870,6 +870,7 @@ static int wpa_config_write_network(HKEY hk, struct wpa_ssid *ssid, int id)
 	INT(scan_ssid);
 	write_bssid(netw, ssid);
 	write_psk(netw, ssid);
+	STR(sae_password);
 	write_proto(netw, ssid);
 	write_key_mgmt(netw, ssid);
 	write_pairwise(netw, ssid);

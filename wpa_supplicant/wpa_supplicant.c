@@ -1446,6 +1446,10 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				       NULL);
 			psk_set = 1;
 		}
+
+		if (wpa_key_mgmt_sae(ssid->key_mgmt) && ssid->sae_password)
+			psk_set = 1;
+
 #ifndef CONFIG_NO_PBKDF2
 		if (bss && ssid->bssid_set && ssid->ssid_len == 0 &&
 		    ssid->passphrase) {
@@ -6414,6 +6418,7 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 
 	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt) && !ssid->psk_set &&
 	    (!ssid->passphrase || ssid->ssid_len != 0) && !ssid->ext_psk &&
+	    !(wpa_key_mgmt_sae(ssid->key_mgmt) && ssid->sae_password) &&
 	    !ssid->mem_only_psk)
 		return 1;
 

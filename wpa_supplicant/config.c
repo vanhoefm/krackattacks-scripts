@@ -2115,6 +2115,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(bssid_whitelist) },
 	{ FUNC_KEY(psk) },
 	{ INT(mem_only_psk) },
+	{ STR_KEY(sae_password) },
 	{ FUNC(proto) },
 	{ FUNC(key_mgmt) },
 	{ INT(bg_scan_period) },
@@ -2450,6 +2451,7 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	os_free(ssid->ssid);
 	str_clear_free(ssid->passphrase);
 	os_free(ssid->ext_psk);
+	str_clear_free(ssid->sae_password);
 #ifdef IEEE8021X_EAPOL
 	eap_peer_config_free(&ssid->eap);
 #endif /* IEEE8021X_EAPOL */

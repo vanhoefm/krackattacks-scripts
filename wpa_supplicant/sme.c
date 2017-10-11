@@ -87,6 +87,7 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 {
 	struct wpabuf *buf;
 	size_t len;
+	const char *password;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (wpa_s->sae_commit_override) {
@@ -101,7 +102,10 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	if (ssid->passphrase == NULL) {
+	password = ssid->sae_password;
+	if (!password)
+		password = ssid->passphrase;
+	if (!password) {
 		wpa_printf(MSG_DEBUG, "SAE: No password available");
 		return NULL;
 	}
@@ -112,8 +116,7 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 	}
 
 	if (sae_prepare_commit(wpa_s->own_addr, bssid,
-			       (u8 *) ssid->passphrase,
-			       os_strlen(ssid->passphrase),
+			       (u8 *) password, os_strlen(password),
 			       &wpa_s->sme.sae) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
 		return NULL;

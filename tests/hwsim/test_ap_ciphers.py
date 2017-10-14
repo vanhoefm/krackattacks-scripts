@@ -558,3 +558,32 @@ def run_ap_wpa2_delayed_group_m1_retransmission(dev, apdev):
         a = int(after[i], 16)
         if a < b:
             raise Exception("RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))
+
+def test_ap_wpa2_delayed_m1_m3_zero_tk(dev, apdev):
+    """Delayed M1+M3 retransmission and zero TK"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_M1 " + addr + " change-anonce"):
+        raise Exception("RESEND_M1 failed")
+    if "OK" not in hapd.request("RESEND_M1 " + addr):
+        raise Exception("RESEND_M1 failed")
+    if "OK" not in hapd.request("RESEND_M3 " + addr):
+        raise Exception("RESEND_M3 failed")
+
+    if "OK" not in hapd.request("SET_KEY 3 %s %d %d %s %s" % (addr, 0, 1, 6*"00", 16*"00")):
+        raise Exception("SET_KEY failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1, broadcast=False,
+                                  success_expected=False)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()

@@ -146,6 +146,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	u8 *decrypted = NULL;
 	size_t dlen;
 	u8 pn[6];
+	int replay = 0;
 
 	bss = bss_get(wt, hdr->addr2);
 	if (bss == NULL)
@@ -211,6 +212,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 			 " Retry" : "");
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
+		replay = 1;
 	}
 
 skip_replay_det:
@@ -233,7 +235,8 @@ skip_replay_det:
 	if (decrypted) {
 		rx_data_process(wt, bss->bssid, NULL, dst, src, decrypted,
 				dlen, 1, NULL);
-		os_memcpy(bss->rsc[keyid], pn, 6);
+		if (!replay)
+			os_memcpy(bss->rsc[keyid], pn, 6);
 		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,
 				     decrypted, dlen);
 	} else
@@ -259,6 +262,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	const u8 *tk = NULL;
 	int ptk_iter_done = 0;
 	int try_ptk_iter = 0;
+	int replay = 0;
 
 	if (hdr->addr1[0] & 0x01) {
 		rx_data_bss_prot_group(wt, hdr, hdrlen, qos, dst, src,
@@ -413,6 +417,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			 " Retry" : "");
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
+		replay = 1;
 	}
 
 skip_replay_det:
@@ -457,7 +462,8 @@ skip_replay_det:
 		const u8 *peer_addr = NULL;
 		if (!(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)))
 			peer_addr = hdr->addr1;
-		os_memcpy(rsc, pn, 6);
+		if (!replay)
+			os_memcpy(rsc, pn, 6);
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
 				dlen, 1, peer_addr);
 		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,

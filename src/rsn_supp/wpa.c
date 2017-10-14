@@ -3281,11 +3281,19 @@ void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm,
 
 
 #ifdef CONFIG_TESTING_OPTIONS
+
 void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf)
 {
 	wpabuf_free(sm->test_assoc_ie);
 	sm->test_assoc_ie = buf;
 }
+
+
+const u8 * wpa_sm_get_anonce(struct wpa_sm *sm)
+{
+	return sm->anonce;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 

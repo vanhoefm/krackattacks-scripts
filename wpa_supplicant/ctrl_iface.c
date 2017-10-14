@@ -749,6 +749,12 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_TESTING_GET_GTK */
 	} else if (os_strcmp(cmd, "tls_library") == 0) {
 		res = tls_get_library_version(buf, buflen);
+#ifdef CONFIG_TESTING_OPTIONS
+	} else if (os_strcmp(cmd, "anonce") == 0) {
+		return wpa_snprintf_hex(buf, buflen,
+					wpa_sm_get_anonce(wpa_s->wpa),
+					WPA_NONCE_LEN);
+#endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		res = wpa_config_get_value(cmd, wpa_s->conf, buf, buflen);
 	}

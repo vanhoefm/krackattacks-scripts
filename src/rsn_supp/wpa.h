@@ -428,6 +428,7 @@ extern unsigned int tdls_testing;
 
 int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf);
 void wpa_sm_set_test_assoc_ie(struct wpa_sm *sm, struct wpabuf *buf);
+const u8 * wpa_sm_get_anonce(struct wpa_sm *sm);
 
 struct wpabuf * fils_build_auth(struct wpa_sm *sm, int dh_group, const u8 *md);
 int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,

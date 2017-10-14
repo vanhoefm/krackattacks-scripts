@@ -2033,6 +2033,26 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 				   sta->last_tk, sta->last_tk_len);
 }
 
+
+static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
+					const char *cmd)
+{
+	struct sta_info *sta;
+	u8 addr[ETH_ALEN];
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !sta->wpa_sm)
+		return -1;
+
+	wpa_printf(MSG_INFO,
+		   "TESTING: Send group M1 for the same GTK and zero RSC to "
+		   MACSTR, MAC2STR(sta->addr));
+	return wpa_auth_resend_group_m1(sta->wpa_sm);
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -2751,6 +2771,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_get_fail(hapd, reply, reply_size);
 	} else if (os_strncmp(buf, "RESET_PN ", 9) == 0) {
 		if (hostapd_ctrl_reset_pn(hapd, buf + 9) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "RESEND_GROUP_M1 ", 16) == 0) {
+		if (hostapd_ctrl_resend_group_m1(hapd, buf + 16) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {

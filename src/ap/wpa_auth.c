@@ -4501,3 +4501,58 @@ void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,
 }
 
 #endif /* CONFIG_FILS */
+
+
+#if CONFIG_TESTING_OPTIONS
+int wpa_auth_resend_group_m1(struct wpa_state_machine *sm)
+{
+	u8 rsc[WPA_KEY_RSC_LEN];
+	struct wpa_group *gsm = sm->group;
+	const u8 *kde;
+	u8 *kde_buf = NULL, *pos, *opos, hdr[2];
+	size_t kde_len;
+	u8 *gtk;
+
+	/* Send EAPOL(1, 1, 1, !Pair, G, RSC, GNonce, MIC(PTK), GTK[GN]) */
+	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
+	/* Use 0 RSC */
+	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+			"sending 1/2 msg of Group Key Handshake (TESTING)");
+
+	gtk = gsm->GTK[gsm->GN - 1];
+	if (sm->wpa == WPA_VERSION_WPA2) {
+		kde_len = 2 + RSN_SELECTOR_LEN + 2 + gsm->GTK_len +
+			ieee80211w_kde_len(sm);
+		kde_buf = os_malloc(kde_len);
+		if (kde_buf == NULL)
+			return -1;
+
+		kde = pos = kde_buf;
+		hdr[0] = gsm->GN & 0x03;
+		hdr[1] = 0;
+		pos = wpa_add_kde(pos, RSN_KEY_DATA_GROUPKEY, hdr, 2,
+				  gtk, gsm->GTK_len);
+		opos = pos;
+		pos = ieee80211w_kde_add(sm, pos);
+		if (pos - opos >= WPA_IGTK_KDE_PREFIX_LEN) {
+			opos += 2; /* skip keyid */
+			os_memset(opos, 0, 6); /* clear PN */
+		}
+		kde_len = pos - kde;
+	} else {
+		kde = gtk;
+		kde_len = gsm->GTK_len;
+	}
+
+	wpa_send_eapol(sm->wpa_auth, sm,
+		       WPA_KEY_INFO_SECURE |
+		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
+			WPA_KEY_INFO_MIC : 0) |
+		       WPA_KEY_INFO_ACK |
+		       (!sm->Pair ? WPA_KEY_INFO_INSTALL : 0),
+		       rsc, NULL, kde, kde_len, gsm->GN, 1);
+
+	os_free(kde_buf);
+	return 0;
+}
+#endif /* CONFIG_TESTING_OPTIONS */

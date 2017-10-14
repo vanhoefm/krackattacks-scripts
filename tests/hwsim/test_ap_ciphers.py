@@ -9,10 +9,11 @@ import time
 import logging
 logger = logging.getLogger()
 import os
+import subprocess
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip, skip_with_fips
+from utils import HwsimSkip, skip_with_fips, require_under_vm
 from wlantest import Wlantest
 
 def check_cipher(dev, ap, cipher):
@@ -343,3 +344,70 @@ def test_ap_cipher_bip_req_mismatch(dev, apdev):
     dev[0].set_network(id, "group_mgmt", "AES-128-CMAC")
     dev[0].select_network(id)
     dev[0].wait_connected()
+
+def get_rx_spec(phy, gtk=False):
+    keys = "/sys/kernel/debug/ieee80211/%s/keys" % (phy)
+    for key in os.listdir(keys):
+        keydir = keys + "/" + key
+        files = os.listdir(keydir)
+        if not gtk and "station" not in files:
+            continue
+        if gtk and "station" in files:
+            continue
+        with open(keydir + "/rx_spec") as f:
+            return f.read()
+    return None
+
+def test_ap_wpa2_delayed_group_m1_retransmission(dev, apdev):
+    """Delayed group M1 retransmission"""
+    require_under_vm()
+    try:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        run_ap_wpa2_delayed_group_m1_retransmission(dev, apdev)
+    finally:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+
+def run_ap_wpa2_delayed_group_m1_retransmission(dev, apdev):
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    phy = dev[0].get_driver_status_field("phyname")
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    for i in range(5):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+    time.sleep(0.1)
+    before = get_rx_spec(phy, gtk=True).splitlines()
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_GROUP_M1 " + addr):
+        raise Exception("RESEND_GROUP_M1 failed")
+    time.sleep(0.1)
+    after = get_rx_spec(phy, gtk=True).splitlines()
+
+    if "OK" not in hapd.request("RESET_PN " + addr):
+        raise Exception("RESET_PN failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    for i in range(len(before)):
+        b = int(before[i], 16)
+        a = int(after[i], 16)
+        if a < b:
+            raise Exception("RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))

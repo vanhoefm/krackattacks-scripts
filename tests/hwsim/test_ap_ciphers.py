@@ -358,6 +358,153 @@ def get_rx_spec(phy, gtk=False):
             return f.read()
     return None
 
+def test_ap_wpa2_delayed_m3_retransmission(dev, apdev):
+    """Delayed M3 retransmission"""
+    require_under_vm()
+    try:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        run_ap_wpa2_delayed_m3_retransmission(dev, apdev)
+    finally:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+
+def run_ap_wpa2_delayed_m3_retransmission(dev, apdev):
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    phy = dev[0].get_driver_status_field("phyname")
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    for i in range(5):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+    time.sleep(0.1)
+    before_tk = get_rx_spec(phy, gtk=False).splitlines()
+    before_gtk = get_rx_spec(phy, gtk=True).splitlines()
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_M3 " + addr):
+        raise Exception("RESEND_M3 failed")
+    time.sleep(0.1)
+    after_tk = get_rx_spec(phy, gtk=False).splitlines()
+    after_gtk = get_rx_spec(phy, gtk=True).splitlines()
+
+    if "OK" not in hapd.request("RESET_PN " + addr):
+        raise Exception("RESET_PN failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    for i in range(len(before_tk)):
+        b = int(before_tk[i], 16)
+        a = int(after_tk[i], 16)
+        if a < b:
+            raise Exception("TK RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))
+
+    for i in range(len(before_gtk)):
+        b = int(before_gtk[i], 16)
+        a = int(after_gtk[i], 16)
+        if a < b:
+            raise Exception("GTK RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))
+
+def test_ap_wpa2_delayed_m1_m3_retransmission(dev, apdev):
+    """Delayed M1+M3 retransmission"""
+    require_under_vm()
+    try:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        run_ap_wpa2_delayed_m1_m3_retransmission(dev, apdev)
+    finally:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+
+def test_ap_wpa2_delayed_m1_m3_retransmission2(dev, apdev):
+    """Delayed M1+M3 retransmission (change M1 ANonce)"""
+    require_under_vm()
+    try:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=1'],
+                        stdout=open('/dev/null', 'w'))
+        run_ap_wpa2_delayed_m1_m3_retransmission(dev, apdev, True)
+    finally:
+        subprocess.call(['sysctl', '-w', 'net.ipv6.conf.all.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+        subprocess.call(['sysctl', '-w',
+                         'net.ipv6.conf.default.disable_ipv6=0'],
+                        stdout=open('/dev/null', 'w'))
+
+def run_ap_wpa2_delayed_m1_m3_retransmission(dev, apdev,
+                                             change_m1_anonce=False):
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    phy = dev[0].get_driver_status_field("phyname")
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    for i in range(5):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+    time.sleep(0.1)
+    before_tk = get_rx_spec(phy, gtk=False).splitlines()
+    before_gtk = get_rx_spec(phy, gtk=True).splitlines()
+    addr = dev[0].own_addr()
+    if change_m1_anonce:
+        if "OK" not in hapd.request("RESEND_M1 " + addr + " change-anonce"):
+            raise Exception("RESEND_M1 failed")
+    if "OK" not in hapd.request("RESEND_M1 " + addr):
+        raise Exception("RESEND_M1 failed")
+    if "OK" not in hapd.request("RESEND_M3 " + addr):
+        raise Exception("RESEND_M3 failed")
+    time.sleep(0.1)
+    after_tk = get_rx_spec(phy, gtk=False).splitlines()
+    after_gtk = get_rx_spec(phy, gtk=True).splitlines()
+
+    if "OK" not in hapd.request("RESET_PN " + addr):
+        raise Exception("RESET_PN failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    for i in range(len(before_tk)):
+        b = int(before_tk[i], 16)
+        a = int(after_tk[i], 16)
+        if a < b:
+            raise Exception("TK RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))
+
+    for i in range(len(before_gtk)):
+        b = int(before_gtk[i], 16)
+        a = int(after_gtk[i], 16)
+        if a < b:
+            raise Exception("GTK RX counter decreased: idx=%d before=%d after=%d" % (i, b, a))
+
 def test_ap_wpa2_delayed_group_m1_retransmission(dev, apdev):
     """Delayed group M1 retransmission"""
     require_under_vm()

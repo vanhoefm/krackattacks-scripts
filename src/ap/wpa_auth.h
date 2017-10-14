@@ -427,6 +427,8 @@ u8 * wpa_auth_write_assoc_resp_owe(struct wpa_state_machine *sm,
 				   u8 *pos, size_t max_len,
 				   const u8 *req_ies, size_t req_ies_len);
 
+int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce);
+int wpa_auth_resend_m3(struct wpa_state_machine *sm);
 int wpa_auth_resend_group_m1(struct wpa_state_machine *sm);
 
 #endif /* WPA_AUTH_H */

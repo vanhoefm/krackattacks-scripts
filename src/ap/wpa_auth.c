@@ -4504,6 +4504,187 @@ void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,
 
 
 #if CONFIG_TESTING_OPTIONS
+
+int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce)
+{
+	const u8 *anonce = sm->ANonce;
+	u8 anonce_buf[WPA_NONCE_LEN];
+
+	if (change_anonce) {
+		if (random_get_bytes(anonce_buf, WPA_NONCE_LEN))
+			return -1;
+		anonce = anonce_buf;
+	}
+
+	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+			"sending 1/4 msg of 4-Way Handshake (TESTING)");
+	wpa_send_eapol(sm->wpa_auth, sm,
+		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
+		       anonce, NULL, 0, 0, 0);
+	return 0;
+}
+
+
+int wpa_auth_resend_m3(struct wpa_state_machine *sm)
+{
+	u8 rsc[WPA_KEY_RSC_LEN], *_rsc, *gtk, *kde, *pos, *opos;
+	size_t gtk_len, kde_len;
+	struct wpa_group *gsm = sm->group;
+	u8 *wpa_ie;
+	int wpa_ie_len, secure, keyidx, encr = 0;
+
+	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, [MDIE],
+	   GTK[GN], IGTK, [FTIE], [TIE * 2])
+	 */
+
+	/* Use 0 RSC */
+	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
+	/* If FT is used, wpa_auth->wpa_ie includes both RSNIE and MDIE */
+	wpa_ie = sm->wpa_auth->wpa_ie;
+	wpa_ie_len = sm->wpa_auth->wpa_ie_len;
+	if (sm->wpa == WPA_VERSION_WPA &&
+	    (sm->wpa_auth->conf.wpa & WPA_PROTO_RSN) &&
+	    wpa_ie_len > wpa_ie[1] + 2 && wpa_ie[0] == WLAN_EID_RSN) {
+		/* WPA-only STA, remove RSN IE and possible MDIE */
+		wpa_ie = wpa_ie + wpa_ie[1] + 2;
+		if (wpa_ie[0] == WLAN_EID_MOBILITY_DOMAIN)
+			wpa_ie = wpa_ie + wpa_ie[1] + 2;
+		wpa_ie_len = wpa_ie[1] + 2;
+	}
+	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+			"sending 3/4 msg of 4-Way Handshake (TESTING)");
+	if (sm->wpa == WPA_VERSION_WPA2) {
+		/* WPA2 send GTK in the 4-way handshake */
+		secure = 1;
+		gtk = gsm->GTK[gsm->GN - 1];
+		gtk_len = gsm->GTK_len;
+		keyidx = gsm->GN;
+		_rsc = rsc;
+		encr = 1;
+	} else {
+		/* WPA does not include GTK in msg 3/4 */
+		secure = 0;
+		gtk = NULL;
+		gtk_len = 0;
+		keyidx = 0;
+		_rsc = NULL;
+		if (sm->rx_eapol_key_secure) {
+			/*
+			 * It looks like Windows 7 supplicant tries to use
+			 * Secure bit in msg 2/4 after having reported Michael
+			 * MIC failure and it then rejects the 4-way handshake
+			 * if msg 3/4 does not set Secure bit. Work around this
+			 * by setting the Secure bit here even in the case of
+			 * WPA if the supplicant used it first.
+			 */
+			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+					"STA used Secure bit in WPA msg 2/4 - "
+					"set Secure for 3/4 as workaround");
+			secure = 1;
+		}
+	}
+
+	kde_len = wpa_ie_len + ieee80211w_kde_len(sm);
+	if (gtk)
+		kde_len += 2 + RSN_SELECTOR_LEN + 2 + gtk_len;
+#ifdef CONFIG_IEEE80211R_AP
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		kde_len += 2 + PMKID_LEN; /* PMKR1Name into RSN IE */
+		kde_len += 300; /* FTIE + 2 * TIE */
+	}
+#endif /* CONFIG_IEEE80211R_AP */
+	kde = os_malloc(kde_len);
+	if (kde == NULL)
+		return -1;
+
+	pos = kde;
+	os_memcpy(pos, wpa_ie, wpa_ie_len);
+	pos += wpa_ie_len;
+#ifdef CONFIG_IEEE80211R_AP
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		int res;
+		size_t elen;
+
+		elen = pos - kde;
+		res = wpa_insert_pmkid(kde, &elen, sm->pmk_r1_name);
+		if (res < 0) {
+			wpa_printf(MSG_ERROR, "FT: Failed to insert "
+				   "PMKR1Name into RSN IE in EAPOL-Key data");
+			os_free(kde);
+			return -1;
+		}
+		pos -= wpa_ie_len;
+		pos += elen;
+	}
+#endif /* CONFIG_IEEE80211R_AP */
+	if (gtk) {
+		u8 hdr[2];
+		hdr[0] = keyidx & 0x03;
+		hdr[1] = 0;
+		pos = wpa_add_kde(pos, RSN_KEY_DATA_GROUPKEY, hdr, 2,
+				  gtk, gtk_len);
+	}
+	opos = pos;
+	pos = ieee80211w_kde_add(sm, pos);
+	if (pos - opos >= WPA_IGTK_KDE_PREFIX_LEN) {
+		opos += 2; /* skip keyid */
+		os_memset(opos, 0, 6); /* clear PN */
+	}
+
+#ifdef CONFIG_IEEE80211R_AP
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		int res;
+		struct wpa_auth_config *conf;
+
+		conf = &sm->wpa_auth->conf;
+		if (sm->assoc_resp_ftie &&
+		    kde + kde_len - pos >= 2 + sm->assoc_resp_ftie[1]) {
+			os_memcpy(pos, sm->assoc_resp_ftie,
+				  2 + sm->assoc_resp_ftie[1]);
+			res = 2 + sm->assoc_resp_ftie[1];
+		} else {
+			res = wpa_write_ftie(conf, conf->r0_key_holder,
+					     conf->r0_key_holder_len,
+					     NULL, NULL, pos,
+					     kde + kde_len - pos,
+					     NULL, 0);
+		}
+		if (res < 0) {
+			wpa_printf(MSG_ERROR, "FT: Failed to insert FTIE "
+				   "into EAPOL-Key Key Data");
+			os_free(kde);
+			return -1;
+		}
+		pos += res;
+
+		/* TIE[ReassociationDeadline] (TU) */
+		*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
+		*pos++ = 5;
+		*pos++ = WLAN_TIMEOUT_REASSOC_DEADLINE;
+		WPA_PUT_LE32(pos, conf->reassociation_deadline);
+		pos += 4;
+
+		/* TIE[KeyLifetime] (seconds) */
+		*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
+		*pos++ = 5;
+		*pos++ = WLAN_TIMEOUT_KEY_LIFETIME;
+		WPA_PUT_LE32(pos, conf->r0_key_lifetime * 60);
+		pos += 4;
+	}
+#endif /* CONFIG_IEEE80211R_AP */
+
+	wpa_send_eapol(sm->wpa_auth, sm,
+		       (secure ? WPA_KEY_INFO_SECURE : 0) |
+		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
+			WPA_KEY_INFO_MIC : 0) |
+		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_INSTALL |
+		       WPA_KEY_INFO_KEY_TYPE,
+		       _rsc, sm->ANonce, kde, pos - kde, keyidx, encr);
+	os_free(kde);
+	return 0;
+}
+
+
 int wpa_auth_resend_group_m1(struct wpa_state_machine *sm)
 {
 	u8 rsc[WPA_KEY_RSC_LEN];
@@ -4555,4 +4736,5 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm)
 	os_free(kde_buf);
 	return 0;
 }
+
 #endif /* CONFIG_TESTING_OPTIONS */

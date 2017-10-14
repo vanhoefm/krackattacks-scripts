@@ -118,6 +118,25 @@ def test_ap_wpa2_ptk_rekey(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ap_wpa2_ptk_rekey_anonce(dev, apdev):
+    """WPA2-PSK AP and PTK rekey enforced by station and ANonce change"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
+    dev[0].dump_monitor()
+    anonce1 = dev[0].request("GET anonce")
+    if "OK" not in dev[0].request("KEY_REQUEST 0 1"):
+        raise Exception("KEY_REQUEST failed")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"])
+    if ev is None:
+        raise Exception("PTK rekey timed out")
+    anonce2 = dev[0].request("GET anonce")
+    if anonce1 == anonce2:
+        raise Exception("AP did not update ANonce in requested PTK rekeying")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
 @remote_compatible
 def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by AP"""

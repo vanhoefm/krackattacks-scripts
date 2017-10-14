@@ -2034,6 +2034,54 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 }
 
 
+static int hostapd_ctrl_set_key(struct hostapd_data *hapd, const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	const char *pos = cmd;
+	enum wpa_alg alg;
+	int idx, set_tx;
+	u8 seq[6], key[WPA_TK_MAX_LEN];
+	size_t key_len;
+
+	/* parameters: alg addr idx set_tx seq key */
+
+	alg = atoi(pos);
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return -1;
+	pos++;
+	if (hwaddr_aton(pos, addr))
+		return -1;
+	pos += 17;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+	idx = atoi(pos);
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return -1;
+	pos++;
+	set_tx = atoi(pos);
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return -1;
+	pos++;
+	if (hexstr2bin(pos, seq, sizeof(6)) < 0)
+		return -1;
+	pos += 2 * 6;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+	key_len = os_strlen(pos) / 2;
+	if (hexstr2bin(pos, key, key_len) < 0)
+		return -1;
+
+	wpa_printf(MSG_INFO, "TESTING: Set key");
+	return hostapd_drv_set_key(hapd->conf->iface, hapd, alg, addr, idx,
+				   set_tx, seq, 6, key, key_len);
+}
+
+
 static int hostapd_ctrl_resend_m1(struct hostapd_data *hapd, const char *cmd)
 {
 	struct sta_info *sta;
@@ -2806,6 +2854,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_get_fail(hapd, reply, reply_size);
 	} else if (os_strncmp(buf, "RESET_PN ", 9) == 0) {
 		if (hostapd_ctrl_reset_pn(hapd, buf + 9) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "SET_KEY ", 8) == 0) {
+		if (hostapd_ctrl_set_key(hapd, buf + 8) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "RESEND_M1 ", 10) == 0) {
 		if (hostapd_ctrl_resend_m1(hapd, buf + 10) < 0)

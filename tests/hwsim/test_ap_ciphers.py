@@ -358,6 +358,144 @@ def get_rx_spec(phy, gtk=False):
             return f.read()
     return None
 
+def get_tk_replay_counter(phy, gtk=False):
+    keys = "/sys/kernel/debug/ieee80211/%s/keys" % (phy)
+    for key in os.listdir(keys):
+        keydir = keys + "/" + key
+        files = os.listdir(keydir)
+        if not gtk and "station" not in files:
+            continue
+        if gtk and "station" in files:
+            continue
+        with open(keydir + "/replays") as f:
+            return int(f.read())
+    return None
+
+def test_ap_cipher_replay_protection_ap_ccmp(dev, apdev):
+    """CCMP replay protection on AP"""
+    run_ap_cipher_replay_protection_ap(dev, apdev, "CCMP")
+
+def test_ap_cipher_replay_protection_ap_tkip(dev, apdev):
+    """TKIP replay protection on AP"""
+    run_ap_cipher_replay_protection_ap(dev, apdev, "TKIP")
+
+def test_ap_cipher_replay_protection_ap_gcmp(dev, apdev):
+    """GCMP replay protection on AP"""
+    if "GCMP" not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("GCMP not supported")
+    run_ap_cipher_replay_protection_ap(dev, apdev, "GCMP")
+
+def run_ap_cipher_replay_protection_ap(dev, apdev, cipher):
+    params = { "ssid": "test-wpa2-psk",
+               "wpa_passphrase": "12345678",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": cipher }
+    hapd = hostapd.add_ap(apdev[0], params)
+    phy = hapd.get_driver_status_field("phyname")
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wpa2-psk", psk="12345678",
+                   pairwise=cipher, group=cipher, scan_freq="2412")
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy)
+        if replays != 0:
+            raise Exception("Unexpected replay reported (1)")
+
+    for i in range(5):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy)
+        if replays != 0:
+            raise Exception("Unexpected replay reported (2)")
+
+    if "OK" not in dev[0].request("RESET_PN"):
+        raise Exception("RESET_PN failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy)
+        if replays < 1:
+            raise Exception("Replays not reported")
+
+def test_ap_cipher_replay_protection_sta_ccmp(dev, apdev):
+    """CCMP replay protection on STA (TK)"""
+    run_ap_cipher_replay_protection_sta(dev, apdev, "CCMP")
+
+def test_ap_cipher_replay_protection_sta_tkip(dev, apdev):
+    """TKIP replay protection on STA (TK)"""
+    run_ap_cipher_replay_protection_sta(dev, apdev, "TKIP")
+
+def test_ap_cipher_replay_protection_sta_gcmp(dev, apdev):
+    """GCMP replay protection on STA (TK)"""
+    if "GCMP" not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("GCMP not supported")
+    run_ap_cipher_replay_protection_sta(dev, apdev, "GCMP")
+
+def test_ap_cipher_replay_protection_sta_gtk_ccmp(dev, apdev):
+    """CCMP replay protection on STA (GTK)"""
+    run_ap_cipher_replay_protection_sta(dev, apdev, "CCMP", gtk=True)
+
+def test_ap_cipher_replay_protection_sta_gtk_tkip(dev, apdev):
+    """TKIP replay protection on STA (GTK)"""
+    run_ap_cipher_replay_protection_sta(dev, apdev, "TKIP", gtk=True)
+
+def test_ap_cipher_replay_protection_sta_gtk_gcmp(dev, apdev):
+    """GCMP replay protection on STA (GTK)"""
+    if "GCMP" not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("GCMP not supported")
+    run_ap_cipher_replay_protection_sta(dev, apdev, "GCMP", gtk=True)
+
+def run_ap_cipher_replay_protection_sta(dev, apdev, cipher, gtk=False):
+    params = { "ssid": "test-wpa2-psk",
+               "wpa_passphrase": "12345678",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": cipher }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    phy = dev[0].get_driver_status_field("phyname")
+    dev[0].connect("test-wpa2-psk", psk="12345678",
+                   pairwise=cipher, group=cipher, scan_freq="2412")
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy, gtk)
+        if replays != 0:
+            raise Exception("Unexpected replay reported (1)")
+
+    for i in range(5):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy, gtk)
+        if replays != 0:
+            raise Exception("Unexpected replay reported (2)")
+
+    addr = "ff:ff:ff:ff:ff:ff" if gtk else dev[0].own_addr()
+    if "OK" not in hapd.request("RESET_PN " + addr):
+        raise Exception("RESET_PN failed")
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+
+    if cipher != "TKIP":
+        replays = get_tk_replay_counter(phy, gtk)
+        if replays < 1:
+            raise Exception("Replays not reported")
+
 def test_ap_wpa2_delayed_m3_retransmission(dev, apdev):
     """Delayed M3 retransmission"""
     require_under_vm()

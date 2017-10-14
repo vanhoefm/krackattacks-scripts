@@ -8937,6 +8937,21 @@ static int wpas_ctrl_reset_pn(struct wpa_supplicant *wpa_s)
 			       wpa_s->last_tk, wpa_s->last_tk_len);
 }
 
+
+static int wpas_ctrl_key_request(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	const char *pos = cmd;
+	int error, pairwise;
+
+	error = atoi(pos);
+	pos = os_strchr(pos, ' ');
+	if (!pos)
+		return -1;
+	pairwise = atoi(pos);
+	wpa_sm_key_request(wpa_s->wpa, error, pairwise);
+	return 0;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -10310,6 +10325,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "RESET_PN") == 0) {
 		if (wpas_ctrl_reset_pn(wpa_s) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "KEY_REQUEST ", 12) == 0) {
+		if (wpas_ctrl_key_request(wpa_s, buf + 12) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {

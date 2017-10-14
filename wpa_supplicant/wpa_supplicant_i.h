@@ -1077,6 +1077,11 @@ struct wpa_supplicant {
 	unsigned int ignore_auth_resp:1;
 	unsigned int ignore_assoc_disallow:1;
 	struct wpabuf *sae_commit_override;
+	enum wpa_alg last_tk_alg;
+	u8 last_tk_addr[ETH_ALEN];
+	int last_tk_key_idx;
+	u8 last_tk[WPA_TK_MAX_LEN];
+	size_t last_tk_len;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	struct wmm_ac_assoc_data *wmm_ac_assoc_info;

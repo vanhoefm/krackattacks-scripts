@@ -8907,6 +8907,30 @@ static int wpas_ctrl_test_assoc_ie(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
+
+static int wpas_ctrl_reset_pn(struct wpa_supplicant *wpa_s)
+{
+	u8 zero[WPA_TK_MAX_LEN];
+
+	if (wpa_s->last_tk_alg == WPA_ALG_NONE)
+		return -1;
+
+	wpa_printf(MSG_INFO, "TESTING: Reset PN");
+	os_memset(zero, 0, sizeof(zero));
+
+	/* First, use a zero key to avoid any possible duplicate key avoidance
+	 * in the driver. */
+	if (wpa_drv_set_key(wpa_s, wpa_s->last_tk_alg, wpa_s->last_tk_addr,
+			    wpa_s->last_tk_key_idx, 1, zero, 6,
+			    zero, wpa_s->last_tk_len) < 0)
+		return -1;
+
+	/* Set the previously configured key to reset its TSC/RSC */
+	return wpa_drv_set_key(wpa_s, wpa_s->last_tk_alg, wpa_s->last_tk_addr,
+			       wpa_s->last_tk_key_idx, 1, zero, 6,
+			       wpa_s->last_tk, wpa_s->last_tk_len);
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -10277,6 +10301,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "TEST_ASSOC_IE ", 14) == 0) {
 		if (wpas_ctrl_test_assoc_ie(wpa_s, buf + 14) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "RESET_PN") == 0) {
+		if (wpas_ctrl_reset_pn(wpa_s) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {

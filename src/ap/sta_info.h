@@ -250,6 +250,13 @@ struct sta_info {
 	struct crypto_ecdh *owe_ecdh;
 	u16 owe_group;
 #endif /* CONFIG_OWE */
+
+#ifdef CONFIG_TESTING_OPTIONS
+	enum wpa_alg last_tk_alg;
+	int last_tk_key_idx;
+	u8 last_tk[WPA_TK_MAX_LEN];
+	size_t last_tk_len;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

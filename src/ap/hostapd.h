@@ -304,6 +304,18 @@ struct hostapd_data {
 	unsigned int ext_eapol_frame_io:1;
 
 	struct l2_packet_data *l2_test;
+
+	enum wpa_alg last_gtk_alg;
+	int last_gtk_key_idx;
+	u8 last_gtk[WPA_GTK_MAX_LEN];
+	size_t last_gtk_len;
+
+#ifdef CONFIG_IEEE80211W
+	enum wpa_alg last_igtk_alg;
+	int last_igtk_key_idx;
+	u8 last_igtk[WPA_IGTK_MAX_LEN];
+	size_t last_igtk_len;
+#endif /* CONFIG_IEEE80211W */
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #ifdef CONFIG_MBO

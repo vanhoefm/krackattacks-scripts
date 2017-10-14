@@ -314,6 +314,11 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 
 	wpas_rrm_reset(wpa_s);
 	wpa_s->wnmsleep_used = 0;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	wpa_s->last_tk_alg = WPA_ALG_NONE;
+	os_memset(wpa_s->last_tk, 0, sizeof(wpa_s->last_tk));
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 

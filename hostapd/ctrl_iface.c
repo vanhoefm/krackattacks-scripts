@@ -1949,6 +1949,90 @@ static int hostapd_ctrl_get_fail(struct hostapd_data *hapd,
 #endif /* WPA_TRACE_BFD */
 }
 
+
+static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
+{
+	struct sta_info *sta;
+	u8 addr[ETH_ALEN];
+	u8 zero[WPA_TK_MAX_LEN];
+
+	os_memset(zero, 0, sizeof(zero));
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+#ifdef CONFIG_IEEE80211W
+	if (is_broadcast_ether_addr(addr) && os_strstr(cmd, "IGTK")) {
+		if (hapd->last_igtk_alg == WPA_ALG_NONE)
+			return -1;
+
+		wpa_printf(MSG_INFO, "TESTING: Reset IPN for IGTK");
+
+		/* First, use a zero key to avoid any possible duplicate key
+		 * avoidance in the driver. */
+		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
+					hapd->last_igtk_alg,
+					broadcast_ether_addr,
+					hapd->last_igtk_key_idx, 1, NULL, 0,
+					zero, hapd->last_igtk_len) < 0)
+			return -1;
+
+		/* Set the previously configured key to reset its TSC */
+		return hostapd_drv_set_key(hapd->conf->iface, hapd,
+					   hapd->last_igtk_alg,
+					   broadcast_ether_addr,
+					   hapd->last_igtk_key_idx, 1, NULL, 0,
+					   hapd->last_igtk,
+					   hapd->last_igtk_len);
+	}
+#endif /* CONFIG_IEEE80211W */
+
+	if (is_broadcast_ether_addr(addr)) {
+		if (hapd->last_gtk_alg == WPA_ALG_NONE)
+			return -1;
+
+		wpa_printf(MSG_INFO, "TESTING: Reset PN for GTK");
+
+		/* First, use a zero key to avoid any possible duplicate key
+		 * avoidance in the driver. */
+		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
+					hapd->last_gtk_alg,
+					broadcast_ether_addr,
+					hapd->last_gtk_key_idx, 1, NULL, 0,
+					zero, hapd->last_gtk_len) < 0)
+			return -1;
+
+		/* Set the previously configured key to reset its TSC */
+		return hostapd_drv_set_key(hapd->conf->iface, hapd,
+					   hapd->last_gtk_alg,
+					   broadcast_ether_addr,
+					   hapd->last_gtk_key_idx, 1, NULL, 0,
+					   hapd->last_gtk, hapd->last_gtk_len);
+	}
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta)
+		return -1;
+
+	if (sta->last_tk_alg == WPA_ALG_NONE)
+		return -1;
+
+	wpa_printf(MSG_INFO, "TESTING: Reset PN for " MACSTR,
+		   MAC2STR(sta->addr));
+
+	/* First, use a zero key to avoid any possible duplicate key avoidance
+	 * in the driver. */
+	if (hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
+				sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
+				zero, sta->last_tk_len) < 0)
+		return -1;
+
+	/* Set the previously configured key to reset its TSC/RSC */
+	return hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
+				   sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
+				   sta->last_tk, sta->last_tk_len);
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -2665,6 +2749,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "GET_FAIL") == 0) {
 		reply_len = hostapd_ctrl_get_fail(hapd, reply, reply_size);
+	} else if (os_strncmp(buf, "RESET_PN ", 9) == 0) {
+		if (hostapd_ctrl_reset_pn(hapd, buf + 9) < 0)
+			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {
 		if (hostapd_ctrl_iface_chan_switch(hapd->iface, buf + 12))

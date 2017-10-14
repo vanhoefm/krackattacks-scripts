@@ -349,6 +349,37 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 			return -1;
 	}
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (addr && !is_broadcast_ether_addr(addr)) {
+		struct sta_info *sta;
+
+		sta = ap_get_sta(hapd, addr);
+		if (sta) {
+			sta->last_tk_alg = alg;
+			sta->last_tk_key_idx = idx;
+			if (key)
+				os_memcpy(sta->last_tk, key, key_len);
+			sta->last_tk_len = key_len;
+		}
+#ifdef CONFIG_IEEE80211W
+	} else if (alg == WPA_CIPHER_AES_128_CMAC ||
+		   alg == WPA_CIPHER_BIP_GMAC_128 ||
+		   alg == WPA_CIPHER_BIP_GMAC_256 ||
+		   alg == WPA_CIPHER_BIP_CMAC_256) {
+		hapd->last_igtk_alg = alg;
+		hapd->last_igtk_key_idx = idx;
+		if (key)
+			os_memcpy(hapd->last_igtk, key, key_len);
+		hapd->last_igtk_len = key_len;
+#endif /* CONFIG_IEEE80211W */
+	} else {
+		hapd->last_gtk_alg = alg;
+		hapd->last_gtk_key_idx = idx;
+		if (key)
+			os_memcpy(hapd->last_gtk, key, key_len);
+		hapd->last_gtk_len = key_len;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	return hostapd_drv_set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
 				   key, key_len);
 }

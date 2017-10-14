@@ -502,6 +502,16 @@ static int wpa_supplicant_set_key(void *_wpa_s, enum wpa_alg alg,
 		wpa_s->last_gtk_len = key_len;
 	}
 #endif /* CONFIG_TESTING_GET_GTK */
+#ifdef CONFIG_TESTING_OPTIONS
+	if (addr && !is_broadcast_ether_addr(addr)) {
+		wpa_s->last_tk_alg = alg;
+		os_memcpy(wpa_s->last_tk_addr, addr, ETH_ALEN);
+		wpa_s->last_tk_key_idx = key_idx;
+		if (key)
+			os_memcpy(wpa_s->last_tk, key, key_len);
+		wpa_s->last_tk_len = key_len;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	return wpa_drv_set_key(wpa_s, alg, addr, key_idx, set_tx, seq, seq_len,
 			       key, key_len);
 }

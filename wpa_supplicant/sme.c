@@ -1314,6 +1314,14 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 
 	eloop_register_timeout(SME_ASSOC_TIMEOUT, 0, sme_assoc_timer, wpa_s,
 			       NULL);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	wpabuf_free(wpa_s->last_assoc_req_wpa_ie);
+	wpa_s->last_assoc_req_wpa_ie = NULL;
+	if (params.wpa_ie)
+		wpa_s->last_assoc_req_wpa_ie =
+			wpabuf_alloc_copy(params.wpa_ie, params.wpa_ie_len);
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 

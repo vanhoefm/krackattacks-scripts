@@ -7771,6 +7771,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->p2p_go_csa_on_inv = 0;
 	wpa_s->ignore_auth_resp = 0;
 	wpa_s->ignore_assoc_disallow = 0;
+	wpa_s->testing_resend_assoc = 0;
 	wpa_s->reject_btm_req_reason = 0;
 	wpa_sm_set_test_assoc_ie(wpa_s->wpa, NULL);
 	os_free(wpa_s->get_pref_freq_list_override);
@@ -8950,6 +8951,40 @@ static int wpas_ctrl_key_request(struct wpa_supplicant *wpa_s, const char *cmd)
 	pairwise = atoi(pos);
 	wpa_sm_key_request(wpa_s->wpa, error, pairwise);
 	return 0;
+}
+
+
+static int wpas_ctrl_resend_assoc(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_SME
+	struct wpa_driver_associate_params params;
+	int ret;
+
+	os_memset(&params, 0, sizeof(params));
+	params.bssid = wpa_s->bssid;
+	params.ssid = wpa_s->sme.ssid;
+	params.ssid_len = wpa_s->sme.ssid_len;
+	params.freq.freq = wpa_s->sme.freq;
+	if (wpa_s->last_assoc_req_wpa_ie) {
+		params.wpa_ie = wpabuf_head(wpa_s->last_assoc_req_wpa_ie);
+		params.wpa_ie_len = wpabuf_len(wpa_s->last_assoc_req_wpa_ie);
+	}
+	params.pairwise_suite = wpa_s->pairwise_cipher;
+	params.group_suite = wpa_s->group_cipher;
+	params.mgmt_group_suite = wpa_s->mgmt_group_cipher;
+	params.key_mgmt_suite = wpa_s->key_mgmt;
+	params.wpa_proto = wpa_s->wpa_proto;
+	params.mgmt_frame_protection = wpa_s->sme.mfp;
+	params.rrm_used = wpa_s->rrm.rrm_used;
+	if (wpa_s->sme.prev_bssid_set)
+		params.prev_bssid = wpa_s->sme.prev_bssid;
+	wpa_printf(MSG_INFO, "TESTING: Resend association request");
+	ret = wpa_drv_associate(wpa_s, &params);
+	wpa_s->testing_resend_assoc = 1;
+	return ret;
+#else /* CONFIG_SME */
+	return -1;
+#endif /* CONFIG_SME */
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -10328,6 +10363,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "KEY_REQUEST ", 12) == 0) {
 		if (wpas_ctrl_key_request(wpa_s, buf + 12) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "RESEND_ASSOC") == 0) {
+		if (wpas_ctrl_resend_assoc(wpa_s) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {

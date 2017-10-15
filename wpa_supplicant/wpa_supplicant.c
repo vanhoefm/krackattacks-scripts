@@ -465,6 +465,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->l2_test = NULL;
 	os_free(wpa_s->get_pref_freq_list_override);
 	wpa_s->get_pref_freq_list_override = NULL;
+	wpabuf_free(wpa_s->last_assoc_req_wpa_ie);
+	wpa_s->last_assoc_req_wpa_ie = NULL;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	if (wpa_s->conf != NULL) {
@@ -1795,6 +1797,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	wmm_ac_clear_saved_tspecs(wpa_s);
 	wpa_s->reassoc_same_bss = 0;
 	wpa_s->reassoc_same_ess = 0;
+#ifdef CONFIG_TESTING_OPTIONS
+	wpa_s->testing_resend_assoc = 0;
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (wpa_s->last_ssid == ssid) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Re-association to the same ESS");

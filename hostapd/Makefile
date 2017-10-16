@@ -489,6 +489,7 @@ ifdef CONFIG_EAP_PWD
 CFLAGS += -DEAP_SERVER_PWD
 OBJS += ../src/eap_server/eap_server_pwd.o ../src/eap_common/eap_pwd_common.o
 NEED_SHA256=y
+NEED_ECC=y
 endif
 
 ifdef CONFIG_EAP_EKE

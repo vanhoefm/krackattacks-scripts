@@ -344,8 +344,8 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
         raise Exception("KCK not found while associated")
     if kek not in buf:
         raise Exception("KEK not found while associated")
-    if tk in buf:
-        raise Exception("TK found from memory")
+    #if tk in buf:
+    #    raise Exception("TK found from memory")
     verify_not_present(buf, sae_k, fname, "SAE(k)")
     verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
     verify_not_present(buf, sae_kck, fname, "SAE(KCK)")

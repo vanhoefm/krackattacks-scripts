@@ -2640,3 +2640,92 @@ def test_ap_wpa2_eapol_retry_limit(dev, apdev):
         raise Exception("Invalid wpa_group_update_count value accepted")
     if "FAIL" not in hapd.request("SET wpa_pairwise_update_count 0"):
         raise Exception("Invalid wpa_pairwise_update_count value accepted")
+
+def test_ap_wpa2_disable_eapol_retry(dev, apdev):
+    """WPA2-PSK disable EAPOL-Key retry"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_disable_eapol_key_retries'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    logger.info("Verify working 4-way handshake without retries")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+    addr = dev[0].own_addr()
+
+    logger.info("Verify no retransmission of message 3/4")
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M1) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M1 retry) from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX (M1) to wpa_supplicant failed")
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M2) from wpa_supplicant")
+    dev[0].dump_monitor()
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX (M2) to hostapd failed")
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M3) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected EAPOL-TX M3 retry from hostapd")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=3)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()
+
+def test_ap_wpa2_disable_eapol_retry_group(dev, apdev):
+    """WPA2-PSK disable EAPOL-Key retry for group handshake"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_disable_eapol_key_retries'] = '1'
+    params['wpa_strict_rekey'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].dump_monitor()
+    addr = dev[0].own_addr()
+
+    dev[1].request("DISCONNECT")
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out")
+    dev[1].request("RECONNECT")
+    dev[1].wait_connected()
+    dev[0].dump_monitor()
+
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[1].request("DISCONNECT")
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (group M1) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected EAPOL-TX group M1 retry from hostapd")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=3)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()

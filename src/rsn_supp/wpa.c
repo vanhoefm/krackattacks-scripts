@@ -2610,6 +2610,7 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
 	wpa_sm_drop_sa(sm);
 
 	sm->msg_3_of_4_ok = 0;
+	os_memset(sm->bssid, 0, ETH_ALEN);
 }
 
 

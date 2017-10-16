@@ -2570,6 +2570,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 		bss->wpa_pairwise_update_count = (u32) val;
+	} else if (os_strcmp(buf, "wpa_disable_eapol_key_retries") == 0) {
+		bss->wpa_disable_eapol_key_retries = atoi(pos);
 	} else if (os_strcmp(buf, "wpa_passphrase") == 0) {
 		int len = os_strlen(pos);
 		if (len < 8 || len > 63) {

@@ -165,6 +165,7 @@ struct wpa_auth_config {
 	int wpa_ptk_rekey;
 	u32 wpa_group_update_count;
 	u32 wpa_pairwise_update_count;
+	int wpa_disable_eapol_key_retries;
 	int rsn_pairwise;
 	int rsn_preauth;
 	int eapol_version;

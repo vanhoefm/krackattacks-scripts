@@ -726,6 +726,11 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 
 	alg = wpa_cipher_to_alg(sm->pairwise_cipher);
 	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
+	if (keylen <= 0 || (unsigned int) keylen != sm->ptk.tk_len) {
+		wpa_printf(MSG_DEBUG, "WPA: TK length mismatch: %d != %lu",
+			   keylen, (long unsigned int) sm->ptk.tk_len);
+		return -1;
+	}
 	rsclen = wpa_cipher_rsc_len(sm->pairwise_cipher);
 
 	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) {
@@ -746,6 +751,7 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 
 	/* TK is not needed anymore in supplicant */
 	os_memset(sm->ptk.tk, 0, WPA_TK_MAX_LEN);
+	sm->ptk.tk_len = 0;
 	sm->ptk.installed = 1;
 
 	if (sm->wpa_ptk_rekey) {
@@ -1718,9 +1724,10 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 	os_memcpy(mic, key + 1, mic_len);
 	if (sm->tptk_set) {
 		os_memset(key + 1, 0, mic_len);
-		wpa_eapol_key_mic(sm->tptk.kck, sm->tptk.kck_len, sm->key_mgmt,
-				  ver, buf, len, (u8 *) (key + 1));
-		if (os_memcmp_const(mic, key + 1, mic_len) != 0) {
+		if (wpa_eapol_key_mic(sm->tptk.kck, sm->tptk.kck_len,
+				      sm->key_mgmt,
+				      ver, buf, len, (u8 *) (key + 1)) < 0 ||
+		    os_memcmp_const(mic, key + 1, mic_len) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC "
 				"when using TPTK - ignoring TPTK");
@@ -1743,9 +1750,10 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 
 	if (!ok && sm->ptk_set) {
 		os_memset(key + 1, 0, mic_len);
-		wpa_eapol_key_mic(sm->ptk.kck, sm->ptk.kck_len, sm->key_mgmt,
-				  ver, buf, len, (u8 *) (key + 1));
-		if (os_memcmp_const(mic, key + 1, mic_len) != 0) {
+		if (wpa_eapol_key_mic(sm->ptk.kck, sm->ptk.kck_len,
+				      sm->key_mgmt,
+				      ver, buf, len, (u8 *) (key + 1)) < 0 ||
+		    os_memcmp_const(mic, key + 1, mic_len) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC - "
 				"dropping packet");
@@ -4123,6 +4131,11 @@ int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
 
 	alg = wpa_cipher_to_alg(sm->pairwise_cipher);
 	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
+	if (keylen <= 0 || (unsigned int) keylen != sm->ptk.tk_len) {
+		wpa_printf(MSG_DEBUG, "FILS: TK length mismatch: %u != %lu",
+			   keylen, (long unsigned int) sm->ptk.tk_len);
+		goto fail;
+	}
 	rsclen = wpa_cipher_rsc_len(sm->pairwise_cipher);
 	wpa_hexdump_key(MSG_DEBUG, "FILS: Set TK to driver",
 			sm->ptk.tk, keylen);
@@ -4139,6 +4152,7 @@ int fils_process_assoc_resp(struct wpa_sm *sm, const u8 *resp, size_t len)
 	 * takes care of association frame encryption/decryption. */
 	/* TK is not needed anymore in supplicant */
 	os_memset(sm->ptk.tk, 0, WPA_TK_MAX_LEN);
+	sm->ptk.tk_len = 0;
 	sm->ptk.installed = 1;
 
 	/* FILS HLP Container */

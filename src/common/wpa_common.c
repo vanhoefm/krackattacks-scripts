@@ -106,6 +106,12 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 {
 	u8 hash[SHA512_MAC_LEN];
 
+	if (key_len == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "WPA: KCK not set - cannot calculate MIC");
+		return -1;
+	}
+
 	switch (ver) {
 #ifndef CONFIG_FIPS
 	case WPA_KEY_INFO_TYPE_HMAC_MD5_RC4:

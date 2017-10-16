@@ -749,7 +749,7 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 						  const u8 *val);
 
 /**
- * crypto_bignum_add - c = a + b
+ * crypto_ec_point_add - c = a + b
  * @e: EC context from crypto_ec_init()
  * @a: Bignum
  * @b: Bignum
@@ -761,7 +761,7 @@ int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a,
 			struct crypto_ec_point *c);
 
 /**
- * crypto_bignum_mul - res = b * p
+ * crypto_ec_point_mul - res = b * p
  * @e: EC context from crypto_ec_init()
  * @p: EC point
  * @b: Bignum

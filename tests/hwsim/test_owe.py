@@ -141,6 +141,7 @@ def test_owe_transition_mode_connect_cmd(dev, apdev):
 def run_owe_transition_mode(dev, apdev):
     if "OWE" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("OWE not supported")
+    dev[0].flush_scan_cache()
     params = { "ssid": "owe-random",
                "wpa": "2",
                "wpa_key_mgmt": "OWE",

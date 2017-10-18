@@ -987,7 +987,8 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 
 static void
 hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
-				 const u8 *buf, size_t len, unsigned int freq)
+				 const u8 *buf, size_t len,
+				 unsigned int freq)
 {
 	struct wpabuf *msg;
 
@@ -1063,7 +1064,7 @@ hostapd_dpp_rx_pkex_exchange_resp(struct hostapd_data *hapd, const u8 *src,
 
 static void
 hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
-				      const u8 *buf, size_t len,
+				      const u8 *hdr, const u8 *buf, size_t len,
 				      unsigned int freq)
 {
 	struct wpabuf *msg;
@@ -1078,7 +1079,7 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	msg = dpp_pkex_rx_commit_reveal_req(pkex, buf, len);
+	msg = dpp_pkex_rx_commit_reveal_req(pkex, hdr, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
 		return;
@@ -1114,7 +1115,7 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 
 static void
 hostapd_dpp_rx_pkex_commit_reveal_resp(struct hostapd_data *hapd, const u8 *src,
-				       const u8 *buf, size_t len,
+				       const u8 *hdr, const u8 *buf, size_t len,
 				       unsigned int freq)
 {
 	int res;
@@ -1130,7 +1131,7 @@ hostapd_dpp_rx_pkex_commit_reveal_resp(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	res = dpp_pkex_rx_commit_reveal_resp(pkex, buf, len);
+	res = dpp_pkex_rx_commit_reveal_resp(pkex, hdr, buf, len);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
 		return;
@@ -1222,10 +1223,11 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 		hostapd_dpp_rx_pkex_exchange_resp(hapd, src, buf, len, freq);
 		break;
 	case DPP_PA_PKEX_COMMIT_REVEAL_REQ:
-		hostapd_dpp_rx_pkex_commit_reveal_req(hapd, src, buf, len, freq);
+		hostapd_dpp_rx_pkex_commit_reveal_req(hapd, src, hdr, buf, len,
+						      freq);
 		break;
 	case DPP_PA_PKEX_COMMIT_REVEAL_RESP:
-		hostapd_dpp_rx_pkex_commit_reveal_resp(hapd, src, buf, len,
+		hostapd_dpp_rx_pkex_commit_reveal_resp(hapd, src, hdr, buf, len,
 						       freq);
 		break;
 	default:

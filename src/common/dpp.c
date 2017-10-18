@@ -5574,10 +5574,13 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	wpabuf_put_le16(clear, curve->hash_len);
 	wpabuf_put_data(clear, u, curve->hash_len);
 
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = DPP_HDR_LEN;
 	octet = 0;
-	addr[0] = &octet;
-	len[0] = sizeof(octet);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[1] = &octet;
+	len[1] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 
 	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
 	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
@@ -5586,7 +5589,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
 	if (aes_siv_encrypt(pkex->z, curve->hash_len,
 			    wpabuf_head(clear), wpabuf_len(clear),
-			    1, addr, len, wrapped) < 0)
+			    2, addr, len, wrapped) < 0)
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
@@ -5614,6 +5617,7 @@ fail:
 
 
 struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
+					      const u8 *hdr,
 					      const u8 *buf, size_t buflen)
 {
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
@@ -5678,14 +5682,17 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	if (!unwrapped)
 		goto fail;
 
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
 	octet = 0;
-	addr[0] = &octet;
-	len[0] = sizeof(octet);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[1] = &octet;
+	len[1] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 
 	if (aes_siv_decrypt(pkex->z, curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}
@@ -5811,10 +5818,13 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	wpabuf_put_le16(clear, curve->hash_len);
 	wpabuf_put_data(clear, v, curve->hash_len);
 
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = DPP_HDR_LEN;
 	octet = 1;
-	addr[0] = &octet;
-	len[0] = sizeof(octet);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[1] = &octet;
+	len[1] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 
 	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
 	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
@@ -5823,7 +5833,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
 	if (aes_siv_encrypt(pkex->z, curve->hash_len,
 			    wpabuf_head(clear), wpabuf_len(clear),
-			    1, addr, len, wrapped) < 0)
+			    2, addr, len, wrapped) < 0)
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
@@ -5843,7 +5853,7 @@ fail:
 }
 
 
-int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex,
+int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 				   const u8 *buf, size_t buflen)
 {
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
@@ -5876,14 +5886,17 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex,
 	if (!unwrapped)
 		goto fail;
 
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
 	octet = 1;
-	addr[0] = &octet;
-	len[0] = sizeof(octet);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[1] = &octet;
+	len[1] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 
 	if (aes_siv_decrypt(pkex->z, curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}

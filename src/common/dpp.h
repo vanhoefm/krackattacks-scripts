@@ -268,8 +268,9 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
 struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 					  const u8 *buf, size_t len);
 struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
+					      const u8 *hdr,
 					      const u8 *buf, size_t len);
-int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex,
+int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 				   const u8 *buf, size_t len);
 void dpp_pkex_free(struct dpp_pkex *pkex);
 

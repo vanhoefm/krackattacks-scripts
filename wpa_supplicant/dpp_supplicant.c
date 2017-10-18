@@ -1441,7 +1441,8 @@ wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 
 static void
 wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
-				   const u8 *buf, size_t len, unsigned int freq)
+				   const u8 *hdr, const u8 *buf, size_t len,
+				   unsigned int freq)
 {
 	struct wpabuf *msg;
 	unsigned int wait_time;
@@ -1456,7 +1457,7 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 
-	msg = dpp_pkex_rx_commit_reveal_req(pkex, buf, len);
+	msg = dpp_pkex_rx_commit_reveal_req(pkex, hdr, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
 		return;
@@ -1497,7 +1498,7 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 
 static void
 wpas_dpp_rx_pkex_commit_reveal_resp(struct wpa_supplicant *wpa_s, const u8 *src,
-				    const u8 *buf, size_t len,
+				    const u8 *hdr, const u8 *buf, size_t len,
 				    unsigned int freq)
 {
 	int res;
@@ -1513,7 +1514,7 @@ wpas_dpp_rx_pkex_commit_reveal_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 
-	res = dpp_pkex_rx_commit_reveal_resp(pkex, buf, len);
+	res = dpp_pkex_rx_commit_reveal_resp(pkex, hdr, buf, len);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
 		return;
@@ -1605,10 +1606,12 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 		wpas_dpp_rx_pkex_exchange_resp(wpa_s, src, buf, len, freq);
 		break;
 	case DPP_PA_PKEX_COMMIT_REVEAL_REQ:
-		wpas_dpp_rx_pkex_commit_reveal_req(wpa_s, src, buf, len, freq);
+		wpas_dpp_rx_pkex_commit_reveal_req(wpa_s, src, hdr, buf, len,
+						   freq);
 		break;
 	case DPP_PA_PKEX_COMMIT_REVEAL_RESP:
-		wpas_dpp_rx_pkex_commit_reveal_resp(wpa_s, src, buf, len, freq);
+		wpas_dpp_rx_pkex_commit_reveal_resp(wpa_s, src, hdr, buf, len,
+						    freq);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,

@@ -1,4 +1,4 @@
-This script tests if APs are affected by CVE-2017-13082 (KRACK attack). See [the KRACK attack website for details](https://www.krackattacks.com]) and also read [the research paper](https://papers.mathyvanhoef.com/ccs2017.pdf).
+This script tests if APs are affected by CVE-2017-13082 (KRACK attack). See [the KRACK attack website for details](https://www.krackattacks.com) and also read [the research paper](https://papers.mathyvanhoef.com/ccs2017.pdf).
 
 # CVE-2017-13082: Key Reinstall in FT Handshake (802.11r)
 
@@ -24,7 +24,7 @@ Essentially, it wraps a normal `wpa_supplicant` client, and will keep replaying 
 
 Remember that this is not an attack script! You require credentials to the network in order to test if an access point is affected by the attack.
 
-**This tool may give incorrectly say an AP is vulnerable to due benign retransmissions of data frames.** However, we are already releasing this code because the script got leaked. Please run this script in an environment with low background noise. Benign retransmissions can be detected in the output of the script: if two data frames have the same `seq` (sequence number), it's a benign retransmission. Example of such a benign retransmission:
+**This tool may incorrectly say an AP is vulnerable to due benign retransmissions of data frames.** However, we are already releasing this code because the script got leaked. Please run this script in an environment with low background noise. Benign retransmissions can be detected in the output of the script: if two data frames have the same `seq` (sequence number), it's a benign retransmission. Example of such a benign retransmission:
 
 	[15:48:47] AP transmitted data using IV=5 (seq=4)
 	[15:48:47] AP transmitted data using IV=5 (seq=4)

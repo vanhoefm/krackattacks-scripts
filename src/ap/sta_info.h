@@ -9,11 +9,7 @@
 #ifndef STA_INFO_H
 #define STA_INFO_H
 
-#ifdef CONFIG_MESH
-/* needed for mesh_plink_state enum */
 #include "common/defs.h"
-#endif /* CONFIG_MESH */
-
 #include "list.h"
 #include "vlan.h"
 #include "common/wpa_common.h"

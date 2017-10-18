@@ -1,6 +1,6 @@
-This script tests if APs are affected by CVE-2017-13082 (KRACK attack). See [https://www.krackattacks.com](the KRACK attack website for details) and also read [https://papers.mathyvanhoef.com/ccs2017.pdf](the research paper).
+This script tests if APs are affected by CVE-2017-13082 (KRACK attack). See [the KRACK attack website for details](https://www.krackattacks.com]) and also read [the research paper](https://papers.mathyvanhoef.com/ccs2017.pdf).
 
-# Background on CVE-2017-13082: Key Reinstallation in the Fast BSS Transition (FT) Handshake (802.11r)
+# CVE-2017-13082: Key Reinstall in FT Handshake (802.11r)
 
 Access Points (APs) might contain a vulnerable implementation of the Fast BSS Transition (FT) handshake. More precisely, a retransmitted or replayed FT Reassociation Request may trick the AP into reinstalling the pairwise key. If the AP does not process retransmitted FT reassociation requests, or if it does not reinstall the pairwise key, it is not vulnerable. If it does reinstall the pairwise key, the effect is similar to the attack against the 4-way handshake, expect that the AP instead of the client is now reinstalling a key. More precisely, the AP will subsequently reuse packet numbers when sending frames protected using TKIP, CCMP, or GCMP. This causes nonce reuse, voiding any security these encryption schemes are supposed to provide. Since the packet number is also used as a replay counter for received frames, frames sent *towards* the AP can also be replayed.
 

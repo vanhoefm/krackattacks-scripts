@@ -3618,7 +3618,7 @@ static int handle_action(struct hostapd_data *hapd,
 		    DPP_OUI_TYPE) {
 			const u8 *pos, *end;
 
-			pos = &mgmt->u.action.u.vs_public_action.variable[1];
+			pos = mgmt->u.action.u.vs_public_action.oui;
 			end = ((const u8 *) mgmt) + len;
 			hostapd_dpp_rx_action(hapd, mgmt->sa, pos, end - pos,
 					      hapd->iface->freq);

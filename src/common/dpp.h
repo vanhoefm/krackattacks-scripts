@@ -15,6 +15,8 @@
 #include "common/wpa_common.h"
 #include "crypto/sha256.h"
 
+#define DPP_HDR_LEN (4 + 2) /* OUI, OUI Type, Crypto Suite, DPP frame type */
+
 enum dpp_public_action_frame_type {
 	DPP_PA_AUTHENTICATION_REQ = 0,
 	DPP_PA_AUTHENTICATION_RESP = 1,
@@ -151,8 +153,8 @@ struct dpp_authentication {
 	u8 r_capab;
 	EVP_PKEY *own_protocol_key;
 	EVP_PKEY *peer_protocol_key;
-	struct wpabuf *req_attr;
-	struct wpabuf *resp_attr;
+	struct wpabuf *req_msg;
+	struct wpabuf *resp_msg;
 	unsigned int curr_freq;
 	size_t secret_len;
 	u8 Mx[DPP_MAX_SHARED_SECRET_LEN];
@@ -219,15 +221,15 @@ struct dpp_authentication *
 dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,
 		struct dpp_bootstrap_info *own_bi,
-		unsigned int freq, const u8 *attr_start,
+		unsigned int freq, const u8 *hdr, const u8 *attr_start,
 		const u8 *wrapped_data, u16 wrapped_data_len);
 struct wpabuf *
-dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
-		 size_t attr_len);
+dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
+		 const u8 *attr_start, size_t attr_len);
 struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
 				   const char *json);
-int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *attr_start,
-		     size_t attr_len);
+int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
+		     const u8 *attr_start, size_t attr_len);
 int dpp_notify_new_qr_code(struct dpp_authentication *auth,
 			   struct dpp_bootstrap_info *peer_bi);
 void dpp_configuration_free(struct dpp_configuration *conf);

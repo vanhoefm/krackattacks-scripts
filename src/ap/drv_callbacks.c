@@ -1005,7 +1005,7 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 	    DPP_OUI_TYPE) {
 		const u8 *pos, *end;
 
-		pos = &mgmt->u.action.u.vs_public_action.variable[1];
+		pos = mgmt->u.action.u.vs_public_action.oui;
 		end = drv_mgmt->frame + drv_mgmt->frame_len;
 		hostapd_dpp_rx_action(hapd, mgmt->sa, pos, end - pos,
 				      drv_mgmt->freq);

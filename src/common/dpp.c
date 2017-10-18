@@ -1340,8 +1340,9 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	u8 clear[4 + DPP_MAX_NONCE_LEN + 4 + 1];
 	u8 wrapped_data[4 + DPP_MAX_NONCE_LEN + 4 + 1 + AES_BLOCK_SIZE];
 	u8 *pos;
-	const u8 *addr[1];
-	size_t len[1], siv_len;
+	const u8 *addr[2];
+	size_t len[2], siv_len, attr_len;
+	u8 *attr_start, *attr_end;
 
 	auth = os_zalloc(sizeof(*auth));
 	if (!auth)
@@ -1393,11 +1394,14 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		goto fail;
 
 	/* Build DPP Authentication Request frame attributes */
-	msg = wpabuf_alloc(2 * (4 + SHA256_MAC_LEN) + 4 + wpabuf_len(pi) +
-			   4 + sizeof(wrapped_data));
+	attr_len = 2 * (4 + SHA256_MAC_LEN) + 4 + wpabuf_len(pi) +
+		4 + sizeof(wrapped_data);
+	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_REQ, attr_len);
 	if (!msg)
 		goto fail;
-	auth->req_attr = msg;
+	auth->req_msg = msg;
+
+	attr_start = wpabuf_put(msg, 0);
 
 	/* Responder Bootstrapping Key Hash */
 	wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
@@ -1437,13 +1441,22 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		DPP_CAPAB_ENROLLEE;
 	*pos++ = auth->i_capab;
 
-	addr[0] = wpabuf_head(msg);
-	len[0] = wpabuf_len(msg);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	attr_end = wpabuf_put(msg, 0);
+
+	/* OUI, OUI type, Crypto Suite, DPP frame type */
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = 3 + 1 + 1 + 1;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+
+	/* Attributes before Wrapped Data */
+	addr[1] = attr_start;
+	len[1] = attr_end - attr_start;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
 	siv_len = pos - clear;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext", clear, siv_len);
 	if (aes_siv_encrypt(auth->k1, auth->curve->hash_len, clear, siv_len,
-			    1, addr, len, wrapped_data) < 0)
+			    2, addr, len, wrapped_data) < 0)
 		goto fail;
 	siv_len += AES_BLOCK_SIZE;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
@@ -1859,8 +1872,9 @@ static int dpp_auth_build_resp(struct dpp_authentication *auth)
 	u8 clear[DPP_AUTH_RESP_CLEAR_LEN];
 	u8 wrapped_data[DPP_AUTH_RESP_CLEAR_LEN + AES_BLOCK_SIZE];
 	u8 *pos;
-	const u8 *addr[1];
-	size_t len[1], siv_len;
+	const u8 *addr[2];
+	size_t len[2], siv_len, attr_len;
+	u8 *attr_start, *attr_end;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 
@@ -1924,12 +1938,15 @@ static int dpp_auth_build_resp(struct dpp_authentication *auth)
 		    wrapped_r_auth, wrapped_r_auth_len);
 
 	/* Build DPP Authentication Response frame attributes */
-	msg = wpabuf_alloc(4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
-			   4 + wpabuf_len(pr) + 4 + sizeof(wrapped_data));
+	attr_len = 4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
+		4 + wpabuf_len(pr) + 4 + sizeof(wrapped_data);
+	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP, attr_len);
 	if (!msg)
 		goto fail;
-	wpabuf_free(auth->resp_attr);
-	auth->resp_attr = msg;
+	wpabuf_free(auth->resp_msg);
+	auth->resp_msg = msg;
+
+	attr_start = wpabuf_put(msg, 0);
 
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
@@ -1956,6 +1973,8 @@ static int dpp_auth_build_resp(struct dpp_authentication *auth)
 	wpabuf_put_buf(msg, pr);
 	wpabuf_free(pr);
 	pr = NULL;
+
+	attr_end = wpabuf_put(msg, 0);
 
 	/* Wrapped data ({R-nonce, I-nonce, R-capabilities, {R-auth}ke}k2) */
 	pos = clear;
@@ -1989,13 +2008,20 @@ static int dpp_auth_build_resp(struct dpp_authentication *auth)
 	os_memcpy(pos, wrapped_r_auth, wrapped_r_auth_len);
 	pos += wrapped_r_auth_len;
 
-	addr[0] = wpabuf_head(msg);
-	len[0] = wpabuf_len(msg);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	/* OUI, OUI type, Crypto Suite, DPP frame type */
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = 3 + 1 + 1 + 1;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+
+	/* Attributes before Wrapped Data */
+	addr[1] = attr_start;
+	len[1] = attr_end - attr_start;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
 	siv_len = pos - clear;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext", clear, siv_len);
 	if (aes_siv_encrypt(auth->k2, auth->curve->hash_len, clear, siv_len,
-			    1, addr, len, wrapped_data) < 0)
+			    2, addr, len, wrapped_data) < 0)
 		goto fail;
 	siv_len += AES_BLOCK_SIZE;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
@@ -2025,18 +2051,21 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 	u8 clear[DPP_AUTH_RESP_CLEAR_LEN2];
 	u8 wrapped_data[DPP_AUTH_RESP_CLEAR_LEN2 + AES_BLOCK_SIZE];
 	u8 *pos;
-	const u8 *addr[1];
-	size_t len[1], siv_len;
+	const u8 *addr[2];
+	size_t len[2], siv_len, attr_len;
+	u8 *attr_start, *attr_end;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 
 	/* Build DPP Authentication Response frame attributes */
-	msg = wpabuf_alloc(4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
-			   4 + sizeof(wrapped_data));
+	attr_len = 4 + 1 + 2 * (4 + SHA256_MAC_LEN) + 4 + sizeof(wrapped_data);
+	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP, attr_len);
 	if (!msg)
 		goto fail;
-	wpabuf_free(auth->resp_attr);
-	auth->resp_attr = msg;
+	wpabuf_free(auth->resp_msg);
+	auth->resp_msg = msg;
+
+	attr_start = wpabuf_put(msg, 0);
 
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
@@ -2057,6 +2086,8 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 				SHA256_MAC_LEN);
 	}
 
+	attr_end = wpabuf_put(msg, 0);
+
 	/* Wrapped data ({I-nonce, R-capabilities}k1) */
 	pos = clear;
 	/* I-nonce */
@@ -2076,13 +2107,20 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 		DPP_CAPAB_ENROLLEE;
 	*pos++ = auth->r_capab;
 
-	addr[0] = wpabuf_head(msg);
-	len[0] = wpabuf_len(msg);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	/* OUI, OUI type, Crypto Suite, DPP frame type */
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = 3 + 1 + 1 + 1;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+
+	/* Attributes before Wrapped Data */
+	addr[1] = attr_start;
+	len[1] = attr_end - attr_start;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
 	siv_len = pos - clear;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext", clear, siv_len);
 	if (aes_siv_encrypt(auth->k1, auth->curve->hash_len, clear, siv_len,
-			    1, addr, len, wrapped_data) < 0)
+			    2, addr, len, wrapped_data) < 0)
 		goto fail;
 	siv_len += AES_BLOCK_SIZE;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
@@ -2106,14 +2144,14 @@ struct dpp_authentication *
 dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,
 		struct dpp_bootstrap_info *own_bi,
-		unsigned int freq, const u8 *attr_start,
+		unsigned int freq, const u8 *hdr, const u8 *attr_start,
 		const u8 *wrapped_data,	u16 wrapped_data_len)
 {
 	EVP_PKEY *pi = NULL;
 	EVP_PKEY_CTX *ctx = NULL;
 	size_t secret_len;
-	const u8 *addr[1];
-	size_t len[1];
+	const u8 *addr[2];
+	size_t len[2];
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	const u8 *i_proto, *i_nonce, *i_capab, *i_bootstrap;
@@ -2176,9 +2214,12 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 			  auth->curve->hash_len) < 0)
 		goto fail;
 
-	addr[0] = attr_start;
-	len[0] = attr_len;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
+	addr[1] = attr_start;
+	len[1] = attr_len;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped_data, wrapped_data_len);
 	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
@@ -2187,7 +2228,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		goto fail;
 	if (aes_siv_decrypt(auth->k1, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}
@@ -2326,18 +2367,22 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 	struct wpabuf *msg;
 	u8 i_auth[4 + DPP_MAX_HASH_LEN];
 	size_t i_auth_len;
-	const u8 *addr[1];
-	size_t len[1];
+	const u8 *addr[2];
+	size_t len[2], attr_len;
 	u8 *wrapped_i_auth;
+	u8 *attr_start, *attr_end;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Confirmation");
 
 	i_auth_len = 4 + auth->curve->hash_len;
 	/* Build DPP Authentication Confirmation frame attributes */
-	msg = wpabuf_alloc(4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
-			   4 + i_auth_len + AES_BLOCK_SIZE);
+	attr_len = 4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
+		4 + i_auth_len + AES_BLOCK_SIZE;
+	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_CONF, attr_len);
 	if (!msg)
 		goto fail;
+
+	attr_start = wpabuf_put(msg, 0);
 
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
@@ -2357,8 +2402,18 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 		wpabuf_put_data(msg, auth->own_bi->pubkey_hash, SHA256_MAC_LEN);
 	}
 
-	addr[0] = wpabuf_head(msg);
-	len[0] = wpabuf_len(msg);
+	attr_end = wpabuf_put(msg, 0);
+
+	/* OUI, OUI type, Crypto Suite, DPP frame type */
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = 3 + 1 + 1 + 1;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+
+	/* Attributes before Wrapped Data */
+	addr[1] = attr_start;
+	len[1] = attr_end - attr_start;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
 	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
 	wpabuf_put_le16(msg, i_auth_len + AES_BLOCK_SIZE);
 	wrapped_i_auth = wpabuf_put(msg, i_auth_len + AES_BLOCK_SIZE);
@@ -2368,7 +2423,7 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 	if (dpp_gen_i_auth(auth, i_auth + 4) < 0 ||
 	    aes_siv_encrypt(auth->ke, auth->curve->hash_len,
 			    i_auth, i_auth_len,
-			    1, addr, len, wrapped_i_auth) < 0)
+			    2, addr, len, wrapped_i_auth) < 0)
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: {I-auth}ke",
 		    wrapped_i_auth, i_auth_len + AES_BLOCK_SIZE);
@@ -2386,13 +2441,13 @@ fail:
 
 
 static void
-dpp_auth_resp_rx_status(struct dpp_authentication *auth,
+dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 			const u8 *attr_start, size_t attr_len,
 			const u8 *wrapped_data, u16 wrapped_data_len,
 			enum dpp_status_error status)
 {
-	const u8 *addr[1];
-	size_t len[1];
+	const u8 *addr[2];
+	size_t len[2];
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	const u8 *i_nonce, *r_capab;
@@ -2411,9 +2466,12 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth,
 		return;
 	}
 
-	addr[0] = attr_start;
-	len[0] = attr_len;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
+	addr[1] = attr_start;
+	len[1] = attr_len;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped_data, wrapped_data_len);
 	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
@@ -2422,7 +2480,7 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth,
 		goto fail;
 	if (aes_siv_decrypt(auth->k1, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}
@@ -2470,14 +2528,14 @@ fail:
 
 
 struct wpabuf *
-dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
-		 size_t attr_len)
+dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
+		 const u8 *attr_start, size_t attr_len)
 {
 	EVP_PKEY *pr;
 	EVP_PKEY_CTX *ctx = NULL;
 	size_t secret_len;
-	const u8 *addr[1];
-	size_t len[1];
+	const u8 *addr[2];
+	size_t len[2];
 	u8 *unwrapped = NULL, *unwrapped2 = NULL;
 	size_t unwrapped_len = 0, unwrapped2_len = 0;
 	const u8 *r_bootstrap, *i_bootstrap, *wrapped_data, *status, *r_proto,
@@ -2551,7 +2609,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", status[0]);
 	auth->auth_resp_status = status[0];
 	if (status[0] != DPP_STATUS_OK) {
-		dpp_auth_resp_rx_status(auth, attr_start,
+		dpp_auth_resp_rx_status(auth, hdr, attr_start,
 					attr_len, wrapped_data,
 					wrapped_data_len, status[0]);
 		return NULL;
@@ -2599,9 +2657,12 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
 			  auth->curve->hash_len) < 0)
 		goto fail;
 
-	addr[0] = attr_start;
-	len[0] = attr_len;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
+	addr[1] = attr_start;
+	len[1] = attr_len;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped_data, wrapped_data_len);
 	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
@@ -2610,7 +2671,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		goto fail;
 	if (aes_siv_decrypt(auth->k2, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}
@@ -2731,14 +2792,14 @@ fail:
 }
 
 
-int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *attr_start,
-		     size_t attr_len)
+int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
+		     const u8 *attr_start, size_t attr_len)
 {
 	const u8 *r_bootstrap, *i_bootstrap, *wrapped_data, *status, *i_auth;
 	u16 r_bootstrap_len, i_bootstrap_len, wrapped_data_len, status_len,
 		i_auth_len;
-	const u8 *addr[1];
-	size_t len[1];
+	const u8 *addr[2];
+	size_t len[2];
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	u8 i_auth2[DPP_MAX_HASH_LEN];
@@ -2812,9 +2873,12 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		return -1;
 	}
 
-	addr[0] = attr_start;
-	len[0] = attr_len;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD", addr[0], len[0]);
+	addr[0] = hdr;
+	len[0] = DPP_HDR_LEN;
+	addr[1] = attr_start;
+	len[1] = attr_len;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped_data, wrapped_data_len);
 	unwrapped_len = wrapped_data_len - AES_BLOCK_SIZE;
@@ -2823,7 +2887,7 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		return -1;
 	if (aes_siv_decrypt(auth->ke, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
-			    1, addr, len, unwrapped) < 0) {
+			    2, addr, len, unwrapped) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
 		goto fail;
 	}
@@ -2882,8 +2946,8 @@ void dpp_auth_deinit(struct dpp_authentication *auth)
 	dpp_configuration_free(auth->conf_sta);
 	EVP_PKEY_free(auth->own_protocol_key);
 	EVP_PKEY_free(auth->peer_protocol_key);
-	wpabuf_free(auth->req_attr);
-	wpabuf_free(auth->resp_attr);
+	wpabuf_free(auth->req_msg);
+	wpabuf_free(auth->resp_msg);
 	wpabuf_free(auth->conf_req);
 	os_free(auth->connector);
 	wpabuf_free(auth->net_access_key);

@@ -73,23 +73,14 @@ int hostapd_dpp_qr_code(struct hostapd_data *hapd, const char *cmd)
 
 	if (auth && auth->response_pending &&
 	    dpp_notify_new_qr_code(auth, bi) == 1) {
-		struct wpabuf *msg;
-
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Sending out pending authentication response");
-		msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
-				    wpabuf_len(auth->resp_attr));
-		if (!msg)
-			goto out;
-		wpabuf_put_buf(msg, hapd->dpp_auth->resp_attr);
-
 		hostapd_drv_send_action(hapd, auth->curr_freq, 0,
 					auth->peer_mac_addr,
-					wpabuf_head(msg), wpabuf_len(msg));
-		wpabuf_free(msg);
+					wpabuf_head(hapd->dpp_auth->resp_msg),
+					wpabuf_len(hapd->dpp_auth->resp_msg));
 	}
 
-out:
 	return bi->id;
 }
 
@@ -459,7 +450,6 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 {
 	const char *pos;
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
-	struct wpabuf *msg;
 	const u8 *dst;
 	int res;
 	int configurator = 1;
@@ -521,12 +511,6 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	else
 		hapd->dpp_auth->curr_freq = 2412;
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_REQ,
-			    wpabuf_len(hapd->dpp_auth->req_attr));
-	if (!msg)
-		return -1;
-	wpabuf_put_buf(msg, hapd->dpp_auth->req_attr);
-
 	if (is_zero_ether_addr(peer_bi->mac_addr)) {
 		dst = broadcast;
 	} else {
@@ -537,8 +521,8 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	hapd->dpp_auth_ok_on_ack = 0;
 
 	res = hostapd_drv_send_action(hapd, hapd->dpp_auth->curr_freq, 0,
-				      dst, wpabuf_head(msg), wpabuf_len(msg));
-	wpabuf_free(msg);
+				      dst, wpabuf_head(hapd->dpp_auth->req_msg),
+				      wpabuf_len(hapd->dpp_auth->req_msg));
 
 	return res;
 fail:
@@ -549,12 +533,12 @@ fail:
 
 
 static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
-				 const u8 *buf, size_t len, unsigned int freq)
+				    const u8 *hdr, const u8 *buf, size_t len,
+				    unsigned int freq)
 {
 	const u8 *r_bootstrap, *i_bootstrap, *wrapped_data;
 	u16 r_bootstrap_len, i_bootstrap_len, wrapped_data_len;
 	struct dpp_bootstrap_info *bi, *own_bi = NULL, *peer_bi = NULL;
-	struct wpabuf *msg;
 
 	wpa_printf(MSG_DEBUG, "DPP: Authentication Request from " MACSTR,
 		   MAC2STR(src));
@@ -630,7 +614,7 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 	hapd->dpp_auth_ok_on_ack = 0;
 	hapd->dpp_auth = dpp_auth_req_rx(hapd->msg_ctx, hapd->dpp_allowed_roles,
 					 hapd->dpp_qr_mutual,
-					 peer_bi, own_bi, freq, buf,
+					 peer_bi, own_bi, freq, hdr, buf,
 					 wrapped_data, wrapped_data_len);
 	if (!hapd->dpp_auth) {
 		wpa_printf(MSG_DEBUG, "DPP: No response generated");
@@ -641,15 +625,9 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 				     hapd->dpp_configurator_params);
 	os_memcpy(hapd->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
-			    wpabuf_len(hapd->dpp_auth->resp_attr));
-	if (!msg)
-		return;
-	wpabuf_put_buf(msg, hapd->dpp_auth->resp_attr);
-
 	hostapd_drv_send_action(hapd, hapd->dpp_auth->curr_freq, 0,
-				src, wpabuf_head(msg), wpabuf_len(msg));
-	wpabuf_free(msg);
+				src, wpabuf_head(hapd->dpp_auth->resp_msg),
+				wpabuf_len(hapd->dpp_auth->resp_msg));
 }
 
 
@@ -840,10 +818,10 @@ static void hostapd_dpp_auth_success(struct hostapd_data *hapd, int initiator)
 
 
 static void hostapd_dpp_rx_auth_resp(struct hostapd_data *hapd, const u8 *src,
-				  const u8 *buf, size_t len)
+				     const u8 *hdr, const u8 *buf, size_t len)
 {
 	struct dpp_authentication *auth = hapd->dpp_auth;
-	struct wpabuf *msg, *attr;
+	struct wpabuf *msg;
 
 	wpa_printf(MSG_DEBUG, "DPP: Authentication Response from " MACSTR,
 		   MAC2STR(src));
@@ -861,8 +839,8 @@ static void hostapd_dpp_rx_auth_resp(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	attr = dpp_auth_resp_rx(auth, buf, len);
-	if (!attr) {
+	msg = dpp_auth_resp_rx(auth, hdr, buf, len);
+	if (!msg) {
 		if (auth->auth_resp_status == DPP_STATUS_RESPONSE_PENDING) {
 			wpa_printf(MSG_DEBUG, "DPP: Wait for full response");
 			return;
@@ -872,14 +850,6 @@ static void hostapd_dpp_rx_auth_resp(struct hostapd_data *hapd, const u8 *src,
 	}
 	os_memcpy(auth->peer_mac_addr, src, ETH_ALEN);
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_CONF, wpabuf_len(attr));
-	if (!msg) {
-		wpabuf_free(attr);
-		return;
-	}
-	wpabuf_put_buf(msg, attr);
-	wpabuf_free(attr);
-
 	hostapd_drv_send_action(hapd, auth->curr_freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 	wpabuf_free(msg);
@@ -888,7 +858,7 @@ static void hostapd_dpp_rx_auth_resp(struct hostapd_data *hapd, const u8 *src,
 
 
 static void hostapd_dpp_rx_auth_conf(struct hostapd_data *hapd, const u8 *src,
-				     const u8 *buf, size_t len)
+				     const u8 *hdr, const u8 *buf, size_t len)
 {
 	struct dpp_authentication *auth = hapd->dpp_auth;
 
@@ -907,7 +877,7 @@ static void hostapd_dpp_rx_auth_conf(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	if (dpp_auth_conf_rx(auth, buf, len) < 0) {
+	if (dpp_auth_conf_rx(auth, hdr, buf, len) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Authentication failed");
 		return;
 	}
@@ -1206,9 +1176,15 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 {
 	u8 crypto_suite;
 	enum dpp_public_action_frame_type type;
+	const u8 *hdr;
 
-	if (len < 2)
+	if (len < DPP_HDR_LEN)
 		return;
+	if (WPA_GET_BE24(buf) != OUI_WFA || buf[3] != DPP_OUI_TYPE)
+		return;
+	hdr = buf;
+	buf += 4;
+	len -= 4;
 	crypto_suite = *buf++;
 	type = *buf++;
 	len -= 2;
@@ -1228,13 +1204,13 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 
 	switch (type) {
 	case DPP_PA_AUTHENTICATION_REQ:
-		hostapd_dpp_rx_auth_req(hapd, src, buf, len, freq);
+		hostapd_dpp_rx_auth_req(hapd, src, hdr, buf, len, freq);
 		break;
 	case DPP_PA_AUTHENTICATION_RESP:
-		hostapd_dpp_rx_auth_resp(hapd, src, buf, len);
+		hostapd_dpp_rx_auth_resp(hapd, src, hdr, buf, len);
 		break;
 	case DPP_PA_AUTHENTICATION_CONF:
-		hostapd_dpp_rx_auth_conf(hapd, src, buf, len);
+		hostapd_dpp_rx_auth_conf(hapd, src, hdr, buf, len);
 		break;
 	case DPP_PA_PEER_DISCOVERY_REQ:
 		hostapd_dpp_rx_peer_disc_req(hapd, src, buf, len, freq);

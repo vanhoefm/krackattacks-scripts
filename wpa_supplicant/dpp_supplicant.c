@@ -91,25 +91,16 @@ int wpas_dpp_qr_code(struct wpa_supplicant *wpa_s, const char *cmd)
 
 	if (auth && auth->response_pending &&
 	    dpp_notify_new_qr_code(auth, bi) == 1) {
-		struct wpabuf *msg;
-
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Sending out pending authentication response");
-		msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
-				    wpabuf_len(auth->resp_attr));
-		if (!msg)
-			goto out;
-		wpabuf_put_buf(msg, wpa_s->dpp_auth->resp_attr);
-
 		offchannel_send_action(wpa_s, auth->curr_freq,
 				       auth->peer_mac_addr, wpa_s->own_addr,
 				       broadcast,
-				       wpabuf_head(msg), wpabuf_len(msg),
+				       wpabuf_head(auth->resp_msg),
+				       wpabuf_len(auth->resp_msg),
 				       500, wpas_dpp_tx_status, 0);
-		wpabuf_free(msg);
 	}
 
-out:
 	return bi->id;
 }
 
@@ -508,7 +499,6 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 {
 	const char *pos;
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
-	struct wpabuf *msg;
 	const u8 *dst;
 	int res;
 	int configurator = 1;
@@ -581,12 +571,6 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	else
 		wpa_s->dpp_auth->curr_freq = 2412;
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_REQ,
-			    wpabuf_len(wpa_s->dpp_auth->req_attr));
-	if (!msg)
-		return -1;
-	wpabuf_put_buf(msg, wpa_s->dpp_auth->req_attr);
-
 	if (is_zero_ether_addr(peer_bi->mac_addr)) {
 		dst = broadcast;
 	} else {
@@ -604,9 +588,9 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 			       wpa_s, NULL);
 	res = offchannel_send_action(wpa_s, wpa_s->dpp_auth->curr_freq,
 				     dst, wpa_s->own_addr, broadcast,
-				     wpabuf_head(msg), wpabuf_len(msg),
+				     wpabuf_head(wpa_s->dpp_auth->req_msg),
+				     wpabuf_len(wpa_s->dpp_auth->req_msg),
 				     wait_time, wpas_dpp_tx_status, 0);
-	wpabuf_free(msg);
 
 	return res;
 fail:
@@ -790,12 +774,12 @@ void wpas_dpp_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 
 
 static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
-				 const u8 *buf, size_t len, unsigned int freq)
+				 const u8 *hdr, const u8 *buf, size_t len,
+				 unsigned int freq)
 {
 	const u8 *r_bootstrap, *i_bootstrap, *wrapped_data;
 	u16 r_bootstrap_len, i_bootstrap_len, wrapped_data_len;
 	struct dpp_bootstrap_info *bi, *own_bi = NULL, *peer_bi = NULL;
-	struct wpabuf *msg;
 
 	wpa_printf(MSG_DEBUG, "DPP: Authentication Request from " MACSTR,
 		   MAC2STR(src));
@@ -872,7 +856,7 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	wpa_s->dpp_auth_ok_on_ack = 0;
 	wpa_s->dpp_auth = dpp_auth_req_rx(wpa_s, wpa_s->dpp_allowed_roles,
 					  wpa_s->dpp_qr_mutual,
-					  peer_bi, own_bi, freq, buf,
+					  peer_bi, own_bi, freq, hdr, buf,
 					  wrapped_data, wrapped_data_len);
 	if (!wpa_s->dpp_auth) {
 		wpa_printf(MSG_DEBUG, "DPP: No response generated");
@@ -883,17 +867,11 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 				  wpa_s->dpp_configurator_params);
 	os_memcpy(wpa_s->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP,
-			    wpabuf_len(wpa_s->dpp_auth->resp_attr));
-	if (!msg)
-		return;
-	wpabuf_put_buf(msg, wpa_s->dpp_auth->resp_attr);
-
 	offchannel_send_action(wpa_s, wpa_s->dpp_auth->curr_freq,
 			       src, wpa_s->own_addr, broadcast,
-			       wpabuf_head(msg), wpabuf_len(msg),
+			       wpabuf_head(wpa_s->dpp_auth->resp_msg),
+			       wpabuf_len(wpa_s->dpp_auth->resp_msg),
 			       500, wpas_dpp_tx_status, 0);
-	wpabuf_free(msg);
 }
 
 
@@ -1183,10 +1161,10 @@ static void wpas_dpp_auth_success(struct wpa_supplicant *wpa_s, int initiator)
 
 
 static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
-				  const u8 *buf, size_t len)
+				  const u8 *hdr, const u8 *buf, size_t len)
 {
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
-	struct wpabuf *msg, *attr;
+	struct wpabuf *msg;
 
 	wpa_printf(MSG_DEBUG, "DPP: Authentication Response from " MACSTR,
 		   MAC2STR(src));
@@ -1206,8 +1184,8 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 
-	attr = dpp_auth_resp_rx(auth, buf, len);
-	if (!attr) {
+	msg = dpp_auth_resp_rx(auth, hdr, buf, len);
+	if (!msg) {
 		if (auth->auth_resp_status == DPP_STATUS_RESPONSE_PENDING) {
 			wpa_printf(MSG_DEBUG,
 				   "DPP: Start wait for full response");
@@ -1220,14 +1198,6 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 	}
 	os_memcpy(auth->peer_mac_addr, src, ETH_ALEN);
 
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_CONF, wpabuf_len(attr));
-	if (!msg) {
-		wpabuf_free(attr);
-		return;
-	}
-	wpabuf_put_buf(msg, attr);
-	wpabuf_free(attr);
-
 	offchannel_send_action(wpa_s, auth->curr_freq,
 			       src, wpa_s->own_addr, broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1238,7 +1208,7 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 
 
 static void wpas_dpp_rx_auth_conf(struct wpa_supplicant *wpa_s, const u8 *src,
-				  const u8 *buf, size_t len)
+				  const u8 *hdr, const u8 *buf, size_t len)
 {
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 
@@ -1257,7 +1227,7 @@ static void wpas_dpp_rx_auth_conf(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 
-	if (dpp_auth_conf_rx(auth, buf, len) < 0) {
+	if (dpp_auth_conf_rx(auth, hdr, buf, len) < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Authentication failed");
 		return;
 	}
@@ -1589,9 +1559,15 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 {
 	u8 crypto_suite;
 	enum dpp_public_action_frame_type type;
+	const u8 *hdr;
 
-	if (len < 2)
+	if (len < DPP_HDR_LEN)
 		return;
+	if (WPA_GET_BE24(buf) != OUI_WFA || buf[3] != DPP_OUI_TYPE)
+		return;
+	hdr = buf;
+	buf += 4;
+	len -= 4;
 	crypto_suite = *buf++;
 	type = *buf++;
 	len -= 2;
@@ -1611,13 +1587,13 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 
 	switch (type) {
 	case DPP_PA_AUTHENTICATION_REQ:
-		wpas_dpp_rx_auth_req(wpa_s, src, buf, len, freq);
+		wpas_dpp_rx_auth_req(wpa_s, src, hdr, buf, len, freq);
 		break;
 	case DPP_PA_AUTHENTICATION_RESP:
-		wpas_dpp_rx_auth_resp(wpa_s, src, buf, len);
+		wpas_dpp_rx_auth_resp(wpa_s, src, hdr, buf, len);
 		break;
 	case DPP_PA_AUTHENTICATION_CONF:
-		wpas_dpp_rx_auth_conf(wpa_s, src, buf, len);
+		wpas_dpp_rx_auth_conf(wpa_s, src, hdr, buf, len);
 		break;
 	case DPP_PA_PEER_DISCOVERY_RESP:
 		wpas_dpp_rx_peer_disc_resp(wpa_s, src, buf, len);

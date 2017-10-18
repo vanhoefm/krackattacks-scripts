@@ -3696,8 +3696,8 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	    payload[0] == WLAN_PA_VENDOR_SPECIFIC &&
 	    WPA_GET_BE24(&payload[1]) == OUI_WFA &&
 	    payload[4] == DPP_OUI_TYPE) {
-		payload += 5;
-		plen -= 5;
+		payload++;
+		plen--;
 		wpas_dpp_rx_action(wpa_s, mgmt->sa, payload, plen, freq);
 		return;
 	}

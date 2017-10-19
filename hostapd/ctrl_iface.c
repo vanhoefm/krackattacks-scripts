@@ -2082,10 +2082,27 @@ static int hostapd_ctrl_set_key(struct hostapd_data *hapd, const char *cmd)
 }
 
 
+static void restore_tk(void *ctx1, void *ctx2)
+{
+	struct hostapd_data *hapd = ctx1;
+	struct sta_info *sta = ctx2;
+
+	wpa_printf(MSG_INFO, "TESTING: Restore TK for " MACSTR,
+		   MAC2STR(sta->addr));
+	/* This does not really restore the TSC properly, so this will result
+	 * in replay protection issues for now since there is no clean way of
+	 * preventing encryption of a single EAPOL frame. */
+	hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
+			    sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
+			    sta->last_tk, sta->last_tk_len);
+}
+
+
 static int hostapd_ctrl_resend_m1(struct hostapd_data *hapd, const char *cmd)
 {
 	struct sta_info *sta;
 	u8 addr[ETH_ALEN];
+	int plain = os_strstr(cmd, "plaintext") != NULL;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2094,9 +2111,20 @@ static int hostapd_ctrl_resend_m1(struct hostapd_data *hapd, const char *cmd)
 	if (!sta || !sta->wpa_sm)
 		return -1;
 
+	if (plain && sta->last_tk_alg == WPA_ALG_NONE)
+		plain = 0; /* no need for special processing */
+	if (plain) {
+		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
+			   MAC2STR(sta->addr));
+		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
+				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
+				    NULL, 0);
+	}
+
 	wpa_printf(MSG_INFO, "TESTING: Send M1 to " MACSTR, MAC2STR(sta->addr));
 	return wpa_auth_resend_m1(sta->wpa_sm,
-				  os_strstr(cmd, "change-anonce") != NULL);
+				  os_strstr(cmd, "change-anonce") != NULL,
+				  plain ? restore_tk : NULL, hapd, sta);
 }
 
 
@@ -2104,6 +2132,7 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 {
 	struct sta_info *sta;
 	u8 addr[ETH_ALEN];
+	int plain = os_strstr(cmd, "plaintext") != NULL;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2112,8 +2141,19 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 	if (!sta || !sta->wpa_sm)
 		return -1;
 
+	if (plain && sta->last_tk_alg == WPA_ALG_NONE)
+		plain = 0; /* no need for special processing */
+	if (plain) {
+		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
+			   MAC2STR(sta->addr));
+		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
+				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
+				    NULL, 0);
+	}
+
 	wpa_printf(MSG_INFO, "TESTING: Send M3 to " MACSTR, MAC2STR(sta->addr));
-	return wpa_auth_resend_m3(sta->wpa_sm);
+	return wpa_auth_resend_m3(sta->wpa_sm,
+				  plain ? restore_tk : NULL, hapd, sta);
 }
 
 
@@ -2122,6 +2162,7 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 {
 	struct sta_info *sta;
 	u8 addr[ETH_ALEN];
+	int plain = os_strstr(cmd, "plaintext") != NULL;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2130,10 +2171,21 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 	if (!sta || !sta->wpa_sm)
 		return -1;
 
+	if (plain && sta->last_tk_alg == WPA_ALG_NONE)
+		plain = 0; /* no need for special processing */
+	if (plain) {
+		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
+			   MAC2STR(sta->addr));
+		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
+				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
+				    NULL, 0);
+	}
+
 	wpa_printf(MSG_INFO,
 		   "TESTING: Send group M1 for the same GTK and zero RSC to "
 		   MACSTR, MAC2STR(sta->addr));
-	return wpa_auth_resend_group_m1(sta->wpa_sm);
+	return wpa_auth_resend_group_m1(sta->wpa_sm,
+					plain ? restore_tk : NULL, hapd, sta);
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */

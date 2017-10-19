@@ -4406,6 +4406,14 @@ void wpa_auth_eapol_key_tx_status(struct wpa_authenticator *wpa_auth,
 				       (timeout_ms % 1000) * 1000,
 				       wpa_send_eapol_timeout, wpa_auth, sm);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (sm->eapol_status_cb) {
+		sm->eapol_status_cb(sm->eapol_status_cb_ctx1,
+				    sm->eapol_status_cb_ctx2);
+		sm->eapol_status_cb = NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 
@@ -4523,7 +4531,9 @@ void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,
 
 #if CONFIG_TESTING_OPTIONS
 
-int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce)
+int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce,
+		       void (*cb)(void *ctx1, void *ctx2),
+		       void *ctx1, void *ctx2)
 {
 	const u8 *anonce = sm->ANonce;
 	u8 anonce_buf[WPA_NONCE_LEN];
@@ -4543,7 +4553,9 @@ int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce)
 }
 
 
-int wpa_auth_resend_m3(struct wpa_state_machine *sm)
+int wpa_auth_resend_m3(struct wpa_state_machine *sm,
+		       void (*cb)(void *ctx1, void *ctx2),
+		       void *ctx1, void *ctx2)
 {
 	u8 rsc[WPA_KEY_RSC_LEN], *_rsc, *gtk, *kde, *pos, *opos;
 	size_t gtk_len, kde_len;
@@ -4703,7 +4715,9 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm)
 }
 
 
-int wpa_auth_resend_group_m1(struct wpa_state_machine *sm)
+int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
+			     void (*cb)(void *ctx1, void *ctx2),
+			     void *ctx1, void *ctx2)
 {
 	u8 rsc[WPA_KEY_RSC_LEN];
 	struct wpa_group *gsm = sm->group;
@@ -4742,6 +4756,10 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm)
 		kde = gtk;
 		kde_len = gsm->GTK_len;
 	}
+
+	sm->eapol_status_cb = cb;
+	sm->eapol_status_cb_ctx1 = ctx1;
+	sm->eapol_status_cb_ctx2 = ctx2;
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       WPA_KEY_INFO_SECURE |

@@ -143,6 +143,12 @@ struct wpa_state_machine {
 	size_t fils_key_auth_len;
 	unsigned int fils_completed:1;
 #endif /* CONFIG_FILS */
+
+#ifdef CONFIG_TESTING_OPTIONS
+	void (*eapol_status_cb)(void *ctx1, void *ctx2);
+	void *eapol_status_cb_ctx1;
+	void *eapol_status_cb_ctx2;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

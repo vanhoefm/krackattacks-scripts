@@ -587,3 +587,66 @@ def test_ap_wpa2_delayed_m1_m3_zero_tk(dev, apdev):
                                   success_expected=False)
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+
+def test_ap_wpa2_plaintext_m1_m3(dev, apdev):
+    """Plaintext M1/M3 during PTK rekey"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    time.sleep(0.1)
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_M1 " + addr + " plaintext"):
+        raise Exception("RESEND_M1 failed")
+    time.sleep(0.1)
+    if "OK" not in hapd.request("RESEND_M3 " + addr + " plaintext"):
+        raise Exception("RESEND_M3 failed")
+    time.sleep(0.1)
+
+def test_ap_wpa2_plaintext_m3(dev, apdev):
+    """Plaintext M3 during PTK rekey"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    time.sleep(0.1)
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_M1 " + addr):
+        raise Exception("RESEND_M1 failed")
+    time.sleep(0.1)
+    if "OK" not in hapd.request("RESEND_M3 " + addr + " plaintext"):
+        raise Exception("RESEND_M3 failed")
+    time.sleep(0.1)
+
+def test_ap_wpa2_plaintext_group_m1(dev, apdev):
+    """Plaintext group M1"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wpa2-psk", psk="12345678", scan_freq="2412")
+
+    time.sleep(0.1)
+    addr = dev[0].own_addr()
+    if "OK" not in hapd.request("RESEND_GROUP_M1 " + addr + " plaintext"):
+        raise Exception("RESEND_GROUP_M1 failed")
+    time.sleep(0.2)
+    if "OK" not in hapd.request("RESEND_GROUP_M1 " + addr):
+        raise Exception("RESEND_GROUP_M1 failed")
+    time.sleep(0.1)

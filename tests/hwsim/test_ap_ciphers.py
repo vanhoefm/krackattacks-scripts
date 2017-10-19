@@ -347,28 +347,34 @@ def test_ap_cipher_bip_req_mismatch(dev, apdev):
 
 def get_rx_spec(phy, gtk=False):
     keys = "/sys/kernel/debug/ieee80211/%s/keys" % (phy)
-    for key in os.listdir(keys):
-        keydir = keys + "/" + key
-        files = os.listdir(keydir)
-        if not gtk and "station" not in files:
-            continue
-        if gtk and "station" in files:
-            continue
-        with open(keydir + "/rx_spec") as f:
-            return f.read()
+    try:
+        for key in os.listdir(keys):
+            keydir = keys + "/" + key
+            files = os.listdir(keydir)
+            if not gtk and "station" not in files:
+                continue
+            if gtk and "station" in files:
+                continue
+            with open(keydir + "/rx_spec") as f:
+                return f.read()
+    except OSError, e:
+        raise HwsimSkip("debugfs not supported in mac80211")
     return None
 
 def get_tk_replay_counter(phy, gtk=False):
     keys = "/sys/kernel/debug/ieee80211/%s/keys" % (phy)
-    for key in os.listdir(keys):
-        keydir = keys + "/" + key
-        files = os.listdir(keydir)
-        if not gtk and "station" not in files:
-            continue
-        if gtk and "station" in files:
-            continue
-        with open(keydir + "/replays") as f:
-            return int(f.read())
+    try:
+        for key in os.listdir(keys):
+            keydir = keys + "/" + key
+            files = os.listdir(keydir)
+            if not gtk and "station" not in files:
+                continue
+            if gtk and "station" in files:
+                continue
+            with open(keydir + "/replays") as f:
+                return int(f.read())
+    except OSError, e:
+        raise HwsimSkip("debugfs not supported in mac80211")
     return None
 
 def test_ap_cipher_replay_protection_ap_ccmp(dev, apdev):

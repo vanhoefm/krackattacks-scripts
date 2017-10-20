@@ -964,6 +964,127 @@ def test_ap_wpa2_psk_ext_retry_msg_3e(dev, apdev):
 
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ap_wpa2_psk_ext_delayed_ptk_rekey(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and delayed PTK rekey exchange"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    params['wpa_ptk_rekey'] = '3'
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg2 = ev.split(' ')[2]
+    # Do not send this to the AP
+
+    # EAPOL-Key msg 1/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to AP
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4b = ev.split(' ')[2]
+    # Do not send msg 4/4 to AP
+
+    # Send the previous EAPOL-Key msg 4/4 to AP
+    res = hapd.request("EAPOL_RX " + addr + " " + msg4)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    # Wait for PTK rekeying to be initialized
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+
+    # EAPOL-Key msg 2/4 from the previous 4-way handshake
+    # hostapd is expected to ignore this due to unexpected Replay Counter
+    res = hapd.request("EAPOL_RX " + addr + " " + msg2)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4 (actually, this ends up being retransmitted 1/4)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    keyinfo = ev.split(' ')[2][10:14]
+    if keyinfo != "008a":
+        raise Exception("Unexpected key info when expected msg 1/4:" + keyinfo)
+
+    # EAPOL-Key msg 4/4 from the previous 4-way handshake
+    # hostapd is expected to ignore this due to unexpected Replay Counter
+    res = hapd.request("EAPOL_RX " + addr + " " + msg4b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # Check if any more EAPOL-Key frames are seen. If the second 4-way handshake
+    # was accepted, there would be no more EAPOL-Key frames. If the Replay
+    # Counters were rejected, there would be a retransmitted msg 1/4 here.
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        raise Exception("Did not see EAPOL-TX from hostapd in the end (expected msg 1/4)")
+    keyinfo = ev.split(' ')[2][10:14]
+    if keyinfo != "008a":
+        raise Exception("Unexpected key info when expected msg 1/4:" + keyinfo)
+
 def parse_eapol(data):
     (version, type, length) = struct.unpack('>BBH', data[0:4])
     payload = data[4:]

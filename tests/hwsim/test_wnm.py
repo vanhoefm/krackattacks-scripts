@@ -1526,6 +1526,7 @@ def test_wnm_bss_tm_req_with_mbo_ie(dev, apdev):
     """WNM BSS transition request with MBO IE and reassociation delay attribute"""
     ssid = "test-wnm-mbo"
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params['bss_transition'] = "1"
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     if "OK" not in dev[0].request("SET mbo_cell_capa 1"):

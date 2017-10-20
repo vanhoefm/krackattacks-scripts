@@ -5,6 +5,7 @@
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
 
+from __future__ import print_function
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
@@ -137,7 +138,7 @@ def log(level, msg, color=None, showtime=True):
 	if level == DEBUG   and color is None: color="gray"
 	if level == WARNING and color is None: color="orange"
 	if level == ERROR   and color is None: color="red"
-	print (datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m"
+	print((datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m")
 
 
 #### Packet Processing Functions ####
@@ -324,7 +325,7 @@ def argv_get_interface():
 
 if __name__ == "__main__":
 	if len(sys.argv) <= 1 or "--help" in sys.argv or "-h" in sys.argv:
-		print USAGE.format(name=sys.argv[0])
+		print(USAGE.format(name=sys.argv[0]))
 		quit(1)
 
 	# TODO: Verify that we only accept CCMP?

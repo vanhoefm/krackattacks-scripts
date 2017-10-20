@@ -236,18 +236,9 @@ the following hostapd_cli commands:
 
 Test broadcast connectivity; should work
 
-> raw RESET_PN ff:ff:ff:ff:ff:ff
-OK
-
-Test broadcast connectivity; should not work; if it does, replay
-protection is completely broken and the following step cannot be
-executed reliably. The following command needs to be run before there
-has been large enough number of new frames to increment the PN on the
-test tool. It would also be possible to execute "raw RESET_PN
-ff:ff:ff:ff:ff:ff" again after the initial sanity testing to get back to
-PN 0 for the next step.
-
 > raw RESEND_GROUP_M1 <DUT MAC address>
+OK
+> raw RESET_PN ff:ff:ff:ff:ff:ff
 OK
 
 Test broadcast connectivity; should not work; if it does, the device
@@ -263,18 +254,9 @@ broadcast traffic, but with the following hostapd_cli commands:
 
 Test broadcast connectivity; should work
 
-> raw RESET_PN ff:ff:ff:ff:ff:ff
-OK
-
-Test broadcast connectivity; should not work; if it does, replay
-protection is completely broken and the following step cannot be
-executed reliably. The following command needs to be run before there
-has been large enough number of new frames to increment the PN on the
-test tool. It would also be possible to execute "raw RESET_PN
-ff:ff:ff:ff:ff:ff" again after the initial sanity testing to get back to
-PN 0 for the next step.
-
 > raw RESEND_M3 <DUT MAC address>
+OK
+> raw RESET_PN ff:ff:ff:ff:ff:ff
 OK
 
 Test broadcast connectivity; should not work; if it does, the device
@@ -310,18 +292,9 @@ unicast traffic, but with the following hostapd_cli commands:
 
 Test unicast connectivity; should work
 
-> raw RESET_PN <DUT MAC address>
-OK
-
-Test unicast connectivity; should not work; if it does, replay
-protection is completely broken and the following step cannot be
-executed reliably. The following command needs to be run before there
-has been large enough number of new frames to increment the PN on the
-test tool. It would also be possible to execute "raw RESET_PN <DUT MAC
-address>" again after the initial sanity testing to get back to PN 0 for
-the next step.
-
 > raw RESEND_M3 <DUT MAC address>
+OK
+> raw RESET_PN <DUT MAC address>
 OK
 
 Test unicast connectivity; should not work; if it does, the device

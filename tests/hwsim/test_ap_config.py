@@ -9,6 +9,7 @@ import signal
 import time
 import logging
 logger = logging.getLogger(__name__)
+import subprocess
 
 from remotehost import remote_compatible
 import hostapd
@@ -114,6 +115,55 @@ def test_ap_config_reload_file(dev, apdev, params):
     os.kill(pid, signal.SIGHUP)
     dev[0].wait_disconnected()
     dev[0].request("DISCONNECT")
+
+def write_hostapd_config(conffile, ifname, ssid):
+    with open(conffile, "w") as f:
+        f.write("driver=nl80211\n")
+        f.write("hw_mode=g\n")
+        f.write("channel=1\n")
+        f.write("ieee80211n=1\n")
+        f.write("interface=" + ifname + "\n")
+        f.write("ssid=" + ssid + "\n")
+
+def test_ap_config_reload_on_sighup(dev, apdev, params):
+    """hostapd configuration reload modification from file on SIGHUP"""
+    pidfile = os.path.join(params['logdir'],
+                           "ap_config_reload_on_sighup-hostapd.pid")
+    logfile = os.path.join(params['logdir'],
+                           "ap_config_reload_on_sighup-hostapd-log")
+    conffile = os.path.join(params['logdir'],
+                            "ap_config_reload_on_sighup-hostapd.conf")
+    prg = os.path.join(params['logdir'], 'alt-hostapd/hostapd/hostapd')
+    if not os.path.exists(prg):
+        prg = '../../hostapd/hostapd'
+    write_hostapd_config(conffile, apdev[0]['ifname'], "test-1")
+    cmd = [ prg, '-B', '-dddt', '-P', pidfile, '-f', logfile, conffile ]
+    res = subprocess.check_call(cmd)
+    if res != 0:
+        raise Exception("Could not start hostapd: %s" % str(res))
+
+    dev[0].connect("test-1", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    write_hostapd_config(conffile, apdev[0]['ifname'], "test-2")
+    with open(pidfile, "r") as f:
+        pid = int(f.read())
+    os.kill(pid, signal.SIGHUP)
+
+    dev[0].connect("test-2", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
+    os.kill(pid, signal.SIGTERM)
+    removed = False
+    for i in range(20):
+        time.sleep(0.1)
+        if not os.path.exists(pidfile):
+            removed = True
+            break
+    if not removed:
+        raise Exception("hostapd PID file not removed on SIGTERM")
 
 def test_ap_config_reload_before_enable(dev, apdev, params):
     """hostapd configuration reload before enable"""

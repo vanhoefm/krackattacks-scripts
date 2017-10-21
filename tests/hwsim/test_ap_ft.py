@@ -609,6 +609,35 @@ def test_ap_ft_eap_pull(dev, apdev):
 
     run_roams(dev[0], apdev, hapd, hapd1, ssid, passphrase, eap=True)
 
+def test_ap_ft_eap_pull_wildcard(dev, apdev):
+    """WPA2-EAP-FT AP (pull PMK) - wildcard R0KH/R1KH"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase, discovery=True)
+    params['wpa_key_mgmt'] = "WPA-EAP FT-EAP"
+    params["ieee8021x"] = "1"
+    params["pmk_r1_push"] = "0"
+    params["r0kh"] = "ff:ff:ff:ff:ff:ff * 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    params["r1kh"] = "00:00:00:00:00:00 00:00:00:00:00:00 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    params["ft_psk_generate_local"] = "1"
+    params["eap_server"] = "0"
+    params = dict(radius.items() + params.items())
+    hapd = hostapd.add_ap(apdev[0], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase, discovery=True)
+    params['wpa_key_mgmt'] = "WPA-EAP FT-EAP"
+    params["ieee8021x"] = "1"
+    params["pmk_r1_push"] = "0"
+    params["r0kh"] = "ff:ff:ff:ff:ff:ff * 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    params["r1kh"] = "00:00:00:00:00:00 00:00:00:00:00:00 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+    params["ft_psk_generate_local"] = "1"
+    params["eap_server"] = "0"
+    params = dict(radius.items() + params.items())
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    run_roams(dev[0], apdev, hapd, hapd1, ssid, passphrase, eap=True)
+
 @remote_compatible
 def test_ap_ft_mismatching_rrb_key_push(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching RRB key (push)"""

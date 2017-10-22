@@ -1671,3 +1671,272 @@ def run_dpp_own_config(dev, apdev, own_curve=None, expect_failure=False):
         dev[0].request("DISCONNECT")
     else:
         dev[0].wait_connected()
+
+def run_dpp_proto_init(dev, test_dev, test, mutual=False):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    dev[test_dev].set("dpp_test", str(test))
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[1].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    if mutual:
+        addr = dev[1].own_addr().replace(':', '')
+        res = dev[1].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+        if "FAIL" in res:
+            raise Exception("Failed to generate bootstrapping info")
+        id1b = int(res)
+        uri1b = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1b)
+
+        res = dev[0].request("DPP_QR_CODE " + uri1b)
+        if "FAIL" in res:
+            raise Exception("Failed to parse QR Code URI")
+        id0b = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d configurator=%d conf=sta-dpp" % (id1, conf_id)
+    if mutual:
+        cmd += " own=%d" % id1b
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+
+def test_dpp_proto_after_wrapped_data_auth_req(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in Auth Req"""
+    run_dpp_proto_init(dev, 1, 1)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Request not seen")
+    if "type=0" not in ev or "ignore=invalid-attributes" not in ev:
+        raise Exception("Unexpected RX info: " + ev)
+    ev = dev[1].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_after_wrapped_data_auth_resp(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in Auth Resp"""
+    run_dpp_proto_init(dev, 0, 2)
+    ev = dev[1].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Response not seen")
+    if "type=1" not in ev or "ignore=invalid-attributes" not in ev:
+        raise Exception("Unexpected RX info: " + ev)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=1)
+    if ev is None or "type=0" not in ev:
+        raise Exception("DPP Authentication Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_after_wrapped_data_auth_conf(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in Auth Conf"""
+    run_dpp_proto_init(dev, 1, 3)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None or "type=0" not in ev:
+        raise Exception("DPP Authentication Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Confirm not seen")
+    if "type=2" not in ev or "ignore=invalid-attributes" not in ev:
+        raise Exception("Unexpected RX info: " + ev)
+
+def test_dpp_proto_after_wrapped_data_conf_req(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in Conf Req"""
+    run_dpp_proto_init(dev, 0, 6)
+    ev = dev[1].wait_event(["DPP-CONF-FAILED"], timeout=10)
+    if ev is None:
+        raise Exception("DPP Configuration failure not seen")
+
+def test_dpp_proto_after_wrapped_data_conf_resp(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in Conf Resp"""
+    run_dpp_proto_init(dev, 1, 7)
+    ev = dev[0].wait_event(["DPP-CONF-FAILED"], timeout=10)
+    if ev is None:
+        raise Exception("DPP Configuration failure not seen")
+
+def test_dpp_proto_zero_i_capab(dev, apdev):
+    """DPP protocol testing - zero I-capability in Auth Req"""
+    run_dpp_proto_init(dev, 1, 8)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Invalid role in I-capabilities 0x00" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[1].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_zero_r_capab(dev, apdev):
+    """DPP protocol testing - zero R-capability in Auth Resp"""
+    run_dpp_proto_init(dev, 0, 9)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Unexpected role in R-capabilities 0x00" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=1)
+    if ev is None or "type=0" not in ev:
+        raise Exception("DPP Authentication Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def run_dpp_proto_auth_req_missing(dev, test, reason):
+    run_dpp_proto_init(dev, 1, test)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[1].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_auth_req_no_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no R-bootstrap key in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 10, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_req_no_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no I-bootstrap key in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 11, "Missing or invalid required Initiator Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_req_no_i_proto_key(dev, apdev):
+    """DPP protocol testing - no I-proto key in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 12, "Missing required Initiator Protocol Key attribute")
+
+def test_dpp_proto_auth_req_no_i_nonce(dev, apdev):
+    """DPP protocol testing - no I-nonce in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 13, "Missing or invalid I-nonce")
+
+def test_dpp_proto_auth_req_no_i_capab(dev, apdev):
+    """DPP protocol testing - no I-capab in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 14, "Missing or invalid I-capab")
+
+def test_dpp_proto_auth_req_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 15, "Missing or invalid required Wrapped Data attribute")
+
+def run_dpp_proto_auth_resp_missing(dev, test, reason):
+    run_dpp_proto_init(dev, 0, test, mutual=True)
+    if reason is None:
+        time.sleep(0.1)
+        return
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=1)
+    if ev is None or "type=0" not in ev:
+        raise Exception("DPP Authentication Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_auth_resp_no_status(dev, apdev):
+    """DPP protocol testing - no Status in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 16, "Missing or invalid required DPP Status attribute")
+
+def test_dpp_proto_auth_resp_no_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no R-bootstrap key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 17, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_resp_no_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no I-bootstrap key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 18, None)
+
+def test_dpp_proto_auth_resp_no_r_proto_key(dev, apdev):
+    """DPP protocol testing - no R-Proto Key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 19, "Missing required Responder Protocol Key attribute")
+
+def test_dpp_proto_auth_resp_no_r_nonce(dev, apdev):
+    """DPP protocol testing - no R-nonce in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 20, "Missing or invalid R-nonce")
+
+def test_dpp_proto_auth_resp_no_i_nonce(dev, apdev):
+    """DPP protocol testing - no I-nonce in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 21, "Missing or invalid I-nonce")
+
+def test_dpp_proto_auth_resp_no_r_capab(dev, apdev):
+    """DPP protocol testing - no R-capab in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 22, "Missing or invalid R-capabilities")
+
+def test_dpp_proto_auth_resp_no_r_auth(dev, apdev):
+    """DPP protocol testing - no R-auth in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 23, "Missing or invalid Secondary Wrapped Data")
+
+def test_dpp_proto_auth_resp_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 24, "Missing or invalid required Wrapped Data attribute")
+
+def run_dpp_proto_init_pkex(dev, test_dev, test):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    dev[test_dev].set("dpp_test", str(test))
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 code=secret" % id1
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+def test_dpp_proto_after_wrapped_data_pkex_cr_req(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in PKEX CR Req"""
+    run_dpp_proto_init_pkex(dev, 1, 4)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None or "type=7" not in ev:
+        raise Exception("PKEX Exchange Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None or "type=9" not in ev:
+        raise Exception("PKEX Commit-Reveal Request not seen")
+    if "ignore=invalid-attributes" not in ev:
+        raise Exception("Unexpected RX info: " + ev)
+
+def test_dpp_proto_after_wrapped_data_pkex_cr_resp(dev, apdev):
+    """DPP protocol testing - attribute after Wrapped Data in PKEX CR Resp"""
+    run_dpp_proto_init_pkex(dev, 0, 5)
+    ev = dev[1].wait_event(["DPP-RX"], timeout=5)
+    if ev is None or "type=8" not in ev:
+        raise Exception("PKEX Exchange Response not seen")
+    ev = dev[1].wait_event(["DPP-RX"], timeout=5)
+    if ev is None or "type=10" not in ev:
+        raise Exception("PKEX Commit-Reveal Response not seen")
+    if "ignore=invalid-attributes" not in ev:
+        raise Exception("Unexpected RX info: " + ev)

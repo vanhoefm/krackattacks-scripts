@@ -240,7 +240,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,
 		struct dpp_bootstrap_info *own_bi,
 		unsigned int freq, const u8 *hdr, const u8 *attr_start,
-		const u8 *wrapped_data, u16 wrapped_data_len);
+		size_t attr_len);
 struct wpabuf *
 dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		 const u8 *attr_start, size_t attr_len);

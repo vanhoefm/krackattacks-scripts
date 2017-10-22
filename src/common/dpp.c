@@ -2225,7 +2225,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,
 		struct dpp_bootstrap_info *own_bi,
 		unsigned int freq, const u8 *hdr, const u8 *attr_start,
-		const u8 *wrapped_data,	u16 wrapped_data_len)
+		size_t attr_len)
 {
 	EVP_PKEY *pi = NULL;
 	EVP_PKEY_CTX *ctx = NULL;
@@ -2234,14 +2234,20 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	size_t len[2];
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
-	const u8 *i_proto, *i_nonce, *i_capab, *i_bootstrap;
-	u16 i_proto_len, i_nonce_len, i_capab_len, i_bootstrap_len;
+	const u8 *wrapped_data, *i_proto, *i_nonce, *i_capab, *i_bootstrap;
+	u16 wrapped_data_len, i_proto_len, i_nonce_len, i_capab_len,
+		i_bootstrap_len;
 	struct dpp_authentication *auth = NULL;
-	size_t attr_len;
 
-	if (wrapped_data_len < AES_BLOCK_SIZE)
+	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
+				    &wrapped_data_len);
+	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Missing or invalid required Wrapped Data attribute");
 		return NULL;
-
+	}
+	wpa_hexdump(MSG_MSGDUMP, "DPP: Wrapped Data",
+		    wrapped_data, wrapped_data_len);
 	attr_len = wrapped_data - 4 - attr_start;
 
 	auth = os_zalloc(sizeof(*auth));

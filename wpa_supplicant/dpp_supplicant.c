@@ -777,27 +777,16 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 				 const u8 *hdr, const u8 *buf, size_t len,
 				 unsigned int freq)
 {
-	const u8 *r_bootstrap, *i_bootstrap, *wrapped_data;
-	u16 r_bootstrap_len, i_bootstrap_len, wrapped_data_len;
+	const u8 *r_bootstrap, *i_bootstrap;
+	u16 r_bootstrap_len, i_bootstrap_len;
 	struct dpp_bootstrap_info *bi, *own_bi = NULL, *peer_bi = NULL;
 
 	wpa_printf(MSG_DEBUG, "DPP: Authentication Request from " MACSTR,
 		   MAC2STR(src));
 
-	wrapped_data = dpp_get_attr(buf, len, DPP_ATTR_WRAPPED_DATA,
-				    &wrapped_data_len);
-	if (!wrapped_data) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Wrapped data attribute");
-		return;
-	}
-	wpa_hexdump(MSG_MSGDUMP, "DPP: Wrapped data",
-		    wrapped_data, wrapped_data_len);
-
 	r_bootstrap = dpp_get_attr(buf, len, DPP_ATTR_R_BOOTSTRAP_KEY_HASH,
 				   &r_bootstrap_len);
-	if (!r_bootstrap || r_bootstrap > wrapped_data ||
-	    r_bootstrap_len != SHA256_MAC_LEN) {
+	if (!r_bootstrap || r_bootstrap_len != SHA256_MAC_LEN) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Missing or invalid required Responder Bootstrapping Key Hash attribute");
 		return;
@@ -807,8 +796,7 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 
 	i_bootstrap = dpp_get_attr(buf, len, DPP_ATTR_I_BOOTSTRAP_KEY_HASH,
 				   &i_bootstrap_len);
-	if (!i_bootstrap || i_bootstrap > wrapped_data ||
-	    i_bootstrap_len != SHA256_MAC_LEN) {
+	if (!i_bootstrap || i_bootstrap_len != SHA256_MAC_LEN) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Missing or invalid required Initiator Bootstrapping Key Hash attribute");
 		return;
@@ -856,8 +844,7 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	wpa_s->dpp_auth_ok_on_ack = 0;
 	wpa_s->dpp_auth = dpp_auth_req_rx(wpa_s, wpa_s->dpp_allowed_roles,
 					  wpa_s->dpp_qr_mutual,
-					  peer_bi, own_bi, freq, hdr, buf,
-					  wrapped_data, wrapped_data_len);
+					  peer_bi, own_bi, freq, hdr, buf, len);
 	if (!wpa_s->dpp_auth) {
 		wpa_printf(MSG_DEBUG, "DPP: No response generated");
 		return;

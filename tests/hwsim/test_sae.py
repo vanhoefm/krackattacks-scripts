@@ -970,6 +970,11 @@ def test_sae_invalid_anti_clogging_token_req(dev, apdev):
         raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
+    # Beacon more frequently since Probe Request frames are practically ignored
+    # in this test setup (ext_mgmt_frame_handled=1 on hostapd side) and
+    # wpa_supplicant scans may end up getting ignored if no new results are
+    # available due to the missing Probe Response frames.
+    params['beacon_int'] = '20'
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
 
@@ -980,7 +985,7 @@ def test_sae_invalid_anti_clogging_token_req(dev, apdev):
                    scan_freq="2412", wait_connect=False)
     ev = dev[0].wait_event(["SME: Trying to authenticate"])
     if ev is None:
-        raise Exception("No authentication attempt seen")
+        raise Exception("No authentication attempt seen (1)")
     dev[0].dump_monitor()
 
     for i in range(0, 10):
@@ -1001,10 +1006,15 @@ def test_sae_invalid_anti_clogging_token_req(dev, apdev):
     resp['bssid'] = req['bssid']
     resp['payload'] = binascii.unhexlify("030001004c0013")
     hapd.mgmt_tx(resp)
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("Management frame TX status not reported (1)")
+    if "stype=11 ok=1" not in ev:
+        raise Exception("Unexpected management frame TX status (1): " + ev)
 
     ev = dev[0].wait_event(["SME: Trying to authenticate"])
     if ev is None:
-        raise Exception("No authentication attempt seen")
+        raise Exception("No authentication attempt seen (2)")
     dev[0].dump_monitor()
 
     for i in range(0, 10):
@@ -1025,10 +1035,15 @@ def test_sae_invalid_anti_clogging_token_req(dev, apdev):
     resp['bssid'] = req['bssid']
     resp['payload'] = binascii.unhexlify("030001000100")
     hapd.mgmt_tx(resp)
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("Management frame TX status not reported (1)")
+    if "stype=11 ok=1" not in ev:
+        raise Exception("Unexpected management frame TX status (1): " + ev)
 
     ev = dev[0].wait_event(["SME: Trying to authenticate"])
     if ev is None:
-        raise Exception("No authentication attempt seen")
+        raise Exception("No authentication attempt seen (3)")
     dev[0].dump_monitor()
 
     dev[0].request("DISCONNECT")

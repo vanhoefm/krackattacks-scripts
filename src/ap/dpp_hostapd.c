@@ -75,6 +75,10 @@ int hostapd_dpp_qr_code(struct hostapd_data *hapd, const char *cmd)
 	    dpp_notify_new_qr_code(auth, bi) == 1) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Sending out pending authentication response");
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+			" freq=%u type=%d",
+			MAC2STR(auth->peer_mac_addr), auth->curr_freq,
+			DPP_PA_AUTHENTICATION_RESP);
 		hostapd_drv_send_action(hapd, auth->curr_freq, 0,
 					auth->peer_mac_addr,
 					wpabuf_head(hapd->dpp_auth->resp_msg),
@@ -279,6 +283,8 @@ void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 {
 	wpa_printf(MSG_DEBUG, "DPP: TX status: dst=" MACSTR " ok=%d",
 		   MAC2STR(dst), ok);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
+		" result=%s", MAC2STR(dst), ok ? "SUCCESS" : "FAILED");
 
 	if (!hapd->dpp_auth) {
 		wpa_printf(MSG_DEBUG,
@@ -520,6 +526,10 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	}
 	hapd->dpp_auth_ok_on_ack = 0;
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d",
+		MAC2STR(dst), hapd->dpp_auth->curr_freq,
+		DPP_PA_AUTHENTICATION_REQ);
 	res = hostapd_drv_send_action(hapd, hapd->dpp_auth->curr_freq, 0,
 				      dst, wpabuf_head(hapd->dpp_auth->req_msg),
 				      wpabuf_len(hapd->dpp_auth->req_msg));
@@ -612,6 +622,10 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 				     hapd->dpp_configurator_params);
 	os_memcpy(hapd->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d",
+		MAC2STR(src), hapd->dpp_auth->curr_freq,
+		DPP_PA_AUTHENTICATION_RESP);
 	hostapd_drv_send_action(hapd, hapd->dpp_auth->curr_freq, 0,
 				src, wpabuf_head(hapd->dpp_auth->resp_msg),
 				wpabuf_len(hapd->dpp_auth->resp_msg));
@@ -837,6 +851,9 @@ static void hostapd_dpp_rx_auth_resp(struct hostapd_data *hapd, const u8 *src,
 	}
 	os_memcpy(auth->peer_mac_addr, src, ETH_ALEN);
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), auth->curr_freq,
+		DPP_PA_AUTHENTICATION_CONF);
 	hostapd_drv_send_action(hapd, auth->curr_freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 	wpabuf_free(msg);
@@ -966,6 +983,9 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 
 	wpa_printf(MSG_DEBUG, "DPP: Send Peer Discovery Response to " MACSTR,
 		   MAC2STR(src));
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), freq,
+		DPP_PA_PEER_DISCOVERY_RESP);
 	hostapd_drv_send_action(hapd, freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 	wpabuf_free(msg);
@@ -1010,6 +1030,9 @@ hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
 	}
 
 	msg = hapd->dpp_pkex->exchange_resp;
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), freq,
+		DPP_PA_PKEX_EXCHANGE_RESP);
 	hostapd_drv_send_action(hapd, freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 }
@@ -1043,6 +1066,9 @@ hostapd_dpp_rx_pkex_exchange_resp(struct hostapd_data *hapd, const u8 *src,
 	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Request to " MACSTR,
 		   MAC2STR(src));
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), freq,
+		DPP_PA_PKEX_COMMIT_REVEAL_REQ);
 	hostapd_drv_send_action(hapd, freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 	wpabuf_free(msg);
@@ -1075,6 +1101,9 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 	wpa_printf(MSG_DEBUG, "DPP: Send PKEX Commit-Reveal Response to "
 		   MACSTR, MAC2STR(src));
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), freq,
+		DPP_PA_PKEX_COMMIT_REVEAL_RESP);
 	hostapd_drv_send_action(hapd, freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
 	wpabuf_free(msg);
@@ -1402,6 +1431,9 @@ int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
 
 		msg = hapd->dpp_pkex->exchange_req;
 		/* TODO: Which channel to use? */
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+			" freq=%u type=%d", MAC2STR(broadcast), 2437,
+			DPP_PA_PKEX_EXCHANGE_REQ);
 		hostapd_drv_send_action(hapd, 2437, 0, broadcast,
 					wpabuf_head(msg), wpabuf_len(msg));
 	}

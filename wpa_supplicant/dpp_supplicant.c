@@ -93,6 +93,10 @@ int wpas_dpp_qr_code(struct wpa_supplicant *wpa_s, const char *cmd)
 	    dpp_notify_new_qr_code(auth, bi) == 1) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Sending out pending authentication response");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+			" freq=%u type=%d",
+			MAC2STR(auth->peer_mac_addr), auth->curr_freq,
+			DPP_PA_AUTHENTICATION_RESP);
 		offchannel_send_action(wpa_s, auth->curr_freq,
 				       auth->peer_mac_addr, wpa_s->own_addr,
 				       broadcast,
@@ -300,12 +304,15 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       const u8 *data, size_t data_len,
 			       enum offchannel_send_action_result result)
 {
+	const char *res_txt;
+
+	res_txt = result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		(result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		 "FAILED");
 	wpa_printf(MSG_DEBUG, "DPP: TX status: freq=%u dst=" MACSTR
-		   " result=%s",
-		   freq, MAC2STR(dst),
-		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
-		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
-		    "FAILED"));
+		   " result=%s", freq, MAC2STR(dst), res_txt);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
+		" freq=%u result=%s", MAC2STR(dst), freq, res_txt);
 
 	if (!wpa_s->dpp_auth) {
 		wpa_printf(MSG_DEBUG,
@@ -586,6 +593,9 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
 			       wpas_dpp_reply_wait_timeout,
 			       wpa_s, NULL);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(dst), wpa_s->dpp_auth->curr_freq,
+		DPP_PA_AUTHENTICATION_REQ);
 	res = offchannel_send_action(wpa_s, wpa_s->dpp_auth->curr_freq,
 				     dst, wpa_s->own_addr, broadcast,
 				     wpabuf_head(wpa_s->dpp_auth->req_msg),
@@ -854,6 +864,9 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 				  wpa_s->dpp_configurator_params);
 	os_memcpy(wpa_s->dpp_auth->peer_mac_addr, src, ETH_ALEN);
 
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(src), wpa_s->dpp_auth->curr_freq,
+		DPP_PA_AUTHENTICATION_RESP);
 	offchannel_send_action(wpa_s, wpa_s->dpp_auth->curr_freq,
 			       src, wpa_s->own_addr, broadcast,
 			       wpabuf_head(wpa_s->dpp_auth->resp_msg),
@@ -1185,6 +1198,8 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 	}
 	os_memcpy(auth->peer_mac_addr, src, ETH_ALEN);
 
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(src), auth->curr_freq, DPP_PA_AUTHENTICATION_CONF);
 	offchannel_send_action(wpa_s, auth->curr_freq,
 			       src, wpa_s->own_addr, broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1328,12 +1343,16 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 			const u8 *data, size_t data_len,
 			enum offchannel_send_action_result result)
 {
+	const char *res_txt;
+
+	res_txt = result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		(result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		 "FAILED");
 	wpa_printf(MSG_DEBUG, "DPP: TX status: freq=%u dst=" MACSTR
 		   " result=%s (PKEX)",
-		   freq, MAC2STR(dst),
-		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
-		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
-		    "FAILED"));
+		   freq, MAC2STR(dst), res_txt);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
+		" freq=%u result=%s", MAC2STR(dst), freq, res_txt);
 	/* TODO: Time out wait for response more quickly in error cases? */
 }
 
@@ -1379,6 +1398,8 @@ wpas_dpp_rx_pkex_exchange_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	wait_time = wpa_s->max_remain_on_chan;
 	if (wait_time > 2000)
 		wait_time = 2000;
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(src), freq, DPP_PA_PKEX_EXCHANGE_RESP);
 	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
 			       broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1418,6 +1439,8 @@ wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 	wait_time = wpa_s->max_remain_on_chan;
 	if (wait_time > 2000)
 		wait_time = 2000;
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(src), freq, DPP_PA_PKEX_COMMIT_REVEAL_REQ);
 	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
 			       broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1456,6 +1479,8 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	wait_time = wpa_s->max_remain_on_chan;
 	if (wait_time > 2000)
 		wait_time = 2000;
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(src), freq, DPP_PA_PKEX_COMMIT_REVEAL_RESP);
 	offchannel_send_action(wpa_s, freq, src, wpa_s->own_addr,
 			       broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1787,12 +1812,16 @@ wpas_dpp_tx_introduction_status(struct wpa_supplicant *wpa_s,
 				const u8 *data, size_t data_len,
 				enum offchannel_send_action_result result)
 {
+	const char *res_txt;
+
+	res_txt = result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
+		(result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
+		 "FAILED");
 	wpa_printf(MSG_DEBUG, "DPP: TX status: freq=%u dst=" MACSTR
 		   " result=%s (DPP Peer Discovery Request)",
-		   freq, MAC2STR(dst),
-		   result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
-		   (result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
-		    "FAILED"));
+		   freq, MAC2STR(dst), res_txt);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
+		" freq=%u result=%s", MAC2STR(dst), freq, res_txt);
 	/* TODO: Time out wait for response more quickly in error cases? */
 }
 
@@ -1851,6 +1880,8 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 	wait_time = wpa_s->max_remain_on_chan;
 	if (wait_time > 2000)
 		wait_time = 2000;
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(bss->bssid), bss->freq, DPP_PA_PEER_DISCOVERY_REQ);
 	offchannel_send_action(wpa_s, bss->freq, bss->bssid, wpa_s->own_addr,
 			       broadcast,
 			       wpabuf_head(msg), wpabuf_len(msg),
@@ -1927,6 +1958,9 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 		if (wait_time > 2000)
 			wait_time = 2000;
 		/* TODO: Which channel to use? */
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+			" freq=%u type=%d",
+			MAC2STR(broadcast), 2437, DPP_PA_PKEX_EXCHANGE_REQ);
 		offchannel_send_action(wpa_s, 2437, broadcast, wpa_s->own_addr,
 				       broadcast,
 				       wpabuf_head(msg), wpabuf_len(msg),

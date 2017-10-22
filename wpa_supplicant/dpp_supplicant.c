@@ -797,8 +797,8 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	r_bootstrap = dpp_get_attr(buf, len, DPP_ATTR_R_BOOTSTRAP_KEY_HASH,
 				   &r_bootstrap_len);
 	if (!r_bootstrap || r_bootstrap_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Responder Bootstrapping Key Hash attribute");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+			"Missing or invalid required Responder Bootstrapping Key Hash attribute");
 		return;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Responder Bootstrapping Key Hash",
@@ -807,8 +807,8 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	i_bootstrap = dpp_get_attr(buf, len, DPP_ATTR_I_BOOTSTRAP_KEY_HASH,
 				   &i_bootstrap_len);
 	if (!i_bootstrap || i_bootstrap_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Initiator Bootstrapping Key Hash attribute");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+			"Missing or invalid required Initiator Bootstrapping Key Hash attribute");
 		return;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Initiator Bootstrapping Key Hash",
@@ -839,14 +839,14 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	}
 
 	if (!own_bi) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No matching own bootstrapping key found - ignore message");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+			"No matching own bootstrapping key found - ignore message");
 		return;
 	}
 
 	if (wpa_s->dpp_auth) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Already in DPP authentication exchange - ignore new one");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+			"Already in DPP authentication exchange - ignore new one");
 		return;
 	}
 

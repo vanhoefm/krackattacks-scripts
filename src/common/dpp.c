@@ -483,6 +483,12 @@ static EVP_PKEY * dpp_set_pubkey_point(EVP_PKEY *group_key,
 }
 
 
+static void dpp_auth_fail(struct dpp_authentication *auth, const char *txt)
+{
+	wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_FAIL "%s", txt);
+}
+
+
 struct wpabuf * dpp_alloc_msg(enum dpp_public_action_frame_type type,
 			      size_t len)
 {
@@ -2333,8 +2339,8 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Wrapped Data attribute");
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Missing or invalid required Wrapped Data attribute");
 		return NULL;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Wrapped Data",
@@ -2353,8 +2359,8 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	i_proto = dpp_get_attr(attr_start, attr_len, DPP_ATTR_I_PROTOCOL_KEY,
 			       &i_proto_len);
 	if (!i_proto) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Initiator Protocol Key attribute");
+		dpp_auth_fail(auth,
+			      "Missing required Initiator Protocol Key attribute");
 		goto fail;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Initiator Protocol Key",
@@ -2363,7 +2369,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	/* M = bR * PI */
 	pi = dpp_set_pubkey_point(own_bi->pubkey, i_proto, i_proto_len);
 	if (!pi) {
-		wpa_printf(MSG_DEBUG, "DPP: Invalid Initiator Protocol Key");
+		dpp_auth_fail(auth, "Invalid Initiator Protocol Key");
 		goto fail;
 	}
 	dpp_debug_print_key("Peer (Initiator) Protocol Key", pi);
@@ -2378,6 +2384,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to derive ECDH shared secret: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
+		dpp_auth_fail(auth, "Failed to derive ECDH shared secret");
 		goto fail;
 	}
 	auth->secret_len = secret_len;
@@ -2406,22 +2413,21 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	if (aes_siv_decrypt(auth->k1, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	i_nonce = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_I_NONCE,
 			       &i_nonce_len);
 	if (!i_nonce || i_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid I-nonce");
+		dpp_auth_fail(auth, "Missing or invalid I-nonce");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: I-nonce", i_nonce, i_nonce_len);
@@ -2431,7 +2437,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 			       DPP_ATTR_I_CAPABILITIES,
 			       &i_capab_len);
 	if (!i_capab || i_capab_len < 1) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid I-capabilities");
+		dpp_auth_fail(auth, "Missing or invalid I-capabilities");
 		goto fail;
 	}
 	auth->i_capab = i_capab[0];
@@ -2655,6 +2661,7 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Responder reported failure (status %d)",
 			   status);
+		dpp_auth_fail(auth, "Responder reported failure");
 		return;
 	}
 
@@ -2673,27 +2680,26 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 	if (aes_siv_decrypt(auth->k1, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	i_nonce = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_I_NONCE,
 			       &i_nonce_len);
 	if (!i_nonce || i_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid I-nonce");
+		dpp_auth_fail(auth, "Missing or invalid I-nonce");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: I-nonce", i_nonce, i_nonce_len);
 	if (os_memcmp(auth->i_nonce, i_nonce, i_nonce_len) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: I-nonce mismatch");
+		dpp_auth_fail(auth, "I-nonce mismatch");
 		goto fail;
 	}
 
@@ -2701,7 +2707,7 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 			       DPP_ATTR_R_CAPABILITIES,
 			       &r_capab_len);
 	if (!r_capab || r_capab_len < 1) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid R-capabilities");
+		dpp_auth_fail(auth, "Missing or invalid R-capabilities");
 		goto fail;
 	}
 	auth->r_capab = r_capab[0];
@@ -2749,16 +2755,13 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
-	if (!wrapped_data) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Wrapped data attribute");
+	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Wrapped Data attribute");
 		return NULL;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Wrapped data",
 		    wrapped_data, wrapped_data_len);
-
-	if (wrapped_data_len < AES_BLOCK_SIZE)
-		return NULL;
 
 	attr_len = wrapped_data - 4 - attr_start;
 
@@ -2766,14 +2769,16 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 				   DPP_ATTR_R_BOOTSTRAP_KEY_HASH,
 				   &r_bootstrap_len);
 	if (!r_bootstrap || r_bootstrap_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Responder Bootstrapping Key Hash attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Responder Bootstrapping Key Hash attribute");
 		return NULL;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Responder Bootstrapping Key Hash",
 		    r_bootstrap, r_bootstrap_len);
 	if (os_memcmp(r_bootstrap, auth->peer_bi->pubkey_hash,
 		      SHA256_MAC_LEN) != 0) {
+		dpp_auth_fail(auth,
+			      "Unexpected Responder Bootstrapping Key Hash value");
 		wpa_hexdump(MSG_DEBUG,
 			    "DPP: Expected Responder Bootstrapping Key Hash",
 			    auth->peer_bi->pubkey_hash, SHA256_MAC_LEN);
@@ -2785,8 +2790,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 				   &i_bootstrap_len);
 	if (i_bootstrap) {
 		if (i_bootstrap_len != SHA256_MAC_LEN) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Invalid Initiator Bootstrapping Key Hash attribute");
+			dpp_auth_fail(auth,
+				      "Invalid Initiator Bootstrapping Key Hash attribute");
 			return NULL;
 		}
 		wpa_hexdump(MSG_MSGDUMP,
@@ -2795,8 +2800,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		if (!auth->own_bi ||
 		    os_memcmp(i_bootstrap, auth->own_bi->pubkey_hash,
 			      SHA256_MAC_LEN) != 0) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Initiator Bootstrapping Key Hash attribute did not match");
+			dpp_auth_fail(auth,
+				      "Initiator Bootstrapping Key Hash attribute did not match");
 			return NULL;
 		}
 	}
@@ -2804,8 +2809,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	status = dpp_get_attr(attr_start, attr_len, DPP_ATTR_STATUS,
 			      &status_len);
 	if (!status || status_len < 1) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required DPP Status attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required DPP Status attribute");
 		return NULL;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", status[0]);
@@ -2820,8 +2825,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	r_proto = dpp_get_attr(attr_start, attr_len, DPP_ATTR_R_PROTOCOL_KEY,
 			       &r_proto_len);
 	if (!r_proto) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Responder Protocol Key attribute");
+		dpp_auth_fail(auth,
+			      "Missing required Responder Protocol Key attribute");
 		return NULL;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Responder Protocol Key",
@@ -2830,7 +2835,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	/* N = pI * PR */
 	pr = dpp_set_pubkey_point(auth->own_protocol_key, r_proto, r_proto_len);
 	if (!pr) {
-		wpa_printf(MSG_DEBUG, "DPP: Invalid Responder Protocol Key");
+		dpp_auth_fail(auth, "Invalid Responder Protocol Key");
 		return NULL;
 	}
 	dpp_debug_print_key("Peer (Responder) Protocol Key", pr);
@@ -2845,6 +2850,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to derive ECDH shared secret: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
+		dpp_auth_fail(auth, "Failed to derive ECDH shared secret");
 		goto fail;
 	}
 	EVP_PKEY_CTX_free(ctx);
@@ -2874,22 +2880,21 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	if (aes_siv_decrypt(auth->k2, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	r_nonce = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_R_NONCE,
 			       &r_nonce_len);
 	if (!r_nonce || r_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid R-nonce");
+		dpp_auth_fail(auth, "DPP: Missing or invalid R-nonce");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: R-nonce", r_nonce, r_nonce_len);
@@ -2898,12 +2903,12 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	i_nonce = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_I_NONCE,
 			       &i_nonce_len);
 	if (!i_nonce || i_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid I-nonce");
+		dpp_auth_fail(auth, "Missing or invalid I-nonce");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: I-nonce", i_nonce, i_nonce_len);
 	if (os_memcmp(auth->i_nonce, i_nonce, i_nonce_len) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: I-nonce mismatch");
+		dpp_auth_fail(auth, "I-nonce mismatch");
 		goto fail;
 	}
 
@@ -2920,7 +2925,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 			       DPP_ATTR_R_CAPABILITIES,
 			       &r_capab_len);
 	if (!r_capab || r_capab_len < 1) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing or invalid R-capabilities");
+		dpp_auth_fail(auth, "Missing or invalid R-capabilities");
 		goto fail;
 	}
 	auth->r_capab = r_capab[0];
@@ -2938,8 +2943,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	wrapped2 = dpp_get_attr(unwrapped, unwrapped_len,
 				DPP_ATTR_WRAPPED_DATA, &wrapped2_len);
 	if (!wrapped2 || wrapped2_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Secondary Wrapped Data");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Secondary Wrapped Data");
 		goto fail;
 	}
 
@@ -2952,23 +2957,23 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	if (aes_siv_decrypt(auth->ke, auth->curve->hash_len,
 			    wrapped2, wrapped2_len,
 			    0, NULL, NULL, unwrapped2) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped2, unwrapped2_len);
 
 	if (dpp_check_attrs(unwrapped2, unwrapped2_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in secondary unwrapped data");
+		dpp_auth_fail(auth,
+			      "Invalid attribute in secondary unwrapped data");
 		goto fail;
 	}
 
 	r_auth = dpp_get_attr(unwrapped2, unwrapped2_len, DPP_ATTR_R_AUTH_TAG,
 			       &r_auth_len);
 	if (!r_auth || r_auth_len != auth->curve->hash_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Responder Authenticating Tag");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Responder Authenticating Tag");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Received Responder Authenticating Tag",
@@ -2979,8 +2984,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	wpa_hexdump(MSG_DEBUG, "DPP: Calculated Responder Authenticating Tag",
 		    r_auth2, r_auth_len);
 	if (os_memcmp(r_auth, r_auth2, r_auth_len) != 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Mismatching Responder Authenticating Tag");
+		dpp_auth_fail(auth, "Mismatching Responder Authenticating Tag");
 		goto fail;
 	}
 

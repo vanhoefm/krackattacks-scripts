@@ -1514,7 +1514,7 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	attr_start = wpabuf_put(msg, 0);
 
 	/* DPP Status */
-	if (status >= 0) {
+	if (status != 255) {
 		wpa_printf(MSG_DEBUG, "DPP: Status %d", status);
 		wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 		wpabuf_put_le16(msg, 1);
@@ -1545,6 +1545,13 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 
 	attr_end = wpabuf_put(msg, 0);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Wrapped data ({R-nonce, I-nonce, R-capabilities, {R-auth}ke}k2) */
 	pos = clear;
 
@@ -1568,6 +1575,13 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 		pos += nonce_len;
 	}
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_R_CAPAB_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-capab");
+		goto skip_r_capab;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* R-capabilities */
 	WPA_PUT_LE16(pos, DPP_ATTR_R_CAPABILITIES);
 	pos += 2;
@@ -1581,6 +1595,7 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 		wpa_printf(MSG_INFO, "DPP: TESTING - zero R-capabilities");
 		pos[-1] = 0;
 	}
+skip_r_capab:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	if (wrapped_r_auth) {
@@ -1624,6 +1639,7 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_hexdump_buf(MSG_DEBUG,
@@ -2134,10 +2150,11 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	size_t secret_len;
 	struct wpabuf *msg, *pr = NULL;
 	u8 r_auth[4 + DPP_MAX_HASH_LEN];
-	u8 wrapped_r_auth[4 + DPP_MAX_HASH_LEN + AES_BLOCK_SIZE];
+	u8 wrapped_r_auth[4 + DPP_MAX_HASH_LEN + AES_BLOCK_SIZE], *w_r_auth;
 	size_t wrapped_r_auth_len;
 	int ret = -1;
-	const u8 *r_pubkey_hash, *i_pubkey_hash;
+	const u8 *r_pubkey_hash, *i_pubkey_hash, *r_nonce, *i_nonce;
+	enum dpp_status_error status = DPP_STATUS_OK;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 
@@ -2199,6 +2216,7 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	wrapped_r_auth_len = 4 + auth->curve->hash_len + AES_BLOCK_SIZE;
 	wpa_hexdump(MSG_DEBUG, "DPP: {R-auth}ke",
 		    wrapped_r_auth, wrapped_r_auth_len);
+	w_r_auth = wrapped_r_auth;
 
 	r_pubkey_hash = auth->own_bi->pubkey_hash;
 	if (auth->peer_bi)
@@ -2206,10 +2224,40 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	else
 		i_pubkey_hash = NULL;
 
-	msg = dpp_auth_build_resp(auth, DPP_STATUS_OK, pr, nonce_len,
+	i_nonce = auth->i_nonce;
+	r_nonce = auth->r_nonce;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
+		r_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
+		i_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_R_PROTO_KEY_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Proto Key");
+		wpabuf_free(pr);
+		pr = NULL;
+	} else if (dpp_test == DPP_TEST_NO_R_AUTH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Auth");
+		w_r_auth = NULL;
+		wrapped_r_auth_len = 0;
+	} else if (dpp_test == DPP_TEST_NO_STATUS_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
+		status = 255;
+	} else if (dpp_test == DPP_TEST_NO_R_NONCE_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-nonce");
+		r_nonce = NULL;
+	} else if (dpp_test == DPP_TEST_NO_I_NONCE_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-nonce");
+		i_nonce = NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	msg = dpp_auth_build_resp(auth, status, pr, nonce_len,
 				  r_pubkey_hash, i_pubkey_hash,
-				  auth->r_nonce, auth->i_nonce,
-				  wrapped_r_auth, wrapped_r_auth_len,
+				  r_nonce, i_nonce,
+				  w_r_auth, wrapped_r_auth_len,
 				  auth->k2);
 	if (!msg)
 		goto fail;
@@ -2225,7 +2273,7 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 				      enum dpp_status_error status)
 {
 	struct wpabuf *msg;
-	const u8 *r_pubkey_hash, *i_pubkey_hash;
+	const u8 *r_pubkey_hash, *i_pubkey_hash, *i_nonce;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 
@@ -2235,10 +2283,27 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 	else
 		i_pubkey_hash = NULL;
 
+	i_nonce = auth->i_nonce;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
+		r_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
+		i_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_STATUS_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
+		status = -1;
+	} else if (dpp_test == DPP_TEST_NO_I_NONCE_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-nonce");
+		i_nonce = NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	msg = dpp_auth_build_resp(auth, status, NULL, auth->curve->nonce_len,
 				  r_pubkey_hash, i_pubkey_hash,
-				  NULL, auth->i_nonce, NULL, 0,
-				  auth->k1);
+				  NULL, i_nonce, NULL, 0, auth->k1);
 	if (!msg)
 		return -1;
 	auth->resp_msg = msg;

@@ -1339,6 +1339,122 @@ static int dpp_derive_ke(struct dpp_authentication *auth, u8 *ke,
 }
 
 
+static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
+					  const struct wpabuf *pi,
+					  size_t nonce_len,
+					  const u8 *r_pubkey_hash,
+					  const u8 *i_pubkey_hash)
+{
+	struct wpabuf *msg;
+	u8 clear[4 + DPP_MAX_NONCE_LEN + 4 + 1];
+	u8 wrapped_data[4 + DPP_MAX_NONCE_LEN + 4 + 1 + AES_BLOCK_SIZE];
+	u8 *pos;
+	const u8 *addr[2];
+	size_t len[2], siv_len, attr_len;
+	u8 *attr_start, *attr_end;
+
+	/* Build DPP Authentication Request frame attributes */
+	attr_len = 2 * (4 + SHA256_MAC_LEN) + 4 + (pi ? wpabuf_len(pi) : 0) +
+		4 + sizeof(wrapped_data);
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ)
+		attr_len += 4;
+#endif /* CONFIG_TESTING_OPTIONS */
+	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_REQ, attr_len);
+	if (!msg)
+		return NULL;
+
+	attr_start = wpabuf_put(msg, 0);
+
+	/* Responder Bootstrapping Key Hash */
+	if (r_pubkey_hash) {
+		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
+		wpabuf_put_le16(msg, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, r_pubkey_hash, SHA256_MAC_LEN);
+	}
+
+	/* Initiator Bootstrapping Key Hash */
+	if (i_pubkey_hash) {
+		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
+		wpabuf_put_le16(msg, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, i_pubkey_hash, SHA256_MAC_LEN);
+	}
+
+	/* Initiator Protocol Key */
+	if (pi) {
+		wpabuf_put_le16(msg, DPP_ATTR_I_PROTOCOL_KEY);
+		wpabuf_put_le16(msg, wpabuf_len(pi));
+		wpabuf_put_buf(msg, pi);
+	}
+
+	/* Wrapped data ({I-nonce, I-capabilities}k1) */
+	pos = clear;
+
+	/* I-nonce */
+	WPA_PUT_LE16(pos, DPP_ATTR_I_NONCE);
+	pos += 2;
+	WPA_PUT_LE16(pos, nonce_len);
+	pos += 2;
+	os_memcpy(pos, auth->i_nonce, nonce_len);
+	pos += nonce_len;
+
+	/* I-capabilities */
+	WPA_PUT_LE16(pos, DPP_ATTR_I_CAPABILITIES);
+	pos += 2;
+	WPA_PUT_LE16(pos, 1);
+	pos += 2;
+	auth->i_capab = auth->configurator ? DPP_CAPAB_CONFIGURATOR :
+		DPP_CAPAB_ENROLLEE;
+	*pos++ = auth->i_capab;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_ZERO_I_CAPAB) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - zero I-capabilities");
+		pos[-1] = 0;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	attr_end = wpabuf_put(msg, 0);
+
+	/* OUI, OUI type, Crypto Suite, DPP frame type */
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = 3 + 1 + 1 + 1;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+
+	/* Attributes before Wrapped Data */
+	addr[1] = attr_start;
+	len[1] = attr_end - attr_start;
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
+	siv_len = pos - clear;
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext", clear, siv_len);
+	if (aes_siv_encrypt(auth->k1, auth->curve->hash_len, clear, siv_len,
+			    2, addr, len, wrapped_data) < 0) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+	siv_len += AES_BLOCK_SIZE;
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped_data, siv_len);
+
+	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+	wpabuf_put_le16(msg, siv_len);
+	wpabuf_put_data(msg, wrapped_data, siv_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - attr after Wrapped Data");
+		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
+		wpabuf_put_le16(msg, 0);
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	wpa_hexdump_buf(MSG_DEBUG,
+			"DPP: Authentication Request frame attributes", msg);
+
+	return msg;
+}
+
+
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
@@ -1348,13 +1464,9 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	size_t nonce_len;
 	EVP_PKEY_CTX *ctx = NULL;
 	size_t secret_len;
-	struct wpabuf *msg, *pi = NULL;
-	u8 clear[4 + DPP_MAX_NONCE_LEN + 4 + 1];
-	u8 wrapped_data[4 + DPP_MAX_NONCE_LEN + 4 + 1 + AES_BLOCK_SIZE];
-	u8 *pos;
-	const u8 *addr[2];
-	size_t len[2], siv_len, attr_len;
-	u8 *attr_start, *attr_end;
+	struct wpabuf *pi = NULL;
+	u8 zero[SHA256_MAC_LEN];
+	const u8 *r_pubkey_hash, *i_pubkey_hash;
 
 	auth = os_zalloc(sizeof(*auth));
 	if (!auth)
@@ -1405,106 +1517,28 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 			  auth->curve->hash_len) < 0)
 		goto fail;
 
-	/* Build DPP Authentication Request frame attributes */
-	attr_len = 2 * (4 + SHA256_MAC_LEN) + 4 + wpabuf_len(pi) +
-		4 + sizeof(wrapped_data);
-#ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ)
-		attr_len += 4;
-#endif /* CONFIG_TESTING_OPTIONS */
-	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_REQ, attr_len);
-	if (!msg)
-		goto fail;
-	auth->req_msg = msg;
+	r_pubkey_hash = auth->peer_bi->pubkey_hash;
 
-	attr_start = wpabuf_put(msg, 0);
-
-	/* Responder Bootstrapping Key Hash */
-	wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
-	wpabuf_put_le16(msg, SHA256_MAC_LEN);
-	wpabuf_put_data(msg, auth->peer_bi->pubkey_hash, SHA256_MAC_LEN);
-
-	/* Initiator Bootstrapping Key Hash */
-	wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
-	wpabuf_put_le16(msg, SHA256_MAC_LEN);
-	if (auth->own_bi)
-		wpabuf_put_data(msg, auth->own_bi->pubkey_hash, SHA256_MAC_LEN);
-	else
-		os_memset(wpabuf_put(msg, SHA256_MAC_LEN), 0, SHA256_MAC_LEN);
-
-	/* Initiator Protocol Key */
-	wpabuf_put_le16(msg, DPP_ATTR_I_PROTOCOL_KEY);
-	wpabuf_put_le16(msg, wpabuf_len(pi));
-	wpabuf_put_buf(msg, pi);
-	wpabuf_free(pi);
-	pi = NULL;
-
-	/* Wrapped data ({I-nonce, I-capabilities}k1) */
-	pos = clear;
-	/* I-nonce */
-	WPA_PUT_LE16(pos, DPP_ATTR_I_NONCE);
-	pos += 2;
-	WPA_PUT_LE16(pos, nonce_len);
-	pos += 2;
-	os_memcpy(pos, auth->i_nonce, nonce_len);
-	pos += nonce_len;
-	/* I-capabilities */
-	WPA_PUT_LE16(pos, DPP_ATTR_I_CAPABILITIES);
-	pos += 2;
-	WPA_PUT_LE16(pos, 1);
-	pos += 2;
-	auth->i_capab = configurator ? DPP_CAPAB_CONFIGURATOR :
-		DPP_CAPAB_ENROLLEE;
-	*pos++ = auth->i_capab;
-#ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_ZERO_I_CAPAB) {
-		wpa_printf(MSG_INFO, "DPP: TESTING - zero I-capabilities");
-		pos[-1] = 0;
+	if (auth->own_bi) {
+		i_pubkey_hash = auth->own_bi->pubkey_hash;
+	} else {
+		os_memset(zero, 0, SHA256_MAC_LEN);
+		i_pubkey_hash = zero;
 	}
-#endif /* CONFIG_TESTING_OPTIONS */
 
-	attr_end = wpabuf_put(msg, 0);
-
-	/* OUI, OUI type, Crypto Suite, DPP frame type */
-	addr[0] = wpabuf_head_u8(msg) + 2;
-	len[0] = 3 + 1 + 1 + 1;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
-
-	/* Attributes before Wrapped Data */
-	addr[1] = attr_start;
-	len[1] = attr_end - attr_start;
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
-
-	siv_len = pos - clear;
-	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext", clear, siv_len);
-	if (aes_siv_encrypt(auth->k1, auth->curve->hash_len, clear, siv_len,
-			    2, addr, len, wrapped_data) < 0)
+	auth->req_msg = dpp_auth_build_req(auth, pi, nonce_len, r_pubkey_hash,
+					   i_pubkey_hash);
+	if (!auth->req_msg)
 		goto fail;
-	siv_len += AES_BLOCK_SIZE;
-	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
-		    wrapped_data, siv_len);
 
-	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
-	wpabuf_put_le16(msg, siv_len);
-	wpabuf_put_data(msg, wrapped_data, siv_len);
-
-#ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ) {
-		wpa_printf(MSG_INFO, "DPP: TESTING - attr after Wrapped Data");
-		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
-		wpabuf_put_le16(msg, 0);
-	}
-#endif /* CONFIG_TESTING_OPTIONS */
-
-	wpa_hexdump_buf(MSG_DEBUG,
-			"DPP: Authentication Request frame attributes", msg);
-
-	return auth;
-fail:
+out:
 	wpabuf_free(pi);
 	EVP_PKEY_CTX_free(ctx);
+	return auth;
+fail:
 	dpp_auth_deinit(auth);
-	return NULL;
+	auth = NULL;
+	goto out;
 }
 
 

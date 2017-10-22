@@ -527,6 +527,7 @@ const u8 * dpp_get_attr(const u8 *buf, size_t len, u16 req_id, u16 *ret_len)
 int dpp_check_attrs(const u8 *buf, size_t len)
 {
 	const u8 *pos, *end;
+	int wrapped_data = 0;
 
 	pos = buf;
 	end = buf + len;
@@ -544,6 +545,13 @@ int dpp_check_attrs(const u8 *buf, size_t len)
 				   "DPP: Truncated message - not enough room for the attribute - dropped");
 			return -1;
 		}
+		if (wrapped_data) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: An unexpected attribute included after the Wrapped Data attribute");
+			return -1;
+		}
+		if (id == DPP_ATTR_WRAPPED_DATA)
+			wrapped_data = 1;
 		pos += alen;
 	}
 

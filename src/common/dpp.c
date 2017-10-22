@@ -1387,8 +1387,22 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 		wpabuf_put_buf(msg, pi);
 	}
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Wrapped data ({I-nonce, I-capabilities}k1) */
 	pos = clear;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_I_NONCE_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-nonce");
+		goto skip_i_nonce;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* I-nonce */
 	WPA_PUT_LE16(pos, DPP_ATTR_I_NONCE);
@@ -1397,6 +1411,14 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 	pos += 2;
 	os_memcpy(pos, auth->i_nonce, nonce_len);
 	pos += nonce_len;
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_i_nonce:
+	if (dpp_test == DPP_TEST_NO_I_CAPAB_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-capab");
+		goto skip_i_capab;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* I-capabilities */
 	WPA_PUT_LE16(pos, DPP_ATTR_I_CAPABILITIES);
@@ -1411,6 +1433,7 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 		wpa_printf(MSG_INFO, "DPP: TESTING - zero I-capabilities");
 		pos[-1] = 0;
 	}
+skip_i_capab:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	attr_end = wpabuf_put(msg, 0);
@@ -1446,6 +1469,7 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_hexdump_buf(MSG_DEBUG,
@@ -1525,6 +1549,20 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		os_memset(zero, 0, SHA256_MAC_LEN);
 		i_pubkey_hash = zero;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
+		r_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
+		i_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_NO_I_PROTO_KEY_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Proto Key");
+		wpabuf_free(pi);
+		pi = NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	auth->req_msg = dpp_auth_build_req(auth, pi, nonce_len, r_pubkey_hash,
 					   i_pubkey_hash);

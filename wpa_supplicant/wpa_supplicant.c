@@ -4711,7 +4711,7 @@ static void radio_work_free(struct wpa_radio_work *work)
 	if (work->started) {
 		work->wpa_s->radio->num_active_works--;
 		wpa_dbg(work->wpa_s, MSG_DEBUG,
-			"radio_work_free('%s'@%p: num_active_works --> %u",
+			"radio_work_free('%s'@%p): num_active_works --> %u",
 			work->type, work,
 			work->wpa_s->radio->num_active_works);
 	}

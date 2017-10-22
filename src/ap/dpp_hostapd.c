@@ -1184,11 +1184,20 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 	if (crypto_suite != 1) {
 		wpa_printf(MSG_DEBUG, "DPP: Unsupported crypto suite %u",
 			   crypto_suite);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_RX "src=" MACSTR
+			" freq=%u type=%d ignore=unsupported-crypto-suite",
+			MAC2STR(src), freq, type);
 		return;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "DPP: Received message attributes", buf, len);
-	if (dpp_check_attrs(buf, len) < 0)
+	if (dpp_check_attrs(buf, len) < 0) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_RX "src=" MACSTR
+			" freq=%u type=%d ignore=invalid-attributes",
+			MAC2STR(src), freq, type);
 		return;
+	}
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_RX "src=" MACSTR
+		" freq=%u type=%d", MAC2STR(src), freq, type);
 
 	switch (type) {
 	case DPP_PA_AUTHENTICATION_REQ:

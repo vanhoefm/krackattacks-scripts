@@ -2370,7 +2370,10 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "DPP: Unexpected role in I-capabilities");
-		goto not_compatible;
+		wpa_msg(auth->msg_ctx, MSG_INFO,
+			DPP_EVENT_FAIL "Invalid role in I-capabilities 0x%02x",
+			auth->i_capab & DPP_CAPAB_ROLE_MASK);
+		goto fail;
 	}
 
 	auth->peer_protocol_key = pi;
@@ -2616,9 +2619,18 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 		wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_NOT_COMPATIBLE
 			"r-capab=0x%02x", auth->r_capab);
 	} else if (status == DPP_STATUS_RESPONSE_PENDING) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Continue waiting for full DPP Authentication Response");
-		wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_RESPONSE_PENDING);
+		u8 role = auth->r_capab & DPP_CAPAB_ROLE_MASK;
+
+		if ((auth->configurator && role != DPP_CAPAB_ENROLLEE) ||
+		    (!auth->configurator && role != DPP_CAPAB_CONFIGURATOR)) {
+			wpa_msg(auth->msg_ctx, MSG_INFO,
+				DPP_EVENT_FAIL "Unexpected role in R-capabilities 0x%02x",
+				role);
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Continue waiting for full DPP Authentication Response");
+			wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_RESPONSE_PENDING);
+		}
 	}
 fail:
 	bin_clear_free(unwrapped, unwrapped_len);
@@ -2642,6 +2654,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		r_proto_len, r_nonce_len, i_nonce_len, r_capab_len,
 		wrapped2_len, r_auth_len;
 	u8 r_auth2[DPP_MAX_HASH_LEN];
+	u8 role;
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
@@ -2821,9 +2834,13 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	}
 	auth->r_capab = r_capab[0];
 	wpa_printf(MSG_DEBUG, "DPP: R-capabilities: 0x%02x", auth->r_capab);
-	if ((auth->configurator && (auth->r_capab & DPP_CAPAB_CONFIGURATOR)) ||
-	    (!auth->configurator && (auth->r_capab & DPP_CAPAB_ENROLLEE))) {
+	role = auth->r_capab & DPP_CAPAB_ROLE_MASK;
+	if ((auth->configurator && role != DPP_CAPAB_ENROLLEE) ||
+	    (!auth->configurator && role != DPP_CAPAB_CONFIGURATOR)) {
 		wpa_printf(MSG_DEBUG, "DPP: Incompatible role selection");
+		wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Unexpected role in R-capabilities 0x%02x",
+			role);
 		goto fail;
 	}
 

@@ -29,6 +29,7 @@
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ctrl_iface_common.h"
+#include "common/dpp.h"
 #include "crypto/tls.h"
 #include "drivers/driver.h"
 #include "eapol_auth/eapol_auth_sm.h"
@@ -1301,6 +1302,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 	} else if (os_strcasecmp(cmd,
 				 "dpp_ignore_netaccesskey_mismatch") == 0) {
 		hapd->dpp_ignore_netaccesskey_mismatch = atoi(value);
+	} else if (os_strcasecmp(cmd, "dpp_test") == 0) {
+		dpp_test = atoi(value);
 #endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_MBO
@@ -3508,6 +3511,13 @@ static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
 	wps_testing_dummy_cred = 0;
 	wps_corrupt_pkhash = 0;
 #endif /* CONFIG_WPS_TESTING */
+
+#ifdef CONFIG_TESTING_OPTIONS
+#ifdef CONFIG_DPP
+	dpp_test = DPP_TEST_DISABLED;
+#endif /* CONFIG_DPP */
+#endif /* CONFIG_TESTING_OPTIONS */
+
 }
 
 

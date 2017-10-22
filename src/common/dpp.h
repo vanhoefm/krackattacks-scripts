@@ -52,6 +52,7 @@ enum dpp_attribute_id {
 	DPP_ATTR_ENROLLEE_NONCE = 0x1014,
 	DPP_ATTR_CODE_IDENTIFIER = 0x1015,
 	DPP_ATTR_TRANSACTION_ID = 0x1016,
+	DPP_ATTR_TESTING = 0x10ff, /* not defined in the DPP tech spec */
 };
 
 enum dpp_status_error {
@@ -202,6 +203,23 @@ struct dpp_introduction {
 	u8 pmk[PMK_LEN_MAX];
 	size_t pmk_len;
 };
+
+#ifdef CONFIG_TESTING_OPTIONS
+enum dpp_test_behavior {
+	DPP_TEST_DISABLED = 0,
+	DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ = 1,
+	DPP_TEST_AFTER_WRAPPED_DATA_AUTH_RESP = 2,
+	DPP_TEST_AFTER_WRAPPED_DATA_AUTH_CONF = 3,
+	DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_REQ = 4,
+	DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_RESP = 5,
+	DPP_TEST_AFTER_WRAPPED_DATA_CONF_REQ = 6,
+	DPP_TEST_AFTER_WRAPPED_DATA_CONF_RESP = 7,
+	DPP_TEST_ZERO_I_CAPAB = 8,
+	DPP_TEST_ZERO_R_CAPAB = 9,
+};
+
+extern enum dpp_test_behavior dpp_test;
+#endif /* CONFIG_TESTING_OPTIONS */
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);
 const char * dpp_bootstrap_type_txt(enum dpp_bootstrap_type type);

@@ -2574,15 +2574,32 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 
 	attr_start = wpabuf_put(msg, 0);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_STATUS_AUTH_CONF)
+		goto skip_status;
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, DPP_STATUS_OK);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_status:
+	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_CONF)
+		goto skip_r_bootstrap_key;
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Responder Bootstrapping Key Hash */
 	wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
 	wpabuf_put_le16(msg, SHA256_MAC_LEN);
 	wpabuf_put_data(msg, auth->peer_bi->pubkey_hash, SHA256_MAC_LEN);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_r_bootstrap_key:
+	if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_CONF)
+		goto skip_i_bootstrap_key;
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (auth->own_bi) {
 		/* Mutual authentication */
@@ -2591,6 +2608,14 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 		wpabuf_put_le16(msg, SHA256_MAC_LEN);
 		wpabuf_put_data(msg, auth->own_bi->pubkey_hash, SHA256_MAC_LEN);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_i_bootstrap_key:
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_AUTH_CONF)
+		goto skip_wrapped_data;
+	if (dpp_test == DPP_TEST_NO_I_AUTH_AUTH_CONF)
+		i_auth_len = 0;
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	attr_end = wpabuf_put(msg, 0);
 
@@ -2607,11 +2632,22 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
 	wpabuf_put_le16(msg, i_auth_len + AES_BLOCK_SIZE);
 	wrapped_i_auth = wpabuf_put(msg, i_auth_len + AES_BLOCK_SIZE);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_I_AUTH_AUTH_CONF)
+		goto skip_i_auth;
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* I-auth = H(R-nonce | I-nonce | PR.x | PI.x | BR.x | [BI.x |] 1) */
 	WPA_PUT_LE16(i_auth, DPP_ATTR_I_AUTH_TAG);
 	WPA_PUT_LE16(&i_auth[2], auth->curve->hash_len);
-	if (dpp_gen_i_auth(auth, i_auth + 4) < 0 ||
-	    aes_siv_encrypt(auth->ke, auth->curve->hash_len,
+	if (dpp_gen_i_auth(auth, i_auth + 4) < 0)
+		goto fail;
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_i_auth:
+#endif /* CONFIG_TESTING_OPTIONS */
+	if (aes_siv_encrypt(auth->ke, auth->curve->hash_len,
 			    i_auth, i_auth_len,
 			    2, addr, len, wrapped_i_auth) < 0)
 		goto fail;
@@ -2624,6 +2660,7 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_hexdump_buf(MSG_DEBUG,

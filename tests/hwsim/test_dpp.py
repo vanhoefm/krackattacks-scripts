@@ -1887,6 +1887,37 @@ def test_dpp_proto_auth_resp_no_wrapped_data(dev, apdev):
     """DPP protocol testing - no Wrapped Data in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 24, "Missing or invalid required Wrapped Data attribute")
 
+def run_dpp_proto_auth_conf_missing(dev, test, reason):
+    run_dpp_proto_init(dev, 1, test, mutual=True)
+    if reason is None:
+        time.sleep(0.1)
+        return
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def test_dpp_proto_auth_conf_no_status(dev, apdev):
+    """DPP protocol testing - no Status in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 25, "Missing or invalid required DPP Status attribute")
+
+def test_dpp_proto_auth_conf_no_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no R-bootstrap key in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 26, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_conf_no_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no I-bootstrap key in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 27, None)
+
+def test_dpp_proto_auth_conf_no_i_auth(dev, apdev):
+    """DPP protocol testing - no I-Auth in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 28, "Missing or invalid Initiator Authenticating Tag")
+
+def test_dpp_proto_auth_conf_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 29, "Missing or invalid required Wrapped Data attribute")
+
 def run_dpp_proto_init_pkex(dev, test_dev, test):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])

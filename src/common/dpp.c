@@ -2841,6 +2841,11 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 				      "Initiator Bootstrapping Key Hash attribute did not match");
 			return NULL;
 		}
+	} else if (auth->own_bi && auth->own_bi->type == DPP_BOOTSTRAP_PKEX) {
+		/* PKEX bootstrapping mandates use of mutual authentication */
+		dpp_auth_fail(auth,
+			      "Missing Initiator Bootstrapping Key Hash attribute");
+		return NULL;
 	}
 
 	status = dpp_get_attr(attr_start, attr_len, DPP_ATTR_STATUS,
@@ -2857,6 +2862,12 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 					attr_len, wrapped_data,
 					wrapped_data_len, status[0]);
 		return NULL;
+	}
+
+	if (!i_bootstrap && auth->own_bi) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Responder decided not to use mutual authentication");
+		auth->own_bi = NULL;
 	}
 
 	r_proto = dpp_get_attr(attr_start, attr_len, DPP_ATTR_R_PROTOCOL_KEY,
@@ -3102,6 +3113,12 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 				      "Initiator Bootstrapping Key Hash mismatch");
 			return -1;
 		}
+	} else if (auth->own_bi && auth->peer_bi) {
+		/* Mutual authentication and peer did not include its
+		 * Bootstrapping Key Hash attribute. */
+		dpp_auth_fail(auth,
+			      "Missing Initiator Bootstrapping Key Hash attribute");
+		return -1;
 	}
 
 	status = dpp_get_attr(attr_start, attr_len, DPP_ATTR_STATUS,

@@ -308,6 +308,47 @@ def test_dpp_qr_code_auth_mutual2(dev, apdev):
         raise Exception("DPP authentication did not succeed (Initiator)")
     dev[0].request("DPP_STOP_LISTEN")
 
+def test_dpp_qr_code_auth_mutual_not_used(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual not used)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    logger.info("dev0 displays QR Code")
+    addr = dev[0].own_addr().replace(':', '')
+    res = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 displays QR Code")
+    addr = dev[1].own_addr().replace(':', '')
+    res = dev[1].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1b = int(res)
+    uri1b = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1b)
+
+    logger.info("dev0 does not scan QR Code")
+
+    logger.info("dev1 initiates DPP Authentication")
+    if "OK" not in dev[0].request("DPP_LISTEN 2412"):
+        raise Exception("Failed to start listen operation")
+    if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d own=%d" % (id1, id1b)):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    dev[0].request("DPP_STOP_LISTEN")
+
 def test_dpp_qr_code_auth_mutual_curve_mismatch(dev, apdev):
     """DPP QR Code and authentication exchange (mutual/mismatch)"""
     check_dpp_capab(dev[0])
@@ -1908,7 +1949,7 @@ def test_dpp_proto_auth_conf_no_r_bootstrap_key(dev, apdev):
 
 def test_dpp_proto_auth_conf_no_i_bootstrap_key(dev, apdev):
     """DPP protocol testing - no I-bootstrap key in Auth Conf"""
-    run_dpp_proto_auth_conf_missing(dev, 27, None)
+    run_dpp_proto_auth_conf_missing(dev, 27, "Missing Initiator Bootstrapping Key Hash attribute")
 
 def test_dpp_proto_auth_conf_no_i_auth(dev, apdev):
     """DPP protocol testing - no I-Auth in Auth Conf"""

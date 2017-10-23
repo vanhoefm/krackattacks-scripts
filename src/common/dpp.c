@@ -3053,26 +3053,22 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
-	if (!wrapped_data) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Wrapped data attribute");
+	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Wrapped Data attribute");
 		return -1;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Wrapped data",
 		    wrapped_data, wrapped_data_len);
-
-	if (wrapped_data_len < AES_BLOCK_SIZE)
-		return -1;
 
 	attr_len = wrapped_data - 4 - attr_start;
 
 	r_bootstrap = dpp_get_attr(attr_start, attr_len,
 				   DPP_ATTR_R_BOOTSTRAP_KEY_HASH,
 				   &r_bootstrap_len);
-	if (!r_bootstrap || r_bootstrap > wrapped_data ||
-	    r_bootstrap_len != SHA256_MAC_LEN) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Responder Bootstrapping Key Hash attribute");
+	if (!r_bootstrap || r_bootstrap_len != SHA256_MAC_LEN) {
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Responder Bootstrapping Key Hash attribute");
 		return -1;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Responder Bootstrapping Key Hash",
@@ -3082,6 +3078,8 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 		wpa_hexdump(MSG_DEBUG,
 			    "DPP: Expected Responder Bootstrapping Key Hash",
 			    auth->peer_bi->pubkey_hash, SHA256_MAC_LEN);
+		dpp_auth_fail(auth,
+			      "Responder Bootstrapping Key Hash mismatch");
 		return -1;
 	}
 
@@ -3089,10 +3087,9 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 				   DPP_ATTR_I_BOOTSTRAP_KEY_HASH,
 				   &i_bootstrap_len);
 	if (i_bootstrap) {
-		if (i_bootstrap > wrapped_data ||
-		    i_bootstrap_len != SHA256_MAC_LEN) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Invalid Initiator Bootstrapping Key Hash attribute");
+		if (i_bootstrap_len != SHA256_MAC_LEN) {
+			dpp_auth_fail(auth,
+				      "Invalid Initiator Bootstrapping Key Hash attribute");
 			return -1;
 		}
 		wpa_hexdump(MSG_MSGDUMP,
@@ -3101,8 +3098,8 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 		if (!auth->peer_bi ||
 		    os_memcmp(i_bootstrap, auth->peer_bi->pubkey_hash,
 			      SHA256_MAC_LEN) != 0) {
-			wpa_printf(MSG_DEBUG,
-				   "DPP: Initiator Bootstrapping Key Hash attribute did not match");
+			dpp_auth_fail(auth,
+				      "Initiator Bootstrapping Key Hash mismatch");
 			return -1;
 		}
 	}
@@ -3110,13 +3107,13 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	status = dpp_get_attr(attr_start, attr_len, DPP_ATTR_STATUS,
 			      &status_len);
 	if (!status || status_len < 1) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required DPP Status attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required DPP Status attribute");
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", status[0]);
 	if (status[0] != DPP_STATUS_OK) {
-		wpa_printf(MSG_DEBUG, "DPP: Authentication failed");
+		dpp_auth_fail(auth, "Authentication failed");
 		return -1;
 	}
 
@@ -3135,23 +3132,22 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	if (aes_siv_decrypt(auth->ke, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	i_auth = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_I_AUTH_TAG,
 			      &i_auth_len);
 	if (!i_auth || i_auth_len != auth->curve->hash_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Initiator Authenticating Tag");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Initiator Authenticating Tag");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Received Initiator Authenticating Tag",
@@ -3162,8 +3158,7 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	wpa_hexdump(MSG_DEBUG, "DPP: Calculated Initiator Authenticating Tag",
 		    i_auth2, i_auth_len);
 	if (os_memcmp(i_auth, i_auth2, i_auth_len) != 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Mismatching Initiator Authenticating Tag");
+		dpp_auth_fail(auth, "Mismatching Initiator Authenticating Tag");
 		goto fail;
 	}
 

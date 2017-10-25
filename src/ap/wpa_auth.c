@@ -4773,4 +4773,13 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 	return 0;
 }
 
+
+int wpa_auth_rekey_gtk(struct wpa_authenticator *wpa_auth)
+{
+	if (!wpa_auth)
+		return -1;
+	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
+	return eloop_register_timeout(0, 0, wpa_rekey_gtk, wpa_auth, NULL);
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */

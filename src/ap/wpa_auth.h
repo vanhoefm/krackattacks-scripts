@@ -437,5 +437,6 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 			     void (*cb)(void *ctx1, void *ctx2),
 			     void *ctx1, void *ctx2);
+int wpa_auth_rekey_gtk(struct wpa_authenticator *wpa_auth);
 
 #endif /* WPA_AUTH_H */

@@ -46,3 +46,12 @@ An adversary can trigger FT handshakes at will as follows. First, if no other AP
 
 The included network trace [example-ft.pcapng](example-ft.pcapng) is an example of the attack executed against Linux's hostapd. When using the wireshark filter `wlan.sa == 7e:62:5c:7a:cd:47`, notice that packets 779 to 1127 all use the CCMP IV value 1. This was caused by malicious retransmissions of the FT reassociation request.
 
+# Extra: Ubuntu 16.04
+
+This tool is officially only supported on Kali Linux. Nevertheless, some users have been able to get it running on Ubuntu 16.04. These users remarked that the `python-pycryptodome` package is not present on Ubuntu, but can be installed as follows:
+
+1. Install python-pip package
+2. Execute `pip install pycryptodomex`
+
+They further recommended to install this python module under a virtual python environment using virtualenv.
+

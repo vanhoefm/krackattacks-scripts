@@ -262,7 +262,9 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 #endif /* CONFIG_WPS */
 
 			wpa_printf(MSG_DEBUG, "No WPA/RSN IE from STA");
-			return -1;
+			reason = WLAN_REASON_INVALID_IE;
+			status = WLAN_STATUS_INVALID_IE;
+			goto fail;
 		}
 #ifdef CONFIG_WPS
 		if (hapd->conf->wps_state && ie[0] == 0xdd && ie[1] >= 4 &&

@@ -698,9 +698,10 @@ void wpa_auth_sta_deinit(struct wpa_state_machine *sm)
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 				"strict rekeying - force GTK rekey since STA "
 				"is leaving");
-		eloop_cancel_timeout(wpa_rekey_gtk, sm->wpa_auth, NULL);
-		eloop_register_timeout(0, 500000, wpa_rekey_gtk, sm->wpa_auth,
-				       NULL);
+		if (eloop_deplete_timeout(0, 500000, wpa_rekey_gtk,
+					  sm->wpa_auth, NULL) == -1)
+			eloop_register_timeout(0, 500000, wpa_rekey_gtk, sm->wpa_auth,
+					       NULL);
 	}
 
 	eloop_cancel_timeout(wpa_send_eapol_timeout, sm->wpa_auth, sm);

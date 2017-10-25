@@ -338,6 +338,22 @@ enum qca_radiotap_vendor_ids {
  *	information indicating the reason that triggered this detection. The
  *	attributes for this command are defined in
  *	enum qca_wlan_vendor_attr_hang.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CONFIG: Get the current values
+ *	of spectral parameters used. The spectral scan parameters are specified
+ *	by enum qca_wlan_vendor_attr_spectral_scan.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_DIAG_STATS: Get the debug stats
+ *	for spectral scan functionality. The debug stats are specified by
+ *	enum qca_wlan_vendor_attr_spectral_diag_stats.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CAP_INFO: Get spectral
+ *	scan system capabilities. The capabilities are specified
+ *	by enum qca_wlan_vendor_attr_spectral_cap.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_STATUS: Get the current
+ *	status of spectral scan. The status values are specified
+ *	by enum qca_wlan_vendor_attr_spectral_scan_status.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -470,6 +486,10 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_STOP = 155,
 	QCA_NL80211_VENDOR_SUBCMD_ACTIVE_TOS = 156,
 	QCA_NL80211_VENDOR_SUBCMD_HANG = 157,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CONFIG = 158,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_DIAG_STATS = 159,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CAP_INFO = 160,
+	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_STATUS = 161,
 };
 
 
@@ -3904,10 +3924,116 @@ enum qca_wlan_vendor_attr_spectral_scan {
 	 * specific scan to be stopped.
 	 */
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_COOKIE = 19,
+	/* Skip interval for FFT reports. u32 attribute */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_PERIOD = 20,
+	/* Set to report only one set of FFT results.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_SHORT_REPORT = 21,
+	/* Debug level for spectral module in driver.
+	 * 0 : Verbosity level 0
+	 * 1 : Verbosity level 1
+	 * 2 : Verbosity level 2
+	 * 3 : Matched filterID display
+	 * 4 : One time dump of FFT report
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_DEBUG_LEVEL = 22,
+	/* Type of spectral scan request. u32 attribute.
+	 * It uses values defined in enum
+	 * qca_wlan_vendor_attr_spectral_scan_request_type.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE = 23,
 
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_MAX =
 		QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_spectral_diag_stats - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_DIAG_STATS.
+ */
+enum qca_wlan_vendor_attr_spectral_diag_stats {
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_INVALID = 0,
+	/* Number of spectral TLV signature mismatches.
+	 * u64 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_SIG_MISMATCH = 1,
+	/* Number of spectral phyerror events with insufficient length when
+	 * parsing for secondary 80 search FFT report. u64 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_SEC80_SFFT_INSUFFLEN = 2,
+	/* Number of spectral phyerror events without secondary 80
+	 * search FFT report. u64 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_NOSEC80_SFFT = 3,
+	/* Number of spectral phyerror events with vht operation segment 1 id
+	 * mismatches in search fft report. u64 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_VHTSEG1ID_MISMATCH = 4,
+	/* Number of spectral phyerror events with vht operation segment 2 id
+	 * mismatches in search fft report. u64 attribute.
+	*/
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_VHTSEG2ID_MISMATCH = 5,
+
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_MAX =
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_spectral_cap - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CAP_INFO.
+ */
+enum qca_wlan_vendor_attr_spectral_cap {
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_INVALID = 0,
+	/* Flag attribute to indicate phydiag capability */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_PHYDIAG = 1,
+	/* Flag attribute to indicate radar detection capability */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_RADAR = 2,
+	/* Flag attribute to indicate spectral capability */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_SPECTRAL = 3,
+	/* Flag attribute to indicate advanced spectral capability */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_ADVANCED_SPECTRAL = 4,
+
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_MAX =
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CAP_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_spectral_scan_status - used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_STATUS.
+ */
+enum qca_wlan_vendor_attr_spectral_scan_status {
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_INVALID = 0,
+	/* Flag attribute to indicate whether spectral scan is enabled */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_IS_ENABLED = 1,
+	/* Flag attribute to indicate whether spectral scan is in progress*/
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_IS_ACTIVE = 2,
+
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_MAX =
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_STATUS_AFTER_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_attr_spectral_scan_request_type: Attribute values for
+ * QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE to the vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_START. This represents the
+ * spectral scan request types.
+ * @QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_SCAN_AND_CONFIG: Request to
+ * set the spectral parameters and start scan.
+ * @QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_SCAN: Request to
+ * only set the spectral parameters.
+ * @QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_CONFIG: Request to
+ * only start the spectral scan.
+ */
+enum qca_wlan_vendor_attr_spectral_scan_request_type {
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_SCAN_AND_CONFIG,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_SCAN,
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_REQUEST_TYPE_CONFIG,
 };
 
 enum qca_wlan_vendor_tos {

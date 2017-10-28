@@ -1928,6 +1928,49 @@ def test_dpp_proto_auth_resp_no_wrapped_data(dev, apdev):
     """DPP protocol testing - no Wrapped Data in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 24, "Missing or invalid required Wrapped Data attribute")
 
+def test_dpp_proto_auth_resp_i_nonce_mismatch(dev, apdev):
+    """DPP protocol testing - I-nonce mismatch in Auth Resp"""
+    run_dpp_proto_init(dev, 0, 30, mutual=True)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "I-nonce mismatch" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[0].wait_event(["DPP-RX"], timeout=1)
+    if ev is None or "type=0" not in ev:
+        raise Exception("DPP Authentication Request not seen")
+    ev = dev[0].wait_event(["DPP-RX"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected DPP message seen")
+
+def test_dpp_proto_auth_resp_incompatible_r_capab(dev, apdev):
+    """DPP protocol testing - Incompatible R-capab in Auth Resp"""
+    run_dpp_proto_init(dev, 0, 31, mutual=True)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Unexpected role in R-capabilities 0x02" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Peer reported incompatible R-capab role" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def test_dpp_proto_auth_resp_r_auth_mismatch(dev, apdev):
+    """DPP protocol testing - R-auth mismatch in Auth Resp"""
+    run_dpp_proto_init(dev, 0, 32, mutual=True)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Mismatching Responder Authenticating Tag" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Peer reported authentication failure" not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
 def run_dpp_proto_auth_conf_missing(dev, test, reason):
     run_dpp_proto_init(dev, 1, test, mutual=True)
     if reason is None:
@@ -1958,6 +2001,15 @@ def test_dpp_proto_auth_conf_no_i_auth(dev, apdev):
 def test_dpp_proto_auth_conf_no_wrapped_data(dev, apdev):
     """DPP protocol testing - no Wrapped Data in Auth Conf"""
     run_dpp_proto_auth_conf_missing(dev, 29, "Missing or invalid required Wrapped Data attribute")
+
+def test_dpp_proto_auth_conf_i_auth_mismatch(dev, apdev):
+    """DPP protocol testing - I-auth mismatch in Auth Conf"""
+    run_dpp_proto_init(dev, 1, 33, mutual=True)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Mismatching Initiator Authenticating Tag" not in ev:
+        raise Excception("Unexpected failure: " + ev)
 
 def run_dpp_proto_init_pkex(dev, test_dev, test):
     check_dpp_capab(dev[0])

@@ -1578,6 +1578,12 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 		WPA_PUT_LE16(pos, nonce_len);
 		pos += 2;
 		os_memcpy(pos, i_nonce, nonce_len);
+#ifdef CONFIG_TESTING_OPTIONS
+		if (dpp_test == DPP_TEST_I_NONCE_MISMATCH_AUTH_RESP) {
+			wpa_printf(MSG_INFO, "DPP: TESTING - I-nonce mismatch");
+			pos[nonce_len / 2] ^= 0x01;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 		pos += nonce_len;
 	}
 
@@ -1600,6 +1606,11 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	if (dpp_test == DPP_TEST_ZERO_R_CAPAB) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - zero R-capabilities");
 		pos[-1] = 0;
+	} else if (dpp_test == DPP_TEST_INCOMPATIBLE_R_CAPAB_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - incompatible R-capabilities");
+		pos[-1] = auth->configurator ? DPP_CAPAB_ENROLLEE :
+			DPP_CAPAB_CONFIGURATOR;
 	}
 skip_r_capab:
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -2214,8 +2225,15 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	/* R-auth = H(I-nonce | R-nonce | PI.x | PR.x | [BI.x |] BR.x | 0) */
 	WPA_PUT_LE16(r_auth, DPP_ATTR_R_AUTH_TAG);
 	WPA_PUT_LE16(&r_auth[2], auth->curve->hash_len);
-	if (dpp_gen_r_auth(auth, r_auth + 4) < 0 ||
-	    aes_siv_encrypt(auth->ke, auth->curve->hash_len,
+	if (dpp_gen_r_auth(auth, r_auth + 4) < 0)
+		goto fail;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_R_AUTH_MISMATCH_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - R-auth mismatch");
+		r_auth[4 + auth->curve->hash_len / 2] ^= 0x01;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+	if (aes_siv_encrypt(auth->ke, auth->curve->hash_len,
 			    r_auth, 4 + auth->curve->hash_len,
 			    0, NULL, NULL, wrapped_r_auth) < 0)
 		goto fail;
@@ -2645,6 +2663,10 @@ skip_i_bootstrap_key:
 		goto fail;
 
 #ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_I_AUTH_MISMATCH_AUTH_CONF) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - I-auth mismatch");
+		i_auth[4 + auth->curve->hash_len / 2] ^= 0x01;
+	}
 skip_i_auth:
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (aes_siv_encrypt(auth->ke, auth->curve->hash_len,

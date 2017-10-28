@@ -2566,22 +2566,27 @@ int dpp_notify_new_qr_code(struct dpp_authentication *auth,
 }
 
 
-static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
+static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
+					   enum dpp_status_error status)
 {
 	struct wpabuf *msg;
 	u8 i_auth[4 + DPP_MAX_HASH_LEN];
 	size_t i_auth_len;
+	u8 r_nonce[4 + DPP_MAX_NONCE_LEN];
+	size_t r_nonce_len;
 	const u8 *addr[2];
 	size_t len[2], attr_len;
 	u8 *wrapped_i_auth;
+	u8 *wrapped_r_nonce;
 	u8 *attr_start, *attr_end;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Confirmation");
 
 	i_auth_len = 4 + auth->curve->hash_len;
+	r_nonce_len = 4 + auth->curve->nonce_len;
 	/* Build DPP Authentication Confirmation frame attributes */
 	attr_len = 4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
-		4 + i_auth_len + AES_BLOCK_SIZE;
+		4 + i_auth_len + r_nonce_len + AES_BLOCK_SIZE;
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_CONF)
 		attr_len += 4;
@@ -2600,7 +2605,7 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth)
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, DPP_STATUS_OK);
+	wpabuf_put_u8(msg, status);
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:
@@ -2647,34 +2652,54 @@ skip_i_bootstrap_key:
 	len[1] = attr_end - attr_start;
 	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
 
-	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
-	wpabuf_put_le16(msg, i_auth_len + AES_BLOCK_SIZE);
-	wrapped_i_auth = wpabuf_put(msg, i_auth_len + AES_BLOCK_SIZE);
+	if (status == DPP_STATUS_OK) {
+		/* I-auth wrapped with ke */
+		wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+		wpabuf_put_le16(msg, i_auth_len + AES_BLOCK_SIZE);
+		wrapped_i_auth = wpabuf_put(msg, i_auth_len + AES_BLOCK_SIZE);
 
 #ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_NO_I_AUTH_AUTH_CONF)
-		goto skip_i_auth;
+		if (dpp_test == DPP_TEST_NO_I_AUTH_AUTH_CONF)
+			goto skip_i_auth;
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	/* I-auth = H(R-nonce | I-nonce | PR.x | PI.x | BR.x | [BI.x |] 1) */
-	WPA_PUT_LE16(i_auth, DPP_ATTR_I_AUTH_TAG);
-	WPA_PUT_LE16(&i_auth[2], auth->curve->hash_len);
-	if (dpp_gen_i_auth(auth, i_auth + 4) < 0)
-		goto fail;
+		/* I-auth = H(R-nonce | I-nonce | PR.x | PI.x | BR.x | [BI.x |]
+		 *	      1) */
+		WPA_PUT_LE16(i_auth, DPP_ATTR_I_AUTH_TAG);
+		WPA_PUT_LE16(&i_auth[2], auth->curve->hash_len);
+		if (dpp_gen_i_auth(auth, i_auth + 4) < 0)
+			goto fail;
 
 #ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_I_AUTH_MISMATCH_AUTH_CONF) {
-		wpa_printf(MSG_INFO, "DPP: TESTING - I-auth mismatch");
-		i_auth[4 + auth->curve->hash_len / 2] ^= 0x01;
-	}
+		if (dpp_test == DPP_TEST_I_AUTH_MISMATCH_AUTH_CONF) {
+			wpa_printf(MSG_INFO, "DPP: TESTING - I-auth mismatch");
+			i_auth[4 + auth->curve->hash_len / 2] ^= 0x01;
+		}
 skip_i_auth:
 #endif /* CONFIG_TESTING_OPTIONS */
-	if (aes_siv_encrypt(auth->ke, auth->curve->hash_len,
-			    i_auth, i_auth_len,
-			    2, addr, len, wrapped_i_auth) < 0)
-		goto fail;
-	wpa_hexdump(MSG_DEBUG, "DPP: {I-auth}ke",
-		    wrapped_i_auth, i_auth_len + AES_BLOCK_SIZE);
+		if (aes_siv_encrypt(auth->ke, auth->curve->hash_len,
+				    i_auth, i_auth_len,
+				    2, addr, len, wrapped_i_auth) < 0)
+			goto fail;
+		wpa_hexdump(MSG_DEBUG, "DPP: {I-auth}ke",
+			    wrapped_i_auth, i_auth_len + AES_BLOCK_SIZE);
+	} else {
+		/* R-nonce wrapped with k2 */
+		wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+		wpabuf_put_le16(msg, r_nonce_len + AES_BLOCK_SIZE);
+		wrapped_r_nonce = wpabuf_put(msg, r_nonce_len + AES_BLOCK_SIZE);
+
+		WPA_PUT_LE16(r_nonce, DPP_ATTR_R_NONCE);
+		WPA_PUT_LE16(&r_nonce[2], auth->curve->nonce_len);
+		os_memcpy(r_nonce + 4, auth->r_nonce, auth->curve->nonce_len);
+
+		if (aes_siv_encrypt(auth->k2, auth->curve->hash_len,
+				    r_nonce, r_nonce_len,
+				    2, addr, len, wrapped_r_nonce) < 0)
+			goto fail;
+		wpa_hexdump(MSG_DEBUG, "DPP: {R-nonce}k2",
+			    wrapped_r_nonce, r_nonce_len + AES_BLOCK_SIZE);
+	}
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_CONF) {
@@ -2688,7 +2713,8 @@ skip_wrapped_data:
 	wpa_hexdump_buf(MSG_DEBUG,
 			"DPP: Authentication Confirmation frame attributes",
 			msg);
-	dpp_auth_success(auth);
+	if (status == DPP_STATUS_OK)
+		dpp_auth_success(auth);
 
 	return msg;
 
@@ -2988,9 +3014,6 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 			goto fail;
 	}
 
-	if (dpp_derive_ke(auth, auth->ke, auth->curve->hash_len) < 0)
-		goto fail;
-
 	r_capab = dpp_get_attr(unwrapped, unwrapped_len,
 			       DPP_ATTR_R_CAPABILITIES,
 			       &r_capab_len);
@@ -3007,7 +3030,12 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_FAIL
 			"Unexpected role in R-capabilities 0x%02x",
 			role);
-		goto fail;
+		if (role != DPP_CAPAB_ENROLLEE &&
+		    role != DPP_CAPAB_CONFIGURATOR)
+			goto fail;
+		bin_clear_free(unwrapped, unwrapped_len);
+		auth->remove_on_tx_status = 1;
+		return dpp_auth_build_conf(auth, DPP_STATUS_NOT_COMPATIBLE);
 	}
 
 	wrapped2 = dpp_get_attr(unwrapped, unwrapped_len,
@@ -3020,6 +3048,10 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped2, wrapped2_len);
+
+	if (dpp_derive_ke(auth, auth->ke, auth->curve->hash_len) < 0)
+		goto fail;
+
 	unwrapped2_len = wrapped2_len - AES_BLOCK_SIZE;
 	unwrapped2 = os_malloc(unwrapped2_len);
 	if (!unwrapped2)
@@ -3055,13 +3087,16 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		    r_auth2, r_auth_len);
 	if (os_memcmp(r_auth, r_auth2, r_auth_len) != 0) {
 		dpp_auth_fail(auth, "Mismatching Responder Authenticating Tag");
-		goto fail;
+		bin_clear_free(unwrapped, unwrapped_len);
+		bin_clear_free(unwrapped2, unwrapped2_len);
+		auth->remove_on_tx_status = 1;
+		return dpp_auth_build_conf(auth, DPP_STATUS_AUTH_FAILURE);
 	}
 
 	bin_clear_free(unwrapped, unwrapped_len);
 	bin_clear_free(unwrapped2, unwrapped2_len);
 
-	return dpp_auth_build_conf(auth);
+	return dpp_auth_build_conf(auth, DPP_STATUS_OK);
 
 fail:
 	bin_clear_free(unwrapped, unwrapped_len);

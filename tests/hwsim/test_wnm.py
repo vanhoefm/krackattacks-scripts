@@ -280,6 +280,30 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
         raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
 
+def test_wnm_sleep_mode_rsn_pmf_key_workaround(dev, apdev):
+    """WNM Sleep Mode - RSN with PMF and GTK/IGTK workaround"""
+    params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
+    params["time_advertisement"] = "2"
+    params["time_zone"] = "EST5"
+    params["wnm_sleep_mode"] = "1"
+    params["wnm_sleep_mode_no_keys"] = "1"
+    params["bss_transition"] = "1"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    Wlantest.setup(hapd)
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+
+    dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
+                   key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
+    check_wnm_sleep_mode_enter_exit(hapd, dev[0])
+
 def test_wnm_sleep_mode_proto(dev, apdev):
     """WNM Sleep Mode - protocol testing"""
     params = { "ssid": "test-wnm", "wnm_sleep_mode": "1" }

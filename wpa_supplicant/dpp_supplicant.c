@@ -340,18 +340,32 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 		/* TODO: In case of DPP Authentication Request frame, move to
 		 * the next channel immediately */
 	}
+
+	if (!wpa_s->dpp_auth_ok_on_ack && wpa_s->dpp_auth->neg_freq > 0 &&
+	    wpa_s->dpp_auth->curr_freq != wpa_s->dpp_auth->neg_freq) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Move from curr_freq %u MHz to neg_freq %u MHz for response",
+			   wpa_s->dpp_auth->curr_freq,
+			   wpa_s->dpp_auth->neg_freq);
+		offchannel_send_action_done(wpa_s);
+		wpas_dpp_listen_start(wpa_s, wpa_s->dpp_auth->neg_freq);
+	}
 }
 
 
 static void wpas_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
+	unsigned int freq;
 
 	if (!wpa_s->dpp_auth)
 		return;
+	freq = wpa_s->dpp_auth->curr_freq;
+	if (wpa_s->dpp_auth->neg_freq > 0)
+		freq = wpa_s->dpp_auth->neg_freq;
 	wpa_printf(MSG_DEBUG, "DPP: Continue reply wait on channel %u MHz",
-		   wpa_s->dpp_auth->curr_freq);
-	wpas_dpp_listen_start(wpa_s, wpa_s->dpp_auth->curr_freq);
+		   freq);
+	wpas_dpp_listen_start(wpa_s, freq);
 }
 
 
@@ -510,6 +524,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	int res;
 	int configurator = 1;
 	unsigned int wait_time;
+	unsigned int neg_freq = 0;
 
 	wpa_s->dpp_gas_client = 0;
 
@@ -559,12 +574,17 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		wpa_s->dpp_netrole_ap = os_strncmp(pos, "ap", 2) == 0;
 	}
 
+	pos = os_strstr(cmd, " neg_freq=");
+	if (pos)
+		neg_freq = atoi(pos + 10);
+
 	if (wpa_s->dpp_auth) {
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
 	}
-	wpa_s->dpp_auth = dpp_auth_init(wpa_s, peer_bi, own_bi, configurator);
+	wpa_s->dpp_auth = dpp_auth_init(wpa_s, peer_bi, own_bi, configurator,
+					neg_freq);
 	if (!wpa_s->dpp_auth)
 		goto fail;
 	wpas_dpp_set_testing_options(wpa_s, wpa_s->dpp_auth);
@@ -577,6 +597,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		wpa_s->dpp_auth->curr_freq = peer_bi->freq[0];
 	else
 		wpa_s->dpp_auth->curr_freq = 2412;
+	wpa_s->dpp_auth->neg_freq = neg_freq;
 
 	if (is_zero_ether_addr(peer_bi->mac_addr)) {
 		dst = broadcast;
@@ -593,6 +614,12 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
 			       wpas_dpp_reply_wait_timeout,
 			       wpa_s, NULL);
+	if (neg_freq > 0 && wpa_s->dpp_auth->curr_freq != neg_freq) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Initiate on curr_freq %u MHz and move to neg_freq %u MHz for response",
+			   wpa_s->dpp_auth->curr_freq,
+			   wpa_s->dpp_auth->neg_freq);
+	}
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
 		MAC2STR(dst), wpa_s->dpp_auth->curr_freq,
 		DPP_PA_AUTHENTICATION_REQ);
@@ -863,6 +890,14 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	wpas_dpp_set_configurator(wpa_s, wpa_s->dpp_auth,
 				  wpa_s->dpp_configurator_params);
 	os_memcpy(wpa_s->dpp_auth->peer_mac_addr, src, ETH_ALEN);
+
+	if (wpa_s->dpp_listen_freq &&
+	    wpa_s->dpp_listen_freq != wpa_s->dpp_auth->curr_freq) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Stop listen on %u MHz to allow response on the request %u MHz",
+			   wpa_s->dpp_listen_freq, wpa_s->dpp_auth->curr_freq);
+		wpas_dpp_listen_stop(wpa_s);
+	}
 
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
 		MAC2STR(src), wpa_s->dpp_auth->curr_freq,
@@ -1161,13 +1196,14 @@ static void wpas_dpp_auth_success(struct wpa_supplicant *wpa_s, int initiator)
 
 
 static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
-				  const u8 *hdr, const u8 *buf, size_t len)
+				  const u8 *hdr, const u8 *buf, size_t len,
+				  unsigned int freq)
 {
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	struct wpabuf *msg;
 
-	wpa_printf(MSG_DEBUG, "DPP: Authentication Response from " MACSTR,
-		   MAC2STR(src));
+	wpa_printf(MSG_DEBUG, "DPP: Authentication Response from " MACSTR
+		   " (freq %u MHz)", MAC2STR(src), freq);
 
 	if (!auth) {
 		wpa_printf(MSG_DEBUG,
@@ -1183,6 +1219,12 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 	}
 
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+
+	if (auth->curr_freq != freq && auth->neg_freq == freq) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Responder accepted request for different negotiation channel");
+		auth->curr_freq = freq;
+	}
 
 	msg = dpp_auth_resp_rx(auth, hdr, buf, len);
 	if (!msg) {
@@ -1641,7 +1683,7 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 		wpas_dpp_rx_auth_req(wpa_s, src, hdr, buf, len, freq);
 		break;
 	case DPP_PA_AUTHENTICATION_RESP:
-		wpas_dpp_rx_auth_resp(wpa_s, src, hdr, buf, len);
+		wpas_dpp_rx_auth_resp(wpa_s, src, hdr, buf, len, freq);
 		break;
 	case DPP_PA_AUTHENTICATION_CONF:
 		wpas_dpp_rx_auth_conf(wpa_s, src, hdr, buf, len);

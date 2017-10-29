@@ -1349,7 +1349,8 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 					  const struct wpabuf *pi,
 					  size_t nonce_len,
 					  const u8 *r_pubkey_hash,
-					  const u8 *i_pubkey_hash)
+					  const u8 *i_pubkey_hash,
+					  unsigned int neg_freq)
 {
 	struct wpabuf *msg;
 	u8 clear[4 + DPP_MAX_NONCE_LEN + 4 + 1];
@@ -1362,6 +1363,8 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 	/* Build DPP Authentication Request frame attributes */
 	attr_len = 2 * (4 + SHA256_MAC_LEN) + 4 + (pi ? wpabuf_len(pi) : 0) +
 		4 + sizeof(wrapped_data);
+	if (neg_freq > 0)
+		attr_len += 4 + 2;
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_AUTH_REQ)
 		attr_len += 4;
@@ -1391,6 +1394,25 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 		wpabuf_put_le16(msg, DPP_ATTR_I_PROTOCOL_KEY);
 		wpabuf_put_le16(msg, wpabuf_len(pi));
 		wpabuf_put_buf(msg, pi);
+	}
+
+	/* Channel */
+	if (neg_freq > 0) {
+		u8 op_class, channel;
+
+		if (ieee80211_freq_to_channel_ext(neg_freq, 0, 0, &op_class,
+						  &channel) ==
+		    NUM_HOSTAPD_MODES) {
+			wpa_printf(MSG_INFO,
+				   "DPP: Unsupported negotiation frequency request: %d",
+				   neg_freq);
+			wpabuf_free(msg);
+			return NULL;
+		}
+		wpabuf_put_le16(msg, DPP_ATTR_CHANNEL);
+		wpabuf_put_le16(msg, 2);
+		wpabuf_put_u8(msg, op_class);
+		wpabuf_put_u8(msg, channel);
 	}
 
 #ifdef CONFIG_TESTING_OPTIONS
@@ -1668,7 +1690,8 @@ skip_wrapped_data:
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
-					  int configurator)
+					  int configurator,
+					  unsigned int neg_freq)
 {
 	struct dpp_authentication *auth;
 	size_t nonce_len;
@@ -1751,7 +1774,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	auth->req_msg = dpp_auth_build_req(auth, pi, nonce_len, r_pubkey_hash,
-					   i_pubkey_hash);
+					   i_pubkey_hash, neg_freq);
 	if (!auth->req_msg)
 		goto fail;
 
@@ -2349,9 +2372,10 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	size_t len[2];
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
-	const u8 *wrapped_data, *i_proto, *i_nonce, *i_capab, *i_bootstrap;
+	const u8 *wrapped_data, *i_proto, *i_nonce, *i_capab, *i_bootstrap,
+		*channel;
 	u16 wrapped_data_len, i_proto_len, i_nonce_len, i_capab_len,
-		i_bootstrap_len;
+		i_bootstrap_len, channel_len;
 	struct dpp_authentication *auth = NULL;
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
@@ -2373,6 +2397,34 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 	auth->own_bi = own_bi;
 	auth->curve = own_bi->curve;
 	auth->curr_freq = freq;
+
+	channel = dpp_get_attr(attr_start, attr_len, DPP_ATTR_CHANNEL,
+			       &channel_len);
+	if (channel) {
+		int neg_freq;
+
+		if (channel_len < 2) {
+			dpp_auth_fail(auth, "Too short Channel attribute");
+			goto fail;
+		}
+
+		neg_freq = ieee80211_chan_to_freq(NULL, channel[0], channel[1]);
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Initiator requested different channel for negotiation: op_class=%u channel=%u --> freq=%d",
+			   channel[0], channel[1], neg_freq);
+		if (neg_freq < 0) {
+			dpp_auth_fail(auth,
+				      "Unsupported Channel attribute value");
+			goto fail;
+		}
+
+		if (auth->curr_freq != (unsigned int) neg_freq) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Changing negotiation channel from %u MHz to %u MHz",
+				   freq, neg_freq);
+			auth->curr_freq = neg_freq;
+		}
+	}
 
 	i_proto = dpp_get_attr(attr_start, attr_len, DPP_ATTR_I_PROTOCOL_KEY,
 			       &i_proto_len);

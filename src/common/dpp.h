@@ -52,6 +52,8 @@ enum dpp_attribute_id {
 	DPP_ATTR_ENROLLEE_NONCE = 0x1014,
 	DPP_ATTR_CODE_IDENTIFIER = 0x1015,
 	DPP_ATTR_TRANSACTION_ID = 0x1016,
+	DPP_ATTR_BOOTSTRAP_INFO = 0x1017,
+	DPP_ATTR_CHANNEL = 0x1018,
 	DPP_ATTR_TESTING = 0x10ff, /* not defined in the DPP tech spec */
 };
 
@@ -159,6 +161,7 @@ struct dpp_authentication {
 	struct wpabuf *req_msg;
 	struct wpabuf *resp_msg;
 	unsigned int curr_freq;
+	unsigned int neg_freq;
 	size_t secret_len;
 	u8 Mx[DPP_MAX_SHARED_SECRET_LEN];
 	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
@@ -260,7 +263,8 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
-					  int configurator);
+					  int configurator,
+					  unsigned int neg_freq);
 struct dpp_authentication *
 dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,

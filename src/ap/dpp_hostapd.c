@@ -503,7 +503,7 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 
 	if (hapd->dpp_auth)
 		dpp_auth_deinit(hapd->dpp_auth);
-	hapd->dpp_auth = dpp_auth_init(hapd, peer_bi, own_bi, configurator);
+	hapd->dpp_auth = dpp_auth_init(hapd, peer_bi, own_bi, configurator, 0);
 	if (!hapd->dpp_auth)
 		goto fail;
 	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);

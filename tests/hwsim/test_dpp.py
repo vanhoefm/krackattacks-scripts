@@ -499,6 +499,113 @@ def test_dpp_qr_code_auth_incompatible_roles(dev, apdev):
         raise Exception("DPP authentication did not succeed (Initiator)")
     dev[0].request("DPP_STOP_LISTEN")
 
+def test_dpp_qr_code_auth_neg_chan(dev, apdev):
+    """DPP QR Code and authentication exchange with requested different channel"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    logger.info("Create configurator on dev1")
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[1].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    logger.info("dev0 displays QR Code")
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 initiates DPP Authentication")
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+    cmd = "DPP_AUTH_INIT peer=%d configurator=%d conf=sta-dpp neg_freq=2462" % (id1, conf_id)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+
+    ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Request not sent")
+    if "freq=2412 type=0" not in ev:
+        raise Exception("Unexpected TX data for Authentication Request: " + ev)
+
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Request not received")
+    if "freq=2412 type=0" not in ev:
+        raise Exception("Unexpected RX data for Authentication Request: " + ev)
+
+    ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("TX status for DPP Authentication Request not reported")
+    if "freq=2412 result=SUCCESS" not in ev:
+        raise Exception("Unexpected TX status for Authentication Request: " + ev)
+
+    ev = dev[0].wait_event(["DPP-TX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Response not sent")
+    if "freq=2462 type=1" not in ev:
+        raise Exception("Unexpected TX data for Authentication Response: " + ev)
+
+    ev = dev[1].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Response not received")
+    if "freq=2462 type=1" not in ev:
+        raise Exception("Unexpected RX data for Authentication Response: " + ev)
+
+    ev = dev[0].wait_event(["DPP-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("TX status for DPP Authentication Response not reported")
+    if "freq=2462 result=SUCCESS" not in ev:
+        raise Exception("Unexpected TX status for Authentication Response: " + ev)
+
+    ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Confirm not sent")
+    if "freq=2462 type=2" not in ev:
+        raise Exception("Unexpected TX data for Authentication Confirm: " + ev)
+
+    ev = dev[0].wait_event(["DPP-RX"], timeout=5)
+    if ev is None:
+        raise Exception("DPP Authentication Confirm not received")
+    if "freq=2462 type=2" not in ev:
+        raise Exception("Unexpected RX data for Authentication Confirm: " + ev)
+
+    ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("TX status for DPP Authentication Confirm not reported")
+    if "freq=2462 result=SUCCESS" not in ev:
+        raise Exception("Unexpected TX status for Authentication Confirm: " + ev)
+
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED", "DPP-CONF-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    if "DPP-CONF-FAILED" in ev:
+        raise Exception("DPP configuration failed")
+    dev[0].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
 def test_dpp_config_legacy(dev, apdev):
     """DPP Config Object for legacy network using passphrase"""
     check_dpp_capab(dev[1])

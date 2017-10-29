@@ -4356,11 +4356,11 @@ struct dpp_signed_connector_info {
 	size_t payload_len;
 };
 
-static int
+static enum dpp_status_error
 dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 			     EVP_PKEY *csign_pub, const char *connector)
 {
-	int ret = -1;
+	enum dpp_status_error ret = 255;
 	const char *pos, *end, *signed_start, *signed_end;
 	struct wpabuf *kid = NULL;
 	unsigned char *prot_hdr = NULL, *signature = NULL;
@@ -4394,6 +4394,7 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	end = os_strchr(pos, '.');
 	if (!end) {
 		wpa_printf(MSG_DEBUG, "DPP: Missing dot(1) in signedConnector");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 	prot_hdr = base64_url_decode((const unsigned char *) pos,
@@ -4401,18 +4402,22 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	if (!prot_hdr) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Failed to base64url decode signedConnector JWS Protected Header");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG,
 			  "DPP: signedConnector - JWS Protected Header",
 			  prot_hdr, prot_hdr_len);
 	kid = dpp_parse_jws_prot_hdr(curve, prot_hdr, prot_hdr_len, &sign_md);
-	if (!kid)
+	if (!kid) {
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
+	}
 	if (wpabuf_len(kid) != SHA256_MAC_LEN) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Unexpected signedConnector JWS Protected Header kid length: %u (expected %u)",
 			   (unsigned int) wpabuf_len(kid), SHA256_MAC_LEN);
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
@@ -4421,6 +4426,7 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	if (!end) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Missing dot(2) in signedConnector");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 	signed_end = end - 1;
@@ -4429,6 +4435,7 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	if (!info->payload) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Failed to base64url decode signedConnector JWS Payload");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG,
@@ -4440,18 +4447,22 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 	if (!signature) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Failed to base64url decode signedConnector signature");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 		}
 	wpa_hexdump(MSG_DEBUG, "DPP: signedConnector - signature",
 		    signature, signature_len);
 
-	if (dpp_check_pubkey_match(csign_pub, kid) < 0)
+	if (dpp_check_pubkey_match(csign_pub, kid) < 0) {
+		ret = DPP_STATUS_NO_MATCH;
 		goto fail;
+	}
 
 	if (signature_len & 0x01) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Unexpected signedConnector signature length (%d)",
 			   (int) signature_len);
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
@@ -4492,10 +4503,11 @@ dpp_process_signed_connector(struct dpp_signed_connector_info *info,
 		wpa_printf(MSG_DEBUG,
 			   "DPP: EVP_DigestVerifyFinal failed (res=%d): %s",
 			   res, ERR_error_string(ERR_get_error(), NULL));
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
-	ret = 0;
+	ret = DPP_STATUS_OK;
 fail:
 	EC_KEY_free(eckey);
 	EVP_MD_CTX_destroy(md_ctx);
@@ -4554,7 +4566,7 @@ static int dpp_parse_cred_dpp(struct dpp_authentication *auth,
 	}
 
 	if (dpp_process_signed_connector(&info, csign_pub,
-					 signed_connector) < 0)
+					 signed_connector) != DPP_STATUS_OK)
 		goto fail;
 
 	if (dpp_parse_connector(auth, info.payload, info.payload_len) < 0) {
@@ -5021,15 +5033,16 @@ fail:
 }
 
 
-int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
-		   const u8 *net_access_key, size_t net_access_key_len,
-		   const u8 *csign_key, size_t csign_key_len,
-		   const u8 *peer_connector, size_t peer_connector_len,
-		   os_time_t *expiry)
+enum dpp_status_error
+dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
+	       const u8 *net_access_key, size_t net_access_key_len,
+	       const u8 *csign_key, size_t csign_key_len,
+	       const u8 *peer_connector, size_t peer_connector_len,
+	       os_time_t *expiry)
 {
 	struct json_token *root = NULL, *netkey, *token;
 	struct json_token *own_root = NULL;
-	int ret = -1;
+	enum dpp_status_error ret = 255, res;
 	EVP_PKEY *own_key = NULL, *peer_key = NULL;
 	struct wpabuf *own_key_pub = NULL;
 	const struct dpp_curve_params *curve, *own_curve;
@@ -5097,18 +5110,23 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	os_memcpy(signed_connector, peer_connector, peer_connector_len);
 	signed_connector[peer_connector_len] = '\0';
 
-	if (dpp_process_signed_connector(&info, csign, signed_connector) < 0)
+	res = dpp_process_signed_connector(&info, csign, signed_connector);
+	if (res != DPP_STATUS_OK) {
+		ret = res;
 		goto fail;
+	}
 
 	root = json_parse((const char *) info.payload, info.payload_len);
 	if (!root) {
 		wpa_printf(MSG_DEBUG, "DPP: JSON parsing of connector failed");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
 	if (!dpp_connector_match_groups(own_root, root)) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Peer connector does not include compatible group netrole with own connector");
+		ret = DPP_STATUS_NO_MATCH;
 		goto fail;
 	}
 
@@ -5121,6 +5139,7 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		if (dpp_key_expired(token->string, expiry)) {
 			wpa_printf(MSG_DEBUG,
 				   "DPP: Connector (netAccessKey) has expired");
+			ret = DPP_STATUS_INVALID_CONNECTOR;
 			goto fail;
 		}
 	}
@@ -5128,18 +5147,22 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	netkey = json_get_member(root, "netAccessKey");
 	if (!netkey || netkey->type != JSON_OBJECT) {
 		wpa_printf(MSG_DEBUG, "DPP: No netAccessKey object found");
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
 	peer_key = dpp_parse_jwk(netkey, &curve);
-	if (!peer_key)
+	if (!peer_key) {
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
+	}
 	dpp_debug_print_key("DPP: Received netAccessKey", peer_key);
 
 	if (own_curve != curve) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Mismatching netAccessKey curves (%s != %s)",
 			   own_curve->name, curve->name);
+		ret = DPP_STATUS_INVALID_CONNECTOR;
 		goto fail;
 	}
 
@@ -5173,9 +5196,9 @@ int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 		goto fail;
 	}
 
-	ret = 0;
+	ret = DPP_STATUS_OK;
 fail:
-	if (ret < 0)
+	if (ret != DPP_STATUS_OK)
 		os_memset(intro, 0, sizeof(*intro));
 	os_memset(Nx, 0, sizeof(Nx));
 	EVP_PKEY_CTX_free(ctx);

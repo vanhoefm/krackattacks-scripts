@@ -63,6 +63,8 @@ enum dpp_status_error {
 	DPP_STATUS_BAD_GROUP = 4,
 	DPP_STATUS_CONFIGURE_FAILURE = 5,
 	DPP_STATUS_RESPONSE_PENDING = 6,
+	DPP_STATUS_INVALID_CONNECTOR = 7,
+	DPP_STATUS_NO_MATCH = 8,
 };
 
 #define DPP_CAPAB_ENROLLEE BIT(0)
@@ -292,11 +294,12 @@ dpp_keygen_configurator(const char *curve, const u8 *privkey,
 			size_t privkey_len);
 int dpp_configurator_own_config(struct dpp_authentication *auth,
 				const char *curve);
-int dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
-		   const u8 *net_access_key, size_t net_access_key_len,
-		   const u8 *csign_key, size_t csign_key_len,
-		   const u8 *peer_connector, size_t peer_connector_len,
-		   os_time_t *expiry);
+enum dpp_status_error
+dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
+	       const u8 *net_access_key, size_t net_access_key_len,
+	       const u8 *csign_key, size_t csign_key_len,
+	       const u8 *peer_connector, size_t peer_connector_len,
+	       os_time_t *expiry);
 struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
 				const u8 *own_mac,
 				const char *identifier,

@@ -890,6 +890,46 @@ static void hostapd_dpp_rx_auth_conf(struct hostapd_data *hapd, const u8 *src,
 }
 
 
+static void hostapd_dpp_send_peer_disc_resp(struct hostapd_data *hapd,
+					    const u8 *src, unsigned int freq,
+					    u8 trans_id,
+					    enum dpp_status_error status)
+{
+	struct wpabuf *msg;
+
+	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_RESP,
+			    5 + 5 + 4 + os_strlen(hapd->conf->dpp_connector));
+	if (!msg)
+		return;
+
+	/* Transaction ID */
+	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, trans_id);
+
+	/* DPP Status */
+	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, status);
+
+	/* DPP Connector */
+	if (status == DPP_STATUS_OK) {
+		wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
+		wpabuf_put_le16(msg, os_strlen(hapd->conf->dpp_connector));
+		wpabuf_put_str(msg, hapd->conf->dpp_connector);
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Send Peer Discovery Response to " MACSTR
+		   " status=%d", MAC2STR(src), status);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d status=%d", MAC2STR(src), freq,
+		DPP_PA_PEER_DISCOVERY_RESP, status);
+	hostapd_drv_send_action(hapd, freq, 0, src,
+				wpabuf_head(msg), wpabuf_len(msg));
+	wpabuf_free(msg);
+}
+
+
 static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 					 const u8 *src,
 					 const u8 *buf, size_t len,
@@ -901,7 +941,7 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	struct dpp_introduction intro;
 	os_time_t expire;
 	int expiration;
-	struct wpabuf *msg;
+	enum dpp_status_error res;
 
 	wpa_printf(MSG_DEBUG, "DPP: Peer Discovery Request from " MACSTR,
 		   MAC2STR(src));
@@ -941,14 +981,24 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 		return;
 	}
 
-	if (dpp_peer_intro(&intro, hapd->conf->dpp_connector,
-			   wpabuf_head(hapd->conf->dpp_netaccesskey),
-			   wpabuf_len(hapd->conf->dpp_netaccesskey),
-			   wpabuf_head(hapd->conf->dpp_csign),
-			   wpabuf_len(hapd->conf->dpp_csign),
-			   connector, connector_len, &expire) < 0) {
+	res = dpp_peer_intro(&intro, hapd->conf->dpp_connector,
+			     wpabuf_head(hapd->conf->dpp_netaccesskey),
+			     wpabuf_len(hapd->conf->dpp_netaccesskey),
+			     wpabuf_head(hapd->conf->dpp_csign),
+			     wpabuf_len(hapd->conf->dpp_csign),
+			     connector, connector_len, &expire);
+	if (res == 255) {
 		wpa_printf(MSG_INFO,
-			   "DPP: Network Introduction protocol resulted in failure");
+			   "DPP: Network Introduction protocol resulted in internal failure (peer "
+			   MACSTR ")", MAC2STR(src));
+		return;
+	}
+	if (res != DPP_STATUS_OK) {
+		wpa_printf(MSG_INFO,
+			   "DPP: Network Introduction protocol resulted in failure (peer "
+			   MACSTR " status %d)", MAC2STR(src), res);
+		hostapd_dpp_send_peer_disc_resp(hapd, src, freq, trans_id[0],
+						res);
 		return;
 	}
 
@@ -966,29 +1016,8 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 		return;
 	}
 
-	msg = dpp_alloc_msg(DPP_PA_PEER_DISCOVERY_RESP,
-			    5 + 4 + os_strlen(hapd->conf->dpp_connector));
-	if (!msg)
-		return;
-
-	/* Transaction ID */
-	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
-	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, trans_id[0]);
-
-	/* DPP Connector */
-	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
-	wpabuf_put_le16(msg, os_strlen(hapd->conf->dpp_connector));
-	wpabuf_put_str(msg, hapd->conf->dpp_connector);
-
-	wpa_printf(MSG_DEBUG, "DPP: Send Peer Discovery Response to " MACSTR,
-		   MAC2STR(src));
-	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
-		" freq=%u type=%d", MAC2STR(src), freq,
-		DPP_PA_PEER_DISCOVERY_RESP);
-	hostapd_drv_send_action(hapd, freq, 0, src,
-				wpabuf_head(msg), wpabuf_len(msg));
-	wpabuf_free(msg);
+	hostapd_dpp_send_peer_disc_resp(hapd, src, freq, trans_id[0],
+					DPP_STATUS_OK);
 }
 
 

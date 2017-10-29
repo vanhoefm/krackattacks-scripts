@@ -171,6 +171,7 @@ extern "C" {
 #define DPP_EVENT_TX "DPP-TX "
 #define DPP_EVENT_TX_STATUS "DPP-TX-STATUS "
 #define DPP_EVENT_FAIL "DPP-FAIL "
+#define DPP_EVENT_INTRO "DPP-INTRO "
 
 /* MESH events */
 #define MESH_GROUP_STARTED "MESH-GROUP-STARTED "

@@ -1243,14 +1243,15 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 				       const u8 *buf, size_t len)
 {
 	struct wpa_ssid *ssid;
-	const u8 *connector, *trans_id;
-	u16 connector_len, trans_id_len;
+	const u8 *connector, *trans_id, *status;
+	u16 connector_len, trans_id_len, status_len;
 	struct dpp_introduction intro;
 	struct rsn_pmksa_cache_entry *entry;
 	struct os_time now;
 	struct os_reltime rnow;
 	os_time_t expiry;
 	unsigned int seconds;
+	enum dpp_status_error res;
 
 	wpa_printf(MSG_DEBUG, "DPP: Peer Discovery Response from " MACSTR,
 		   MAC2STR(src));
@@ -1278,12 +1279,32 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	if (!trans_id || trans_id_len != 1) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Peer did not include Transaction ID");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" fail=missing_transaction_id", MAC2STR(src));
 		goto fail;
 	}
 	if (trans_id[0] != TRANSACTION_ID) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Ignore frame with unexpected Transaction ID %u",
 			   trans_id[0]);
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" fail=transaction_id_mismatch", MAC2STR(src));
+		goto fail;
+	}
+
+	status = dpp_get_attr(buf, len, DPP_ATTR_STATUS, &status_len);
+	if (!status || status_len != 1) {
+		wpa_printf(MSG_DEBUG, "DPP: Peer did not include Status");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" fail=missing_status", MAC2STR(src));
+		goto fail;
+	}
+	if (status[0] != DPP_STATUS_OK) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Peer rejected network introduction: Status %u",
+			   status[0]);
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" status=%u", MAC2STR(src), status[0]);
 		goto fail;
 	}
 
@@ -1291,17 +1312,22 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	if (!connector) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Peer did not include its Connector");
-		return;
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" fail=missing_connector", MAC2STR(src));
+		goto fail;
 	}
 
-	if (dpp_peer_intro(&intro, ssid->dpp_connector,
-			   ssid->dpp_netaccesskey,
-			   ssid->dpp_netaccesskey_len,
-			   ssid->dpp_csign,
-			   ssid->dpp_csign_len,
-			   connector, connector_len, &expiry) < 0) {
+	res = dpp_peer_intro(&intro, ssid->dpp_connector,
+			     ssid->dpp_netaccesskey,
+			     ssid->dpp_netaccesskey_len,
+			     ssid->dpp_csign,
+			     ssid->dpp_csign_len,
+			     connector, connector_len, &expiry);
+	if (res != DPP_STATUS_OK) {
 		wpa_printf(MSG_INFO,
 			   "DPP: Network Introduction protocol resulted in failure");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+			" fail=peer_connector_validation_failed", MAC2STR(src));
 		goto fail;
 	}
 
@@ -1324,6 +1350,9 @@ static void wpas_dpp_rx_peer_disc_resp(struct wpa_supplicant *wpa_s,
 	entry->reauth_time = rnow.sec + seconds;
 	entry->network_ctx = ssid;
 	wpa_sm_pmksa_cache_add_entry(wpa_s->wpa, entry);
+
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_INTRO "peer=" MACSTR
+		" status=%u", MAC2STR(src), status[0]);
 
 	wpa_printf(MSG_DEBUG,
 		   "DPP: Try connection again after successful network introduction");

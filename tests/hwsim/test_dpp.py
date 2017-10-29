@@ -1713,6 +1713,168 @@ def run_dpp_own_config(dev, apdev, own_curve=None, expect_failure=False):
     else:
         dev[0].wait_connected()
 
+def test_dpp_intro_mismatch(dev, apdev):
+    """DPP network introduction mismatch cases"""
+    try:
+        wpas = None
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add("wlan5")
+        check_dpp_capab(wpas)
+        run_dpp_intro_mismatch(dev, apdev, wpas)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+        dev[2].set("dpp_config_processing", "0")
+        if wpas:
+            wpas.set("dpp_config_processing", "0")
+
+def run_dpp_intro_mismatch(dev, apdev, wpas):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    check_dpp_capab(dev[2])
+
+    logger.info("Start AP in unconfigured state")
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
+    check_dpp_capab(hapd)
+
+    addr = hapd.own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id_h = int(res)
+    uri = hapd.request("DPP_BOOTSTRAP_GET_URI %d" % id_h)
+
+    logger.info("Provision AP with DPP configuration")
+    res = dev[1].request("DPP_CONFIGURATOR_ADD");
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    res = dev[1].request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id = int(res)
+
+    dev[1].set("dpp_groups_override", '[{"groupId":"a","netRole":"ap"}]')
+    cmd = "DPP_AUTH_INIT peer=%d conf=ap-dpp configurator=%d" % (id, conf_id)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    update_hapd_config(hapd)
+
+    logger.info("Provision STA0 with DPP Connector that has mismatching groupId")
+    dev[0].set("dpp_config_processing", "2")
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    dev[1].set("dpp_groups_override", '[{"groupId":"b","netRole":"sta"}]')
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id1, conf_id)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator for STA0)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee STA0)")
+
+    logger.info("Provision STA2 with DPP Connector that has mismatching C-sign-key")
+    dev[2].set("dpp_config_processing", "2")
+    addr = dev[2].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[2].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id2 = int(res)
+    uri2 = dev[2].request("DPP_BOOTSTRAP_GET_URI %d" % id2)
+
+    res = dev[1].request("DPP_QR_CODE " + uri2)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[2].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = dev[1].request("DPP_CONFIGURATOR_ADD");
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id_2 = int(res)
+    dev[1].set("dpp_groups_override", '')
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id1, conf_id_2)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator for STA2)")
+    ev = dev[2].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee STA2)")
+
+    logger.info("Provision STA5 with DPP Connector that has mismatching netAccessKey EC group")
+    wpas.set("dpp_config_processing", "2")
+    addr = wpas.own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    cmd += " curve=P-521"
+    res = wpas.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id5 = int(res)
+    uri5 = wpas.request("DPP_BOOTSTRAP_GET_URI %d" % id5)
+
+    res = dev[1].request("DPP_QR_CODE " + uri5)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in wpas.request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    dev[1].set("dpp_groups_override", '')
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id1, conf_id)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator for STA0)")
+    ev = wpas.wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee STA5)")
+
+    logger.info("Verify network introduction results")
+    ev = dev[0].wait_event(["DPP-INTRO"], timeout=10)
+    if ev is None:
+        raise Exception("DPP network introduction result not seen on STA0")
+    if "status=8" not in ev:
+        raise Exception("Unexpected network introduction result on STA0: " + ev)
+
+    ev = dev[2].wait_event(["DPP-INTRO"], timeout=5)
+    if ev is None:
+        raise Exception("DPP network introduction result not seen on STA2")
+    if "status=8" not in ev:
+        raise Exception("Unexpected network introduction result on STA2: " + ev)
+
+    ev = wpas.wait_event(["DPP-INTRO"], timeout=10)
+    if ev is None:
+        raise Exception("DPP network introduction result not seen on STA5")
+    if "status=7" not in ev:
+        raise Exception("Unexpected network introduction result on STA5: " + ev)
+
 def run_dpp_proto_init(dev, test_dev, test, mutual=False):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])

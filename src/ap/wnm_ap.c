@@ -109,6 +109,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	pos = (u8 *)mgmt->u.action.u.wnm_sleep_resp.variable;
 	/* add key data if MFP is enabled */
 	if (!wpa_auth_uses_mfp(sta->wpa_sm) ||
+	    hapd->conf->wnm_sleep_mode_no_keys ||
 	    action_type != WNM_SLEEP_MODE_EXIT) {
 		mgmt->u.action.u.wnm_sleep_resp.keydata_len = 0;
 	} else {
@@ -173,7 +174,8 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 			wpa_set_wnmsleep(sta->wpa_sm, 0);
 			hostapd_drv_wnm_oper(hapd, WNM_SLEEP_EXIT_CONFIRM,
 					     addr, NULL, NULL);
-			if (!wpa_auth_uses_mfp(sta->wpa_sm))
+			if (!wpa_auth_uses_mfp(sta->wpa_sm) ||
+			    hapd->conf->wnm_sleep_mode_no_keys)
 				wpa_wnmsleep_rekey_gtk(sta->wpa_sm);
 		}
 	} else

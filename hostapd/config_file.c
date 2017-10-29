@@ -3293,6 +3293,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #ifdef CONFIG_WNM_AP
 	} else if (os_strcmp(buf, "wnm_sleep_mode") == 0) {
 		bss->wnm_sleep_mode = atoi(pos);
+	} else if (os_strcmp(buf, "wnm_sleep_mode_no_keys") == 0) {
+		bss->wnm_sleep_mode_no_keys = atoi(pos);
 	} else if (os_strcmp(buf, "bss_transition") == 0) {
 		bss->bss_transition = atoi(pos);
 #endif /* CONFIG_WNM_AP */

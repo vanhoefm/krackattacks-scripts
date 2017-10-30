@@ -3208,7 +3208,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 	sta->listen_interval = listen_interval;
 
-	if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G)
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G)
 		sta->flags |= WLAN_STA_NONERP;
 	for (i = 0; i < sta->supported_rates_len; i++) {
 		if ((sta->supported_rates[i] & 0x7f) > 22) {
@@ -3227,7 +3228,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	    !sta->no_short_slot_time_set) {
 		sta->no_short_slot_time_set = 1;
 		hapd->iface->num_sta_no_short_slot_time++;
-		if (hapd->iface->current_mode->mode ==
+		if (hapd->iface->current_mode &&
+		    hapd->iface->current_mode->mode ==
 		    HOSTAPD_MODE_IEEE80211G &&
 		    hapd->iface->num_sta_no_short_slot_time == 1)
 			ieee802_11_set_beacons(hapd->iface);
@@ -3242,7 +3244,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	    !sta->no_short_preamble_set) {
 		sta->no_short_preamble_set = 1;
 		hapd->iface->num_sta_no_short_preamble++;
-		if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
+		if (hapd->iface->current_mode &&
+		    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
 		    && hapd->iface->num_sta_no_short_preamble == 1)
 			ieee802_11_set_beacons(hapd->iface);
 	}

@@ -197,7 +197,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	if (sta->no_short_slot_time_set) {
 		sta->no_short_slot_time_set = 0;
 		hapd->iface->num_sta_no_short_slot_time--;
-		if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
+		if (hapd->iface->current_mode &&
+		    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
 		    && hapd->iface->num_sta_no_short_slot_time == 0)
 			set_beacon++;
 	}
@@ -205,7 +206,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	if (sta->no_short_preamble_set) {
 		sta->no_short_preamble_set = 0;
 		hapd->iface->num_sta_no_short_preamble--;
-		if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
+		if (hapd->iface->current_mode &&
+		    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G
 		    && hapd->iface->num_sta_no_short_preamble == 0)
 			set_beacon++;
 	}

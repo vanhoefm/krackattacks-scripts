@@ -5264,7 +5264,7 @@ def test_ap_wpa2_eap_tls_versions(dev, apdev):
 
     tls = dev[0].request("GET tls_library")
     if tls.startswith("OpenSSL"):
-        if "build=OpenSSL 1.0.2" in tls and "run=OpenSSL 1.0.2" in tls:
+        if "build=OpenSSL 1.0.1" not in tls and "run=OpenSSL 1.0.1" not in tls:
             check_tls_ver(dev[0], hapd,
                           "tls_disable_tlsv1_0=1 tls_disable_tlsv1_1=1",
                           "TLSv1.2")

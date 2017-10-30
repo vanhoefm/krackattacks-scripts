@@ -520,7 +520,19 @@ skip_wpa_check:
 	}
 #endif /* CONFIG_FILS */
 
-#if defined(CONFIG_IEEE80211R_AP) || defined(CONFIG_FILS)
+#ifdef CONFIG_OWE
+	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
+	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_OWE &&
+	    elems.owe_dh) {
+		p = owe_auth_req_process(hapd, sta,
+					 elems.owe_dh, elems.owe_dh_len,
+					 p, &reason);
+		if (!p || reason != WLAN_STATUS_SUCCESS)
+			goto fail;
+	}
+#endif /* CONFIG_OWE */
+
+#if defined(CONFIG_IEEE80211R_AP) || defined(CONFIG_FILS) || defined(CONFIG_OWE)
 	hostapd_sta_assoc(hapd, addr, reassoc, status, buf, p - buf);
 
 	if (sta->auth_alg == WLAN_AUTH_FT ||

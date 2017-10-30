@@ -2932,6 +2932,37 @@ done:
 }
 
 
+#ifdef CONFIG_OWE
+u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
+			  const u8 *owe_dh, u8 owe_dh_len,
+			  u8 *owe_buf, u16 *reason)
+{
+	struct wpabuf *pub;
+
+	*reason = owe_process_assoc_req(hapd, sta, owe_dh, owe_dh_len);
+	if (*reason != WLAN_STATUS_SUCCESS)
+		return NULL;
+	pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);
+	if (!pub) {
+		*reason = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		return NULL;
+	}
+
+	/* OWE Diffie-Hellman Parameter element */
+	*owe_buf++ = WLAN_EID_EXTENSION; /* Element ID */
+	*owe_buf++ = 1 + 2 + wpabuf_len(pub); /* Length */
+	*owe_buf++ = WLAN_EID_EXT_OWE_DH_PARAM; /* Element ID Extension */
+	WPA_PUT_LE16(owe_buf, OWE_DH_GROUP);
+	owe_buf += 2;
+	os_memcpy(owe_buf, wpabuf_head(pub), wpabuf_len(pub));
+	owe_buf += wpabuf_len(pub);
+	wpabuf_free(pub);
+	*reason = WLAN_STATUS_SUCCESS;
+	return owe_buf;
+}
+#endif /* CONFIG_OWE */
+
+
 #ifdef CONFIG_FILS
 
 void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta)

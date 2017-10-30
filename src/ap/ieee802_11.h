@@ -142,6 +142,9 @@ void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
 				 struct sta_info *sta, int success,
 				 struct wpabuf *erp_resp,
 				 const u8 *msk, size_t msk_len);
+u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
+			  const u8 *owe_dh, u8 owe_dh_len,
+			  u8 *owe_buf, u16 *reason);
 void fils_hlp_timeout(void *eloop_ctx, void *eloop_data);
 void fils_hlp_finish_assoc(struct hostapd_data *hapd, struct sta_info *sta);
 void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,

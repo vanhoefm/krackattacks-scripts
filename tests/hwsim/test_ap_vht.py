@@ -62,6 +62,15 @@ def test_ap_vht80(dev, apdev):
             raise Exception("Unexpected STATUS vht_oper_chwidth value")
         if status["vht_oper_centr_freq_seg0_idx"] != "42":
             raise Exception("Unexpected STATUS vht_oper_centr_freq_seg0_idx value")
+        if "vht_caps_info" not in status:
+            raise Exception("Missing vht_caps_info")
+
+        sta = hapd.get_sta(dev[0].own_addr())
+        logger.info("hostapd STA: " + str(sta))
+        if "[HT]" not in sta['flags']:
+            raise Exception("Missing STA flag: HT")
+        if "[VHT]" not in sta['flags']:
+            raise Exception("Missing STA flag: VHT")
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():

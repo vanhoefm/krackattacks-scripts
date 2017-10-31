@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
 from remotehost import remote_compatible
 import hostapd
 import hwsim_utils
@@ -17,7 +19,9 @@ def test_hapd_ctrl_status(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     hapd = hostapd.add_ap(apdev[0], params)
     status = hapd.get_status()
+    logger.info("STATUS: " + str(status))
     driver = hapd.get_driver_status()
+    logger.info("STATUS-DRIVER: " + str(driver))
 
     if status['bss[0]'] != apdev[0]['ifname']:
         raise Exception("Unexpected bss[0]")
@@ -27,6 +31,14 @@ def test_hapd_ctrl_status(dev, apdev):
         raise Exception("Unexpected bssid[0]")
     if status['freq'] != "2412":
         raise Exception("Unexpected freq")
+    if status['beacon_int'] != "100":
+        raise Exception("Unexpected beacon_int")
+    if status['dtim_period'] != "2":
+        raise Exception("Unexpected dtim_period")
+    if "max_txpower" not in status:
+        raise Exception("Missing max_txpower")
+    if "ht_caps_info" not in status:
+        raise Exception("Missing ht_caps_info")
 
     if driver['beacon_set'] != "1":
         raise Exception("Unexpected beacon_set")
@@ -57,10 +69,17 @@ def test_hapd_ctrl_p2p_manager(dev, apdev):
 @remote_compatible
 def test_hapd_ctrl_sta(dev, apdev):
     """hostapd and STA ctrl_iface commands"""
+    try:
+        run_hapd_ctrl_sta(dev, apdev)
+    finally:
+        dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def run_hapd_ctrl_sta(dev, apdev):
     ssid = "hapd-ctrl-sta"
     passphrase = "12345678"
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].request("VENDOR_ELEM_ADD 13 2102ff02")
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     addr = dev[0].own_addr()
     if "FAIL" in hapd.request("STA " + addr):
@@ -78,6 +97,21 @@ def test_hapd_ctrl_sta(dev, apdev):
         raise Exception("Unexpected STA-NEXT result")
     if "FAIL" not in hapd.request("STA-NEXT 00:11:22:33:44"):
         raise Exception("Unexpected STA-NEXT success")
+
+    sta = hapd.get_sta(addr)
+    logger.info("STA: " + str(sta))
+    if "ext_capab" not in sta:
+        raise Exception("Missing ext_capab in STA output")
+    if 'ht_caps_info' not in sta:
+        raise Exception("Missing ht_caps_info in STA output")
+    if 'min_txpower' not in sta:
+        raise Exception("Missing min_txpower in STA output")
+    if 'max_txpower' not in sta:
+        raise Exception("Missing min_txpower in STA output")
+    if sta['min_txpower'] != '-1':
+        raise Exception("Unxpected min_txpower value: " + sta['min_txpower'])
+    if sta['max_txpower'] != '2':
+        raise Exception("Unxpected max_txpower value: " + sta['max_txpower'])
 
 @remote_compatible
 def test_hapd_ctrl_disconnect(dev, apdev):

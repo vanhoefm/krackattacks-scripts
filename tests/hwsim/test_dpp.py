@@ -877,13 +877,14 @@ def run_dpp_akm(dev, apdev, pmk_len):
     params = { "ssid": "dpp",
                "wpa": "2",
                "wpa_key_mgmt": "DPP",
-               "rsn_pairwise": "CCMP" }
+               "rsn_pairwise": "CCMP",
+               "ieee80211w": "2" }
     try:
         hapd = hostapd.add_ap(apdev[0], params)
     except:
         raise HwsimSkip("DPP not supported")
 
-    id = dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412",
+    id = dev[0].connect("dpp", key_mgmt="DPP", ieee80211w="2", scan_freq="2412",
                         wait_connect=False)
     ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-NOT-FOUND"], timeout=2)
     if not ev:
@@ -932,6 +933,7 @@ def test_dpp_network_introduction(dev, apdev):
     params = { "ssid": "dpp",
                "wpa": "2",
                "wpa_key_mgmt": "DPP",
+               "ieee80211w": "2",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
                "dpp_csign": csign,
@@ -942,6 +944,7 @@ def test_dpp_network_introduction(dev, apdev):
         raise HwsimSkip("DPP not supported")
 
     id = dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412",
+                        ieee80211w="2",
                         dpp_csign=csign,
                         dpp_connector=sta_connector,
                         dpp_netaccesskey=sta_netaccesskey)
@@ -1018,6 +1021,7 @@ def update_hapd_config(hapd):
     hapd.set("ssid", ssid)
     hapd.set("wpa", "2")
     hapd.set("wpa_key_mgmt", "DPP")
+    hapd.set("ieee80211w", "2")
     hapd.set("rsn_pairwise", "CCMP")
     hapd.set("dpp_connector", connector)
     hapd.set("dpp_csign", csign)
@@ -1135,7 +1139,7 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
 
     dev[1].dump_monitor()
 
-    id = dev[1].connect(ssid, key_mgmt="DPP", scan_freq="2412",
+    id = dev[1].connect(ssid, key_mgmt="DPP", ieee80211w="2", scan_freq="2412",
                         only_add_network=True)
     dev[1].set_network_quoted(id, "dpp_connector", connector)
     dev[1].set_network(id, "dpp_csign", csign)
@@ -1183,6 +1187,7 @@ def run_dpp_auto_connect(dev, apdev, processing):
     params = { "ssid": "test",
                "wpa": "2",
                "wpa_key_mgmt": "DPP",
+               "ieee80211w": "2",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
                "dpp_csign": csign_pub,
@@ -1249,6 +1254,57 @@ def run_dpp_auto_connect_legacy(dev, apdev):
 
     params = hostapd.wpa2_params(ssid="dpp-legacy",
                                  passphrase="secret passphrase")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].set("dpp_config_processing", "2")
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_LISTEN 2412"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk ssid=%s pass=%s" % (id1, "dpp-legacy".encode("hex"), "secret passphrase".encode("hex"))
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=2)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    ev = dev[0].wait_event(["DPP-NETWORK-ID"], timeout=1)
+    if ev is None:
+        raise Exception("DPP network profile not generated")
+    id = ev.split(' ')[1]
+
+    dev[0].wait_connected()
+
+def test_dpp_auto_connect_legacy_pmf_required(dev, apdev):
+    """DPP and auto connect (legacy, PMF required)"""
+    try:
+        run_dpp_auto_connect_legacy_pmf_required(dev, apdev)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_auto_connect_legacy_pmf_required(dev, apdev):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    params = hostapd.wpa2_params(ssid="dpp-legacy",
+                                 passphrase="secret passphrase")
+    params['wpa_key_mgmt'] = "WPA-PSK-SHA256"
+    params['ieee80211w'] = "2"
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].set("dpp_config_processing", "2")

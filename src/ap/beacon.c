@@ -16,6 +16,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/hw_features_common.h"
+#include "common/wpa_ctrl.h"
 #include "wps/wps_defs.h"
 #include "p2p/p2p.h"
 #include "hostapd.h"
@@ -992,6 +993,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
+
+	wpa_msg_ctrl(hapd->msg_ctx, MSG_INFO, RX_PROBE_REQUEST "sa=" MACSTR
+		     " signal=%d", MAC2STR(mgmt->sa), ssi_signal);
 
 	resp = hostapd_gen_probe_resp(hapd, mgmt, elems.p2p != NULL,
 				      &resp_len);

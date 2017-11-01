@@ -339,6 +339,10 @@ extern "C" {
  */
 #define FILS_HLP_RX "FILS-HLP-RX "
 
+/* Event to indicate Probe Request frame;
+ * parameters: sa=<STA MAC address> signal=<signal> */
+#define RX_PROBE_REQUEST "RX-PROBE-REQUEST "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

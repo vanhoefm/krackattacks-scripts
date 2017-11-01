@@ -30,6 +30,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ctrl_iface_common.h"
 #include "common/dpp.h"
+#include "common/wpa_ctrl.h"
 #include "crypto/tls.h"
 #include "drivers/driver.h"
 #include "eapol_auth/eapol_auth_sm.h"
@@ -78,9 +79,9 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 
 static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
 				     struct sockaddr_storage *from,
-				     socklen_t fromlen)
+				     socklen_t fromlen, const char *input)
 {
-	return ctrl_iface_attach(&hapd->ctrl_dst, from, fromlen);
+	return ctrl_iface_attach(&hapd->ctrl_dst, from, fromlen, input);
 }
 
 
@@ -2746,7 +2747,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_iface_sta_next(hapd, buf + 9, reply,
 							reply_size);
 	} else if (os_strcmp(buf, "ATTACH") == 0) {
-		if (hostapd_ctrl_iface_attach(hapd, from, fromlen))
+		if (hostapd_ctrl_iface_attach(hapd, from, fromlen, NULL))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "ATTACH ", 7) == 0) {
+		if (hostapd_ctrl_iface_attach(hapd, from, fromlen, buf + 7))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "DETACH") == 0) {
 		if (hostapd_ctrl_iface_detach(hapd, from, fromlen))
@@ -3499,9 +3503,10 @@ static int hostapd_ctrl_iface_remove(struct hapd_interfaces *interfaces,
 
 static int hostapd_global_ctrl_iface_attach(struct hapd_interfaces *interfaces,
 					    struct sockaddr_storage *from,
-					    socklen_t fromlen)
+					    socklen_t fromlen, char *input)
 {
-	return ctrl_iface_attach(&interfaces->global_ctrl_dst, from, fromlen);
+	return ctrl_iface_attach(&interfaces->global_ctrl_dst, from, fromlen,
+				 input);
 }
 
 
@@ -3878,7 +3883,11 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "ATTACH") == 0) {
 		if (hostapd_global_ctrl_iface_attach(interfaces, &from,
-						     fromlen))
+						     fromlen, NULL))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "ATTACH ", 7) == 0) {
+		if (hostapd_global_ctrl_iface_attach(interfaces, &from,
+						     fromlen, buf + 7))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "DETACH") == 0) {
 		if (hostapd_global_ctrl_iface_detach(interfaces, &from,
@@ -4194,6 +4203,18 @@ void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
 }
 
 
+static int hostapd_ctrl_check_event_enabled(struct wpa_ctrl_dst *dst,
+					    const char *buf)
+{
+	/* Enable Probe Request events based on explicit request.
+	 * Other events are enabled by default.
+	 */
+	if (str_starts(buf, RX_PROBE_REQUEST))
+		return !!(dst->events & WPA_EVENT_RX_PROBE_REQUEST);
+	return 1;
+}
+
+
 static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				    enum wpa_msg_type type,
 				    const char *buf, size_t len)
@@ -4228,7 +4249,8 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 
 	idx = 0;
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
-		if (level >= dst->debug_level) {
+		if ((level >= dst->debug_level) &&
+		     hostapd_ctrl_check_event_enabled(dst, buf)) {
 			sockaddr_print(MSG_DEBUG, "CTRL_IFACE monitor send",
 				       &dst->addr, dst->addrlen);
 			msg.msg_name = &dst->addr;

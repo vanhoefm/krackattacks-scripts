@@ -5522,10 +5522,21 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 	if (!msg)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_FINITE_CYCLIC_GROUP_PKEX_EXCHANGE_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Finite Cyclic Group");
+		goto skip_finite_cyclic_group;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Finite Cyclic Group attribute */
 	wpabuf_put_le16(msg, DPP_ATTR_FINITE_CYCLIC_GROUP);
 	wpabuf_put_le16(msg, 2);
 	wpabuf_put_le16(msg, curve->ike_group);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_finite_cyclic_group:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Code Identifier attribute */
 	if (pkex->identifier) {
@@ -5533,6 +5544,13 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
 		wpabuf_put_str(msg, pkex->identifier);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_ENCRYPTED_KEY_PKEX_EXCHANGE_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Encrypted Key");
+		goto out;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* M in Encrypted Key attribute */
 	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
@@ -5634,10 +5652,21 @@ static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 	if (!msg)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_STATUS_PKEX_EXCHANGE_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
+		goto skip_status;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, DPP_STATUS_OK);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_status:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Code Identifier attribute */
 	if (pkex->identifier) {
@@ -5645,6 +5674,13 @@ static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
 		wpabuf_put_str(msg, pkex->identifier);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_ENCRYPTED_KEY_PKEX_EXCHANGE_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Encrypted Key");
+		goto skip_encrypted_key;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* N in Encrypted Key attribute */
 	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
@@ -5672,6 +5708,9 @@ static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 	os_memset(wpabuf_put(msg, offset), 0, offset);
 	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_encrypted_key:
+#endif /* CONFIG_TESTING_OPTIONS */
 	return msg;
 fail:
 	wpabuf_free(msg);
@@ -5930,15 +5969,38 @@ dpp_pkex_build_commit_reveal_req(struct dpp_pkex *pkex,
 	if (!clear || !msg)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_BOOTSTRAP_KEY_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Bootstrap Key");
+		goto skip_bootstrap_key;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* A in Bootstrap Key attribute */
 	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
 	wpabuf_put_le16(clear, wpabuf_len(A_pub));
 	wpabuf_put_buf(clear, A_pub);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_bootstrap_key:
+	if (dpp_test == DPP_TEST_NO_I_AUTH_TAG_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Auth tag");
+		goto skip_i_auth_tag;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* u in I-Auth tag attribute */
 	wpabuf_put_le16(clear, DPP_ATTR_I_AUTH_TAG);
 	wpabuf_put_le16(clear, curve->hash_len);
 	wpabuf_put_data(clear, u, curve->hash_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_i_auth_tag:
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	addr[0] = wpabuf_head_u8(msg) + 2;
 	len[0] = DPP_HDR_LEN;
@@ -5966,6 +6028,7 @@ dpp_pkex_build_commit_reveal_req(struct dpp_pkex *pkex,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 out:
@@ -6180,15 +6243,38 @@ dpp_pkex_build_commit_reveal_resp(struct dpp_pkex *pkex,
 	if (!clear || !msg)
 		goto fail;
 
-	/* A in Bootstrap Key attribute */
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_BOOTSTRAP_KEY_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Bootstrap Key");
+		goto skip_bootstrap_key;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	/* B in Bootstrap Key attribute */
 	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
 	wpabuf_put_le16(clear, wpabuf_len(B_pub));
 	wpabuf_put_buf(clear, B_pub);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_bootstrap_key:
+	if (dpp_test == DPP_TEST_NO_R_AUTH_TAG_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Auth tag");
+		goto skip_r_auth_tag;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* v in R-Auth tag attribute */
 	wpabuf_put_le16(clear, DPP_ATTR_R_AUTH_TAG);
 	wpabuf_put_le16(clear, curve->hash_len);
 	wpabuf_put_data(clear, v, curve->hash_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_r_auth_tag:
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	addr[0] = wpabuf_head_u8(msg) + 2;
 	len[0] = DPP_HDR_LEN;
@@ -6216,6 +6302,7 @@ dpp_pkex_build_commit_reveal_resp(struct dpp_pkex *pkex,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 out:

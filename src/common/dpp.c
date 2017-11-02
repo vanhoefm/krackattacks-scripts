@@ -5756,15 +5756,15 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	attr_group = dpp_get_attr(buf, len, DPP_ATTR_FINITE_CYCLIC_GROUP,
 				  &attr_group_len);
 	if (!attr_group || attr_group_len != 2) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Finite Cyclic Group attribute");
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Missing or invalid Finite Cyclic Group attribute");
 		return NULL;
 	}
 	ike_group = WPA_GET_LE16(attr_group);
 	if (ike_group != curve->ike_group) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Mismatching PKEX curve: peer=%u own=%u",
-			   ike_group, curve->ike_group);
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Mismatching PKEX curve: peer=%u own=%u",
+			ike_group, curve->ike_group);
 		/* TODO: error response with suggested curve:
 		 * DPP Status, group */
 		return NULL;
@@ -5775,7 +5775,8 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 				&attr_key_len);
 	if (!attr_key || attr_key_len & 0x01 || attr_key_len < 2 ||
 	    attr_key_len / 2 > DPP_MAX_SHARED_SECRET_LEN) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing Encrypted Key attribute");
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Missing Encrypted Key attribute");
 		return NULL;
 	}
 
@@ -5800,8 +5801,11 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	    EC_POINT_invert(group, Qi, bnctx) != 1 ||
 	    EC_POINT_add(group, X, M, Qi, bnctx) != 1 ||
 	    EC_POINT_is_at_infinity(group, X) ||
-	    !EC_POINT_is_on_curve(group, X, bnctx))
+	    !EC_POINT_is_on_curve(group, X, bnctx)) {
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"Invalid Encrypted Key value");
 		goto fail;
+	}
 
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
@@ -6065,12 +6069,12 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
 				   &attr_status_len);
 	if (!attr_status || attr_status_len != 1) {
-		wpa_printf(MSG_DEBUG, "DPP: No DPP Status attribute");
+		dpp_pkex_fail(pkex, "No DPP Status attribute");
 		return NULL;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", attr_status[0]);
 	if (attr_status[0] != DPP_STATUS_OK) {
-		wpa_printf(MSG_DEBUG, "DPP: PKEX failed");
+		dpp_pkex_fail(pkex, "PKEX failed (peer indicated failure)");
 		return NULL;
 	}
 
@@ -6084,7 +6088,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	if (attr_id && pkex->identifier &&
 	    (os_strlen(pkex->identifier) != attr_id_len ||
 	     os_memcmp(pkex->identifier, attr_id, attr_id_len) != 0)) {
-		wpa_printf(MSG_DEBUG, "DPP: PKEX code identifier mismatch");
+		dpp_pkex_fail(pkex, "PKEX code identifier mismatch");
 		return NULL;
 	}
 
@@ -6092,7 +6096,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	attr_key = dpp_get_attr(buf, buflen, DPP_ATTR_ENCRYPTED_KEY,
 				&attr_key_len);
 	if (!attr_key || attr_key_len & 0x01 || attr_key_len < 2) {
-		wpa_printf(MSG_DEBUG, "DPP: Missing Encrypted Key attribute");
+		dpp_pkex_fail(pkex, "Missing Encrypted Key attribute");
 		return NULL;
 	}
 
@@ -6117,8 +6121,10 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	    EC_POINT_invert(group, Qr, bnctx) != 1 ||
 	    EC_POINT_add(group, Y, N, Qr, bnctx) != 1 ||
 	    EC_POINT_is_at_infinity(group, Y) ||
-	    !EC_POINT_is_on_curve(group, Y, bnctx))
+	    !EC_POINT_is_on_curve(group, Y, bnctx)) {
+		dpp_pkex_fail(pkex, "Invalid Encrypted Key value");
 		goto fail;
+	}
 
 	pkex->exchange_done = 1;
 
@@ -6367,8 +6373,8 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Wrapped data attribute");
+		dpp_pkex_fail(pkex,
+			      "Missing or invalid required Wrapped Data attribute");
 		goto fail;
 	}
 
@@ -6398,22 +6404,22 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_pkex_fail(pkex, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	b_key = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_BOOTSTRAP_KEY,
 			     &b_key_len);
 	if (!b_key || b_key_len != 2 * curve->prime_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No valid peer bootstrapping key found");
+		dpp_pkex_fail(pkex, "No valid peer bootstrapping key found");
 		goto fail;
 	}
 	pkex->peer_bootstrap_key = dpp_set_pubkey_point(pkex->x, b_key,
 							b_key_len);
-	if (!pkex->peer_bootstrap_key)
+	if (!pkex->peer_bootstrap_key) {
+		dpp_pkex_fail(pkex, "Peer bootstrapping key is invalid");
 		goto fail;
+	}
 	dpp_debug_print_key("DPP: Peer bootstrap public key",
 			    pkex->peer_bootstrap_key);
 
@@ -6456,7 +6462,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 			      &peer_u_len);
 	if (!peer_u || peer_u_len != curve->hash_len ||
 	    os_memcmp(peer_u, u, curve->hash_len) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: No valid u (I-Auth tag) found");
+		dpp_pkex_fail(pkex, "No valid u (I-Auth tag) found");
 		wpa_hexdump(MSG_DEBUG, "DPP: Calculated u'",
 			    u, curve->hash_len);
 		wpa_hexdump(MSG_DEBUG, "DPP: Received u", peer_u, peer_u_len);
@@ -6538,8 +6544,8 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Wrapped data attribute");
+		dpp_pkex_fail(pkex,
+			      "Missing or invalid required Wrapped Data attribute");
 		goto fail;
 	}
 
@@ -6569,22 +6575,22 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_pkex_fail(pkex, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
 	b_key = dpp_get_attr(unwrapped, unwrapped_len, DPP_ATTR_BOOTSTRAP_KEY,
 			     &b_key_len);
 	if (!b_key || b_key_len != 2 * curve->prime_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No valid peer bootstrapping key found");
+		dpp_pkex_fail(pkex, "No valid peer bootstrapping key found");
 		goto fail;
 	}
 	pkex->peer_bootstrap_key = dpp_set_pubkey_point(pkex->x, b_key,
 							b_key_len);
-	if (!pkex->peer_bootstrap_key)
+	if (!pkex->peer_bootstrap_key) {
+		dpp_pkex_fail(pkex, "Peer bootstrapping key is invalid");
 		goto fail;
+	}
 	dpp_debug_print_key("DPP: Peer bootstrap public key",
 			    pkex->peer_bootstrap_key);
 
@@ -6626,7 +6632,7 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 			      &peer_v_len);
 	if (!peer_v || peer_v_len != curve->hash_len ||
 	    os_memcmp(peer_v, v, curve->hash_len) != 0) {
-		wpa_printf(MSG_DEBUG, "DPP: No valid v (R-Auth tag) found");
+		dpp_pkex_fail(pkex, "No valid v (R-Auth tag) found");
 		wpa_hexdump(MSG_DEBUG, "DPP: Calculated v'",
 			    v, curve->hash_len);
 		wpa_hexdump(MSG_DEBUG, "DPP: Received v", peer_v, peer_v_len);

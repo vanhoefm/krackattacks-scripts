@@ -2485,3 +2485,13 @@ def test_dpp_proto_pkex_cr_resp_no_r_auth_tag(dev, apdev):
 def test_dpp_proto_pkex_cr_resp_no_wrapped_data(dev, apdev):
     """DPP protocol testing - no Wrapped Data in PKEX Commit-Reveal Response"""
     run_dpp_proto_pkex_resp_missing(dev, 43, "Missing or invalid required Wrapped Data attribute")
+
+def test_dpp_proto_pkex_exchange_req_invalid_encrypted_key(dev, apdev):
+    """DPP protocol testing - invalid Encrypted Key in PKEX Exchange Request"""
+    run_dpp_proto_pkex_req_missing(dev, 44,
+                                   "Invalid Encrypted Key value")
+
+def test_dpp_proto_pkex_exchange_resp_invalid_encrypted_key(dev, apdev):
+    """DPP protocol testing - invalid Encrypted Key in PKEX Exchange Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 45,
+                                    "Invalid Encrypted Key value")

@@ -6155,6 +6155,80 @@ fail:
 }
 
 
+static struct wpabuf *
+dpp_pkex_build_commit_reveal_resp(struct dpp_pkex *pkex,
+				  const struct wpabuf *B_pub, const u8 *v)
+{
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+	struct wpabuf *msg = NULL;
+	const u8 *addr[2];
+	size_t len[2];
+	u8 octet;
+	u8 *wrapped;
+	struct wpabuf *clear = NULL;
+	size_t clear_len, attr_len;
+
+	/* {B, v [bootstrapping info]}z */
+	clear_len = 4 + 2 * curve->prime_len + 4 + curve->hash_len;
+	clear = wpabuf_alloc(clear_len);
+	attr_len = 4 + clear_len + AES_BLOCK_SIZE;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_RESP)
+		attr_len += 4;
+#endif /* CONFIG_TESTING_OPTIONS */
+	msg = dpp_alloc_msg(DPP_PA_PKEX_COMMIT_REVEAL_RESP, attr_len);
+	if (!clear || !msg)
+		goto fail;
+
+	/* A in Bootstrap Key attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
+	wpabuf_put_le16(clear, wpabuf_len(B_pub));
+	wpabuf_put_buf(clear, B_pub);
+
+	/* v in R-Auth tag attribute */
+	wpabuf_put_le16(clear, DPP_ATTR_R_AUTH_TAG);
+	wpabuf_put_le16(clear, curve->hash_len);
+	wpabuf_put_data(clear, v, curve->hash_len);
+
+	addr[0] = wpabuf_head_u8(msg) + 2;
+	len[0] = DPP_HDR_LEN;
+	octet = 1;
+	addr[1] = &octet;
+	len[1] = sizeof(octet);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
+	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
+
+	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
+	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+	wrapped = wpabuf_put(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
+
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
+	if (aes_siv_encrypt(pkex->z, curve->hash_len,
+			    wpabuf_head(clear), wpabuf_len(clear),
+			    2, addr, len, wrapped) < 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
+		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - attr after Wrapped Data");
+		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
+		wpabuf_put_le16(msg, 0);
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+out:
+	wpabuf_free(clear);
+	return msg;
+
+fail:
+	wpabuf_free(msg);
+	msg = NULL;
+	goto out;
+}
+
+
 struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 					      const u8 *hdr,
 					      const u8 *buf, size_t buflen)
@@ -6174,9 +6248,6 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	struct wpabuf *msg = NULL, *A_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
 	struct wpabuf *B_pub = NULL;
 	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
-	size_t clear_len, attr_len;
-	struct wpabuf *clear = NULL;
-	u8 *wrapped;
 	int res;
 
 	/* K = y * X' */
@@ -6340,55 +6411,10 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: v", v, curve->hash_len);
 
-	/* {B, v [bootstrapping info]}z */
-	clear_len = 4 + 2 * curve->prime_len + 4 + curve->hash_len;
-	clear = wpabuf_alloc(clear_len);
-	attr_len = 4 + clear_len + AES_BLOCK_SIZE;
-#ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_RESP)
-		attr_len += 4;
-#endif /* CONFIG_TESTING_OPTIONS */
-	msg = dpp_alloc_msg(DPP_PA_PKEX_COMMIT_REVEAL_RESP, attr_len);
-	if (!clear || !msg)
+	msg = dpp_pkex_build_commit_reveal_resp(pkex, B_pub, v);
+	if (!msg)
 		goto fail;
 
-	/* A in Bootstrap Key attribute */
-	wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
-	wpabuf_put_le16(clear, wpabuf_len(B_pub));
-	wpabuf_put_buf(clear, B_pub);
-
-	/* v in R-Auth tag attribute */
-	wpabuf_put_le16(clear, DPP_ATTR_R_AUTH_TAG);
-	wpabuf_put_le16(clear, curve->hash_len);
-	wpabuf_put_data(clear, v, curve->hash_len);
-
-	addr[0] = wpabuf_head_u8(msg) + 2;
-	len[0] = DPP_HDR_LEN;
-	octet = 1;
-	addr[1] = &octet;
-	len[1] = sizeof(octet);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[0]", addr[0], len[0]);
-	wpa_hexdump(MSG_DEBUG, "DDP: AES-SIV AD[1]", addr[1], len[1]);
-
-	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
-	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
-	wrapped = wpabuf_put(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
-
-	wpa_hexdump_buf(MSG_DEBUG, "DPP: AES-SIV cleartext", clear);
-	if (aes_siv_encrypt(pkex->z, curve->hash_len,
-			    wpabuf_head(clear), wpabuf_len(clear),
-			    2, addr, len, wrapped) < 0)
-		goto fail;
-	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
-		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
-
-#ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_PKEX_CR_RESP) {
-		wpa_printf(MSG_INFO, "DPP: TESTING - attr after Wrapped Data");
-		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
-		wpabuf_put_le16(msg, 0);
-	}
-#endif /* CONFIG_TESTING_OPTIONS */
 out:
 	EVP_PKEY_CTX_free(ctx);
 	os_free(unwrapped);
@@ -6396,11 +6422,10 @@ out:
 	wpabuf_free(B_pub);
 	wpabuf_free(X_pub);
 	wpabuf_free(Y_pub);
-	wpabuf_free(clear);
 	return msg;
 fail:
-	wpabuf_free(msg);
-	msg = NULL;
+	wpa_printf(MSG_DEBUG,
+		   "DPP: PKEX Commit-Reveal Request processing failed");
 	goto out;
 }
 

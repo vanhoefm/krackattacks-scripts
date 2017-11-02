@@ -5615,6 +5615,70 @@ fail:
 }
 
 
+static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
+						    const char *identifier,
+						    const BIGNUM *Nx,
+						    const BIGNUM *Ny)
+{
+	struct wpabuf *msg = NULL;
+	size_t attr_len;
+	int num_bytes, offset;
+	const struct dpp_curve_params *curve = pkex->own_bi->curve;
+
+	/* Initiator -> Responder: DPP Status, [identifier,] N */
+	attr_len = 4 + 1;
+	if (identifier)
+		attr_len += 4 + os_strlen(identifier);
+	attr_len += 4 + 2 * curve->prime_len;
+	msg = dpp_alloc_msg(DPP_PA_PKEX_EXCHANGE_RESP, attr_len);
+	if (!msg)
+		goto fail;
+
+	/* DPP Status */
+	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, DPP_STATUS_OK);
+
+	/* Code Identifier attribute */
+	if (pkex->identifier) {
+		wpabuf_put_le16(msg, DPP_ATTR_CODE_IDENTIFIER);
+		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
+		wpabuf_put_str(msg, pkex->identifier);
+	}
+
+	/* N in Encrypted Key attribute */
+	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
+	wpabuf_put_le16(msg, 2 * curve->prime_len);
+
+	num_bytes = BN_num_bytes(Nx);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(Nx, wpabuf_put(msg, num_bytes));
+	os_memset(pkex->Nx, 0, offset);
+	BN_bn2bin(Nx, pkex->Nx + offset);
+
+	num_bytes = BN_num_bytes(Ny);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
+
+	return msg;
+fail:
+	wpabuf_free(msg);
+	return NULL;
+}
+
+
 struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 					   struct dpp_bootstrap_info *bi,
 					   const u8 *own_mac,
@@ -5635,9 +5699,6 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	EC_KEY *Y_ec = NULL, *X_ec = NULL;;
 	const EC_POINT *Y_point;
 	BIGNUM *Nx = NULL, *Ny = NULL;
-	struct wpabuf *msg = NULL;
-	size_t attr_len;
-	int num_bytes, offset;
 
 	attr_id = dpp_get_attr(buf, len, DPP_ATTR_CODE_IDENTIFIER,
 			       &attr_id_len);
@@ -5756,59 +5817,14 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	    EC_POINT_get_affine_coordinates_GFp(group, N, Nx, Ny, bnctx) != 1)
 		goto fail;
 
-	/* Initiator -> Responder: DPP Status, [identifier,] N */
-	attr_len = 4 + 1;
-	if (identifier)
-		attr_len += 4 + os_strlen(identifier);
-	attr_len += 4 + 2 * curve->prime_len;
-	msg = dpp_alloc_msg(DPP_PA_PKEX_EXCHANGE_RESP, attr_len);
-	if (!msg)
+	pkex->exchange_resp = dpp_pkex_build_exchange_resp(pkex, identifier,
+							   Nx, Ny);
+	if (!pkex->exchange_resp)
 		goto fail;
 
-	/* DPP Status */
-	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
-	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, DPP_STATUS_OK);
-
-	/* Code Identifier attribute */
-	if (pkex->identifier) {
-		wpabuf_put_le16(msg, DPP_ATTR_CODE_IDENTIFIER);
-		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
-		wpabuf_put_str(msg, pkex->identifier);
-	}
-
-	/* N in Encrypted Key attribute */
-	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
-	wpabuf_put_le16(msg, 2 * curve->prime_len);
-
-	num_bytes = BN_num_bytes(Nx);
-	if ((size_t) num_bytes > curve->prime_len)
-		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(Nx, wpabuf_put(msg, num_bytes));
-	os_memset(pkex->Nx, 0, offset);
-	BN_bn2bin(Nx, pkex->Nx + offset);
-
-	num_bytes = BN_num_bytes(Ny);
-	if ((size_t) num_bytes > curve->prime_len)
-		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
-
-	pkex->exchange_resp = msg;
-	msg = NULL;
 	pkex->exchange_done = 1;
 
 out:
-	wpabuf_free(msg);
 	BN_CTX_free(bnctx);
 	EC_POINT_free(Qi);
 	EC_POINT_free(Qr);

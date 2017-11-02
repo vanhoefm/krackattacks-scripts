@@ -1456,7 +1456,7 @@ wpas_dpp_rx_pkex_exchange_req(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 
-	wpa_s->dpp_pkex = dpp_pkex_rx_exchange_req(wpa_s->dpp_pkex_bi,
+	wpa_s->dpp_pkex = dpp_pkex_rx_exchange_req(wpa_s, wpa_s->dpp_pkex_bi,
 						   wpa_s->own_addr, src,
 						   wpa_s->dpp_pkex_identifier,
 						   wpa_s->dpp_pkex_code,
@@ -2020,7 +2020,7 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 
 		wpa_printf(MSG_DEBUG, "DPP: Initiating PKEX");
 		dpp_pkex_free(wpa_s->dpp_pkex);
-		wpa_s->dpp_pkex = dpp_pkex_init(own_bi, wpa_s->own_addr,
+		wpa_s->dpp_pkex = dpp_pkex_init(wpa_s, own_bi, wpa_s->own_addr,
 						wpa_s->dpp_pkex_identifier,
 						wpa_s->dpp_pkex_code);
 		if (!wpa_s->dpp_pkex)

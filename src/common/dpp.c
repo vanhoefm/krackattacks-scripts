@@ -5577,7 +5577,13 @@ fail:
 }
 
 
-struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
+static void dpp_pkex_fail(struct dpp_pkex *pkex, const char *txt)
+{
+	wpa_msg(pkex->msg_ctx, MSG_INFO, DPP_EVENT_FAIL "%s", txt);
+}
+
+
+struct dpp_pkex * dpp_pkex_init(void *msg_ctx, struct dpp_bootstrap_info *bi,
 				const u8 *own_mac,
 				const char *identifier,
 				const char *code)
@@ -5587,6 +5593,7 @@ struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
 		return NULL;
+	pkex->msg_ctx = msg_ctx;
 	pkex->initiator = 1;
 	pkex->own_bi = bi;
 	os_memcpy(pkex->own_mac, own_mac, ETH_ALEN);
@@ -5608,7 +5615,8 @@ fail:
 }
 
 
-struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
+struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
+					   struct dpp_bootstrap_info *bi,
 					   const u8 *own_mac,
 					   const u8 *peer_mac,
 					   const char *identifier,
@@ -5698,6 +5706,7 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
 		goto fail;
+	pkex->msg_ctx = msg_ctx;
 	pkex->own_bi = bi;
 	os_memcpy(pkex->own_mac, own_mac, ETH_ALEN);
 	os_memcpy(pkex->peer_mac, peer_mac, ETH_ALEN);
@@ -6186,7 +6195,8 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	if (aes_siv_decrypt(pkex->z, curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_pkex_fail(pkex,
+			      "AES-SIV decryption failed - possible PKEX code mismatch");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
@@ -6402,7 +6412,8 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	if (aes_siv_decrypt(pkex->z, curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    2, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_pkex_fail(pkex,
+			      "AES-SIV decryption failed - possible PKEX code mismatch");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",

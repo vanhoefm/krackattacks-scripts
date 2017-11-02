@@ -110,6 +110,7 @@ struct dpp_bootstrap_info {
 };
 
 struct dpp_pkex {
+	void *msg_ctx;
 	unsigned int initiator:1;
 	unsigned int exchange_done:1;
 	struct dpp_bootstrap_info *own_bi;
@@ -304,11 +305,12 @@ dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	       const u8 *csign_key, size_t csign_key_len,
 	       const u8 *peer_connector, size_t peer_connector_len,
 	       os_time_t *expiry);
-struct dpp_pkex * dpp_pkex_init(struct dpp_bootstrap_info *bi,
+struct dpp_pkex * dpp_pkex_init(void *msg_ctx, struct dpp_bootstrap_info *bi,
 				const u8 *own_mac,
 				const char *identifier,
 				const char *code);
-struct dpp_pkex * dpp_pkex_rx_exchange_req(struct dpp_bootstrap_info *bi,
+struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
+					   struct dpp_bootstrap_info *bi,
 					   const u8 *own_mac,
 					   const u8 *peer_mac,
 					   const char *identifier,

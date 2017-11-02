@@ -1047,7 +1047,8 @@ hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	hapd->dpp_pkex = dpp_pkex_rx_exchange_req(hapd->dpp_pkex_bi,
+	hapd->dpp_pkex = dpp_pkex_rx_exchange_req(hapd->msg_ctx,
+						  hapd->dpp_pkex_bi,
 						  hapd->own_addr, src,
 						  hapd->dpp_pkex_identifier,
 						  hapd->dpp_pkex_code,
@@ -1452,7 +1453,8 @@ int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
 
 		wpa_printf(MSG_DEBUG, "DPP: Initiating PKEX");
 		dpp_pkex_free(hapd->dpp_pkex);
-		hapd->dpp_pkex = dpp_pkex_init(own_bi, hapd->own_addr,
+		hapd->dpp_pkex = dpp_pkex_init(hapd->msg_ctx, own_bi,
+					       hapd->own_addr,
 					       hapd->dpp_pkex_identifier,
 					       hapd->dpp_pkex_code);
 		if (!hapd->dpp_pkex)

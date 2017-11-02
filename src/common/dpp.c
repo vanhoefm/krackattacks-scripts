@@ -5823,7 +5823,7 @@ out:
 	EC_KEY_free(Y_ec);
 	return pkex;
 fail:
-	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Request processing faileed");
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Request processing failed");
 	dpp_pkex_free(pkex);
 	pkex = NULL;
 	goto out;
@@ -6111,7 +6111,7 @@ out:
 	BN_CTX_free(bnctx);
 	return msg;
 fail:
-	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Response processing faileed");
+	wpa_printf(MSG_DEBUG, "DPP: PKEX Exchange Response processing failed");
 	wpabuf_free(msg);
 	msg = NULL;
 	goto out;

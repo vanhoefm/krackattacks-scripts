@@ -5468,6 +5468,77 @@ fail:
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+static int dpp_test_gen_invalid_key(struct wpabuf *msg,
+				    const struct dpp_curve_params *curve)
+{
+	BN_CTX *ctx;
+	BIGNUM *x, *y;
+	int num_bytes, offset;
+	int ret = -1;
+	EC_GROUP *group;
+	EC_POINT *point;
+
+	group = EC_GROUP_new_by_curve_name(OBJ_txt2nid(curve->name));
+	if (!group)
+		return NULL;
+
+	ctx = BN_CTX_new();
+	point = EC_POINT_new(group);
+	x = BN_new();
+	y = BN_new();
+	if (!ctx || !point || !x || !y)
+		goto fail;
+
+	if (BN_rand(x, curve->prime_len * 8, 0, 0) != 1)
+		goto fail;
+
+	/* Generate a random y coordinate that results in a point that is not
+	 * on the curve. */
+	for (;;) {
+		if (BN_rand(y, curve->prime_len * 8, 0, 0) != 1)
+			goto fail;
+
+		if (EC_POINT_set_affine_coordinates_GFp(group, point, x, y,
+							ctx) != 1)
+			goto fail;
+
+		if (!EC_POINT_is_on_curve(group, point, ctx))
+			break;
+	}
+
+	num_bytes = BN_num_bytes(x);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(x, wpabuf_put(msg, num_bytes));
+
+	num_bytes = BN_num_bytes(y);
+	if ((size_t) num_bytes > curve->prime_len)
+		goto fail;
+	if (curve->prime_len > (size_t) num_bytes)
+		offset = curve->prime_len - num_bytes;
+	else
+		offset = 0;
+	os_memset(wpabuf_put(msg, offset), 0, offset);
+	BN_bn2bin(y, wpabuf_put(msg, num_bytes));
+
+	ret = 0;
+fail:
+	BN_free(x);
+	BN_free(y);
+	EC_POINT_free(point);
+	BN_CTX_free(ctx);
+
+	return ret;
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
 static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 {
 	EC_KEY *X_ec = NULL;
@@ -5555,6 +5626,15 @@ skip_finite_cyclic_group:
 	/* M in Encrypted Key attribute */
 	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
 	wpabuf_put_le16(msg, 2 * curve->prime_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_INVALID_ENCRYPTED_KEY_PKEX_EXCHANGE_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Encrypted Key");
+		if (dpp_test_gen_invalid_key(msg, curve) < 0)
+			goto fail;
+		goto out;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	num_bytes = BN_num_bytes(Mx);
 	if ((size_t) num_bytes > curve->prime_len)
@@ -5685,6 +5765,15 @@ skip_status:
 	/* N in Encrypted Key attribute */
 	wpabuf_put_le16(msg, DPP_ATTR_ENCRYPTED_KEY);
 	wpabuf_put_le16(msg, 2 * curve->prime_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_INVALID_ENCRYPTED_KEY_PKEX_EXCHANGE_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Encrypted Key");
+		if (dpp_test_gen_invalid_key(msg, curve) < 0)
+			goto fail;
+		goto skip_encrypted_key;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	num_bytes = BN_num_bytes(Nx);
 	if ((size_t) num_bytes > curve->prime_len)

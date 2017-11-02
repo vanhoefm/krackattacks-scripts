@@ -2425,3 +2425,63 @@ def test_dpp_proto_after_wrapped_data_pkex_cr_resp(dev, apdev):
         raise Exception("PKEX Commit-Reveal Response not seen")
     if "ignore=invalid-attributes" not in ev:
         raise Exception("Unexpected RX info: " + ev)
+
+def run_dpp_proto_pkex_req_missing(dev, test, reason):
+    run_dpp_proto_init_pkex(dev, 1, test)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def run_dpp_proto_pkex_resp_missing(dev, test, reason):
+    run_dpp_proto_init_pkex(dev, 0, test)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def test_dpp_proto_pkex_exchange_req_no_finite_cyclic_group(dev, apdev):
+    """DPP protocol testing - no Finite Cyclic Group in PKEX Exchange Request"""
+    run_dpp_proto_pkex_req_missing(dev, 34,
+                                   "Missing or invalid Finite Cyclic Group attribute")
+
+def test_dpp_proto_pkex_exchange_req_no_encrypted_key(dev, apdev):
+    """DPP protocol testing - no Encrypted Key in PKEX Exchange Request"""
+    run_dpp_proto_pkex_req_missing(dev, 35,
+                                   "Missing Encrypted Key attribute")
+
+def test_dpp_proto_pkex_exchange_resp_no_status(dev, apdev):
+    """DPP protocol testing - no Status in PKEX Exchange Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 36, "No DPP Status attribute")
+
+def test_dpp_proto_pkex_exchange_resp_no_encrypted_key(dev, apdev):
+    """DPP protocol testing - no Encrypted Key in PKEX Exchange Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 37, "Missing Encrypted Key attribute")
+
+def test_dpp_proto_pkex_cr_req_no_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no Bootstrap Key in PKEX Commit-Reveal Request"""
+    run_dpp_proto_pkex_req_missing(dev, 38,
+                                   "No valid peer bootstrapping key found")
+
+def test_dpp_proto_pkex_cr_req_no_i_auth_tag(dev, apdev):
+    """DPP protocol testing - no I-Auth Tag in PKEX Commit-Reveal Request"""
+    run_dpp_proto_pkex_req_missing(dev, 39, "No valid u (I-Auth tag) found")
+
+def test_dpp_proto_pkex_cr_req_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in PKEX Commit-Reveal Request"""
+    run_dpp_proto_pkex_req_missing(dev, 40, "Missing or invalid required Wrapped Data attribute")
+
+def test_dpp_proto_pkex_cr_resp_no_bootstrap_key(dev, apdev):
+    """DPP protocol testing - no Bootstrap Key in PKEX Commit-Reveal Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 41,
+                                   "No valid peer bootstrapping key found")
+
+def test_dpp_proto_pkex_cr_resp_no_r_auth_tag(dev, apdev):
+    """DPP protocol testing - no R-Auth Tag in PKEX Commit-Reveal Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 42, "No valid v (R-Auth tag) found")
+
+def test_dpp_proto_pkex_cr_resp_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in PKEX Commit-Reveal Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 43, "Missing or invalid required Wrapped Data attribute")

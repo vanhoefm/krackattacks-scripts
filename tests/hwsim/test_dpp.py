@@ -1563,6 +1563,21 @@ def test_dpp_pkex_code_mismatch(dev, apdev):
     if "possible PKEX code mismatch" not in ev:
         raise Exception("Unexpected result: " + ev)
 
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 code=secret" % id1
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator, retry)")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator, retry)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder, retry)")
+
 def test_dpp_pkex_curve_mismatch(dev, apdev):
     """DPP and PKEX with mismatching curve"""
     check_dpp_capab(dev[0])

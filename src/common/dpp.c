@@ -6064,6 +6064,14 @@ dpp_pkex_build_commit_reveal_req(struct dpp_pkex *pkex,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Bootstrap Key");
 		goto skip_bootstrap_key;
 	}
+	if (dpp_test == DPP_TEST_INVALID_BOOTSTRAP_KEY_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Bootstrap Key");
+		wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
+		wpabuf_put_le16(clear, 2 * curve->prime_len);
+		if (dpp_test_gen_invalid_key(clear, curve) < 0)
+			goto fail;
+		goto skip_bootstrap_key;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* A in Bootstrap Key attribute */
@@ -6355,6 +6363,14 @@ dpp_pkex_build_commit_reveal_resp(struct dpp_pkex *pkex,
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_NO_BOOTSTRAP_KEY_PKEX_CR_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Bootstrap Key");
+		goto skip_bootstrap_key;
+	}
+	if (dpp_test == DPP_TEST_INVALID_BOOTSTRAP_KEY_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Bootstrap Key");
+		wpabuf_put_le16(clear, DPP_ATTR_BOOTSTRAP_KEY);
+		wpabuf_put_le16(clear, 2 * curve->prime_len);
+		if (dpp_test_gen_invalid_key(clear, curve) < 0)
+			goto fail;
 		goto skip_bootstrap_key;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */

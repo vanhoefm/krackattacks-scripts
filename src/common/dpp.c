@@ -1835,15 +1835,38 @@ struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
 	if (!clear || !msg)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_E_NONCE_CONF_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no E-nonce");
+		goto skip_e_nonce;
+	}
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_CONF_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* E-nonce */
 	wpabuf_put_le16(clear, DPP_ATTR_ENROLLEE_NONCE);
 	wpabuf_put_le16(clear, nonce_len);
 	wpabuf_put_data(clear, auth->e_nonce, nonce_len);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_e_nonce:
+	if (dpp_test == DPP_TEST_NO_CONFIG_ATTR_OBJ_CONF_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no configAttrib");
+		goto skip_conf_attr_obj;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* configAttrib */
 	wpabuf_put_le16(clear, DPP_ATTR_CONFIG_ATTR_OBJ);
 	wpabuf_put_le16(clear, json_len);
 	wpabuf_put_data(clear, json, json_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_conf_attr_obj:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	wpabuf_put_le16(msg, DPP_ATTR_WRAPPED_DATA);
 	wpabuf_put_le16(msg, wpabuf_len(clear) + AES_BLOCK_SIZE);
@@ -1864,6 +1887,7 @@ struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_hexdump_buf(MSG_DEBUG,
@@ -3772,23 +3796,52 @@ dpp_build_conf_resp(struct dpp_authentication *auth, const u8 *e_nonce,
 	if (!clear || !msg)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_E_NONCE_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no E-nonce");
+		goto skip_e_nonce;
+	}
+	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
+		goto skip_wrapped_data;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* E-nonce */
 	wpabuf_put_le16(clear, DPP_ATTR_ENROLLEE_NONCE);
 	wpabuf_put_le16(clear, e_nonce_len);
 	wpabuf_put_data(clear, e_nonce, e_nonce_len);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_e_nonce:
+	if (dpp_test == DPP_TEST_NO_CONFIG_OBJ_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - Config Object");
+		goto skip_config_obj;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (conf) {
 		wpabuf_put_le16(clear, DPP_ATTR_CONFIG_OBJ);
 		wpabuf_put_le16(clear, wpabuf_len(conf));
 		wpabuf_put_buf(clear, conf);
-		wpabuf_free(conf);
-		conf = NULL;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_config_obj:
+	if (dpp_test == DPP_TEST_NO_STATUS_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - Status");
+		goto skip_status;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, status);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_status:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	addr[0] = wpabuf_head(msg);
 	len[0] = wpabuf_len(msg);
@@ -3805,8 +3858,6 @@ dpp_build_conf_resp(struct dpp_authentication *auth, const u8 *e_nonce,
 		goto fail;
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV ciphertext",
 		    wrapped, wpabuf_len(clear) + AES_BLOCK_SIZE);
-	wpabuf_free(clear);
-	clear = NULL;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_AFTER_WRAPPED_DATA_CONF_RESP) {
@@ -3814,16 +3865,20 @@ dpp_build_conf_resp(struct dpp_authentication *auth, const u8 *e_nonce,
 		wpabuf_put_le16(msg, DPP_ATTR_TESTING);
 		wpabuf_put_le16(msg, 0);
 	}
+skip_wrapped_data:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_hexdump_buf(MSG_DEBUG,
 			"DPP: Configuration Response attributes", msg);
-	return msg;
-fail:
+out:
 	wpabuf_free(conf);
 	wpabuf_free(clear);
+
+	return msg;
+fail:
 	wpabuf_free(msg);
-	return NULL;
+	msg = NULL;
+	goto out;
 }
 
 

@@ -3801,6 +3801,14 @@ dpp_build_conf_resp(struct dpp_authentication *auth, const u8 *e_nonce,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no E-nonce");
 		goto skip_e_nonce;
 	}
+	if (dpp_test == DPP_TEST_E_NONCE_MISMATCH_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - E-nonce mismatch");
+		wpabuf_put_le16(clear, DPP_ATTR_ENROLLEE_NONCE);
+		wpabuf_put_le16(clear, e_nonce_len);
+		wpabuf_put_data(clear, e_nonce, e_nonce_len - 1);
+		wpabuf_put_u8(clear, e_nonce[e_nonce_len - 1] ^ 0x01);
+		goto skip_e_nonce;
+	}
 	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_CONF_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
 		goto skip_wrapped_data;
@@ -3831,6 +3839,10 @@ skip_config_obj:
 	if (dpp_test == DPP_TEST_NO_STATUS_CONF_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - Status");
 		goto skip_status;
+	}
+	if (dpp_test == DPP_TEST_INVALID_STATUS_CONF_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Status");
+		status = 255;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 

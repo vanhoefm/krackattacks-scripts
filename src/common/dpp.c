@@ -339,6 +339,20 @@ static int dpp_hmac(size_t hash_len, const u8 *key, size_t key_len,
 }
 
 
+static int dpp_bn2bin_pad(const BIGNUM *bn, u8 *pos, size_t len)
+{
+	int num_bytes, offset;
+
+	num_bytes = BN_num_bytes(bn);
+	if ((size_t) num_bytes > len)
+		return -1;
+	offset = len - num_bytes;
+	os_memset(pos, 0, offset);
+	BN_bn2bin(bn, pos + offset);
+	return 0;
+}
+
+
 static struct wpabuf * dpp_get_pubkey_point(EVP_PKEY *pkey, int prefix)
 {
 	int len, res;
@@ -2050,7 +2064,6 @@ static int dpp_auth_derive_l_responder(struct dpp_authentication *auth)
 	BIGNUM *lx, *sum, *q;
 	const BIGNUM *bR_bn, *pR_bn;
 	int ret = -1;
-	int num_bytes, offset;
 
 	/* L = ((bR + pR) modulo q) * BI */
 
@@ -2090,16 +2103,8 @@ static int dpp_auth_derive_l_responder(struct dpp_authentication *auth)
 		goto fail;
 	}
 
-	num_bytes = BN_num_bytes(lx);
-	if ((size_t) num_bytes > auth->secret_len)
+	if (dpp_bn2bin_pad(lx, auth->Lx, auth->secret_len) < 0)
 		goto fail;
-	if (auth->secret_len > (size_t) num_bytes)
-		offset = auth->secret_len - num_bytes;
-	else
-		offset = 0;
-
-	os_memset(auth->Lx, 0, offset);
-	BN_bn2bin(lx, auth->Lx + offset);
 	wpa_hexdump_key(MSG_DEBUG, "DPP: L.x", auth->Lx, auth->secret_len);
 	ret = 0;
 fail:
@@ -2125,7 +2130,6 @@ static int dpp_auth_derive_l_initiator(struct dpp_authentication *auth)
 	BIGNUM *lx;
 	const BIGNUM *bI_bn;
 	int ret = -1;
-	int num_bytes, offset;
 
 	/* L = bI * (BR + PR) */
 
@@ -2160,16 +2164,8 @@ static int dpp_auth_derive_l_initiator(struct dpp_authentication *auth)
 		goto fail;
 	}
 
-	num_bytes = BN_num_bytes(lx);
-	if ((size_t) num_bytes > auth->secret_len)
+	if (dpp_bn2bin_pad(lx, auth->Lx, auth->secret_len) < 0)
 		goto fail;
-	if (auth->secret_len > (size_t) num_bytes)
-		offset = auth->secret_len - num_bytes;
-	else
-		offset = 0;
-
-	os_memset(auth->Lx, 0, offset);
-	BN_bn2bin(lx, auth->Lx + offset);
 	wpa_hexdump_key(MSG_DEBUG, "DPP: L.x", auth->Lx, auth->secret_len);
 	ret = 0;
 fail:
@@ -3438,20 +3434,6 @@ dpp_build_conf_start(struct dpp_authentication *auth,
 	wpabuf_put_str(buf, "\"},");
 
 	return buf;
-}
-
-
-static int dpp_bn2bin_pad(const BIGNUM *bn, u8 *pos, size_t len)
-{
-	int num_bytes, offset;
-
-	num_bytes = BN_num_bytes(bn);
-	if ((size_t) num_bytes > len)
-		return -1;
-	offset = len - num_bytes;
-	os_memset(pos, 0, offset);
-	BN_bn2bin(bn, pos + offset);
-	return 0;
 }
 
 
@@ -5472,7 +5454,6 @@ static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 {
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
-	int num_bytes, offset;
 	int ret = -1;
 	EC_GROUP *group;
 	EC_POINT *point;
@@ -5505,25 +5486,11 @@ static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 			break;
 	}
 
-	num_bytes = BN_num_bytes(x);
-	if ((size_t) num_bytes > curve->prime_len)
+	if (dpp_bn2bin_pad(x, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0 ||
+	    dpp_bn2bin_pad(y, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0)
 		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(x, wpabuf_put(msg, num_bytes));
-
-	num_bytes = BN_num_bytes(y);
-	if ((size_t) num_bytes > curve->prime_len)
-		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(y, wpabuf_put(msg, num_bytes));
 
 	ret = 0;
 fail:
@@ -5549,7 +5516,6 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 	struct wpabuf *msg = NULL;
 	size_t attr_len;
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
-	int num_bytes, offset;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build PKEX Exchange Request");
 
@@ -5634,27 +5600,12 @@ skip_finite_cyclic_group:
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	num_bytes = BN_num_bytes(Mx);
-	if ((size_t) num_bytes > curve->prime_len)
+	if (dpp_bn2bin_pad(Mx, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0 ||
+	    dpp_bn2bin_pad(Mx, pkex->Mx, curve->prime_len) < 0 ||
+	    dpp_bn2bin_pad(My, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0)
 		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(Mx, wpabuf_put(msg, num_bytes));
-	os_memset(pkex->Mx, 0, offset);
-	BN_bn2bin(Mx, pkex->Mx + offset);
-
-	num_bytes = BN_num_bytes(My);
-	if ((size_t) num_bytes > curve->prime_len)
-		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(My, wpabuf_put(msg, num_bytes));
 
 out:
 	wpabuf_free(M_buf);
@@ -5718,7 +5669,6 @@ dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 {
 	struct wpabuf *msg = NULL;
 	size_t attr_len;
-	int num_bytes, offset;
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
 
 	/* Initiator -> Responder: DPP Status, [identifier,] N */
@@ -5776,27 +5726,12 @@ skip_status:
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	num_bytes = BN_num_bytes(Nx);
-	if ((size_t) num_bytes > curve->prime_len)
+	if (dpp_bn2bin_pad(Nx, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0 ||
+	    dpp_bn2bin_pad(Nx, pkex->Nx, curve->prime_len) < 0 ||
+	    dpp_bn2bin_pad(Ny, wpabuf_put(msg, curve->prime_len),
+			   curve->prime_len) < 0)
 		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(Nx, wpabuf_put(msg, num_bytes));
-	os_memset(pkex->Nx, 0, offset);
-	BN_bn2bin(Nx, pkex->Nx + offset);
-
-	num_bytes = BN_num_bytes(Ny);
-	if ((size_t) num_bytes > curve->prime_len)
-		goto fail;
-	if (curve->prime_len > (size_t) num_bytes)
-		offset = curve->prime_len - num_bytes;
-	else
-		offset = 0;
-	os_memset(wpabuf_put(msg, offset), 0, offset);
-	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
 
 skip_encrypted_key:
 	if (status == DPP_STATUS_BAD_GROUP) {

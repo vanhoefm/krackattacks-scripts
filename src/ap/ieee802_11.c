@@ -1686,7 +1686,7 @@ static void handle_auth(struct hostapd_data *hapd,
 #endif /* CONFIG_NO_RC4 */
 
 	if (hapd->tkip_countermeasures) {
-		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
 
@@ -3191,7 +3191,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		WLAN_FC_STYPE_ASSOC_REQ;
 
 	if (hapd->tkip_countermeasures) {
-		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
+		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
 

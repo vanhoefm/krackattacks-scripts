@@ -5689,6 +5689,11 @@ dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
 		goto skip_status;
 	}
+
+	if (dpp_test == DPP_TEST_INVALID_STATUS_PKEX_EXCHANGE_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Status");
+		status = 255;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */

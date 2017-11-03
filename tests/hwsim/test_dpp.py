@@ -2600,3 +2600,13 @@ def test_dpp_proto_pkex_exchange_resp_invalid_status(dev, apdev):
     """DPP protocol testing - invalid Status in PKEX Exchange Response"""
     run_dpp_proto_pkex_resp_missing(dev, 46,
                                     "PKEX failed (peer indicated failure)")
+
+def test_dpp_proto_pkex_cr_req_invalid_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid Bootstrap Key in PKEX Commit-Reveal Request"""
+    run_dpp_proto_pkex_req_missing(dev, 47,
+                                   "Peer bootstrapping key is invalid")
+
+def test_dpp_proto_pkex_cr_resp_invalid_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid Bootstrap Key in PKEX Commit-Reveal Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 48,
+                                    "Peer bootstrapping key is invalid")

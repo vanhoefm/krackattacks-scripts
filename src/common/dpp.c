@@ -5434,6 +5434,10 @@ static EC_POINT * dpp_pkex_derive_Qr(const struct dpp_curve_params *curve,
 	if (!hash_bn ||
 	    EC_POINT_mul(group2, Qr, NULL, Pr_point, hash_bn, bnctx) != 1)
 		goto fail;
+	if (EC_POINT_is_at_infinity(group, Qr)) {
+		wpa_printf(MSG_INFO, "DPP: Qr is the point-at-infinity");
+		goto fail;
+	}
 out:
 	EC_KEY_free(Pr_ec);
 	EVP_PKEY_free(Pr);

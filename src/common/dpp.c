@@ -6454,6 +6454,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 			    2, addr, len, unwrapped) < 0) {
 		dpp_pkex_fail(pkex,
 			      "AES-SIV decryption failed - possible PKEX code mismatch");
+		pkex->failed = 1;
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",

@@ -1132,6 +1132,11 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 	msg = dpp_pkex_rx_commit_reveal_req(pkex, hdr, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
+		if (hapd->dpp_pkex->failed) {
+			wpa_printf(MSG_DEBUG, "DPP: Terminate PKEX exchange");
+			dpp_pkex_free(hapd->dpp_pkex);
+			hapd->dpp_pkex = NULL;
+		}
 		return;
 	}
 

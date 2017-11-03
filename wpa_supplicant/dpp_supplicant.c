@@ -1556,6 +1556,11 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	msg = dpp_pkex_rx_commit_reveal_req(pkex, hdr, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
+		if (pkex->failed) {
+			wpa_printf(MSG_DEBUG, "DPP: Terminate PKEX exchange");
+			dpp_pkex_free(wpa_s->dpp_pkex);
+			wpa_s->dpp_pkex = NULL;
+		}
 		return;
 	}
 

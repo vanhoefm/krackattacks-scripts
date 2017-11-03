@@ -1563,6 +1563,48 @@ def test_dpp_pkex_code_mismatch(dev, apdev):
     if "possible PKEX code mismatch" not in ev:
         raise Exception("Unexpected result: " + ev)
 
+def test_dpp_pkex_curve_mismatch(dev, apdev):
+    """DPP and PKEX with mismatching curve"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex curve=P-256"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex curve=P-384"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 code=secret" % id1
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("Failure not reported (dev 0)")
+    if "Mismatching PKEX curve: peer=20 own=19" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("Failure not reported (dev 1)")
+    if "Peer indicated mismatching PKEX group - proposed 19" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
 def test_dpp_pkex_config2(dev, apdev):
     """DPP and PKEX with responder as the configurator"""
     check_dpp_capab(dev[0])

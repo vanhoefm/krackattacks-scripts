@@ -2523,6 +2523,16 @@ def test_dpp_proto_conf_resp_no_wrapped_data(dev, apdev):
     run_dpp_proto_conf_resp_missing(dev, 57,
                                     "Missing or invalid required Wrapped Data attribute")
 
+def test_dpp_proto_conf_resp_invalid_status(dev, apdev):
+    """DPP protocol testing - invalid Status in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 58,
+                                    "Configurator rejected configuration")
+
+def test_dpp_proto_conf_resp_e_nonce_mismatch(dev, apdev):
+    """DPP protocol testing - E-nonce mismatch in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 59,
+                                    "Enrollee Nonce mismatch")
+
 def run_dpp_proto_init_pkex(dev, test_dev, test):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])

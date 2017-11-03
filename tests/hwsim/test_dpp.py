@@ -2610,3 +2610,11 @@ def test_dpp_proto_pkex_cr_resp_invalid_bootstrap_key(dev, apdev):
     """DPP protocol testing - invalid Bootstrap Key in PKEX Commit-Reveal Response"""
     run_dpp_proto_pkex_resp_missing(dev, 48,
                                     "Peer bootstrapping key is invalid")
+
+def test_dpp_proto_pkex_cr_req_i_auth_tag_mismatch(dev, apdev):
+    """DPP protocol testing - I-auth tag mismatch in PKEX Commit-Reveal Request"""
+    run_dpp_proto_pkex_req_missing(dev, 49, "No valid u (I-Auth tag) found")
+
+def test_dpp_proto_pkex_cr_resp_r_auth_tag_mismatch(dev, apdev):
+    """DPP protocol testing - R-auth tag mismatch in PKEX Commit-Reveal Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 50, "No valid v (R-Auth tag) found")

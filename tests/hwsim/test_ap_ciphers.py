@@ -106,6 +106,53 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection during TKIP countermeasures")
 
+def test_ap_cipher_tkip_countermeasures_ap_mixed_mode(dev, apdev):
+    """WPA+WPA2-PSK/TKIP countermeasures (detected by mixed mode AP)"""
+    skip_with_fips(dev[0])
+    testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (dev[0].get_driver_status_field("phyname"), dev[0].ifname)
+    if dev[0].cmd_execute([ "ls", testfile ])[0] != 0:
+        raise HwsimSkip("tkip_mic_test not supported in mac80211")
+
+    params = { "ssid": "tkip-countermeasures",
+               "wpa_passphrase": "12345678",
+               "wpa": "3",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP",
+               "rsn_pairwise": "CCMP" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("tkip-countermeasures", psk="12345678",
+                   pairwise="TKIP", group="TKIP", scan_freq="2412")
+    dev[1].connect("tkip-countermeasures", psk="12345678",
+                   pairwise="CCMP", scan_freq="2412")
+
+    dev[0].dump_monitor()
+    dev[0].cmd_execute([ "echo", "-n", apdev[0]['bssid'], ">", testfile ],
+                       shell=True)
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection on first Michael MIC failure")
+
+    dev[0].cmd_execute([ "echo", "-n", "ff:ff:ff:ff:ff:ff", ">", testfile ],
+                       shell=True)
+
+    ev = dev[0].wait_disconnected(timeout=10,
+                                  error="No disconnection after two Michael MIC failures")
+    if "reason=14" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+
+    ev = dev[1].wait_disconnected(timeout=10,
+                                  error="No disconnection after two Michael MIC failures (2)")
+    if "reason=14" not in ev:
+        raise Exception("Unexpected disconnection reason (2): " + ev)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures (1)")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures (2)")
+
 @remote_compatible
 def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by STA)"""

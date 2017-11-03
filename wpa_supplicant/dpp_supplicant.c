@@ -1437,6 +1437,8 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 	if (wpa_s->dpp_pkex->failed) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Terminate PKEX exchange due to an earlier error");
+		if (wpa_s->dpp_pkex->t > wpa_s->dpp_pkex->own_bi->pkex_t)
+			wpa_s->dpp_pkex->own_bi->pkex_t = wpa_s->dpp_pkex->t;
 		dpp_pkex_free(wpa_s->dpp_pkex);
 		wpa_s->dpp_pkex = NULL;
 	}
@@ -1558,6 +1560,8 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
 		if (pkex->failed) {
 			wpa_printf(MSG_DEBUG, "DPP: Terminate PKEX exchange");
+			if (pkex->t > pkex->own_bi->pkex_t)
+				pkex->own_bi->pkex_t = pkex->t;
 			dpp_pkex_free(wpa_s->dpp_pkex);
 			wpa_s->dpp_pkex = NULL;
 		}
@@ -1664,6 +1668,7 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 	u8 crypto_suite;
 	enum dpp_public_action_frame_type type;
 	const u8 *hdr;
+	unsigned int pkex_t;
 
 	if (len < DPP_HDR_LEN)
 		return;
@@ -1729,6 +1734,17 @@ void wpas_dpp_rx_action(struct wpa_supplicant *wpa_s, const u8 *src,
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Ignored unsupported frame subtype %d", type);
 		break;
+	}
+
+	if (wpa_s->dpp_pkex)
+		pkex_t = wpa_s->dpp_pkex->t;
+	else if (wpa_s->dpp_pkex_bi)
+		pkex_t = wpa_s->dpp_pkex_bi->pkex_t;
+	else
+		pkex_t = 0;
+	if (pkex_t >= PKEX_COUNTER_T_LIMIT) {
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_PKEX_T_LIMIT "id=0");
+		wpas_dpp_pkex_remove(wpa_s, "*");
 	}
 }
 
@@ -2009,6 +2025,7 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 		return -1;
 	}
 	wpa_s->dpp_pkex_bi = own_bi;
+	own_bi->pkex_t = 0; /* clear pending errors on new code */
 
 	os_free(wpa_s->dpp_pkex_identifier);
 	wpa_s->dpp_pkex_identifier = NULL;

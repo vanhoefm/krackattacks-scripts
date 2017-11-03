@@ -5769,6 +5769,12 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	const EC_POINT *Y_point;
 	BIGNUM *Nx = NULL, *Ny = NULL;
 
+	if (bi->pkex_t >= PKEX_COUNTER_T_LIMIT) {
+		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+			"PKEX counter t limit reached - ignore message");
+		return NULL;
+	}
+
 	attr_id = dpp_get_attr(buf, len, DPP_ATTR_CODE_IDENTIFIER,
 			       &attr_id_len);
 	if (!attr_id && identifier) {
@@ -5841,12 +5847,14 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	    !EC_POINT_is_on_curve(group, X, bnctx)) {
 		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
 			"Invalid Encrypted Key value");
+		bi->pkex_t++;
 		goto fail;
 	}
 
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
 		goto fail;
+	pkex->t = bi->pkex_t;
 	pkex->msg_ctx = msg_ctx;
 	pkex->own_bi = bi;
 	os_memcpy(pkex->own_mac, own_mac, ETH_ALEN);
@@ -6103,7 +6111,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	u8 u[DPP_MAX_HASH_LEN];
 	int res;
 
-	if (pkex->failed)
+	if (pkex->failed || pkex->t >= PKEX_COUNTER_T_LIMIT)
 		return NULL;
 
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
@@ -6176,6 +6184,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	    EC_POINT_is_at_infinity(group, Y) ||
 	    !EC_POINT_is_on_curve(group, Y, bnctx)) {
 		dpp_pkex_fail(pkex, "Invalid Encrypted Key value");
+		pkex->t++;
 		goto fail;
 	}
 
@@ -6396,7 +6405,8 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
 	int res;
 
-	if (!pkex->exchange_done || pkex->failed)
+	if (!pkex->exchange_done || pkex->failed ||
+	    pkex->t >= PKEX_COUNTER_T_LIMIT)
 		goto fail;
 
 	/* K = y * X' */
@@ -6455,6 +6465,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 		dpp_pkex_fail(pkex,
 			      "AES-SIV decryption failed - possible PKEX code mismatch");
 		pkex->failed = 1;
+		pkex->t++;
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
@@ -6523,6 +6534,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 		wpa_hexdump(MSG_DEBUG, "DPP: Calculated u'",
 			    u, curve->hash_len);
 		wpa_hexdump(MSG_DEBUG, "DPP: Received u", peer_u, peer_u_len);
+		pkex->t++;
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Valid u (I-Auth tag) received");
@@ -6598,7 +6610,8 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	EVP_PKEY_CTX *ctx = NULL;
 	struct wpabuf *B_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
 
-	if (!pkex->exchange_done || pkex->failed)
+	if (!pkex->exchange_done || pkex->failed ||
+	    pkex->t >= PKEX_COUNTER_T_LIMIT)
 		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
@@ -6629,6 +6642,7 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 			    2, addr, len, unwrapped) < 0) {
 		dpp_pkex_fail(pkex,
 			      "AES-SIV decryption failed - possible PKEX code mismatch");
+		pkex->t++;
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
@@ -6696,6 +6710,7 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 		wpa_hexdump(MSG_DEBUG, "DPP: Calculated v'",
 			    v, curve->hash_len);
 		wpa_hexdump(MSG_DEBUG, "DPP: Received v", peer_v, peer_v_len);
+		pkex->t++;
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Valid v (R-Auth tag) received");

@@ -1069,6 +1069,8 @@ hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
 	if (hapd->dpp_pkex->failed) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Terminate PKEX exchange due to an earlier error");
+		if (hapd->dpp_pkex->t > hapd->dpp_pkex->own_bi->pkex_t)
+			hapd->dpp_pkex->own_bi->pkex_t = hapd->dpp_pkex->t;
 		dpp_pkex_free(hapd->dpp_pkex);
 		hapd->dpp_pkex = NULL;
 	}
@@ -1134,6 +1136,9 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the request");
 		if (hapd->dpp_pkex->failed) {
 			wpa_printf(MSG_DEBUG, "DPP: Terminate PKEX exchange");
+			if (hapd->dpp_pkex->t > hapd->dpp_pkex->own_bi->pkex_t)
+				hapd->dpp_pkex->own_bi->pkex_t =
+					hapd->dpp_pkex->t;
 			dpp_pkex_free(hapd->dpp_pkex);
 			hapd->dpp_pkex = NULL;
 		}
@@ -1236,6 +1241,7 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 	u8 crypto_suite;
 	enum dpp_public_action_frame_type type;
 	const u8 *hdr;
+	unsigned int pkex_t;
 
 	if (len < DPP_HDR_LEN)
 		return;
@@ -1301,6 +1307,17 @@ void hostapd_dpp_rx_action(struct hostapd_data *hapd, const u8 *src,
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Ignored unsupported frame subtype %d", type);
 		break;
+	}
+
+	if (hapd->dpp_pkex)
+		pkex_t = hapd->dpp_pkex->t;
+	else if (hapd->dpp_pkex_bi)
+		pkex_t = hapd->dpp_pkex_bi->pkex_t;
+	else
+		pkex_t = 0;
+	if (pkex_t >= PKEX_COUNTER_T_LIMIT) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_PKEX_T_LIMIT "id=0");
+		hostapd_dpp_pkex_remove(hapd, "*");
 	}
 }
 
@@ -1436,6 +1453,7 @@ int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
 		return -1;
 	}
 	hapd->dpp_pkex_bi = own_bi;
+	own_bi->pkex_t = 0; /* clear pending errors on new code */
 
 	os_free(hapd->dpp_pkex_identifier);
 	hapd->dpp_pkex_identifier = NULL;

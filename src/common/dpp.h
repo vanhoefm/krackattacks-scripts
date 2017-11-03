@@ -107,7 +107,11 @@ struct dpp_bootstrap_info {
 	EVP_PKEY *pubkey;
 	u8 pubkey_hash[SHA256_MAC_LEN];
 	const struct dpp_curve_params *curve;
+	unsigned int pkex_t; /* number of failures before dpp_pkex
+			      * instantiation */
 };
+
+#define PKEX_COUNTER_T_LIMIT 5
 
 struct dpp_pkex {
 	void *msg_ctx;
@@ -127,6 +131,7 @@ struct dpp_pkex {
 	EVP_PKEY *peer_bootstrap_key;
 	struct wpabuf *exchange_req;
 	struct wpabuf *exchange_resp;
+	unsigned int t; /* number of failures on code use */
 };
 
 struct dpp_configuration {

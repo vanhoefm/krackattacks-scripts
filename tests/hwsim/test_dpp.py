@@ -2472,6 +2472,57 @@ def test_dpp_proto_auth_conf_i_auth_mismatch(dev, apdev):
     if "Mismatching Initiator Authenticating Tag" not in ev:
         raise Excception("Unexpected failure: " + ev)
 
+def run_dpp_proto_conf_req_missing(dev, test, reason):
+    run_dpp_proto_init(dev, 0, test)
+    ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def test_dpp_proto_conf_req_no_e_nonce(dev, apdev):
+    """DPP protocol testing - no E-nonce in Conf Req"""
+    run_dpp_proto_conf_req_missing(dev, 51,
+                                   "Missing or invalid Enrollee Nonce attribute")
+
+def test_dpp_proto_conf_req_no_config_attr_obj(dev, apdev):
+    """DPP protocol testing - no Config Attr Obj in Conf Req"""
+    run_dpp_proto_conf_req_missing(dev, 52,
+                                   "Missing or invalid Config Attributes attribute")
+
+def test_dpp_proto_conf_req_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in Conf Req"""
+    run_dpp_proto_conf_req_missing(dev, 53,
+                                   "Missing or invalid required Wrapped Data attribute")
+
+def run_dpp_proto_conf_resp_missing(dev, test, reason):
+    run_dpp_proto_init(dev, 1, test)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if reason not in ev:
+        raise Exception("Unexpected failure: " + ev)
+
+def test_dpp_proto_conf_resp_no_e_nonce(dev, apdev):
+    """DPP protocol testing - no E-nonce in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 54,
+                                    "Missing or invalid Enrollee Nonce attribute")
+
+def test_dpp_proto_conf_resp_no_config_obj(dev, apdev):
+    """DPP protocol testing - no Config Object in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 55,
+                                    "Missing required Configuration Object attribute")
+
+def test_dpp_proto_conf_resp_no_status(dev, apdev):
+    """DPP protocol testing - no Status in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 56,
+                                    "Missing or invalid required DPP Status attribute")
+
+def test_dpp_proto_conf_resp_no_wrapped_data(dev, apdev):
+    """DPP protocol testing - no Wrapped Data in Conf Resp"""
+    run_dpp_proto_conf_resp_missing(dev, 57,
+                                    "Missing or invalid required Wrapped Data attribute")
+
 def run_dpp_proto_init_pkex(dev, test_dev, test):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])

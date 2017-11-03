@@ -3895,16 +3895,15 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	int ap;
 
 	if (dpp_check_attrs(attr_start, attr_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in config request");
+		dpp_auth_fail(auth, "Invalid attribute in config request");
 		return NULL;
 	}
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Wrapped data attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Wrapped Data attribute");
 		return NULL;
 	}
 
@@ -3917,15 +3916,14 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	if (aes_siv_decrypt(auth->ke, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    0, NULL, NULL, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
@@ -3933,8 +3931,8 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 			       DPP_ATTR_ENROLLEE_NONCE,
 			       &e_nonce_len);
 	if (!e_nonce || e_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Enrollee Nonce attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Enrollee Nonce attribute");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Enrollee Nonce", e_nonce, e_nonce_len);
@@ -3943,8 +3941,8 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 				   DPP_ATTR_CONFIG_ATTR_OBJ,
 				   &config_attr_len);
 	if (!config_attr) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Config Attributes attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Config Attributes attribute");
 		goto fail;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG, "DPP: Config Attributes",
@@ -3952,32 +3950,33 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 
 	root = json_parse((const char *) config_attr, config_attr_len);
 	if (!root) {
-		wpa_printf(MSG_DEBUG, "DPP: Could not parse Config Attributes");
+		dpp_auth_fail(auth, "Could not parse Config Attributes");
 		goto fail;
 	}
 
 	token = json_get_member(root, "name");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG, "DPP: No Config Attributes - name");
+		dpp_auth_fail(auth, "No Config Attributes - name");
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Enrollee name = '%s'", token->string);
 
 	token = json_get_member(root, "wi-fi_tech");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG, "DPP: No Config Attributes - wi-fi_tech");
+		dpp_auth_fail(auth, "No Config Attributes - wi-fi_tech");
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: wi-fi_tech = '%s'", token->string);
 	if (os_strcmp(token->string, "infra") != 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Unsupported wi-fi_tech '%s'",
 			   token->string);
+		dpp_auth_fail(auth, "Unsupported wi-fi_tech");
 		goto fail;
 	}
 
 	token = json_get_member(root, "netRole");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG, "DPP: No Config Attributes - netRole");
+		dpp_auth_fail(auth, "No Config Attributes - netRole");
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: netRole = '%s'", token->string);
@@ -3988,6 +3987,7 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: Unsupported netRole '%s'",
 			   token->string);
+		dpp_auth_fail(auth, "Unsupported netRole");
 		goto fail;
 	}
 
@@ -4685,38 +4685,37 @@ static int dpp_parse_conf_obj(struct dpp_authentication *auth,
 	if (!root)
 		return -1;
 	if (root->type != JSON_OBJECT) {
-		wpa_printf(MSG_DEBUG, "DPP: JSON root is not an object");
+		dpp_auth_fail(auth, "JSON root is not an object");
 		goto fail;
 	}
 
 	token = json_get_member(root, "wi-fi_tech");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG, "DPP: No wi-fi_tech string value found");
+		dpp_auth_fail(auth, "No wi-fi_tech string value found");
 		goto fail;
 	}
 	if (os_strcmp(token->string, "infra") != 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Unsupported wi-fi_tech value: '%s'",
 			   token->string);
+		dpp_auth_fail(auth, "Unsupported wi-fi_tech value");
 		goto fail;
 	}
 
 	discovery = json_get_member(root, "discovery");
 	if (!discovery || discovery->type != JSON_OBJECT) {
-		wpa_printf(MSG_DEBUG, "DPP: No discovery object in JSON");
+		dpp_auth_fail(auth, "No discovery object in JSON");
 		goto fail;
 	}
 
 	token = json_get_member(discovery, "ssid");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No discovery::ssid string value found");
+		dpp_auth_fail(auth, "No discovery::ssid string value found");
 		goto fail;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG, "DPP: discovery::ssid",
 			  token->string, os_strlen(token->string));
 	if (os_strlen(token->string) > SSID_MAX_LEN) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Too long discovery::ssid string value");
+		dpp_auth_fail(auth, "Too long discovery::ssid string value");
 		goto fail;
 	}
 	auth->ssid_len = os_strlen(token->string);
@@ -4724,14 +4723,13 @@ static int dpp_parse_conf_obj(struct dpp_authentication *auth,
 
 	cred = json_get_member(root, "cred");
 	if (!cred || cred->type != JSON_OBJECT) {
-		wpa_printf(MSG_DEBUG, "DPP: No cred object in JSON");
+		dpp_auth_fail(auth, "No cred object in JSON");
 		goto fail;
 	}
 
 	token = json_get_member(cred, "akm");
 	if (!token || token->type != JSON_STRING) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: No cred::akm string value found");
+		dpp_auth_fail(auth, "No cred::akm string value found");
 		goto fail;
 	}
 	if (os_strcmp(token->string, "psk") == 0) {
@@ -4743,6 +4741,7 @@ static int dpp_parse_conf_obj(struct dpp_authentication *auth,
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: Unsupported akm: %s",
 			   token->string);
+		dpp_auth_fail(auth, "Unsupported akm");
 		goto fail;
 	}
 
@@ -4766,8 +4765,7 @@ int dpp_conf_resp_rx(struct dpp_authentication *auth,
 	int ret = -1;
 
 	if (dpp_check_attrs(wpabuf_head(resp), wpabuf_len(resp)) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in config response");
+		dpp_auth_fail(auth, "Invalid attribute in config response");
 		return -1;
 	}
 
@@ -4775,8 +4773,8 @@ int dpp_conf_resp_rx(struct dpp_authentication *auth,
 				    DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required Wrapped data attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required Wrapped Data attribute");
 		return -1;
 	}
 
@@ -4794,15 +4792,14 @@ int dpp_conf_resp_rx(struct dpp_authentication *auth,
 	if (aes_siv_decrypt(auth->ke, auth->curve->hash_len,
 			    wrapped_data, wrapped_data_len,
 			    1, addr, len, unwrapped) < 0) {
-		wpa_printf(MSG_DEBUG, "DPP: AES-SIV decryption failed");
+		dpp_auth_fail(auth, "AES-SIV decryption failed");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: AES-SIV cleartext",
 		    unwrapped, unwrapped_len);
 
 	if (dpp_check_attrs(unwrapped, unwrapped_len) < 0) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Invalid attribute in unwrapped data");
+		dpp_auth_fail(auth, "Invalid attribute in unwrapped data");
 		goto fail;
 	}
 
@@ -4810,34 +4807,34 @@ int dpp_conf_resp_rx(struct dpp_authentication *auth,
 			       DPP_ATTR_ENROLLEE_NONCE,
 			       &e_nonce_len);
 	if (!e_nonce || e_nonce_len != auth->curve->nonce_len) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid Enrollee Nonce attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid Enrollee Nonce attribute");
 		goto fail;
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: Enrollee Nonce", e_nonce, e_nonce_len);
 	if (os_memcmp(e_nonce, auth->e_nonce, e_nonce_len) != 0) {
-		wpa_printf(MSG_DEBUG, "Enrollee Nonce mismatch");
+		dpp_auth_fail(auth, "Enrollee Nonce mismatch");
 		goto fail;
 	}
 
 	status = dpp_get_attr(wpabuf_head(resp), wpabuf_len(resp),
 			      DPP_ATTR_STATUS, &status_len);
 	if (!status || status_len < 1) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing or invalid required DPP Status attribute");
+		dpp_auth_fail(auth,
+			      "Missing or invalid required DPP Status attribute");
 		goto fail;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", status[0]);
 	if (status[0] != DPP_STATUS_OK) {
-		wpa_printf(MSG_DEBUG, "DPP: Configuration failed");
+		dpp_auth_fail(auth, "Configurator rejected configuration");
 		goto fail;
 	}
 
 	conf_obj = dpp_get_attr(unwrapped, unwrapped_len,
 				DPP_ATTR_CONFIG_OBJ, &conf_obj_len);
 	if (!conf_obj) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Missing required Configuration Object attribute");
+		dpp_auth_fail(auth,
+			      "Missing required Configuration Object attribute");
 		goto fail;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG, "DPP: configurationObject JSON",

@@ -6085,6 +6085,14 @@ skip_bootstrap_key:
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Auth tag");
 		goto skip_i_auth_tag;
 	}
+	if (dpp_test == DPP_TEST_I_AUTH_TAG_MISMATCH_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - I-Auth tag mismatch");
+		wpabuf_put_le16(clear, DPP_ATTR_I_AUTH_TAG);
+		wpabuf_put_le16(clear, curve->hash_len);
+		wpabuf_put_data(clear, u, curve->hash_len - 1);
+		wpabuf_put_u8(clear, u[curve->hash_len - 1] ^ 0x01);
+		goto skip_i_auth_tag;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* u in I-Auth tag attribute */
@@ -6384,6 +6392,14 @@ dpp_pkex_build_commit_reveal_resp(struct dpp_pkex *pkex,
 skip_bootstrap_key:
 	if (dpp_test == DPP_TEST_NO_R_AUTH_TAG_PKEX_CR_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Auth tag");
+		goto skip_r_auth_tag;
+	}
+	if (dpp_test == DPP_TEST_R_AUTH_TAG_MISMATCH_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - R-Auth tag mismatch");
+		wpabuf_put_le16(clear, DPP_ATTR_R_AUTH_TAG);
+		wpabuf_put_le16(clear, curve->hash_len);
+		wpabuf_put_data(clear, v, curve->hash_len - 1);
+		wpabuf_put_u8(clear, v[curve->hash_len - 1] ^ 0x01);
 		goto skip_r_auth_tag;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */

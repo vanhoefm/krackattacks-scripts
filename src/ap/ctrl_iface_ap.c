@@ -26,6 +26,30 @@
 #include "taxonomy.h"
 
 
+static size_t hostapd_write_ht_mcs_bitmask(char *buf, size_t buflen,
+					   size_t curr_len, const u8 *mcs_set)
+{
+	int ret;
+	size_t len = curr_len;
+
+	ret = os_snprintf(buf + len, buflen - len,
+			  "ht_mcs_bitmask=");
+	if (os_snprintf_error(buflen - len, ret))
+		return len;
+	len += ret;
+
+	/* 77 first bits (+ 3 reserved bits) */
+	len += wpa_snprintf_hex(buf + len, buflen - len, mcs_set, 10);
+
+	ret = os_snprintf(buf + len, buflen - len, "\n");
+	if (os_snprintf_error(buflen - len, ret))
+		return curr_len;
+	len += ret;
+
+	return len;
+}
+
+
 static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
 				 struct sta_info *sta,
 				 char *buf, size_t buflen)
@@ -110,6 +134,24 @@ static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
 	ret = os_snprintf(buf + len, buflen - len, "\n");
 	if (!os_snprintf_error(buflen - len, ret))
 		len += ret;
+
+	if ((sta->flags & WLAN_STA_VHT) && sta->vht_capabilities) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "rx_vht_mcs_map=%04x\n"
+				  "tx_vht_mcs_map=%04x\n",
+				  le_to_host16(sta->vht_capabilities->
+					       vht_supported_mcs_set.rx_map),
+				  le_to_host16(sta->vht_capabilities->
+					       vht_supported_mcs_set.tx_map));
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+
+	if ((sta->flags & WLAN_STA_HT) && sta->ht_capabilities) {
+		len = hostapd_write_ht_mcs_bitmask(buf, buflen, len,
+						   sta->ht_capabilities->
+						   supported_mcs_set);
+	}
 
 	return len;
 }
@@ -676,10 +718,48 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 		len += ret;
 	}
 
+	if (iface->conf->ieee80211ac && !hapd->conf->disable_11ac && mode) {
+		u16 rxmap = WPA_GET_LE16(&mode->vht_mcs_set[0]);
+		u16 txmap = WPA_GET_LE16(&mode->vht_mcs_set[4]);
+
+		ret = os_snprintf(buf + len, buflen - len,
+				  "rx_vht_mcs_map=%04x\n"
+				  "tx_vht_mcs_map=%04x\n",
+				  rxmap, txmap);
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+	}
+
 	if (iface->conf->ieee80211n && !hapd->conf->disable_11n) {
 		ret = os_snprintf(buf + len, buflen - len,
 				  "ht_caps_info=%04x\n",
 				  hapd->iconf->ht_capab);
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+	}
+
+	if (iface->conf->ieee80211n && !hapd->conf->disable_11n && mode) {
+		len = hostapd_write_ht_mcs_bitmask(buf, buflen, len,
+						   mode->mcs_set);
+	}
+
+	if (iface->current_rates && iface->num_rates) {
+		ret = os_snprintf(buf + len, buflen - len, "supported_rates=");
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+
+		for (j = 0; j < iface->num_rates; j++) {
+			ret = os_snprintf(buf + len, buflen - len, "%s%02x",
+					  j > 0 ? " " : "",
+					  iface->current_rates[j].rate / 5);
+			if (os_snprintf_error(buflen - len, ret))
+				return len;
+			len += ret;
+		}
+		ret = os_snprintf(buf + len, buflen - len, "\n");
 		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;

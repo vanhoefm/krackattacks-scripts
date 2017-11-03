@@ -2595,3 +2595,8 @@ def test_dpp_proto_pkex_exchange_resp_invalid_encrypted_key(dev, apdev):
     """DPP protocol testing - invalid Encrypted Key in PKEX Exchange Response"""
     run_dpp_proto_pkex_resp_missing(dev, 45,
                                     "Invalid Encrypted Key value")
+
+def test_dpp_proto_pkex_exchange_resp_invalid_status(dev, apdev):
+    """DPP protocol testing - invalid Status in PKEX Exchange Response"""
+    run_dpp_proto_pkex_resp_missing(dev, 46,
+                                    "PKEX failed (peer indicated failure)")

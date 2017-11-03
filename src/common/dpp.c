@@ -3435,9 +3435,7 @@ dpp_build_conf_start(struct dpp_authentication *auth,
 	json_escape_string(ssid, sizeof(ssid),
 			   (const char *) conf->ssid, conf->ssid_len);
 	wpabuf_put_str(buf, ssid);
-	wpabuf_put_str(buf, "\"");
-	/* TODO: optional channel information */
-	wpabuf_put_str(buf, "},");
+	wpabuf_put_str(buf, "\"},");
 
 	return buf;
 }

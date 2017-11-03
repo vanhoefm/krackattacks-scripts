@@ -5711,10 +5711,10 @@ fail:
 }
 
 
-static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
-						    const char *identifier,
-						    const BIGNUM *Nx,
-						    const BIGNUM *Ny)
+static struct wpabuf *
+dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
+			     enum dpp_status_error status,
+			     const BIGNUM *Nx, const BIGNUM *Ny)
 {
 	struct wpabuf *msg = NULL;
 	size_t attr_len;
@@ -5723,8 +5723,8 @@ static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 
 	/* Initiator -> Responder: DPP Status, [identifier,] N */
 	attr_len = 4 + 1;
-	if (identifier)
-		attr_len += 4 + os_strlen(identifier);
+	if (pkex->identifier)
+		attr_len += 4 + os_strlen(pkex->identifier);
 	attr_len += 4 + 2 * curve->prime_len;
 	msg = dpp_alloc_msg(DPP_PA_PKEX_EXCHANGE_RESP, attr_len);
 	if (!msg)
@@ -5740,7 +5740,7 @@ static struct wpabuf * dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, DPP_STATUS_OK);
+	wpabuf_put_u8(msg, status);
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:
@@ -5752,6 +5752,9 @@ skip_status:
 		wpabuf_put_le16(msg, os_strlen(pkex->identifier));
 		wpabuf_put_str(msg, pkex->identifier);
 	}
+
+	if (status != DPP_STATUS_OK)
+		goto skip_encrypted_key;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_NO_ENCRYPTED_KEY_PKEX_EXCHANGE_RESP) {
@@ -5795,9 +5798,14 @@ skip_status:
 	os_memset(wpabuf_put(msg, offset), 0, offset);
 	BN_bn2bin(Ny, wpabuf_put(msg, num_bytes));
 
-#ifdef CONFIG_TESTING_OPTIONS
 skip_encrypted_key:
-#endif /* CONFIG_TESTING_OPTIONS */
+	if (status == DPP_STATUS_BAD_GROUP) {
+		/* Finite Cyclic Group attribute */
+		wpabuf_put_le16(msg, DPP_ATTR_FINITE_CYCLIC_GROUP);
+		wpabuf_put_le16(msg, 2);
+		wpabuf_put_le16(msg, curve->ike_group);
+	}
+
 	return msg;
 fail:
 	wpabuf_free(msg);
@@ -5852,9 +5860,16 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 		wpa_msg(msg_ctx, MSG_INFO, DPP_EVENT_FAIL
 			"Mismatching PKEX curve: peer=%u own=%u",
 			ike_group, curve->ike_group);
-		/* TODO: error response with suggested curve:
-		 * DPP Status, group */
-		return NULL;
+		pkex = os_zalloc(sizeof(*pkex));
+		if (!pkex)
+			goto fail;
+		pkex->own_bi = bi;
+		pkex->failed = 1;
+		pkex->exchange_resp = dpp_pkex_build_exchange_resp(
+			pkex, DPP_STATUS_BAD_GROUP, NULL, NULL);
+		if (!pkex->exchange_resp)
+			goto fail;
+		return pkex;
 	}
 
 	/* M in Encrypted Key attribute */
@@ -5947,7 +5962,7 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	    EC_POINT_get_affine_coordinates_GFp(group, N, Nx, Ny, bnctx) != 1)
 		goto fail;
 
-	pkex->exchange_resp = dpp_pkex_build_exchange_resp(pkex, identifier,
+	pkex->exchange_resp = dpp_pkex_build_exchange_resp(pkex, DPP_STATUS_OK,
 							   Nx, Ny);
 	if (!pkex->exchange_resp)
 		goto fail;
@@ -6136,8 +6151,8 @@ fail:
 struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 					  const u8 *buf, size_t buflen)
 {
-	const u8 *attr_status, *attr_id, *attr_key;
-	u16 attr_status_len, attr_id_len, attr_key_len;
+	const u8 *attr_status, *attr_id, *attr_key, *attr_group;
+	u16 attr_status_len, attr_id_len, attr_key_len, attr_group_len;
 	const EC_GROUP *group;
 	BN_CTX *bnctx = NULL;
 	struct wpabuf *msg = NULL, *A_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
@@ -6153,6 +6168,9 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	u8 u[DPP_MAX_HASH_LEN];
 	int res;
 
+	if (pkex->failed)
+		return NULL;
+
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
 				   &attr_status_len);
 	if (!attr_status || attr_status_len != 1) {
@@ -6160,6 +6178,19 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 		return NULL;
 	}
 	wpa_printf(MSG_DEBUG, "DPP: Status %u", attr_status[0]);
+
+	if (attr_status[0] == DPP_STATUS_BAD_GROUP) {
+		attr_group = dpp_get_attr(buf, buflen,
+					  DPP_ATTR_FINITE_CYCLIC_GROUP,
+					  &attr_group_len);
+		if (attr_group && attr_group_len == 2) {
+			wpa_msg(pkex->msg_ctx, MSG_INFO, DPP_EVENT_FAIL
+				"Peer indicated mismatching PKEX group - proposed %u",
+				WPA_GET_LE16(attr_group));
+			return NULL;
+		}
+	}
+
 	if (attr_status[0] != DPP_STATUS_OK) {
 		dpp_pkex_fail(pkex, "PKEX failed (peer indicated failure)");
 		return NULL;
@@ -6414,7 +6445,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 					      const u8 *buf, size_t buflen)
 {
 	const struct dpp_curve_params *curve = pkex->own_bi->curve;
-	EVP_PKEY_CTX *ctx;
+	EVP_PKEY_CTX *ctx = NULL;
 	size_t Jx_len, Kx_len, Lx_len;
 	u8 Jx[DPP_MAX_SHARED_SECRET_LEN], Kx[DPP_MAX_SHARED_SECRET_LEN];
 	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
@@ -6429,6 +6460,9 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	struct wpabuf *B_pub = NULL;
 	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
 	int res;
+
+	if (!pkex->exchange_done || pkex->failed)
+		goto fail;
 
 	/* K = y * X' */
 	ctx = EVP_PKEY_CTX_new(pkex->y, NULL);
@@ -6627,6 +6661,9 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
 	EVP_PKEY_CTX *ctx = NULL;
 	struct wpabuf *B_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
+
+	if (!pkex->exchange_done || pkex->failed)
+		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);

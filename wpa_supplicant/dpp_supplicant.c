@@ -1427,6 +1427,19 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
 		" freq=%u result=%s", MAC2STR(dst), freq, res_txt);
 	/* TODO: Time out wait for response more quickly in error cases? */
+
+	if (!wpa_s->dpp_pkex) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Ignore TX status since there is no ongoing PKEX exchange");
+		return;
+	}
+
+	if (wpa_s->dpp_pkex->failed) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Terminate PKEX exchange due to an earlier error");
+		dpp_pkex_free(wpa_s->dpp_pkex);
+		wpa_s->dpp_pkex = NULL;
+	}
 }
 
 

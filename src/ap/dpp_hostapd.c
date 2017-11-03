@@ -1066,6 +1066,12 @@ hostapd_dpp_rx_pkex_exchange_req(struct hostapd_data *hapd, const u8 *src,
 		DPP_PA_PKEX_EXCHANGE_RESP);
 	hostapd_drv_send_action(hapd, freq, 0, src,
 				wpabuf_head(msg), wpabuf_len(msg));
+	if (hapd->dpp_pkex->failed) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Terminate PKEX exchange due to an earlier error");
+		dpp_pkex_free(hapd->dpp_pkex);
+		hapd->dpp_pkex = NULL;
+	}
 }
 
 

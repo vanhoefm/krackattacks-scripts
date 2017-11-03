@@ -113,6 +113,7 @@ struct dpp_pkex {
 	void *msg_ctx;
 	unsigned int initiator:1;
 	unsigned int exchange_done:1;
+	unsigned int failed:1;
 	struct dpp_bootstrap_info *own_bi;
 	u8 own_mac[ETH_ALEN];
 	u8 peer_mac[ETH_ALEN];

@@ -543,6 +543,41 @@ fail:
 }
 
 
+int hostapd_dpp_listen(struct hostapd_data *hapd, const char *cmd)
+{
+	int freq;
+
+	freq = atoi(cmd);
+	if (freq <= 0)
+		return -1;
+
+	if (os_strstr(cmd, " role=configurator"))
+		hapd->dpp_allowed_roles = DPP_CAPAB_CONFIGURATOR;
+	else if (os_strstr(cmd, " role=enrollee"))
+		hapd->dpp_allowed_roles = DPP_CAPAB_ENROLLEE;
+	else
+		hapd->dpp_allowed_roles = DPP_CAPAB_CONFIGURATOR |
+			DPP_CAPAB_ENROLLEE;
+	hapd->dpp_qr_mutual = os_strstr(cmd, " qr=mutual") != NULL;
+
+	if (freq != hapd->iface->freq && hapd->iface->freq > 0) {
+		/* TODO: Listen operation on non-operating channel */
+		wpa_printf(MSG_INFO,
+			   "DPP: Listen operation on non-operating channel (%d MHz) is not yet supported (operating channel: %d MHz)",
+			   freq, hapd->iface->freq);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+void hostapd_dpp_listen_stop(struct hostapd_data *hapd)
+{
+	/* TODO: Stop listen operation on non-operating channel */
+}
+
+
 static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 				    const u8 *hdr, const u8 *buf, size_t len,
 				    unsigned int freq)

@@ -1240,3 +1240,49 @@ def run_sigma_dut_ap_dpp_qr(dev, apdev, params, ap_conf, sta_conf, extra=""):
         finally:
             dev[1].set("dpp_config_processing", "0")
             stop_sigma_dut(sigma)
+
+def test_sigma_dut_ap_dpp_pkex_responder(dev, apdev, params):
+    """sigma_dut controlled AP as DPP PKEX responder"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_dpp_pkex_responder.sigma-hostapd")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            run_sigma_dut_ap_dpp_pkex_responder(dev, apdev)
+        finally:
+            stop_sigma_dut(sigma)
+
+def dpp_init_conf_pkex(dev, conf_id):
+    logger.info("Starting DPP PKEX initiator/configurator in a thread")
+    time.sleep(1.5)
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id = int(res)
+    cmd = "DPP_PKEX_ADD own=%d init=1 conf=ap-dpp configurator=%d code=password" % (id, conf_id)
+    res = dev.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to initiate DPP PKEX")
+    ev = dev.wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    logger.info("DPP initiator/configurator done")
+
+def run_sigma_dut_ap_dpp_pkex_responder(dev, apdev):
+    sigma_dut_cmd_check("ap_reset_default,program,DPP")
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    t = threading.Thread(target=dpp_init_conf_pkex, args=(dev[0], conf_id))
+    t.start()
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,PKEX,DPPPKEXCode,password,DPPTimeout,6", timeout=10)
+    t.join()
+    if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
+        raise Exception("Unexpected result: " + res)
+
+    sigma_dut_cmd_check("ap_reset_default")

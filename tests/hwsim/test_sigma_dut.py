@@ -1286,3 +1286,231 @@ def run_sigma_dut_ap_dpp_pkex_responder(dev, apdev):
         raise Exception("Unexpected result: " + res)
 
     sigma_dut_cmd_check("ap_reset_default")
+
+def dpp_proto_init(dev, id1):
+    time.sleep(1)
+    logger.info("Starting DPP initiator/configurator in a thread")
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev.request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id1, conf_id)
+    if "OK" not in dev.request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+
+def test_sigma_dut_dpp_proto_initiator(dev, apdev):
+    """sigma_dut DPP protocol testing - Initiator"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("InvalidValue", "AuthenticationRequest", "WrappedData",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               None),
+              ("InvalidValue", "AuthenticationConfirm", "WrappedData",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               None),
+              ("MissingAttribute", "AuthenticationRequest", "InitCapabilities",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               "Missing or invalid I-capabilities"),
+              ("InvalidValue", "AuthenticationConfirm", "InitAuthTag",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               "Mismatching Initiator Authenticating Tag"),
+              ("MissingAttribute", "ConfigurationResponse", "EnrolleeNonce",
+               "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent",
+               "Missing or invalid Enrollee Nonce attribute") ]
+    for step, frame, attr, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_initiator(dev, step, frame, attr, result,
+                                              fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_initiator(dev, step, frame, attr, result, fail):
+    addr = dev[1].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/6 mac=" + addr
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    cmd = "DPP_LISTEN 2437 role=enrollee"
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,SetPeerBootstrap,DPPBootstrappingdata,%s,DPPBS,QR" % uri0.encode('hex'))
+    if "status,COMPLETE" not in res:
+        raise Exception("dev_exec_action did not succeed: " + res)
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6,DPPStep,%s,DPPFrameType,%s,DPPIEAttribute,%s" % (step, frame, attr))
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly: " + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_sigma_dut_dpp_proto_responder(dev, apdev):
+    """sigma_dut DPP protocol testing - Responder"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("MissingAttribute", "AuthenticationResponse", "DPPStatus",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               "Missing or invalid required DPP Status attribute"),
+              ("MissingAttribute", "ConfigurationRequest", "EnrolleeNonce",
+               "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent",
+               "Missing or invalid Enrollee Nonce attribute") ]
+    for step, frame, attr, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_responder(dev, step, frame, attr, result,
+                                              fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_responder(dev, step, frame, attr, result, fail):
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR")
+    if "status,COMPLETE" not in res:
+        raise Exception("dev_exec_action did not succeed: " + res)
+    hex = res.split(',')[3]
+    uri = hex.decode('hex')
+    logger.info("URI from sigma_dut: " + uri)
+
+    res = dev[1].request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    t = threading.Thread(target=dpp_proto_init, args=(dev[1], id1))
+    t.start()
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Single,DPPProvisioningRole,Enrollee,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6,DPPStep,%s,DPPFrameType,%s,DPPIEAttribute,%s" % (step, frame, attr), timeout=10)
+    t.join()
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly:" + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def dpp_proto_init_pkex(dev):
+    time.sleep(1)
+    logger.info("Starting DPP PKEX initiator/configurator in a thread")
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev.request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d init=1 conf=sta-dpp configurator=%d code=secret" % (id, conf_id)
+    if "FAIL" in dev.request(cmd):
+        raise Exception("Failed to initiate DPP PKEX")
+
+def test_sigma_dut_dpp_proto_initiator_pkex(dev, apdev):
+    """sigma_dut DPP protocol testing - Initiator (PKEX)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("InvalidValue", "PKEXCRRequest", "WrappedData",
+               "BootstrapResult,Errorsent",
+               None),
+              ("MissingAttribute", "PKEXExchangeRequest", "FiniteCyclicGroup",
+               "BootstrapResult,Errorsent",
+               "Missing or invalid Finite Cyclic Group attribute"),
+              ("MissingAttribute", "PKEXCRRequest", "BSKey",
+               "BootstrapResult,Errorsent",
+               "No valid peer bootstrapping key found") ]
+    for step, frame, attr, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_initiator_pkex(dev, step, frame, attr,
+                                                   result, fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_initiator_pkex(dev, step, frame, attr, result, fail):
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d code=secret" % (id1)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+
+    cmd = "DPP_LISTEN 2437 role=enrollee"
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,PKEX,DPPPKEXCode,secret,DPPTimeout,6,DPPStep,%s,DPPFrameType,%s,DPPIEAttribute,%s" % (step, frame, attr))
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly: " + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_sigma_dut_dpp_proto_responder_pkex(dev, apdev):
+    """sigma_dut DPP protocol testing - Responder (PKEX)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("InvalidValue", "PKEXCRResponse", "WrappedData",
+               "BootstrapResult,Errorsent",
+               None),
+              ("MissingAttribute", "PKEXExchangeResponse", "DPPStatus",
+               "BootstrapResult,Errorsent",
+               "No DPP Status attribute"),
+              ("MissingAttribute", "PKEXCRResponse", "BSKey",
+               "BootstrapResult,Errorsent",
+               "No valid peer bootstrapping key found") ]
+    for step, frame, attr, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_responder_pkex(dev, step, frame, attr,
+                                                   result, fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_responder_pkex(dev, step, frame, attr, result, fail):
+    t = threading.Thread(target=dpp_proto_init_pkex, args=(dev[1],))
+    t.start()
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Single,DPPProvisioningRole,Enrollee,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,PKEX,DPPPKEXCode,secret,DPPTimeout,6,DPPStep,%s,DPPFrameType,%s,DPPIEAttribute,%s" % (step, frame, attr), timeout=10)
+    t.join()
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly:" + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()

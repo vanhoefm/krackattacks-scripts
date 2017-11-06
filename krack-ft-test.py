@@ -23,7 +23,6 @@ IEEE80211_RADIOTAP_DATA_RETRIES = (1 << 17)
 #TODO: - Merge code with client tests to avoid code duplication (including some error handling)
 #TODO: - Option to use a secondary interface for injection + WARNING if a virtual interface is used + repeat advice to disable hardware encryption
 #TODO: - Test whether injection works on the virtual interface (send probe requests to nearby AP and wait for replies)
-#TODO: - Execute rfkill unblock wifi because some will forget this
 
 # FIXME: We are repeating the "disable hw encryption" script to client tests
 USAGE = """{name} - Tool to test Key Reinstallation Attacks against an AP
@@ -192,6 +191,7 @@ class KRAckAttackFt():
 			log(INFO, "Detected normal association frame")
 			self.reset_client()
 
+		# Encrypted data sent to the client
 		elif p.addr1 == self.clientmac and Dot11WEP in p:
 			iv = dot11_get_iv(p)
 			log(INFO, "AP transmitted data using IV=%d (seq=%d)" % (iv, dot11_get_seqnum(p)))
@@ -209,6 +209,9 @@ class KRAckAttackFt():
 
 	def configure_interfaces(self):
 		log(STATUS, "Note: disable Wi-Fi in your network manager so it doesn't interfere with this script")
+
+		# 0. Some users may forget this otherwise
+		subprocess.check_output(["rfkill", "unblock", "wifi"])
 
 		# 1. Remove unused virtual interfaces to start from a clean state
 		subprocess.call(["iw", self.nic_mon, "del"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)

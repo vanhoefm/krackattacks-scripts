@@ -2734,3 +2734,70 @@ def test_dpp_proto_pkex_cr_req_i_auth_tag_mismatch(dev, apdev):
 def test_dpp_proto_pkex_cr_resp_r_auth_tag_mismatch(dev, apdev):
     """DPP protocol testing - R-auth tag mismatch in PKEX Commit-Reveal Response"""
     run_dpp_proto_pkex_resp_missing(dev, 50, "No valid v (R-Auth tag) found")
+
+def test_dpp_proto_network_introduction(dev, apdev):
+    """DPP protocol testing - network introduction"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    csign = "3059301306072a8648ce3d020106082a8648ce3d03010703420004d02e5bd81a120762b5f0f2994777f5d40297238a6c294fd575cdf35fabec44c050a6421c401d98d659fd2ed13c961cc8287944dd3202f516977800d3ab2f39ee"
+    ap_connector = "eyJ0eXAiOiJkcHBDb24iLCJraWQiOiJzOEFrYjg5bTV4UGhoYk5UbTVmVVo0eVBzNU5VMkdxYXNRY3hXUWhtQVFRIiwiYWxnIjoiRVMyNTYifQ.eyJncm91cHMiOlt7Imdyb3VwSWQiOiIqIiwibmV0Um9sZSI6ImFwIn1dLCJuZXRBY2Nlc3NLZXkiOnsia3R5IjoiRUMiLCJjcnYiOiJQLTI1NiIsIngiOiIwOHF4TlNYRzRWemdCV3BjVUdNSmc1czNvbElOVFJsRVQ1aERpNkRKY3ZjIiwieSI6IlVhaGFYQXpKRVpRQk1YaHRUQnlZZVlrOWtJYjk5UDA3UV9NcW9TVVZTVEkifX0.a5_nfMVr7Qe1SW0ZL3u6oQRm5NUCYUSfixDAJOUFN3XUfECBZ6E8fm8xjeSfdOytgRidTz0CTlIRjzPQo82dmQ"
+    ap_netaccesskey = "30770201010420f6531d17f29dfab655b7c9e923478d5a345164c489aadd44a3519c3e9dcc792da00a06082a8648ce3d030107a14403420004d3cab13525c6e15ce0056a5c506309839b37a2520d4d19444f98438ba0c972f751a85a5c0cc911940131786d4c1c9879893d9086fdf4fd3b43f32aa125154932"
+    sta_connector = "eyJ0eXAiOiJkcHBDb24iLCJraWQiOiJzOEFrYjg5bTV4UGhoYk5UbTVmVVo0eVBzNU5VMkdxYXNRY3hXUWhtQVFRIiwiYWxnIjoiRVMyNTYifQ.eyJncm91cHMiOlt7Imdyb3VwSWQiOiIqIiwibmV0Um9sZSI6InN0YSJ9XSwibmV0QWNjZXNzS2V5Ijp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiZWMzR3NqQ3lQMzVBUUZOQUJJdEltQnN4WXVyMGJZX1dES1lfSE9zUGdjNCIsInkiOiJTRS1HVllkdWVnTFhLMU1TQXZNMEx2QWdLREpTNWoyQVhCbE9PMTdUSTRBIn19.PDK9zsGlK-e1pEOmNxVeJfCS8pNeay6ckIS1TXCQsR64AR-9wFPCNVjqOxWvVKltehyMFqVAtOcv0IrjtMJFqQ"
+    sta_netaccesskey = "30770201010420bc33380c26fd2168b69cd8242ed1df07ba89aa4813f8d4e8523de6ca3f8dd28ba00a06082a8648ce3d030107a1440342000479cdc6b230b23f7e40405340048b48981b3162eaf46d8fd60ca63f1ceb0f81ce484f8655876e7a02d72b531202f3342ef020283252e63d805c194e3b5ed32380"
+
+    params = { "ssid": "dpp",
+               "wpa": "2",
+               "wpa_key_mgmt": "DPP",
+               "ieee80211w": "2",
+               "rsn_pairwise": "CCMP",
+               "dpp_connector": ap_connector,
+               "dpp_csign": csign,
+               "dpp_netaccesskey": ap_netaccesskey }
+    try:
+        hapd = hostapd.add_ap(apdev[0], params)
+    except:
+        raise HwsimSkip("DPP not supported")
+
+    for test in [ 60, 61 ]:
+        dev[0].set("dpp_test", str(test))
+        dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
+                       dpp_csign=csign, dpp_connector=sta_connector,
+                       dpp_netaccesskey=sta_netaccesskey, wait_connect=False)
+
+        ev = dev[0].wait_event(["DPP-TX"], timeout=10)
+        if ev is None or "type=5" not in ev:
+            raise Exception("Peer Discovery Request TX not reported")
+        ev = dev[0].wait_event(["DPP-TX-STATUS"], timeout=2)
+        if ev is None or "result=SUCCESS" not in ev:
+            raise Exception("Peer Discovery Request TX status not reported")
+
+        ev = hapd.wait_event(["DPP-RX"], timeout=10)
+        if ev is None or "type=5" not in ev:
+            raise Exception("Peer Discovery Request RX not reported")
+
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+        hapd.dump_monitor()
+    dev[0].set("dpp_test", "0")
+
+    for test in [ 62, 63, 64 ]:
+        hapd.set("dpp_test", str(test))
+        dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
+                       dpp_csign=csign, dpp_connector=sta_connector,
+                       dpp_netaccesskey=sta_netaccesskey, wait_connect=False)
+
+        ev = dev[0].wait_event(["DPP-INTRO"], timeout=10)
+        if ev is None:
+            raise Exception("Peer introduction result not reported")
+        if "status=" in ev:
+            raise Exception("Unexpected peer introduction result: " + ev)
+
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+        hapd.dump_monitor()
+    hapd.set("dpp_test", "0")
+
+    dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
+                   dpp_csign=csign, dpp_connector=sta_connector,
+                   dpp_netaccesskey=sta_netaccesskey)

@@ -938,15 +938,38 @@ static void hostapd_dpp_send_peer_disc_resp(struct hostapd_data *hapd,
 	if (!msg)
 		return;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_TRANSACTION_ID_PEER_DISC_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Transaction ID");
+		goto skip_trans_id;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Transaction ID */
 	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, trans_id);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_trans_id:
+	if (dpp_test == DPP_TEST_NO_STATUS_PEER_DISC_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
+		goto skip_status;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* DPP Status */
 	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, status);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_status:
+	if (dpp_test == DPP_TEST_NO_CONNECTOR_PEER_DISC_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Connector");
+		goto skip_connector;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Connector */
 	if (status == DPP_STATUS_OK) {
@@ -954,6 +977,10 @@ static void hostapd_dpp_send_peer_disc_resp(struct hostapd_data *hapd,
 		wpabuf_put_le16(msg, os_strlen(hapd->conf->dpp_connector));
 		wpabuf_put_str(msg, hapd->conf->dpp_connector);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_connector:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_printf(MSG_DEBUG, "DPP: Send Peer Discovery Response to " MACSTR
 		   " status=%d", MAC2STR(src), status);

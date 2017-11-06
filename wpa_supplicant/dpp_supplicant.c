@@ -1973,15 +1973,34 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 	if (!msg)
 		return -1;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_NO_TRANSACTION_ID_PEER_DISC_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Transaction ID");
+		goto skip_trans_id;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* Transaction ID */
 	wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
 	wpabuf_put_le16(msg, 1);
 	wpabuf_put_u8(msg, TRANSACTION_ID);
 
+#ifdef CONFIG_TESTING_OPTIONS
+skip_trans_id:
+	if (dpp_test == DPP_TEST_NO_CONNECTOR_PEER_DISC_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Connector");
+		goto skip_connector;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	/* DPP Connector */
 	wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
 	wpabuf_put_le16(msg, os_strlen(ssid->dpp_connector));
 	wpabuf_put_str(msg, ssid->dpp_connector);
+
+#ifdef CONFIG_TESTING_OPTIONS
+skip_connector:
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* TODO: Timeout on AP response */
 	wait_time = wpa_s->max_remain_on_chan;

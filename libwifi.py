@@ -71,3 +71,40 @@ def get_tlv_value(p, type):
 		el = el.payload
 	return None
 
+
+class IvInfo():
+	def __init__(self, p):
+		self.iv = dot11_get_iv(p)
+		self.seq = dot11_get_seqnum(p)
+		self.time = p.time
+
+	def is_reused(self, p):
+		"""Return true if frame p reuses an IV and if p is not a retransmitted frame"""
+		iv = dot11_get_iv(p)
+		seq = dot11_get_seqnum(p)
+		return self.iv == iv and self.seq != seq and p.time >= self.time + 1
+
+class IvCollection():
+	def __init__(self):
+		self.ivs = dict() # maps IV values to IvInfo objects
+
+	def reset(self):
+		self.ivs = dict()
+
+	def track_used_iv(self, p):
+		iv = dot11_get_iv(p)
+		self.ivs[iv] = IvInfo(p)
+
+	def is_iv_reused(self, p):
+		"""Returns True if this is an *observed* IV reuse and not just a retransmission"""
+		iv = dot11_get_iv(p)
+		return iv in self.ivs and self.ivs[iv].is_reused(p)
+
+	def is_new_iv(self, p):
+		"""Returns True if the IV in this frame is higher than all previously observed ones"""
+		iv = dot11_get_iv(p)
+		if len(self.ivs) == 0: return True
+		return iv > max(self.ivs.keys())
+
+
+

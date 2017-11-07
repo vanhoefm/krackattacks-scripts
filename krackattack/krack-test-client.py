@@ -190,7 +190,7 @@ class DHCP_sock(DHCP_am):
 		self.sock.send(reply, **self.optsend)
 
 	def print_reply(self, req, reply):
-		log(STATUS, "%s: DHCP reply %s to %s" % (reply.getlayer(Ether).dst, reply.getlayer(IP).dst, reply.dst), color="green")
+		log(STATUS, "%s: DHCP reply %s to %s" % (reply.getlayer(Ether).dst, reply.getlayer(BOOTP).yiaddr, reply.dst), color="green")
 
 	def remove_client(self, clientmac):
 		clientip = self.leases[clientmac]

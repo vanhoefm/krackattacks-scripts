@@ -171,6 +171,16 @@ class DHCP_sock(DHCP_am):
 		self.sock = kwargs.pop("sock")
 		super(DHCP_am, self).__init__(**kwargs)
 
+	def make_reply(self, req):
+		rep = super(DHCP_sock, self).make_reply(req)
+
+		# Fix scapy bug: set broadcast IP if required
+		if rep is not None and BOOTP in req and IP in rep:
+			if req[BOOTP].flags & 0x8000 != 0 and req[BOOTP].giaddr == '0.0.0.0' and req[BOOTP].ciaddr == '0.0.0.0':
+				rep[IP].dst = "255.255.255.255"
+
+		return rep
+
 	def send_reply(self, reply):
 		self.sock.send(reply, **self.optsend)
 

@@ -169,7 +169,7 @@ def hostapd_command(hostapd_ctrl, cmd):
 class DHCP_sock(DHCP_am):
 	def __init__(self, **kwargs):
 		self.sock = kwargs.pop("sock")
-		super(DHCP_am, self).__init__(**kwargs)
+		super(DHCP_sock, self).__init__(**kwargs)
 
 	def make_reply(self, req):
 		rep = super(DHCP_sock, self).make_reply(req)

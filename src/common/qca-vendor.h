@@ -365,6 +365,12 @@ enum qca_radiotap_vendor_ids {
  *	RF Operating Parameter (RROP) information. The attributes for this
  *	information are defined in enum qca_wlan_vendor_attr_rrop_info. This is
  *	intended for use by external Auto Channel Selection applications.
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS: Get the Specific Absorption Rate
+ *	(SAR) power limits. This is a companion to the command
+ *	@QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS and is used to retrieve the
+ *	settings currently in use. The attributes returned by this command are
+ *	defined by enum qca_vendor_attr_sar_limits.
+ *
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -504,6 +510,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* Flush peer pending data */
 	QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING = 162,
 	QCA_NL80211_VENDOR_SUBCMD_GET_RROP_INFO = 163,
+	QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS = 164,
 };
 
 
@@ -2738,7 +2745,9 @@ enum qca_wlan_vendor_tdls_trigger_mode {
  *
  * This enumerates the valid set of values that may be supplied for
  * attribute %QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT in an instance of
- * the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
+ * the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command or in
+ * the response to an instance of the
+ * %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
  */
 enum qca_vendor_attr_sar_limits_selections {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0 = 0,
@@ -2762,7 +2771,8 @@ enum qca_vendor_attr_sar_limits_selections {
  * attribute %QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC_MODULATION in an
  * instance of attribute %QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC in an
  * instance of the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor
- * command.
+ * command or in the response to an instance of the
+ * %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
  */
 enum qca_vendor_attr_sar_limits_spec_modulations {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC_MODULATION_CCK = 0,
@@ -2819,7 +2829,8 @@ enum qca_vendor_attr_sar_limits_spec_modulations {
  *	value to specify the actual power limit value in units of 0.5
  *	dBm (i.e., a value of 11 represents 5.5 dBm).
  *
- * These attributes are used with %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS.
+ * These attributes are used with %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS
+ * and %QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS.
  */
 enum qca_vendor_attr_sar_limits {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_INVALID = 0,

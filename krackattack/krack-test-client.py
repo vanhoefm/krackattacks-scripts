@@ -169,6 +169,7 @@ def hostapd_command(hostapd_ctrl, cmd):
 class DHCP_sock(DHCP_am):
 	def __init__(self, **kwargs):
 		self.sock = kwargs.pop("sock")
+		self.server_ip = kwargs["gw"]
 		super(DHCP_sock, self).__init__(**kwargs)
 
 	def make_reply(self, req):
@@ -178,6 +179,10 @@ class DHCP_sock(DHCP_am):
 		if rep is not None and BOOTP in req and IP in rep:
 			if req[BOOTP].flags & 0x8000 != 0 and req[BOOTP].giaddr == '0.0.0.0' and req[BOOTP].ciaddr == '0.0.0.0':
 				rep[IP].dst = "255.255.255.255"
+
+		# Explicitly set source IP if requested
+		if not self.server_ip is None:
+			rep[IP].src = self.server_ip
 
 		return rep
 

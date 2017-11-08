@@ -1,7 +1,6 @@
 To verify the script is working correctly, try it out against a virtualized Wi-Fi network as follows:
 
 	apt-get install vtun bridge-utils hostapd
-	cd hwsim-test-network
 	./initradios.sh
 	./hostap0.sh # Start fist access point in window 1
 	./hostap1.sh # Start second access point in window 2

@@ -10,7 +10,7 @@ Our scripts were tested on Kali Linux. To install the required dependencies on K
 	apt-get update
 	apt-get install libnl-3-dev libnl-genl-3-dev pkg-config libssl-dev net-tools git sysfsutils python-scapy python-pycryptodome
 
-Then **disable hardware encryption** using the script `./disable-hwcrypto.sh`. We tested our scripts on a Kali Linux distribution using a TP-Link WN722N v1.
+Then **disable hardware encryption** using the script `./krackattack/disable-hwcrypto.sh`. We tested our scripts on a Kali Linux distribution using a TP-Link WN722N v1.
 
 Remember to disable Wi-Fi in your network manager before using our scripts. After disabling Wi-Fi, execute `sudo rfkill unblock wifi` so our scripts can still use Wi-Fi.
 

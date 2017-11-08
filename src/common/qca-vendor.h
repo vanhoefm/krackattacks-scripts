@@ -3987,7 +3987,7 @@ enum qca_wlan_vendor_attr_spectral_diag_stats {
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_VHTSEG1ID_MISMATCH = 4,
 	/* Number of spectral phyerror events with vht operation segment 2 id
 	 * mismatches in search fft report. u64 attribute.
-	*/
+	 */
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_VHTSEG2ID_MISMATCH = 5,
 
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_DIAG_AFTER_LAST,

@@ -1,4 +1,4 @@
-This project contains scripts to tests if clients or access points (APs) are affected by the KRACK attack against WPA2. For [details behind this attack see our website](https://www.krackattacks.com) and [the research paper](https://papers.mathyvanhoef.com/ccs2017.pdf).
+This project contains scripts to test if clients or access points (APs) are affected by the KRACK attack against WPA2. For [details behind this attack see our website](https://www.krackattacks.com) and [the research paper](https://papers.mathyvanhoef.com/ccs2017.pdf).
 
 Remember that our scripts are not attack scripts! You require network credentials in order to test if an access point or client is affected by the attack.
 

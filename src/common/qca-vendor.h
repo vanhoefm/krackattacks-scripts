@@ -2587,6 +2587,11 @@ enum qca_wlan_vendor_attr_ll_stats_results {
 	/* Unsigned 32 bit value */
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_PPDU_FAIL_CNT = 82,
 
+	/* Unsigned int 32 value.
+	 * Pending MSDUs corresponding to respective AC.
+	 */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_WMM_AC_PENDING_MSDU = 83,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX =

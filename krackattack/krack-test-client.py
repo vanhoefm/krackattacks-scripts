@@ -10,7 +10,7 @@ import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from libwifi import *
-import sys, socket, struct, time, subprocess, atexit, select
+import sys, socket, struct, time, subprocess, atexit, select, os.path
 from datetime import datetime
 from wpaspy import Ctrl
 
@@ -453,7 +453,12 @@ class KRAckAttackClient():
 
 		# Open the patched hostapd instance that carries out tests and let it start
 		log(STATUS, "Starting hostapd ...")
-		self.hostapd = subprocess.Popen(["../hostapd/hostapd", "hostapd.conf"] + sys.argv[1:])
+		try:
+			self.hostapd = subprocess.Popen(["../hostapd/hostapd", "hostapd.conf"] + sys.argv[1:])
+		except:
+			if not os.path.exists("../hostapd/hostapd"):
+				log(ERROR, "hostapd executable not found. Did you compile hostapd? Use --help param for more info.")
+			raise
 		time.sleep(1)
 
 		try:

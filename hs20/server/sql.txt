@@ -1,0 +1,59 @@
+CREATE TABLE eventlog(
+	user TEXT,
+	realm TEXT,
+	sessionid TEXT COLLATE NOCASE,
+	timestamp TEXT,
+	notes TEXT,
+	dump TEXT,
+	addr TEXT
+);
+
+CREATE TABLE sessions(
+	timestamp TEXT,
+	id TEXT COLLATE NOCASE,
+	user TEXT,
+	realm TEXT,
+	password TEXT,
+	machine_managed BOOLEAN,
+	operation INTEGER,
+	type TEXT,
+	pps TEXT,
+	redirect_uri TEXT,
+	devinfo TEXT,
+	devdetail TEXT,
+	cert TEXT,
+	cert_pem TEXT
+);
+
+CREATE index sessions_id_index ON sessions(id);
+
+CREATE TABLE osu_config(
+       realm TEXT,
+       field TEXT,
+       value TEXT
+);
+
+CREATE TABLE users(
+	identity TEXT PRIMARY KEY,
+	methods TEXT,
+	password TEXT,
+	machine_managed BOOLEAN,
+	remediation TEXT,
+	phase2 INTEGER,
+	realm TEXT,
+	policy TEXT,
+	devinfo TEXT,
+	devdetail TEXT,
+	pps TEXT,
+	fetch_pps INTEGER,
+	osu_user TEXT,
+	osu_password TEXT,
+	shared INTEGER,
+	cert TEXT,
+	cert_pem TEXT
+);
+
+CREATE TABLE wildcards(
+	identity TEXT PRIMARY KEY,
+	methods TEXT
+);

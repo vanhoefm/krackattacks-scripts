@@ -139,6 +139,15 @@ the 4-way handshake or group key handshake, take the following steps:
 # This value must match the one in `../src/ap/wpa_auth.c` (same variable name).
 HANDSHAKE_TRANSMIT_INTERVAL = 2
 
+#### Utility Commands ####
+
+def hostapd_command(hostapd_ctrl, cmd):
+	rval = hostapd_ctrl.request(cmd)
+	if "UNKNOWN COMMAND" in rval:
+		log(ERROR, "Hostapd did not recognize the command %s. Did you (re)compile hostapd?" % cmd.split()[0])
+		quit(1)
+	return rval
+
 #### Main Testing Code ####
 
 class ClientState():

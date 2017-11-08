@@ -30,6 +30,7 @@ Remember to also perform extra tests using the `--tptk` and `--tptk-rand` parame
 
 The attached Linux script `krack-ft-test.py` can be used to determine if an AP is vulnerable to our attack. The script contains detailed documentation on how to use it:
 
+	cd krackattack/
 	./krack-ft-test.py --help
 
 **Now follow the detail instructions that the script outputs.**

@@ -5750,7 +5750,7 @@ static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 
 	group = EC_GROUP_new_by_curve_name(OBJ_txt2nid(curve->name));
 	if (!group)
-		return NULL;
+		return -1;
 
 	ctx = BN_CTX_new();
 	point = EC_POINT_new(group);

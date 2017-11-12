@@ -2801,3 +2801,99 @@ def test_dpp_proto_network_introduction(dev, apdev):
     dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
                    dpp_csign=csign, dpp_connector=sta_connector,
                    dpp_netaccesskey=sta_netaccesskey)
+
+def test_dpp_qr_code_no_chan_list_unicast(dev, apdev):
+    """DPP QR Code and no channel list (unicast)"""
+    run_dpp_qr_code_chan_list(dev, apdev, True, 2417, None)
+
+def test_dpp_qr_code_chan_list_unicast(dev, apdev):
+    """DPP QR Code and 2.4 GHz channels (unicast)"""
+    run_dpp_qr_code_chan_list(dev, apdev, True, 2417,
+                              "81/1,81/2,81/3,81/4,81/5,81/6,81/7,81/8,81/9,81/10,81/11,81/12,81/13")
+
+def test_dpp_qr_code_chan_list_no_peer_unicast(dev, apdev):
+    """DPP QR Code and channel list and no peer (unicast)"""
+    run_dpp_qr_code_chan_list(dev, apdev, True, 2417, "81/1,81/6,81/11",
+                              no_wait=True)
+    ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("Initiation failure not reported")
+
+def test_dpp_qr_code_no_chan_list_broadcast(dev, apdev):
+    """DPP QR Code and no channel list (broadcast)"""
+    run_dpp_qr_code_chan_list(dev, apdev, False, 2412, None)
+
+def test_dpp_qr_code_chan_list_broadcast(dev, apdev):
+    """DPP QR Code and some 2.4 GHz channels (broadcast)"""
+    run_dpp_qr_code_chan_list(dev, apdev, False, 2412, "81/1,81/6,81/11",
+                              timeout=10)
+
+def run_dpp_qr_code_chan_list(dev, apdev, unicast, listen_freq, chanlist,
+                              no_wait=False, timeout=5):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    dev[1].set("dpp_init_max_tries", "3")
+    dev[1].set("dpp_init_retry_time", "100")
+    dev[1].set("dpp_resp_wait_time", "1")
+
+    logger.info("dev0 displays QR Code")
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode"
+    if chanlist:
+        cmd += " chan=" + chanlist
+    if unicast:
+        addr = dev[0].own_addr().replace(':', '')
+        cmd += " mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 initiates DPP Authentication")
+    cmd = "DPP_LISTEN %d" % listen_freq
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+    cmd = "DPP_AUTH_INIT peer=%d" % id1
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    if no_wait:
+        return
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=timeout)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED", "DPP-CONF-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    dev[0].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_dpp_qr_code_chan_list_no_match(dev, apdev):
+    """DPP QR Code and no matching supported channel"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=123/123"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_AUTH_INIT peer=%d" % id1
+    if "FAIL" not in dev[1].request(cmd):
+        raise Exception("DPP Authentication started unexpectedly")

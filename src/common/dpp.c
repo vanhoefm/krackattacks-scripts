@@ -22,6 +22,7 @@
 #include "crypto/aes_siv.h"
 #include "crypto/sha384.h"
 #include "crypto/sha512.h"
+#include "drivers/driver.h"
 #include "dpp.h"
 
 
@@ -1701,11 +1702,171 @@ skip_wrapped_data:
 }
 
 
+static int dpp_channel_ok_init(struct hostapd_hw_modes *own_modes,
+			       u16 num_modes, unsigned int freq)
+{
+	u16 m;
+	int c, flag;
+
+	if (!own_modes || !num_modes)
+		return 1;
+
+	for (m = 0; m < num_modes; m++) {
+		for (c = 0; c < own_modes[m].num_channels; c++) {
+			if ((unsigned int) own_modes[m].channels[c].freq !=
+			    freq)
+				continue;
+			flag = own_modes[m].channels[c].flag;
+			if (!(flag & (HOSTAPD_CHAN_DISABLED |
+				      HOSTAPD_CHAN_NO_IR |
+				      HOSTAPD_CHAN_RADAR)))
+				return 1;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "DPP: Peer channel %u MHz not supported", freq);
+	return 0;
+}
+
+
+static int freq_included(const unsigned int freqs[], unsigned int num,
+			 unsigned int freq)
+{
+	while (num > 0) {
+		if (freqs[--num] == freq)
+			return 1;
+	}
+	return 0;
+}
+
+
+static void freq_to_start(unsigned int freqs[], unsigned int num,
+			  unsigned int freq)
+{
+	unsigned int i;
+
+	for (i = 0; i < num; i++) {
+		if (freqs[i] == freq)
+			break;
+	}
+	if (i == 0 || i >= num)
+		return;
+	os_memmove(&freqs[1], &freqs[0], i * sizeof(freqs[0]));
+	freqs[0] = freq;
+}
+
+
+static int dpp_channel_intersect(struct dpp_authentication *auth,
+				 struct hostapd_hw_modes *own_modes,
+				 u16 num_modes)
+{
+	struct dpp_bootstrap_info *peer_bi = auth->peer_bi;
+	unsigned int i, freq;
+
+	for (i = 0; i < peer_bi->num_freq; i++) {
+		freq = peer_bi->freq[i];
+		if (freq_included(auth->freq, auth->num_freq, freq))
+			continue;
+		if (dpp_channel_ok_init(own_modes, num_modes, freq))
+			auth->freq[auth->num_freq++] = freq;
+	}
+	if (!auth->num_freq) {
+		wpa_printf(MSG_INFO,
+			   "DPP: No available channels for initiating DPP Authentication");
+		return -1;
+	}
+	auth->curr_freq = auth->freq[0];
+	return 0;
+}
+
+
+static int dpp_channel_local_list(struct dpp_authentication *auth,
+				  struct hostapd_hw_modes *own_modes,
+				  u16 num_modes)
+{
+	u16 m;
+	int c, flag;
+	unsigned int freq;
+
+	auth->num_freq = 0;
+
+	if (!own_modes || !num_modes) {
+		auth->freq[0] = 2412;
+		auth->freq[1] = 2437;
+		auth->freq[2] = 2462;
+		auth->num_freq = 3;
+		return 0;
+	}
+
+	for (m = 0; m < num_modes; m++) {
+		for (c = 0; c < own_modes[m].num_channels; c++) {
+			freq = own_modes[m].channels[c].freq;
+			flag = own_modes[m].channels[c].flag;
+			if (flag & (HOSTAPD_CHAN_DISABLED |
+				    HOSTAPD_CHAN_NO_IR |
+				    HOSTAPD_CHAN_RADAR))
+				continue;
+			if (freq_included(auth->freq, auth->num_freq, freq))
+				continue;
+			auth->freq[auth->num_freq++] = freq;
+			if (auth->num_freq == DPP_BOOTSTRAP_MAX_FREQ) {
+				m = num_modes;
+				break;
+			}
+		}
+	}
+
+	return auth->num_freq == 0 ? -1 : 0;
+}
+
+
+static int dpp_prepare_channel_list(struct dpp_authentication *auth,
+				    struct hostapd_hw_modes *own_modes,
+				    u16 num_modes)
+{
+	int res;
+	char freqs[DPP_BOOTSTRAP_MAX_FREQ * 6 + 10], *pos, *end;
+	unsigned int i;
+
+	if (auth->peer_bi->num_freq > 0)
+		res = dpp_channel_intersect(auth, own_modes, num_modes);
+	else
+		res = dpp_channel_local_list(auth, own_modes, num_modes);
+	if (res < 0)
+		return res;
+
+	/* Prioritize 2.4 GHz channels 6, 1, 11 (in this order) to hit the most
+	 * likely channels first. */
+	freq_to_start(auth->freq, auth->num_freq, 2462);
+	freq_to_start(auth->freq, auth->num_freq, 2412);
+	freq_to_start(auth->freq, auth->num_freq, 2437);
+
+	auth->freq_idx = 0;
+	auth->curr_freq = auth->freq[0];
+
+	pos = freqs;
+	end = pos + sizeof(freqs);
+	for (i = 0; i < auth->num_freq; i++) {
+		res = os_snprintf(pos, end - pos, " %u", auth->freq[i]);
+		if (os_snprintf_error(end - pos, res))
+			break;
+		pos += res;
+	}
+	*pos = '\0';
+	wpa_printf(MSG_DEBUG, "DPP: Possible frequencies for initiating:%s",
+		   freqs);
+
+	return 0;
+}
+
+
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
 					  int configurator,
-					  unsigned int neg_freq)
+					  unsigned int neg_freq,
+					  struct hostapd_hw_modes *own_modes,
+					  u16 num_modes)
 {
 	struct dpp_authentication *auth;
 	size_t nonce_len;
@@ -1720,10 +1881,14 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		return NULL;
 	auth->msg_ctx = msg_ctx;
 	auth->initiator = 1;
+	auth->waiting_auth_resp = 1;
 	auth->configurator = configurator;
 	auth->peer_bi = peer_bi;
 	auth->own_bi = own_bi;
 	auth->curve = peer_bi->curve;
+
+	if (dpp_prepare_channel_list(auth, own_modes, num_modes) < 0)
+		goto fail;
 
 	nonce_len = auth->curve->nonce_len;
 	if (random_get_bytes(auth->i_nonce, nonce_len)) {
@@ -2909,6 +3074,8 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		wrapped2_len, r_auth_len;
 	u8 r_auth2[DPP_MAX_HASH_LEN];
 	u8 role;
+
+	auth->waiting_auth_resp = 0;
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);

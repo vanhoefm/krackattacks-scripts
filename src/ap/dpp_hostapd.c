@@ -503,8 +503,9 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 
 	if (hapd->dpp_auth)
 		dpp_auth_deinit(hapd->dpp_auth);
+	/* TODO: hw_modes */
 	hapd->dpp_auth = dpp_auth_init(hapd->msg_ctx, peer_bi, own_bi,
-				       configurator, 0);
+				       configurator, 0, NULL, 0);
 	if (!hapd->dpp_auth)
 		goto fail;
 	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);
@@ -513,10 +514,6 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	/* TODO: Support iteration over all frequencies and filtering of
 	 * frequencies based on locally enabled channels that allow initiation
 	 * of transmission. */
-	if (peer_bi->num_freq > 0)
-		hapd->dpp_auth->curr_freq = peer_bi->freq[0];
-	else
-		hapd->dpp_auth->curr_freq = 2412;
 
 	if (is_zero_ether_addr(peer_bi->mac_addr)) {
 		dst = broadcast;

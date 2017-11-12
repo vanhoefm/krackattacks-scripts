@@ -35,6 +35,8 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       const u8 *src, const u8 *bssid,
 			       const u8 *data, size_t data_len,
 			       enum offchannel_send_action_result result);
+static void wpas_dpp_init_timeout(void *eloop_ctx, void *timeout_ctx);
+static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s);
 
 static const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -305,6 +307,7 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       enum offchannel_send_action_result result)
 {
 	const char *res_txt;
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
 
 	res_txt = result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
 		(result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
@@ -323,6 +326,7 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 	if (wpa_s->dpp_auth->remove_on_tx_status) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Terminate authentication exchange due to an earlier error");
+		eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
@@ -337,8 +341,13 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 	    result != OFFCHANNEL_SEND_ACTION_SUCCESS) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Unicast DPP Action frame was not ACKed");
-		/* TODO: In case of DPP Authentication Request frame, move to
-		 * the next channel immediately */
+		if (auth->waiting_auth_resp) {
+			/* In case of DPP Authentication Request frame, move to
+			 * the next channel immediately. */
+			offchannel_send_action_done(wpa_s);
+			wpas_dpp_auth_init_next(wpa_s);
+			return;
+		}
 	}
 
 	if (!wpa_s->dpp_auth_ok_on_ack && wpa_s->dpp_auth->neg_freq > 0 &&
@@ -357,9 +366,25 @@ static void wpas_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	unsigned int freq;
+	struct os_reltime now;
 
 	if (!wpa_s->dpp_auth)
 		return;
+
+	if (wpa_s->dpp_auth->waiting_auth_resp) {
+		unsigned int wait_time;
+
+		wait_time = wpa_s->dpp_resp_wait_time ?
+			wpa_s->dpp_resp_wait_time : 2;
+		os_get_reltime(&now);
+		if (os_reltime_expired(&now, &wpa_s->dpp_last_init,
+				       wait_time)) {
+			offchannel_send_action_done(wpa_s);
+			wpas_dpp_auth_init_next(wpa_s);
+			return;
+		}
+	}
+
 	freq = wpa_s->dpp_auth->curr_freq;
 	if (wpa_s->dpp_auth->neg_freq > 0)
 		freq = wpa_s->dpp_auth->neg_freq;
@@ -516,14 +541,90 @@ fail:
 }
 
 
+static void wpas_dpp_init_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	if (!wpa_s->dpp_auth)
+		return;
+	wpa_printf(MSG_DEBUG, "DPP: Retry initiation after timeout");
+	wpas_dpp_auth_init_next(wpa_s);
+}
+
+
+static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
+{
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
+	const u8 *dst;
+	unsigned int wait_time, freq, max_tries;
+
+	if (!auth)
+		return -1;
+	if (auth->freq_idx >= auth->num_freq) {
+		auth->num_freq_iters++;
+		if (wpa_s->dpp_init_max_tries)
+			max_tries = wpa_s->dpp_init_max_tries;
+		else
+			max_tries = 5;
+		if (auth->num_freq_iters >= max_tries) {
+			wpa_printf(MSG_INFO,
+				   "DPP: No response received from responder - stopping initiation attempt");
+			wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_AUTH_INIT_FAILED);
+			eloop_cancel_timeout(wpas_dpp_reply_wait_timeout,
+					     wpa_s, NULL);
+			offchannel_send_action_done(wpa_s);
+			dpp_auth_deinit(wpa_s->dpp_auth);
+			wpa_s->dpp_auth = NULL;
+			return -1;
+		}
+		auth->freq_idx = 0;
+		eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
+		if (wpa_s->dpp_init_retry_time)
+			wait_time = wpa_s->dpp_init_retry_time;
+		else
+			wait_time = 10000;
+		eloop_register_timeout(wait_time / 1000,
+				       (wait_time % 1000) * 1000,
+				       wpas_dpp_init_timeout, wpa_s,
+				       NULL);
+		return 0;
+	}
+	freq = auth->freq[auth->freq_idx++];
+	auth->curr_freq = freq;
+
+	if (is_zero_ether_addr(auth->peer_bi->mac_addr))
+		dst = broadcast;
+	else
+		dst = auth->peer_bi->mac_addr;
+	wpa_s->dpp_auth_ok_on_ack = 0;
+	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+	wait_time = wpa_s->max_remain_on_chan;
+	if (wait_time > 2000)
+		wait_time = 2000;
+	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
+			       wpas_dpp_reply_wait_timeout,
+			       wpa_s, NULL);
+	if (auth->neg_freq > 0 && freq != auth->neg_freq) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Initiate on %u MHz and move to neg_freq %u MHz for response",
+			   freq, auth->neg_freq);
+	}
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(dst), freq, DPP_PA_AUTHENTICATION_REQ);
+	os_get_reltime(&wpa_s->dpp_last_init);
+	return offchannel_send_action(wpa_s, freq, dst,
+				      wpa_s->own_addr, broadcast,
+				      wpabuf_head(auth->req_msg),
+				      wpabuf_len(auth->req_msg),
+				      wait_time, wpas_dpp_tx_status, 0);
+}
+
+
 int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 {
 	const char *pos;
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
-	const u8 *dst;
-	int res;
 	int configurator = 1;
-	unsigned int wait_time;
 	unsigned int neg_freq = 0;
 
 	wpa_s->dpp_gas_client = 0;
@@ -579,57 +680,26 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		neg_freq = atoi(pos + 10);
 
 	if (wpa_s->dpp_auth) {
+		eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
 	}
 	wpa_s->dpp_auth = dpp_auth_init(wpa_s, peer_bi, own_bi, configurator,
-					neg_freq);
+					neg_freq,
+					wpa_s->hw.modes, wpa_s->hw.num_modes);
 	if (!wpa_s->dpp_auth)
 		goto fail;
 	wpas_dpp_set_testing_options(wpa_s, wpa_s->dpp_auth);
 	wpas_dpp_set_configurator(wpa_s, wpa_s->dpp_auth, cmd);
 
-	/* TODO: Support iteration over all frequencies and filtering of
-	 * frequencies based on locally enabled channels that allow initiation
-	 * of transmission. */
-	if (peer_bi->num_freq > 0)
-		wpa_s->dpp_auth->curr_freq = peer_bi->freq[0];
-	else
-		wpa_s->dpp_auth->curr_freq = 2412;
 	wpa_s->dpp_auth->neg_freq = neg_freq;
 
-	if (is_zero_ether_addr(peer_bi->mac_addr)) {
-		dst = broadcast;
-	} else {
-		dst = peer_bi->mac_addr;
+	if (!is_zero_ether_addr(peer_bi->mac_addr))
 		os_memcpy(wpa_s->dpp_auth->peer_mac_addr, peer_bi->mac_addr,
 			  ETH_ALEN);
-	}
-	wpa_s->dpp_auth_ok_on_ack = 0;
-	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
-	wait_time = wpa_s->max_remain_on_chan;
-	if (wait_time > 2000)
-		wait_time = 2000;
-	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
-			       wpas_dpp_reply_wait_timeout,
-			       wpa_s, NULL);
-	if (neg_freq > 0 && wpa_s->dpp_auth->curr_freq != neg_freq) {
-		wpa_printf(MSG_DEBUG,
-			   "DPP: Initiate on curr_freq %u MHz and move to neg_freq %u MHz for response",
-			   wpa_s->dpp_auth->curr_freq,
-			   wpa_s->dpp_auth->neg_freq);
-	}
-	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
-		MAC2STR(dst), wpa_s->dpp_auth->curr_freq,
-		DPP_PA_AUTHENTICATION_REQ);
-	res = offchannel_send_action(wpa_s, wpa_s->dpp_auth->curr_freq,
-				     dst, wpa_s->own_addr, broadcast,
-				     wpabuf_head(wpa_s->dpp_auth->req_msg),
-				     wpabuf_len(wpa_s->dpp_auth->req_msg),
-				     wait_time, wpas_dpp_tx_status, 0);
 
-	return res;
+	return wpas_dpp_auth_init_next(wpa_s);
 fail:
 	return -1;
 }
@@ -1228,6 +1298,7 @@ static void wpas_dpp_rx_auth_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 		auth->curr_freq = freq;
 	}
 
+	eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 	msg = dpp_auth_resp_rx(auth, hdr, buf, len);
 	if (!msg) {
 		if (auth->auth_resp_status == DPP_STATUS_RESPONSE_PENDING) {
@@ -2162,6 +2233,7 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	if (!wpa_s->dpp_init_done)
 		return;
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 	offchannel_send_action_done(wpa_s);
 	wpas_dpp_listen_stop(wpa_s);
 	dpp_bootstrap_del(wpa_s, 0);

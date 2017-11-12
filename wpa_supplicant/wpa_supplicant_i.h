@@ -1199,6 +1199,10 @@ struct wpa_supplicant {
 	char *dpp_pkex_identifier;
 	char *dpp_pkex_auth_cmd;
 	char *dpp_configurator_params;
+	struct os_reltime dpp_last_init;
+	unsigned int dpp_init_max_tries;
+	unsigned int dpp_init_retry_time;
+	unsigned int dpp_resp_wait_time;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

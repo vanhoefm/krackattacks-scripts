@@ -167,8 +167,13 @@ struct dpp_authentication {
 	EVP_PKEY *peer_protocol_key;
 	struct wpabuf *req_msg;
 	struct wpabuf *resp_msg;
+	/* Intersection of possible frequencies for initiating DPP
+	 * Authentication exchange */
+	unsigned int freq[DPP_BOOTSTRAP_MAX_FREQ];
+	unsigned int num_freq, freq_idx;
 	unsigned int curr_freq;
 	unsigned int neg_freq;
+	unsigned int num_freq_iters;
 	size_t secret_len;
 	u8 Mx[DPP_MAX_SHARED_SECRET_LEN];
 	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
@@ -177,6 +182,7 @@ struct dpp_authentication {
 	u8 k2[DPP_MAX_HASH_LEN];
 	u8 ke[DPP_MAX_HASH_LEN];
 	int initiator;
+	int waiting_auth_resp;
 	int configurator;
 	int remove_on_tx_status;
 	int auth_success;
@@ -298,11 +304,14 @@ int dpp_parse_uri_info(struct dpp_bootstrap_info *bi, const char *info);
 struct dpp_bootstrap_info * dpp_parse_qr_code(const char *uri);
 char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 		  const u8 *privkey, size_t privkey_len);
+struct hostapd_hw_modes;
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
 					  int configurator,
-					  unsigned int neg_freq);
+					  unsigned int neg_freq,
+					  struct hostapd_hw_modes *own_modes,
+					  u16 num_modes);
 struct dpp_authentication *
 dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		struct dpp_bootstrap_info *peer_bi,

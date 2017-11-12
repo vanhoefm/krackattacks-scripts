@@ -1537,6 +1537,35 @@ wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 }
 
 
+static struct dpp_bootstrap_info *
+wpas_dpp_pkex_finish(struct wpa_supplicant *wpa_s, const u8 *peer,
+		     unsigned int freq)
+{
+	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
+	struct dpp_bootstrap_info *bi;
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return NULL;
+	bi->id = wpas_dpp_next_id(wpa_s);
+	bi->type = DPP_BOOTSTRAP_PKEX;
+	os_memcpy(bi->mac_addr, peer, ETH_ALEN);
+	bi->num_freq = 1;
+	bi->freq[0] = freq;
+	bi->curve = pkex->own_bi->curve;
+	bi->pubkey = pkex->peer_bootstrap_key;
+	pkex->peer_bootstrap_key = NULL;
+	dpp_pkex_free(pkex);
+	wpa_s->dpp_pkex = NULL;
+	if (dpp_bootstrap_key_hash(bi) < 0) {
+		dpp_bootstrap_info_free(bi);
+		return NULL;
+	}
+	dl_list_add(&wpa_s->dpp_bootstrap, &bi->list);
+	return bi;
+}
+
+
 static void
 wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 				   const u8 *hdr, const u8 *buf, size_t len,
@@ -1545,7 +1574,6 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 	struct wpabuf *msg;
 	unsigned int wait_time;
 	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
-	struct dpp_bootstrap_info *bi;
 
 	wpa_printf(MSG_DEBUG, "DPP: PKEX Commit-Reveal Request from " MACSTR,
 		   MAC2STR(src));
@@ -1582,24 +1610,7 @@ wpas_dpp_rx_pkex_commit_reveal_req(struct wpa_supplicant *wpa_s, const u8 *src,
 			       wait_time, wpas_dpp_tx_pkex_status, 0);
 	wpabuf_free(msg);
 
-	bi = os_zalloc(sizeof(*bi));
-	if (!bi)
-		return;
-	bi->id = wpas_dpp_next_id(wpa_s);
-	bi->type = DPP_BOOTSTRAP_PKEX;
-	os_memcpy(bi->mac_addr, src, ETH_ALEN);
-	bi->num_freq = 1;
-	bi->freq[0] = freq;
-	bi->curve = pkex->own_bi->curve;
-	bi->pubkey = pkex->peer_bootstrap_key;
-	pkex->peer_bootstrap_key = NULL;
-	dpp_pkex_free(pkex);
-	wpa_s->dpp_pkex = NULL;
-	if (dpp_bootstrap_key_hash(bi) < 0) {
-		dpp_bootstrap_info_free(bi);
-		return;
-	}
-	dl_list_add(&wpa_s->dpp_bootstrap, &bi->list);
+	wpas_dpp_pkex_finish(wpa_s, src, freq);
 }
 
 
@@ -1609,7 +1620,7 @@ wpas_dpp_rx_pkex_commit_reveal_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 				    unsigned int freq)
 {
 	int res;
-	struct dpp_bootstrap_info *bi, *own_bi;
+	struct dpp_bootstrap_info *bi;
 	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
 	char cmd[500];
 
@@ -1627,26 +1638,9 @@ wpas_dpp_rx_pkex_commit_reveal_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 		return;
 	}
 
-	own_bi = pkex->own_bi;
-
-	bi = os_zalloc(sizeof(*bi));
+	bi = wpas_dpp_pkex_finish(wpa_s, src, freq);
 	if (!bi)
 		return;
-	bi->id = wpas_dpp_next_id(wpa_s);
-	bi->type = DPP_BOOTSTRAP_PKEX;
-	os_memcpy(bi->mac_addr, src, ETH_ALEN);
-	bi->num_freq = 1;
-	bi->freq[0] = freq;
-	bi->curve = own_bi->curve;
-	bi->pubkey = pkex->peer_bootstrap_key;
-	pkex->peer_bootstrap_key = NULL;
-	dpp_pkex_free(pkex);
-	wpa_s->dpp_pkex = NULL;
-	if (dpp_bootstrap_key_hash(bi) < 0) {
-		dpp_bootstrap_info_free(bi);
-		return;
-	}
-	dl_list_add(&wpa_s->dpp_bootstrap, &bi->list);
 
 	os_snprintf(cmd, sizeof(cmd), " peer=%u %s",
 		    bi->id,

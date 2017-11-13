@@ -30,6 +30,7 @@ int wpas_dpp_configurator_remove(struct wpa_supplicant *wpa_s, const char *id);
 int wpas_dpp_configurator_sign(struct wpa_supplicant *wpa_s, const char *cmd);
 int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd);
 int wpas_dpp_pkex_remove(struct wpa_supplicant *wpa_s, const char *id);
+void wpas_dpp_stop(struct wpa_supplicant *wpa_s);
 int wpas_dpp_init(struct wpa_supplicant *wpa_s);
 void wpas_dpp_deinit(struct wpa_supplicant *wpa_s);
 int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,

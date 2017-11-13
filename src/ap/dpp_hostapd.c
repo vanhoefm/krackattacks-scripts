@@ -1600,6 +1600,13 @@ int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id)
 }
 
 
+void hostapd_dpp_stop(struct hostapd_data *hapd)
+{
+	dpp_auth_deinit(hapd->dpp_auth);
+	hapd->dpp_auth = NULL;
+}
+
+
 int hostapd_dpp_init(struct hostapd_data *hapd)
 {
 	dl_list_init(&hapd->dpp_bootstrap);

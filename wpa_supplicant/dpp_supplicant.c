@@ -2201,6 +2201,13 @@ int wpas_dpp_pkex_remove(struct wpa_supplicant *wpa_s, const char *id)
 }
 
 
+void wpas_dpp_stop(struct wpa_supplicant *wpa_s)
+{
+	dpp_auth_deinit(wpa_s->dpp_auth);
+	wpa_s->dpp_auth = NULL;
+}
+
+
 int wpas_dpp_init(struct wpa_supplicant *wpa_s)
 {
 	u8 adv_proto_id[7];

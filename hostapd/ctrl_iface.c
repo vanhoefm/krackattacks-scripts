@@ -3022,6 +3022,7 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		if (hostapd_dpp_listen(hapd, buf + 11) < 0)
 			reply_len = -1;
 	} else if (os_strcmp(buf, "DPP_STOP_LISTEN") == 0) {
+		hostapd_dpp_stop(hapd);
 		hostapd_dpp_listen_stop(hapd);
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_ADD", 20) == 0) {
 		res = hostapd_dpp_configurator_add(hapd, buf + 20);

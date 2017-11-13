@@ -30,6 +30,7 @@ int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_configurator_remove(struct hostapd_data *hapd, const char *id);
 int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id);
+void hostapd_dpp_stop(struct hostapd_data *hapd);
 int hostapd_dpp_init(struct hostapd_data *hapd);
 void hostapd_dpp_deinit(struct hostapd_data *hapd);
 

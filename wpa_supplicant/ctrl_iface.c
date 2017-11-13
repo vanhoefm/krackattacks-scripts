@@ -10498,6 +10498,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_dpp_listen(wpa_s, buf + 11) < 0)
 			reply_len = -1;
 	} else if (os_strcmp(buf, "DPP_STOP_LISTEN") == 0) {
+		wpas_dpp_stop(wpa_s);
 		wpas_dpp_listen_stop(wpa_s);
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_ADD", 20) == 0) {
 		int res;

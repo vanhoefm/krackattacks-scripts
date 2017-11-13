@@ -986,6 +986,13 @@ def dpp_init_conf_mutual(dev, id1, conf_id, own_id=None):
 
 def test_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev):
     """sigma_dut DPP/QR (mutual) responder as Enrollee"""
+    run_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev)
+
+def test_sigma_dut_dpp_qr_mutual_resp_enrollee_pending(dev, apdev):
+    """sigma_dut DPP/QR (mutual) responder as Enrollee (response pending)"""
+    run_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev, ',DPPDelayQRResponse,1')
+
+def run_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev, extra=None):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
 
@@ -1024,12 +1031,6 @@ def test_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev):
         id0 = int(res)
         uri0 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
 
-        dev[1].set("dpp_configurator_params",
-                   " conf=sta-dpp ssid=%s configurator=%d" % ("DPPNET01".encode("hex"), conf_id));
-        cmd = "DPP_LISTEN 2437 role=configurator qr=mutual"
-        if "OK" not in dev[1].request(cmd):
-            raise Exception("Failed to start listen operation")
-
         res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR")
         if "status,COMPLETE" not in res:
             raise Exception("dev_exec_action did not succeed: " + res)
@@ -1050,7 +1051,10 @@ def test_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev):
                              args=(dev[1], id1, conf_id, id0))
         t.start()
 
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,20,DPPWaitForConnect,Yes", timeout=25)
+        cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,20,DPPWaitForConnect,Yes"
+        if extra:
+            cmd += extra
+        res = sigma_dut_cmd(cmd, timeout=25)
         t.join()
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK" not in res:
             raise Exception("Unexpected result: " + res)

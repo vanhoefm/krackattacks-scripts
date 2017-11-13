@@ -2651,6 +2651,15 @@ def test_dpp_proto_auth_conf_i_auth_mismatch(dev, apdev):
     if "Mismatching Initiator Authenticating Tag" not in ev:
         raise Excception("Unexpected failure: " + ev)
 
+def test_dpp_proto_auth_conf_replaced_by_resp(dev, apdev):
+    """DPP protocol testing - Auth Conf replaced by Resp"""
+    run_dpp_proto_init(dev, 1, 65, mutual=True)
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
+    if ev is None:
+        raise Exception("DPP failure not seen")
+    if "Unexpected Authentication Response" not in ev:
+        raise Excception("Unexpected failure: " + ev)
+
 def run_dpp_proto_conf_req_missing(dev, test, reason):
     run_dpp_proto_init(dev, 0, test)
     ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)

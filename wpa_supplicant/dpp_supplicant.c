@@ -300,6 +300,63 @@ int wpas_dpp_bootstrap_info(struct wpa_supplicant *wpa_s, int id,
 }
 
 
+static void wpas_dpp_auth_resp_retry_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
+
+	if (!auth || !auth->resp_msg)
+		return;
+
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Retry Authentication Response after timeout");
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
+		" freq=%u type=%d",
+		MAC2STR(auth->peer_mac_addr), auth->curr_freq,
+		DPP_PA_AUTHENTICATION_RESP);
+	offchannel_send_action(wpa_s, auth->curr_freq, auth->peer_mac_addr,
+			       wpa_s->own_addr, broadcast,
+			       wpabuf_head(auth->resp_msg),
+			       wpabuf_len(auth->resp_msg),
+			       500, wpas_dpp_tx_status, 0);
+}
+
+
+static void wpas_dpp_auth_resp_retry(struct wpa_supplicant *wpa_s)
+{
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
+	unsigned int wait_time, max_tries;
+
+	if (!auth || !auth->resp_msg)
+		return;
+
+	if (wpa_s->dpp_resp_max_tries)
+		max_tries = wpa_s->dpp_resp_max_tries;
+	else
+		max_tries = 5;
+	auth->auth_resp_tries++;
+	if (auth->auth_resp_tries >= max_tries) {
+		wpa_printf(MSG_INFO, "DPP: No confirm received from initiator - stopping exchange");
+		offchannel_send_action_done(wpa_s);
+		dpp_auth_deinit(wpa_s->dpp_auth);
+		wpa_s->dpp_auth = NULL;
+		return;
+	}
+
+	if (wpa_s->dpp_resp_retry_time)
+		wait_time = wpa_s->dpp_resp_retry_time;
+	else
+		wait_time = 10000;
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Schedule retransmission of Authentication Response frame in %u ms",
+		wait_time);
+	eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s, NULL);
+	eloop_register_timeout(wait_time / 1000,
+			       (wait_time % 1000) * 1000,
+			       wpas_dpp_auth_resp_retry_timeout, wpa_s, NULL);
+}
+
+
 static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       unsigned int freq, const u8 *dst,
 			       const u8 *src, const u8 *bssid,
@@ -328,6 +385,8 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			   "DPP: Terminate authentication exchange due to an earlier error");
 		eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+		eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s,
+				     NULL);
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
 		wpa_s->dpp_auth = NULL;
@@ -346,6 +405,10 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			 * the next channel immediately. */
 			offchannel_send_action_done(wpa_s);
 			wpas_dpp_auth_init_next(wpa_s);
+			return;
+		}
+		if (auth->waiting_auth_conf) {
+			wpas_dpp_auth_resp_retry(wpa_s);
 			return;
 		}
 	}
@@ -685,6 +748,8 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	if (wpa_s->dpp_auth) {
 		eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 		eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+		eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s,
+				     NULL);
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
 	}
@@ -1856,6 +1921,7 @@ wpas_dpp_gas_status_handler(void *ctx, struct wpabuf *resp, int ok)
 	wpa_printf(MSG_DEBUG, "DPP: Configuration exchange completed (ok=%d)",
 		   ok);
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s, NULL);
 	offchannel_send_action_done(wpa_s);
 	wpas_dpp_listen_stop(wpa_s);
 	if (ok)
@@ -2244,6 +2310,7 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 		return;
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s, NULL);
 	offchannel_send_action_done(wpa_s);
 	wpas_dpp_listen_stop(wpa_s);
 	dpp_bootstrap_del(wpa_s, 0);

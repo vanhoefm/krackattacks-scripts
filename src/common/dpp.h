@@ -183,6 +183,8 @@ struct dpp_authentication {
 	u8 ke[DPP_MAX_HASH_LEN];
 	int initiator;
 	int waiting_auth_resp;
+	int waiting_auth_conf;
+	unsigned int auth_resp_tries;
 	u8 allowed_roles;
 	int configurator;
 	int remove_on_tx_status;

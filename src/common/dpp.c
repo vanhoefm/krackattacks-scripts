@@ -1541,6 +1541,9 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	size_t len[2], siv_len, attr_len;
 	u8 *attr_start, *attr_end, *pos;
 
+	auth->waiting_auth_conf = 1;
+	auth->auth_resp_tries = 0;
+
 	/* Build DPP Authentication Response frame attributes */
 	attr_len = 4 + 1 + 2 * (4 + SHA256_MAC_LEN) +
 		4 + (pr ? wpabuf_len(pr) : 0) + 4 + sizeof(wrapped_data);
@@ -1551,7 +1554,6 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	msg = dpp_alloc_msg(DPP_PA_AUTHENTICATION_RESP, attr_len);
 	if (!msg)
 		return NULL;
-	wpabuf_free(auth->resp_msg);
 
 	attr_start = wpabuf_put(msg, 0);
 
@@ -2497,6 +2499,7 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 				  auth->k2);
 	if (!msg)
 		goto fail;
+	wpabuf_free(auth->resp_msg);
 	auth->resp_msg = msg;
 	ret = 0;
 fail:
@@ -2542,6 +2545,7 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 				  NULL, i_nonce, NULL, 0, auth->k1);
 	if (!msg)
 		return -1;
+	wpabuf_free(auth->resp_msg);
 	auth->resp_msg = msg;
 	return 0;
 }
@@ -3453,6 +3457,8 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	u8 i_auth2[DPP_MAX_HASH_LEN];
+
+	auth->waiting_auth_conf = 0;
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);

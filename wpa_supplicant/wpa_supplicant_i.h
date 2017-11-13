@@ -1203,6 +1203,8 @@ struct wpa_supplicant {
 	unsigned int dpp_init_max_tries;
 	unsigned int dpp_init_retry_time;
 	unsigned int dpp_resp_wait_time;
+	unsigned int dpp_resp_max_tries;
+	unsigned int dpp_resp_retry_time;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

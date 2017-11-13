@@ -292,6 +292,7 @@ enum dpp_test_behavior {
 	DPP_TEST_NO_TRANSACTION_ID_PEER_DISC_RESP = 62,
 	DPP_TEST_NO_STATUS_PEER_DISC_RESP = 63,
 	DPP_TEST_NO_CONNECTOR_PEER_DISC_RESP = 64,
+	DPP_TEST_AUTH_RESP_IN_PLACE_OF_CONF = 65,
 };
 
 extern enum dpp_test_behavior dpp_test;

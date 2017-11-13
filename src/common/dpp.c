@@ -2388,6 +2388,8 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	enum dpp_status_error status = DPP_STATUS_OK;
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
+	if (!auth->own_bi)
+		return -1;
 
 	nonce_len = auth->curve->nonce_len;
 	if (random_get_bytes(auth->r_nonce, nonce_len)) {
@@ -2514,6 +2516,8 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 	struct wpabuf *msg;
 	const u8 *r_pubkey_hash, *i_pubkey_hash, *i_nonce;
 
+	if (!auth->own_bi)
+		return -1;
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 
 	r_pubkey_hash = auth->own_bi->pubkey_hash;
@@ -3368,6 +3372,16 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	bin_clear_free(unwrapped, unwrapped_len);
 	bin_clear_free(unwrapped2, unwrapped2_len);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_AUTH_RESP_IN_PLACE_OF_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - Authentication Response in place of Confirm");
+		if (dpp_auth_build_resp_ok(auth) < 0)
+			return NULL;
+		return wpabuf_dup(auth->resp_msg);
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	return dpp_auth_build_conf(auth, DPP_STATUS_OK);
 

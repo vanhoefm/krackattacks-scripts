@@ -807,12 +807,21 @@ def test_sigma_dut_dpp_qr_resp_4(dev, apdev):
     """sigma_dut DPP/QR responder (conf index 4)"""
     run_sigma_dut_dpp_qr_resp(dev, apdev, 4)
 
-def run_sigma_dut_dpp_qr_resp(dev, apdev, conf_idx):
+def test_sigma_dut_dpp_qr_resp_chan_list(dev, apdev):
+    """sigma_dut DPP/QR responder (channel list override)"""
+    run_sigma_dut_dpp_qr_resp(dev, apdev, 1, chan_list='81/2 81/6 81/1',
+                              listen_chan=2)
+
+def run_sigma_dut_dpp_qr_resp(dev, apdev, conf_idx, chan_list=None,
+                              listen_chan=None):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
     sigma = start_sigma_dut(dev[0].ifname)
     try:
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR")
+        cmd = "dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR"
+        if chan_list:
+            cmd += ",DPPChannelList," + chan_list
+        res = sigma_dut_cmd(cmd)
         if "status,COMPLETE" not in res:
             raise Exception("dev_exec_action did not succeed: " + res)
         hex = res.split(',')[3]
@@ -826,7 +835,10 @@ def run_sigma_dut_dpp_qr_resp(dev, apdev, conf_idx):
 
         t = threading.Thread(target=dpp_init_enrollee, args=(dev[1], id1))
         t.start()
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPConfIndex,%d,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfigEnrolleeRole,STA,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6" % conf_idx, timeout=10)
+        cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPConfIndex,%d,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfigEnrolleeRole,STA,DPPSigningKeyECC,P-256,DPPConfigEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6" % conf_idx
+        if listen_chan:
+            cmd += ",DPPListenChannel," + str(listen_chan)
+        res = sigma_dut_cmd(cmd, timeout=10)
         t.join()
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
             raise Exception("Unexpected result: " + res)

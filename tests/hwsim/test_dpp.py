@@ -308,6 +308,74 @@ def test_dpp_qr_code_auth_mutual2(dev, apdev):
         raise Exception("DPP authentication did not succeed (Initiator)")
     dev[0].request("DPP_STOP_LISTEN")
 
+def test_dpp_auth_resp_retries(dev, apdev):
+    """DPP Authentication Response retries"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    dev[0].set("dpp_resp_max_tries", "3")
+    dev[0].set("dpp_resp_retry_time", "100")
+
+    logger.info("dev0 displays QR Code")
+    addr = dev[0].own_addr().replace(':', '')
+    res = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 displays QR Code")
+    addr = dev[1].own_addr().replace(':', '')
+    res = dev[1].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1b = int(res)
+    uri1b = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1b)
+
+    logger.info("dev1 initiates DPP Authentication")
+    if "OK" not in dev[0].request("DPP_LISTEN 2412 qr=mutual"):
+        raise Exception("Failed to start listen operation")
+    if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d own=%d" % (id1, id1b)):
+        raise Exception("Failed to initiate DPP Authentication")
+
+    ev = dev[1].wait_event(["DPP-RESPONSE-PENDING"], timeout=5)
+    if ev is None:
+        raise Exception("Pending response not reported")
+    ev = dev[0].wait_event(["DPP-SCAN-PEER-QR-CODE"], timeout=5)
+    if ev is None:
+        raise Exception("QR Code scan for mutual authentication not requested")
+
+    # Stop Initiator from listening to frames to force retransmission of the
+    # DPP Authentication Response frame with Status=0
+    dev[1].request("DPP_STOP_LISTEN")
+
+    dev[1].dump_monitor()
+    dev[0].dump_monitor()
+
+    logger.info("dev0 scans QR Code")
+    res = dev[0].request("DPP_QR_CODE " + uri1b)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id0b = int(res)
+
+    ev = dev[0].wait_event(["DPP-TX"], timeout=5)
+    if ev is None or "type=1" not in ev:
+        raise Exception("DPP Authentication Response not sent")
+    ev = dev[0].wait_event(["DPP-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("TX status for DPP Authentication Response not reported")
+    if "result=no-ACK" not in ev:
+        raise Exception("Unexpected TX status for Authentication Response: " + ev)
+
+    ev = dev[0].wait_event(["DPP-TX"], timeout=15)
+    if ev is None or "type=1" not in ev:
+        raise Exception("DPP Authentication Response retransmission not sent")
+
 def test_dpp_qr_code_auth_mutual_not_used(dev, apdev):
     """DPP QR Code and authentication exchange (mutual not used)"""
     check_dpp_capab(dev[0])

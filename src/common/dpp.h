@@ -183,6 +183,7 @@ struct dpp_authentication {
 	u8 ke[DPP_MAX_HASH_LEN];
 	int initiator;
 	int waiting_auth_resp;
+	u8 allowed_roles;
 	int configurator;
 	int remove_on_tx_status;
 	int auth_success;
@@ -308,7 +309,7 @@ struct hostapd_hw_modes;
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
-					  int configurator,
+					  u8 dpp_allowed_roles,
 					  unsigned int neg_freq,
 					  struct hostapd_hw_modes *own_modes,
 					  u16 num_modes);

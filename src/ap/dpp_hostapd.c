@@ -458,7 +458,7 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
 	const u8 *dst;
 	int res;
-	int configurator = 1;
+	u8 allowed_roles = DPP_CAPAB_CONFIGURATOR;
 	struct dpp_configuration *conf_sta = NULL, *conf_ap = NULL;
 
 	pos = os_strstr(cmd, " peer=");
@@ -494,9 +494,12 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 	if (pos) {
 		pos += 6;
 		if (os_strncmp(pos, "configurator", 12) == 0)
-			configurator = 1;
+			allowed_roles = DPP_CAPAB_CONFIGURATOR;
 		else if (os_strncmp(pos, "enrollee", 8) == 0)
-			configurator = 0;
+			allowed_roles = DPP_CAPAB_ENROLLEE;
+		else if (os_strncmp(pos, "either", 6) == 0)
+			allowed_roles = DPP_CAPAB_CONFIGURATOR |
+				DPP_CAPAB_ENROLLEE;
 		else
 			goto fail;
 	}
@@ -505,7 +508,7 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 		dpp_auth_deinit(hapd->dpp_auth);
 	/* TODO: hw_modes */
 	hapd->dpp_auth = dpp_auth_init(hapd->msg_ctx, peer_bi, own_bi,
-				       configurator, 0, NULL, 0);
+				       allowed_roles, 0, NULL, 0);
 	if (!hapd->dpp_auth)
 		goto fail;
 	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);

@@ -1468,8 +1468,7 @@ skip_i_nonce:
 	pos += 2;
 	WPA_PUT_LE16(pos, 1);
 	pos += 2;
-	auth->i_capab = auth->configurator ? DPP_CAPAB_CONFIGURATOR :
-		DPP_CAPAB_ENROLLEE;
+	auth->i_capab = auth->allowed_roles;
 	*pos++ = auth->i_capab;
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_ZERO_I_CAPAB) {
@@ -1646,8 +1645,12 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	} else if (dpp_test == DPP_TEST_INCOMPATIBLE_R_CAPAB_AUTH_RESP) {
 		wpa_printf(MSG_INFO,
 			   "DPP: TESTING - incompatible R-capabilities");
-		pos[-1] = auth->configurator ? DPP_CAPAB_ENROLLEE :
-			DPP_CAPAB_CONFIGURATOR;
+		if ((auth->i_capab & DPP_CAPAB_ROLE_MASK) ==
+		    (DPP_CAPAB_CONFIGURATOR | DPP_CAPAB_ENROLLEE))
+			pos[-1] = 0;
+		else
+			pos[-1] = auth->configurator ? DPP_CAPAB_ENROLLEE :
+				DPP_CAPAB_CONFIGURATOR;
 	}
 skip_r_capab:
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -1863,7 +1866,7 @@ static int dpp_prepare_channel_list(struct dpp_authentication *auth,
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
-					  int configurator,
+					  u8 dpp_allowed_roles,
 					  unsigned int neg_freq,
 					  struct hostapd_hw_modes *own_modes,
 					  u16 num_modes)
@@ -1882,7 +1885,8 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	auth->msg_ctx = msg_ctx;
 	auth->initiator = 1;
 	auth->waiting_auth_resp = 1;
-	auth->configurator = configurator;
+	auth->allowed_roles = dpp_allowed_roles;
+	auth->configurator = !!(dpp_allowed_roles & DPP_CAPAB_CONFIGURATOR);
 	auth->peer_bi = peer_bi;
 	auth->own_bi = own_bi;
 	auth->curve = peer_bi->curve;
@@ -2720,6 +2724,19 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		wpa_printf(MSG_DEBUG, "DPP: Acting as Enrollee");
 		auth->configurator = 0;
 		break;
+	case DPP_CAPAB_CONFIGURATOR | DPP_CAPAB_ENROLLEE:
+		if (dpp_allowed_roles & DPP_CAPAB_ENROLLEE) {
+			wpa_printf(MSG_DEBUG, "DPP: Acting as Enrollee");
+			auth->configurator = 0;
+		} else if (dpp_allowed_roles & DPP_CAPAB_CONFIGURATOR) {
+			wpa_printf(MSG_DEBUG, "DPP: Acting as Configurator");
+			auth->configurator = 1;
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Local policy does not allow Configurator/Enrollee role");
+			goto not_compatible;
+		}
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "DPP: Unexpected role in I-capabilities");
 		wpa_msg(auth->msg_ctx, MSG_INFO,
@@ -3263,8 +3280,16 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	auth->r_capab = r_capab[0];
 	wpa_printf(MSG_DEBUG, "DPP: R-capabilities: 0x%02x", auth->r_capab);
 	role = auth->r_capab & DPP_CAPAB_ROLE_MASK;
-	if ((auth->configurator && role != DPP_CAPAB_ENROLLEE) ||
-	    (!auth->configurator && role != DPP_CAPAB_CONFIGURATOR)) {
+	if ((auth->allowed_roles ==
+	     (DPP_CAPAB_CONFIGURATOR | DPP_CAPAB_ENROLLEE)) &&
+	    (role == DPP_CAPAB_CONFIGURATOR || role == DPP_CAPAB_ENROLLEE)) {
+		/* Peer selected its role, so move from "either role" to the
+		 * role that is compatible with peer's selection. */
+		auth->configurator = role == DPP_CAPAB_ENROLLEE;
+		wpa_printf(MSG_DEBUG, "DPP: Acting as %s",
+			   auth->configurator ? "Configurator" : "Enrollee");
+	} else if ((auth->configurator && role != DPP_CAPAB_ENROLLEE) ||
+		   (!auth->configurator && role != DPP_CAPAB_CONFIGURATOR)) {
 		wpa_printf(MSG_DEBUG, "DPP: Incompatible role selection");
 		wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_FAIL
 			"Unexpected role in R-capabilities 0x%02x",

@@ -624,7 +624,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 {
 	const char *pos;
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
-	int configurator = 1;
+	u8 allowed_roles = DPP_CAPAB_CONFIGURATOR;
 	unsigned int neg_freq = 0;
 
 	wpa_s->dpp_gas_client = 0;
@@ -662,9 +662,12 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	if (pos) {
 		pos += 6;
 		if (os_strncmp(pos, "configurator", 12) == 0)
-			configurator = 1;
+			allowed_roles = DPP_CAPAB_CONFIGURATOR;
 		else if (os_strncmp(pos, "enrollee", 8) == 0)
-			configurator = 0;
+			allowed_roles = DPP_CAPAB_ENROLLEE;
+		else if (os_strncmp(pos, "either", 6) == 0)
+			allowed_roles = DPP_CAPAB_CONFIGURATOR |
+				DPP_CAPAB_ENROLLEE;
 		else
 			goto fail;
 	}
@@ -685,7 +688,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		offchannel_send_action_done(wpa_s);
 		dpp_auth_deinit(wpa_s->dpp_auth);
 	}
-	wpa_s->dpp_auth = dpp_auth_init(wpa_s, peer_bi, own_bi, configurator,
+	wpa_s->dpp_auth = dpp_auth_init(wpa_s, peer_bi, own_bi, allowed_roles,
 					neg_freq,
 					wpa_s->hw.modes, wpa_s->hw.num_modes);
 	if (!wpa_s->dpp_auth)

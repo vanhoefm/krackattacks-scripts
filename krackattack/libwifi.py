@@ -4,6 +4,7 @@
 # See README for more details.
 from scapy.all import *
 from Cryptodome.Cipher import AES
+from datetime import datetime
 
 #### Basic output and logging functionality ####
 

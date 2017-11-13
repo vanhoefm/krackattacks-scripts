@@ -11,7 +11,6 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select, os.path
-from datetime import datetime
 from wpaspy import Ctrl
 
 # FIXME:

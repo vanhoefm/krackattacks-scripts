@@ -514,6 +514,62 @@ def test_dpp_qr_code_auth_initiator_enrollee(dev, apdev):
 
     dev[0].request("DPP_STOP_LISTEN")
 
+def test_dpp_qr_code_auth_initiator_either_1(dev, apdev):
+    """DPP QR Code and authentication exchange (Initiator in either role)"""
+    run_dpp_qr_code_auth_initiator_either(dev, apdev, None, dev[1], dev[0])
+
+def test_dpp_qr_code_auth_initiator_either_2(dev, apdev):
+    """DPP QR Code and authentication exchange (Initiator in either role)"""
+    run_dpp_qr_code_auth_initiator_either(dev, apdev, "enrollee",
+                                          dev[1], dev[0])
+
+def test_dpp_qr_code_auth_initiator_either_3(dev, apdev):
+    """DPP QR Code and authentication exchange (Initiator in either role)"""
+    run_dpp_qr_code_auth_initiator_either(dev, apdev, "configurator",
+                                          dev[0], dev[1])
+
+def run_dpp_qr_code_auth_initiator_either(dev, apdev, resp_role,
+                                          conf_dev, enrollee_dev):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    logger.info("dev0 displays QR Code")
+    addr = dev[0].own_addr().replace(':', '')
+    res = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 initiates DPP Authentication")
+    cmd = "DPP_LISTEN 2412"
+    if resp_role:
+        cmd += " role=" + resp_role
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+    if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d role=either" % id1):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+
+    ev = conf_dev.wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration did not succeed (Configurator)")
+    ev = enrollee_dev.wait_event(["DPP-CONF-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration did not succeed (Enrollee)")
+
+    dev[0].request("DPP_STOP_LISTEN")
+
 def test_dpp_qr_code_auth_incompatible_roles(dev, apdev):
     """DPP QR Code and authentication exchange (incompatible roles)"""
     check_dpp_capab(dev[0])

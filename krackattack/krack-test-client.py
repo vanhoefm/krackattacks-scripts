@@ -329,7 +329,19 @@ class ClientState():
 class KRAckAttackClient():
 	TPTK_NONE, TPTK_REPLAY, TPTK_RAND = range(3)
 
-	def __init__(self, interface):
+	def __init__(self):
+		# Parse hostapd.conf
+		self.script_path = os.path.dirname(os.path.realpath(__file__))
+		try:
+			interface = hostapd_read_config(os.path.join(self.script_path, "hostapd.conf"))
+		except Exception as ex:
+			log(ERROR, "Failed to parse the hostapd.conf config file")
+			raise
+		if not interface:
+			log(ERROR, 'Failed to determine wireless interface. Specify one in hostapd.conf at the line "interface=NAME".')
+			quit(1)
+
+		# Set other variables
 		self.nic_iface = interface
 		self.nic_mon = interface + "mon"
 		self.test_grouphs = False
@@ -463,7 +475,10 @@ class KRAckAttackClient():
 		# Open the patched hostapd instance that carries out tests and let it start
 		log(STATUS, "Starting hostapd ...")
 		try:
-			self.hostapd = subprocess.Popen(["../hostapd/hostapd", "hostapd.conf"] + sys.argv[1:])
+			self.hostapd = subprocess.Popen([
+				os.path.join(self.script_path, "../hostapd/hostapd"),
+				os.path.join(self.script_path, "hostapd.conf")]
+				+ sys.argv[1:])
 		except:
 			if not os.path.exists("../hostapd/hostapd"):
 				log(ERROR, "hostapd executable not found. Did you compile hostapd? Use --help param for more info.")
@@ -598,15 +613,6 @@ if __name__ == "__main__":
 	elif test_tptk_rand:
 		test_tptk = KRAckAttackClient.TPTK_RAND
 
-	try:
-		interface = hostapd_read_config("hostapd.conf")
-	except Exception as ex:
-		log(ERROR, "Failed to parse the hostapd.conf config file")
-		raise
-	if not interface:
-		log(ERROR, 'Failed to determine wireless interface. Specify one in hostapd.conf at the line "interface=NAME".')
-		quit(1)
-
-	attack = KRAckAttackClient(interface)
+	attack = KRAckAttackClient()
 	atexit.register(cleanup)
 	attack.run(test_grouphs=test_grouphs, test_tptk=test_tptk)

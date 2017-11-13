@@ -3096,6 +3096,11 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	u8 r_auth2[DPP_MAX_HASH_LEN];
 	u8 role;
 
+	if (!auth->initiator) {
+		dpp_auth_fail(auth, "Unexpected Authentication Response");
+		return NULL;
+	}
+
 	auth->waiting_auth_resp = 0;
 
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
@@ -3457,6 +3462,11 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	u8 i_auth2[DPP_MAX_HASH_LEN];
+
+	if (auth->initiator) {
+		dpp_auth_fail(auth, "Unexpected Authentication Confirm");
+		return NULL;
+	}
 
 	auth->waiting_auth_conf = 0;
 
@@ -6430,7 +6440,7 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 	u8 u[DPP_MAX_HASH_LEN];
 	int res;
 
-	if (pkex->failed || pkex->t >= PKEX_COUNTER_T_LIMIT)
+	if (pkex->failed || pkex->t >= PKEX_COUNTER_T_LIMIT || !pkex->initiator)
 		return NULL;
 
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
@@ -6740,7 +6750,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
 
 	if (!pkex->exchange_done || pkex->failed ||
-	    pkex->t >= PKEX_COUNTER_T_LIMIT)
+	    pkex->t >= PKEX_COUNTER_T_LIMIT || pkex->initiator)
 		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,
@@ -6917,7 +6927,7 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	struct wpabuf *B_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
 
 	if (!pkex->exchange_done || pkex->failed ||
-	    pkex->t >= PKEX_COUNTER_T_LIMIT)
+	    pkex->t >= PKEX_COUNTER_T_LIMIT || !pkex->initiator)
 		goto fail;
 
 	wrapped_data = dpp_get_attr(buf, buflen, DPP_ATTR_WRAPPED_DATA,

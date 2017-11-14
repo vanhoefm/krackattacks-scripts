@@ -354,6 +354,12 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_STATUS: Get the current
  *	status of spectral scan. The status values are specified
  *	by enum qca_wlan_vendor_attr_spectral_scan_status.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING: Sub-command to flush
+ *	peer pending packets. Specify the peer MAC address in
+ *	QCA_WLAN_VENDOR_ATTR_PEER_ADDR and the access category of the packets
+ *	in QCA_WLAN_VENDOR_ATTR_AC. The attributes are listed
+ *	in enum qca_wlan_vendor_attr_flush_pending.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -490,6 +496,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_DIAG_STATS = 159,
 	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_CAP_INFO = 160,
 	QCA_NL80211_VENDOR_SUBCMD_SPECTRAL_SCAN_GET_STATUS = 161,
+	/* Flush peer pending data */
+	QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING = 162,
 };
 
 
@@ -4107,6 +4115,27 @@ enum qca_wlan_vendor_attr_hang {
 	QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_HANG_MAX =
 		QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_flush_pending - Attributes for
+ * flushing pending traffic in firmware.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_PEER_ADDR: Configure peer MAC address.
+ * @QCA_WLAN_VENDOR_ATTR_AC: Configure access category of the pending
+ * packets. It is u8 value with bit 0~3 represent AC_BE, AC_BK,
+ * AC_VI, AC_VO respectively. Set the corresponding bit to 1 to
+ * flush packets with access category.
+ */
+enum qca_wlan_vendor_attr_flush_pending {
+	QCA_WLAN_VENDOR_ATTR_FLUSH_PENDING_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_PEER_ADDR = 1,
+	QCA_WLAN_VENDOR_ATTR_AC = 2,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_FLUSH_PENDING_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_FLUSH_PENDING_MAX =
+	QCA_WLAN_VENDOR_ATTR_FLUSH_PENDING_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

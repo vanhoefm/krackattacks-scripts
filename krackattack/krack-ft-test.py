@@ -10,7 +10,6 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select
-from datetime import datetime
 
 IEEE_TLV_TYPE_RSN = 48
 IEEE_TLV_TYPE_FT  = 55
@@ -120,23 +119,6 @@ the Fast BSS Transition (FT) handshake, take the following steps:
       [16:00:51] Replaying Reassociation Request
       [16:00:52] AP transmitted data using IV=4 (seq=3)
 """
-
-#### Basic output and logging functionality ####
-
-ALL, DEBUG, INFO, STATUS, WARNING, ERROR = range(6)
-COLORCODES = { "gray"  : "\033[0;37m",
-               "green" : "\033[0;32m",
-               "orange": "\033[0;33m",
-               "red"   : "\033[0;31m" }
-
-global_log_level = INFO
-def log(level, msg, color=None, showtime=True):
-	if level < global_log_level: return
-	if level == DEBUG   and color is None: color="gray"
-	if level == WARNING and color is None: color="orange"
-	if level == ERROR   and color is None: color="red"
-	print (datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m"
-
 
 #### Man-in-the-middle Code ####
 

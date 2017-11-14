@@ -1352,6 +1352,40 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 	}
 }
 
+
+static void send_action_cb_event(struct atheros_driver_data *drv,
+				 char *data, size_t data_len)
+{
+	union wpa_event_data event;
+	struct ieee80211_send_action_cb *sa;
+	const struct ieee80211_hdr *hdr;
+	u16 fc;
+
+	if (data_len < sizeof(*sa) + 24) {
+		wpa_printf(MSG_DEBUG,
+			   "athr: Too short event message (data_len=%d sizeof(*sa)=%d)",
+			   (int) data_len, (int) sizeof(*sa));
+		wpa_hexdump(MSG_DEBUG, "athr: Short event message",
+			    data, data_len);
+		return;
+	}
+
+	sa = (struct ieee80211_send_action_cb *) data;
+
+	hdr = (const struct ieee80211_hdr *) (sa + 1);
+	fc = le_to_host16(hdr->frame_control);
+
+	os_memset(&event, 0, sizeof(event));
+	event.tx_status.type = WLAN_FC_GET_TYPE(fc);
+	event.tx_status.stype = WLAN_FC_GET_STYPE(fc);
+	event.tx_status.dst = sa->dst_addr;
+	event.tx_status.data = (const u8 *) hdr;
+	event.tx_status.data_len = data_len - sizeof(*sa);
+	event.tx_status.ack = sa->ack;
+	wpa_supplicant_event(drv->hapd, EVENT_TX_STATUS, &event);
+}
+
+
 /*
 * Handle size of data problem. WEXT only allows data of 256 bytes for custom
 * events, and p2p data can be much bigger. So the athr driver sends a small
@@ -1416,6 +1450,11 @@ static void fetch_pending_big_events(struct atheros_driver_data *drv)
 						     &event);
 				continue;
 			}
+		} else if (frame_type == IEEE80211_EV_P2P_SEND_ACTION_CB) {
+			wpa_printf(MSG_DEBUG,
+				   "%s: ACTION_CB frame_type=%u len=%zu",
+				   __func__, frame_type, data_len);
+			send_action_cb_event(drv, (void *) mgmt, data_len);
 		} else {
 			wpa_printf(MSG_DEBUG, "athr: %s unknown type %d",
 				   __func__, frame_type);
@@ -1429,6 +1468,10 @@ atheros_wireless_event_atheros_custom(struct atheros_driver_data *drv,
 				      int opcode, char *buf, int len)
 {
 	switch (opcode) {
+	case IEEE80211_EV_P2P_SEND_ACTION_CB:
+		wpa_printf(MSG_DEBUG, "WEXT: EV_P2P_SEND_ACTION_CB");
+		fetch_pending_big_events(drv);
+		break;
 	case IEEE80211_EV_RX_MGMT:
 		wpa_printf(MSG_DEBUG, "WEXT: EV_RX_MGMT");
 		fetch_pending_big_events(drv);

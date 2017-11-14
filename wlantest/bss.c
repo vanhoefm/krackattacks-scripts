@@ -223,6 +223,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 	if (!update)
 		return;
 
+	bss->beacon_seen = 1;
 	bss->prev_capab_info = bss->capab_info;
 	bss->proto = 0;
 	bss->pairwise_cipher = 0;

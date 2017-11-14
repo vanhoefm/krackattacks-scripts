@@ -129,6 +129,7 @@ struct wlantest_bss {
 	u16 prev_capab_info;
 	u8 ssid[32];
 	size_t ssid_len;
+	int beacon_seen;
 	int proberesp_seen;
 	int parse_error_reported;
 	u8 wpaie[257];

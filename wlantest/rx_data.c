@@ -426,7 +426,7 @@ skip_replay_det:
 			decrypted = ccmp_256_decrypt(tk, hdr, data, len, &dlen);
 		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
 			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
-			decrypted = gcmp_decrypt(tk, sta->tk_len, hdr, data,
+			decrypted = gcmp_decrypt(tk, sta->ptk.tk_len, hdr, data,
 						 len, &dlen);
 		else
 			decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
@@ -440,7 +440,7 @@ skip_replay_det:
 						     len, &dlen);
 		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
 			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
-			decrypted = gcmp_decrypt(sta->ptk.tk, sta->tk_len,
+			decrypted = gcmp_decrypt(sta->ptk.tk, sta->ptk.tk_len,
 						 hdr, data, len, &dlen);
 		else
 			decrypted = ccmp_decrypt(sta->ptk.tk, hdr, data, len,

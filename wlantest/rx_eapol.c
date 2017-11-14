@@ -136,7 +136,6 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 		return -1;
 	}
 
-	sta->tk_len = wpa_cipher_key_len(sta->pairwise_cipher);
 	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR,
 		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 	sta->counters[WLANTEST_STA_COUNTER_PTK_LEARNED]++;

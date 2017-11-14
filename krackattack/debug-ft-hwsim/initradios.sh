@@ -15,6 +15,7 @@ function bridgeup {
 rfkill unblock wifi 2> /dev/null || true
 rmmod mac80211_hwsim 2> /dev/null || true
 modprobe mac80211_hwsim radios=3
+sleep 1
 
 macchanger -m 02:00:00:00:00:00 wlan0 > /dev/null || true
 macchanger -m 02:00:00:00:01:00 wlan1 > /dev/null || true

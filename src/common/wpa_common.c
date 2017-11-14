@@ -273,6 +273,12 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 	ptk->kck_len = wpa_kck_len(akmp, pmk_len);
 	ptk->kek_len = wpa_kek_len(akmp, pmk_len);
 	ptk->tk_len = wpa_cipher_key_len(cipher);
+	if (ptk->tk_len == 0) {
+		wpa_printf(MSG_ERROR,
+			   "WPA: Unsupported cipher (0x%x) used in PTK derivation",
+			   cipher);
+		return -1;
+	}
 	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len;
 
 	if (wpa_key_mgmt_sha384(akmp)) {

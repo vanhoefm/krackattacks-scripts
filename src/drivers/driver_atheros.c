@@ -931,6 +931,12 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 		if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth))
 			break;
 		os_memset(&event, 0, sizeof(event));
+		if (le_to_host16(mgmt->u.auth.auth_alg) == WLAN_AUTH_SAE) {
+			event.rx_mgmt.frame = buf;
+			event.rx_mgmt.frame_len = len;
+			wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
+			break;
+		}
 		os_memcpy(event.auth.peer, mgmt->sa, ETH_ALEN);
 		os_memcpy(event.auth.bssid, mgmt->bssid, ETH_ALEN);
 		event.auth.auth_type = le_to_host16(mgmt->u.auth.auth_alg);

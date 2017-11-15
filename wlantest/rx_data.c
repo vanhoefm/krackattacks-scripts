@@ -250,7 +250,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			     const u8 *qos, const u8 *dst, const u8 *src,
 			     const u8 *data, size_t len)
 {
-	struct wlantest_bss *bss;
+	struct wlantest_bss *bss, *bss2;
 	struct wlantest_sta *sta, *sta2;
 	int keyid;
 	u16 fc = le_to_host16(hdr->frame_control);
@@ -275,9 +275,17 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		bss = bss_find(wt, hdr->addr1);
 		if (bss) {
 			sta = sta_find(bss, hdr->addr2);
-			if (sta)
+			if (sta) {
 				sta->counters[
 					WLANTEST_STA_COUNTER_PROT_DATA_TX]++;
+			} else {
+				bss2 = bss_find(wt, hdr->addr2);
+				if (bss2) {
+					sta = sta_find(bss2, hdr->addr1);
+					if (sta)
+						bss = bss2;
+				}
+			}
 		} else {
 			bss = bss_find(wt, hdr->addr2);
 			if (!bss)
@@ -393,6 +401,12 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			rsc = tdls->rsc_init[tid];
 		else
 			rsc = tdls->rsc_resp[tid];
+	} else if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+		   (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
+		if (os_memcmp(sta->addr, hdr->addr2, ETH_ALEN) == 0)
+			rsc = sta->rsc_tods[tid];
+		else
+			rsc = sta->rsc_fromds[tid];
 	} else if (fc & WLAN_FC_TODS)
 		rsc = sta->rsc_tods[tid];
 	else

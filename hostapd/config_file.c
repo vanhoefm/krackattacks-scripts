@@ -2643,6 +2643,20 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line, pos);
 			return 1;
 		}
+	} else if (os_strcmp(buf, "group_cipher") == 0) {
+		bss->group_cipher = hostapd_config_parse_cipher(line, pos);
+		if (bss->group_cipher == -1 || bss->group_cipher == 0)
+			return 1;
+		if (bss->group_cipher != WPA_CIPHER_TKIP &&
+		    bss->group_cipher != WPA_CIPHER_CCMP &&
+		    bss->group_cipher != WPA_CIPHER_GCMP &&
+		    bss->group_cipher != WPA_CIPHER_GCMP_256 &&
+		    bss->group_cipher != WPA_CIPHER_CCMP_256) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: unsupported group cipher suite '%s'",
+				   line, pos);
+			return 1;
+		}
 #ifdef CONFIG_RSN_PREAUTH
 	} else if (os_strcmp(buf, "rsn_preauth") == 0) {
 		bss->rsn_preauth = atoi(pos);

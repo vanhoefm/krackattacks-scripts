@@ -325,6 +325,7 @@ struct hostapd_bss_config {
 		PSK_RADIUS_REQUIRED = 2
 	} wpa_psk_radius;
 	int wpa_pairwise;
+	int group_cipher; /* wpa_group value override from configuation */
 	int wpa_group;
 	int wpa_group_rekey;
 	int wpa_group_rekey_set;

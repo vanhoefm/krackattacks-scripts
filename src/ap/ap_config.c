@@ -1046,8 +1046,12 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss,
 
 	if ((bss->wpa & 2) && bss->rsn_pairwise == 0)
 		bss->rsn_pairwise = bss->wpa_pairwise;
-	bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa, bss->wpa_pairwise,
-						    bss->rsn_pairwise);
+	if (bss->group_cipher)
+		bss->wpa_group = bss->group_cipher;
+	else
+		bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa,
+							    bss->wpa_pairwise,
+							    bss->rsn_pairwise);
 	if (!bss->wpa_group_rekey_set)
 		bss->wpa_group_rekey = bss->wpa_group == WPA_CIPHER_TKIP ?
 			600 : 86400;

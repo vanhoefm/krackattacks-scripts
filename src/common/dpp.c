@@ -30,7 +30,7 @@
 enum dpp_test_behavior dpp_test = DPP_TEST_DISABLED;
 #endif /* CONFIG_TESTING_OPTIONS */
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
 /* Compatibility wrappers for older versions. */
 
 static int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s)
@@ -764,7 +764,7 @@ static int dpp_parse_uri_pk(struct dpp_bootstrap_info *bi, const char *info)
 	const unsigned char *pk;
 	int ppklen;
 	X509_ALGOR *pa;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
 	ASN1_OBJECT *pa_oid;
 #else
 	const ASN1_OBJECT *pa_oid;

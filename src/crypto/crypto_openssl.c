@@ -291,8 +291,11 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 		return NULL;
 
 	type = aes_get_evp_cipher(len);
-	if (type == NULL)
+	if (!type) {
+		wpa_printf(MSG_INFO, "%s: Unsupported len=%u",
+			   __func__, (unsigned int) len);
 		return NULL;
+	}
 
 	ctx = EVP_CIPHER_CTX_new();
 	if (ctx == NULL)
@@ -345,8 +348,11 @@ void * aes_decrypt_init(const u8 *key, size_t len)
 		return NULL;
 
 	type = aes_get_evp_cipher(len);
-	if (type == NULL)
+	if (!type) {
+		wpa_printf(MSG_INFO, "%s: Unsupported len=%u",
+			   __func__, (unsigned int) len);
 		return NULL;
+	}
 
 	ctx = EVP_CIPHER_CTX_new();
 	if (ctx == NULL)

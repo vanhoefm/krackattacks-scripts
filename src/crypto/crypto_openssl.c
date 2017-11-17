@@ -270,10 +270,8 @@ static const EVP_CIPHER * aes_get_evp_cipher(size_t keylen)
 	switch (keylen) {
 	case 16:
 		return EVP_aes_128_ecb();
-#ifndef OPENSSL_IS_BORINGSSL
 	case 24:
 		return EVP_aes_192_ecb();
-#endif /* OPENSSL_IS_BORINGSSL */
 	case 32:
 		return EVP_aes_256_ecb();
 	}

@@ -1701,7 +1701,12 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 {
 	struct crypto_ecdh *ecdh;
 	EVP_PKEY *params = NULL;
+#ifdef OPENSSL_IS_BORINGSSL
+	const EC_GROUP *ec_group;
+	EC_KEY *ec_params;
+#else /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *pctx = NULL;
+#endif /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *kctx = NULL;
 
 	ecdh = os_zalloc(sizeof(*ecdh));
@@ -1712,6 +1717,22 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 	if (!ecdh->ec)
 		goto fail;
 
+#ifdef OPENSSL_IS_BORINGSSL
+	ec_group = EC_GROUP_new_by_curve_name(ecdh->ec->nid);
+	ec_params = EC_KEY_new();
+	if (!ec_params || EC_KEY_set_group(ec_params, ec_group) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "BoringSSL: Failed to generate EC_KEY parameters");
+		goto fail;
+	}
+	EC_KEY_set_asn1_flag(ec_params, OPENSSL_EC_NAMED_CURVE);
+	params = EVP_PKEY_new();
+	if (!params || EVP_PKEY_set1_EC_KEY(params, ec_params) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "BoringSSL: Failed to generate EVP_PKEY parameters");
+		goto fail;
+	}
+#else /* OPENSSL_IS_BORINGSSL */
 	pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
 	if (!pctx)
 		goto fail;
@@ -1735,6 +1756,7 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 			   ERR_error_string(ERR_get_error(), NULL));
 		goto fail;
 	}
+#endif /* OPENSSL_IS_BORINGSSL */
 
 	kctx = EVP_PKEY_CTX_new(params, NULL);
 	if (!kctx)
@@ -1755,7 +1777,9 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 
 done:
 	EVP_PKEY_free(params);
+#ifndef OPENSSL_IS_BORINGSSL
 	EVP_PKEY_CTX_free(pctx);
+#endif /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX_free(kctx);
 
 	return ecdh;

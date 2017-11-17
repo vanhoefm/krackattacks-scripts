@@ -515,8 +515,13 @@ def test_sigma_dut_ap_cipher_ccmp_gcmp_2(dev, apdev, params):
     run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-128 AES-GCMP-256",
                             "BIP-GMAC-256", "GCMP-256", "CCMP")
 
+def test_sigma_dut_ap_cipher_gcmp_256_group_ccmp(dev, apdev, params):
+    """sigma_dut controlled AP with GCMP-256/CCMP/BIP-GMAC-256 cipher"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-GCMP-256", "BIP-GMAC-256",
+                            "GCMP-256", "CCMP", "AES-CCMP-128")
+
 def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
-                            sta_cipher, sta_cipher_group=None):
+                            sta_cipher, sta_cipher_group=None, ap_group=None):
     check_suite_b_192_capa(dev)
     logdir = os.path.join(params['logdir'],
                           "sigma_dut_ap_cipher.sigma-hostapd")
@@ -532,7 +537,10 @@ def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-suite-b,MODE,11ng")
             sigma_dut_cmd_check("ap_set_radius,NAME,AP,IPADDR,127.0.0.1,PORT,18129,PASSWORD,radius")
-            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required,PairwiseCipher,%s,GroupMgntCipher,%s" % (ap_pairwise, ap_group_mgmt))
+            cmd = "ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required,PairwiseCipher,%s,GroupMgntCipher,%s" % (ap_pairwise, ap_group_mgmt)
+            if ap_group:
+                cmd += ",GroupCipher,%s" % ap_group
+            sigma_dut_cmd_check(cmd)
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
             if sta_cipher_group is None:

@@ -16,17 +16,23 @@ import hostapd
 from utils import HwsimSkip, skip_with_fips, require_under_vm
 from wlantest import Wlantest
 
-def check_cipher(dev, ap, cipher):
+def check_cipher(dev, ap, cipher, group_cipher=None):
     if cipher not in dev.get_capability("pairwise"):
         raise HwsimSkip("Cipher %s not supported" % cipher)
+    if group_cipher and group_cipher not in dev.get_capability("group"):
+        raise HwsimSkip("Cipher %s not supported" % group_cipher)
     params = { "ssid": "test-wpa2-psk",
                "wpa_passphrase": "12345678",
                "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK",
                "rsn_pairwise": cipher }
+    if group_cipher:
+        params["group_cipher"] = group_cipher
+    else:
+        group_cipher = cipher
     hapd = hostapd.add_ap(ap, params)
     dev.connect("test-wpa2-psk", psk="12345678",
-                pairwise=cipher, group=cipher, scan_freq="2412")
+                pairwise=cipher, group=group_cipher, scan_freq="2412")
     hwsim_utils.test_connectivity(dev, hapd)
 
 def check_group_mgmt_cipher(dev, ap, cipher, sta_req_cipher=None):
@@ -277,6 +283,22 @@ def test_ap_cipher_ccmp_256(dev, apdev):
 def test_ap_cipher_gcmp_256(dev, apdev):
     """WPA2-PSK/GCMP-256 connection"""
     check_cipher(dev[0], apdev[0], "GCMP-256")
+
+def test_ap_cipher_gcmp_256_group_gcmp_256(dev, apdev):
+    """WPA2-PSK/GCMP-256 connection with group cipher override GCMP-256"""
+    check_cipher(dev[0], apdev[0], "GCMP-256", "GCMP-256")
+
+def test_ap_cipher_gcmp_256_group_gcmp(dev, apdev):
+    """WPA2-PSK/GCMP-256 connection with group cipher override GCMP"""
+    check_cipher(dev[0], apdev[0], "GCMP-256", "GCMP")
+
+def test_ap_cipher_gcmp_256_group_ccmp_256(dev, apdev):
+    """WPA2-PSK/GCMP-256 connection with group cipher override CCMP-256"""
+    check_cipher(dev[0], apdev[0], "GCMP-256", "CCMP-256")
+
+def test_ap_cipher_gcmp_256_group_ccmp(dev, apdev):
+    """WPA2-PSK/GCMP-256 connection with group cipher override CCMP"""
+    check_cipher(dev[0], apdev[0], "GCMP-256", "CCMP")
 
 @remote_compatible
 def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):

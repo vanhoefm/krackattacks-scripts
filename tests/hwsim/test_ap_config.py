@@ -131,7 +131,7 @@ def test_ap_config_reload_on_sighup(dev, apdev, params):
                            "ap_config_reload_on_sighup-hostapd.pid")
     logfile = os.path.join(params['logdir'],
                            "ap_config_reload_on_sighup-hostapd-log")
-    conffile = os.path.join(params['logdir'],
+    conffile = os.path.join(os.getcwd(), params['logdir'],
                             "ap_config_reload_on_sighup-hostapd.conf")
     prg = os.path.join(params['logdir'], 'alt-hostapd/hostapd/hostapd')
     if not os.path.exists(prg):

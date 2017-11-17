@@ -505,8 +505,18 @@ def test_sigma_dut_ap_cipher_ccmp_256(dev, apdev, params):
     run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-256", "BIP-CMAC-256",
                             "CCMP-256")
 
+def test_sigma_dut_ap_cipher_ccmp_gcmp_1(dev, apdev, params):
+    """sigma_dut controlled AP with CCMP-128+GCMP-256 ciphers (1)"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-128 AES-GCMP-256",
+                            "BIP-GMAC-256", "CCMP")
+
+def test_sigma_dut_ap_cipher_ccmp_gcmp_2(dev, apdev, params):
+    """sigma_dut controlled AP with CCMP-128+GCMP-256 ciphers (2)"""
+    run_sigma_dut_ap_cipher(dev, apdev, params, "AES-CCMP-128 AES-GCMP-256",
+                            "BIP-GMAC-256", "GCMP-256", "CCMP")
+
 def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
-                            sta_cipher):
+                            sta_cipher, sta_cipher_group=None):
     check_suite_b_192_capa(dev)
     logdir = os.path.join(params['logdir'],
                           "sigma_dut_ap_cipher.sigma-hostapd")
@@ -525,6 +535,8 @@ def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
             sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required,PairwiseCipher,%s,GroupMgntCipher,%s" % (ap_pairwise, ap_group_mgmt))
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
+            if sta_cipher_group is None:
+                sta_cipher_group = sta_cipher
             dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
                            ieee80211w="2",
                            openssl_ciphers="SUITEB192",
@@ -532,7 +544,7 @@ def run_sigma_dut_ap_cipher(dev, apdev, params, ap_pairwise, ap_group_mgmt,
                            ca_cert="auth_serv/ec2-ca.pem",
                            client_cert="auth_serv/ec2-user.pem",
                            private_key="auth_serv/ec2-user.key",
-                           pairwise=sta_cipher, group=sta_cipher,
+                           pairwise=sta_cipher, group=sta_cipher_group,
                            scan_freq="2412")
 
             sigma_dut_cmd_check("ap_reset_default")

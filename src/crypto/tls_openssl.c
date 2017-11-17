@@ -3016,12 +3016,16 @@ static int tls_connection_engine_private_key(struct tls_connection *conn)
 
 static void tls_clear_default_passwd_cb(SSL_CTX *ssl_ctx, SSL *ssl)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifndef LIBRESSL_VERSION_NUMBER
+#ifndef OPENSSL_IS_BORINGSSL
 	if (ssl) {
 		SSL_set_default_passwd_cb(ssl, NULL);
 		SSL_set_default_passwd_cb_userdata(ssl, NULL);
 	}
-#endif /* >= 1.1.0f && !LibreSSL */
+#endif /* !BoringSSL */
+#endif /* !LibreSSL */
+#endif /* >= 1.1.0f */
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
 	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, NULL);
 }
@@ -3048,14 +3052,18 @@ static int tls_connection_private_key(struct tls_data *data,
 	} else
 		passwd = NULL;
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifndef LIBRESSL_VERSION_NUMBER
+#ifndef OPENSSL_IS_BORINGSSL
 	/*
 	 * In OpenSSL >= 1.1.0f SSL_use_PrivateKey_file() uses the callback
 	 * from the SSL object. See OpenSSL commit d61461a75253.
 	 */
 	SSL_set_default_passwd_cb(conn->ssl, tls_passwd_cb);
 	SSL_set_default_passwd_cb_userdata(conn->ssl, passwd);
-#endif /* >= 1.1.0f && !LibreSSL */
+#endif /* !BoringSSL */
+#endif /* !LibreSSL */
+#endif /* >= 1.1.0f && */
 	/* Keep these for OpenSSL < 1.1.0f */
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, tls_passwd_cb);
 	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, passwd);

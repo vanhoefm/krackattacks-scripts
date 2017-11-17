@@ -103,7 +103,7 @@ static size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
 
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
 #ifdef CONFIG_SUITEB
 static int RSA_bits(const RSA *r)
 {

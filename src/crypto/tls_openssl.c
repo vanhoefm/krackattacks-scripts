@@ -2499,12 +2499,14 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags)
 		EC_KEY_free(ecdh);
 	}
 	if (flags & (TLS_CONN_SUITEB | TLS_CONN_SUITEB_NO_ECDH)) {
+#ifndef OPENSSL_IS_BORINGSSL
 		/* ECDSA+SHA384 if need to add EC support here */
 		if (SSL_set1_sigalgs_list(ssl, "RSA+SHA384") != 1) {
 			wpa_printf(MSG_INFO,
 				   "OpenSSL: Failed to set Suite B sigalgs");
 			return -1;
 		}
+#endif /* OPENSSL_IS_BORINGSSL */
 
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1);
 		SSL_set_options(ssl, SSL_OP_NO_TLSv1_1);

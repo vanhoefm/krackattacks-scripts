@@ -5842,8 +5842,15 @@ static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 			goto fail;
 
 		if (EC_POINT_set_affine_coordinates_GFp(group, point, x, y,
-							ctx) != 1)
+							ctx) != 1) {
+#ifdef OPENSSL_IS_BORINGSSL
+		/* Unlike OpenSSL, BoringSSL returns an error from
+		 * EC_POINT_set_affine_coordinates_GFp() is not on the curve. */
+			break;
+#else /* OPENSSL_IS_BORINGSSL */
 			goto fail;
+#endif /* OPENSSL_IS_BORINGSSL */
+		}
 
 		if (!EC_POINT_is_on_curve(group, point, ctx))
 			break;
@@ -5857,6 +5864,8 @@ static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 
 	ret = 0;
 fail:
+	if (ret < 0)
+		wpa_printf(MSG_INFO, "DPP: Failed to generate invalid key");
 	BN_free(x);
 	BN_free(y);
 	EC_POINT_free(point);

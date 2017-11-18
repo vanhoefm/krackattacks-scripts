@@ -362,6 +362,25 @@ def test_sigma_dut_ap_psk(dev, apdev):
         finally:
             stop_sigma_dut(sigma)
 
+def test_sigma_dut_ap_pskhex(dev, apdev, params):
+    """sigma_dut controlled AP and PSKHEX"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_pskhex.sigma-hostapd")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            psk = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+            sigma_dut_cmd_check("ap_reset_default")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-psk,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,WPA2-PSK,PSKHEX," + psk)
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            dev[0].connect("test-psk", raw_psk=psk, scan_freq="2412")
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
 def test_sigma_dut_suite_b(dev, apdev, params):
     """sigma_dut controlled STA Suite B"""
     check_suite_b_192_capa(dev)

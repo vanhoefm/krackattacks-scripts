@@ -9,6 +9,8 @@
 #include "utils/includes.h"
 #include <openssl/opensslv.h>
 #include <openssl/err.h>
+#include <openssl/asn1.h>
+#include <openssl/asn1t.h>
 
 #include "utils/common.h"
 #include "utils/base64.h"
@@ -1154,30 +1156,84 @@ static EVP_PKEY * dpp_set_keypair(const struct dpp_curve_params **curve,
 }
 
 
+typedef struct {
+	/* AlgorithmIdentifier ecPublicKey with optional parameters present
+	 * as an OID identifying the curve */
+	X509_ALGOR *alg;
+	/* Compressed format public key per ANSI X9.63 */
+	ASN1_BIT_STRING *pub_key;
+} DPP_BOOTSTRAPPING_KEY;
+
+ASN1_SEQUENCE(DPP_BOOTSTRAPPING_KEY) = {
+	ASN1_SIMPLE(DPP_BOOTSTRAPPING_KEY, alg, X509_ALGOR),
+	ASN1_SIMPLE(DPP_BOOTSTRAPPING_KEY, pub_key, ASN1_BIT_STRING)
+} ASN1_SEQUENCE_END(DPP_BOOTSTRAPPING_KEY);
+
+IMPLEMENT_ASN1_FUNCTIONS(DPP_BOOTSTRAPPING_KEY);
+
+
 static struct wpabuf * dpp_bootstrap_key_der(EVP_PKEY *key)
 {
 	unsigned char *der = NULL;
 	int der_len;
 	EC_KEY *eckey;
-	struct wpabuf *ret;
+	struct wpabuf *ret = NULL;
+	size_t len;
+	const EC_GROUP *group;
+	const EC_POINT *point;
+	BN_CTX *ctx;
+	DPP_BOOTSTRAPPING_KEY *bootstrap = NULL;
+	int nid;
 
-	/* Need to get the compressed form of the public key through EC_KEY, so
-	 * cannot use the simpler i2d_PUBKEY() here. */
+	ctx = BN_CTX_new();
 	eckey = EVP_PKEY_get1_EC_KEY(key);
-	if (!eckey)
-		return NULL;
-	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
-	der_len = i2d_EC_PUBKEY(eckey, &der);
-	EC_KEY_free(eckey);
+	if (!ctx || !eckey)
+		goto fail;
+
+	group = EC_KEY_get0_group(eckey);
+	point = EC_KEY_get0_public_key(eckey);
+	if (!group || !point)
+		goto fail;
+	nid = EC_GROUP_get_curve_name(group);
+
+	bootstrap = DPP_BOOTSTRAPPING_KEY_new();
+	if (!bootstrap ||
+	    X509_ALGOR_set0(bootstrap->alg, OBJ_nid2obj(EVP_PKEY_EC),
+			    V_ASN1_OBJECT, (void *) OBJ_nid2obj(nid)) != 1)
+		goto fail;
+
+	len = EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED,
+				 NULL, 0, ctx);
+	if (len == 0)
+		goto fail;
+
+	der = OPENSSL_malloc(len);
+	if (!der)
+		goto fail;
+	len = EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED,
+				 der, len, ctx);
+
+	OPENSSL_free(bootstrap->pub_key->data);
+	bootstrap->pub_key->data = der;
+	der = NULL;
+	bootstrap->pub_key->length = len;
+	/* No unused bits */
+	bootstrap->pub_key->flags &= ~(ASN1_STRING_FLAG_BITS_LEFT | 0x07);
+	bootstrap->pub_key->flags |= ASN1_STRING_FLAG_BITS_LEFT;
+
+	der_len = i2d_DPP_BOOTSTRAPPING_KEY(bootstrap, &der);
 	if (der_len <= 0) {
 		wpa_printf(MSG_ERROR,
 			   "DDP: Failed to build DER encoded public key");
-		OPENSSL_free(der);
-		return NULL;
+		goto fail;
 	}
 
 	ret = wpabuf_alloc_copy(der, der_len);
+fail:
+	DPP_BOOTSTRAPPING_KEY_free(bootstrap);
 	OPENSSL_free(der);
+	EC_KEY_free(eckey);
+	BN_CTX_free(ctx);
 	return ret;
 }
 

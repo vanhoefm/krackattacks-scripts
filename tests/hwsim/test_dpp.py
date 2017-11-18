@@ -2507,6 +2507,10 @@ def test_dpp_proto_auth_req_no_i_proto_key(dev, apdev):
     """DPP protocol testing - no I-proto key in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 12, "Missing required Initiator Protocol Key attribute")
 
+def test_dpp_proto_auth_req_invalid_i_proto_key(dev, apdev):
+    """DPP protocol testing - invalid I-proto key in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 66, "Invalid Initiator Protocol Key")
+
 def test_dpp_proto_auth_req_no_i_nonce(dev, apdev):
     """DPP protocol testing - no I-nonce in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 13, "Missing or invalid I-nonce")
@@ -2551,6 +2555,10 @@ def test_dpp_proto_auth_resp_no_i_bootstrap_key(dev, apdev):
 def test_dpp_proto_auth_resp_no_r_proto_key(dev, apdev):
     """DPP protocol testing - no R-Proto Key in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 19, "Missing required Responder Protocol Key attribute")
+
+def test_dpp_proto_auth_resp_invalid_r_proto_key(dev, apdev):
+    """DPP protocol testing - invalid R-Proto Key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 67, "Invalid Responder Protocol Key")
 
 def test_dpp_proto_auth_resp_no_r_nonce(dev, apdev):
     """DPP protocol testing - no R-nonce in Auth Resp"""

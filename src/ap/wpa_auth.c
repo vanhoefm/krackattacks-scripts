@@ -19,6 +19,7 @@
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/sha384.h"
 #include "crypto/random.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "ap_config.h"
@@ -1318,7 +1319,7 @@ continue_processing:
 static int wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
 			  const u8 *gnonce, u8 *gtk, size_t gtk_len)
 {
-	u8 data[ETH_ALEN + WPA_NONCE_LEN + 8 + 16];
+	u8 data[ETH_ALEN + WPA_NONCE_LEN + 8 + WPA_GTK_MAX_LEN];
 	u8 *pos;
 	int ret = 0;
 
@@ -1329,21 +1330,30 @@ static int wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
 	 * is done only at the Authenticator and as such, does not need to be
 	 * exactly same.
 	 */
+	os_memset(data, 0, sizeof(data));
 	os_memcpy(data, addr, ETH_ALEN);
 	os_memcpy(data + ETH_ALEN, gnonce, WPA_NONCE_LEN);
 	pos = data + ETH_ALEN + WPA_NONCE_LEN;
 	wpa_get_ntp_timestamp(pos);
 	pos += 8;
-	if (random_get_bytes(pos, 16) < 0)
+	if (random_get_bytes(pos, gtk_len) < 0)
 		ret = -1;
 
-#ifdef CONFIG_IEEE80211W
-	sha256_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len);
-#else /* CONFIG_IEEE80211W */
-	if (sha1_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len)
-	    < 0)
+#ifdef CONFIG_SHA384
+	if (sha384_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data),
+		       gtk, gtk_len) < 0)
 		ret = -1;
-#endif /* CONFIG_IEEE80211W */
+#else /* CONFIG_SHA384 */
+#ifdef CONFIG_SHA256
+	if (sha256_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data),
+		       gtk, gtk_len) < 0)
+		ret = -1;
+#else /* CONFIG_SHA256 */
+	if (sha1_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data),
+		     gtk, gtk_len) < 0)
+		ret = -1;
+#endif /* CONFIG_SHA256 */
+#endif /* CONFIG_SHA384 */
 
 	return ret;
 }

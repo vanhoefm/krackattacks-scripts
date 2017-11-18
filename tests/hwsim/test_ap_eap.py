@@ -1759,6 +1759,7 @@ def run_ap_wpa2_eap_peap_eap_sim_ext(dev, apdev):
 
 def test_ap_wpa2_eap_fast_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/EAP-SIM"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0], params)
     eap_connect(dev[0], hapd, "FAST", "1232010000000000",

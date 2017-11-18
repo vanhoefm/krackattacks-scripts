@@ -30,6 +30,9 @@
 
 #ifdef CONFIG_TESTING_OPTIONS
 enum dpp_test_behavior dpp_test = DPP_TEST_DISABLED;
+
+static int dpp_test_gen_invalid_key(struct wpabuf *msg,
+				    const struct dpp_curve_params *curve);
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
@@ -2028,6 +2031,12 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Proto Key");
 		wpabuf_free(pi);
 		pi = NULL;
+	} else if (dpp_test == DPP_TEST_INVALID_I_PROTO_KEY_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid I-Proto Key");
+		wpabuf_free(pi);
+		pi = wpabuf_alloc(2 * auth->curve->prime_len);
+		if (!pi || dpp_test_gen_invalid_key(pi, auth->curve) < 0)
+			goto fail;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
@@ -2551,6 +2560,12 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Proto Key");
 		wpabuf_free(pr);
 		pr = NULL;
+	} else if (dpp_test == DPP_TEST_INVALID_R_PROTO_KEY_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid R-Proto Key");
+		wpabuf_free(pr);
+		pr = wpabuf_alloc(2 * auth->curve->prime_len);
+		if (!pr || dpp_test_gen_invalid_key(pr, auth->curve) < 0)
+			goto fail;
 	} else if (dpp_test == DPP_TEST_NO_R_AUTH_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Auth");
 		w_r_auth = NULL;

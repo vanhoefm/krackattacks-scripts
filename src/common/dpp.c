@@ -1154,19 +1154,18 @@ static EVP_PKEY * dpp_set_keypair(const struct dpp_curve_params **curve,
 }
 
 
-int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi)
+static struct wpabuf * dpp_bootstrap_key_der(EVP_PKEY *key)
 {
 	unsigned char *der = NULL;
 	int der_len;
 	EC_KEY *eckey;
-	int res;
-	size_t len;
+	struct wpabuf *ret;
 
 	/* Need to get the compressed form of the public key through EC_KEY, so
 	 * cannot use the simpler i2d_PUBKEY() here. */
-	eckey = EVP_PKEY_get1_EC_KEY(bi->pubkey);
+	eckey = EVP_PKEY_get1_EC_KEY(key);
 	if (!eckey)
-		return -1;
+		return NULL;
 	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
 	der_len = i2d_EC_PUBKEY(eckey, &der);
 	EC_KEY_free(eckey);
@@ -1174,14 +1173,37 @@ int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi)
 		wpa_printf(MSG_ERROR,
 			   "DDP: Failed to build DER encoded public key");
 		OPENSSL_free(der);
-		return -1;
+		return NULL;
 	}
 
-	len = der_len;
-	res = sha256_vector(1, (const u8 **) &der, &len, bi->pubkey_hash);
+	ret = wpabuf_alloc_copy(der, der_len);
 	OPENSSL_free(der);
+	return ret;
+}
+
+
+int dpp_bootstrap_key_hash(struct dpp_bootstrap_info *bi)
+{
+	struct wpabuf *der;
+	int res;
+	const u8 *addr[1];
+	size_t len[1];
+
+	der = dpp_bootstrap_key_der(bi->pubkey);
+	if (!der)
+		return -1;
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: Compressed public key (DER)",
+			der);
+
+	addr[0] = wpabuf_head(der);
+	len[0] = wpabuf_len(der);
+	res = sha256_vector(1, addr, len, bi->pubkey_hash);
 	if (res < 0)
 		wpa_printf(MSG_DEBUG, "DPP: Failed to hash public key");
+	else
+		wpa_hexdump(MSG_DEBUG, "DPP: Public key hash", bi->pubkey_hash,
+			    SHA256_MAC_LEN);
+	wpabuf_free(der);
 	return res;
 }
 
@@ -1192,9 +1214,9 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 	unsigned char *base64 = NULL;
 	char *pos, *end;
 	size_t len;
-	unsigned char *der = NULL;
-	int der_len;
-	EC_KEY *eckey;
+	struct wpabuf *der = NULL;
+	const u8 *addr[1];
+	int res;
 
 	if (!curve) {
 		bi->curve = &dpp_curves[0];
@@ -1214,28 +1236,23 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 		goto fail;
 	bi->own = 1;
 
-	/* Need to get the compressed form of the public key through EC_KEY, so
-	 * cannot use the simpler i2d_PUBKEY() here. */
-	eckey = EVP_PKEY_get1_EC_KEY(bi->pubkey);
-	if (!eckey)
+	der = dpp_bootstrap_key_der(bi->pubkey);
+	if (!der)
 		goto fail;
-	EC_KEY_set_conv_form(eckey, POINT_CONVERSION_COMPRESSED);
-	der_len = i2d_EC_PUBKEY(eckey, &der);
-	EC_KEY_free(eckey);
-	if (der_len <= 0) {
-		wpa_printf(MSG_ERROR,
-			   "DDP: Failed to build DER encoded public key");
-		goto fail;
-	}
+	wpa_hexdump_buf(MSG_DEBUG, "DPP: Compressed public key (DER)",
+			der);
 
-	len = der_len;
-	if (sha256_vector(1, (const u8 **) &der, &len, bi->pubkey_hash) < 0) {
+	addr[0] = wpabuf_head(der);
+	len = wpabuf_len(der);
+	res = sha256_vector(1, addr, &len, bi->pubkey_hash);
+	if (res < 0)
 		wpa_printf(MSG_DEBUG, "DPP: Failed to hash public key");
-		goto fail;
-	}
+	else
+		wpa_hexdump(MSG_DEBUG, "DPP: Public key hash", bi->pubkey_hash,
+			    SHA256_MAC_LEN);
 
-	base64 = base64_encode(der, der_len, &len);
-	OPENSSL_free(der);
+	base64 = base64_encode(wpabuf_head(der), wpabuf_len(der), &len);
+	wpabuf_free(der);
 	der = NULL;
 	if (!base64)
 		goto fail;
@@ -1250,7 +1267,7 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 	return (char *) base64;
 fail:
 	os_free(base64);
-	OPENSSL_free(der);
+	wpabuf_free(der);
 	return NULL;
 }
 

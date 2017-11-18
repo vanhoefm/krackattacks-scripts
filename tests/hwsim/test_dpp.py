@@ -13,9 +13,13 @@ import hwsim_utils
 from utils import HwsimSkip
 from wpasupplicant import WpaSupplicant
 
-def check_dpp_capab(dev):
+def check_dpp_capab(dev, brainpool=False):
     if "UNKNOWN COMMAND" in dev.request("DPP_BOOTSTRAP_GET_URI 0"):
         raise HwsimSkip("DPP not supported")
+    if brainpool:
+        tls = dev.request("GET tls_library")
+        if not tls.startswith("OpenSSL") or "run=BoringSSL" in tls:
+            raise HwsimSkip("Crypto library does not support Brainpool curves: " + tls)
 
 def test_dpp_qr_code_parsing(dev, apdev):
     """DPP QR Code parsing"""
@@ -144,8 +148,8 @@ def run_dpp_qr_code_auth_unicast(dev, apdev, curve, netrole=None, key=None,
                                  require_conf_success=False, init_extra=None,
                                  require_conf_failure=False,
                                  configurator=False, conf_curve=None):
-    check_dpp_capab(dev[0])
-    check_dpp_capab(dev[1])
+    check_dpp_capab(dev[0], curve and "brainpool" in curve)
+    check_dpp_capab(dev[1], curve and "brainpool" in curve)
     if configurator:
         logger.info("Create configurator on dev1")
         cmd = "DPP_CONFIGURATOR_ADD"
@@ -1659,8 +1663,8 @@ def test_dpp_pkex_config(dev, apdev):
                  check_config=True)
 
 def run_dpp_pkex(dev, apdev, curve=None, init_extra="", check_config=False):
-    check_dpp_capab(dev[0])
-    check_dpp_capab(dev[1])
+    check_dpp_capab(dev[0], curve and "brainpool" in curve)
+    check_dpp_capab(dev[1], curve and "brainpool" in curve)
 
     cmd = "DPP_BOOTSTRAP_GEN type=pkex"
     if curve:
@@ -2129,7 +2133,7 @@ def test_dpp_own_config_curve_mismatch(dev, apdev):
         dev[0].set("dpp_config_processing", "0")
 
 def run_dpp_own_config(dev, apdev, own_curve=None, expect_failure=False):
-    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[0], own_curve and "BP" in own_curve)
     hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
     check_dpp_capab(hapd)
 

@@ -252,7 +252,7 @@ def test_ap_cipher_tkip_countermeasures_sta2(dev, apdev, params):
         if "CTRL-EVENT-CONNECTED" in ev:
             connected = True
             break
-        if "status_code=14" not in ev:
+        if "status_code=1" not in ev:
             raise Exception("Unexpected connection failure reason during TKIP countermeasures: " + ev)
         dev[0].request("REMOVE_NETWORK all")
         time.sleep(1)

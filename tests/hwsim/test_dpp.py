@@ -2394,7 +2394,10 @@ def run_dpp_proto_init(dev, test_dev, test, mutual=False):
             raise Exception("Failed to parse QR Code URI")
         id0b = int(res)
 
-    cmd = "DPP_LISTEN 2412"
+        cmd = "DPP_LISTEN 2412 qr=mutual"
+    else:
+        cmd = "DPP_LISTEN 2412"
+
     if "OK" not in dev[0].request(cmd):
         raise Exception("Failed to start listen operation")
 
@@ -2484,8 +2487,8 @@ def test_dpp_proto_zero_r_capab(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected DPP message seen")
 
-def run_dpp_proto_auth_req_missing(dev, test, reason):
-    run_dpp_proto_init(dev, 1, test)
+def run_dpp_proto_auth_req_missing(dev, test, reason, mutual=False):
+    run_dpp_proto_init(dev, 1, test, mutual=mutual)
     ev = dev[0].wait_event(["DPP-FAIL"], timeout=5)
     if ev is None:
         raise Exception("DPP failure not seen")
@@ -2499,9 +2502,23 @@ def test_dpp_proto_auth_req_no_r_bootstrap_key(dev, apdev):
     """DPP protocol testing - no R-bootstrap key in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 10, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
 
+def test_dpp_proto_auth_req_invalid_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid R-bootstrap key in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 68, "No matching own bootstrapping key found - ignore message")
+
 def test_dpp_proto_auth_req_no_i_bootstrap_key(dev, apdev):
     """DPP protocol testing - no I-bootstrap key in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 11, "Missing or invalid required Initiator Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_req_invalid_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid I-bootstrap key in Auth Req"""
+    run_dpp_proto_init(dev, 1, 69, mutual=True)
+    ev = dev[0].wait_event(["DPP-SCAN-PEER-QR-CODE"], timeout=5)
+    if ev is None:
+        raise Exception("DPP scan request not seen")
+    ev = dev[1].wait_event(["DPP-RESPONSE-PENDING"], timeout=5)
+    if ev is None:
+        raise Exception("DPP response pending indivation not seen")
 
 def test_dpp_proto_auth_req_no_i_proto_key(dev, apdev):
     """DPP protocol testing - no I-proto key in Auth Req"""
@@ -2548,9 +2565,17 @@ def test_dpp_proto_auth_resp_no_r_bootstrap_key(dev, apdev):
     """DPP protocol testing - no R-bootstrap key in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 17, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
 
+def test_dpp_proto_auth_resp_invalid_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid R-bootstrap key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 70, "Unexpected Responder Bootstrapping Key Hash value")
+
 def test_dpp_proto_auth_resp_no_i_bootstrap_key(dev, apdev):
     """DPP protocol testing - no I-bootstrap key in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 18, None)
+
+def test_dpp_proto_auth_resp_invalid_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid I-bootstrap key in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 71, "Initiator Bootstrapping Key Hash attribute did not match")
 
 def test_dpp_proto_auth_resp_no_r_proto_key(dev, apdev):
     """DPP protocol testing - no R-Proto Key in Auth Resp"""
@@ -2642,9 +2667,17 @@ def test_dpp_proto_auth_conf_no_r_bootstrap_key(dev, apdev):
     """DPP protocol testing - no R-bootstrap key in Auth Conf"""
     run_dpp_proto_auth_conf_missing(dev, 26, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
 
+def test_dpp_proto_auth_conf_invalid_r_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid R-bootstrap key in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 72, "Responder Bootstrapping Key Hash mismatch")
+
 def test_dpp_proto_auth_conf_no_i_bootstrap_key(dev, apdev):
     """DPP protocol testing - no I-bootstrap key in Auth Conf"""
     run_dpp_proto_auth_conf_missing(dev, 27, "Missing Initiator Bootstrapping Key Hash attribute")
+
+def test_dpp_proto_auth_conf_invalid_i_bootstrap_key(dev, apdev):
+    """DPP protocol testing - invalid I-bootstrap key in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 73, "Initiator Bootstrapping Key Hash mismatch")
 
 def test_dpp_proto_auth_conf_no_i_auth(dev, apdev):
     """DPP protocol testing - no I-Auth in Auth Conf"""

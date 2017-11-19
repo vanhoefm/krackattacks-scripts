@@ -54,7 +54,6 @@ enum dpp_attribute_id {
 	DPP_ATTR_TRANSACTION_ID = 0x1016,
 	DPP_ATTR_BOOTSTRAP_INFO = 0x1017,
 	DPP_ATTR_CHANNEL = 0x1018,
-	DPP_ATTR_TESTING = 0x10ff, /* not defined in the DPP tech spec */
 };
 
 enum dpp_status_error {

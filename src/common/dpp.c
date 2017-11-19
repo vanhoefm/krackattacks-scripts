@@ -7250,3 +7250,56 @@ void dpp_pkex_free(struct dpp_pkex *pkex)
 	wpabuf_free(pkex->exchange_resp);
 	os_free(pkex);
 }
+
+
+#ifdef CONFIG_TESTING_OPTIONS
+char * dpp_corrupt_connector_signature(const char *connector)
+{
+	char *tmp, *pos, *signed3 = NULL;
+	unsigned char *signature = NULL;
+	size_t signature_len = 0, signed3_len;
+
+	tmp = os_zalloc(os_strlen(connector) + 5);
+	if (!tmp)
+		goto fail;
+	os_memcpy(tmp, connector, os_strlen(connector));
+
+	pos = os_strchr(tmp, '.');
+	if (!pos)
+		goto fail;
+
+	pos = os_strchr(pos + 1, '.');
+	if (!pos)
+		goto fail;
+	pos++;
+
+	wpa_printf(MSG_DEBUG, "DPP: Original base64url encoded signature: %s",
+		   pos);
+	signature = base64_url_decode((const unsigned char *) pos,
+				      os_strlen(pos), &signature_len);
+	if (!signature || signature_len == 0)
+		goto fail;
+	wpa_hexdump(MSG_DEBUG, "DPP: Original Connector signature",
+		    signature, signature_len);
+	signature[signature_len - 1] ^= 0x01;
+	wpa_hexdump(MSG_DEBUG, "DPP: Corrupted Connector signature",
+		    signature, signature_len);
+	signed3 = (char *) base64_url_encode(signature, signature_len,
+					     &signed3_len, 0);
+	if (!signed3)
+		goto fail;
+	os_memcpy(pos, signed3, signed3_len);
+	pos[signed3_len] = '\0';
+	wpa_printf(MSG_DEBUG, "DPP: Corrupted base64url encoded signature: %s",
+		   pos);
+
+out:
+	os_free(signature);
+	os_free(signed3);
+	return tmp;
+fail:
+	os_free(tmp);
+	tmp = NULL;
+	goto out;
+}
+#endif /* CONFIG_TESTING_OPTIONS */

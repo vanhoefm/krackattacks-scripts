@@ -943,6 +943,10 @@ static void hostapd_dpp_send_peer_disc_resp(struct hostapd_data *hapd,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Transaction ID");
 		goto skip_trans_id;
 	}
+	if (dpp_test == DPP_TEST_INVALID_TRANSACTION_ID_PEER_DISC_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Transaction ID");
+		trans_id ^= 0x01;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Transaction ID */
@@ -956,6 +960,10 @@ skip_trans_id:
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
 		goto skip_status;
 	}
+	if (dpp_test == DPP_TEST_INVALID_STATUS_PEER_DISC_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Status");
+		status = 254;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */
@@ -967,6 +975,23 @@ skip_trans_id:
 skip_status:
 	if (dpp_test == DPP_TEST_NO_CONNECTOR_PEER_DISC_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Connector");
+		goto skip_connector;
+	}
+	if (status == DPP_STATUS_OK &&
+	    dpp_test == DPP_TEST_INVALID_CONNECTOR_PEER_DISC_RESP) {
+		char *connector;
+
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Connector");
+		connector = dpp_corrupt_connector_signature(
+			hapd->conf->dpp_connector);
+		if (!connector) {
+			wpabuf_free(msg);
+			return;
+		}
+		wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
+		wpabuf_put_le16(msg, os_strlen(connector));
+		wpabuf_put_str(msg, connector);
+		os_free(connector);
 		goto skip_connector;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */

@@ -2131,6 +2131,22 @@ skip_trans_id:
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Connector");
 		goto skip_connector;
 	}
+	if (dpp_test == DPP_TEST_INVALID_CONNECTOR_PEER_DISC_REQ) {
+		char *connector;
+
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Connector");
+		connector = dpp_corrupt_connector_signature(
+			ssid->dpp_connector);
+		if (!connector) {
+			wpabuf_free(msg);
+			return -1;
+		}
+		wpabuf_put_le16(msg, DPP_ATTR_CONNECTOR);
+		wpabuf_put_le16(msg, os_strlen(connector));
+		wpabuf_put_str(msg, connector);
+		os_free(connector);
+		goto skip_connector;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Connector */

@@ -303,6 +303,10 @@ enum dpp_test_behavior {
 	DPP_TEST_INVALID_STATUS_AUTH_RESP = 74,
 	DPP_TEST_INVALID_STATUS_AUTH_CONF = 75,
 	DPP_TEST_INVALID_CONFIG_ATTR_OBJ_CONF_REQ = 76,
+	DPP_TEST_INVALID_TRANSACTION_ID_PEER_DISC_RESP = 77,
+	DPP_TEST_INVALID_STATUS_PEER_DISC_RESP = 78,
+	DPP_TEST_INVALID_CONNECTOR_PEER_DISC_RESP = 79,
+	DPP_TEST_INVALID_CONNECTOR_PEER_DISC_REQ = 80,
 };
 
 extern enum dpp_test_behavior dpp_test;
@@ -384,5 +388,7 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 				   const u8 *buf, size_t len);
 void dpp_pkex_free(struct dpp_pkex *pkex);
+
+char * dpp_corrupt_connector_signature(const char *connector);
 
 #endif /* DPP_H */

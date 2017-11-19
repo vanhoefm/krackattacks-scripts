@@ -1436,6 +1436,16 @@ static int dpp_derive_ke(struct dpp_authentication *auth, u8 *ke,
 }
 
 
+static void dpp_build_attr_status(struct wpabuf *msg,
+				  enum dpp_status_error status)
+{
+	wpa_printf(MSG_DEBUG, "DPP: Status %d", status);
+	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
+	wpabuf_put_le16(msg, 1);
+	wpabuf_put_u8(msg, status);
+}
+
+
 static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 					  const struct wpabuf *pi,
 					  size_t nonce_len,
@@ -1634,12 +1644,8 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 	attr_start = wpabuf_put(msg, 0);
 
 	/* DPP Status */
-	if (status != 255) {
-		wpa_printf(MSG_DEBUG, "DPP: Status %d", status);
-		wpabuf_put_le16(msg, DPP_ATTR_STATUS);
-		wpabuf_put_le16(msg, 1);
-		wpabuf_put_u8(msg, status);
-	}
+	if (status != 255)
+		dpp_build_attr_status(msg, status);
 
 	/* Responder Bootstrapping Key Hash */
 	if (r_pubkey_hash) {
@@ -3018,9 +3024,7 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */
-	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
-	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, status);
+	dpp_build_attr_status(msg, status);
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:
@@ -4239,9 +4243,7 @@ skip_config_obj:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */
-	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
-	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, status);
+	dpp_build_attr_status(msg, status);
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:
@@ -6162,9 +6164,7 @@ dpp_pkex_build_exchange_resp(struct dpp_pkex *pkex,
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */
-	wpabuf_put_le16(msg, DPP_ATTR_STATUS);
-	wpabuf_put_le16(msg, 1);
-	wpabuf_put_u8(msg, status);
+	dpp_build_attr_status(msg, status);
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:

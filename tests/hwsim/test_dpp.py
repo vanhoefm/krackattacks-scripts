@@ -2950,7 +2950,7 @@ def test_dpp_proto_network_introduction(dev, apdev):
     except:
         raise HwsimSkip("DPP not supported")
 
-    for test in [ 60, 61 ]:
+    for test in [ 60, 61, 80 ]:
         dev[0].set("dpp_test", str(test))
         dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
                        dpp_csign=csign, dpp_connector=sta_connector,
@@ -2967,12 +2967,19 @@ def test_dpp_proto_network_introduction(dev, apdev):
         if ev is None or "type=5" not in ev:
             raise Exception("Peer Discovery Request RX not reported")
 
+        if test == 80:
+            ev = dev[0].wait_event(["DPP-INTRO"], timeout=10)
+            if ev is None:
+                raise Exception("DPP-INTRO not reported for test 80")
+            if "status=7" not in ev:
+                raise Exception("Unexpected result in test 80: " + ev)
+
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()
         hapd.dump_monitor()
     dev[0].set("dpp_test", "0")
 
-    for test in [ 62, 63, 64 ]:
+    for test in [ 62, 63, 64, 77, 78, 79 ]:
         hapd.set("dpp_test", str(test))
         dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
                        dpp_csign=csign, dpp_connector=sta_connector,
@@ -2980,9 +2987,18 @@ def test_dpp_proto_network_introduction(dev, apdev):
 
         ev = dev[0].wait_event(["DPP-INTRO"], timeout=10)
         if ev is None:
-            raise Exception("Peer introduction result not reported")
-        if "status=" in ev:
-            raise Exception("Unexpected peer introduction result: " + ev)
+            raise Exception("Peer introduction result not reported (test %d)" % test)
+        if test == 77:
+            if "fail=transaction_id_mismatch" not in ev:
+                raise Exception("Connector validation failure not reported")
+        elif test == 78:
+            if "status=254" not in ev:
+                raise Exception("Invalid status value not reported")
+        elif test == 79:
+            if "fail=peer_connector_validation_failed" not in ev:
+                raise Exception("Connector validation failure not reported")
+        elif "status=" in ev:
+            raise Exception("Unexpected peer introduction result (test %d): " % test + ev)
 
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()

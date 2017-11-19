@@ -2731,6 +2731,11 @@ def test_dpp_proto_conf_req_no_config_attr_obj(dev, apdev):
     run_dpp_proto_conf_req_missing(dev, 52,
                                    "Missing or invalid Config Attributes attribute")
 
+def test_dpp_proto_conf_req_invalid_config_attr_obj(dev, apdev):
+    """DPP protocol testing - invalid Config Attr Obj in Conf Req"""
+    run_dpp_proto_conf_req_missing(dev, 76,
+                                   "Unsupported wi-fi_tech")
+
 def test_dpp_proto_conf_req_no_wrapped_data(dev, apdev):
     """DPP protocol testing - no Wrapped Data in Conf Req"""
     run_dpp_proto_conf_req_missing(dev, 53,

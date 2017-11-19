@@ -2561,6 +2561,10 @@ def test_dpp_proto_auth_resp_no_status(dev, apdev):
     """DPP protocol testing - no Status in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 16, "Missing or invalid required DPP Status attribute")
 
+def test_dpp_proto_auth_resp_invalid_status(dev, apdev):
+    """DPP protocol testing - invalid Status in Auth Resp"""
+    run_dpp_proto_auth_resp_missing(dev, 74, "Responder reported failure")
+
 def test_dpp_proto_auth_resp_no_r_bootstrap_key(dev, apdev):
     """DPP protocol testing - no R-bootstrap key in Auth Resp"""
     run_dpp_proto_auth_resp_missing(dev, 17, "Missing or invalid required Responder Bootstrapping Key Hash attribute")
@@ -2662,6 +2666,10 @@ def run_dpp_proto_auth_conf_missing(dev, test, reason):
 def test_dpp_proto_auth_conf_no_status(dev, apdev):
     """DPP protocol testing - no Status in Auth Conf"""
     run_dpp_proto_auth_conf_missing(dev, 25, "Missing or invalid required DPP Status attribute")
+
+def test_dpp_proto_auth_conf_invalid_status(dev, apdev):
+    """DPP protocol testing - invalid Status in Auth Conf"""
+    run_dpp_proto_auth_conf_missing(dev, 75, "Authentication failed")
 
 def test_dpp_proto_auth_conf_no_r_bootstrap_key(dev, apdev):
     """DPP protocol testing - no R-bootstrap key in Auth Conf"""

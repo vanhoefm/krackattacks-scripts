@@ -1956,6 +1956,9 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	struct wpabuf *pi = NULL;
 	u8 zero[SHA256_MAC_LEN];
 	const u8 *r_pubkey_hash, *i_pubkey_hash;
+#ifdef CONFIG_TESTING_OPTIONS
+	u8 test_hash[SHA256_MAC_LEN];
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	auth = os_zalloc(sizeof(*auth));
 	if (!auth)
@@ -2024,9 +2027,21 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
 		r_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_INVALID_R_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid R-Bootstrap Key Hash");
+		os_memcpy(test_hash, r_pubkey_hash, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		r_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
 		i_pubkey_hash = NULL;
+	} else if (dpp_test == DPP_TEST_INVALID_I_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid I-Bootstrap Key Hash");
+		os_memcpy(test_hash, i_pubkey_hash, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		i_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_I_PROTO_KEY_AUTH_REQ) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Proto Key");
 		wpabuf_free(pi);
@@ -2468,6 +2483,9 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	int ret = -1;
 	const u8 *r_pubkey_hash, *i_pubkey_hash, *r_nonce, *i_nonce;
 	enum dpp_status_error status = DPP_STATUS_OK;
+#ifdef CONFIG_TESTING_OPTIONS
+	u8 test_hash[SHA256_MAC_LEN];
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Response");
 	if (!auth->own_bi)
@@ -2553,9 +2571,26 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
 		r_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid R-Bootstrap Key Hash");
+		os_memcpy(test_hash, r_pubkey_hash, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		r_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
 		i_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid I-Bootstrap Key Hash");
+		if (i_pubkey_hash)
+			os_memcpy(test_hash, i_pubkey_hash, SHA256_MAC_LEN);
+		else
+			os_memset(test_hash, 0, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		i_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_R_PROTO_KEY_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Proto Key");
 		wpabuf_free(pr);
@@ -2603,6 +2638,9 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 {
 	struct wpabuf *msg;
 	const u8 *r_pubkey_hash, *i_pubkey_hash, *i_nonce;
+#ifdef CONFIG_TESTING_OPTIONS
+	u8 test_hash[SHA256_MAC_LEN];
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (!auth->own_bi)
 		return -1;
@@ -2620,9 +2658,26 @@ static int dpp_auth_build_resp_status(struct dpp_authentication *auth,
 	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
 		r_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_R_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid R-Bootstrap Key Hash");
+		os_memcpy(test_hash, r_pubkey_hash, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		r_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
 		i_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_I_BOOTSTRAP_KEY_HASH_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid I-Bootstrap Key Hash");
+		if (i_pubkey_hash)
+			os_memcpy(test_hash, i_pubkey_hash, SHA256_MAC_LEN);
+		else
+			os_memset(test_hash, 0, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		i_pubkey_hash = test_hash;
 	} else if (dpp_test == DPP_TEST_NO_STATUS_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
 		status = -1;
@@ -2929,6 +2984,10 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
 	u8 *wrapped_i_auth;
 	u8 *wrapped_r_nonce;
 	u8 *attr_start, *attr_end;
+	const u8 *r_pubkey_hash, *i_pubkey_hash;
+#ifdef CONFIG_TESTING_OPTIONS
+	u8 test_hash[SHA256_MAC_LEN];
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	wpa_printf(MSG_DEBUG, "DPP: Build Authentication Confirmation");
 
@@ -2947,6 +3006,12 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
 
 	attr_start = wpabuf_put(msg, 0);
 
+	r_pubkey_hash = auth->peer_bi->pubkey_hash;
+	if (auth->own_bi)
+		i_pubkey_hash = auth->own_bi->pubkey_hash;
+	else
+		i_pubkey_hash = NULL;
+
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_NO_STATUS_AUTH_CONF)
 		goto skip_status;
@@ -2959,31 +3024,48 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
 
 #ifdef CONFIG_TESTING_OPTIONS
 skip_status:
-	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_CONF)
-		goto skip_r_bootstrap_key;
+	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_CONF) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no R-Bootstrap Key Hash");
+		r_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_R_BOOTSTRAP_KEY_HASH_AUTH_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid R-Bootstrap Key Hash");
+		os_memcpy(test_hash, r_pubkey_hash, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		r_pubkey_hash = test_hash;
+	} else if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_CONF) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no I-Bootstrap Key Hash");
+		i_pubkey_hash = NULL;
+	} else if (dpp_test ==
+		   DPP_TEST_INVALID_I_BOOTSTRAP_KEY_HASH_AUTH_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - invalid I-Bootstrap Key Hash");
+		if (i_pubkey_hash)
+			os_memcpy(test_hash, i_pubkey_hash, SHA256_MAC_LEN);
+		else
+			os_memset(test_hash, 0, SHA256_MAC_LEN);
+		test_hash[SHA256_MAC_LEN - 1] ^= 0x01;
+		i_pubkey_hash = test_hash;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Responder Bootstrapping Key Hash */
-	wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
-	wpabuf_put_le16(msg, SHA256_MAC_LEN);
-	wpabuf_put_data(msg, auth->peer_bi->pubkey_hash, SHA256_MAC_LEN);
+	if (r_pubkey_hash) {
+		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
+		wpabuf_put_le16(msg, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, r_pubkey_hash, SHA256_MAC_LEN);
+	}
 
-#ifdef CONFIG_TESTING_OPTIONS
-skip_r_bootstrap_key:
-	if (dpp_test == DPP_TEST_NO_I_BOOTSTRAP_KEY_HASH_AUTH_CONF)
-		goto skip_i_bootstrap_key;
-#endif /* CONFIG_TESTING_OPTIONS */
-
-	if (auth->own_bi) {
+	if (i_pubkey_hash) {
 		/* Mutual authentication */
 		/* Initiator Bootstrapping Key Hash */
 		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
 		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, auth->own_bi->pubkey_hash, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, i_pubkey_hash, SHA256_MAC_LEN);
 	}
 
 #ifdef CONFIG_TESTING_OPTIONS
-skip_i_bootstrap_key:
 	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_AUTH_CONF)
 		goto skip_wrapped_data;
 	if (dpp_test == DPP_TEST_NO_I_AUTH_AUTH_CONF)

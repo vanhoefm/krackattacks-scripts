@@ -1275,6 +1275,12 @@ static void wpas_dpp_start_gas_client(struct wpa_supplicant *wpa_s)
 		    "\"wi-fi_tech\":\"infra\","
 		    "\"netRole\":\"%s\"}",
 		    wpa_s->dpp_netrole_ap ? "ap" : "sta");
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_INVALID_CONFIG_ATTR_OBJ_CONF_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Config Attr");
+		json[29] = 'k'; /* replace "infra" with "knfra" */
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	wpa_printf(MSG_DEBUG, "DPP: GAS Config Attributes: %s", json);
 
 	offchannel_send_action_done(wpa_s);

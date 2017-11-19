@@ -1101,6 +1101,103 @@ def run_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev, extra=None):
         dev[0].set("dpp_config_processing", "0")
         stop_sigma_dut(sigma)
 
+def dpp_resp_conf_mutual(dev, conf_id, uri):
+    logger.info("Starting DPP responder/configurator in a thread")
+    dev.set("dpp_configurator_params",
+            " conf=sta-dpp ssid=%s configurator=%d" % ("DPPNET01".encode("hex"), conf_id));
+    cmd = "DPP_LISTEN 2437 role=configurator qr=mutual"
+    if "OK" not in dev.request(cmd):
+        raise Exception("Failed to initiate DPP listen")
+    if uri:
+        ev = dev.wait_event(["DPP-SCAN-PEER-QR-CODE"], timeout=10)
+        if ev is None:
+            raise Exception("QR Code scan for mutual authentication not requested")
+        res = dev.request("DPP_QR_CODE " + uri)
+        if "FAIL" in res:
+            raise Exception("Failed to parse QR Code URI")
+    ev = dev.wait_event(["DPP-CONF-SENT"], timeout=10)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    logger.info("DPP responder/configurator done")
+
+def test_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev):
+    """sigma_dut DPP/QR (mutual) initiator as Enrollee"""
+    run_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev, False)
+
+def test_sigma_dut_dpp_qr_mutual_init_enrollee_pending(dev, apdev):
+    """sigma_dut DPP/QR (mutual) initiator as Enrollee (response pending)"""
+    run_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev, True)
+
+def run_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev, resp_pending):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    csign = "30770201010420768240a3fc89d6662d9782f120527fe7fb9edc6366ab0b9c7dde96125cfd250fa00a06082a8648ce3d030107a144034200042908e1baf7bf413cc66f9e878a03e8bb1835ba94b033dbe3d6969fc8575d5eb5dfda1cb81c95cee21d0cd7d92ba30541ffa05cb6296f5dd808b0c1c2a83c0708"
+    csign_pub = "3059301306072a8648ce3d020106082a8648ce3d030107034200042908e1baf7bf413cc66f9e878a03e8bb1835ba94b033dbe3d6969fc8575d5eb5dfda1cb81c95cee21d0cd7d92ba30541ffa05cb6296f5dd808b0c1c2a83c0708"
+    ap_connector = "eyJ0eXAiOiJkcHBDb24iLCJraWQiOiJwYWtZbXVzd1dCdWpSYTl5OEsweDViaTVrT3VNT3dzZHRlaml2UG55ZHZzIiwiYWxnIjoiRVMyNTYifQ.eyJncm91cHMiOlt7Imdyb3VwSWQiOiIqIiwibmV0Um9sZSI6ImFwIn1dLCJuZXRBY2Nlc3NLZXkiOnsia3R5IjoiRUMiLCJjcnYiOiJQLTI1NiIsIngiOiIybU5vNXZuRkI5bEw3d1VWb1hJbGVPYzBNSEE1QXZKbnpwZXZULVVTYzVNIiwieSI6IlhzS3dqVHJlLTg5WWdpU3pKaG9CN1haeUttTU05OTl3V2ZaSVl0bi01Q3MifX0.XhjFpZgcSa7G2lHy0OCYTvaZFRo5Hyx6b7g7oYyusLC7C_73AJ4_BxEZQVYJXAtDuGvb3dXSkHEKxREP9Q6Qeg"
+    ap_netaccesskey = "30770201010420ceba752db2ad5200fa7bc565b9c05c69b7eb006751b0b329b0279de1c19ca67ca00a06082a8648ce3d030107a14403420004da6368e6f9c507d94bef0515a1722578e73430703902f267ce97af4fe51273935ec2b08d3adefbcf588224b3261a01ed76722a630cf7df7059f64862d9fee42b"
+
+    params = { "ssid": "DPPNET01",
+               "wpa": "2",
+               "wpa_key_mgmt": "DPP",
+               "rsn_pairwise": "CCMP",
+               "dpp_connector": ap_connector,
+               "dpp_csign": csign_pub,
+               "dpp_netaccesskey": ap_netaccesskey }
+    try:
+        hapd = hostapd.add_ap(apdev[0], params)
+    except:
+        raise HwsimSkip("DPP not supported")
+
+    sigma = start_sigma_dut(dev[0].ifname)
+    try:
+        dev[0].set("dpp_config_processing", "2")
+
+        cmd = "DPP_CONFIGURATOR_ADD key=" + csign
+        res = dev[1].request(cmd);
+        if "FAIL" in res:
+            raise Exception("Failed to add configurator")
+        conf_id = int(res)
+
+        addr = dev[1].own_addr().replace(':', '')
+        cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/6 mac=" + addr
+        res = dev[1].request(cmd)
+        if "FAIL" in res:
+            raise Exception("Failed to generate bootstrapping info")
+        id0 = int(res)
+        uri0 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR")
+        if "status,COMPLETE" not in res:
+            raise Exception("dev_exec_action did not succeed: " + res)
+        hex = res.split(',')[3]
+        uri = hex.decode('hex')
+        logger.info("URI from sigma_dut: " + uri)
+
+        if not resp_pending:
+            res = dev[1].request("DPP_QR_CODE " + uri)
+            if "FAIL" in res:
+                raise Exception("Failed to parse QR Code URI")
+            uri = None
+
+        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,SetPeerBootstrap,DPPBootstrappingdata,%s,DPPBS,QR" % uri0.encode('hex'))
+        if "status,COMPLETE" not in res:
+            raise Exception("dev_exec_action did not succeed: " + res)
+
+        t = threading.Thread(target=dpp_resp_conf_mutual,
+                             args=(dev[1], conf_id, uri))
+        t.start()
+
+        time.sleep(1)
+        cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,10,DPPWaitForConnect,Yes"
+        res = sigma_dut_cmd(cmd, timeout=15)
+        t.join()
+        if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK" not in res:
+            raise Exception("Unexpected result: " + res)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+        stop_sigma_dut(sigma)
+
 def test_sigma_dut_dpp_qr_init_enrollee_psk(dev, apdev):
     """sigma_dut DPP/QR initiator as Enrollee (PSK)"""
     check_dpp_capab(dev[0])

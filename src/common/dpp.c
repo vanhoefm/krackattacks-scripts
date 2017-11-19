@@ -2618,6 +2618,9 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	} else if (dpp_test == DPP_TEST_NO_STATUS_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
 		status = 255;
+	} else if (dpp_test == DPP_TEST_INVALID_STATUS_AUTH_RESP) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Status");
+		status = 254;
 	} else if (dpp_test == DPP_TEST_NO_R_NONCE_AUTH_RESP) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no R-nonce");
 		r_nonce = NULL;
@@ -3023,8 +3026,13 @@ static struct wpabuf * dpp_auth_build_conf(struct dpp_authentication *auth,
 		i_pubkey_hash = NULL;
 
 #ifdef CONFIG_TESTING_OPTIONS
-	if (dpp_test == DPP_TEST_NO_STATUS_AUTH_CONF)
+	if (dpp_test == DPP_TEST_NO_STATUS_AUTH_CONF) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - no Status");
 		goto skip_status;
+	} else if (dpp_test == DPP_TEST_INVALID_STATUS_AUTH_CONF) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Status");
+		status = 254;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* DPP Status */

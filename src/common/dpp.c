@@ -1446,6 +1446,30 @@ static void dpp_build_attr_status(struct wpabuf *msg,
 }
 
 
+static void dpp_build_attr_r_bootstrap_key_hash(struct wpabuf *msg,
+						const u8 *hash)
+{
+	if (hash) {
+		wpa_printf(MSG_DEBUG, "DPP: R-Bootstrap Key Hash");
+		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
+		wpabuf_put_le16(msg, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, hash, SHA256_MAC_LEN);
+	}
+}
+
+
+static void dpp_build_attr_i_bootstrap_key_hash(struct wpabuf *msg,
+						const u8 *hash)
+{
+	if (hash) {
+		wpa_printf(MSG_DEBUG, "DPP: I-Bootstrap Key Hash");
+		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
+		wpabuf_put_le16(msg, SHA256_MAC_LEN);
+		wpabuf_put_data(msg, hash, SHA256_MAC_LEN);
+	}
+}
+
+
 static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 					  const struct wpabuf *pi,
 					  size_t nonce_len,
@@ -1477,18 +1501,10 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 	attr_start = wpabuf_put(msg, 0);
 
 	/* Responder Bootstrapping Key Hash */
-	if (r_pubkey_hash) {
-		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, r_pubkey_hash, SHA256_MAC_LEN);
-	}
+	dpp_build_attr_r_bootstrap_key_hash(msg, r_pubkey_hash);
 
 	/* Initiator Bootstrapping Key Hash */
-	if (i_pubkey_hash) {
-		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, i_pubkey_hash, SHA256_MAC_LEN);
-	}
+	dpp_build_attr_i_bootstrap_key_hash(msg, i_pubkey_hash);
 
 	/* Initiator Protocol Key */
 	if (pi) {
@@ -1647,19 +1663,10 @@ static struct wpabuf * dpp_auth_build_resp(struct dpp_authentication *auth,
 		dpp_build_attr_status(msg, status);
 
 	/* Responder Bootstrapping Key Hash */
-	if (r_pubkey_hash) {
-		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, r_pubkey_hash, SHA256_MAC_LEN);
-	}
+	dpp_build_attr_r_bootstrap_key_hash(msg, r_pubkey_hash);
 
-	/* Initiator Bootstrapping Key Hash */
-	if (i_pubkey_hash) {
-		/* Mutual authentication */
-		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, i_pubkey_hash, SHA256_MAC_LEN);
-	}
+	/* Initiator Bootstrapping Key Hash (mutual authentication) */
+	dpp_build_attr_i_bootstrap_key_hash(msg, i_pubkey_hash);
 
 	/* Responder Protocol Key */
 	if (pr) {
@@ -3052,19 +3059,10 @@ skip_status:
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Responder Bootstrapping Key Hash */
-	if (r_pubkey_hash) {
-		wpabuf_put_le16(msg, DPP_ATTR_R_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, r_pubkey_hash, SHA256_MAC_LEN);
-	}
+	dpp_build_attr_r_bootstrap_key_hash(msg, r_pubkey_hash);
 
-	if (i_pubkey_hash) {
-		/* Mutual authentication */
-		/* Initiator Bootstrapping Key Hash */
-		wpabuf_put_le16(msg, DPP_ATTR_I_BOOTSTRAP_KEY_HASH);
-		wpabuf_put_le16(msg, SHA256_MAC_LEN);
-		wpabuf_put_data(msg, i_pubkey_hash, SHA256_MAC_LEN);
-	}
+	/* Initiator Bootstrapping Key Hash (mutual authentication) */
+	dpp_build_attr_i_bootstrap_key_hash(msg, i_pubkey_hash);
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_AUTH_CONF)

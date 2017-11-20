@@ -790,3 +790,15 @@ def test_ap_open_disable_select(dev, apdev):
         raise Exception("Unexpected blacklist entry added")
     dev[0].request("SELECT_NETWORK %d" % id)
     dev[0].wait_connected()
+
+def test_ap_open_reassoc_same(dev, apdev):
+    """AP with open mode and STA reassociating back to same AP without auth exchange"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    try:
+        dev[0].request("SET reassoc_same_bss_optim 1")
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity(dev[0], hapd)
+    finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")

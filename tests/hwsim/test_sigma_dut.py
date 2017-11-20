@@ -1258,7 +1258,12 @@ def test_sigma_dut_dpp_qr_init_configurator_4(dev, apdev):
     """sigma_dut DPP/QR initiator as Configurator (conf index 4)"""
     run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 4)
 
-def run_sigma_dut_dpp_qr_init_configurator(dev, apdev, conf_idx):
+def test_sigma_dut_dpp_qr_init_configurator_both(dev, apdev):
+    """sigma_dut DPP/QR initiator as Configurator or Enrollee (conf index 1)"""
+    run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 1, "Both")
+
+def run_sigma_dut_dpp_qr_init_configurator(dev, apdev, conf_idx,
+                                           prov_role="Configurator"):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
     sigma = start_sigma_dut(dev[0].ifname)
@@ -1279,7 +1284,7 @@ def run_sigma_dut_dpp_qr_init_configurator(dev, apdev, conf_idx):
         if "status,COMPLETE" not in res:
             raise Exception("dev_exec_action did not succeed: " + res)
 
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfIndex,%d,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6" % conf_idx)
+        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,%s,DPPConfIndex,%d,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6" % (prov_role, conf_idx))
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
             raise Exception("Unexpected result: " + res)
     finally:

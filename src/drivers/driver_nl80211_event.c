@@ -2387,10 +2387,11 @@ int process_global_event(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct wpa_driver_nl80211_data *drv, *tmp;
-	int ifidx = -1;
+	int ifidx = -1, wiphy_idx = -1, wiphy_idx_rx = -1;
 	struct i802_bss *bss;
 	u64 wdev_id = 0;
 	int wdev_id_set = 0;
+	int wiphy_idx_set = 0;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -2400,13 +2401,19 @@ int process_global_event(struct nl_msg *msg, void *arg)
 	else if (tb[NL80211_ATTR_WDEV]) {
 		wdev_id = nla_get_u64(tb[NL80211_ATTR_WDEV]);
 		wdev_id_set = 1;
+	} else if (tb[NL80211_ATTR_WIPHY]) {
+		wiphy_idx_rx = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+		wiphy_idx_set = 1;
 	}
 
 	dl_list_for_each_safe(drv, tmp, &global->interfaces,
 			      struct wpa_driver_nl80211_data, list) {
 		for (bss = drv->first_bss; bss; bss = bss->next) {
-			if ((ifidx == -1 && !wdev_id_set) ||
+			if (wiphy_idx_set)
+				wiphy_idx = nl80211_get_wiphy_index(bss);
+			if ((ifidx == -1 && !wiphy_idx_set && !wdev_id_set) ||
 			    ifidx == bss->ifindex ||
+			    (wiphy_idx_set && wiphy_idx == wiphy_idx_rx) ||
 			    (wdev_id_set && bss->wdev_id_set &&
 			     wdev_id == bss->wdev_id)) {
 				do_process_drv_event(bss, gnlh->cmd, tb);

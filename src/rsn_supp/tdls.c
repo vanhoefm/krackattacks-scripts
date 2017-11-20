@@ -35,6 +35,7 @@
 #define TDLS_TESTING_DECLINE_RESP BIT(9)
 #define TDLS_TESTING_IGNORE_AP_PROHIBIT BIT(10)
 #define TDLS_TESTING_WRONG_MIC BIT(11)
+#define TDLS_TESTING_DOUBLE_TPK_M2 BIT(12)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -2123,6 +2124,13 @@ skip_add_peer:
 		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
 		goto error;
 	}
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_DOUBLE_TPK_M2) {
+		wpa_printf(MSG_INFO, "TDLS: Testing - Send another TPK M2");
+		wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer);
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	return 0;
 

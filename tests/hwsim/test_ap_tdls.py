@@ -271,6 +271,14 @@ def test_ap_wpa2_tdls_wrong_tpk_m3_mic(dev, apdev):
     dev[1].tdls_setup(addr0)
     time.sleep(1)
 
+def test_ap_wpa2_tdls_double_tpk_m2(dev, apdev):
+    """Double TPK M2 during TDLS setup initiation"""
+    hapd = start_ap_wpa2_psk(apdev[0])
+    wlantest_setup(hapd)
+    connect_2sta_wpa2_psk(dev, hapd)
+    dev[0].request("SET tdls_testing 0x1000")
+    setup_tdls(dev[1], dev[0], hapd)
+
 def test_ap_wpa_tdls(dev, apdev):
     """WPA-PSK AP and two stations using TDLS"""
     skip_with_fips(dev[0])

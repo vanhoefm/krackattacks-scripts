@@ -1547,6 +1547,16 @@ static struct wpabuf * dpp_auth_build_req(struct dpp_authentication *auth,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no I-nonce");
 		goto skip_i_nonce;
 	}
+	if (dpp_test == DPP_TEST_INVALID_I_NONCE_AUTH_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid I-nonce");
+		WPA_PUT_LE16(pos, DPP_ATTR_I_NONCE);
+		pos += 2;
+		WPA_PUT_LE16(pos, nonce_len - 1);
+		pos += 2;
+		os_memcpy(pos, auth->i_nonce, nonce_len - 1);
+		pos += nonce_len - 1;
+		goto skip_i_nonce;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* I-nonce */

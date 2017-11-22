@@ -136,6 +136,14 @@ struct dpp_pkex {
 	unsigned int freq;
 };
 
+enum dpp_akm {
+	DPP_AKM_UNKNOWN,
+	DPP_AKM_DPP,
+	DPP_AKM_PSK,
+	DPP_AKM_SAE,
+	DPP_AKM_PSK_SAE
+};
+
 struct dpp_configuration {
 	u8 ssid[32];
 	size_t ssid_len;
@@ -201,6 +209,7 @@ struct dpp_authentication {
 	char passphrase[64];
 	u8 psk[PMK_LEN];
 	int psk_set;
+	enum dpp_akm akm;
 	struct wpabuf *net_access_key;
 	os_time_t net_access_key_expiry;
 	struct wpabuf *c_sign_key;
@@ -361,6 +370,7 @@ struct wpabuf * dpp_alloc_msg(enum dpp_public_action_frame_type type,
 const u8 * dpp_get_attr(const u8 *buf, size_t len, u16 req_id, u16 *ret_len);
 int dpp_check_attrs(const u8 *buf, size_t len);
 int dpp_key_expired(const char *timestamp, os_time_t *expiry);
+const char * dpp_akm_str(enum dpp_akm akm);
 void dpp_configurator_free(struct dpp_configurator *conf);
 struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,

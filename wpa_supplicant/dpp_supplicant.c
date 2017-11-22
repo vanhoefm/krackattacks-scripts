@@ -1108,7 +1108,13 @@ static struct wpa_ssid * wpas_dpp_add_network(struct wpa_supplicant *wpa_s,
 	}
 
 	if (!auth->connector) {
-		ssid->key_mgmt = WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_PSK_SHA256;
+		ssid->key_mgmt = 0;
+		if (auth->akm == DPP_AKM_PSK || auth->akm == DPP_AKM_PSK_SAE)
+			ssid->key_mgmt |= WPA_KEY_MGMT_PSK |
+				WPA_KEY_MGMT_PSK_SHA256 | WPA_KEY_MGMT_FT_PSK;
+		if (auth->akm == DPP_AKM_SAE || auth->akm == DPP_AKM_PSK_SAE)
+			ssid->key_mgmt |= WPA_KEY_MGMT_SAE |
+				WPA_KEY_MGMT_FT_SAE;
 		ssid->ieee80211w = 1;
 		if (auth->passphrase[0]) {
 			if (wpa_config_set_quoted(ssid, "psk",

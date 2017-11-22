@@ -4517,6 +4517,11 @@ static int dpp_parse_cred_legacy(struct dpp_authentication *auth,
 		os_strlcpy(auth->passphrase, pass->string,
 			   sizeof(auth->passphrase));
 	} else if (psk_hex && psk_hex->type == JSON_STRING) {
+		if (auth->akm == DPP_AKM_SAE) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Unexpected psk_hex with akm=sae");
+			return -1;
+		}
 		if (os_strlen(psk_hex->string) != PMK_LEN * 2 ||
 		    hexstr2bin(psk_hex->string, auth->psk, PMK_LEN) < 0) {
 			wpa_printf(MSG_DEBUG, "DPP: Invalid psk_hex encoding");
@@ -4527,6 +4532,12 @@ static int dpp_parse_cred_legacy(struct dpp_authentication *auth,
 		auth->psk_set = 1;
 	} else {
 		wpa_printf(MSG_DEBUG, "DPP: No pass or psk_hex strings found");
+		return -1;
+	}
+
+	if ((auth->akm == DPP_AKM_SAE || auth->akm == DPP_AKM_PSK_SAE) &&
+	    !auth->passphrase[0]) {
+		wpa_printf(MSG_DEBUG, "DPP: No pass for sae found");
 		return -1;
 	}
 
@@ -5092,6 +5103,37 @@ fail:
 }
 
 
+const char * dpp_akm_str(enum dpp_akm akm)
+{
+	switch (akm) {
+	case DPP_AKM_DPP:
+		return "dpp";
+	case DPP_AKM_PSK:
+		return "psk";
+	case DPP_AKM_SAE:
+		return "sae";
+	case DPP_AKM_PSK_SAE:
+		return "psk+sae";
+	default:
+		return "??";
+	}
+}
+
+
+static enum dpp_akm dpp_akm_from_str(const char *akm)
+{
+	if (os_strcmp(akm, "psk") == 0)
+		return DPP_AKM_PSK;
+	if (os_strcmp(akm, "sae") == 0)
+		return DPP_AKM_SAE;
+	if (os_strcmp(akm, "psk+sae") == 0)
+		return DPP_AKM_PSK_SAE;
+	if (os_strcmp(akm, "dpp") == 0)
+		return DPP_AKM_DPP;
+	return DPP_AKM_UNKNOWN;
+}
+
+
 static int dpp_parse_conf_obj(struct dpp_authentication *auth,
 			      const u8 *conf_obj, u16 conf_obj_len)
 {
@@ -5149,10 +5191,13 @@ static int dpp_parse_conf_obj(struct dpp_authentication *auth,
 		dpp_auth_fail(auth, "No cred::akm string value found");
 		goto fail;
 	}
-	if (os_strcmp(token->string, "psk") == 0) {
+	auth->akm = dpp_akm_from_str(token->string);
+
+	if (auth->akm == DPP_AKM_PSK || auth->akm == DPP_AKM_SAE ||
+	    auth->akm == DPP_AKM_PSK_SAE) {
 		if (dpp_parse_cred_legacy(auth, cred) < 0)
 			goto fail;
-	} else if (os_strcmp(token->string, "dpp") == 0) {
+	} else if (auth->akm == DPP_AKM_DPP) {
 		if (dpp_parse_cred_dpp(auth, cred) < 0)
 			goto fail;
 	} else {

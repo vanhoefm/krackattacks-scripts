@@ -1907,6 +1907,68 @@ def run_dpp_pkex2(dev, apdev, curve=None, init_extra=""):
     if ev is None:
         raise Exception("DPP configuration not completed (Enrollee)")
 
+def test_dpp_pkex_no_responder(dev, apdev):
+    """DPP and PKEX with no responder (retry behavior)"""
+    check_dpp_capab(dev[0])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d init=1 identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[0].wait_event(["DPP-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("DPP PKEX failure not reported")
+    if "No response from PKEX peer" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
+def test_dpp_pkex_after_retry(dev, apdev):
+    """DPP and PKEX completing after retry"""
+    check_dpp_capab(dev[0])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d init=1 identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    time.sleep(0.1)
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id1)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437"
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    # Ignore Enrollee result since configurator was not set here
+
 def test_dpp_pkex_hostapd_responder(dev, apdev):
     """DPP PKEX with hostapd as responder"""
     check_dpp_capab(dev[0])

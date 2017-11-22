@@ -37,6 +37,12 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 			       enum offchannel_send_action_result result);
 static void wpas_dpp_init_timeout(void *eloop_ctx, void *timeout_ctx);
 static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s);
+static void
+wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
+			unsigned int freq, const u8 *dst,
+			const u8 *src, const u8 *bssid,
+			const u8 *data, size_t data_len,
+			enum offchannel_send_action_result result);
 
 static const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -1554,6 +1560,35 @@ fail:
 }
 
 
+static void wpas_dpp_pkex_retry_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
+
+	if (!pkex || !pkex->exchange_req)
+		return;
+	if (pkex->exch_req_tries >= 5) {
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+			"No response from PKEX peer");
+		dpp_pkex_free(pkex);
+		wpa_s->dpp_pkex = NULL;
+		return;
+	}
+
+	pkex->exch_req_tries++;
+	wpa_printf(MSG_DEBUG, "DPP: Retransmit PKEX Exchange Request (try %u)",
+		   pkex->exch_req_tries);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
+		MAC2STR(broadcast), pkex->freq, DPP_PA_PKEX_EXCHANGE_REQ);
+	offchannel_send_action(wpa_s, pkex->freq, broadcast,
+			       wpa_s->own_addr, broadcast,
+			       wpabuf_head(pkex->exchange_req),
+			       wpabuf_len(pkex->exchange_req),
+			       pkex->exch_req_wait_time,
+			       wpas_dpp_tx_pkex_status, 0);
+}
+
+
 static void
 wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 			unsigned int freq, const u8 *dst,
@@ -1562,6 +1597,7 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 			enum offchannel_send_action_result result)
 {
 	const char *res_txt;
+	struct dpp_pkex *pkex = wpa_s->dpp_pkex;
 
 	res_txt = result == OFFCHANNEL_SEND_ACTION_SUCCESS ? "SUCCESS" :
 		(result == OFFCHANNEL_SEND_ACTION_NO_ACK ? "no-ACK" :
@@ -1571,21 +1607,31 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 		   freq, MAC2STR(dst), res_txt);
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX_STATUS "dst=" MACSTR
 		" freq=%u result=%s", MAC2STR(dst), freq, res_txt);
-	/* TODO: Time out wait for response more quickly in error cases? */
 
-	if (!wpa_s->dpp_pkex) {
+	if (!pkex) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Ignore TX status since there is no ongoing PKEX exchange");
 		return;
 	}
 
-	if (wpa_s->dpp_pkex->failed) {
+	if (pkex->failed) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Terminate PKEX exchange due to an earlier error");
-		if (wpa_s->dpp_pkex->t > wpa_s->dpp_pkex->own_bi->pkex_t)
-			wpa_s->dpp_pkex->own_bi->pkex_t = wpa_s->dpp_pkex->t;
-		dpp_pkex_free(wpa_s->dpp_pkex);
+		if (pkex->t > pkex->own_bi->pkex_t)
+			pkex->own_bi->pkex_t = pkex->t;
+		dpp_pkex_free(pkex);
 		wpa_s->dpp_pkex = NULL;
+		return;
+	}
+
+	if (pkex->exch_req_wait_time && pkex->exchange_req) {
+		/* Wait for PKEX Exchange Response frame and retry request if
+		 * no response is seen. */
+		eloop_cancel_timeout(wpas_dpp_pkex_retry_timeout, wpa_s, NULL);
+		eloop_register_timeout(pkex->exch_req_wait_time / 1000,
+				       (pkex->exch_req_wait_time % 1000) * 1000,
+				       wpas_dpp_pkex_retry_timeout, wpa_s,
+				       NULL);
 	}
 }
 
@@ -1658,6 +1704,9 @@ wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 		wpa_printf(MSG_DEBUG, "DPP: No matching PKEX session");
 		return;
 	}
+
+	eloop_cancel_timeout(wpas_dpp_pkex_retry_timeout, wpa_s, NULL);
+	wpa_s->dpp_pkex->exch_req_wait_time = 0;
 
 	os_memcpy(wpa_s->dpp_pkex->peer_mac, src, ETH_ALEN);
 	msg = dpp_pkex_rx_exchange_resp(wpa_s->dpp_pkex, buf, len);
@@ -2226,6 +2275,7 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 		return -1;
 
 	if (os_strstr(cmd, " init=1")) {
+		struct dpp_pkex *pkex;
 		struct wpabuf *msg;
 
 		wpa_printf(MSG_DEBUG, "DPP: Initiating PKEX");
@@ -2233,21 +2283,28 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 		wpa_s->dpp_pkex = dpp_pkex_init(wpa_s, own_bi, wpa_s->own_addr,
 						wpa_s->dpp_pkex_identifier,
 						wpa_s->dpp_pkex_code);
-		if (!wpa_s->dpp_pkex)
+		pkex = wpa_s->dpp_pkex;
+		if (!pkex)
 			return -1;
 
-		msg = wpa_s->dpp_pkex->exchange_req;
+		msg = pkex->exchange_req;
 		wait_time = wpa_s->max_remain_on_chan;
 		if (wait_time > 2000)
 			wait_time = 2000;
-		/* TODO: Which channel to use? */
+		/* TODO: Support for 5 GHz channels */
+		pkex->freq = 2437;
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
 			" freq=%u type=%d",
-			MAC2STR(broadcast), 2437, DPP_PA_PKEX_EXCHANGE_REQ);
-		offchannel_send_action(wpa_s, 2437, broadcast, wpa_s->own_addr,
-				       broadcast,
+			MAC2STR(broadcast), pkex->freq,
+			DPP_PA_PKEX_EXCHANGE_REQ);
+		offchannel_send_action(wpa_s, pkex->freq, broadcast,
+				       wpa_s->own_addr, broadcast,
 				       wpabuf_head(msg), wpabuf_len(msg),
 				       wait_time, wpas_dpp_tx_pkex_status, 0);
+		if (wait_time == 0)
+			wait_time = 2000;
+		pkex->exch_req_wait_time = wait_time;
+		pkex->exch_req_tries = 1;
 	}
 
 	/* TODO: Support multiple PKEX info entries */
@@ -2330,6 +2387,7 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (!wpa_s->dpp_init_done)
 		return;
+	eloop_cancel_timeout(wpas_dpp_pkex_retry_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_dpp_init_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_dpp_auth_resp_retry_timeout, wpa_s, NULL);

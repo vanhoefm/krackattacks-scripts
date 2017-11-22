@@ -131,6 +131,9 @@ struct dpp_pkex {
 	struct wpabuf *exchange_req;
 	struct wpabuf *exchange_resp;
 	unsigned int t; /* number of failures on code use */
+	unsigned int exch_req_wait_time;
+	unsigned int exch_req_tries;
+	unsigned int freq;
 };
 
 struct dpp_configuration {

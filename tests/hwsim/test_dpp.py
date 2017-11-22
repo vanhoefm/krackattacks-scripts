@@ -2594,6 +2594,10 @@ def test_dpp_proto_auth_req_no_i_nonce(dev, apdev):
     """DPP protocol testing - no I-nonce in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 13, "Missing or invalid I-nonce")
 
+def test_dpp_proto_auth_req_invalid_i_nonce(dev, apdev):
+    """DPP protocol testing - invalid I-nonce in Auth Req"""
+    run_dpp_proto_auth_req_missing(dev, 81, "Missing or invalid I-nonce")
+
 def test_dpp_proto_auth_req_no_i_capab(dev, apdev):
     """DPP protocol testing - no I-capab in Auth Req"""
     run_dpp_proto_auth_req_missing(dev, 14, "Missing or invalid I-capab")

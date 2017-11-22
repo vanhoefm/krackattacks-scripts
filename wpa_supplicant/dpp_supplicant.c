@@ -657,7 +657,8 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 {
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	const u8 *dst;
-	unsigned int wait_time, freq, max_tries;
+	unsigned int wait_time, freq, max_tries, used;
+	struct os_reltime now, diff;
 
 	if (!auth)
 		return -1;
@@ -684,6 +685,15 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 			wait_time = wpa_s->dpp_init_retry_time;
 		else
 			wait_time = 10000;
+		os_get_reltime(&now);
+		os_reltime_sub(&now, &wpa_s->dpp_last_init, &diff);
+		used = diff.sec * 1000 + diff.usec / 1000;
+		if (used > wait_time)
+			wait_time = 0;
+		else
+			wait_time -= used;
+		wpa_printf(MSG_DEBUG, "DPP: Next init attempt in %u ms",
+			   wait_time);
 		eloop_register_timeout(wait_time / 1000,
 				       (wait_time % 1000) * 1000,
 				       wpas_dpp_init_timeout, wpa_s,

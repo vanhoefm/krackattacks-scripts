@@ -1431,12 +1431,55 @@ def test_dpp_auto_connect_legacy(dev, apdev):
     finally:
         dev[0].set("dpp_config_processing", "0")
 
-def run_dpp_auto_connect_legacy(dev, apdev):
+def test_dpp_auto_connect_legacy_sae_1(dev, apdev):
+    """DPP and auto connect (legacy SAE)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev, conf='sta-sae', psk_sae=True)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_legacy_sae_2(dev, apdev):
+    """DPP and auto connect (legacy SAE)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev, conf='sta-sae', sae_only=True)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_legacy_psk_sae_1(dev, apdev):
+    """DPP and auto connect (legacy PSK+SAE)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev, conf='sta-psk-sae',
+                                    psk_sae=True)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_legacy_psk_sae_2(dev, apdev):
+    """DPP and auto connect (legacy PSK+SAE)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev, conf='sta-psk-sae',
+                                    sae_only=True)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def test_dpp_auto_connect_legacy_psk_sae_3(dev, apdev):
+    """DPP and auto connect (legacy PSK+SAE)"""
+    try:
+        run_dpp_auto_connect_legacy(dev, apdev, conf='sta-psk-sae')
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_auto_connect_legacy(dev, apdev, conf='sta-psk',
+                                psk_sae=False, sae_only=False):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
 
     params = hostapd.wpa2_params(ssid="dpp-legacy",
                                  passphrase="secret passphrase")
+    if sae_only:
+            params['wpa_key_mgmt'] = 'SAE'
+    elif psk_sae:
+            params['wpa_key_mgmt'] = 'WPA-PSK SAE'
+
     hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].set("dpp_config_processing", "2")
@@ -1457,7 +1500,7 @@ def run_dpp_auto_connect_legacy(dev, apdev):
     if "OK" not in dev[0].request(cmd):
         raise Exception("Failed to start listen operation")
 
-    cmd = "DPP_AUTH_INIT peer=%d conf=sta-psk ssid=%s pass=%s" % (id1, "dpp-legacy".encode("hex"), "secret passphrase".encode("hex"))
+    cmd = "DPP_AUTH_INIT peer=%d conf=%s ssid=%s pass=%s" % (id1, conf, "dpp-legacy".encode("hex"), "secret passphrase".encode("hex"))
     if "OK" not in dev[1].request(cmd):
         raise Exception("Failed to initiate DPP Authentication")
     ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=10)

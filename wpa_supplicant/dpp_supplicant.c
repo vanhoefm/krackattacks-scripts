@@ -419,6 +419,13 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 		}
 	}
 
+	if (!is_broadcast_ether_addr(dst) && auth->waiting_auth_resp &&
+	    result == OFFCHANNEL_SEND_ACTION_SUCCESS) {
+		/* Allow timeout handling to stop iteration if no response is
+		 * received from a peer that has ACKed a request. */
+		auth->auth_req_ack = 1;
+	}
+
 	if (!wpa_s->dpp_auth_ok_on_ack && wpa_s->dpp_auth->neg_freq > 0 &&
 	    wpa_s->dpp_auth->curr_freq != wpa_s->dpp_auth->neg_freq) {
 		wpa_printf(MSG_DEBUG,
@@ -434,13 +441,24 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 static void wpas_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	unsigned int freq;
 	struct os_reltime now;
 
-	if (!wpa_s->dpp_auth)
+	if (!auth)
 		return;
 
-	if (wpa_s->dpp_auth->waiting_auth_resp) {
+	if (auth->waiting_auth_resp && auth->auth_req_ack) {
+		wpa_printf(MSG_INFO,
+			   "DPP: No response received from responder - stopping initiation attempt");
+		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_AUTH_INIT_FAILED);
+		offchannel_send_action_done(wpa_s);
+		dpp_auth_deinit(auth);
+		wpa_s->dpp_auth = NULL;
+		return;
+	}
+
+	if (auth->waiting_auth_resp) {
 		unsigned int wait_time;
 
 		wait_time = wpa_s->dpp_resp_wait_time ?
@@ -454,9 +472,9 @@ static void wpas_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
-	freq = wpa_s->dpp_auth->curr_freq;
-	if (wpa_s->dpp_auth->neg_freq > 0)
-		freq = wpa_s->dpp_auth->neg_freq;
+	freq = auth->curr_freq;
+	if (auth->neg_freq > 0)
+		freq = auth->neg_freq;
 	wpa_printf(MSG_DEBUG, "DPP: Continue reply wait on channel %u MHz",
 		   freq);
 	wpas_dpp_listen_start(wpa_s, freq);
@@ -649,7 +667,7 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 			max_tries = wpa_s->dpp_init_max_tries;
 		else
 			max_tries = 5;
-		if (auth->num_freq_iters >= max_tries) {
+		if (auth->num_freq_iters >= max_tries || auth->auth_req_ack) {
 			wpa_printf(MSG_INFO,
 				   "DPP: No response received from responder - stopping initiation attempt");
 			wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_AUTH_INIT_FAILED);
@@ -694,6 +712,7 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 	}
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR " freq=%u type=%d",
 		MAC2STR(dst), freq, DPP_PA_AUTHENTICATION_REQ);
+	auth->auth_req_ack = 0;
 	os_get_reltime(&wpa_s->dpp_last_init);
 	return offchannel_send_action(wpa_s, freq, dst,
 				      wpa_s->own_addr, broadcast,

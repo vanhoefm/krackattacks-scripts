@@ -194,6 +194,7 @@ struct dpp_authentication {
 	int initiator;
 	int waiting_auth_resp;
 	int waiting_auth_conf;
+	int auth_req_ack;
 	unsigned int auth_resp_tries;
 	u8 allowed_roles;
 	int configurator;

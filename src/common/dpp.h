@@ -147,7 +147,7 @@ enum dpp_akm {
 struct dpp_configuration {
 	u8 ssid[32];
 	size_t ssid_len;
-	int dpp; /* whether to use DPP or legacy configuration */
+	enum dpp_akm akm;
 
 	/* For DPP configuration (connector) */
 	os_time_t netaccesskey_expiry;

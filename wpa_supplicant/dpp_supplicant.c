@@ -536,8 +536,15 @@ static void wpas_dpp_set_configurator(struct wpa_supplicant *wpa_s,
 			goto fail;
 		os_memcpy(conf_sta->ssid, ssid, ssid_len);
 		conf_sta->ssid_len = ssid_len;
-		if (os_strstr(cmd, " conf=sta-psk")) {
-			conf_sta->dpp = 0;
+		if (os_strstr(cmd, " conf=sta-psk") ||
+		    os_strstr(cmd, " conf=sta-sae") ||
+		    os_strstr(cmd, " conf=sta-psk-sae")) {
+			if (os_strstr(cmd, " conf=sta-psk-sae"))
+				conf_sta->akm = DPP_AKM_PSK_SAE;
+			else if (os_strstr(cmd, " conf=sta-sae"))
+				conf_sta->akm = DPP_AKM_SAE;
+			else
+				conf_sta->akm = DPP_AKM_PSK;
 			if (psk_set) {
 				os_memcpy(conf_sta->psk, psk, PMK_LEN);
 			} else {
@@ -546,7 +553,7 @@ static void wpas_dpp_set_configurator(struct wpa_supplicant *wpa_s,
 					goto fail;
 			}
 		} else if (os_strstr(cmd, " conf=sta-dpp")) {
-			conf_sta->dpp = 1;
+			conf_sta->akm = DPP_AKM_DPP;
 		} else {
 			goto fail;
 		}
@@ -558,8 +565,15 @@ static void wpas_dpp_set_configurator(struct wpa_supplicant *wpa_s,
 			goto fail;
 		os_memcpy(conf_ap->ssid, ssid, ssid_len);
 		conf_ap->ssid_len = ssid_len;
-		if (os_strstr(cmd, " conf=ap-psk")) {
-			conf_ap->dpp = 0;
+		if (os_strstr(cmd, " conf=ap-psk") ||
+		    os_strstr(cmd, " conf=ap-sae") ||
+		    os_strstr(cmd, " conf=ap-psk-sae")) {
+			if (os_strstr(cmd, " conf=ap-psk-sae"))
+				conf_ap->akm = DPP_AKM_PSK_SAE;
+			else if (os_strstr(cmd, " conf=ap-sae"))
+				conf_ap->akm = DPP_AKM_SAE;
+			else
+				conf_ap->akm = DPP_AKM_PSK;
 			if (psk_set) {
 				os_memcpy(conf_ap->psk, psk, PMK_LEN);
 			} else {
@@ -568,7 +582,7 @@ static void wpas_dpp_set_configurator(struct wpa_supplicant *wpa_s,
 					goto fail;
 			}
 		} else if (os_strstr(cmd, " conf=ap-dpp")) {
-			conf_ap->dpp = 1;
+			conf_ap->akm = DPP_AKM_DPP;
 		} else {
 			goto fail;
 		}

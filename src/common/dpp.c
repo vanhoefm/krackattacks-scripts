@@ -4112,7 +4112,7 @@ dpp_build_conf_obj_legacy(struct dpp_authentication *auth, int ap,
 	if (!buf)
 		return NULL;
 
-	wpabuf_put_str(buf, "\"cred\":{\"akm\":\"psk\",");
+	wpabuf_printf(buf, "\"cred\":{\"akm\":\"%s\",", dpp_akm_str(conf->akm));
 	if (conf->passphrase) {
 		char pass[63 * 6 + 1];
 
@@ -4165,7 +4165,7 @@ dpp_build_conf_obj(struct dpp_authentication *auth, int ap)
 		return NULL;
 	}
 
-	if (conf->dpp)
+	if (conf->akm == DPP_AKM_DPP)
 		return dpp_build_conf_obj_dpp(auth, ap, conf);
 	return dpp_build_conf_obj_legacy(auth, ap, conf);
 }

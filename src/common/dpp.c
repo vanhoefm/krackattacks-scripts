@@ -30,6 +30,8 @@
 
 #ifdef CONFIG_TESTING_OPTIONS
 enum dpp_test_behavior dpp_test = DPP_TEST_DISABLED;
+u8 dpp_pkex_own_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
+u8 dpp_pkex_peer_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 
 static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 				    const struct dpp_curve_params *curve);
@@ -6166,6 +6168,14 @@ struct dpp_pkex * dpp_pkex_init(void *msg_ctx, struct dpp_bootstrap_info *bi,
 {
 	struct dpp_pkex *pkex;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (!is_zero_ether_addr(dpp_pkex_own_mac_override)) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - own_mac override " MACSTR,
+			   MAC2STR(dpp_pkex_own_mac_override));
+		own_mac = dpp_pkex_own_mac_override;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
 		return NULL;
@@ -6369,6 +6379,19 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 			"PKEX counter t limit reached - ignore message");
 		return NULL;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (!is_zero_ether_addr(dpp_pkex_peer_mac_override)) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - peer_mac override " MACSTR,
+			   MAC2STR(dpp_pkex_peer_mac_override));
+		peer_mac = dpp_pkex_peer_mac_override;
+	}
+	if (!is_zero_ether_addr(dpp_pkex_own_mac_override)) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - own_mac override " MACSTR,
+			   MAC2STR(dpp_pkex_own_mac_override));
+		own_mac = dpp_pkex_own_mac_override;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	attr_id = dpp_get_attr(buf, len, DPP_ATTR_CODE_IDENTIFIER,
 			       &attr_id_len);
@@ -6693,6 +6716,14 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 
 	if (pkex->failed || pkex->t >= PKEX_COUNTER_T_LIMIT || !pkex->initiator)
 		return NULL;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (!is_zero_ether_addr(dpp_pkex_peer_mac_override)) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - peer_mac override " MACSTR,
+			   MAC2STR(dpp_pkex_peer_mac_override));
+		peer_mac = dpp_pkex_peer_mac_override;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	os_memcpy(pkex->peer_mac, peer_mac, ETH_ALEN);
 

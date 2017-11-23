@@ -284,6 +284,39 @@ static const u8 pkex_resp_y_bp_p512r1[64] = {
 };
 
 
+static void dpp_debug_print_point(const char *title, const EC_GROUP *group,
+				  const EC_POINT *point)
+{
+	BIGNUM *x, *y;
+	BN_CTX *ctx;
+	char *x_str = NULL, *y_str = NULL;
+
+	if (!wpa_debug_show_keys)
+		return;
+
+	ctx = BN_CTX_new();
+	x = BN_new();
+	y = BN_new();
+	if (!ctx || !x || !y ||
+	    EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) != 1)
+		goto fail;
+
+	x_str = BN_bn2hex(x);
+	y_str = BN_bn2hex(y);
+	if (!x_str || !y_str)
+		goto fail;
+
+	wpa_printf(MSG_DEBUG, "%s (%s,%s)", title, x_str, y_str);
+
+fail:
+	OPENSSL_free(x_str);
+	OPENSSL_free(y_str);
+	BN_free(x);
+	BN_free(y);
+	BN_CTX_free(ctx);
+}
+
+
 static int dpp_hash_vector(const struct dpp_curve_params *curve,
 			   size_t num_elem, const u8 *addr[], const size_t *len,
 			   u8 *mac)
@@ -444,6 +477,7 @@ static EVP_PKEY * dpp_set_pubkey_point_group(const EC_GROUP *group,
 		wpa_printf(MSG_ERROR, "DPP: Invalid point");
 		goto fail;
 	}
+	dpp_debug_print_point("DPP: dpp_set_pubkey_point_group", group, point);
 
 	eckey = EC_KEY_new();
 	if (!eckey ||
@@ -979,6 +1013,8 @@ static void dpp_debug_print_key(const char *title, EVP_PKEY *key)
 	int res;
 	unsigned char *der = NULL;
 	int der_len;
+	const EC_GROUP *group;
+	const EC_POINT *point;
 
 	out = BIO_new(BIO_s_mem());
 	if (!out)
@@ -1000,6 +1036,11 @@ static void dpp_debug_print_key(const char *title, EVP_PKEY *key)
 	eckey = EVP_PKEY_get1_EC_KEY(key);
 	if (!eckey)
 		return;
+
+	group = EC_KEY_get0_group(eckey);
+	point = EC_KEY_get0_public_key(eckey);
+	if (group && point)
+		dpp_debug_print_point(title, group, point);
 
 	der_len = i2d_ECPrivateKey(eckey, &der);
 	if (der_len > 0)
@@ -1201,6 +1242,7 @@ static struct wpabuf * dpp_bootstrap_key_der(EVP_PKEY *key)
 	point = EC_KEY_get0_public_key(eckey);
 	if (!group || !point)
 		goto fail;
+	dpp_debug_print_point("DPP: bootstrap public key", group, point);
 	nid = EC_GROUP_get_curve_name(group);
 
 	bootstrap = DPP_BOOTSTRAPPING_KEY_new();
@@ -5875,6 +5917,7 @@ static EC_POINT * dpp_pkex_derive_Qi(const struct dpp_curve_params *curve,
 		wpa_printf(MSG_INFO, "DPP: Qi is the point-at-infinity");
 		goto fail;
 	}
+	dpp_debug_print_point("DPP: Qi", group, Qi);
 out:
 	EC_KEY_free(Pi_ec);
 	EVP_PKEY_free(Pi);
@@ -5956,6 +5999,7 @@ static EC_POINT * dpp_pkex_derive_Qr(const struct dpp_curve_params *curve,
 		wpa_printf(MSG_INFO, "DPP: Qr is the point-at-infinity");
 		goto fail;
 	}
+	dpp_debug_print_point("DPP: Qr", group, Qr);
 out:
 	EC_KEY_free(Pr_ec);
 	EVP_PKEY_free(Pr);
@@ -6071,6 +6115,7 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 	X_point = EC_KEY_get0_public_key(X_ec);
 	if (!X_point)
 		goto fail;
+	dpp_debug_print_point("DPP: X", group, X_point);
 	M = EC_POINT_new(group);
 	Mx = BN_new();
 	My = BN_new();
@@ -6078,6 +6123,7 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 	    EC_POINT_add(group, M, X_point, Qi, bnctx) != 1 ||
 	    EC_POINT_get_affine_coordinates_GFp(group, M, Mx, My, bnctx) != 1)
 		goto fail;
+	dpp_debug_print_point("DPP: M", group, M);
 
 	/* Initiator -> Responder: group, [identifier,] M */
 	attr_len = 4 + 2;
@@ -6468,6 +6514,8 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 		bi->pkex_t++;
 		goto fail;
 	}
+	dpp_debug_print_point("DPP: M", group, M);
+	dpp_debug_print_point("DPP: X'", group, X);
 
 	pkex = os_zalloc(sizeof(*pkex));
 	if (!pkex)
@@ -6515,6 +6563,7 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	Y_point = EC_KEY_get0_public_key(Y_ec);
 	if (!Y_point)
 		goto fail;
+	dpp_debug_print_point("DPP: Y", group, Y_point);
 	N = EC_POINT_new(group);
 	Nx = BN_new();
 	Ny = BN_new();
@@ -6522,6 +6571,7 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 	    EC_POINT_add(group, N, Y_point, Qr, bnctx) != 1 ||
 	    EC_POINT_get_affine_coordinates_GFp(group, N, Nx, Ny, bnctx) != 1)
 		goto fail;
+	dpp_debug_print_point("DPP: N", group, N);
 
 	pkex->exchange_resp = dpp_pkex_build_exchange_resp(pkex, DPP_STATUS_OK,
 							   Nx, Ny);
@@ -6800,6 +6850,8 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 		pkex->t++;
 		goto fail;
 	}
+	dpp_debug_print_point("DPP: N", group, N);
+	dpp_debug_print_point("DPP: Y'", group, Y);
 
 	pkex->exchange_done = 1;
 

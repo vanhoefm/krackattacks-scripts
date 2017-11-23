@@ -6671,6 +6671,7 @@ fail:
 
 
 struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
+					  const u8 *peer_mac,
 					  const u8 *buf, size_t buflen)
 {
 	const u8 *attr_status, *attr_id, *attr_key, *attr_group;
@@ -6692,6 +6693,8 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 
 	if (pkex->failed || pkex->t >= PKEX_COUNTER_T_LIMIT || !pkex->initiator)
 		return NULL;
+
+	os_memcpy(pkex->peer_mac, peer_mac, ETH_ALEN);
 
 	attr_status = dpp_get_attr(buf, buflen, DPP_ATTR_STATUS,
 				   &attr_status_len);

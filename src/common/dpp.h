@@ -396,6 +396,7 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 					   const char *code,
 					   const u8 *buf, size_t len);
 struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
+					  const u8 *peer_mac,
 					  const u8 *buf, size_t len);
 struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 					      const u8 *hdr,

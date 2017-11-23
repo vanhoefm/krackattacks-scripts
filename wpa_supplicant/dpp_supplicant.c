@@ -1796,8 +1796,7 @@ wpas_dpp_rx_pkex_exchange_resp(struct wpa_supplicant *wpa_s, const u8 *src,
 	eloop_cancel_timeout(wpas_dpp_pkex_retry_timeout, wpa_s, NULL);
 	wpa_s->dpp_pkex->exch_req_wait_time = 0;
 
-	os_memcpy(wpa_s->dpp_pkex->peer_mac, src, ETH_ALEN);
-	msg = dpp_pkex_rx_exchange_resp(wpa_s->dpp_pkex, buf, len);
+	msg = dpp_pkex_rx_exchange_resp(wpa_s->dpp_pkex, src, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
 		return;

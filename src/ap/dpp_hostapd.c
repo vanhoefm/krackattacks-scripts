@@ -1198,8 +1198,7 @@ hostapd_dpp_rx_pkex_exchange_resp(struct hostapd_data *hapd, const u8 *src,
 		return;
 	}
 
-	os_memcpy(hapd->dpp_pkex->peer_mac, src, ETH_ALEN);
-	msg = dpp_pkex_rx_exchange_resp(hapd->dpp_pkex, buf, len);
+	msg = dpp_pkex_rx_exchange_resp(hapd->dpp_pkex, src, buf, len);
 	if (!msg) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to process the response");
 		return;

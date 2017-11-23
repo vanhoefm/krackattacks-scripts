@@ -2462,7 +2462,8 @@ def run_dpp_intro_mismatch(dev, apdev, wpas):
     if "status=7" not in ev:
         raise Exception("Unexpected network introduction result on STA5: " + ev)
 
-def run_dpp_proto_init(dev, test_dev, test, mutual=False):
+def run_dpp_proto_init(dev, test_dev, test, mutual=False, unicast=True,
+                       listen=True, chan="81/1"):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
     dev[test_dev].set("dpp_test", str(test))
@@ -2474,7 +2475,11 @@ def run_dpp_proto_init(dev, test_dev, test, mutual=False):
     conf_id = int(res)
 
     addr = dev[0].own_addr().replace(':', '')
-    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode"
+    if chan:
+        cmd += " chan=" + chan
+    if unicast:
+        cmd += " mac=" + addr
     res = dev[0].request(cmd)
     if "FAIL" in res:
         raise Exception("Failed to generate bootstrapping info")
@@ -2503,8 +2508,9 @@ def run_dpp_proto_init(dev, test_dev, test, mutual=False):
     else:
         cmd = "DPP_LISTEN 2412"
 
-    if "OK" not in dev[0].request(cmd):
-        raise Exception("Failed to start listen operation")
+    if listen:
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("Failed to start listen operation")
 
     cmd = "DPP_AUTH_INIT peer=%d configurator=%d conf=sta-dpp" % (id1, conf_id)
     if mutual:
@@ -2523,6 +2529,52 @@ def test_dpp_proto_after_wrapped_data_auth_req(dev, apdev):
     ev = dev[1].wait_event(["DPP-RX"], timeout=0.1)
     if ev is not None:
         raise Exception("Unexpected DPP message seen")
+
+def test_dpp_auth_req_stop_after_ack(dev, apdev):
+    """DPP initiator stopping after ACK, but no response"""
+    run_dpp_proto_init(dev, 1, 1, listen=True)
+    ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication failure not reported")
+
+def test_dpp_auth_req_retries(dev, apdev):
+    """DPP initiator retries with no ACK"""
+    dev[1].set("dpp_init_max_tries", "3")
+    dev[1].set("dpp_init_retry_time", "1000")
+    dev[1].set("dpp_resp_wait_time", "100")
+    run_dpp_proto_init(dev, 1, 1, unicast=False, listen=False)
+
+    for i in range(3):
+        ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+        if ev is None:
+            raise Exception("Auth Req not sent (%d)" % i)
+        ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
+        if ev is None:
+            raise Exception("Auth Req TX status not seen (%d)" % i)
+
+    ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication failure not reported")
+
+def test_dpp_auth_req_retries_multi_chan(dev, apdev):
+    """DPP initiator retries with no ACK and multiple channels"""
+    dev[1].set("dpp_init_max_tries", "3")
+    dev[1].set("dpp_init_retry_time", "1000")
+    dev[1].set("dpp_resp_wait_time", "100")
+    run_dpp_proto_init(dev, 1, 1, unicast=False, listen=False,
+                       chan="81/1,81/6,81/11")
+
+    for i in range(3 * 3):
+        ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+        if ev is None:
+            raise Exception("Auth Req not sent (%d)" % i)
+        ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
+        if ev is None:
+            raise Exception("Auth Req TX status not seen (%d)" % i)
+
+    ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication failure not reported")
 
 def test_dpp_proto_after_wrapped_data_auth_resp(dev, apdev):
     """DPP protocol testing - attribute after Wrapped Data in Auth Resp"""
@@ -3150,7 +3202,7 @@ def run_dpp_qr_code_chan_list(dev, apdev, unicast, listen_freq, chanlist,
     check_dpp_capab(dev[1])
     dev[1].set("dpp_init_max_tries", "3")
     dev[1].set("dpp_init_retry_time", "100")
-    dev[1].set("dpp_resp_wait_time", "1")
+    dev[1].set("dpp_resp_wait_time", "1000")
 
     logger.info("dev0 displays QR Code")
     cmd = "DPP_BOOTSTRAP_GEN type=qrcode"

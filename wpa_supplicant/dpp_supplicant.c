@@ -443,41 +443,64 @@ static void wpas_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	unsigned int freq;
-	struct os_reltime now;
+	struct os_reltime now, diff;
+	unsigned int wait_time, diff_ms;
 
-	if (!auth)
+	if (!auth || !auth->waiting_auth_resp)
 		return;
 
-	if (auth->waiting_auth_resp && auth->auth_req_ack) {
+	wait_time = wpa_s->dpp_resp_wait_time ?
+		wpa_s->dpp_resp_wait_time : 2000;
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &wpa_s->dpp_last_init, &diff);
+	diff_ms = diff.sec * 1000 + diff.usec / 1000;
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Reply wait timeout - wait_time=%u diff_ms=%u",
+		   wait_time, diff_ms);
+
+	if (auth->auth_req_ack && diff_ms >= wait_time) {
+		/* Peer ACK'ed Authentication Request frame, but did not reply
+		 * with Authentication Response frame within two seconds. */
 		wpa_printf(MSG_INFO,
 			   "DPP: No response received from responder - stopping initiation attempt");
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_AUTH_INIT_FAILED);
 		offchannel_send_action_done(wpa_s);
+		wpas_dpp_listen_stop(wpa_s);
 		dpp_auth_deinit(auth);
 		wpa_s->dpp_auth = NULL;
 		return;
 	}
 
-	if (auth->waiting_auth_resp) {
-		unsigned int wait_time;
-
-		wait_time = wpa_s->dpp_resp_wait_time ?
-			wpa_s->dpp_resp_wait_time : 2;
-		os_get_reltime(&now);
-		if (os_reltime_expired(&now, &wpa_s->dpp_last_init,
-				       wait_time)) {
-			offchannel_send_action_done(wpa_s);
-			wpas_dpp_auth_init_next(wpa_s);
-			return;
-		}
+	if (diff_ms >= wait_time) {
+		/* Authentication Request frame was not ACK'ed and no reply
+		 * was receiving within two seconds. */
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Continue Initiator channel iteration");
+		offchannel_send_action_done(wpa_s);
+		wpas_dpp_listen_stop(wpa_s);
+		wpas_dpp_auth_init_next(wpa_s);
+		return;
 	}
+
+	/* Driver did not support 2000 ms long wait_time with TX command, so
+	 * schedule listen operation to continue waiting for the response.
+	 *
+	 * DPP listen operations continue until stopped, so simply schedule a
+	 * new call to this function at the point when the two second reply
+	 * wait has expired. */
+	wait_time -= diff_ms;
 
 	freq = auth->curr_freq;
 	if (auth->neg_freq > 0)
 		freq = auth->neg_freq;
-	wpa_printf(MSG_DEBUG, "DPP: Continue reply wait on channel %u MHz",
-		   freq);
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Continue reply wait on channel %u MHz for %u ms",
+		   freq, wait_time);
+	wpa_s->dpp_in_response_listen = 1;
 	wpas_dpp_listen_start(wpa_s, freq);
+
+	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
+			       wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 }
 
 
@@ -657,11 +680,16 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 {
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	const u8 *dst;
-	unsigned int wait_time, freq, max_tries, used;
+	unsigned int wait_time, max_wait_time, freq, max_tries, used;
 	struct os_reltime now, diff;
 
+	wpa_s->dpp_in_response_listen = 0;
 	if (!auth)
 		return -1;
+
+	if (auth->freq_idx == 0)
+		os_get_reltime(&wpa_s->dpp_init_iter_start);
+
 	if (auth->freq_idx >= auth->num_freq) {
 		auth->num_freq_iters++;
 		if (wpa_s->dpp_init_max_tries)
@@ -686,7 +714,7 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 		else
 			wait_time = 10000;
 		os_get_reltime(&now);
-		os_reltime_sub(&now, &wpa_s->dpp_last_init, &diff);
+		os_reltime_sub(&now, &wpa_s->dpp_init_iter_start, &diff);
 		used = diff.sec * 1000 + diff.usec / 1000;
 		if (used > wait_time)
 			wait_time = 0;
@@ -710,11 +738,15 @@ static int wpas_dpp_auth_init_next(struct wpa_supplicant *wpa_s)
 	wpa_s->dpp_auth_ok_on_ack = 0;
 	eloop_cancel_timeout(wpas_dpp_reply_wait_timeout, wpa_s, NULL);
 	wait_time = wpa_s->max_remain_on_chan;
-	if (wait_time > 2000)
-		wait_time = 2000;
+	max_wait_time = wpa_s->dpp_resp_wait_time ?
+		wpa_s->dpp_resp_wait_time : 2000;
+	if (wait_time > max_wait_time)
+		wait_time = max_wait_time;
+	wait_time += 10; /* give the driver some extra time to complete */
 	eloop_register_timeout(wait_time / 1000, (wait_time % 1000) * 1000,
 			       wpas_dpp_reply_wait_timeout,
 			       wpa_s, NULL);
+	wait_time -= 10;
 	if (auth->neg_freq > 0 && freq != auth->neg_freq) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Initiate on %u MHz and move to neg_freq %u MHz for response",
@@ -942,6 +974,7 @@ int wpas_dpp_listen(struct wpa_supplicant *wpa_s, const char *cmd)
 
 void wpas_dpp_listen_stop(struct wpa_supplicant *wpa_s)
 {
+	wpa_s->dpp_in_response_listen = 0;
 	if (!wpa_s->dpp_listen_freq)
 		return;
 
@@ -981,12 +1014,18 @@ void wpas_dpp_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 {
 	wpas_dpp_listen_work_done(wpa_s);
 
-	if (wpa_s->dpp_auth && !wpa_s->dpp_gas_client) {
+	if (wpa_s->dpp_auth && wpa_s->dpp_in_response_listen) {
+		unsigned int new_freq;
+
 		/* Continue listen with a new remain-on-channel */
+		if (wpa_s->dpp_auth->neg_freq > 0)
+			new_freq = wpa_s->dpp_auth->neg_freq;
+		else
+			new_freq = wpa_s->dpp_auth->curr_freq;
 		wpa_printf(MSG_DEBUG,
 			   "DPP: Continue wait on %u MHz for the ongoing DPP provisioning session",
-			   wpa_s->dpp_auth->curr_freq);
-		wpas_dpp_listen_start(wpa_s, wpa_s->dpp_auth->curr_freq);
+			   new_freq);
+		wpas_dpp_listen_start(wpa_s, new_freq);
 		return;
 	}
 

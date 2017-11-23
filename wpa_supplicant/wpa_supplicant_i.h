@@ -1190,6 +1190,7 @@ struct wpa_supplicant {
 	int dpp_qr_mutual;
 	int dpp_netrole_ap;
 	int dpp_auth_ok_on_ack;
+	int dpp_in_response_listen;
 	int dpp_gas_client;
 	u8 dpp_intro_bssid[ETH_ALEN];
 	void *dpp_intro_network;
@@ -1200,6 +1201,7 @@ struct wpa_supplicant {
 	char *dpp_pkex_auth_cmd;
 	char *dpp_configurator_params;
 	struct os_reltime dpp_last_init;
+	struct os_reltime dpp_init_iter_start;
 	unsigned int dpp_init_max_tries;
 	unsigned int dpp_init_retry_time;
 	unsigned int dpp_resp_wait_time;

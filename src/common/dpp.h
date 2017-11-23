@@ -326,6 +326,8 @@ enum dpp_test_behavior {
 extern enum dpp_test_behavior dpp_test;
 extern u8 dpp_pkex_own_mac_override[ETH_ALEN];
 extern u8 dpp_pkex_peer_mac_override[ETH_ALEN];
+extern u8 dpp_pkex_ephemeral_key_override[600];
+extern size_t dpp_pkex_ephemeral_key_override_len;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);

@@ -32,6 +32,8 @@
 enum dpp_test_behavior dpp_test = DPP_TEST_DISABLED;
 u8 dpp_pkex_own_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 u8 dpp_pkex_peer_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
+u8 dpp_pkex_ephemeral_key_override[600];
+size_t dpp_pkex_ephemeral_key_override_len = 0;
 
 static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 				    const struct dpp_curve_params *curve);
@@ -6104,7 +6106,21 @@ static struct wpabuf * dpp_pkex_build_exchange_req(struct dpp_pkex *pkex)
 		goto fail;
 
 	/* Generate a random ephemeral keypair x/X */
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_pkex_ephemeral_key_override_len) {
+		const struct dpp_curve_params *tmp_curve;
+
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - override ephemeral key x/X");
+		pkex->x = dpp_set_keypair(&tmp_curve,
+					  dpp_pkex_ephemeral_key_override,
+					  dpp_pkex_ephemeral_key_override_len);
+	} else {
+		pkex->x = dpp_gen_keypair(curve);
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	pkex->x = dpp_gen_keypair(curve);
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!pkex->x)
 		goto fail;
 
@@ -6552,7 +6568,21 @@ struct dpp_pkex * dpp_pkex_rx_exchange_req(void *msg_ctx,
 		goto fail;
 
 	/* Generate a random ephemeral keypair y/Y */
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_pkex_ephemeral_key_override_len) {
+		const struct dpp_curve_params *tmp_curve;
+
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - override ephemeral key y/Y");
+		pkex->y = dpp_set_keypair(&tmp_curve,
+					  dpp_pkex_ephemeral_key_override,
+					  dpp_pkex_ephemeral_key_override_len);
+	} else {
+		pkex->y = dpp_gen_keypair(curve);
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	pkex->y = dpp_gen_keypair(curve);
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!pkex->y)
 		goto fail;
 

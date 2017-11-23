@@ -1455,3 +1455,22 @@ def test_scan_specific_bssid(dev, apdev):
         raise Exception("First scan for unknown BSSID returned unexpected response")
     if bss2 and 'beacon_ie' in bss2 and 'ie' in bss2 and bss2['beacon_ie'] == bss2['ie']:
         raise Exception("Second scan did find Probe Response frame")
+
+def test_scan_probe_req_events(dev, apdev):
+    """Probe Request frame RX events from hostapd"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    hapd2 = hostapd.Hostapd(apdev[0]['ifname'])
+    if "OK" not in hapd2.mon.request("ATTACH probe_rx_events=1"):
+        raise Exception("Failed to register for events")
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+
+    ev = hapd2.wait_event(["RX-PROBE-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("RX-PROBE-REQUEST not reported")
+    if "sa=" + dev[0].own_addr() not in ev:
+        raise Exception("Unexpected event parameters: " + ev)
+
+    ev = hapd.wait_event(["RX-PROBE-REQUEST"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected RX-PROBE-REQUEST")

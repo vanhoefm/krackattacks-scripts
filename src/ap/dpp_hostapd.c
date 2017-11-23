@@ -1065,7 +1065,7 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 	os_get_time(&now);
 
 	if (hapd->conf->dpp_netaccesskey_expiry &&
-	    hapd->conf->dpp_netaccesskey_expiry < now.sec) {
+	    (os_time_t) hapd->conf->dpp_netaccesskey_expiry < now.sec) {
 		wpa_printf(MSG_INFO, "DPP: Own netAccessKey expired");
 		return;
 	}
@@ -1106,7 +1106,7 @@ static void hostapd_dpp_rx_peer_disc_req(struct hostapd_data *hapd,
 		return;
 	}
 
-	if (!expire || hapd->conf->dpp_netaccesskey_expiry < expire)
+	if (!expire || (os_time_t) hapd->conf->dpp_netaccesskey_expiry < expire)
 		expire = hapd->conf->dpp_netaccesskey_expiry;
 	if (expire)
 		expiration = expire - now.sec;

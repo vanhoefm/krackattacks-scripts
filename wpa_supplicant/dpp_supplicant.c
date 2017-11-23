@@ -2235,7 +2235,7 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 	os_get_time(&now);
 
 	if (ssid->dpp_netaccesskey_expiry &&
-	    ssid->dpp_netaccesskey_expiry < now.sec) {
+	    (os_time_t) ssid->dpp_netaccesskey_expiry < now.sec) {
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_MISSING_CONNECTOR
 			"netAccessKey expired");
 		return -1;

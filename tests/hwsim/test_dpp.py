@@ -1753,6 +1753,63 @@ def run_dpp_pkex(dev, apdev, curve=None, init_extra="", check_config=False):
         if ev is None:
             raise Exception("DPP configuration not completed (Enrollee)")
 
+def test_dpp_pkex_test_vector(dev, apdev):
+    """DPP and PKEX (P-256) test vector"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    dev[0].set("dpp_pkex_own_mac_override", "cd:9b:a8:f3:e5:36")
+    dev[0].set("dpp_pkex_peer_mac_override", "0c:c5:fc:af:f3:ec")
+    dev[1].set("dpp_pkex_own_mac_override", "0c:c5:fc:af:f3:ec")
+    dev[1].set("dpp_pkex_peer_mac_override", "cd:9b:a8:f3:e5:36")
+    identifier = "joes_key"
+    code = "thisisreallysecret"
+
+    # Responder bootstrapping key
+    priv = "2ae8956293f49986b6d0b8169a86805d9232babb5f6813fdfe96f19d59536c60"
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    # Responder y/Y keypair override
+    priv = "cc6cf1b24f59370920df1633a818c6c777013a116a4e1e285c80ed1cc996f0f5"
+    dev[0].set("dpp_pkex_ephemeral_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    # Initiator bootstrapping key
+    priv = "5941b51acfc702cdc1c347264beb2920db88eb1a0bf03a211868b1632233c269"
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    # Initiator x/X keypair override
+    priv = "c18f91b88b2c8e12349b2f755c888c143bcfa8e42ce744ba24ef656cf893032f"
+    dev[1].set("dpp_pkex_ephemeral_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=%s code=%s" % (id0, identifier, code)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 2437"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=%s init=1 code=%s" % (id1, identifier, code)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
 def test_dpp_pkex_code_mismatch(dev, apdev):
     """DPP and PKEX with mismatching code"""
     check_dpp_capab(dev[0])

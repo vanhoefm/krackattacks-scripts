@@ -3665,7 +3665,7 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	if (auth->initiator) {
 		dpp_auth_fail(auth, "Unexpected Authentication Confirm");
-		return NULL;
+		return -1;
 	}
 
 	auth->waiting_auth_conf = 0;

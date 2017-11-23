@@ -1054,7 +1054,9 @@ static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 	if (!pctx ||
 	    EVP_PKEY_paramgen_init(pctx) != 1 ||
 	    EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, nid) != 1 ||
+#ifdef EVP_PKEY_CTX_set_ec_param_enc
 	    EVP_PKEY_CTX_set_ec_param_enc(pctx, OPENSSL_EC_NAMED_CURVE) != 1 ||
+#endif
 	    EVP_PKEY_paramgen(pctx, &params) != 1) {
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to generate EVP_PKEY parameters");

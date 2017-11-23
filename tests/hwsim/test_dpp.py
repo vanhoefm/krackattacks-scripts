@@ -2539,6 +2539,7 @@ def test_dpp_auth_req_stop_after_ack(dev, apdev):
 
 def test_dpp_auth_req_retries(dev, apdev):
     """DPP initiator retries with no ACK"""
+    check_dpp_capab(dev[1])
     dev[1].set("dpp_init_max_tries", "3")
     dev[1].set("dpp_init_retry_time", "1000")
     dev[1].set("dpp_resp_wait_time", "100")
@@ -2558,6 +2559,7 @@ def test_dpp_auth_req_retries(dev, apdev):
 
 def test_dpp_auth_req_retries_multi_chan(dev, apdev):
     """DPP initiator retries with no ACK and multiple channels"""
+    check_dpp_capab(dev[1])
     dev[1].set("dpp_init_max_tries", "3")
     dev[1].set("dpp_init_retry_time", "1000")
     dev[1].set("dpp_resp_wait_time", "100")

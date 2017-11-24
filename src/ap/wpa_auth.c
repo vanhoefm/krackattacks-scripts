@@ -1571,9 +1571,12 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			return;
 		}
 
-		wpa_eapol_key_mic(sm->PTK.kck, sm->PTK.kck_len,
-				  sm->wpa_key_mgmt, version,
-				  (u8 *) hdr, len, key_mic);
+		if (wpa_eapol_key_mic(sm->PTK.kck, sm->PTK.kck_len,
+				      sm->wpa_key_mgmt, version,
+				      (u8 *) hdr, len, key_mic) < 0) {
+			os_free(hdr);
+			return;
+		}
 #ifdef CONFIG_TESTING_OPTIONS
 		if (!pairwise &&
 		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability > 0.0 &&

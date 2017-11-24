@@ -3221,6 +3221,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	if (sta->auth_alg == WLAN_AUTH_FILS_SK ||
 	    sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
 	    sta->auth_alg == WLAN_AUTH_FILS_PK) {
+		int res;
+
 		/* The end of the payload is encrypted. Need to decrypt it
 		 * before parsing. */
 
@@ -3230,13 +3232,14 @@ static void handle_assoc(struct hostapd_data *hapd,
 			goto fail;
 		}
 
-		left = fils_decrypt_assoc(sta->wpa_sm, sta->fils_session, mgmt,
-					  len, tmp, left);
-		if (left < 0) {
+		res = fils_decrypt_assoc(sta->wpa_sm, sta->fils_session, mgmt,
+					 len, tmp, left);
+		if (res < 0) {
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			goto fail;
 		}
 		pos = tmp;
+		left = res;
 	}
 #endif /* CONFIG_FILS */
 

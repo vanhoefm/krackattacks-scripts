@@ -64,7 +64,12 @@ def test_ap_ht40_scan(dev, apdev):
     if sec != "-1":
         raise Exception("Unexpected secondary channel")
 
+    status = hapd.get_status()
+    logger.info("hostapd STATUS: " + str(status))
+
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+    sta = hapd.get_sta(dev[0].own_addr())
+    logger.info("hostapd STA: " + str(sta))
 
 @remote_compatible
 def test_ap_ht40_scan_conflict(dev, apdev):

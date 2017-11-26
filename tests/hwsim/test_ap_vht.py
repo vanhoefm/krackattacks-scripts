@@ -308,10 +308,9 @@ def test_ap_vht_capab_not_supported(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_ap_vht160(dev, apdev):
-    """VHT with 160 MHz channel width"""
+    """VHT with 160 MHz channel width (1)"""
     try:
         hapd = None
-        hapd2 = None
         params = { "ssid": "vht",
                    "country_code": "FI",
                    "hw_mode": "a",
@@ -338,27 +337,6 @@ def test_ap_vht160(dev, apdev):
                 raise HwsimSkip("CRDA or wireless-regdb did not support 160 MHz")
             raise Exception("Unexpected interface state: " + state)
 
-        params = { "ssid": "vht2",
-                   "country_code": "FI",
-                   "hw_mode": "a",
-                   "channel": "104",
-                   "ht_capab": "[HT40-]",
-                   "ieee80211n": "1",
-                   "ieee80211ac": "1",
-                   "vht_oper_chwidth": "2",
-                   "vht_oper_centr_freq_seg0_idx": "114",
-                   'ieee80211d': '1',
-                   'ieee80211h': '1' }
-        hapd2 = hostapd.add_ap(apdev[1], params, wait_enabled=False)
-
-        ev = wait_dfs_event(hapd2, "DFS-CAC-START", 5)
-        if "DFS-CAC-START" not in ev:
-            raise Exception("Unexpected DFS event(2)")
-
-        state = hapd2.get_status_field("state")
-        if state != "DFS":
-            raise Exception("Unexpected interface state(2): " + state)
-
         logger.info("Waiting for CAC to complete")
 
         ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
@@ -375,24 +353,6 @@ def test_ap_vht160(dev, apdev):
         if state != "ENABLED":
             raise Exception("Unexpected interface state")
 
-        ev = wait_dfs_event(hapd2, "DFS-CAC-COMPLETED", 70)
-        if "success=1" not in ev:
-            raise Exception("CAC failed(2)")
-        if "freq=5520" not in ev:
-            raise Exception("Unexpected DFS freq result(2)")
-
-        ev = hapd2.wait_event(["AP-ENABLED"], timeout=5)
-        if not ev:
-            raise Exception("AP setup timed out(2)")
-
-        state = hapd2.get_status_field("state")
-        if state != "ENABLED":
-            raise Exception("Unexpected interface state(2)")
-
-        freq = hapd2.get_status_field("freq")
-        if freq != "5520":
-            raise Exception("Unexpected frequency(2)")
-
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
         sig = dev[0].request("SIGNAL_POLL").splitlines()
@@ -400,9 +360,72 @@ def test_ap_vht160(dev, apdev):
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
         if "WIDTH=160 MHz" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
-        dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5520")
-        hwsim_utils.test_connectivity(dev[1], hapd2)
-        sig = dev[1].request("SIGNAL_POLL").splitlines()
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
+        raise
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+
+def test_ap_vht160b(dev, apdev):
+    """VHT with 160 MHz channel width (2)"""
+    try:
+        hapd = None
+
+        params = { "ssid": "vht",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "104",
+                   "ht_capab": "[HT40-]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "2",
+                   "vht_oper_centr_freq_seg0_idx": "114",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[1], params, wait_enabled=False)
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
+        if "DFS-CAC-START" not in ev:
+            raise Exception("Unexpected DFS event(2)")
+
+        state = hapd.get_status_field("state")
+        if state != "DFS":
+            if state == "DISABLED" and not os.path.exists("dfs"):
+                # Not all systems have recent enough CRDA version and
+                # wireless-regdb changes to support 160 MHz and DFS. For now,
+                # do not report failures for this test case.
+                raise HwsimSkip("CRDA or wireless-regdb did not support 160 MHz")
+            raise Exception("Unexpected interface state: " + state)
+
+        logger.info("Waiting for CAC to complete")
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
+        if "success=1" not in ev:
+            raise Exception("CAC failed(2)")
+        if "freq=5520" not in ev:
+            raise Exception("Unexpected DFS freq result(2)")
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=5)
+        if not ev:
+            raise Exception("AP setup timed out(2)")
+
+        state = hapd.get_status_field("state")
+        if state != "ENABLED":
+            raise Exception("Unexpected interface state(2)")
+
+        freq = hapd.get_status_field("freq")
+        if freq != "5520":
+            raise Exception("Unexpected frequency(2)")
+
+        dev[0].connect("vht", key_mgmt="NONE", scan_freq="5520")
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
         if "FREQUENCY=5520" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
         if "WIDTH=160 MHz" not in sig:
@@ -414,14 +437,10 @@ def test_ap_vht160(dev, apdev):
         raise
     finally:
         dev[0].request("DISCONNECT")
-        dev[1].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        if hapd2:
-            hapd2.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
-        dev[1].flush_scan_cache()
 
 def test_ap_vht160_no_dfs_100_plus(dev, apdev):
     """VHT with 160 MHz channel width and no DFS (100 plus)"""

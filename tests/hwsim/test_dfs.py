@@ -203,17 +203,14 @@ def test_dfs_etsi(dev, apdev, params):
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
-def test_dfs_radar(dev, apdev):
-    """DFS CAC functionality with radar detected"""
+def test_dfs_radar1(dev, apdev):
+    """DFS CAC functionality with radar detected during initial CAC"""
     try:
         hapd = None
-        hapd2 = None
         hapd = start_dfs_ap(apdev[0], allow_failure=True)
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
-
-        hapd2 = start_dfs_ap(apdev[1], ssid="dfs2", ht40=True)
 
         ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 5)
         if ev is None:
@@ -258,30 +255,38 @@ def test_dfs_radar(dev, apdev):
                 raise Exception("Unexpected frequency: " + freq)
 
         dev[0].connect("dfs", key_mgmt="NONE")
-
-        ev = hapd2.wait_event(["AP-ENABLED"], timeout=70)
-        if not ev:
-            raise Exception("AP2 setup timed out")
-
-        dfs_simulate_radar(hapd2)
-
-        ev = wait_dfs_event(hapd2, "DFS-RADAR-DETECTED", 5)
-        if "freq=5260 ht_enabled=1 chan_offset=1 chan_width=2" not in ev:
-            raise Exception("Unexpected DFS radar detection freq from AP2")
-
-        ev = wait_dfs_event(hapd2, "DFS-NEW-CHANNEL", 5)
-        if "freq=5260" in ev:
-            raise Exception("Unexpected DFS new freq for AP2")
-
-        wait_dfs_event(hapd2, None, 5)
     finally:
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        if hapd2:
-            hapd2.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_dfs_radar2(dev, apdev):
+    """DFS CAC functionality with radar detected after initial CAC"""
+    try:
+        hapd = None
+        hapd = start_dfs_ap(apdev[0], ssid="dfs2", ht40=True)
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=70)
+        if not ev:
+            raise Exception("AP2 setup timed out")
+
+        dfs_simulate_radar(hapd)
+
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260 ht_enabled=1 chan_offset=1 chan_width=2" not in ev:
+            raise Exception("Unexpected DFS radar detection freq from AP2")
+
+        ev = wait_dfs_event(hapd, "DFS-NEW-CHANNEL", 5)
+        if "freq=5260" in ev:
+            raise Exception("Unexpected DFS new freq for AP2")
+
+        wait_dfs_event(hapd, None, 5)
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 @remote_compatible
 def test_dfs_radar_on_non_dfs_channel(dev, apdev):

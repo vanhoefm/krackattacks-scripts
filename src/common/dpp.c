@@ -2010,6 +2010,45 @@ static int dpp_prepare_channel_list(struct dpp_authentication *auth,
 }
 
 
+static int dpp_autogen_bootstrap_key(struct dpp_authentication *auth)
+{
+	struct dpp_bootstrap_info *bi;
+	char *pk = NULL;
+	size_t len;
+
+	if (auth->own_bi)
+		return 0; /* already generated */
+
+	bi = os_zalloc(sizeof(*bi));
+	if (!bi)
+		return -1;
+	bi->type = DPP_BOOTSTRAP_QR_CODE;
+	pk = dpp_keygen(bi, auth->peer_bi->curve->name, NULL, 0);
+	if (!pk)
+		goto fail;
+
+	len = 4; /* "DPP:" */
+	len += 4 + os_strlen(pk);
+	bi->uri = os_malloc(len + 1);
+	if (!bi->uri)
+		goto fail;
+	os_snprintf(bi->uri, len + 1, "DPP:K:%s;;", pk);
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Auto-generated own bootstrapping key info: URI %s",
+		   bi->uri);
+
+	auth->tmp_own_bi = auth->own_bi = bi;
+
+	os_free(pk);
+
+	return 0;
+fail:
+	os_free(pk);
+	dpp_bootstrap_info_free(bi);
+	return -1;
+}
+
+
 struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
@@ -2023,7 +2062,6 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	EVP_PKEY_CTX *ctx = NULL;
 	size_t secret_len;
 	struct wpabuf *pi = NULL;
-	u8 zero[SHA256_MAC_LEN];
 	const u8 *r_pubkey_hash, *i_pubkey_hash;
 #ifdef CONFIG_TESTING_OPTIONS
 	u8 test_hash[SHA256_MAC_LEN];
@@ -2041,7 +2079,8 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	auth->own_bi = own_bi;
 	auth->curve = peer_bi->curve;
 
-	if (dpp_prepare_channel_list(auth, own_modes, num_modes) < 0)
+	if (dpp_autogen_bootstrap_key(auth) < 0 ||
+	    dpp_prepare_channel_list(auth, own_modes, num_modes) < 0)
 		goto fail;
 
 	nonce_len = auth->curve->nonce_len;
@@ -2084,13 +2123,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 		goto fail;
 
 	r_pubkey_hash = auth->peer_bi->pubkey_hash;
-
-	if (auth->own_bi) {
-		i_pubkey_hash = auth->own_bi->pubkey_hash;
-	} else {
-		os_memset(zero, 0, SHA256_MAC_LEN);
-		i_pubkey_hash = zero;
-	}
+	i_pubkey_hash = auth->own_bi->pubkey_hash;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (dpp_test == DPP_TEST_NO_R_BOOTSTRAP_KEY_HASH_AUTH_REQ) {
@@ -3307,7 +3340,9 @@ dpp_auth_resp_rx_status(struct dpp_authentication *auth, const u8 *hdr,
 		} else {
 			wpa_printf(MSG_DEBUG,
 				   "DPP: Continue waiting for full DPP Authentication Response");
-			wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_RESPONSE_PENDING);
+			wpa_msg(auth->msg_ctx, MSG_INFO,
+				DPP_EVENT_RESPONSE_PENDING "%s",
+				auth->tmp_own_bi ? auth->tmp_own_bi->uri : "");
 		}
 	}
 fail:
@@ -3873,6 +3908,7 @@ void dpp_auth_deinit(struct dpp_authentication *auth)
 	os_free(auth->connector);
 	wpabuf_free(auth->net_access_key);
 	wpabuf_free(auth->c_sign_key);
+	dpp_bootstrap_info_free(auth->tmp_own_bi);
 #ifdef CONFIG_TESTING_OPTIONS
 	os_free(auth->config_obj_override);
 	os_free(auth->discovery_override);

@@ -164,6 +164,7 @@ struct dpp_authentication {
 	const struct dpp_curve_params *curve;
 	struct dpp_bootstrap_info *peer_bi;
 	struct dpp_bootstrap_info *own_bi;
+	struct dpp_bootstrap_info *tmp_own_bi;
 	u8 waiting_pubkey_hash[SHA256_MAC_LEN];
 	int response_pending;
 	enum dpp_status_error auth_resp_status;

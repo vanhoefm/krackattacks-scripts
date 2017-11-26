@@ -312,6 +312,77 @@ def test_dpp_qr_code_auth_mutual2(dev, apdev):
         raise Exception("DPP authentication did not succeed (Initiator)")
     dev[0].request("DPP_STOP_LISTEN")
 
+def test_dpp_qr_code_auth_mutual_p_256(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen P-256)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "P-256")
+
+def test_dpp_qr_code_auth_mutual_p_384(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen P-384)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "P-384")
+
+def test_dpp_qr_code_auth_mutual_p_521(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen P-521)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "P-521")
+
+def test_dpp_qr_code_auth_mutual_bp_256(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen BP-256)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "BP-256")
+
+def test_dpp_qr_code_auth_mutual_bp_384(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen BP-384)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "BP-384")
+
+def test_dpp_qr_code_auth_mutual_bp_512(dev, apdev):
+    """DPP QR Code and authentication exchange (mutual, autogen BP-512)"""
+    run_dpp_qr_code_auth_mutual(dev, apdev, "BP-512")
+
+def run_dpp_qr_code_auth_mutual(dev, apdev, curve):
+    check_dpp_capab(dev[0], curve and "BP-" in curve)
+    check_dpp_capab(dev[1], curve and "BP-" in curve)
+    logger.info("dev0 displays QR Code")
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    cmd += " curve=" + curve
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    logger.info("dev1 scans QR Code")
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    logger.info("dev1 initiates DPP Authentication")
+    if "OK" not in dev[0].request("DPP_LISTEN 2412 qr=mutual"):
+        raise Exception("Failed to start listen operation")
+    if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d" % (id1)):
+        raise Exception("Failed to initiate DPP Authentication")
+
+    ev = dev[1].wait_event(["DPP-RESPONSE-PENDING"], timeout=5)
+    if ev is None:
+        raise Exception("Pending response not reported")
+    uri = ev.split(' ')[1]
+
+    ev = dev[0].wait_event(["DPP-SCAN-PEER-QR-CODE"], timeout=5)
+    if ev is None:
+        raise Exception("QR Code scan for mutual authentication not requested")
+
+    logger.info("dev0 scans QR Code")
+    res = dev[0].request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    dev[0].request("DPP_STOP_LISTEN")
+
 def test_dpp_auth_resp_retries(dev, apdev):
     """DPP Authentication Response retries"""
     check_dpp_capab(dev[0])

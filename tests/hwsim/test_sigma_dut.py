@@ -1774,3 +1774,49 @@ def test_sigma_dut_dpp_self_config(dev, apdev):
     finally:
         stop_sigma_dut(sigma)
         dev[0].set("dpp_config_processing", "0")
+
+def test_sigma_dut_ap_dpp_self_config(dev, apdev, params):
+    """sigma_dut DPP AP Configurator using self-configuration"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_dpp_self_config.sigma-hostapd")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            run_sigma_dut_ap_dpp_self_config(dev, apdev)
+        finally:
+            stop_sigma_dut(sigma)
+            dev[0].set("dpp_config_processing", "0")
+
+def run_sigma_dut_ap_dpp_self_config(dev, apdev):
+    check_dpp_capab(dev[0])
+
+    sigma_dut_cmd_check("ap_reset_default,program,DPP")
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfEnrolleeRole,AP,DPPBS,QR,DPPConfIndex,1,DPPSelfConfigure,Yes,DPPTimeout,6", timeout=10)
+    if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
+            raise Exception("Unexpected result: " + res)
+
+    dev[0].set("dpp_config_processing", "2")
+
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/11 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id = int(res)
+    uri = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id)
+    cmd = "DPP_LISTEN 2462 role=enrollee"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,SetPeerBootstrap,DPPBootstrappingdata,%s,DPPBS,QR" % uri.encode('hex'))
+    if "status,COMPLETE" not in res:
+        raise Exception("dev_exec_action did not succeed: " + res)
+    cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6"
+    res = sigma_dut_cmd(cmd)
+    if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
+        raise Exception("Unexpected result: " + res)
+    dev[0].wait_connected()
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    sigma_dut_cmd_check("ap_reset_default")

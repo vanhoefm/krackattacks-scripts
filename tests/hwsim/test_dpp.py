@@ -2428,6 +2428,63 @@ def run_dpp_own_config(dev, apdev, own_curve=None, expect_failure=False):
     else:
         dev[0].wait_connected()
 
+def test_dpp_own_config_ap(dev, apdev):
+    """DPP configurator (AP) signing own connector"""
+    try:
+        run_dpp_own_config_ap(dev, apdev)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_own_config_ap(dev, apdev):
+    check_dpp_capab(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
+    check_dpp_capab(hapd)
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = hapd.request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    cmd = "DPP_CONFIGURATOR_SIGN  conf=ap-dpp configurator=%d" % (conf_id)
+    res = hapd.request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate own configuration")
+    update_hapd_config(hapd)
+
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id = int(res)
+    uri = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id)
+
+    res = hapd.request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id = int(res)
+
+    dev[0].set("dpp_config_processing", "2")
+    if "OK" not in dev[0].request("DPP_LISTEN 2412"):
+        raise Exception("Failed to start listen operation")
+    cmd = "DPP_AUTH_INIT peer=%d conf=sta-dpp configurator=%d" % (id, conf_id)
+    if "OK" not in hapd.request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = hapd.wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = hapd.wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = dev[0].wait_event(["DPP-CONF-RECEIVED", "DPP-CONF-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    if "DPP-CONF-RECEIVED" not in ev:
+        raise Exception("DPP configuration failed (Enrollee)")
+
+    dev[0].wait_connected()
+
 def test_dpp_intro_mismatch(dev, apdev):
     """DPP network introduction mismatch cases"""
     try:

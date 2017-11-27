@@ -615,6 +615,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		wpa_s->dpp_resp_max_tries = atoi(value);
 	} else if (os_strcasecmp(cmd, "dpp_resp_retry_time") == 0) {
 		wpa_s->dpp_resp_retry_time = atoi(value);
+#ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strcasecmp(cmd, "dpp_pkex_own_mac_override") == 0) {
 		if (hwaddr_aton(value, dpp_pkex_own_mac_override))
 			ret = -1;
@@ -632,6 +633,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = -1;
 		else
 			dpp_pkex_ephemeral_key_override_len = hex_len / 2;
+#endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_DPP */
 #ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
@@ -7778,9 +7780,11 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->dpp_resp_wait_time = 0;
 	wpa_s->dpp_resp_max_tries = 0;
 	wpa_s->dpp_resp_retry_time = 0;
+#ifdef CONFIG_TESTING_OPTIONS
 	os_memset(dpp_pkex_own_mac_override, 0, ETH_ALEN);
 	os_memset(dpp_pkex_peer_mac_override, 0, ETH_ALEN);
 	dpp_pkex_ephemeral_key_override_len = 0;
+#endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_DPP */
 
 #ifdef CONFIG_TDLS

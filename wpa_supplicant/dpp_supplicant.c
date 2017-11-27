@@ -435,6 +435,9 @@ static void wpas_dpp_tx_status(struct wpa_supplicant *wpa_s,
 		offchannel_send_action_done(wpa_s);
 		wpas_dpp_listen_start(wpa_s, wpa_s->dpp_auth->neg_freq);
 	}
+
+	if (wpa_s->dpp_auth_ok_on_ack)
+		wpa_s->dpp_auth_ok_on_ack = 0;
 }
 
 

@@ -300,8 +300,10 @@ void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 		return;
 	}
 
-	if (hapd->dpp_auth_ok_on_ack)
+	if (hapd->dpp_auth_ok_on_ack) {
+		hapd->dpp_auth_ok_on_ack = 0;
 		hostapd_dpp_auth_success(hapd, 1);
+	}
 }
 
 

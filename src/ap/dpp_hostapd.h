@@ -26,6 +26,7 @@ void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 struct wpabuf *
 hostapd_dpp_gas_req_handler(struct hostapd_data *hapd, const u8 *sa,
 			    const u8 *query, size_t query_len);
+void hostapd_dpp_gas_status_handler(struct hostapd_data *hapd, int ok);
 int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_configurator_remove(struct hostapd_data *hapd, const char *id);
 int hostapd_dpp_configurator_sign(struct hostapd_data *hapd, const char *cmd);

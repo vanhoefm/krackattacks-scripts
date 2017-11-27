@@ -1456,6 +1456,20 @@ hostapd_dpp_gas_req_handler(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
+void hostapd_dpp_gas_status_handler(struct hostapd_data *hapd, int ok)
+{
+	if (!hapd->dpp_auth)
+		return;
+
+	if (ok)
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_SENT);
+	else
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_FAILED);
+	dpp_auth_deinit(hapd->dpp_auth);
+	hapd->dpp_auth = NULL;
+}
+
+
 static unsigned int hostapd_dpp_next_configurator_id(struct hostapd_data *hapd)
 {
 	struct dpp_configurator *conf;

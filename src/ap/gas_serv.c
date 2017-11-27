@@ -1460,7 +1460,7 @@ static void gas_serv_req_dpp_processing(struct hostapd_data *hapd,
 			gas_serv_write_dpp_adv_proto(tx_buf);
 			wpabuf_put_le16(tx_buf, wpabuf_len(buf));
 			wpabuf_put_buf(tx_buf, buf);
-			wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_SENT);
+			hostapd_dpp_gas_status_handler(hapd, 1);
 		}
 		wpabuf_free(buf);
 	}
@@ -1702,7 +1702,7 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 			"SD response sent");
 #ifdef CONFIG_DPP
 		if (dialog->dpp)
-			wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_CONF_SENT);
+			hostapd_dpp_gas_status_handler(hapd, 1);
 #endif /* CONFIG_DPP */
 		gas_serv_dialog_clear(dialog);
 		gas_serv_free_dialogs(hapd, sa);

@@ -24,6 +24,7 @@
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #include "ap/ap_drv_ops.h"
+#include "ap/dpp_hostapd.h"
 #include "fst/fst.h"
 #include "config_file.h"
 #include "eap_register.h"
@@ -669,6 +670,9 @@ int main(int argc, char *argv[])
 #ifdef CONFIG_ETH_P_OUI
 	dl_list_init(&interfaces.eth_p_oui);
 #endif /* CONFIG_ETH_P_OUI */
+#ifdef CONFIG_DPP
+	hostapd_dpp_init_global(&interfaces);
+#endif /* CONFIG_DPP */
 
 	for (;;) {
 		c = getopt(argc, argv, "b:Bde:f:hi:KP:sSTtu:vg:G:");
@@ -914,6 +918,10 @@ int main(int argc, char *argv[])
 		hostapd_interface_deinit_free(interfaces.iface[i]);
 	}
 	os_free(interfaces.iface);
+
+#ifdef CONFIG_DPP
+	hostapd_dpp_deinit_global(&interfaces);
+#endif /* CONFIG_DPP */
 
 	if (interfaces.eloop_initialized)
 		eloop_cancel_timeout(hostapd_periodic, &interfaces, NULL);

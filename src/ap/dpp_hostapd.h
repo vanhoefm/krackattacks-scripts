@@ -33,5 +33,7 @@ int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id);
 void hostapd_dpp_stop(struct hostapd_data *hapd);
 int hostapd_dpp_init(struct hostapd_data *hapd);
 void hostapd_dpp_deinit(struct hostapd_data *hapd);
+void hostapd_dpp_init_global(struct hapd_interfaces *ifaces);
+void hostapd_dpp_deinit_global(struct hapd_interfaces *ifaces);
 
 #endif /* DPP_HOSTAPD_H */

@@ -3532,6 +3532,9 @@ static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
 #endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 
+#ifdef CONFIG_DPP
+	hostapd_dpp_deinit_global(interfaces);
+#endif /* CONFIG_DPP */
 }
 
 

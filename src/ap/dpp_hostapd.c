@@ -30,7 +30,7 @@ hostapd_dpp_configurator_get_id(struct hostapd_data *hapd, unsigned int id)
 {
 	struct dpp_configurator *conf;
 
-	dl_list_for_each(conf, &hapd->dpp_configurator,
+	dl_list_for_each(conf, &hapd->iface->interfaces->dpp_configurator,
 			 struct dpp_configurator, list) {
 		if (conf->id == id)
 			return conf;
@@ -44,8 +44,8 @@ static unsigned int hapd_dpp_next_id(struct hostapd_data *hapd)
 	struct dpp_bootstrap_info *bi;
 	unsigned int max_id = 0;
 
-	dl_list_for_each(bi, &hapd->dpp_bootstrap, struct dpp_bootstrap_info,
-			 list) {
+	dl_list_for_each(bi, &hapd->iface->interfaces->dpp_bootstrap,
+			 struct dpp_bootstrap_info, list) {
 		if (bi->id > max_id)
 			max_id = bi->id;
 	}
@@ -69,7 +69,7 @@ int hostapd_dpp_qr_code(struct hostapd_data *hapd, const char *cmd)
 		return -1;
 
 	bi->id = hapd_dpp_next_id(hapd);
-	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+	dl_list_add(&hapd->iface->interfaces->dpp_bootstrap, &bi->list);
 
 	if (auth && auth->response_pending &&
 	    dpp_notify_new_qr_code(auth, bi) == 1) {
@@ -179,7 +179,7 @@ int hostapd_dpp_bootstrap_gen(struct hostapd_data *hapd, const char *cmd)
 		    info ? "I:" : "", info ? info : "", info ? ";" : "",
 		    pk);
 	bi->id = hapd_dpp_next_id(hapd);
-	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+	dl_list_add(&hapd->iface->interfaces->dpp_bootstrap, &bi->list);
 	ret = bi->id;
 	bi = NULL;
 fail:
@@ -200,8 +200,8 @@ dpp_bootstrap_get_id(struct hostapd_data *hapd, unsigned int id)
 {
 	struct dpp_bootstrap_info *bi;
 
-	dl_list_for_each(bi, &hapd->dpp_bootstrap, struct dpp_bootstrap_info,
-			 list) {
+	dl_list_for_each(bi, &hapd->iface->interfaces->dpp_bootstrap,
+			 struct dpp_bootstrap_info, list) {
 		if (bi->id == id)
 			return bi;
 	}
@@ -209,12 +209,12 @@ dpp_bootstrap_get_id(struct hostapd_data *hapd, unsigned int id)
 }
 
 
-static int dpp_bootstrap_del(struct hostapd_data *hapd, unsigned int id)
+static int dpp_bootstrap_del(struct hapd_interfaces *ifaces, unsigned int id)
 {
 	struct dpp_bootstrap_info *bi, *tmp;
 	int found = 0;
 
-	dl_list_for_each_safe(bi, tmp, &hapd->dpp_bootstrap,
+	dl_list_for_each_safe(bi, tmp, &ifaces->dpp_bootstrap,
 			      struct dpp_bootstrap_info, list) {
 		if (id && bi->id != id)
 			continue;
@@ -241,7 +241,7 @@ int hostapd_dpp_bootstrap_remove(struct hostapd_data *hapd, const char *id)
 			return -1;
 	}
 
-	return dpp_bootstrap_del(hapd, id_val);
+	return dpp_bootstrap_del(hapd->iface->interfaces, id_val);
 }
 
 
@@ -625,8 +625,8 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
 
 	/* Try to find own and peer bootstrapping key matches based on the
 	 * received hash values */
-	dl_list_for_each(bi, &hapd->dpp_bootstrap, struct dpp_bootstrap_info,
-			 list) {
+	dl_list_for_each(bi, &hapd->iface->interfaces->dpp_bootstrap,
+			 struct dpp_bootstrap_info, list) {
 		if (!own_bi && bi->own &&
 		    os_memcmp(bi->pubkey_hash, r_bootstrap,
 			      SHA256_MAC_LEN) == 0) {
@@ -1274,7 +1274,7 @@ hostapd_dpp_rx_pkex_commit_reveal_req(struct hostapd_data *hapd, const u8 *src,
 		dpp_bootstrap_info_free(bi);
 		return;
 	}
-	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+	dl_list_add(&hapd->iface->interfaces->dpp_bootstrap, &bi->list);
 }
 
 
@@ -1321,7 +1321,7 @@ hostapd_dpp_rx_pkex_commit_reveal_resp(struct hostapd_data *hapd, const u8 *src,
 		dpp_bootstrap_info_free(bi);
 		return;
 	}
-	dl_list_add(&hapd->dpp_bootstrap, &bi->list);
+	dl_list_add(&hapd->iface->interfaces->dpp_bootstrap, &bi->list);
 
 	os_snprintf(cmd, sizeof(cmd), " peer=%u %s",
 		    bi->id,
@@ -1452,7 +1452,7 @@ static unsigned int hostapd_dpp_next_configurator_id(struct hostapd_data *hapd)
 	struct dpp_configurator *conf;
 	unsigned int max_id = 0;
 
-	dl_list_for_each(conf, &hapd->dpp_configurator,
+	dl_list_for_each(conf, &hapd->iface->interfaces->dpp_configurator,
 			 struct dpp_configurator, list) {
 		if (conf->id > max_id)
 			max_id = conf->id;
@@ -1486,7 +1486,7 @@ int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd)
 		goto fail;
 
 	conf->id = hostapd_dpp_next_configurator_id(hapd);
-	dl_list_add(&hapd->dpp_configurator, &conf->list);
+	dl_list_add(&hapd->iface->interfaces->dpp_configurator, &conf->list);
 	ret = conf->id;
 	conf = NULL;
 fail:
@@ -1498,12 +1498,12 @@ fail:
 }
 
 
-static int dpp_configurator_del(struct hostapd_data *hapd, unsigned int id)
+static int dpp_configurator_del(struct hapd_interfaces *ifaces, unsigned int id)
 {
 	struct dpp_configurator *conf, *tmp;
 	int found = 0;
 
-	dl_list_for_each_safe(conf, tmp, &hapd->dpp_configurator,
+	dl_list_for_each_safe(conf, tmp, &ifaces->dpp_configurator,
 			      struct dpp_configurator, list) {
 		if (id && conf->id != id)
 			continue;
@@ -1530,7 +1530,7 @@ int hostapd_dpp_configurator_remove(struct hostapd_data *hapd, const char *id)
 			return -1;
 	}
 
-	return dpp_configurator_del(hapd, id_val);
+	return dpp_configurator_del(hapd->iface->interfaces, id_val);
 }
 
 
@@ -1649,8 +1649,6 @@ void hostapd_dpp_stop(struct hostapd_data *hapd)
 
 int hostapd_dpp_init(struct hostapd_data *hapd)
 {
-	dl_list_init(&hapd->dpp_bootstrap);
-	dl_list_init(&hapd->dpp_configurator);
 	hapd->dpp_allowed_roles = DPP_CAPAB_CONFIGURATOR | DPP_CAPAB_ENROLLEE;
 	hapd->dpp_init_done = 1;
 	return 0;
@@ -1670,12 +1668,27 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
 #endif /* CONFIG_TESTING_OPTIONS */
 	if (!hapd->dpp_init_done)
 		return;
-	dpp_bootstrap_del(hapd, 0);
-	dpp_configurator_del(hapd, 0);
 	dpp_auth_deinit(hapd->dpp_auth);
 	hapd->dpp_auth = NULL;
 	hostapd_dpp_pkex_remove(hapd, "*");
 	hapd->dpp_pkex = NULL;
 	os_free(hapd->dpp_configurator_params);
 	hapd->dpp_configurator_params = NULL;
+}
+
+
+void hostapd_dpp_init_global(struct hapd_interfaces *ifaces)
+{
+	dl_list_init(&ifaces->dpp_bootstrap);
+	dl_list_init(&ifaces->dpp_configurator);
+	ifaces->dpp_init_done = 1;
+}
+
+
+void hostapd_dpp_deinit_global(struct hapd_interfaces *ifaces)
+{
+	if (!ifaces->dpp_init_done)
+		return;
+	dpp_bootstrap_del(ifaces, 0);
+	dpp_configurator_del(ifaces, 0);
 }

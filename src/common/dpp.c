@@ -5469,7 +5469,7 @@ fail:
 
 
 int dpp_configurator_own_config(struct dpp_authentication *auth,
-				const char *curve)
+				const char *curve, int ap)
 {
 	struct wpabuf *conf_obj;
 	int ret = -1;
@@ -5500,7 +5500,7 @@ int dpp_configurator_own_config(struct dpp_authentication *auth,
 	auth->peer_protocol_key = auth->own_protocol_key;
 	dpp_copy_csign(auth, auth->conf->csign);
 
-	conf_obj = dpp_build_conf_obj(auth, 0);
+	conf_obj = dpp_build_conf_obj(auth, ap);
 	if (!conf_obj)
 		goto fail;
 	ret = dpp_parse_conf_obj(auth, wpabuf_head(conf_obj),

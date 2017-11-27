@@ -382,7 +382,7 @@ struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,
 			size_t privkey_len);
 int dpp_configurator_own_config(struct dpp_authentication *auth,
-				const char *curve);
+				const char *curve, int ap);
 enum dpp_status_error
 dpp_peer_intro(struct dpp_introduction *intro, const char *own_connector,
 	       const u8 *net_access_key, size_t net_access_key_len,

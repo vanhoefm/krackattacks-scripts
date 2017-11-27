@@ -2045,6 +2045,7 @@ wpas_dpp_gas_req_handler(void *ctx, const u8 *sa, const u8 *query,
 	resp = dpp_conf_req_rx(auth, query, query_len);
 	if (!resp)
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_FAILED);
+	auth->conf_resp = resp;
 	return resp;
 }
 
@@ -2056,6 +2057,13 @@ wpas_dpp_gas_status_handler(void *ctx, struct wpabuf *resp, int ok)
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 
 	if (!auth) {
+		wpabuf_free(resp);
+		return;
+	}
+	if (auth->conf_resp != resp) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Ignore GAS status report (ok=%d) for unknown response",
+			ok);
 		wpabuf_free(resp);
 		return;
 	}

@@ -202,6 +202,7 @@ struct dpp_authentication {
 	int remove_on_tx_status;
 	int auth_success;
 	struct wpabuf *conf_req;
+	const struct wpabuf *conf_resp; /* owned by GAS server */
 	struct dpp_configuration *conf_ap;
 	struct dpp_configuration *conf_sta;
 	struct dpp_configurator *conf;

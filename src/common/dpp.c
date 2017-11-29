@@ -3248,6 +3248,7 @@ skip_wrapped_data:
 	return msg;
 
 fail:
+	wpabuf_free(msg);
 	return NULL;
 }
 

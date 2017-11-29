@@ -2500,10 +2500,8 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 	wpas_dpp_listen_stop(wpa_s);
 	dpp_bootstrap_del(wpa_s, 0);
 	dpp_configurator_del(wpa_s, 0);
-	dpp_auth_deinit(wpa_s->dpp_auth);
-	wpa_s->dpp_auth = NULL;
+	wpas_dpp_stop(wpa_s);
 	wpas_dpp_pkex_remove(wpa_s, "*");
-	wpa_s->dpp_pkex = NULL;
 	os_memset(wpa_s->dpp_intro_bssid, 0, ETH_ALEN);
 	os_free(wpa_s->dpp_configurator_params);
 	wpa_s->dpp_configurator_params = NULL;

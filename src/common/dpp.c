@@ -1352,11 +1352,12 @@ char * dpp_keygen(struct dpp_bootstrap_info *bi, const char *curve,
 	addr[0] = wpabuf_head(der);
 	len = wpabuf_len(der);
 	res = sha256_vector(1, addr, &len, bi->pubkey_hash);
-	if (res < 0)
+	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "DPP: Failed to hash public key");
-	else
-		wpa_hexdump(MSG_DEBUG, "DPP: Public key hash", bi->pubkey_hash,
-			    SHA256_MAC_LEN);
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "DPP: Public key hash", bi->pubkey_hash,
+		    SHA256_MAC_LEN);
 
 	base64 = base64_encode(wpabuf_head(der), wpabuf_len(der), &len);
 	wpabuf_free(der);

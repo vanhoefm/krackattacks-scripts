@@ -230,6 +230,8 @@ struct json_token * json_parse(const char *data, size_t data_len)
 				token = json_alloc_token(&tokens);
 				if (!token)
 					goto fail;
+				if (!root)
+					root = token;
 			} else if (curr_token->state == JSON_WAITING_VALUE) {
 				token = curr_token;
 			} else if (curr_token->parent &&

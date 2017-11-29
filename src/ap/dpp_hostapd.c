@@ -1692,6 +1692,8 @@ void hostapd_dpp_stop(struct hostapd_data *hapd)
 {
 	dpp_auth_deinit(hapd->dpp_auth);
 	hapd->dpp_auth = NULL;
+	dpp_pkex_free(hapd->dpp_pkex);
+	hapd->dpp_pkex = NULL;
 }
 
 

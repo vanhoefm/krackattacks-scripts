@@ -2448,6 +2448,8 @@ void wpas_dpp_stop(struct wpa_supplicant *wpa_s)
 {
 	dpp_auth_deinit(wpa_s->dpp_auth);
 	wpa_s->dpp_auth = NULL;
+	dpp_pkex_free(wpa_s->dpp_pkex);
+	wpa_s->dpp_pkex = NULL;
 }
 
 

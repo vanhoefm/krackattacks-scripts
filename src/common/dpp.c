@@ -4149,7 +4149,7 @@ skip_groups:
 	tailroom += signed1_len + signed2_len + signed3_len;
 	buf = dpp_build_conf_start(auth, conf, tailroom);
 	if (!buf)
-		return NULL;
+		goto fail;
 
 	wpabuf_put_str(buf, "\"cred\":{\"akm\":\"dpp\",\"signedConnector\":\"");
 	wpabuf_put_str(buf, signed1);

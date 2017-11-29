@@ -121,6 +121,8 @@ static const char * gas_result_txt(enum gas_query_result result)
 		return "PEER_ERROR";
 	case GAS_QUERY_INTERNAL_ERROR:
 		return "INTERNAL_ERROR";
+	case GAS_QUERY_STOPPED:
+		return "STOPPED";
 	case GAS_QUERY_DELETED_AT_DEINIT:
 		return "DELETED_AT_DEINIT";
 	}
@@ -851,4 +853,19 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 	}
 
 	return dialog_token;
+}
+
+
+int gas_query_stop(struct gas_query *gas, u8 dialog_token)
+{
+	struct gas_query_pending *query;
+
+	dl_list_for_each(query, &gas->pending, struct gas_query_pending, list) {
+		if (query->dialog_token == dialog_token) {
+			gas_query_done(gas, query, GAS_QUERY_STOPPED);
+			return 0;
+		}
+	}
+
+	return -1;
 }

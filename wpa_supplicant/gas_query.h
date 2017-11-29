@@ -29,6 +29,7 @@ enum gas_query_result {
 	GAS_QUERY_TIMEOUT,
 	GAS_QUERY_PEER_ERROR,
 	GAS_QUERY_INTERNAL_ERROR,
+	GAS_QUERY_STOPPED,
 	GAS_QUERY_DELETED_AT_DEINIT
 };
 
@@ -39,6 +40,7 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 			     const struct wpabuf *adv_proto,
 			     const struct wpabuf *resp, u16 status_code),
 		  void *ctx);
+int gas_query_stop(struct gas_query *gas, u8 dialog_token);
 
 #else /* CONFIG_GAS */
 

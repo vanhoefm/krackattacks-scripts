@@ -1314,6 +1314,8 @@ static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 	const u8 *pos;
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 
+	wpa_s->dpp_gas_dialog_token = -1;
+
 	if (!auth || !auth->auth_success) {
 		wpa_printf(MSG_DEBUG, "DPP: No matching exchange in progress");
 		return;
@@ -1422,6 +1424,7 @@ static void wpas_dpp_start_gas_client(struct wpa_supplicant *wpa_s)
 	} else {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: GAS query started with dialog token %u", res);
+		wpa_s->dpp_gas_dialog_token = res;
 	}
 }
 
@@ -2450,6 +2453,8 @@ void wpas_dpp_stop(struct wpa_supplicant *wpa_s)
 	wpa_s->dpp_auth = NULL;
 	dpp_pkex_free(wpa_s->dpp_pkex);
 	wpa_s->dpp_pkex = NULL;
+	if (wpa_s->dpp_gas_client && wpa_s->dpp_gas_dialog_token >= 0)
+		gas_query_stop(wpa_s->gas, wpa_s->dpp_gas_dialog_token);
 }
 
 

@@ -890,6 +890,12 @@ def test_dpp_config_legacy_gen(dev, apdev):
                                  init_extra="conf=sta-psk pass=%s" % "passphrase".encode("hex"),
                                  require_conf_success=True)
 
+def test_dpp_config_legacy_gen_psk(dev, apdev):
+    """Generate DPP Config Object for legacy network (PSK)"""
+    run_dpp_qr_code_auth_unicast(dev, apdev, "prime256v1",
+                                 init_extra="conf=sta-psk psk=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                                 require_conf_success=True)
+
 def test_dpp_config_dpp_gen_prime256v1(dev, apdev):
     """Generate DPP Config Object for DPP network (P-256)"""
     run_dpp_qr_code_auth_unicast(dev, apdev, "prime256v1",

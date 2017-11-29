@@ -54,11 +54,11 @@ class fail_test(object):
             if self._dev.request("GET_FAIL") != "0:%s" % self._funcs:
                 raise Exception("Test failure did not trigger")
 
-def wait_fail_trigger(dev, cmd, note="Failure not triggered"):
-    for i in range(0, 40):
+def wait_fail_trigger(dev, cmd, note="Failure not triggered", max_iter=40):
+    for i in range(0, max_iter):
         if dev.request(cmd).startswith("0:"):
             break
-        if i == 39:
+        if i == max_iter - 1:
             raise Exception(note)
         time.sleep(0.05)
 

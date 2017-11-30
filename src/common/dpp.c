@@ -2211,6 +2211,13 @@ struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no E-nonce");
 		goto skip_e_nonce;
 	}
+	if (dpp_test == DPP_TEST_INVALID_E_NONCE_CONF_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid E-nonce");
+		wpabuf_put_le16(clear, DPP_ATTR_ENROLLEE_NONCE);
+		wpabuf_put_le16(clear, nonce_len - 1);
+		wpabuf_put_data(clear, auth->e_nonce, nonce_len - 1);
+		goto skip_e_nonce;
+	}
 	if (dpp_test == DPP_TEST_NO_WRAPPED_DATA_CONF_REQ) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Wrapped Data");
 		goto skip_wrapped_data;

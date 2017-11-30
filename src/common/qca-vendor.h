@@ -1480,6 +1480,11 @@ enum qca_wlan_vendor_attr_config {
 	 * 0-enable, 1-disable */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_DISABLE_FILS = 54,
 
+	/* 16-bit unsigned value to configure the level of WLAN latency
+	 * module. See enum qca_wlan_vendor_attr_config_latency_level.
+	 */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL = 55,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
@@ -4218,6 +4223,42 @@ enum qca_wlan_vendor_attr_rtplinst {
 	QCA_WLAN_VENDOR_ATTR_RTPLINST_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_RTPLINST_MAX =
 		QCA_WLAN_VENDOR_ATTR_RTPLINST_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_config_latency_level - Level for
+ * wlan latency module.
+ *
+ * There will be various of Wi-Fi functionality like scan/roaming/adaptive
+ * power saving which would causing data exchange out of service, this
+ * would be a big impact on latency. For latency sensitive applications over
+ * Wi-Fi are intolerant to such operations and thus would configure them
+ * to meet their respective needs. It is well understood by such applications
+ * that altering the default behavior would degrade the Wi-Fi functionality
+ * w.r.t the above pointed WLAN operations.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_NORMAL:
+ *	Default WLAN operation level which throughput orientated.
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_MODERATE:
+ *	Use moderate level to improve latency by limit scan duration.
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_LOW:
+ *	Use low latency level to benifit application like concurrent
+ *	downloading or video streaming via constraint scan/adaptive PS.
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_ULTRALOW:
+ *	Use ultra low latency level to benefit for gaming/voice
+ *	application via constraint scan/roaming/adaptive PS.
+ */
+enum qca_wlan_vendor_attr_config_latency_level {
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_NORMAL = 1,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_MODERATE = 2,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_LOW = 3,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_ULTRALOW = 4,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_MAX =
+	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

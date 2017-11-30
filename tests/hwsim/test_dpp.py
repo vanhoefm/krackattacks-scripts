@@ -2737,12 +2737,9 @@ def test_dpp_auth_req_retries(dev, apdev):
     run_dpp_proto_init(dev, 1, 1, unicast=False, listen=False)
 
     for i in range(3):
-        ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+        ev = dev[1].wait_event(["DPP-TX "], timeout=5)
         if ev is None:
             raise Exception("Auth Req not sent (%d)" % i)
-        ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
-        if ev is None:
-            raise Exception("Auth Req TX status not seen (%d)" % i)
 
     ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
     if ev is None:
@@ -2758,12 +2755,9 @@ def test_dpp_auth_req_retries_multi_chan(dev, apdev):
                        chan="81/1,81/6,81/11")
 
     for i in range(3 * 3):
-        ev = dev[1].wait_event(["DPP-TX"], timeout=5)
+        ev = dev[1].wait_event(["DPP-TX "], timeout=5)
         if ev is None:
             raise Exception("Auth Req not sent (%d)" % i)
-        ev = dev[1].wait_event(["DPP-TX-STATUS"], timeout=5)
-        if ev is None:
-            raise Exception("Auth Req TX status not seen (%d)" % i)
 
     ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
     if ev is None:

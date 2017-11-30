@@ -3298,7 +3298,7 @@ def test_dpp_proto_network_introduction(dev, apdev):
     except:
         raise HwsimSkip("DPP not supported")
 
-    for test in [ 60, 61, 80 ]:
+    for test in [ 60, 61, 80, 82 ]:
         dev[0].set("dpp_test", str(test))
         dev[0].connect("dpp", key_mgmt="DPP", scan_freq="2412", ieee80211w="2",
                        dpp_csign=csign, dpp_connector=sta_connector,

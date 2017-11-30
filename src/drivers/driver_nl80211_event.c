@@ -673,7 +673,7 @@ static void mlme_event_mgmt_tx_status(struct wpa_driver_nl80211_data *drv,
 
 		cookie_val = nla_get_u64(cookie);
 		wpa_printf(MSG_DEBUG, "nl80211: Action TX status:"
-			   " cookie=0%llx%s (ack=%d)",
+			   " cookie=0x%llx%s (ack=%d)",
 			   (long long unsigned int) cookie_val,
 			   cookie_val == drv->send_action_cookie ?
 			   " (match)" : " (unknown)", ack != NULL);

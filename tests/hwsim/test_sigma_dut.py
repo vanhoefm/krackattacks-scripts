@@ -1845,3 +1845,32 @@ def run_sigma_dut_preconfigured_profile(dev, apdev):
     sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
 
     stop_sigma_dut(sigma)
+
+def test_sigma_dut_wps_pbc(dev, apdev):
+    """sigma_dut and WPS PBC Enrollee"""
+    try:
+        run_sigma_dut_wps_pbc(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_wps_pbc(dev, apdev):
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": "wps", "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" })
+    hapd.request("WPS_PBC")
+
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname)
+
+    cmd = "start_wps_registration,interface,%s" % ifname
+    cmd += ",WpsRole,Enrollee"
+    cmd += ",WpsConfigMethod,PBC"
+    sigma_dut_cmd_check(cmd, timeout=15)
+
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+    hapd.disable()
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+    stop_sigma_dut(sigma)
+    dev[0].flush_scan_cache()

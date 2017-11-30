@@ -2268,6 +2268,12 @@ int wpas_dpp_check_connect(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 		wpa_printf(MSG_INFO, "DPP: TESTING - no Transaction ID");
 		goto skip_trans_id;
 	}
+	if (dpp_test == DPP_TEST_INVALID_TRANSACTION_ID_PEER_DISC_REQ) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - invalid Transaction ID");
+		wpabuf_put_le16(msg, DPP_ATTR_TRANSACTION_ID);
+		wpabuf_put_le16(msg, 0);
+		goto skip_trans_id;
+	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Transaction ID */

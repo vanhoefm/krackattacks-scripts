@@ -3074,6 +3074,11 @@ def test_dpp_proto_conf_req_no_e_nonce(dev, apdev):
     run_dpp_proto_conf_req_missing(dev, 51,
                                    "Missing or invalid Enrollee Nonce attribute")
 
+def test_dpp_proto_conf_req_invalid_e_nonce(dev, apdev):
+    """DPP protocol testing - invalid E-nonce in Conf Req"""
+    run_dpp_proto_conf_req_missing(dev, 83,
+                                   "Missing or invalid Enrollee Nonce attribute")
+
 def test_dpp_proto_conf_req_no_config_attr_obj(dev, apdev):
     """DPP protocol testing - no Config Attr Obj in Conf Req"""
     run_dpp_proto_conf_req_missing(dev, 52,

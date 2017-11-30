@@ -1820,3 +1820,28 @@ def run_sigma_dut_ap_dpp_self_config(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
     sigma_dut_cmd_check("ap_reset_default")
+
+def test_sigma_dut_preconfigured_profile(dev, apdev):
+    """sigma_dut controlled connection using preconfigured profile"""
+    try:
+        run_sigma_dut_preconfigured_profile(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+
+def run_sigma_dut_preconfigured_profile(dev, apdev):
+    ifname = dev[0].ifname
+    sigma = start_sigma_dut(ifname)
+
+    params = hostapd.wpa2_params(ssid="test-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect("test-psk", psk="12345678", scan_freq="2412",
+                   only_add_network=True)
+
+    sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
+    sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s" % (ifname, "test-psk"))
+    sigma_dut_wait_connected(ifname)
+    sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
+    sigma_dut_cmd_check("sta_disconnect,interface," + ifname)
+    sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
+
+    stop_sigma_dut(sigma)

@@ -3957,7 +3957,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			smps_mode = NL80211_SMPS_OFF;
 			break;
 		}
-		if (nla_put_u32(msg, NL80211_ATTR_SMPS_MODE, smps_mode))
+		if (nla_put_u8(msg, NL80211_ATTR_SMPS_MODE, smps_mode))
 			goto fail;
 	}
 

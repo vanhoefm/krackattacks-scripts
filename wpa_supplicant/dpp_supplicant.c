@@ -352,7 +352,7 @@ static void wpas_dpp_auth_resp_retry(struct wpa_supplicant *wpa_s)
 	if (wpa_s->dpp_resp_retry_time)
 		wait_time = wpa_s->dpp_resp_retry_time;
 	else
-		wait_time = 10000;
+		wait_time = 1000;
 	wpa_printf(MSG_DEBUG,
 		   "DPP: Schedule retransmission of Authentication Response frame in %u ms",
 		wait_time);

@@ -3481,6 +3481,9 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 		auth->own_bi = NULL;
 	}
 
+	wpa_msg(auth->msg_ctx, MSG_INFO, DPP_EVENT_AUTH_DIRECTION "mutual=%d",
+		auth->own_bi != NULL);
+
 	r_proto = dpp_get_attr(attr_start, attr_len, DPP_ATTR_R_PROTOCOL_KEY,
 			       &r_proto_len);
 	if (!r_proto) {

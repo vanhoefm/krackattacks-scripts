@@ -10000,3 +10000,31 @@ def test_ap_wps_random_uuid(dev, apdev, params):
     logger.info("Seen UUIDs: " + str(uuid))
     if uuid[0] == uuid[1] or uuid[0] == uuid[2] or uuid[1] == uuid[2]:
         raise Exception("Same UUID used multiple times")
+
+def test_ap_wps_conf_pin_gcmp_128(dev, apdev):
+    """WPS PIN provisioning with configured AP using GCMP-128"""
+    run_ap_wps_conf_pin_cipher(dev, apdev, "GCMP")
+
+def test_ap_wps_conf_pin_gcmp_256(dev, apdev):
+    """WPS PIN provisioning with configured AP using GCMP-256"""
+    run_ap_wps_conf_pin_cipher(dev, apdev, "GCMP-256")
+
+def test_ap_wps_conf_pin_ccmp_256(dev, apdev):
+    """WPS PIN provisioning with configured AP using CCMP-256"""
+    run_ap_wps_conf_pin_cipher(dev, apdev, "CCMP-256")
+
+def run_ap_wps_conf_pin_cipher(dev, apdev, cipher):
+    if cipher not in dev[0].get_capability("pairwise"):
+        raise HwsimSkip("Cipher %s not supported" % cipher)
+    ssid = "test-wps-conf-pin"
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK",
+                            "rsn_pairwise": cipher })
+    logger.info("WPS provisioning step")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+    dev[0].wait_connected(timeout=15)

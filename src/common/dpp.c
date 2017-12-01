@@ -2830,6 +2830,14 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 		i_bootstrap_len, channel_len;
 	struct dpp_authentication *auth = NULL;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_AUTH_REQ) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Authentication Request");
+		return NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	wrapped_data = dpp_get_attr(attr_start, attr_len, DPP_ATTR_WRAPPED_DATA,
 				    &wrapped_data_len);
 	if (!wrapped_data || wrapped_data_len < AES_BLOCK_SIZE) {
@@ -3378,6 +3386,14 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 	u8 r_auth2[DPP_MAX_HASH_LEN];
 	u8 role;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_AUTH_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Authentication Response");
+		return NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (!auth->initiator) {
 		dpp_auth_fail(auth, "Unexpected Authentication Response");
 		return NULL;
@@ -3754,6 +3770,14 @@ int dpp_auth_conf_rx(struct dpp_authentication *auth, const u8 *hdr,
 	u8 *unwrapped = NULL;
 	size_t unwrapped_len = 0;
 	u8 i_auth2[DPP_MAX_HASH_LEN];
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_AUTH_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Authentication Confirm");
+		return -1;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (auth->initiator) {
 		dpp_auth_fail(auth, "Unexpected Authentication Confirm");
@@ -4403,6 +4427,14 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	struct wpabuf *resp = NULL;
 	struct json_token *root = NULL, *token;
 	int ap;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_CONF_REQ) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Config Request");
+		return NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (dpp_check_attrs(attr_start, attr_len) < 0) {
 		dpp_auth_fail(auth, "Invalid attribute in config request");
@@ -6843,6 +6875,13 @@ struct wpabuf * dpp_pkex_rx_exchange_resp(struct dpp_pkex *pkex,
 		return NULL;
 
 #ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_PKEX_EXCHANGE_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at PKEX Exchange Response");
+		pkex->failed = 1;
+		return NULL;
+	}
+
 	if (!is_zero_ether_addr(dpp_pkex_peer_mac_override)) {
 		wpa_printf(MSG_INFO, "DPP: TESTING - peer_mac override " MACSTR,
 			   MAC2STR(dpp_pkex_peer_mac_override));
@@ -7159,6 +7198,15 @@ struct wpabuf * dpp_pkex_rx_commit_reveal_req(struct dpp_pkex *pkex,
 	struct wpabuf *B_pub = NULL;
 	u8 u[DPP_MAX_HASH_LEN], v[DPP_MAX_HASH_LEN];
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_PKEX_CR_REQ) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at PKEX CR Request");
+		pkex->failed = 1;
+		return NULL;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (!pkex->exchange_done || pkex->failed ||
 	    pkex->t >= PKEX_COUNTER_T_LIMIT || pkex->initiator)
 		goto fail;
@@ -7335,6 +7383,15 @@ int dpp_pkex_rx_commit_reveal_resp(struct dpp_pkex *pkex, const u8 *hdr,
 	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
 	EVP_PKEY_CTX *ctx = NULL;
 	struct wpabuf *B_pub = NULL, *X_pub = NULL, *Y_pub = NULL;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_PKEX_CR_RESP) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at PKEX CR Response");
+		pkex->failed = 1;
+		goto fail;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (!pkex->exchange_done || pkex->failed ||
 	    pkex->t >= PKEX_COUNTER_T_LIMIT || !pkex->initiator)

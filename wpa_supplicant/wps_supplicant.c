@@ -493,6 +493,16 @@ static int wpa_supplicant_wps_cred(void *ctx,
 			ssid->pairwise_cipher |= WPA_CIPHER_GCMP;
 			ssid->group_cipher |= WPA_CIPHER_GCMP;
 		}
+		if (wpa_s->drv_capa_known &&
+		    (wpa_s->drv_enc & WPA_DRIVER_CAPA_ENC_GCMP_256)) {
+			ssid->pairwise_cipher |= WPA_CIPHER_GCMP_256;
+			ssid->group_cipher |= WPA_CIPHER_GCMP_256;
+		}
+		if (wpa_s->drv_capa_known &&
+		    (wpa_s->drv_enc & WPA_DRIVER_CAPA_ENC_CCMP_256)) {
+			ssid->pairwise_cipher |= WPA_CIPHER_CCMP_256;
+			ssid->group_cipher |= WPA_CIPHER_CCMP_256;
+		}
 		break;
 	}
 

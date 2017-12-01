@@ -203,6 +203,9 @@ static void wpas_wps_security_workaround(struct wpa_supplicant *wpa_s,
 	if (ssid->ssid == NULL)
 		return;
 	bss = wpa_bss_get(wpa_s, cred->mac_addr, ssid->ssid, ssid->ssid_len);
+	if (!bss)
+		bss = wpa_bss_get(wpa_s, wpa_s->bssid,
+				  ssid->ssid, ssid->ssid_len);
 	if (bss == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: The AP was not found from BSS "
 			   "table - use credential as-is");

@@ -2654,13 +2654,16 @@ def run_dpp_intro_mismatch(dev, apdev, wpas):
         raise Exception("Unexpected network introduction result on STA5: " + ev)
 
 def run_dpp_proto_init(dev, test_dev, test, mutual=False, unicast=True,
-                       listen=True, chan="81/1"):
+                       listen=True, chan="81/1", init_enrollee=False):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
     dev[test_dev].set("dpp_test", str(test))
 
     cmd = "DPP_CONFIGURATOR_ADD"
-    res = dev[1].request(cmd);
+    if init_enrollee:
+        res = dev[0].request(cmd)
+    else:
+        res = dev[1].request(cmd)
     if "FAIL" in res:
         raise Exception("Failed to add configurator")
     conf_id = int(res)
@@ -2699,11 +2702,19 @@ def run_dpp_proto_init(dev, test_dev, test, mutual=False, unicast=True,
     else:
         cmd = "DPP_LISTEN 2412"
 
+    if init_enrollee:
+        cmd += " role=configurator"
+        dev[0].set("dpp_configurator_params",
+                   " conf=sta-dpp configurator=%d" % conf_id);
+
     if listen:
         if "OK" not in dev[0].request(cmd):
             raise Exception("Failed to start listen operation")
 
-    cmd = "DPP_AUTH_INIT peer=%d configurator=%d conf=sta-dpp" % (id1, conf_id)
+    if init_enrollee:
+        cmd = "DPP_AUTH_INIT peer=%d role=enrollee" % (id1)
+    else:
+        cmd = "DPP_AUTH_INIT peer=%d configurator=%d conf=sta-dpp" % (id1, conf_id)
     if mutual:
         cmd += " own=%d" % id1b
     if "OK" not in dev[1].request(cmd):
@@ -3132,6 +3143,53 @@ def test_dpp_proto_conf_resp_e_nonce_mismatch(dev, apdev):
     run_dpp_proto_conf_resp_missing(dev, 59,
                                     "Enrollee Nonce mismatch")
 
+def test_dpp_proto_stop_at_auth_req(dev, apdev):
+    """DPP protocol testing - stop when receiving Auth Req"""
+    run_dpp_proto_init(dev, 0, 87)
+    ev = dev[1].wait_event(["DPP-AUTH-INIT-FAILED"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication init failure not reported")
+
+def test_dpp_proto_stop_at_auth_resp(dev, apdev):
+    """DPP protocol testing - stop when receiving Auth Resp"""
+    run_dpp_proto_init(dev, 1, 88)
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("Auth Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("Auth Resp TX not seen")
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected Auth Conf TX")
+
+def test_dpp_proto_stop_at_auth_conf(dev, apdev):
+    """DPP protocol testing - stop when receiving Auth Conf"""
+    run_dpp_proto_init(dev, 0, 89, init_enrollee=True)
+    ev = dev[1].wait_event(["GAS-QUERY-START"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee did not start GAS")
+    ev = dev[1].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee did not time out GAS")
+    if "result=TIMEOUT" not in ev:
+        raise Exception("Unexpected GAS result: " + ev)
+
+def test_dpp_proto_stop_at_conf_req(dev, apdev):
+    """DPP protocol testing - stop when receiving Auth Req"""
+    run_dpp_proto_init(dev, 1, 90)
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee did not start GAS")
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee did not time out GAS")
+    if "result=TIMEOUT" not in ev:
+        raise Exception("Unexpected GAS result: " + ev)
+
 def run_dpp_proto_init_pkex(dev, test_dev, test):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
@@ -3278,6 +3336,66 @@ def test_dpp_proto_pkex_cr_req_i_auth_tag_mismatch(dev, apdev):
 def test_dpp_proto_pkex_cr_resp_r_auth_tag_mismatch(dev, apdev):
     """DPP protocol testing - R-auth tag mismatch in PKEX Commit-Reveal Response"""
     run_dpp_proto_pkex_resp_missing(dev, 50, "No valid v (R-Auth tag) found")
+
+def test_dpp_proto_stop_at_pkex_exchange_resp(dev, apdev):
+    """DPP protocol testing - stop when receiving PKEX Exchange Response"""
+    run_dpp_proto_init_pkex(dev, 1, 84)
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Resp not seen")
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected PKEX CR Req TX")
+
+def test_dpp_proto_stop_at_pkex_cr_req(dev, apdev):
+    """DPP protocol testing - stop when receiving PKEX CR Request"""
+    run_dpp_proto_init_pkex(dev, 0, 85)
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Resp not seen")
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX CR Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected PKEX CR Resp TX")
+
+def test_dpp_proto_stop_at_pkex_cr_resp(dev, apdev):
+    """DPP protocol testing - stop when receiving PKEX CR Response"""
+    run_dpp_proto_init_pkex(dev, 1, 86)
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX Exchange Resp not seen")
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX CR Req TX not seen")
+
+    ev = dev[0].wait_event(["DPP-TX "], timeout=5)
+    if ev is None:
+        raise Exception("PKEX CR Resp TX not seen")
+
+    ev = dev[1].wait_event(["DPP-TX "], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected Auth Req TX")
 
 def test_dpp_proto_network_introduction(dev, apdev):
     """DPP protocol testing - network introduction"""

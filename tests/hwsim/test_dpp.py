@@ -251,6 +251,13 @@ def test_dpp_qr_code_auth_mutual(dev, apdev):
         raise Exception("Failed to start listen operation")
     if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d own=%d" % (id1, id1b)):
         raise Exception("Failed to initiate DPP Authentication")
+
+    ev = dev[1].wait_event(["DPP-AUTH-DIRECTION"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication direction not indicated (Initiator)")
+    if "mutual=1" not in ev:
+        raise Exception("Mutual authentication not used")
+
     ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
     if ev is None:
         raise Exception("DPP authentication did not succeed (Responder)")
@@ -303,6 +310,12 @@ def test_dpp_qr_code_auth_mutual2(dev, apdev):
     if "FAIL" in res:
         raise Exception("Failed to parse QR Code URI")
     id0b = int(res)
+
+    ev = dev[1].wait_event(["DPP-AUTH-DIRECTION"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication direction not indicated (Initiator)")
+    if "mutual=1" not in ev:
+        raise Exception("Mutual authentication not used")
 
     ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
     if ev is None:
@@ -374,6 +387,12 @@ def run_dpp_qr_code_auth_mutual(dev, apdev, curve):
     res = dev[0].request("DPP_QR_CODE " + uri)
     if "FAIL" in res:
         raise Exception("Failed to parse QR Code URI")
+
+    ev = dev[1].wait_event(["DPP-AUTH-DIRECTION"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication direction not indicated (Initiator)")
+    if "mutual=1" not in ev:
+        raise Exception("Mutual authentication not used")
 
     ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
     if ev is None:
@@ -484,6 +503,13 @@ def test_dpp_qr_code_auth_mutual_not_used(dev, apdev):
         raise Exception("Failed to start listen operation")
     if "OK" not in dev[1].request("DPP_AUTH_INIT peer=%d own=%d" % (id1, id1b)):
         raise Exception("Failed to initiate DPP Authentication")
+
+    ev = dev[1].wait_event(["DPP-AUTH-DIRECTION"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication direction not indicated (Initiator)")
+    if "mutual=0" not in ev:
+        raise Exception("Mutual authentication not used")
+
     ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
     if ev is None:
         raise Exception("DPP authentication did not succeed (Responder)")

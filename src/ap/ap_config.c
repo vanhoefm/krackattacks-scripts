@@ -936,7 +936,9 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 
 	if (full_config && bss->wps_state && bss->wpa &&
 	    (!(bss->wpa & 2) ||
-	     !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)))) {
+	     !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP |
+				    WPA_CIPHER_CCMP_256 |
+				    WPA_CIPHER_GCMP_256)))) {
 		wpa_printf(MSG_INFO, "WPS: WPA/TKIP configuration without "
 			   "WPA2/CCMP/GCMP forced WPS to be disabled");
 		bss->wps_state = 0;

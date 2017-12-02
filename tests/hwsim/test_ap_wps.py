@@ -3594,6 +3594,17 @@ def test_ap_wps_ap_scan_2(dev, apdev):
     wpas.wait_connected(timeout=30)
     wpas.dump_monitor()
     wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    id = wpas.list_networks()[0]['id']
+    pairwise = wpas.get_network(id, "pairwise")
+    if "CCMP" not in pairwise.split():
+        raise Exception("Unexpected pairwise parameter value: " + pairwise)
+    group = wpas.get_network(id, "group")
+    if "CCMP" not in group.split():
+        raise Exception("Unexpected group parameter value: " + group)
+    # Need to select a single cipher for ap_scan=2 testing
+    wpas.set_network(id, "pairwise", "CCMP")
+    wpas.set_network(id, "group", "CCMP")
     wpas.request("BSS_FLUSH 0")
     wpas.dump_monitor()
     wpas.request("REASSOCIATE")

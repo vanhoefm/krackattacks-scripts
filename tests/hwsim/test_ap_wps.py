@@ -3493,7 +3493,8 @@ def test_ap_wps_mixed_cred(dev, apdev):
     if proto != "WPA RSN":
         raise Exception("Unexpected merged proto field value: " + proto)
     pairwise = dev[0].get_network(id, "pairwise")
-    if pairwise != "CCMP TKIP" and pairwise != "CCMP GCMP TKIP":
+    p = pairwise.split()
+    if "CCMP" not in p or "TKIP" not in p:
         raise Exception("Unexpected merged pairwise field value: " + pairwise)
 
 @remote_compatible

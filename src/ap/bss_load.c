@@ -16,6 +16,29 @@
 #include "beacon.h"
 
 
+static int get_bss_load_update_timeout(struct hostapd_data *hapd,
+				       unsigned int *sec, unsigned int *usec)
+{
+	unsigned int update_period = hapd->conf->bss_load_update_period;
+	unsigned int beacon_int = hapd->iconf->beacon_int;
+	unsigned int update_timeout;
+
+	if (!update_period || !beacon_int) {
+		wpa_printf(MSG_ERROR,
+			   "BSS Load: Invalid BSS load update configuration (period=%u beacon_int=%u)",
+			   update_period, beacon_int);
+		return -1;
+	}
+
+	update_timeout = update_period * beacon_int;
+
+	*sec = ((update_timeout / 1000) * 1024) / 1000;
+	*usec = (update_timeout % 1000) * 1024;
+
+	return 0;
+}
+
+
 static void update_channel_utilization(void *eloop_data, void *user_data)
 {
 	struct hostapd_data *hapd = eloop_data;
@@ -33,8 +56,9 @@ static void update_channel_utilization(void *eloop_data, void *user_data)
 
 	ieee802_11_set_beacon(hapd);
 
-	sec = ((hapd->bss_load_update_timeout / 1000) * 1024) / 1000;
-	usec = (hapd->bss_load_update_timeout % 1000) * 1024;
+	if (get_bss_load_update_timeout(hapd, &sec, &usec) < 0)
+		return;
+
 	eloop_register_timeout(sec, usec, update_channel_utilization, hapd,
 			       NULL);
 }
@@ -42,17 +66,11 @@ static void update_channel_utilization(void *eloop_data, void *user_data)
 
 int bss_load_update_init(struct hostapd_data *hapd)
 {
-	struct hostapd_bss_config *conf = hapd->conf;
-	struct hostapd_config *iconf = hapd->iconf;
 	unsigned int sec, usec;
 
-	if (!conf->bss_load_update_period || !iconf->beacon_int)
+	if (get_bss_load_update_timeout(hapd, &sec, &usec) < 0)
 		return -1;
 
-	hapd->bss_load_update_timeout = conf->bss_load_update_period *
-					iconf->beacon_int;
-	sec = ((hapd->bss_load_update_timeout / 1000) * 1024) / 1000;
-	usec = (hapd->bss_load_update_timeout % 1000) * 1024;
 	eloop_register_timeout(sec, usec, update_channel_utilization, hapd,
 			       NULL);
 	return 0;

@@ -263,9 +263,6 @@ struct hostapd_data {
 	unsigned int cs_c_off_ecsa_beacon;
 	unsigned int cs_c_off_ecsa_proberesp;
 
-	/* BSS Load */
-	unsigned int bss_load_update_timeout;
-
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;
 	struct p2p_group *p2p_group;

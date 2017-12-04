@@ -795,6 +795,15 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 		len += ret;
 	}
 
+	if (hapd->conf->chan_util_avg_period) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "chan_util_avg=%u\n",
+				  iface->chan_util_average);
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+	}
+
 	return len;
 }
 

@@ -497,6 +497,10 @@ struct hostapd_iface {
 	u64 last_channel_time_busy;
 	u8 channel_utilization;
 
+	unsigned int chan_util_samples_sum;
+	unsigned int chan_util_num_sample_periods;
+	unsigned int chan_util_average;
+
 	/* eCSA IE will be added only if operating class is specified */
 	u8 cs_oper_class;
 

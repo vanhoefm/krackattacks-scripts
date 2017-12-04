@@ -2863,6 +2863,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 		bss->bss_load_update_period = val;
+	} else if (os_strcmp(buf, "chan_util_avg_period") == 0) {
+		int val = atoi(pos);
+
+		if (val < 0) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid chan_util_avg_period",
+				   line);
+			return 1;
+		}
+		bss->chan_util_avg_period = val;
 	} else if (os_strcmp(buf, "rts_threshold") == 0) {
 		conf->rts_threshold = atoi(pos);
 		if (conf->rts_threshold < -1 || conf->rts_threshold > 65535) {

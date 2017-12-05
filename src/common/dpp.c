@@ -34,6 +34,8 @@ u8 dpp_pkex_own_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 u8 dpp_pkex_peer_mac_override[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 u8 dpp_pkex_ephemeral_key_override[600];
 size_t dpp_pkex_ephemeral_key_override_len = 0;
+u8 dpp_protocol_key_override[600];
+size_t dpp_protocol_key_override_len = 0;
 
 static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 				    const struct dpp_curve_params *curve);
@@ -2091,7 +2093,21 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: I-nonce", auth->i_nonce, nonce_len);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_protocol_key_override_len) {
+		const struct dpp_curve_params *tmp_curve;
+
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - override protocol key");
+		auth->own_protocol_key = dpp_set_keypair(
+			&tmp_curve, dpp_protocol_key_override,
+			dpp_protocol_key_override_len);
+	} else {
+		auth->own_protocol_key = dpp_gen_keypair(auth->curve);
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	auth->own_protocol_key = dpp_gen_keypair(auth->curve);
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!auth->own_protocol_key)
 		goto fail;
 
@@ -2607,7 +2623,21 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	}
 	wpa_hexdump(MSG_DEBUG, "DPP: R-nonce", auth->r_nonce, nonce_len);
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_protocol_key_override_len) {
+		const struct dpp_curve_params *tmp_curve;
+
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - override protocol key");
+		auth->own_protocol_key = dpp_set_keypair(
+			&tmp_curve, dpp_protocol_key_override,
+			dpp_protocol_key_override_len);
+	} else {
+		auth->own_protocol_key = dpp_gen_keypair(auth->curve);
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	auth->own_protocol_key = dpp_gen_keypair(auth->curve);
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (!auth->own_protocol_key)
 		goto fail;
 

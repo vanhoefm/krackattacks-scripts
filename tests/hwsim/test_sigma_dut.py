@@ -943,6 +943,14 @@ def test_sigma_dut_dpp_qr_init_enrollee(dev, apdev):
 
 def test_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev):
     """sigma_dut DPP/QR (mutual) initiator as Enrollee"""
+    run_sigma_dut_dpp_qr_mutual_init_enrollee_check(dev, apdev)
+
+def test_sigma_dut_dpp_qr_mutual_init_enrollee_check(dev, apdev):
+    """sigma_dut DPP/QR (mutual) initiator as Enrollee (extra check)"""
+    run_sigma_dut_dpp_qr_mutual_init_enrollee_check(dev, apdev,
+                                                    extra="DPPAuthDirection,Mutual,")
+
+def run_sigma_dut_dpp_qr_mutual_init_enrollee_check(dev, apdev, extra=''):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
 
@@ -1003,7 +1011,7 @@ def test_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev):
         if "status,COMPLETE" not in res:
             raise Exception("dev_exec_action did not succeed: " + res)
 
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,6,DPPWaitForConnect,Yes", timeout=10)
+        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,%sDPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,6,DPPWaitForConnect,Yes" % extra, timeout=10)
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK" not in res:
             raise Exception("Unexpected result: " + res)
     finally:
@@ -1189,7 +1197,7 @@ def run_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev, resp_pending):
         t.start()
 
         time.sleep(1)
-        cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Mutual,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,10,DPPWaitForConnect,Yes"
+        cmd = "dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPProvisioningRole,Enrollee,DPPBS,QR,DPPTimeout,10,DPPWaitForConnect,Yes"
         res = sigma_dut_cmd(cmd, timeout=15)
         t.join()
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK" not in res:
@@ -1317,7 +1325,7 @@ def test_sigma_dut_dpp_pkex_init_configurator(dev, apdev):
         if "OK" not in dev[1].request(cmd):
             raise Exception("Failed to start listen operation")
 
-        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Mutual,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,PKEX,DPPPKEXCodeIdentifier,test,DPPPKEXCode,secret,DPPTimeout,6")
+        res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,PKEX,DPPPKEXCodeIdentifier,test,DPPPKEXCode,secret,DPPTimeout,6")
         if "BootstrapResult,OK,AuthResult,OK,ConfResult,OK" not in res:
             raise Exception("Unexpected result: " + res)
     finally:

@@ -1571,6 +1571,101 @@ def run_sigma_dut_dpp_proto_responder(dev, step, frame, attr, result, fail):
     dev[0].dump_monitor()
     dev[1].dump_monitor()
 
+def test_sigma_dut_dpp_proto_stop_at_initiator(dev, apdev):
+    """sigma_dut DPP protocol testing - Stop at RX on Initiator"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("AuthenticationResponse",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               None),
+              ("ConfigurationRequest",
+               "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent",
+               None)]
+    for frame, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_stop_at_initiator(dev, frame, result, fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_stop_at_initiator(dev, frame, result, fail):
+    addr = dev[1].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/6 mac=" + addr
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    cmd = "DPP_LISTEN 2437 role=enrollee"
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,SetPeerBootstrap,DPPBootstrappingdata,%s,DPPBS,QR" % uri0.encode('hex'))
+    if "status,COMPLETE" not in res:
+        raise Exception("dev_exec_action did not succeed: " + res)
+
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Initiator,DPPAuthDirection,Single,DPPProvisioningRole,Configurator,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6,DPPStep,Timeout,DPPFrameType,%s" % (frame))
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly: " + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+def test_sigma_dut_dpp_proto_stop_at_responder(dev, apdev):
+    """sigma_dut DPP protocol testing - Stop at RX on Responder"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+    tests = [ ("AuthenticationRequest",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               None),
+              ("AuthenticationConfirm",
+               "BootstrapResult,OK,AuthResult,Errorsent",
+               None) ]
+    for frame, result, fail in tests:
+        dev[0].request("FLUSH")
+        dev[1].request("FLUSH")
+        sigma = start_sigma_dut(dev[0].ifname)
+        try:
+            run_sigma_dut_dpp_proto_stop_at_responder(dev, frame, result, fail)
+        finally:
+            stop_sigma_dut(sigma)
+
+def run_sigma_dut_dpp_proto_stop_at_responder(dev, frame, result, fail):
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,GetLocalBootstrap,DPPCryptoIdentifier,P-256,DPPBS,QR")
+    if "status,COMPLETE" not in res:
+        raise Exception("dev_exec_action did not succeed: " + res)
+    hex = res.split(',')[3]
+    uri = hex.decode('hex')
+    logger.info("URI from sigma_dut: " + uri)
+
+    res = dev[1].request("DPP_QR_CODE " + uri)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    t = threading.Thread(target=dpp_proto_init, args=(dev[1], id1))
+    t.start()
+    res = sigma_dut_cmd("dev_exec_action,program,DPP,DPPActionType,AutomaticDPP,DPPAuthRole,Responder,DPPAuthDirection,Single,DPPProvisioningRole,Enrollee,DPPConfIndex,1,DPPSigningKeyECC,P-256,DPPConfEnrolleeRole,STA,DPPBS,QR,DPPTimeout,6,DPPStep,Timeout,DPPFrameType,%s" % (frame), timeout=10)
+    t.join()
+    if result not in res:
+        raise Exception("Unexpected result: " + res)
+    if fail:
+        ev = dev[1].wait_event(["DPP-FAIL"], timeout=5)
+        if ev is None or fail not in ev:
+            raise Exception("Failure not reported correctly:" + str(ev))
+
+    dev[1].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
 def dpp_proto_init_pkex(dev):
     time.sleep(1)
     logger.info("Starting DPP PKEX initiator/configurator in a thread")

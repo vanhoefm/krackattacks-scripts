@@ -341,6 +341,8 @@ extern u8 dpp_pkex_ephemeral_key_override[600];
 extern size_t dpp_pkex_ephemeral_key_override_len;
 extern u8 dpp_protocol_key_override[600];
 extern size_t dpp_protocol_key_override_len;
+extern u8 dpp_nonce_override[DPP_MAX_NONCE_LEN];
+extern size_t dpp_nonce_override_len;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 void dpp_bootstrap_info_free(struct dpp_bootstrap_info *info);

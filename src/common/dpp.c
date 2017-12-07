@@ -36,6 +36,8 @@ u8 dpp_pkex_ephemeral_key_override[600];
 size_t dpp_pkex_ephemeral_key_override_len = 0;
 u8 dpp_protocol_key_override[600];
 size_t dpp_protocol_key_override_len = 0;
+u8 dpp_nonce_override[DPP_MAX_NONCE_LEN];
+size_t dpp_nonce_override_len = 0;
 
 static int dpp_test_gen_invalid_key(struct wpabuf *msg,
 				    const struct dpp_curve_params *curve);
@@ -2086,11 +2088,26 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	    dpp_prepare_channel_list(auth, own_modes, num_modes) < 0)
 		goto fail;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_nonce_override_len > 0) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - override I-nonce");
+		nonce_len = dpp_nonce_override_len;
+		os_memcpy(auth->i_nonce, dpp_nonce_override, nonce_len);
+	} else {
+		nonce_len = auth->curve->nonce_len;
+		if (random_get_bytes(auth->i_nonce, nonce_len)) {
+			wpa_printf(MSG_ERROR,
+				   "DPP: Failed to generate I-nonce");
+			goto fail;
+		}
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	nonce_len = auth->curve->nonce_len;
 	if (random_get_bytes(auth->i_nonce, nonce_len)) {
 		wpa_printf(MSG_ERROR, "DPP: Failed to generate I-nonce");
 		goto fail;
 	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	wpa_hexdump(MSG_DEBUG, "DPP: I-nonce", auth->i_nonce, nonce_len);
 
 #ifdef CONFIG_TESTING_OPTIONS
@@ -2616,11 +2633,26 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 	if (!auth->own_bi)
 		return -1;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_nonce_override_len > 0) {
+		wpa_printf(MSG_INFO, "DPP: TESTING - override R-nonce");
+		nonce_len = dpp_nonce_override_len;
+		os_memcpy(auth->r_nonce, dpp_nonce_override, nonce_len);
+	} else {
+		nonce_len = auth->curve->nonce_len;
+		if (random_get_bytes(auth->r_nonce, nonce_len)) {
+			wpa_printf(MSG_ERROR,
+				   "DPP: Failed to generate R-nonce");
+			goto fail;
+		}
+	}
+#else /* CONFIG_TESTING_OPTIONS */
 	nonce_len = auth->curve->nonce_len;
 	if (random_get_bytes(auth->r_nonce, nonce_len)) {
 		wpa_printf(MSG_ERROR, "DPP: Failed to generate R-nonce");
 		goto fail;
 	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	wpa_hexdump(MSG_DEBUG, "DPP: R-nonce", auth->r_nonce, nonce_len);
 
 #ifdef CONFIG_TESTING_OPTIONS

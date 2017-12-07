@@ -1766,6 +1766,127 @@ def test_dpp_qr_code_hostapd_init(dev, apdev):
     dev[0].request("DPP_STOP_LISTEN")
     dev[0].dump_monitor()
 
+def test_dpp_test_vector_p_256(dev, apdev):
+    """DPP P-256 test vector (mutual auth)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    # Responder bootstrapping key
+    priv = "54ce181a98525f217216f59b245f60e9df30ac7f6b26c939418cfc3c42d1afa0"
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/11 mac=" + addr + " key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    # Responder protocol keypair override
+    priv = "f798ed2e19286f6a6efe210b1863badb99af2a14b497634dbfd2a97394fb5aa5"
+    dev[0].set("dpp_protocol_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    dev[0].set("dpp_nonce_override", "3d0cfb011ca916d796f7029ff0b43393")
+
+    # Initiator bootstrapping key
+    priv = "15b2a83c5a0a38b61f2aa8200ee4994b8afdc01c58507d10d0a38f7eedf051bb"
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+    uri1 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1)
+
+    # Initiator protocol keypair override
+    priv = "a87de9afbb406c96e5f79a3df895ecac3ad406f95da66314c8cb3165e0c61783"
+    dev[1].set("dpp_protocol_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    dev[1].set("dpp_nonce_override", "13f4602a16daeb69712263b9c46cba31")
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1peer = int(res)
+
+    res = dev[0].request("DPP_QR_CODE " + uri1)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id0peer = int(res)
+
+    cmd = "DPP_LISTEN 2462 qr=mutual"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d own=%d neg_freq=2412" % (id1peer, id1)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate operation")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
+def test_dpp_test_vector_p_256_b(dev, apdev):
+    """DPP P-256 test vector (Responder-only auth)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    # Responder bootstrapping key
+    priv = "54ce181a98525f217216f59b245f60e9df30ac7f6b26c939418cfc3c42d1afa0"
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/11 mac=" + addr + " key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    # Responder protocol keypair override
+    priv = "f798ed2e19286f6a6efe210b1863badb99af2a14b497634dbfd2a97394fb5aa5"
+    dev[0].set("dpp_protocol_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    dev[0].set("dpp_nonce_override", "3d0cfb011ca916d796f7029ff0b43393")
+
+    # Initiator bootstrapping key
+    priv = "15b2a83c5a0a38b61f2aa8200ee4994b8afdc01c58507d10d0a38f7eedf051bb"
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+    uri1 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1)
+
+    # Initiator protocol keypair override
+    priv = "a87de9afbb406c96e5f79a3df895ecac3ad406f95da66314c8cb3165e0c61783"
+    dev[1].set("dpp_protocol_key_override",
+               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+
+    dev[1].set("dpp_nonce_override", "13f4602a16daeb69712263b9c46cba31")
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1peer = int(res)
+
+    cmd = "DPP_LISTEN 2462"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d own=%d neg_freq=2412" % (id1peer, id1)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate operation")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
 def test_dpp_pkex(dev, apdev):
     """DPP and PKEX"""
     run_dpp_pkex(dev, apdev)

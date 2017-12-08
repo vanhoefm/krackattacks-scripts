@@ -278,12 +278,15 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			if (sta) {
 				sta->counters[
 					WLANTEST_STA_COUNTER_PROT_DATA_TX]++;
-			} else {
+			}
+			if (!sta || !sta->ptk_set) {
 				bss2 = bss_find(wt, hdr->addr2);
 				if (bss2) {
-					sta = sta_find(bss2, hdr->addr1);
-					if (sta)
+					sta2 = sta_find(bss2, hdr->addr1);
+					if (sta2 && (!sta || sta2->ptk_set)) {
 						bss = bss2;
+						sta = sta2;
+					}
 				}
 			}
 		} else {

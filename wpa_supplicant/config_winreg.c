@@ -880,6 +880,7 @@ static int wpa_config_write_network(HKEY hk, struct wpa_ssid *ssid, int id)
 	write_eap(netw, ssid);
 	STR(identity);
 	STR(anonymous_identity);
+	STR(imsi_identity);
 	STR(password);
 	STR(ca_cert);
 	STR(ca_path);

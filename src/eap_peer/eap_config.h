@@ -46,6 +46,9 @@ struct eap_peer_config {
 	 */
 	size_t anonymous_identity_len;
 
+	u8 *imsi_identity;
+	size_t imsi_identity_len;
+
 	/**
 	 * password - Password string for EAP
 	 *

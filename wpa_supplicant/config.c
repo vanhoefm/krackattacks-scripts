@@ -2154,6 +2154,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(eap) },
 	{ STR_LENe(identity) },
 	{ STR_LENe(anonymous_identity) },
+	{ STR_LENe(imsi_identity) },
 	{ FUNC_KEY(password) },
 	{ STRe(ca_cert) },
 	{ STRe(ca_path) },
@@ -2412,6 +2413,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->eap_methods);
 	bin_clear_free(eap->identity, eap->identity_len);
 	os_free(eap->anonymous_identity);
+	os_free(eap->imsi_identity);
 	bin_clear_free(eap->password, eap->password_len);
 	os_free(eap->ca_cert);
 	os_free(eap->ca_path);

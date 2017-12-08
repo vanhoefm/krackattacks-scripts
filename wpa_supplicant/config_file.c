@@ -760,6 +760,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_eap(f, ssid);
 	STR(identity);
 	STR(anonymous_identity);
+	STR(imsi_identity);
 	STR(password);
 	STR(ca_cert);
 	STR(ca_path);

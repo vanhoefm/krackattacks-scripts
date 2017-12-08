@@ -1025,8 +1025,17 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 	} else if (data->pseudonym) {
 		identity = data->pseudonym;
 		identity_len = data->pseudonym_len;
-	} else
-		identity = eap_get_config_identity(sm, &identity_len);
+	} else {
+		struct eap_peer_config *config;
+
+		config = eap_get_config(sm);
+		if (config && config->imsi_identity) {
+			identity = config->imsi_identity;
+			identity_len = config->imsi_identity_len;
+		} else {
+			identity = eap_get_config_identity(sm, &identity_len);
+		}
+	}
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA: Selected identity for MK "
 			  "derivation", identity, identity_len);
 	if (data->eap_method == EAP_TYPE_AKA_PRIME) {

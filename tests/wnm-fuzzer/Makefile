@@ -78,6 +78,8 @@ OBJS += ../../wpa_supplicant/gas_query.o
 OBJS += ../../wpa_supplicant/offchannel.o
 OBJS += ../../wpa_supplicant/interworking.o
 OBJS += ../../wpa_supplicant/hs20_supplicant.o
+OBJS += ../../wpa_supplicant/rrm.o
+OBJS += ../../wpa_supplicant/op_classes.o
 OBJS += $(SRC)/drivers/drivers.o
 OBJS += $(SRC)/drivers/driver_common.o
 
@@ -86,6 +88,7 @@ wnm-fuzzer: wnm-fuzzer.o $(OBJS) $(LIBS)
 
 clean:
 	$(MAKE) -C $(SRC) clean
+	$(MAKE) -C ../../wpa_supplicant clean
 	rm -f wnm-fuzzer *~ *.o *.d
 
 -include $(OBJS:%.o=%.d)

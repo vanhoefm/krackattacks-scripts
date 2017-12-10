@@ -4094,7 +4094,7 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(
 	DBusMessageIter iter_dict, variant_iter;
 	const char *group;
 	const char *pairwise[5]; /* max 5 pairwise ciphers is supported */
-	const char *key_mgmt[9]; /* max 9 key managements may be supported */
+	const char *key_mgmt[13]; /* max 13 key managements may be supported */
 	int n;
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
@@ -4126,6 +4126,16 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(
 	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
 		key_mgmt[n++] = "wpa-eap-suite-b-192";
 #endif /* CONFIG_SUITEB192 */
+#ifdef CONFIG_FILS
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FILS_SHA256)
+		key_mgmt[n++] = "wpa-fils-sha256";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FILS_SHA384)
+		key_mgmt[n++] = "wpa-fils-sha384";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA256)
+		key_mgmt[n++] = "wpa-ft-fils-sha256";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FT_FILS_SHA384)
+		key_mgmt[n++] = "wpa-ft-fils-sha384";
+#endif /* CONFIG_FILS */
 	if (ie_data->key_mgmt & WPA_KEY_MGMT_NONE)
 		key_mgmt[n++] = "wpa-none";
 

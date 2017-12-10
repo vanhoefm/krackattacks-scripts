@@ -2433,7 +2433,8 @@ static int suiteb_cert_cb(SSL *ssl, void *arg)
 #endif /* CONFIG_SUITEB */
 
 
-static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags)
+static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
+			      const char *openssl_ciphers)
 {
 	SSL *ssl = conn->ssl;
 
@@ -2467,6 +2468,12 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags)
 	if (flags & TLS_CONN_SUITEB_NO_ECDH) {
 		const char *ciphers = "DHE-RSA-AES256-GCM-SHA384";
 
+		if (openssl_ciphers) {
+			wpa_printf(MSG_DEBUG,
+				   "OpenSSL: Override ciphers for Suite B (no ECDH): %s",
+				   openssl_ciphers);
+			ciphers = openssl_ciphers;
+		}
 		if (SSL_set_cipher_list(ssl, ciphers) != 1) {
 			wpa_printf(MSG_INFO,
 				   "OpenSSL: Failed to set Suite B ciphers");
@@ -2477,6 +2484,12 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags)
 		const char *ciphers =
 			"ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384";
 
+		if (openssl_ciphers) {
+			wpa_printf(MSG_DEBUG,
+				   "OpenSSL: Override ciphers for Suite B: %s",
+				   openssl_ciphers);
+			ciphers = openssl_ciphers;
+		}
 		if (SSL_set_cipher_list(ssl, ciphers) != 1) {
 			wpa_printf(MSG_INFO,
 				   "OpenSSL: Failed to set Suite B ciphers");
@@ -2545,7 +2558,7 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
 	}
 
-	if (tls_set_conn_flags(conn, flags) < 0)
+	if (tls_set_conn_flags(conn, flags, NULL) < 0)
 		return -1;
 	conn->flags = flags;
 
@@ -4362,7 +4375,8 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-	if (tls_set_conn_flags(conn, params->flags) < 0)
+	if (tls_set_conn_flags(conn, params->flags,
+			       params->openssl_ciphers) < 0)
 		return -1;
 
 #ifdef OPENSSL_IS_BORINGSSL

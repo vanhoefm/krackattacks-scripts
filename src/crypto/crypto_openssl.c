@@ -1705,11 +1705,7 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 {
 	struct crypto_ecdh *ecdh;
 	EVP_PKEY *params = NULL;
-#ifdef OPENSSL_IS_BORINGSSL
 	EC_KEY *ec_params;
-#else /* OPENSSL_IS_BORINGSSL */
-	EVP_PKEY_CTX *pctx = NULL;
-#endif /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *kctx = NULL;
 
 	ecdh = os_zalloc(sizeof(*ecdh));
@@ -1720,45 +1716,19 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 	if (!ecdh->ec)
 		goto fail;
 
-#ifdef OPENSSL_IS_BORINGSSL
 	ec_params = EC_KEY_new_by_curve_name(ecdh->ec->nid);
 	if (!ec_params) {
 		wpa_printf(MSG_ERROR,
-			   "BoringSSL: Failed to generate EC_KEY parameters");
+			   "OpenSSL: Failed to generate EC_KEY parameters");
 		goto fail;
 	}
 	EC_KEY_set_asn1_flag(ec_params, OPENSSL_EC_NAMED_CURVE);
 	params = EVP_PKEY_new();
 	if (!params || EVP_PKEY_set1_EC_KEY(params, ec_params) != 1) {
 		wpa_printf(MSG_ERROR,
-			   "BoringSSL: Failed to generate EVP_PKEY parameters");
+			   "OpenSSL: Failed to generate EVP_PKEY parameters");
 		goto fail;
 	}
-#else /* OPENSSL_IS_BORINGSSL */
-	pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
-	if (!pctx)
-		goto fail;
-
-	if (EVP_PKEY_paramgen_init(pctx) != 1) {
-		wpa_printf(MSG_ERROR,
-			   "OpenSSL: EVP_PKEY_paramgen_init failed: %s",
-			   ERR_error_string(ERR_get_error(), NULL));
-		goto fail;
-	}
-
-	if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, ecdh->ec->nid) != 1) {
-		wpa_printf(MSG_ERROR,
-			   "OpenSSL: EVP_PKEY_CTX_set_ec_paramgen_curve_nid failed: %s",
-			   ERR_error_string(ERR_get_error(), NULL));
-		goto fail;
-	}
-
-	if (EVP_PKEY_paramgen(pctx, &params) != 1) {
-		wpa_printf(MSG_ERROR, "OpenSSL: EVP_PKEY_paramgen failed: %s",
-			   ERR_error_string(ERR_get_error(), NULL));
-		goto fail;
-	}
-#endif /* OPENSSL_IS_BORINGSSL */
 
 	kctx = EVP_PKEY_CTX_new(params, NULL);
 	if (!kctx)
@@ -1779,9 +1749,6 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 
 done:
 	EVP_PKEY_free(params);
-#ifndef OPENSSL_IS_BORINGSSL
-	EVP_PKEY_CTX_free(pctx);
-#endif /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX_free(kctx);
 
 	return ecdh;

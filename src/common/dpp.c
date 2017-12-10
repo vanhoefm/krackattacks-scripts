@@ -1066,12 +1066,8 @@ static void dpp_debug_print_key(const char *title, EVP_PKEY *key)
 
 static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 {
-#ifdef OPENSSL_IS_BORINGSSL
 	EVP_PKEY_CTX *kctx = NULL;
 	EC_KEY *ec_params;
-#else
-	EVP_PKEY_CTX *pctx, *kctx = NULL;
-#endif
 	EVP_PKEY *params = NULL, *key = NULL;
 	int nid;
 
@@ -1082,7 +1078,7 @@ static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 		wpa_printf(MSG_INFO, "DPP: Unsupported curve %s", curve->name);
 		return NULL;
 	}
-#ifdef OPENSSL_IS_BORINGSSL
+
 	ec_params = EC_KEY_new_by_curve_name(nid);
 	if (!ec_params) {
 		wpa_printf(MSG_ERROR,
@@ -1096,22 +1092,6 @@ static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 			   "DPP: Failed to generate EVP_PKEY parameters");
 		goto fail;
 	}
-#else
-	pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
-	if (!pctx ||
-	    EVP_PKEY_paramgen_init(pctx) != 1 ||
-	    EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx, nid) != 1 ||
-#ifdef EVP_PKEY_CTX_set_ec_param_enc
-	    EVP_PKEY_CTX_set_ec_param_enc(pctx, OPENSSL_EC_NAMED_CURVE) != 1 ||
-#endif
-	    EVP_PKEY_paramgen(pctx, &params) != 1) {
-		wpa_printf(MSG_ERROR,
-			   "DPP: Failed to generate EVP_PKEY parameters");
-		EVP_PKEY_CTX_free(pctx);
-		goto fail;
-	}
-	EVP_PKEY_CTX_free(pctx);
-#endif
 
 	kctx = EVP_PKEY_CTX_new(params, NULL);
 	if (!kctx ||

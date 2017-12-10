@@ -429,3 +429,43 @@ def test_suite_b_192_rsa_insufficient_dh(dev, apdev):
         raise Exception("DH error not reported")
     if "insufficient security" not in ev and "internal error" not in ev:
         raise Exception("Unexpected error reason: " + ev)
+
+def test_suite_b_192_rsa_radius(dev, apdev):
+    """WPA2/GCMP-256 (RADIUS) connection at Suite B 192-bit level and RSA (ECDHE)"""
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/rsa3072-ca.pem'
+    params['server_cert'] = 'auth_serv/rsa3072-server.pem'
+    params['private_key'] = 'auth_serv/rsa3072-server.key'
+    del params['openssl_ciphers']
+    params["tls_flags"] = "[SUITEB]"
+
+    hostapd.add_ap(apdev[1], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   openssl_ciphers="ECDHE-RSA-AES256-GCM-SHA384",
+                   phase1="tls_suiteb=1",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/rsa3072-ca.pem",
+                   client_cert="auth_serv/rsa3072-user.pem",
+                   private_key="auth_serv/rsa3072-user.key",
+                   pairwise="GCMP-256", group="GCMP-256",
+                   group_mgmt="BIP-GMAC-256", scan_freq="2412")
+    tls_cipher = dev[0].get_status_field("EAP TLS cipher")
+    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384":
+        raise Exception("Unexpected TLS cipher: " + tls_cipher)

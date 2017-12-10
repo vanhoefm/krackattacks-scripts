@@ -1706,7 +1706,6 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 	struct crypto_ecdh *ecdh;
 	EVP_PKEY *params = NULL;
 #ifdef OPENSSL_IS_BORINGSSL
-	const EC_GROUP *ec_group;
 	EC_KEY *ec_params;
 #else /* OPENSSL_IS_BORINGSSL */
 	EVP_PKEY_CTX *pctx = NULL;
@@ -1722,9 +1721,8 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
 		goto fail;
 
 #ifdef OPENSSL_IS_BORINGSSL
-	ec_group = EC_GROUP_new_by_curve_name(ecdh->ec->nid);
-	ec_params = EC_KEY_new();
-	if (!ec_params || EC_KEY_set_group(ec_params, ec_group) != 1) {
+	ec_params = EC_KEY_new_by_curve_name(ecdh->ec->nid);
+	if (!ec_params) {
 		wpa_printf(MSG_ERROR,
 			   "BoringSSL: Failed to generate EC_KEY parameters");
 		goto fail;

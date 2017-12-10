@@ -1068,7 +1068,6 @@ static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 {
 #ifdef OPENSSL_IS_BORINGSSL
 	EVP_PKEY_CTX *kctx = NULL;
-	const EC_GROUP *group;
 	EC_KEY *ec_params;
 #else
 	EVP_PKEY_CTX *pctx, *kctx = NULL;
@@ -1084,9 +1083,8 @@ static EVP_PKEY * dpp_gen_keypair(const struct dpp_curve_params *curve)
 		return NULL;
 	}
 #ifdef OPENSSL_IS_BORINGSSL
-	group = EC_GROUP_new_by_curve_name(nid);
-	ec_params = EC_KEY_new();
-	if (!ec_params || EC_KEY_set_group(ec_params, group) != 1) {
+	ec_params = EC_KEY_new_by_curve_name(nid);
+	if (!ec_params) {
 		wpa_printf(MSG_ERROR,
 			   "DPP: Failed to generate EC_KEY parameters");
 		goto fail;

@@ -2608,6 +2608,11 @@ static u8 * wpas_populate_assoc_ies(
 #endif /* CONFIG_FILS */
 
 #ifdef CONFIG_OWE
+#ifdef CONFIG_TESTING_OPTIONS
+	if (get_ie_ext(wpa_ie, wpa_ie_len, WLAN_EID_EXT_OWE_DH_PARAM)) {
+		wpa_printf(MSG_INFO, "TESTING: Override OWE DH element");
+	} else
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (algs == WPA_AUTH_ALG_OPEN &&
 	    ssid->key_mgmt == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *owe_ie;

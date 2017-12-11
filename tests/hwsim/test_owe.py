@@ -235,6 +235,17 @@ def test_owe_unsupported_group(dev, apdev):
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 13 *")
 
+def test_owe_unsupported_group_connect_cmd(dev, apdev):
+    """Opportunistic Wireless Encryption and unsupported group using cfg80211 connect command"""
+    try:
+        wpas = None
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+        run_owe_unsupported_group([ wpas ], apdev)
+    finally:
+        if wpas:
+            wpas.request("VENDOR_ELEM_REMOVE 13 *")
+
 def run_owe_unsupported_group(dev, apdev):
     if "OWE" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("OWE not supported")

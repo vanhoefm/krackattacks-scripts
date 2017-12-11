@@ -2854,14 +2854,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 		bss->dtim_period = val;
 	} else if (os_strcmp(buf, "bss_load_update_period") == 0) {
-		bss->bss_load_update_period = atoi(pos);
-		if (bss->bss_load_update_period < 0 ||
-		    bss->bss_load_update_period > 100) {
+		int val = atoi(pos);
+
+		if (val < 0 || val > 100) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid bss_load_update_period %d",
-				   line, bss->bss_load_update_period);
+				   line, val);
 			return 1;
 		}
+		bss->bss_load_update_period = val;
 	} else if (os_strcmp(buf, "rts_threshold") == 0) {
 		conf->rts_threshold = atoi(pos);
 		if (conf->rts_threshold < -1 || conf->rts_threshold > 65535) {

@@ -248,7 +248,7 @@ struct hostapd_bss_config {
 	int max_num_sta; /* maximum number of STAs in station table */
 
 	int dtim_period;
-	int bss_load_update_period;
+	unsigned int bss_load_update_period;
 
 	int ieee802_1x; /* use IEEE 802.1X */
 	int eapol_version;

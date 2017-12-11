@@ -1408,6 +1408,20 @@ static int hostapd_cli_cmd_dpp_auth_init(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_dpp_listen(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_LISTEN", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_dpp_stop_listen(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DPP_STOP_LISTEN");
+}
+
+
 static int hostapd_cli_cmd_dpp_configurator_add(struct wpa_ctrl *ctrl, int argc,
 						char *argv[])
 {
@@ -1586,6 +1600,10 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "<id> = show DPP bootstrap information" },
 	{ "dpp_auth_init", hostapd_cli_cmd_dpp_auth_init, NULL,
 	  "peer=<id> [own=<id>] = initiate DPP bootstrapping" },
+	{ "dpp_listen", hostapd_cli_cmd_dpp_listen, NULL,
+	  "<freq in MHz> = start DPP listen" },
+	{ "dpp_stop_listen", hostapd_cli_cmd_dpp_stop_listen, NULL,
+	  "= stop DPP listen" },
 	{ "dpp_configurator_add", hostapd_cli_cmd_dpp_configurator_add, NULL,
 	  "[curve=..] [key=..] = add DPP configurator" },
 	{ "dpp_configurator_remove", hostapd_cli_cmd_dpp_configurator_remove,

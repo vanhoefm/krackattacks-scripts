@@ -211,7 +211,8 @@ def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""
     hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "open",
-                            "bss_load_update_period": "10" })
+                            "bss_load_update_period": "10",
+                            "chan_util_avg_period": "20" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     # this does not really get much useful output with mac80211_hwsim currently,
     # but run through the channel survey update couple of times
@@ -220,6 +221,9 @@ def test_ap_bss_load(dev, apdev):
         hwsim_utils.test_connectivity(dev[0], hapd)
         hwsim_utils.test_connectivity(dev[0], hapd)
         time.sleep(0.15)
+    avg = hapd.get_status_field("chan_util_avg")
+    if avg is None:
+        raise Exception("No STATUS chan_util_avg seen")
 
 def test_ap_bss_load_fail(dev, apdev):
     """BSS Load update failing to get survey data"""

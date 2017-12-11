@@ -60,6 +60,7 @@ static DEFINE_DL_LIST(p2p_peers); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(ifnames); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(networks); /* struct cli_txt_entry */
+static DEFINE_DL_LIST(creds); /* struct cli_txt_entry */
 #ifdef CONFIG_AP
 static DEFINE_DL_LIST(stations); /* struct cli_txt_entry */
 #endif /* CONFIG_AP */
@@ -70,6 +71,7 @@ static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
 static void wpa_cli_close_connection(void);
 static char * wpa_cli_get_default_ifname(void);
 static char ** wpa_list_cmd_list(void);
+static void update_creds(struct wpa_ctrl *ctrl);
 static void update_networks(struct wpa_ctrl *ctrl);
 static void update_stations(struct wpa_ctrl *ctrl);
 
@@ -1519,14 +1521,56 @@ static int wpa_cli_cmd_list_creds(struct wpa_ctrl *ctrl, int argc,
 
 static int wpa_cli_cmd_add_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	return wpa_ctrl_command(ctrl, "ADD_CRED");
+	int res = wpa_ctrl_command(ctrl, "ADD_CRED");
+	if (interactive)
+		update_creds(ctrl);
+	return res;
 }
 
 
 static int wpa_cli_cmd_remove_cred(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	return wpa_cli_cmd(ctrl, "REMOVE_CRED", 1, argc, argv);
+	int res = wpa_cli_cmd(ctrl, "REMOVE_CRED", 1, argc, argv);
+	if (interactive)
+		update_creds(ctrl);
+	return res;
+}
+
+
+static const char const *cred_fields[] = {
+	"temporary", "priority", "sp_priority", "pcsc", "eap",
+	"update_identifier", "min_dl_bandwidth_home", "min_ul_bandwidth_home",
+	"min_dl_bandwidth_roaming", "min_ul_bandwidth_roaming", "max_bss_load",
+	"req_conn_capab", "ocsp", "sim_num", "realm", "username", "password",
+	"ca_cert", "client_cert", "private_key", "private_key_passwd", "imsi",
+	"milenage", "domain_suffix_match", "domain", "phase1", "phase2",
+	"roaming_consortium", "required_roaming_consortium", "excluded_ssid",
+	"roaming_partner", "provisioning_sp"
+};
+
+
+static char ** wpa_cli_complete_cred(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	int i, num_fields = ARRAY_SIZE(cred_fields);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&creds);
+		break;
+	case 2:
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(cred_fields[i]);
+			if (res[i] == NULL)
+				break;
+		}
+	}
+	return res;
 }
 
 
@@ -3093,10 +3137,10 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "remove_cred", wpa_cli_cmd_remove_cred, NULL,
 	  cli_cmd_flag_none,
 	  "<cred id> = remove a credential" },
-	{ "set_cred", wpa_cli_cmd_set_cred, NULL,
+	{ "set_cred", wpa_cli_cmd_set_cred, wpa_cli_complete_cred,
 	  cli_cmd_flag_sensitive,
 	  "<cred id> <variable> <value> = set credential variables" },
-	{ "get_cred", wpa_cli_cmd_get_cred, NULL,
+	{ "get_cred", wpa_cli_cmd_get_cred, wpa_cli_complete_cred,
 	  cli_cmd_flag_none,
 	  "<cred id> <variable> = get credential variables" },
 	{ "save_config", wpa_cli_cmd_save_config, NULL,
@@ -4206,6 +4250,38 @@ static void update_ifnames(struct wpa_ctrl *ctrl)
 }
 
 
+static void update_creds(struct wpa_ctrl *ctrl)
+{
+	char buf[4096];
+	size_t len = sizeof(buf);
+	int ret;
+	const char *cmd = "LIST_CREDS";
+	char *pos, *end;
+	int header = 1;
+
+	cli_txt_list_flush(&creds);
+
+	if (ctrl == NULL)
+		return;
+	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len, NULL);
+	if (ret < 0)
+		return;
+	buf[len] = '\0';
+
+	pos = buf;
+	while (pos) {
+		end = os_strchr(pos, '\n');
+		if (end == NULL)
+			break;
+		*end = '\0';
+		if (!header)
+			cli_txt_list_add_word(&creds, pos, '\t');
+		header = 0;
+		pos = end + 1;
+	}
+}
+
+
 static void update_networks(struct wpa_ctrl *ctrl)
 {
 	char buf[4096];
@@ -4279,6 +4355,7 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	update_bssid_list(ctrl_conn);
+	update_creds(ctrl_conn);
 	update_networks(ctrl_conn);
 	update_stations(ctrl_conn);
 
@@ -4302,6 +4379,7 @@ static void wpa_cli_interactive(void)
 	cli_txt_list_flush(&p2p_groups);
 	cli_txt_list_flush(&bsses);
 	cli_txt_list_flush(&ifnames);
+	cli_txt_list_flush(&creds);
 	cli_txt_list_flush(&networks);
 	if (edit_started)
 		edit_deinit(hfile, wpa_cli_edit_filter_history_cb);

@@ -988,6 +988,12 @@ enum qca_vendor_attr_get_preferred_freq_list {
 	 * from kernel space to user space.
 	 */
 	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST,
+	/* An array of nested values as per enum qca_wlan_vendor_attr_pcl
+	 * attribute. Each element contains frequency (MHz), weight, and flag
+	 * bit mask indicating how the frequency should be used in P2P
+	 * negotiation; sent from kernel space to user space.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_WEIGHED_PCL,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_GET_PREFERRED_FREQ_LIST_MAX =
@@ -3604,7 +3610,8 @@ enum qca_wlan_vendor_external_acs_event_chan_info_attr {
 /**
  * qca_wlan_vendor_attr_pcl: Represents attributes for
  * preferred channel list (PCL). These attributes are sent as part of
- * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PCL.
+ * QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_PCL and
+ * QCA_NL80211_VENDOR_SUBCMD_GET_PREFERRED_FREQ_LIST.
  */
 enum qca_wlan_vendor_attr_pcl {
 	QCA_WLAN_VENDOR_ATTR_PCL_INVALID = 0,
@@ -3613,6 +3620,17 @@ enum qca_wlan_vendor_attr_pcl {
 	QCA_WLAN_VENDOR_ATTR_PCL_CHANNEL = 1,
 	/* Channel weightage (u8) */
 	QCA_WLAN_VENDOR_ATTR_PCL_WEIGHT = 2,
+	/* Channel frequency (u32) in MHz */
+	QCA_WLAN_VENDOR_ATTR_PCL_FREQ = 3,
+	/* Channel flags (u32)
+	 * bit 0 set: channel to be used for GO role,
+	 * bit 1 set: channel to be used on CLI role,
+	 * bit 2 set: channel must be considered for operating channel
+	 *                 selection & peer chosen operating channel should be
+	 *                 one of the channels with this flag set,
+	 * bit 3 set: channel should be excluded in GO negotiation
+	 */
+	QCA_WLAN_VENDOR_ATTR_PCL_FLAG = 4,
 };
 
 /**

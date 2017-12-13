@@ -1887,6 +1887,77 @@ def test_dpp_test_vector_p_256_b(dev, apdev):
     if ev is None:
         raise Exception("DPP authentication did not succeed (Responder)")
 
+def der_priv_key_p_521(priv):
+    if len(priv) != 2 * 66:
+        raise Exception("Unexpected der_priv_key_p_521 parameter: " + priv)
+    der_prefix = "3081500201010442"
+    der_postfix = "a00706052b81040023"
+    return der_prefix + priv + der_postfix
+
+def test_dpp_test_vector_p_521(dev, apdev):
+    """DPP P-521 test vector (mutual auth)"""
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    # Responder bootstrapping key
+    priv = "0061e54f518cdf859735da3dd64c6f72c2f086f41a6fd52915152ea2fe0f24ddaecd8883730c9c9fd82cf7c043a41021696388cf5190b731dd83638bcd56d8b6c743"
+    addr = dev[0].own_addr().replace(':', '')
+    #cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/11 mac=" + addr + " key=" + der_prefix + priv + der_postfix
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/11 mac=" + addr + " key=" + der_priv_key_p_521(priv)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    # Responder protocol keypair override
+    priv = "01d8b7b17cd1b0a33f7c66fb4220999329cdaf4f8b44b2ffadde8ab8ed8abffa9f5358c5b1caae26709ca4fb78e52a4d08f2e4f24111a36a6f440d20a0000ff51597"
+    dev[0].set("dpp_protocol_key_override", der_priv_key_p_521(priv))
+
+    dev[0].set("dpp_nonce_override",
+               "d749a782012eb0a8595af30b2dfc8d0880d004ebddb55ecc5afbdef18c400e01")
+
+    # Initiator bootstrapping key
+    priv = "0060c10df14af5ef27f6e362d31bdd9eeb44be77a323ba64b08f3f03d58b92cbfe05c182a91660caa081ca344243c47b5aa088bcdf738840eb35f0218b9f26881e02"
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode key=" + der_priv_key_p_521(priv)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+    uri1 = dev[1].request("DPP_BOOTSTRAP_GET_URI %d" % id1)
+
+    # Initiator protocol keypair override
+    priv = "019c1c08caaeec38fb931894699b095bc3ab8c1ec7ef0622d2e3eba821477c8c6fca41774f21166ad98aebda37c067d9aa08a8a2e1b5c44c61f2bae02a61f85d9661"
+    dev[1].set("dpp_protocol_key_override", der_priv_key_p_521(priv))
+
+    dev[1].set("dpp_nonce_override",
+               "de972af3847bec3ba2aedd9f5c21cfdec7bf0bc5fe8b276cbcd0267807fb15b0")
+
+    res = dev[1].request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1peer = int(res)
+
+    res = dev[0].request("DPP_QR_CODE " + uri1)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id0peer = int(res)
+
+    cmd = "DPP_LISTEN 2462 qr=mutual"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_AUTH_INIT peer=%d own=%d neg_freq=2412" % (id1peer, id1)
+    if "OK" not in dev[1].request(cmd):
+        raise Exception("Failed to initiate operation")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+
 def test_dpp_pkex(dev, apdev):
     """DPP and PKEX"""
     run_dpp_pkex(dev, apdev)

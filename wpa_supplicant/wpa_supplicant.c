@@ -1606,7 +1606,8 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 		break;
 	case 9: /* Bits 72-79 */
 #ifdef CONFIG_FILS
-		*pos |= 0x01;
+		if (!wpa_s->disable_fils)
+			*pos |= 0x01;
 #endif /* CONFIG_FILS */
 		break;
 	}

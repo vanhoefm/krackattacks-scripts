@@ -717,6 +717,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		dpp_test = atoi(value);
 #endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_FILS
+	} else if (os_strcasecmp(cmd, "disable_fils") == 0) {
+		wpa_s->disable_fils = !!atoi(value);
+		wpa_drv_disable_fils(wpa_s, wpa_s->disable_fils);
+		wpa_supplicant_set_default_scan_ies(wpa_s);
+#endif /* CONFIG_FILS */
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	} else if (os_strcmp(cmd, "blob") == 0) {
 		ret = wpas_ctrl_set_blob(wpa_s, value);

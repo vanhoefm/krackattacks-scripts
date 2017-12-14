@@ -689,6 +689,14 @@ static inline int wpa_drv_roaming(struct wpa_supplicant *wpa_s, int allowed,
 	return wpa_s->driver->roaming(wpa_s->drv_priv, allowed, bssid);
 }
 
+static inline int wpa_drv_disable_fils(struct wpa_supplicant *wpa_s,
+				       int disable)
+{
+	if (!wpa_s->driver->disable_fils)
+		return -1;
+	return wpa_s->driver->disable_fils(wpa_s->drv_priv, disable);
+}
+
 static inline int wpa_drv_set_mac_addr(struct wpa_supplicant *wpa_s,
 				       const u8 *addr)
 {

@@ -8885,6 +8885,34 @@ static int nl80211_roaming(void *priv, int allowed, const u8 *bssid)
 }
 
 
+static int nl80211_disable_fils(void *priv, int disable)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *params;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Disable FILS=%d", disable);
+
+	if (!drv->set_wifi_conf_vendor_cmd_avail)
+		return -1;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_DISABLE_FILS,
+		       disable)) {
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+}
+
+
 /* Reserved QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID value for wpa_supplicant */
 #define WPA_SUPPLICANT_CLIENT_ID 1
 
@@ -10450,6 +10478,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_ifindex = nl80211_get_ifindex,
 #ifdef CONFIG_DRIVER_NL80211_QCA
 	.roaming = nl80211_roaming,
+	.disable_fils = nl80211_disable_fils,
 	.do_acs = wpa_driver_do_acs,
 	.set_band = nl80211_set_band,
 	.get_pref_freq_list = nl80211_get_pref_freq_list,

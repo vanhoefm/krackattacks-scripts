@@ -1215,6 +1215,10 @@ struct wpa_supplicant {
 	unsigned int dpp_ignore_netaccesskey_mismatch:1;
 #endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_DPP */
+
+#ifdef CONFIG_FILS
+	unsigned int disable_fils:1;
+#endif /* CONFIG_FILS */
 };
 
 

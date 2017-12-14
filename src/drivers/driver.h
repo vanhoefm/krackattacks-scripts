@@ -3611,6 +3611,17 @@ struct wpa_driver_ops {
 	int (*roaming)(void *priv, int allowed, const u8 *bssid);
 
 	/**
+	 * disable_fils - Enable/disable FILS feature
+	 * @priv: Private driver interface data
+	 * @disable: 0-enable and 1-disable FILS feature
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This callback can be used to configure driver and below layers to
+	 * enable/disable all FILS features.
+	 */
+	int (*disable_fils)(void *priv, int disable);
+
+	/**
 	 * set_mac_addr - Set MAC address
 	 * @priv: Private driver interface data
 	 * @addr: MAC address to use or %NULL for setting back to permanent

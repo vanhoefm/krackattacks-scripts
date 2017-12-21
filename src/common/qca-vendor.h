@@ -1,6 +1,7 @@
 /*
  * Qualcomm Atheros OUI and vendor specific assignments
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -365,12 +366,22 @@ enum qca_radiotap_vendor_ids {
  *	RF Operating Parameter (RROP) information. The attributes for this
  *	information are defined in enum qca_wlan_vendor_attr_rrop_info. This is
  *	intended for use by external Auto Channel Selection applications.
+ *
  * @QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS: Get the Specific Absorption Rate
  *	(SAR) power limits. This is a companion to the command
  *	@QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS and is used to retrieve the
  *	settings currently in use. The attributes returned by this command are
  *	defined by enum qca_vendor_attr_sar_limits.
  *
+ * @QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO: Provides the current behavior of
+ *	the WLAN hardware MAC. Also, provides the WLAN netdev interface
+ *	information attached to the respective MAC.
+ *	This works both as a query (user space asks the current mode) or event
+ *	interface (driver advertising the current mode to the user space).
+ *	Driver does not trigger this event for temporary hardware mode changes.
+ *	Mode changes w.r.t Wi-Fi connection update (VIZ creation / deletion,
+ *	channel change, etc.) are updated with this event. Attributes for this
+ *	interface are defined in enum qca_wlan_vendor_attr_mac.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -511,6 +522,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING = 162,
 	QCA_NL80211_VENDOR_SUBCMD_GET_RROP_INFO = 163,
 	QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS = 164,
+	QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO = 165,
 };
 
 
@@ -4300,6 +4312,67 @@ enum qca_wlan_vendor_attr_config_latency_level {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_MAX =
 	QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_wlan_mac - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO.
+ */
+enum qca_wlan_vendor_attr_mac {
+	QCA_WLAN_VENDOR_ATTR_MAC_INVALID = 0,
+
+	/* MAC mode info list which has an array of nested values as
+	 * per attributes in enum qca_wlan_vendor_attr_mac_mode_info.
+	 */
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO = 1,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_MAC_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_MAC_MAX =
+	QCA_WLAN_VENDOR_ATTR_MAC_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_mac_iface_info - Information of the connected
+ *	Wi-Fi netdev interface on a respective MAC.
+ *	Used by the attribute QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO.
+ */
+enum qca_wlan_vendor_attr_mac_iface_info {
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_INVALID = 0,
+	/* Wi-Fi netdev's interface index (u32) */
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_IFINDEX = 1,
+	/* Associated frequency in MHz of the connected Wi-Fi interface (u32) */
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_FREQ = 2,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_MAX =
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_mac_info - Points to MAC the information.
+ *	Used by the attribute QCA_WLAN_VENDOR_ATTR_MAC_INFO of the
+ *	vendor command QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO.
+ */
+enum qca_wlan_vendor_attr_mac_info {
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_INVALID = 0,
+	/* Hardware MAC ID associated for the MAC (u32) */
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_MAC_ID = 1,
+	/* Band supported by the MAC at a given point.
+	 * This is a u32 bitmask of BIT(NL80211_BAND_*) as described in %enum
+	 * nl80211_band.
+	 */
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_BAND = 2,
+	/* Refers to list of WLAN netdev interfaces associated with this MAC.
+	 * Represented by enum qca_wlan_vendor_attr_mac_iface_info.
+	 */
+	QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO = 3,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_MAX =
+	QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

@@ -3779,6 +3779,59 @@ enum qca_attr_chip_power_save_failure {
 };
 
 /**
+ * qca_wlan_vendor_nud_stats_data_pkt_flags: Flag representing the various
+ * data types for which the stats have to get collected.
+ */
+enum qca_wlan_vendor_nud_stats_data_pkt_flags {
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_ARP = 1 << 0,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_DNS = 1 << 1,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_TCP_HANDSHAKE = 1 << 2,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_ICMPV4 = 1 << 3,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_ICMPV6 = 1 << 4,
+	/* Used by QCA_ATTR_NUD_STATS_PKT_TYPE only in nud stats get
+	 * to represent the stats of respective data type.
+	 */
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_TCP_SYN = 1 << 5,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_TCP_SYN_ACK = 1 << 6,
+	QCA_WLAN_VENDOR_NUD_STATS_DATA_TCP_ACK = 1 << 7,
+};
+
+enum qca_wlan_vendor_nud_stats_set_data_pkt_info {
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_INVALID = 0,
+	/* Represents the data packet type to be monitored (u32).
+	 * Host driver tracks the stats corresponding to each data frame
+	 * represented by these flags.
+	 * These data packets are represented by
+	 * enum qca_wlan_vendor_nud_stats_data_pkt_flags
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_TYPE = 1,
+	/* Name corresponding to the DNS frame for which the respective DNS
+	 * stats have to get monitored (string). Max string length 255.
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DNS_DOMAIN_NAME = 2,
+	/* source port on which the respective proto stats have to get
+	 * collected (u32).
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_SRC_PORT = 3,
+	/* destination port on which the respective proto stats have to get
+	 * collected (u32).
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_PORT = 4,
+	/* IPv4 address for which the destined data packets have to be
+	 * monitored. (in network byte order), u32.
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV4 = 5,
+	/* IPv6 address for which the destined data packets have to be
+	 * monitored. (in network byte order), 16 bytes array.
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV6 = 6,
+
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_LAST,
+	QCA_ATTR_NUD_STATS_DATA_PKT_INFO_MAX =
+		QCA_ATTR_NUD_STATS_DATA_PKT_INFO_LAST - 1,
+};
+
+/**
  * qca_wlan_vendor_attr_nud_stats_set: Attributes to vendor subcmd
  * QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET. This carries the requisite
  * information to start/stop the NUD statistics collection.
@@ -3790,13 +3843,72 @@ enum qca_attr_nud_stats_set {
 	 * Start - If included, Stop - If not included
 	 */
 	QCA_ATTR_NUD_STATS_SET_START = 1,
-	/* IPv4 address of the default gateway (in network byte order) */
+	/* IPv4 address of the default gateway (in network byte order), u32 */
 	QCA_ATTR_NUD_STATS_GW_IPV4 = 2,
+	/* Represents the list of data packet types to be monitored.
+	 * Host driver tracks the stats corresponding to each data frame
+	 * represented by these flags.
+	 * These data packets are represented by
+	 * enum qca_wlan_vendor_nud_stats_set_data_pkt_info
+	 */
+	QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO = 3,
 
 	/* keep last */
 	QCA_ATTR_NUD_STATS_SET_LAST,
 	QCA_ATTR_NUD_STATS_SET_MAX =
 		QCA_ATTR_NUD_STATS_SET_LAST - 1,
+};
+
+enum qca_attr_nud_data_stats {
+	QCA_ATTR_NUD_DATA_STATS_INVALID = 0,
+	/* Data packet type for which the stats are collected (u32).
+	 * Represented by enum qca_wlan_vendor_nud_stats_data_pkt_flags
+	 */
+	QCA_ATTR_NUD_STATS_PKT_TYPE = 1,
+	/* Name corresponding to the DNS frame for which the respective DNS
+	 * stats are monitored (string). Max string length 255.
+	 */
+	QCA_ATTR_NUD_STATS_PKT_DNS_DOMAIN_NAME = 2,
+	/* source port on which the respective proto stats are collected (u32).
+	 */
+	QCA_ATTR_NUD_STATS_PKT_SRC_PORT = 3,
+	/* destination port on which the respective proto stats are collected
+	 * (u32).
+	 */
+	QCA_ATTR_NUD_STATS_PKT_DEST_PORT = 4,
+	/* IPv4 address for which the destined data packets have to be
+	 * monitored. (in network byte order), u32.
+	 */
+	QCA_ATTR_NUD_STATS_PKT_DEST_IPV4 = 5,
+	/* IPv6 address for which the destined data packets have to be
+	 * monitored. (in network byte order), 16 bytes array.
+	 */
+	QCA_ATTR_NUD_STATS_PKT_DEST_IPV6 = 6,
+	/* Data packet Request count received from netdev (u32). */
+	QCA_ATTR_NUD_STATS_PKT_REQ_COUNT_FROM_NETDEV = 7,
+	/* Data packet Request count sent to lower MAC from upper MAC (u32). */
+	QCA_ATTR_NUD_STATS_PKT_REQ_COUNT_TO_LOWER_MAC = 8,
+	/* Data packet Request count received by lower MAC from upper MAC
+	 * (u32)
+	 */
+	QCA_ATTR_NUD_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC = 9,
+	/* Data packet Request count successfully transmitted by the device
+	 * (u32)
+	 */
+	QCA_ATTR_NUD_STATS_PKT_REQ_COUNT_TX_SUCCESS = 10,
+	/* Data packet Response count received by lower MAC (u32) */
+	QCA_ATTR_NUD_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC = 11,
+	/* Data packet Response count received by upper MAC (u32) */
+	QCA_ATTR_NUD_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC = 12,
+	/* Data packet Response count delivered to netdev (u32) */
+	QCA_ATTR_NUD_STATS_PKT_RSP_COUNT_TO_NETDEV = 13,
+	/* Data Packet Response count that are dropped out of order (u32) */
+	QCA_ATTR_NUD_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP = 14,
+
+	/* keep last */
+	QCA_ATTR_NUD_DATA_STATS_LAST,
+	QCA_ATTR_NUD_DATA_STATS_MAX =
+		QCA_ATTR_NUD_DATA_STATS_LAST - 1,
 };
 
 /**
@@ -3806,21 +3918,21 @@ enum qca_attr_nud_stats_set {
  */
 enum qca_attr_nud_stats_get {
 	QCA_ATTR_NUD_STATS_GET_INVALID = 0,
-	/* ARP Request count from netdev */
+	/* ARP Request count from netdev (u32) */
 	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV = 1,
-	/* ARP Request count sent to lower MAC from upper MAC */
+	/* ARP Request count sent to lower MAC from upper MAC (u32) */
 	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC = 2,
-	/* ARP Request count received by lower MAC from upper MAC */
+	/* ARP Request count received by lower MAC from upper MAC (u32) */
 	QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC = 3,
-	/* ARP Request count successfully transmitted by the device */
+	/* ARP Request count successfully transmitted by the device (u32) */
 	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS = 4,
-	/* ARP Response count received by lower MAC */
+	/* ARP Response count received by lower MAC (u32) */
 	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC = 5,
-	/* ARP Response count received by upper MAC */
+	/* ARP Response count received by upper MAC (u32) */
 	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC = 6,
-	/* ARP Response count delivered to netdev */
+	/* ARP Response count delivered to netdev (u32) */
 	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV = 7,
-	/* ARP Response count delivered to netdev */
+	/* ARP Response count dropped due to out of order reception (u32) */
 	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP = 8,
 	/* Flag indicating if the station's link to the AP is active.
 	 * Active Link - If included, Inactive link - If not included
@@ -3830,6 +3942,11 @@ enum qca_attr_nud_stats_get {
 	 * Yes - If detected, No - If not detected.
 	 */
 	QCA_ATTR_NUD_STATS_IS_DAD = 10,
+	/* List of Data packet types for which the stats are requested.
+	 * This list does not carry ARP stats as they are done by the
+	 * above attributes. Represented by enum qca_attr_nud_data_stats.
+	 */
+	QCA_ATTR_NUD_STATS_DATA_PKT_STATS = 11,
 
 	/* keep last */
 	QCA_ATTR_NUD_STATS_GET_LAST,

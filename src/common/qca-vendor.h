@@ -2759,7 +2759,7 @@ enum qca_wlan_vendor_tdls_trigger_mode {
  * attribute %QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT in an instance of
  * the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command or in
  * the response to an instance of the
- * %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
+ * %QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS vendor command.
  */
 enum qca_vendor_attr_sar_limits_selections {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0 = 0,
@@ -2784,7 +2784,7 @@ enum qca_vendor_attr_sar_limits_selections {
  * instance of attribute %QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC in an
  * instance of the %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor
  * command or in the response to an instance of the
- * %QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
+ * %QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS vendor command.
  */
 enum qca_vendor_attr_sar_limits_spec_modulations {
 	QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC_MODULATION_CCK = 0,

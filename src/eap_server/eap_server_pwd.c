@@ -1126,4 +1126,3 @@ int eap_server_pwd_register(void)
 
 	return eap_server_method_register(eap);
 }
-

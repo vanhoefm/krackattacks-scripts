@@ -5,7 +5,7 @@
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
  */
-#include <openssl/ssl.h>
+
 #include "utils/includes.h"
 
 #include "utils/common.h"
@@ -268,7 +268,7 @@ static int ieee802_1x_auth_get_session_id(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	need_len = 1 + 2 * SSL3_RANDOM_SIZE;
+	need_len = 1 + 2 * 32 /* random size */;
 	if (need_len > id_len) {
 		wpa_printf(MSG_DEBUG, "EAP Session-Id not long enough");
 		return -1;

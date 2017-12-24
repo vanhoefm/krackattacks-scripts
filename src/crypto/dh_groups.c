@@ -1151,7 +1151,7 @@ static const u8 dh_group24_order[] = {
 { id, dh_group ## id ## _generator, sizeof(dh_group ## id ## _generator), \
 dh_group ## id ## _prime, sizeof(dh_group ## id ## _prime), \
 dh_group ## id ## _order, sizeof(dh_group ## id ## _order), safe }
-		
+
 
 static const struct dh_group dh_groups[] = {
 	DH_GROUP(5, 1),

@@ -3877,7 +3877,7 @@ def test_dpp_pkex_alloc_fail(dev, apdev):
         with alloc_fail(dev[1], count, func):
             cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 conf=sta-dpp configurator=%d code=secret" % (id1, conf_id)
             dev[1].request(cmd)
-            wait_fail_trigger(dev[1], "GET_ALLOC_FAIL")
+            wait_fail_trigger(dev[1], "GET_ALLOC_FAIL", max_iter=100)
             ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=0.01)
             if ev:
                 dev[0].request("DPP_STOP_LISTEN")
@@ -3931,7 +3931,7 @@ def test_dpp_pkex_alloc_fail(dev, apdev):
         with alloc_fail(dev[0], count, func):
             cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 conf=sta-dpp configurator=%d code=secret" % (id1, conf_id)
             dev[1].request(cmd)
-            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
+            wait_fail_trigger(dev[0], "GET_ALLOC_FAIL", max_iter=100)
             ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=0.01)
             if ev:
                 dev[0].request("DPP_STOP_LISTEN")
@@ -4011,7 +4011,7 @@ def test_dpp_pkex_test_fail(dev, apdev):
         with fail_test(dev[1], count, func):
             cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 conf=sta-dpp configurator=%d code=secret" % (id1, conf_id)
             dev[1].request(cmd)
-            wait_fail_trigger(dev[1], "GET_FAIL")
+            wait_fail_trigger(dev[1], "GET_FAIL", max_iter=100)
             ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=0.01)
             if ev:
                 dev[0].request("DPP_STOP_LISTEN")

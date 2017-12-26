@@ -41,8 +41,12 @@ struct sae_temporary_data {
 	struct wpabuf *anti_clogging_token;
 };
 
+enum sae_state {
+	SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED
+};
+
 struct sae_data {
-	enum { SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED } state;
+	enum sae_state state;
 	u16 send_confirm;
 	u8 pmk[SAE_PMK_LEN];
 	u8 pmkid[SAE_PMKID_LEN];
@@ -67,5 +71,6 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf);
 int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len);
 u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups, u16 group);
+const char * sae_state_txt(enum sae_state state);
 
 #endif /* SAE_H */

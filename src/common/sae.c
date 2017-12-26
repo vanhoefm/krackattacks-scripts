@@ -1292,3 +1292,19 @@ int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 
 	return 0;
 }
+
+
+const char * sae_state_txt(enum sae_state state)
+{
+	switch (state) {
+	case SAE_NOTHING:
+		return "Nothing";
+	case SAE_COMMITTED:
+		return "Committed";
+	case SAE_CONFIRMED:
+		return "Confirmed";
+	case SAE_ACCEPTED:
+		return "Accepted";
+	}
+	return "?";
+}

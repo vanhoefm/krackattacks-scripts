@@ -354,6 +354,16 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 
 #ifdef CONFIG_SAE
 
+static void sae_set_state(struct sta_info *sta, enum sae_state state,
+			  const char *reason)
+{
+	wpa_printf(MSG_DEBUG, "SAE: State %s -> %s for peer " MACSTR " (%s)",
+		   sae_state_txt(sta->sae->state), sae_state_txt(state),
+		   MAC2STR(sta->addr), reason);
+	sta->sae->state = state;
+}
+
+
 static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 					     struct sta_info *sta, int update)
 {
@@ -517,7 +527,7 @@ static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
 static int sae_check_big_sync(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	if (sta->sae->sync > hapd->conf->sae_sync) {
-		sta->sae->state = SAE_NOTHING;
+		sae_set_state(sta, SAE_NOTHING, "Sync > dot11RSNASAESync");
 		sta->sae->sync = 0;
 		return -1;
 	}
@@ -535,8 +545,9 @@ static void auth_sae_retransmit_timer(void *eloop_ctx, void *eloop_data)
 		return;
 	sta->sae->sync++;
 	wpa_printf(MSG_DEBUG, "SAE: Auth SAE retransmit timer for " MACSTR
-		   " (sync=%d state=%d)",
-		   MAC2STR(sta->addr), sta->sae->sync, sta->sae->state);
+		   " (sync=%d state=%s)",
+		   MAC2STR(sta->addr), sta->sae->sync,
+		   sae_state_txt(sta->sae->state));
 
 	switch (sta->sae->state) {
 	case SAE_COMMITTED:
@@ -585,7 +596,7 @@ void sae_accept_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	sta->auth_alg = WLAN_AUTH_SAE;
 	mlme_authenticate_indication(hapd, sta);
 	wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
-	sta->sae->state = SAE_ACCEPTED;
+	sae_set_state(sta, SAE_ACCEPTED, "Accept Confirm");
 	wpa_auth_pmksa_add_sae(hapd->wpa_auth, sta->addr,
 			       sta->sae->pmk, sta->sae->pmkid);
 }
@@ -599,13 +610,16 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 	if (auth_transaction != 1 && auth_transaction != 2)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
+	wpa_printf(MSG_DEBUG, "SAE: Peer " MACSTR " state=%s auth_trans=%u",
+		   MAC2STR(sta->addr), sae_state_txt(sta->sae->state),
+		   auth_transaction);
 	switch (sta->sae->state) {
 	case SAE_NOTHING:
 		if (auth_transaction == 1) {
 			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
-			sta->sae->state = SAE_COMMITTED;
+			sae_set_state(sta, SAE_COMMITTED, "Sent Commit");
 
 			if (sae_process_commit(sta->sae) < 0)
 				return WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -627,7 +641,8 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				ret = auth_sae_send_confirm(hapd, sta, bssid);
 				if (ret)
 					return ret;
-				sta->sae->state = SAE_CONFIRMED;
+				sae_set_state(sta, SAE_CONFIRMED,
+					      "Sent Confirm (mesh)");
 			} else {
 				/*
 				 * For infrastructure BSS, send only the Commit
@@ -656,7 +671,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			ret = auth_sae_send_confirm(hapd, sta, bssid);
 			if (ret)
 				return ret;
-			sta->sae->state = SAE_CONFIRMED;
+			sae_set_state(sta, SAE_CONFIRMED, "Sent Confirm");
 			sta->sae->sync = 0;
 			sae_set_retransmit_timer(hapd, sta);
 		} else if (hapd->conf->mesh & MESH_ENABLED) {
@@ -683,7 +698,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			if (ret)
 				return ret;
 
-			sta->sae->state = SAE_CONFIRMED;
+			sae_set_state(sta, SAE_CONFIRMED, "Sent Confirm");
 
 			/*
 			 * Since this was triggered on Confirm RX, run another
@@ -820,7 +835,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			resp = -1;
 			goto remove_sta;
 		}
-		sta->sae->state = SAE_NOTHING;
+		sae_set_state(sta, SAE_NOTHING, "Init");
 		sta->sae->sync = 0;
 	}
 
@@ -883,7 +898,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 					   "SAE: Failed to send commit message");
 				goto remove_sta;
 			}
-			sta->sae->state = SAE_COMMITTED;
+			sae_set_state(sta, SAE_COMMITTED,
+				      "Sent Commit (anti-clogging token case in mesh)");
 			sta->sae->sync = 0;
 			sae_set_retransmit_timer(hapd, sta);
 			return;
@@ -932,7 +948,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 						    sta->addr);
 			resp = WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ;
 			if (hapd->conf->mesh & MESH_ENABLED)
-				sta->sae->state = SAE_NOTHING;
+				sae_set_state(sta, SAE_NOTHING,
+					      "Request anti-clogging token case in mesh");
 			goto reply;
 		}
 
@@ -1006,7 +1023,7 @@ int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta)
 	if (ret)
 		return -1;
 
-	sta->sae->state = SAE_COMMITTED;
+	sae_set_state(sta, SAE_COMMITTED, "Init and sent commit");
 	sta->sae->sync = 0;
 	sae_set_retransmit_timer(hapd, sta);
 

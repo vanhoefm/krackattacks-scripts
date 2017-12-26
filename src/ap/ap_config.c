@@ -108,6 +108,7 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->radius_das_time_window = 300;
 
 	bss->sae_anti_clogging_threshold = 5;
+	bss->sae_sync = 5;
 
 	bss->gas_frag_limit = 1400;
 

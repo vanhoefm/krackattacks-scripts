@@ -48,7 +48,7 @@ struct sae_data {
 	u8 pmkid[SAE_PMKID_LEN];
 	struct crypto_bignum *peer_commit_scalar;
 	int group;
-	int sync;
+	unsigned int sync; /* protocol instance variable: Sync */
 	struct sae_temporary_data *tmp;
 };
 

@@ -3634,6 +3634,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 	} else if (os_strcmp(buf, "sae_anti_clogging_threshold") == 0) {
 		bss->sae_anti_clogging_threshold = atoi(pos);
+	} else if (os_strcmp(buf, "sae_sync") == 0) {
+		bss->sae_sync = atoi(pos);
 	} else if (os_strcmp(buf, "sae_groups") == 0) {
 		if (hostapd_parse_intlist(&bss->sae_groups, pos)) {
 			wpa_printf(MSG_ERROR,

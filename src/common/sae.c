@@ -1235,7 +1235,8 @@ void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
 	/* Send-Confirm */
 	sc = wpabuf_put(buf, 0);
 	wpabuf_put_le16(buf, sae->send_confirm);
-	sae->send_confirm++;
+	if (sae->send_confirm < 0xffff)
+		sae->send_confirm++;
 
 	if (sae->tmp->ec)
 		sae_cn_confirm_ecc(sae, sc, sae->tmp->own_commit_scalar,

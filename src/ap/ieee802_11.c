@@ -728,6 +728,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 
 			sae_set_retransmit_timer(hapd, sta);
 		} else {
+			sta->sae->send_confirm = 0xffff;
 			sae_accept_sta(hapd, sta);
 		}
 		break;

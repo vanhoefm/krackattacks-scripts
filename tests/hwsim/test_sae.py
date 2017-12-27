@@ -250,6 +250,38 @@ def test_sae_mixed(dev, apdev):
         dev[i].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")
 
+def test_sae_mixed_mfp(dev, apdev):
+    """Mixed SAE and non-SAE network and MFP required with SAE"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE WPA-PSK'
+    params["ieee80211w"] = "1"
+    params['sae_require_mfp'] = '1'
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE", ieee80211w="2",
+                   scan_freq="2412")
+    dev[0].dump_monitor()
+
+    dev[1].request("SET sae_groups ")
+    dev[1].connect("test-sae", psk="12345678", key_mgmt="SAE", ieee80211w="0",
+                   scan_freq="2412", wait_connect=False)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("No connection result reported")
+    if "CTRL-EVENT-ASSOC-REJECT" not in ev:
+        raise Exception("SAE connection without MFP was not rejected")
+    if "status_code=31" not in ev:
+        raise Exception("Unexpected status code in rejection: " + ev)
+    dev[1].request("DISCONNECT")
+    dev[1].dump_monitor()
+
+    dev[2].connect("test-sae", psk="12345678", ieee80211w="0", scan_freq="2412")
+    dev[2].dump_monitor()
+
 @remote_compatible
 def test_sae_missing_password(dev, apdev):
     """SAE and missing password"""

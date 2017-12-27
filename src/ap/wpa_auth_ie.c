@@ -711,12 +711,6 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			return WPA_MGMT_FRAME_PROTECTION_VIOLATION;
 		}
 
-		if (ciphers & WPA_CIPHER_TKIP) {
-			wpa_printf(MSG_DEBUG, "Management frame protection "
-				   "cannot use TKIP");
-			return WPA_MGMT_FRAME_PROTECTION_VIOLATION;
-		}
-
 		if (data.mgmt_group_cipher != wpa_auth->conf.group_mgmt_cipher)
 		{
 			wpa_printf(MSG_DEBUG, "Unsupported management group "
@@ -740,6 +734,12 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		sm->mgmt_frame_prot = 0;
 	else
 		sm->mgmt_frame_prot = 1;
+
+	if (sm->mgmt_frame_prot && (ciphers & WPA_CIPHER_TKIP)) {
+		    wpa_printf(MSG_DEBUG,
+			       "Management frame protection cannot use TKIP");
+		    return WPA_MGMT_FRAME_PROTECTION_VIOLATION;
+	}
 #endif /* CONFIG_IEEE80211W */
 
 #ifdef CONFIG_IEEE80211R_AP

@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
+#include "rsn_supp/wpa_i.h"
 
 
 struct arg_ctx {
@@ -142,7 +143,10 @@ static int init_wpa(struct arg_ctx *arg)
 	ctx->get_bssid = get_bssid;
 
 	arg->wpa = wpa_sm_init(ctx);
-	return arg->wpa ? 0 : -1;
+	if (!arg->wpa)
+		return -1;
+	arg->wpa->pmk_len = PMK_LEN;
+	return 0;
 }
 
 

@@ -597,6 +597,8 @@ def test_sigma_dut_ap_override_rsne(dev, apdev):
 
 def test_sigma_dut_ap_sae(dev, apdev):
     """sigma_dut controlled AP with SAE"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
         sigma = start_sigma_dut(iface)
         try:
@@ -617,6 +619,8 @@ def test_sigma_dut_ap_sae(dev, apdev):
 
 def test_sigma_dut_ap_sae_password(dev, apdev):
     """sigma_dut controlled AP with SAE and long password"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
         sigma = start_sigma_dut(iface)
         try:
@@ -637,6 +641,8 @@ def test_sigma_dut_ap_sae_password(dev, apdev):
 
 def test_sigma_dut_ap_sae_group(dev, apdev):
     """sigma_dut controlled AP with SAE and specific group"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
         sigma = start_sigma_dut(iface)
         try:
@@ -657,6 +663,8 @@ def test_sigma_dut_ap_sae_group(dev, apdev):
 
 def test_sigma_dut_ap_psk_sae(dev, apdev):
     """sigma_dut controlled AP with PSK+SAE"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
         sigma = start_sigma_dut(iface)
         try:
@@ -1356,6 +1364,7 @@ def test_sigma_dut_ap_dpp_qr_legacy_psk(dev, apdev, params):
                             extra="psk=%s" % (32*"12"))
 
 def run_sigma_dut_ap_dpp_qr(dev, apdev, params, ap_conf, sta_conf, extra=""):
+    check_dpp_capab(dev[0])
     logdir = os.path.join(params['logdir'], "sigma_dut_ap_dpp_qr.sigma-hostapd")
     with HWSimRadio() as (radio, iface):
         sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
@@ -1416,6 +1425,7 @@ def run_sigma_dut_ap_dpp_qr(dev, apdev, params, ap_conf, sta_conf, extra=""):
 
 def test_sigma_dut_ap_dpp_pkex_responder(dev, apdev, params):
     """sigma_dut controlled AP as DPP PKEX responder"""
+    check_dpp_capab(dev[0])
     logdir = os.path.join(params['logdir'],
                           "sigma_dut_ap_dpp_pkex_responder.sigma-hostapd")
     with HWSimRadio() as (radio, iface):

@@ -53,6 +53,7 @@ struct sae_data {
 	struct crypto_bignum *peer_commit_scalar;
 	int group;
 	unsigned int sync; /* protocol instance variable: Sync */
+	u16 rc; /* protocol instance variable: Rc (received send-confirm) */
 	struct sae_temporary_data *tmp;
 };
 

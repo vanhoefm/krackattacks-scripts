@@ -963,12 +963,36 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			goto remove_sta;
 		if (sta->sae->state >= SAE_CONFIRMED ||
 		    !(hapd->conf->mesh & MESH_ENABLED)) {
-			if (sae_check_confirm(sta->sae, mgmt->u.auth.variable,
-					      ((u8 *) mgmt) + len -
-					      mgmt->u.auth.variable) < 0) {
+			const u8 *var;
+			size_t var_len;
+			u16 peer_send_confirm;
+
+			var = mgmt->u.auth.variable;
+			var_len = ((u8 *) mgmt) + len - mgmt->u.auth.variable;
+			if (var_len < 2) {
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 				goto reply;
 			}
+
+			peer_send_confirm = WPA_GET_LE16(var);
+
+			if (sta->sae->state == SAE_ACCEPTED &&
+			    (peer_send_confirm <= sta->sae->rc ||
+			     peer_send_confirm == 0xffff)) {
+				wpa_printf(MSG_DEBUG,
+					   "SAE: Silently ignore unexpected Confirm from peer "
+					   MACSTR
+					   " (peer-send-confirm=%u Rc=%u)",
+					   MAC2STR(sta->addr),
+					   peer_send_confirm, sta->sae->rc);
+				return;
+			}
+
+			if (sae_check_confirm(sta->sae, var, var_len) < 0) {
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				goto reply;
+			}
+			sta->sae->rc = peer_send_confirm;
 		}
 		resp = sae_sm_step(hapd, sta, mgmt->bssid, auth_transaction);
 	} else {

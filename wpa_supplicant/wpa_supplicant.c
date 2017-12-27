@@ -2617,10 +2617,20 @@ static u8 * wpas_populate_assoc_ies(
 	if (algs == WPA_AUTH_ALG_OPEN &&
 	    ssid->key_mgmt == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *owe_ie;
-		u16 group = OWE_DH_GROUP;
+		u16 group;
 
-		if (ssid->owe_group)
+		if (ssid->owe_group) {
 			group = ssid->owe_group;
+		} else {
+			if (wpa_s->last_owe_group == 19)
+				group = 20;
+			else if (wpa_s->last_owe_group == 20)
+				group = 21;
+			else
+				group = OWE_DH_GROUP;
+		}
+		wpa_s->last_owe_group = group;
+		wpa_printf(MSG_DEBUG, "OWE: Try to use group %u", group);
 		owe_ie = owe_build_assoc_req(wpa_s->wpa, group);
 		if (owe_ie &&
 		    wpabuf_len(owe_ie) <= max_wpa_ie_len - wpa_ie_len) {
@@ -3405,6 +3415,7 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+	wpa_s->last_owe_group = 0;
 
 	if (wpa_s->connect_without_scan ||
 	    wpa_supplicant_fast_associate(wpa_s) != 1) {
@@ -6659,6 +6670,7 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 	wpa_s->extra_blacklist_count = 0;
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+	wpa_s->last_owe_group = 0;
 
 	if (wpa_supplicant_fast_associate(wpa_s) != 1)
 		wpa_supplicant_req_scan(wpa_s, 0, 0);

@@ -3986,6 +3986,26 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				data->assoc_reject.timeout_reason : "");
 		wpa_s->assoc_status_code = data->assoc_reject.status_code;
 		wpas_notify_assoc_status_code(wpa_s);
+
+#ifdef CONFIG_OWE
+		if (data->assoc_reject.status_code ==
+		    WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED &&
+		    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE &&
+		    wpa_s->current_ssid &&
+		    wpa_s->current_ssid->owe_group == 0 &&
+		    wpa_s->last_owe_group != 21) {
+			struct wpa_ssid *ssid = wpa_s->current_ssid;
+			struct wpa_bss *bss = wpa_s->current_bss;
+
+			wpa_printf(MSG_DEBUG,
+				   "OWE: Try next supported DH group");
+			wpas_connect_work_done(wpa_s);
+			wpa_supplicant_mark_disassoc(wpa_s);
+			wpa_supplicant_connect(wpa_s, bss, ssid);
+			break;
+		}
+#endif /* CONFIG_OWE */
+
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_assoc_reject(wpa_s, data);
 		else {

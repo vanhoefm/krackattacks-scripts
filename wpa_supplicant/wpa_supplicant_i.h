@@ -751,6 +751,7 @@ struct wpa_supplicant {
 	int set_ap_uapsd;
 	int ap_uapsd;
 	int auth_alg;
+	u16 last_owe_group;
 
 #ifdef CONFIG_SME
 	struct {

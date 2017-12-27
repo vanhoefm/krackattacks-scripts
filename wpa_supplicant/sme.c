@@ -1204,10 +1204,20 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	if (auth_type == WLAN_AUTH_OPEN &&
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *owe_ie;
-		u16 group = OWE_DH_GROUP;
+		u16 group;
 
-		if (wpa_s->current_ssid && wpa_s->current_ssid->owe_group)
+		if (wpa_s->current_ssid && wpa_s->current_ssid->owe_group) {
 			group = wpa_s->current_ssid->owe_group;
+		} else {
+			if (wpa_s->last_owe_group == 19)
+				group = 20;
+			else if (wpa_s->last_owe_group == 20)
+				group = 21;
+			else
+				group = OWE_DH_GROUP;
+		}
+		wpa_s->last_owe_group = group;
+		wpa_printf(MSG_DEBUG, "OWE: Try to use group %u", group);
 		owe_ie = owe_build_assoc_req(wpa_s->wpa, group);
 		if (!owe_ie) {
 			wpa_printf(MSG_ERROR,

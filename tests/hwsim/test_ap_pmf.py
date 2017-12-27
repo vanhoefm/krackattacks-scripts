@@ -500,3 +500,33 @@ def test_ap_pmf_inject_auth(dev, apdev):
 
     # Verify that original association is still functional.
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_pmf_tkip_reject(dev, apdev):
+    """Mixed mode BSS and MFP-enabled AP rejecting TKIP"""
+    params = hostapd.wpa2_params(ssid="test-pmf", passphrase="12345678")
+    params['wpa'] = '3'
+    params["ieee80211w"] = "1"
+    params["wpa_pairwise"] = "TKIP CCMP"
+    params["rsn_pairwise"] = "TKIP CCMP"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-pmf", psk="12345678", pairwise="CCMP", ieee80211w="2",
+                   scan_freq="2412")
+    dev[0].dump_monitor()
+
+    dev[1].connect("test-pmf", psk="12345678", proto="WPA", pairwise="TKIP",
+                   ieee80211w="0", scan_freq="2412")
+    dev[1].dump_monitor()
+
+    dev[2].connect("test-pmf", psk="12345678", pairwise="TKIP",
+                   ieee80211w="2", scan_freq="2412", wait_connect=False)
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("No connection result reported")
+    if "CTRL-EVENT-ASSOC-REJECT" not in ev:
+        raise Exception("MFP + TKIP connection was not rejected")
+    if "status_code=31" not in ev:
+        raise Exception("Unexpected status code in rejection: " + ev)
+    dev[2].request("DISCONNECT")
+    dev[2].dump_monitor()

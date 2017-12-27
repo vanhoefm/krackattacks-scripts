@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / wrapper functions for libgcrypt
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2017, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -69,6 +69,24 @@ int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return gnutls_digest_vector(GCRY_MD_SHA1, num_elem, addr, len, mac);
+}
+
+
+int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return gnutls_digest_vector(GCRY_MD_SHA256, num_elem, addr, len, mac);
+}
+
+
+int sha384_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return gnutls_digest_vector(GCRY_MD_SHA384, num_elem, addr, len, mac);
+}
+
+
+int sha512_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return gnutls_digest_vector(GCRY_MD_SHA512, num_elem, addr, len, mac);
 }
 
 

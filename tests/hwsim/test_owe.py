@@ -297,3 +297,27 @@ def test_owe_limited_group_set(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
         dev[0].dump_monitor()
+
+def test_owe_group_negotiation(dev, apdev):
+    """Opportunistic Wireless Encryption and group negotiation"""
+    run_owe_group_negotiation(dev[0], apdev)
+
+def test_owe_group_negotiation_connect_cmd(dev, apdev):
+    """Opportunistic Wireless Encryption and group negotiation (connect command)"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    run_owe_group_negotiation(wpas, apdev)
+
+def run_owe_group_negotiation(dev, apdev):
+    if "OWE" not in dev.get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    params = { "ssid": "owe",
+               "wpa": "2",
+               "wpa_key_mgmt": "OWE",
+               "rsn_pairwise": "CCMP",
+               "owe_groups": "21" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev.scan_for_bss(bssid, freq="2412")
+    dev.connect("owe", key_mgmt="OWE")

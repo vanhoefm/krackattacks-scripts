@@ -1332,7 +1332,9 @@ endif
 ifdef NEED_SHA1
 ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
 SHA1OBJS += ../src/crypto/sha1.o
+endif
 endif
 endif
 SHA1OBJS += ../src/crypto/sha1-prf.o
@@ -1360,7 +1362,9 @@ endif
 ifndef CONFIG_FIPS
 ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
 MD5OBJS += ../src/crypto/md5.o
+endif
 endif
 endif
 endif
@@ -1403,7 +1407,9 @@ ifdef NEED_SHA256
 CFLAGS += -DCONFIG_SHA256
 ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
 SHA256OBJS += ../src/crypto/sha256.o
+endif
 endif
 endif
 SHA256OBJS += ../src/crypto/sha256-prf.o
@@ -1438,7 +1444,9 @@ endif
 ifdef NEED_SHA384
 ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/sha384.o
+endif
 endif
 endif
 CFLAGS += -DCONFIG_SHA384
@@ -1447,7 +1455,9 @@ endif
 ifdef NEED_SHA512
 ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/sha512.o
+endif
 endif
 endif
 CFLAGS += -DCONFIG_SHA512

@@ -105,6 +105,35 @@ static int valid_fqdn(const char *fqdn)
 }
 
 
+static int android_update_permission(const char *path, mode_t mode)
+{
+#ifdef ANDROID
+	/* we need to change file/folder permission for Android */
+
+	if (!path) {
+		wpa_printf(MSG_ERROR, "file path null");
+		return -1;
+	}
+
+	/* Allow processes running with Group ID as AID_WIFI,
+	 * to read files from SP, SP/<fqdn>, Cert and osu-info directories */
+	if (chown(path, -1, AID_WIFI)) {
+		wpa_printf(MSG_INFO, "CTRL: Could not chown directory: %s",
+			   strerror(errno));
+		return -1;
+	}
+
+	if (chmod(path, mode) < 0) {
+		wpa_printf(MSG_INFO, "CTRL: Could not chmod directory: %s",
+			   strerror(errno));
+		return -1;
+	}
+#endif  /* ANDROID */
+
+	return 0;
+}
+
+
 int osu_get_certificate(struct hs20_osu_client *ctx, xml_node_t *getcert)
 {
 	xml_node_t *node;
@@ -169,6 +198,8 @@ int osu_get_certificate(struct hs20_osu_client *ctx, xml_node_t *getcert)
 	}
 
 	mkdir("Cert", S_IRWXU);
+	android_update_permission("Cert", S_IRWXU | S_IRWXG);
+
 	if (est_load_cacerts(ctx, url) < 0 ||
 	    est_build_csr(ctx, url) < 0 ||
 	    est_simple_enroll(ctx, url, user, pw) < 0)
@@ -578,20 +609,8 @@ int hs20_add_pps_mo(struct hs20_osu_client *ctx, const char *uri,
 		}
 	}
 
-#ifdef ANDROID
-	/* Allow processes running with Group ID as AID_WIFI,
-	 * to read files from SP/<fqdn> directory */
-	if (chown(fname, -1, AID_WIFI)) {
-		wpa_printf(MSG_INFO, "CTRL: Could not chown directory: %s",
-			   strerror(errno));
-		/* Try to continue anyway */
-	}
-	if (chmod(fname, S_IRWXU | S_IRGRP | S_IXGRP) < 0) {
-		wpa_printf(MSG_INFO, "CTRL: Could not chmod directory: %s",
-			   strerror(errno));
-		/* Try to continue anyway */
-	}
-#endif /* ANDROID */
+	android_update_permission("SP", S_IRWXU | S_IRGRP | S_IXGRP);
+	android_update_permission(fname, S_IRWXU | S_IRGRP | S_IXGRP);
 
 	snprintf(fname, fname_len, "SP/%s/pps.xml", fqdn);
 
@@ -2346,15 +2365,7 @@ static int cmd_signup(struct hs20_osu_client *ctx, int no_prod_assoc,
 		return -1;
 	}
 
-#ifdef ANDROID
-	/* Allow processes running with Group ID as AID_WIFI
-	 * to read/write files from osu-info directory
-	 */
-	if (chown(fname, -1, AID_WIFI)) {
-		wpa_printf(MSG_INFO, "Could not chown osu-info directory: %s",
-			   strerror(errno));
-	}
-#endif /* ANDROID */
+	android_update_permission(fname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 	snprintf(buf, sizeof(buf), "SET osu_dir %s", fname);
 	if (wpa_command(ifname, buf) < 0) {

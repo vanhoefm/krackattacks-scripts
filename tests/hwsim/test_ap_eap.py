@@ -82,7 +82,7 @@ def check_ocsp_support(dev):
 
 def check_pkcs5_v15_support(dev):
     tls = dev.request("GET tls_library")
-    if "BoringSSL" in tls:
+    if "BoringSSL" in tls or "GnuTLS" in tls:
         raise HwsimSkip("PKCS#5 v1.5 not supported with this TLS library: " + tls)
 
 def check_ocsp_multi_support(dev):

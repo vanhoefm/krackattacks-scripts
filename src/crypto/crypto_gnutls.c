@@ -24,6 +24,9 @@ static int gnutls_digest_vector(int algo, size_t num_elem,
 	unsigned char *p;
 	size_t i;
 
+	if (TEST_FAIL())
+		return -1;
+
 	if (gcry_md_open(&hd, algo, 0) != GPG_ERR_NO_ERROR)
 		return -1;
 	for (i = 0; i < num_elem; i++)
@@ -102,6 +105,9 @@ static int gnutls_hmac_vector(int algo, const u8 *key, size_t key_len,
 	gcry_md_hd_t hd;
 	unsigned char *p;
 	size_t i;
+
+	if (TEST_FAIL())
+		return -1;
 
 	if (gcry_md_open(&hd, algo, GCRY_MD_FLAG_HMAC) != GPG_ERR_NO_ERROR)
 		return -1;
@@ -210,6 +216,9 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 {
 	gcry_cipher_hd_t hd;
 
+	if (TEST_FAIL())
+		return NULL;
+
 	if (gcry_cipher_open(&hd, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, 0) !=
 	    GPG_ERR_NO_ERROR) {
 		printf("cipher open failed\n");
@@ -243,6 +252,9 @@ void aes_encrypt_deinit(void *ctx)
 void * aes_decrypt_init(const u8 *key, size_t len)
 {
 	gcry_cipher_hd_t hd;
+
+	if (TEST_FAIL())
+		return NULL;
 
 	if (gcry_cipher_open(&hd, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, 0) !=
 	    GPG_ERR_NO_ERROR)

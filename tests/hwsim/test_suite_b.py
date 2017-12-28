@@ -22,6 +22,8 @@ def check_suite_b_capa(dev):
 
 def check_suite_b_tls_lib(dev):
     tls = dev[0].request("GET tls_library")
+    if tls.startswith("GnuTLS"):
+        return
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("TLS library not supported for Suite B: " + tls)
     supported = False
@@ -64,7 +66,8 @@ def test_suite_b(dev, apdev):
                    private_key="auth_serv/ec-user.key",
                    pairwise="GCMP", group="GCMP", scan_freq="2412")
     tls_cipher = dev[0].get_status_field("EAP TLS cipher")
-    if tls_cipher != "ECDHE-ECDSA-AES128-GCM-SHA256":
+    if tls_cipher != "ECDHE-ECDSA-AES128-GCM-SHA256" and \
+       tls_cipher != "ECDHE-ECDSA-AES-128-GCM-AEAD":
         raise Exception("Unexpected TLS cipher: " + tls_cipher)
 
     bss = dev[0].get_bss(apdev[0]['bssid'])
@@ -171,7 +174,8 @@ def test_suite_b_192(dev, apdev):
                    private_key="auth_serv/ec2-user.key",
                    pairwise="GCMP-256", group="GCMP-256", scan_freq="2412")
     tls_cipher = dev[0].get_status_field("EAP TLS cipher")
-    if tls_cipher != "ECDHE-ECDSA-AES256-GCM-SHA384":
+    if tls_cipher != "ECDHE-ECDSA-AES256-GCM-SHA384" and \
+       tls_cipher != "ECDHE-ECDSA-AES-256-GCM-AEAD":
         raise Exception("Unexpected TLS cipher: " + tls_cipher)
     cipher = dev[0].get_status_field("mgmt_group_cipher")
     if cipher != "BIP-GMAC-256":
@@ -351,7 +355,10 @@ def run_suite_b_192_rsa(dev, apdev, no_ecdh=False, no_dhe=False):
                    private_key="auth_serv/rsa3072-user.key",
                    pairwise="GCMP-256", group="GCMP-256", scan_freq="2412")
     tls_cipher = dev[0].get_status_field("EAP TLS cipher")
-    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384" and tls_cipher != "DHE-RSA-AES256-GCM-SHA384":
+    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384" and \
+       tls_cipher != "DHE-RSA-AES256-GCM-SHA384" and \
+       tls_cipher != "ECDHE-RSA-AES-256-GCM-AEAD" and \
+       tls_cipher != "DHE-RSA-AES-256-GCM-AEAD":
         raise Exception("Unexpected TLS cipher: " + tls_cipher)
     cipher = dev[0].get_status_field("mgmt_group_cipher")
     if cipher != "BIP-GMAC-256":
@@ -401,8 +408,11 @@ def test_suite_b_192_rsa_insufficient_key(dev, apdev):
     dev[0].request("DISCONNECT")
     if ev is None:
         raise Exception("Certificate error not reported")
-    if "reason=11" not in ev or "err='Insufficient RSA modulus size'" not in ev:
-        raise Exception("Unexpected error reason: " + ev)
+    if "reason=11" in ev and "err='Insufficient RSA modulus size'" in ev:
+        return
+    if "reason=7" in ev and "err='certificate uses insecure algorithm'" in ev:
+        return
+    raise Exception("Unexpected error reason: " + ev)
 
 def test_suite_b_192_rsa_insufficient_dh(dev, apdev):
     """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA with insufficient DH key length"""
@@ -470,5 +480,6 @@ def test_suite_b_192_rsa_radius(dev, apdev):
                    pairwise="GCMP-256", group="GCMP-256",
                    group_mgmt="BIP-GMAC-256", scan_freq="2412")
     tls_cipher = dev[0].get_status_field("EAP TLS cipher")
-    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384":
+    if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384" and \
+       tls_cipher != "ECDHE-RSA-AES-256-GCM-AEAD":
         raise Exception("Unexpected TLS cipher: " + tls_cipher)

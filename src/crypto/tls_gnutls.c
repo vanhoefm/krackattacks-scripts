@@ -346,6 +346,9 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			      const struct tls_connection_params *params)
 {
 	int ret;
+	const char *err;
+	char prio_buf[100];
+	const char *prio = NULL;
 
 	if (conn == NULL || params == NULL)
 		return -1;
@@ -400,16 +403,46 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (params->flags & (TLS_CONN_DISABLE_TLSv1_0 |
 			     TLS_CONN_DISABLE_TLSv1_1 |
 			     TLS_CONN_DISABLE_TLSv1_2)) {
-		const char *err;
-		char prio[100];
-
-		os_snprintf(prio, sizeof(prio), "NORMAL:-VERS-SSL3.0%s%s%s",
+		os_snprintf(prio_buf, sizeof(prio_buf),
+			    "NORMAL:-VERS-SSL3.0%s%s%s",
 			    params->flags & TLS_CONN_DISABLE_TLSv1_0 ?
 			    ":-VERS-TLS1.0" : "",
 			    params->flags & TLS_CONN_DISABLE_TLSv1_1 ?
 			    ":-VERS-TLS1.1" : "",
 			    params->flags & TLS_CONN_DISABLE_TLSv1_2 ?
 			    ":-VERS-TLS1.2" : "");
+		prio = prio_buf;
+	}
+
+	if (params->openssl_ciphers) {
+		if (os_strcmp(params->openssl_ciphers, "SUITEB128") == 0) {
+			prio = "SUITEB128";
+		} else if (os_strcmp(params->openssl_ciphers,
+				     "SUITEB192") == 0) {
+			prio = "SUITEB192";
+		} else if ((params->flags & TLS_CONN_SUITEB) &&
+			   os_strcmp(params->openssl_ciphers,
+				     "ECDHE-RSA-AES256-GCM-SHA384") == 0) {
+			prio = "NONE:+VERS-TLS1.2:+AEAD:+ECDHE-RSA:+AES-256-GCM:+SIGN-RSA-SHA384:+CURVE-SECP384R1:+COMP-NULL";
+		} else if (os_strcmp(params->openssl_ciphers,
+				     "ECDHE-RSA-AES256-GCM-SHA384") == 0) {
+			prio = "NONE:+VERS-TLS1.2:+AEAD:+ECDHE-RSA:+AES-256-GCM:+SIGN-RSA-SHA384:+CURVE-SECP384R1:+COMP-NULL";
+		} else if (os_strcmp(params->openssl_ciphers,
+				     "DHE-RSA-AES256-GCM-SHA384") == 0) {
+			prio = "NONE:+VERS-TLS1.2:+AEAD:+DHE-RSA:+AES-256-GCM:+SIGN-RSA-SHA384:+CURVE-SECP384R1:+COMP-NULL:%PROFILE_HIGH";
+		} else if (os_strcmp(params->openssl_ciphers,
+				     "ECDHE-ECDSA-AES256-GCM-SHA384") == 0) {
+			prio = "NONE:+VERS-TLS1.2:+AEAD:+ECDHE-ECDSA:+AES-256-GCM:+SIGN-RSA-SHA384:+CURVE-SECP384R1:+COMP-NULL";
+		} else {
+			wpa_printf(MSG_INFO,
+				   "GnuTLS: openssl_ciphers not supported");
+			return -1;
+		}
+	} else if (params->flags & TLS_CONN_SUITEB) {
+		prio = "NONE:+VERS-TLS1.2:+AEAD:+ECDHE-ECDSA:+ECDHE-RSA:+DHE-RSA:+AES-256-GCM:+SIGN-RSA-SHA384:+CURVE-SECP384R1:+COMP-NULL:%PROFILE_HIGH";
+	}
+
+	if (prio) {
 		wpa_printf(MSG_DEBUG, "GnuTLS: Set priority string: %s", prio);
 		ret = gnutls_priority_set_direct(conn->session, prio, &err);
 		if (ret < 0) {
@@ -418,11 +451,6 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				   err);
 			return -1;
 		}
-	}
-
-	if (params->openssl_ciphers) {
-		wpa_printf(MSG_INFO, "GnuTLS: openssl_ciphers not supported");
-		return -1;
 	}
 
 	/* TODO: gnutls_certificate_set_verify_flags(xcred, flags);
@@ -1375,6 +1403,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 	ret = gnutls_handshake(conn->session);
 	if (ret < 0) {
 		gnutls_alert_description_t alert;
+		union tls_event_data ev;
 
 		switch (ret) {
 		case GNUTLS_E_AGAIN:
@@ -1385,14 +1414,29 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 				conn->push_buf = wpabuf_alloc(0);
 			}
 			break;
+		case GNUTLS_E_DH_PRIME_UNACCEPTABLE:
+			wpa_printf(MSG_DEBUG, "GnuTLS: Unacceptable DH prime");
+			if (conn->global->event_cb) {
+				os_memset(&ev, 0, sizeof(ev));
+				ev.alert.is_local = 1;
+				ev.alert.type = "fatal";
+				ev.alert.description = "insufficient security";
+				conn->global->event_cb(conn->global->cb_ctx,
+						       TLS_ALERT, &ev);
+			}
+			/*
+			 * Could send a TLS Alert to the server, but for now,
+			 * simply terminate handshake.
+			 */
+			conn->failed++;
+			conn->write_alerts++;
+			break;
 		case GNUTLS_E_FATAL_ALERT_RECEIVED:
 			alert = gnutls_alert_get(conn->session);
 			wpa_printf(MSG_DEBUG, "%s - received fatal '%s' alert",
 				   __func__, gnutls_alert_get_name(alert));
 			conn->read_alerts++;
 			if (conn->global->event_cb != NULL) {
-				union tls_event_data ev;
-
 				os_memset(&ev, 0, sizeof(ev));
 				ev.alert.is_local = 0;
 				ev.alert.type = gnutls_alert_get_name(alert);

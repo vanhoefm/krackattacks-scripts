@@ -1770,7 +1770,12 @@ def test_gas_anqp_overrides(dev, apdev):
     ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:
         raise Exception("GAS query timed out")
-    for i in range(9):
+    elems = 9
+    capa = dev[0].get_capability("fils")
+    if capa is None or "FILS" not in capa:
+        # FILS Realm Info not supported in the build
+        elems -= 1
+    for i in range(elems):
         ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
         if ev is None:
             raise Exception("ANQP response not seen")

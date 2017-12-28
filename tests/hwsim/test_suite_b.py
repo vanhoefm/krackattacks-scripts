@@ -422,11 +422,14 @@ def test_suite_b_192_rsa_insufficient_dh(dev, apdev):
                    private_key="auth_serv/rsa3072-user.key",
                    pairwise="GCMP-256", group="GCMP-256", scan_freq="2412",
                    wait_connect=False)
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='local TLS alert'"],
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS status='local TLS alert'",
+                            "CTRL-EVENT-CONNECTED"],
                            timeout=10)
     dev[0].request("DISCONNECT")
     if ev is None:
         raise Exception("DH error not reported")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection")
     if "insufficient security" not in ev and "internal error" not in ev:
         raise Exception("Unexpected error reason: " + ev)
 

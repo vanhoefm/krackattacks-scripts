@@ -397,6 +397,29 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 
 	conn->flags = params->flags;
 
+	if (params->flags & (TLS_CONN_DISABLE_TLSv1_0 |
+			     TLS_CONN_DISABLE_TLSv1_1 |
+			     TLS_CONN_DISABLE_TLSv1_2)) {
+		const char *err;
+		char prio[100];
+
+		os_snprintf(prio, sizeof(prio), "NORMAL:-VERS-SSL3.0%s%s%s",
+			    params->flags & TLS_CONN_DISABLE_TLSv1_0 ?
+			    ":-VERS-TLS1.0" : "",
+			    params->flags & TLS_CONN_DISABLE_TLSv1_1 ?
+			    ":-VERS-TLS1.1" : "",
+			    params->flags & TLS_CONN_DISABLE_TLSv1_2 ?
+			    ":-VERS-TLS1.2" : "");
+		wpa_printf(MSG_DEBUG, "GnuTLS: Set priority string: %s", prio);
+		ret = gnutls_priority_set_direct(conn->session, prio, &err);
+		if (ret < 0) {
+			wpa_printf(MSG_ERROR,
+				   "GnuTLS: Priority string failure at '%s'",
+				   err);
+			return -1;
+		}
+	}
+
 	if (params->openssl_ciphers) {
 		wpa_printf(MSG_INFO, "GnuTLS: openssl_ciphers not supported");
 		return -1;

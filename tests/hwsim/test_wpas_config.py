@@ -126,7 +126,19 @@ config_checks = [ ("ap_scan", "0"),
                   ("go_venue_group", "3"),
                   ("go_venue_type", "4"),
                   ("openssl_ciphers", "DEFAULT") ]
-def check_config(config):
+
+def supported_param(capa, field):
+    mesh_params = [ "user_mpm", "max_peer_links", "mesh_max_inactivity" ]
+    if field in mesh_params and not capa['mesh']:
+        return False
+
+    sae_params = [ "dot11RSNASAERetransPeriod" ]
+    if field in sae_params and not capa['sae']:
+        return False
+
+    return True
+
+def check_config(capa, config):
     with open(config, "r") as f:
         data = f.read()
     if "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=" not in data:
@@ -138,8 +150,9 @@ def check_config(config):
     if "network={" not in data:
         raise Exception("Missing network")
     for field, value in config_checks:
-        if "\n" + field + "=" + value + "\n" not in data:
-            raise Exception("Missing value: " + field)
+        if supported_param(capa, field):
+            if "\n" + field + "=" + value + "\n" not in data:
+                raise Exception("Missing value: " + field)
     return data
 
 def test_wpas_config_file(dev, apdev, params):
@@ -176,6 +189,9 @@ def test_wpas_config_file(dev, apdev, params):
             f.write("device_name=name#foo\n")
 
         wpas.interface_add("wlan5", config=config)
+        capa = {}
+        capa['mesh'] = "MESH" in wpas.get_capability("modes")
+        capa['sae'] = "SAE" in wpas.get_capability("auth_alg")
 
         id = wpas.add_network()
         wpas.set_network_quoted(id, "ssid", "foo")
@@ -210,7 +226,8 @@ def test_wpas_config_file(dev, apdev, params):
         wpas.request("SET blob foo 12345678")
 
         for field, value in config_checks:
-            wpas.set(field, value)
+            if supported_param(capa, field):
+                wpas.set(field, value)
 
         if "OK" not in wpas.request("SAVE_CONFIG"):
             raise Exception("Failed to save configuration file")
@@ -218,7 +235,7 @@ def test_wpas_config_file(dev, apdev, params):
             raise Exception("Failed to save configuration file")
 
         wpas.interface_remove("wlan5")
-        data1 = check_config(config)
+        data1 = check_config(capa, config)
 
         wpas.interface_add("wlan5", config=config)
         if len(wpas.list_networks()) != 1:
@@ -228,7 +245,7 @@ def test_wpas_config_file(dev, apdev, params):
 
         if "OK" not in wpas.request("SAVE_CONFIG"):
             raise Exception("Failed to save configuration file")
-        data2 = check_config(config)
+        data2 = check_config(capa, config)
 
         if data1 != data2:
             logger.debug(data1)

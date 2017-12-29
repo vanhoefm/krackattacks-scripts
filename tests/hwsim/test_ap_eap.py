@@ -4100,10 +4100,17 @@ def test_ap_wpa2_eap_tls_intermediate_ca(dev, apdev, params):
     params["server_cert"] = "auth_serv/iCA-server/server.pem"
     params["private_key"] = "auth_serv/iCA-server/server.key"
     hostapd.add_ap(apdev[0], params)
+    tls = dev[0].request("GET tls_library")
+    if "GnuTLS" in tls:
+        ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+        client_cert = "auth_serv/iCA-user/user_and_ica.pem"
+    else:
+        ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+        client_cert = "auth_serv/iCA-user/user.pem"
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                    identity="tls user",
-                   ca_cert="auth_serv/iCA-user/ca-and-root.pem",
-                   client_cert="auth_serv/iCA-user/user.pem",
+                   ca_cert=ca_cert,
+                   client_cert=client_cert,
                    private_key="auth_serv/iCA-user/user.key",
                    scan_freq="2412")
 
@@ -4201,10 +4208,17 @@ def run_ap_wpa2_eap_tls_intermediate_ca_ocsp(dev, apdev, params, md):
     params["ocsp_stapling_response"] = fn
     try:
         hostapd.add_ap(apdev[0], params)
+        tls = dev[0].request("GET tls_library")
+        if "GnuTLS" in tls:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user_and_ica.pem"
+        else:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user.pem"
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                        identity="tls user",
-                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
-                       client_cert="auth_serv/iCA-user/user.pem",
+                       ca_cert=ca_cert,
+                       client_cert=client_cert,
                        private_key="auth_serv/iCA-user/user.key",
                        scan_freq="2412", ocsp=2)
     finally:
@@ -4229,10 +4243,17 @@ def run_ap_wpa2_eap_tls_intermediate_ca_ocsp_revoked(dev, apdev, params, md):
     params["ocsp_stapling_response"] = fn
     try:
         hostapd.add_ap(apdev[0], params)
+        tls = dev[0].request("GET tls_library")
+        if "GnuTLS" in tls:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user_and_ica.pem"
+        else:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user.pem"
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                        identity="tls user",
-                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
-                       client_cert="auth_serv/iCA-user/user.pem",
+                       ca_cert=ca_cert,
+                       client_cert=client_cert,
                        private_key="auth_serv/iCA-user/user.key",
                        scan_freq="2412", ocsp=1, wait_connect=False)
         count = 0
@@ -4272,10 +4293,17 @@ def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_multi_missing_resp(dev, apdev, par
     params["ocsp_stapling_response"] = fn
     try:
         hostapd.add_ap(apdev[0], params)
+        tls = dev[0].request("GET tls_library")
+        if "GnuTLS" in tls:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user_and_ica.pem"
+        else:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user.pem"
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                        identity="tls user",
-                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
-                       client_cert="auth_serv/iCA-user/user.pem",
+                       ca_cert=ca_cert,
+                       client_cert=client_cert,
                        private_key="auth_serv/iCA-user/user.key",
                        scan_freq="2412", ocsp=3, wait_connect=False)
         count = 0
@@ -4332,10 +4360,17 @@ def test_ap_wpa2_eap_tls_intermediate_ca_ocsp_multi(dev, apdev, params):
         params["ocsp_stapling_response_multi"] = fn3
 
         hostapd.add_ap(apdev[0], params)
+        tls = dev[0].request("GET tls_library")
+        if "GnuTLS" in tls:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user_and_ica.pem"
+        else:
+            ca_cert = "auth_serv/iCA-user/ca-and-root.pem"
+            client_cert = "auth_serv/iCA-user/user.pem"
         dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                        identity="tls user",
-                       ca_cert="auth_serv/iCA-user/ca-and-root.pem",
-                       client_cert="auth_serv/iCA-user/user.pem",
+                       ca_cert=ca_cert,
+                       client_cert=client_cert,
                        private_key="auth_serv/iCA-user/user.key",
                        scan_freq="2412", ocsp=3)
         dev[0].request("REMOVE_NETWORK all")

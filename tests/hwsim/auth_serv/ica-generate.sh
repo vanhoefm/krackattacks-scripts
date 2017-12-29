@@ -72,7 +72,7 @@ cat ec-ca-openssl.cnf |
 	> openssl.cnf.tmp
 $OPENSSL req -config openssl.cnf.tmp -batch -new -newkey rsa:2048 -nodes -keyout iCA-user/user.key -out iCA-user/user.req -outform PEM -sha256
 $OPENSSL ca -config openssl.cnf.tmp -batch -keyfile iCA-user/private/cakey.pem -cert iCA-user/cacert.pem -create_serial -in iCA-user/user.req -out iCA-user/user.pem -extensions ext_client -md sha256
-cat iCA-user/cacert.pem iCA-user/user.pem > iCA-user/user_and_ica.pem
+cat iCA-user/user.pem iCA-user/cacert.pem > iCA-user/user_and_ica.pem
 rm openssl.cnf.tmp
 
 echo

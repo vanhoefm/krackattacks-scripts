@@ -58,6 +58,8 @@ fi
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then
     GROUP=admin
+elif groups | tr ' ' "\n" | grep -q ^wheel$; then
+    GROUP=wheel
 else
     GROUP=adm
 fi

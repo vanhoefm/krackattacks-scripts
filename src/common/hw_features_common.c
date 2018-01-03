@@ -89,7 +89,7 @@ int allowed_ht40_channel_pair(struct hostapd_hw_modes *mode, int pri_chan,
 {
 	int ok, j, first;
 	int allowed[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 140,
-			  149, 157, 184, 192 };
+			  149, 157, 165, 184, 192 };
 	size_t k;
 
 	if (pri_chan == sec_chan || !sec_chan)

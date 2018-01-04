@@ -253,6 +253,7 @@ def test_sigma_dut_sae(dev, apdev):
     ssid = "test-sae"
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
+    params["ieee80211w"] = "2"
     hapd = hostapd.add_ap(apdev[0], params)
 
     sigma_dut_cmd_check("sta_reset_default,interface,%s" % ifname)
@@ -292,6 +293,7 @@ def test_sigma_dut_sae_password(dev, apdev):
         params = hostapd.wpa2_params(ssid=ssid)
         params['sae_password'] = 100*'B'
         params['wpa_key_mgmt'] = 'SAE'
+        params["ieee80211w"] = "2"
         hapd = hostapd.add_ap(apdev[0], params)
 
         sigma_dut_cmd_check("sta_reset_default,interface,%s" % ifname)
@@ -595,12 +597,14 @@ def test_sigma_dut_ap_override_rsne(dev, apdev):
         finally:
             stop_sigma_dut(sigma)
 
-def test_sigma_dut_ap_sae(dev, apdev):
+def test_sigma_dut_ap_sae(dev, apdev, params):
     """sigma_dut controlled AP with SAE"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_sae.sigma-hostapd")
     if "SAE" not in dev[0].get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
-        sigma = start_sigma_dut(iface)
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
         try:
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
@@ -609,7 +613,7 @@ def test_sigma_dut_ap_sae(dev, apdev):
 
             dev[0].request("SET sae_groups ")
             dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
-                           scan_freq="2412")
+                           ieee80211w="2", scan_freq="2412")
             if dev[0].get_status_field('sae_group') != '19':
                 raise Exception("Expected default SAE group not used")
 
@@ -617,12 +621,14 @@ def test_sigma_dut_ap_sae(dev, apdev):
         finally:
             stop_sigma_dut(sigma)
 
-def test_sigma_dut_ap_sae_password(dev, apdev):
+def test_sigma_dut_ap_sae_password(dev, apdev, params):
     """sigma_dut controlled AP with SAE and long password"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_sae_password.sigma-hostapd")
     if "SAE" not in dev[0].get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
-        sigma = start_sigma_dut(iface)
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
         try:
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
@@ -631,7 +637,7 @@ def test_sigma_dut_ap_sae_password(dev, apdev):
 
             dev[0].request("SET sae_groups ")
             dev[0].connect("test-sae", key_mgmt="SAE", sae_password=100*'C',
-                           scan_freq="2412")
+                           ieee80211w="2", scan_freq="2412")
             if dev[0].get_status_field('sae_group') != '19':
                 raise Exception("Expected default SAE group not used")
 
@@ -639,12 +645,14 @@ def test_sigma_dut_ap_sae_password(dev, apdev):
         finally:
             stop_sigma_dut(sigma)
 
-def test_sigma_dut_ap_sae_group(dev, apdev):
+def test_sigma_dut_ap_sae_group(dev, apdev, params):
     """sigma_dut controlled AP with SAE and specific group"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_sae_group.sigma-hostapd")
     if "SAE" not in dev[0].get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")
     with HWSimRadio() as (radio, iface):
-        sigma = start_sigma_dut(iface)
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
         try:
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
@@ -653,7 +661,7 @@ def test_sigma_dut_ap_sae_group(dev, apdev):
 
             dev[0].request("SET sae_groups ")
             dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
-                           scan_freq="2412")
+                           ieee80211w="2", scan_freq="2412")
             if dev[0].get_status_field('sae_group') != '20':
                 raise Exception("Expected SAE group not used")
 
@@ -661,22 +669,32 @@ def test_sigma_dut_ap_sae_group(dev, apdev):
         finally:
             stop_sigma_dut(sigma)
 
-def test_sigma_dut_ap_psk_sae(dev, apdev):
+def test_sigma_dut_ap_psk_sae(dev, apdev, params):
     """sigma_dut controlled AP with PSK+SAE"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_psk_sae.sigma-hostapd")
     with HWSimRadio() as (radio, iface):
-        sigma = start_sigma_dut(iface)
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
         try:
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-sae,MODE,11ng")
             sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,WPA2-PSK-SAE,PSK,12345678")
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
+            dev[2].request("SET sae_groups ")
+            dev[2].connect("test-sae", key_mgmt="SAE", psk="12345678",
+                           scan_freq="2412", ieee80211w="0", wait_connect=False)
             dev[0].request("SET sae_groups ")
             dev[0].connect("test-sae", key_mgmt="SAE", psk="12345678",
-                           scan_freq="2412")
+                           scan_freq="2412", ieee80211w="2")
             dev[1].connect("test-sae", psk="12345678", scan_freq="2412")
+
+            ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+            dev[2].request("DISCONNECT")
+            if ev is not None:
+                raise Exception("Unexpected connection without PMF")
 
             sigma_dut_cmd_check("ap_reset_default")
         finally:
@@ -700,6 +718,7 @@ def run_sigma_dut_owe(dev, apdev):
         params = { "ssid": "owe",
                    "wpa": "2",
                    "wpa_key_mgmt": "OWE",
+                   "ieee80211w": "2",
                    "rsn_pairwise": "CCMP" }
         hapd = hostapd.add_ap(apdev[0], params)
         bssid = hapd.own_addr()
@@ -743,19 +762,22 @@ def run_sigma_dut_owe(dev, apdev):
     finally:
         stop_sigma_dut(sigma)
 
-def test_sigma_dut_ap_owe(dev, apdev):
+def test_sigma_dut_ap_owe(dev, apdev, params):
     """sigma_dut controlled AP with OWE"""
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_owe.sigma-hostapd")
     if "OWE" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("OWE not supported")
     with HWSimRadio() as (radio, iface):
-        sigma = start_sigma_dut(iface)
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
         try:
             sigma_dut_cmd_check("ap_reset_default,NAME,AP,Program,WPA3")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,owe,MODE,11ng")
             sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,OWE")
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
-            dev[0].connect("owe", key_mgmt="OWE", scan_freq="2412")
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           scan_freq="2412")
 
             sigma_dut_cmd_check("ap_reset_default")
         finally:
@@ -816,7 +838,8 @@ def test_sigma_dut_ap_owe_transition_mode(dev, apdev, params):
             res1 = sigma_dut_cmd_check("ap_get_mac_address,NAME,AP,WLAN_TAG,1,Interface,24G")
             res2 = sigma_dut_cmd_check("ap_get_mac_address,NAME,AP,WLAN_TAG,2,Interface,24G")
 
-            dev[0].connect("owe", key_mgmt="OWE", scan_freq="2412")
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           scan_freq="2412")
             dev[1].connect("owe", key_mgmt="NONE", scan_freq="2412")
             if dev[0].get_status_field('bssid') not in res1:
                 raise Exception("Unexpected ap_get_mac_address WLAN_TAG,1: " + res1)

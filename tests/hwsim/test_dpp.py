@@ -1766,6 +1766,65 @@ def test_dpp_qr_code_hostapd_init(dev, apdev):
     dev[0].request("DPP_STOP_LISTEN")
     dev[0].dump_monitor()
 
+def test_dpp_qr_code_hostapd_init_offchannel(dev, apdev):
+    """DPP QR Code and hostapd as initiator (offchannel)"""
+    run_dpp_qr_code_hostapd_init_offchannel(dev, apdev, None)
+
+def test_dpp_qr_code_hostapd_init_offchannel_neg_freq(dev, apdev):
+    """DPP QR Code and hostapd as initiator (offchannel, neg_freq)"""
+    run_dpp_qr_code_hostapd_init_offchannel(dev, apdev, "neg_freq=2437")
+
+def run_dpp_qr_code_hostapd_init_offchannel(dev, apdev, extra):
+    check_dpp_capab(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured",
+                                      "channel": "6" })
+    check_dpp_capab(hapd)
+
+    cmd = "DPP_CONFIGURATOR_ADD"
+    res = dev[0].request(cmd);
+    if "FAIL" in res:
+        raise Exception("Failed to add configurator")
+    conf_id = int(res)
+
+    addr = dev[0].own_addr().replace(':', '')
+    cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1,81/11 mac=" + addr
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+    uri0 = dev[0].request("DPP_BOOTSTRAP_GET_URI %d" % id0)
+
+    dev[0].set("dpp_configurator_params",
+               " conf=ap-dpp configurator=%d" % conf_id);
+    cmd = "DPP_LISTEN 2462 role=configurator"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    res = hapd.request("DPP_QR_CODE " + uri0)
+    if "FAIL" in res:
+        raise Exception("Failed to parse QR Code URI")
+    id1 = int(res)
+
+    cmd = "DPP_AUTH_INIT peer=%d role=enrollee" % id1
+    if extra:
+        cmd += " " + extra
+    if "OK" not in hapd.request(cmd):
+        raise Exception("Failed to initiate DPP Authentication")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
+    ev = hapd.wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-CONF-SENT"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Configurator)")
+    ev = hapd.wait_event(["DPP-CONF-RECEIVED"], timeout=5)
+    if ev is None:
+        raise Exception("DPP configuration not completed (Enrollee)")
+    dev[0].request("DPP_STOP_LISTEN")
+    dev[0].dump_monitor()
+
 def test_dpp_test_vector_p_256(dev, apdev):
     """DPP P-256 test vector (mutual auth)"""
     check_dpp_capab(dev[0])

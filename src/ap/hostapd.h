@@ -85,6 +85,7 @@ struct hostapd_rate_data {
 };
 
 struct hostapd_frame_info {
+	unsigned int freq;
 	u32 channel;
 	u32 datarate;
 	int ssi_signal; /* dBm */

@@ -1114,6 +1114,7 @@ static int hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 	}
 
 	os_memset(&fi, 0, sizeof(fi));
+	fi.freq = rx_mgmt->freq;
 	fi.datarate = rx_mgmt->datarate;
 	fi.ssi_signal = rx_mgmt->ssi_signal;
 

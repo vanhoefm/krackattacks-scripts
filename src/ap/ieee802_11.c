@@ -3604,7 +3604,8 @@ static int robust_action_frame(u8 category)
 
 
 static int handle_action(struct hostapd_data *hapd,
-			 const struct ieee80211_mgmt *mgmt, size_t len)
+			 const struct ieee80211_mgmt *mgmt, size_t len,
+			 unsigned int freq)
 {
 	struct sta_info *sta;
 	sta = ap_get_sta(hapd, mgmt->sa);
@@ -3713,7 +3714,7 @@ static int handle_action(struct hostapd_data *hapd,
 			pos = mgmt->u.action.u.vs_public_action.oui;
 			end = ((const u8 *) mgmt) + len;
 			hostapd_dpp_rx_action(hapd, mgmt->sa, pos, end - pos,
-					      hapd->iface->freq);
+					      freq);
 			return 1;
 		}
 		if (len >= IEEE80211_HDRLEN + 2 &&
@@ -3812,9 +3813,15 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	struct ieee80211_mgmt *mgmt;
 	u16 fc, stype;
 	int ret = 0;
+	unsigned int freq;
 
 	if (len < 24)
 		return 0;
+
+	if (fi && fi->freq)
+		freq = fi->freq;
+	else
+		freq = hapd->iface->freq;
 
 	mgmt = (struct ieee80211_mgmt *) buf;
 	fc = le_to_host16(mgmt->frame_control);
@@ -3887,7 +3894,7 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		break;
 	case WLAN_FC_STYPE_ACTION:
 		wpa_printf(MSG_DEBUG, "mgmt::action");
-		ret = handle_action(hapd, mgmt, len);
+		ret = handle_action(hapd, mgmt, len, freq);
 		break;
 	default:
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,

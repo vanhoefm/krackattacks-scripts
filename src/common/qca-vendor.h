@@ -382,6 +382,10 @@ enum qca_radiotap_vendor_ids {
  *	Mode changes w.r.t Wi-Fi connection update (VIZ creation / deletion,
  *	channel change, etc.) are updated with this event. Attributes for this
  *	interface are defined in enum qca_wlan_vendor_attr_mac.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_SET_QDEPTH_THRESH: Set MSDU queue depth threshold
+ *	per peer per TID. Attributes for this command are define in
+ *	enum qca_wlan_set_qdepth_thresh_attr.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -523,6 +527,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_GET_RROP_INFO = 163,
 	QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS = 164,
 	QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO = 165,
+	QCA_NL80211_VENDOR_SUBCMD_SET_QDEPTH_THRESH = 166,
 };
 
 
@@ -1586,6 +1591,36 @@ enum qca_wlan_gpio_attr {
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST,
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_MAX =
 	QCA_WLAN_VENDOR_ATTR_GPIO_PARAM_LAST - 1
+};
+
+/**
+ * qca_wlan_set_qdepth_thresh_attr - Parameters for setting
+ * MSDUQ depth threshold per peer per tid in the target
+ *
+ * Associated Vendor Command:
+ * QCA_NL80211_VENDOR_SUBCMD_SET_QDEPTH_THRESH
+ */
+enum qca_wlan_set_qdepth_thresh_attr {
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_INVALID = 0,
+	/* 6-byte MAC address */
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_MAC_ADDR,
+	/* Unsigned 32-bit attribute for holding the TID */
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_TID,
+	/* Unsigned 32-bit attribute for holding the update mask
+	 * bit 0 - Update high priority msdu qdepth threshold
+	 * bit 1 - Update low priority msdu qdepth threshold
+	 * bit 2 - Update UDP msdu qdepth threshold
+	 * bit 3 - Update Non UDP msdu qdepth threshold
+	 * rest of bits are reserved
+	 */
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_UPDATE_MASK,
+	/* Unsigned 32-bit attribute for holding the threshold value */
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_VALUE,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_LAST,
+	QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_MAX =
+		QCA_WLAN_VENDOR_ATTR_QDEPTH_THRESH_LAST - 1,
 };
 
 /**

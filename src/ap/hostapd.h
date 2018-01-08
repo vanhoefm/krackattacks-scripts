@@ -347,6 +347,7 @@ struct hostapd_data {
 	u8 dpp_allowed_roles;
 	int dpp_qr_mutual;
 	int dpp_auth_ok_on_ack;
+	int dpp_in_response_listen;
 	struct gas_query_ap *gas;
 	struct dpp_pkex *dpp_pkex;
 	struct dpp_bootstrap_info *dpp_pkex_bi;
@@ -354,6 +355,13 @@ struct hostapd_data {
 	char *dpp_pkex_identifier;
 	char *dpp_pkex_auth_cmd;
 	char *dpp_configurator_params;
+	struct os_reltime dpp_last_init;
+	struct os_reltime dpp_init_iter_start;
+	unsigned int dpp_init_max_tries;
+	unsigned int dpp_init_retry_time;
+	unsigned int dpp_resp_wait_time;
+	unsigned int dpp_resp_max_tries;
+	unsigned int dpp_resp_retry_time;
 #ifdef CONFIG_TESTING_OPTIONS
 	char *dpp_config_obj_override;
 	char *dpp_discovery_override;

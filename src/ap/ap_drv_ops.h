@@ -103,6 +103,14 @@ int hostapd_drv_send_action_addr3_ap(struct hostapd_data *hapd,
 				     unsigned int freq,
 				     unsigned int wait, const u8 *dst,
 				     const u8 *data, size_t len);
+static inline void
+hostapd_drv_send_action_cancel_wait(struct hostapd_data *hapd)
+{
+	if (!hapd->driver || !hapd->driver->send_action_cancel_wait ||
+	    !hapd->drv_priv)
+		return;
+	hapd->driver->send_action_cancel_wait(hapd->drv_priv);
+}
 int hostapd_add_sta_node(struct hostapd_data *hapd, const u8 *addr,
 			 u16 auth_alg);
 int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,

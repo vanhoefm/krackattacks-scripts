@@ -877,6 +877,18 @@ def test_sigma_dut_dpp_qr_resp_4(dev, apdev):
     """sigma_dut DPP/QR responder (conf index 4)"""
     run_sigma_dut_dpp_qr_resp(dev, apdev, 4)
 
+def test_sigma_dut_dpp_qr_resp_5(dev, apdev):
+    """sigma_dut DPP/QR responder (conf index 5)"""
+    run_sigma_dut_dpp_qr_resp(dev, apdev, 5)
+
+def test_sigma_dut_dpp_qr_resp_6(dev, apdev):
+    """sigma_dut DPP/QR responder (conf index 6)"""
+    run_sigma_dut_dpp_qr_resp(dev, apdev, 6)
+
+def test_sigma_dut_dpp_qr_resp_7(dev, apdev):
+    """sigma_dut DPP/QR responder (conf index 7)"""
+    run_sigma_dut_dpp_qr_resp(dev, apdev, 7)
+
 def test_sigma_dut_dpp_qr_resp_chan_list(dev, apdev):
     """sigma_dut DPP/QR responder (channel list override)"""
     run_sigma_dut_dpp_qr_resp(dev, apdev, 1, chan_list='81/2 81/6 81/1',
@@ -1296,6 +1308,18 @@ def test_sigma_dut_dpp_qr_init_configurator_3(dev, apdev):
 def test_sigma_dut_dpp_qr_init_configurator_4(dev, apdev):
     """sigma_dut DPP/QR initiator as Configurator (conf index 4)"""
     run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 4)
+
+def test_sigma_dut_dpp_qr_init_configurator_5(dev, apdev):
+    """sigma_dut DPP/QR initiator as Configurator (conf index 5)"""
+    run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 5)
+
+def test_sigma_dut_dpp_qr_init_configurator_6(dev, apdev):
+    """sigma_dut DPP/QR initiator as Configurator (conf index 6)"""
+    run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 6)
+
+def test_sigma_dut_dpp_qr_init_configurator_7(dev, apdev):
+    """sigma_dut DPP/QR initiator as Configurator (conf index 7)"""
+    run_sigma_dut_dpp_qr_init_configurator(dev, apdev, 7)
 
 def test_sigma_dut_dpp_qr_init_configurator_both(dev, apdev):
     """sigma_dut DPP/QR initiator as Configurator or Enrollee (conf index 1)"""

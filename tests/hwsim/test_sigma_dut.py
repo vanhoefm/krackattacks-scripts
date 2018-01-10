@@ -850,6 +850,37 @@ def test_sigma_dut_ap_owe_transition_mode(dev, apdev, params):
         finally:
             stop_sigma_dut(sigma)
 
+def test_sigma_dut_ap_owe_transition_mode_2(dev, apdev, params):
+    """sigma_dut controlled AP with OWE and transition mode (2)"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    logdir = os.path.join(params['logdir'],
+                          "sigma_dut_ap_owe_transition_mode_2.sigma-hostapd")
+    with HWSimRadio() as (radio, iface):
+        sigma = start_sigma_dut(iface, hostapd_logdir=logdir)
+        try:
+            sigma_dut_cmd_check("ap_reset_default,NAME,AP,Program,WPA3")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,WLAN_TAG,1,CHANNEL,1,SSID,owe,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,WLAN_TAG,1,KEYMGNT,NONE")
+            sigma_dut_cmd_check("ap_set_wireless,NAME,AP,WLAN_TAG,2,CHANNEL,1,MODE,11ng")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,WLAN_TAG,2,KEYMGNT,OWE")
+            sigma_dut_cmd_check("ap_config_commit,NAME,AP")
+
+            res1 = sigma_dut_cmd_check("ap_get_mac_address,NAME,AP,WLAN_TAG,1,Interface,24G")
+            res2 = sigma_dut_cmd_check("ap_get_mac_address,NAME,AP,WLAN_TAG,2,Interface,24G")
+
+            dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                           scan_freq="2412")
+            dev[1].connect("owe", key_mgmt="NONE", scan_freq="2412")
+            if dev[0].get_status_field('bssid') not in res2:
+                raise Exception("Unexpected ap_get_mac_address WLAN_TAG,2: " + res1)
+            if dev[1].get_status_field('bssid') not in res1:
+                raise Exception("Unexpected ap_get_mac_address WLAN_TAG,1: " + res2)
+
+            sigma_dut_cmd_check("ap_reset_default")
+        finally:
+            stop_sigma_dut(sigma)
+
 def dpp_init_enrollee(dev, id1):
     logger.info("Starting DPP initiator/enrollee in a thread")
     time.sleep(1)

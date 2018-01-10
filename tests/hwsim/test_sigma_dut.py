@@ -2065,3 +2065,16 @@ def run_sigma_dut_wps_pbc(dev, apdev):
     sigma_dut_cmd_check("sta_reset_default,interface," + ifname)
     stop_sigma_dut(sigma)
     dev[0].flush_scan_cache()
+
+def test_sigma_dut_sta_scan_bss(dev, apdev):
+    """sigma_dut sta_scan_bss"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test" })
+    sigma = start_sigma_dut(dev[0].ifname)
+    try:
+        cmd = "sta_scan_bss,Interface,%s,BSSID,%s" % (dev[0].ifname, \
+                                                      hapd.own_addr())
+        res = sigma_dut_cmd(cmd, timeout=10)
+        if "ssid,test,bsschannel,1" not in res:
+            raise Exception("Unexpected result: " + res)
+    finally:
+        stop_sigma_dut(sigma)

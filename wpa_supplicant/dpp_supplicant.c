@@ -2048,6 +2048,8 @@ wpas_dpp_gas_req_handler(void *ctx, const u8 *sa, const u8 *query,
 	wpa_hexdump(MSG_DEBUG,
 		    "DPP: Received Configuration Request (GAS Query Request)",
 		    query, query_len);
+	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_REQ_RX "src=" MACSTR,
+		MAC2STR(sa));
 	resp = dpp_conf_req_rx(auth, query, query_len);
 	if (!resp)
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_FAILED);

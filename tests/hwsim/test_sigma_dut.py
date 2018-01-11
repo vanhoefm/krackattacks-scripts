@@ -424,7 +424,7 @@ def test_sigma_dut_suite_b(dev, apdev, params):
 
     sigma_dut_cmd_check("sta_reset_default,interface,%s,prog,PMF" % ifname)
     sigma_dut_cmd_check("sta_set_ip_config,interface,%s,dhcp,0,ip,127.0.0.11,mask,255.255.255.0" % ifname)
-    sigma_dut_cmd_check("sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b.pem,trustedRootCA,suite_b_ca.pem,CertType,ECC" % (ifname, "test-suite-b"))
+    sigma_dut_cmd_check("sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,clientCertificate,suite_b.pem,trustedRootCA,suite_b_ca.pem,CertType,ECC" % (ifname, "test-suite-b"))
     sigma_dut_cmd_check("sta_associate,interface,%s,ssid,%s,channel,1" % (ifname, "test-suite-b"))
     sigma_dut_wait_connected(ifname)
     sigma_dut_cmd_check("sta_get_ip_config,interface," + ifname)
@@ -455,7 +455,7 @@ def test_sigma_dut_suite_b_rsa(dev, apdev, params):
     ifname = dev[0].ifname
     sigma = start_sigma_dut(ifname, cert_path=logdir)
 
-    cmd = "sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,PMF,Required,clientCertificate,suite_b_rsa.pem,trustedRootCA,suite_b_ca_rsa.pem,CertType,RSA" % (ifname, "test-suite-b")
+    cmd = "sta_set_security,type,eaptls,interface,%s,ssid,%s,PairwiseCipher,AES-GCMP-256,GroupCipher,AES-GCMP-256,GroupMgntCipher,BIP-GMAC-256,keymgmttype,SuiteB,clientCertificate,suite_b_rsa.pem,trustedRootCA,suite_b_ca_rsa.pem,CertType,RSA" % (ifname, "test-suite-b")
 
     tests = [ "",
               ",TLSCipher,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
@@ -489,7 +489,7 @@ def test_sigma_dut_ap_suite_b(dev, apdev, params):
             sigma_dut_cmd_check("ap_reset_default")
             sigma_dut_cmd_check("ap_set_wireless,NAME,AP,CHANNEL,1,SSID,test-suite-b,MODE,11ng")
             sigma_dut_cmd_check("ap_set_radius,NAME,AP,IPADDR,127.0.0.1,PORT,18129,PASSWORD,radius")
-            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB,PMF,Required")
+            sigma_dut_cmd_check("ap_set_security,NAME,AP,KEYMGNT,SuiteB")
             sigma_dut_cmd_check("ap_config_commit,NAME,AP")
 
             dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",

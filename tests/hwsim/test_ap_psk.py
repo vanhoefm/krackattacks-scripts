@@ -2749,6 +2749,18 @@ def test_ap_wpa2_psk_assoc_rsn(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()
 
+def test_ap_wpa2_psk_assoc_rsn_pmkid(dev, apdev):
+    """WPA2-PSK AP and association request RSN IE with PMKID"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    set_test_assoc_ie(dev[0], "30260100000fac040100000fac040100000fac0200000100" + 16*'00')
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa_psk_rsn_pairwise(dev, apdev):
     """WPA-PSK AP and only rsn_pairwise set"""
     params = { "ssid": "wpapsk", "wpa": "1", "wpa_key_mgmt": "WPA-PSK",

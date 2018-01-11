@@ -1452,6 +1452,20 @@ static int hostapd_cli_cmd_dpp_pkex_remove(struct wpa_ctrl *ctrl, int argc,
 #endif /* CONFIG_DPP */
 
 
+static int hostapd_cli_cmd_accept_macacl(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "ACCEPT_ACL", 1, argc, argv);
+}
+
+
+static int hostapd_cli_cmd_deny_macacl(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DENY_ACL", 1, argc, argv);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1614,6 +1628,10 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "dpp_pkex_remove", hostapd_cli_cmd_dpp_pkex_remove, NULL,
 	  "*|<id> = remove DPP pkex information" },
 #endif /* CONFIG_DPP */
+	{ "accept_acl", hostapd_cli_cmd_accept_macacl, NULL,
+	  "=Add/Delete/Show/Clear accept MAC ACL" },
+	{ "deny_acl", hostapd_cli_cmd_deny_macacl, NULL,
+	  "=Add/Delete/Show/Clear deny MAC ACL" },
 	{ NULL, NULL, NULL, NULL }
 };
 

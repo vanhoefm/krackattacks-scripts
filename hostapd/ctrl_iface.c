@@ -1248,6 +1248,42 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_disassoc_accept_mac(struct hostapd_data *hapd)
+{
+	struct sta_info *sta;
+	struct vlan_description vlan_id;
+
+	if (hapd->conf->macaddr_acl != DENY_UNLESS_ACCEPTED)
+		return;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (!hostapd_maclist_found(hapd->conf->accept_mac,
+					   hapd->conf->num_accept_mac,
+					   sta->addr, &vlan_id) ||
+		    (vlan_id.notempty &&
+		     vlan_compare(&vlan_id, sta->vlan_desc)))
+			ap_sta_disconnect(hapd, sta, sta->addr,
+					  WLAN_REASON_UNSPECIFIED);
+	}
+}
+
+
+static void hostapd_disassoc_deny_mac(struct hostapd_data *hapd)
+{
+	struct sta_info *sta;
+	struct vlan_description vlan_id;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (hostapd_maclist_found(hapd->conf->deny_mac,
+					  hapd->conf->num_deny_mac, sta->addr,
+					  &vlan_id) &&
+		    (!vlan_id.notempty ||
+		     !vlan_compare(&vlan_id, sta->vlan_desc)))
+			ap_sta_disconnect(hapd, sta, sta->addr,
+					  WLAN_REASON_UNSPECIFIED);
+	}
+}
+
 static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 {
 	char *value;
@@ -1332,38 +1368,14 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		hapd->dpp_configurator_params = os_strdup(value);
 #endif /* CONFIG_DPP */
 	} else {
-		struct sta_info *sta;
-		struct vlan_description vlan_id;
-
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 		if (ret)
 			return ret;
 
 		if (os_strcasecmp(cmd, "deny_mac_file") == 0) {
-			for (sta = hapd->sta_list; sta; sta = sta->next) {
-				if (hostapd_maclist_found(
-					    hapd->conf->deny_mac,
-					    hapd->conf->num_deny_mac, sta->addr,
-					    &vlan_id) &&
-				    (!vlan_id.notempty ||
-				     !vlan_compare(&vlan_id, sta->vlan_desc)))
-					ap_sta_disconnect(
-						hapd, sta, sta->addr,
-						WLAN_REASON_UNSPECIFIED);
-			}
-		} else if (hapd->conf->macaddr_acl == DENY_UNLESS_ACCEPTED &&
-			   os_strcasecmp(cmd, "accept_mac_file") == 0) {
-			for (sta = hapd->sta_list; sta; sta = sta->next) {
-				if (!hostapd_maclist_found(
-					    hapd->conf->accept_mac,
-					    hapd->conf->num_accept_mac,
-					    sta->addr, &vlan_id) ||
-				    (vlan_id.notempty &&
-				     vlan_compare(&vlan_id, sta->vlan_desc)))
-					ap_sta_disconnect(
-						hapd, sta, sta->addr,
-						WLAN_REASON_UNSPECIFIED);
-			}
+			hostapd_disassoc_deny_mac(hapd);
+		} else if (os_strcasecmp(cmd, "accept_mac_file") == 0) {
+			hostapd_disassoc_accept_mac(hapd);
 		}
 	}
 
@@ -2683,6 +2695,80 @@ static int hostapd_ctrl_driver_flags(struct hostapd_iface *iface, char *buf,
 }
 
 
+static int hostapd_ctrl_iface_acl_del_mac(struct mac_acl_entry **acl, int *num,
+					  const char *txtaddr)
+{
+	u8 addr[ETH_ALEN];
+	struct vlan_description vlan_id;
+
+	if (!(*num))
+		return 0;
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	if (hostapd_maclist_found(*acl, *num, addr, &vlan_id))
+		hostapd_remove_acl_mac(acl, num, addr);
+
+	return 0;
+}
+
+
+static void hostapd_ctrl_iface_acl_clear_list(struct mac_acl_entry **acl,
+					      int *num)
+{
+	while (*num)
+		hostapd_remove_acl_mac(acl, num, (*acl)[0].addr);
+}
+
+
+static int hostapd_ctrl_iface_acl_show_mac(struct mac_acl_entry *acl, int num,
+					   char *buf, size_t buflen)
+{
+	int i = 0, len = 0, ret = 0;
+
+	if (!acl)
+		return 0;
+
+	while (i < num) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  MACSTR " VLAN_ID=%d\n",
+				  MAC2STR(acl[i].addr),
+				  acl[i].vlan_id.untagged);
+		if (ret < 0 || (size_t) ret >= buflen - len)
+			return len;
+		i++;
+		len += ret;
+	}
+	return len;
+}
+
+
+static int hostapd_ctrl_iface_acl_add_mac(struct mac_acl_entry **acl, int *num,
+					  const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct vlan_description vlan_id;
+	int ret = 0, vlanid = 0;
+	const char *pos;
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = os_strstr(cmd, "VLAN_ID=");
+	if (pos)
+		vlanid = atoi(pos + 8);
+
+	if (!hostapd_maclist_found(*acl, *num, addr, &vlan_id)) {
+		ret = hostapd_add_acl_maclist(acl, num, vlanid, addr);
+		if (ret != -1 && *acl)
+			qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
+	}
+
+	return ret < 0 ? -1 : 0;
+}
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2983,6 +3069,46 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 						      reply_size);
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		eloop_terminate();
+	} else if (os_strncmp(buf, "ACCEPT_ACL ", 11) == 0) {
+		if (os_strncmp(buf + 11, "ADD_MAC ", 8) == 0) {
+			if (!hostapd_ctrl_iface_acl_add_mac(
+				    &hapd->conf->accept_mac,
+				    &hapd->conf->num_accept_mac, buf + 19))
+				hostapd_disassoc_accept_mac(hapd);
+			else
+				reply_len = -1;
+		} else if (os_strncmp((buf + 11), "DEL_MAC ", 8) == 0) {
+			hostapd_ctrl_iface_acl_del_mac(
+				&hapd->conf->accept_mac,
+				&hapd->conf->num_accept_mac, buf + 19);
+		} else if (os_strcmp(buf + 11, "SHOW") == 0) {
+			reply_len = hostapd_ctrl_iface_acl_show_mac(
+				hapd->conf->accept_mac,
+				hapd->conf->num_accept_mac, reply, reply_size);
+		} else if (os_strcmp(buf + 11, "CLEAR") == 0) {
+			hostapd_ctrl_iface_acl_clear_list(
+				&hapd->conf->accept_mac,
+				&hapd->conf->num_accept_mac);
+		}
+	} else if (os_strncmp(buf, "DENY_ACL ", 9) == 0) {
+		if (os_strncmp(buf + 9, "ADD_MAC ", 8) == 0) {
+			if (!hostapd_ctrl_iface_acl_add_mac(
+				    &hapd->conf->deny_mac,
+				    &hapd->conf->num_deny_mac, buf + 17))
+				hostapd_disassoc_deny_mac(hapd);
+		} else if (os_strncmp(buf + 9, "DEL_MAC ", 8) == 0) {
+			hostapd_ctrl_iface_acl_del_mac(
+				&hapd->conf->deny_mac,
+				&hapd->conf->num_deny_mac, buf + 17);
+		} else if (os_strcmp(buf + 9, "SHOW") == 0) {
+			reply_len = hostapd_ctrl_iface_acl_show_mac(
+				hapd->conf->deny_mac,
+				hapd->conf->num_deny_mac, reply, reply_size);
+		} else if (os_strcmp(buf + 9, "CLEAR") == 0) {
+			hostapd_ctrl_iface_acl_clear_list(
+				&hapd->conf->deny_mac,
+				&hapd->conf->num_deny_mac);
+		}
 #ifdef CONFIG_DPP
 	} else if (os_strncmp(buf, "DPP_QR_CODE ", 12) == 0) {
 		res = hostapd_dpp_qr_code(hapd, buf + 12);

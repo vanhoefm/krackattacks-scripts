@@ -6030,7 +6030,7 @@ def test_ap_wpa2_eap_assoc_rsn(dev, apdev):
     tests = [ ("Management frame protection not enabled",
                "30140100000fac040100000fac040100000fac010000", 31),
               ("Unsupported management group cipher",
-               "301a0100000fac040100000fac040100000fac01cc000000000fac0b", 31) ]
+               "301a0100000fac040100000fac040100000fac01cc000000000fac0b", 46) ]
     for title, ie, status in tests:
         logger.info(title)
         set_test_assoc_ie(dev[0], ie)

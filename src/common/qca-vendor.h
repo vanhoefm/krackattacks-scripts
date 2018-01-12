@@ -4869,11 +4869,33 @@ enum qca_wlan_vendor_attr_nd_offload {
 };
 
 /**
- * enum packet_filter_sub_cmd - Packet filter sub command
+ * enum packet_filter_sub_cmd - Packet filter sub commands
  */
 enum packet_filter_sub_cmd {
+	/**
+	 * Write packet filter program and/or data. The driver/firmware should
+	 * disable APF before writing into local buffer and re-enable APF after
+	 * writing is done.
+	 */
 	QCA_WLAN_SET_PACKET_FILTER = 1,
+	/* Get packet filter feature capabilities from driver */
 	QCA_WLAN_GET_PACKET_FILTER = 2,
+	/**
+	 * Write packet filter program and/or data. User space will send the
+	 * %QCA_WLAN_DISABLE_PACKET_FILTER command before issuing this command
+	 * and will send the %QCA_WLAN_ENABLE_PACKET_FILTER afterwards. The key
+	 * difference from that %QCA_WLAN_SET_PACKET_FILTER is the control over
+	 * enable/disable is given to user space with this command. Also,
+	 * user space sends the length of program portion in the buffer within
+	 * %QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROG_LENGTH.
+	 */
+	QCA_WLAN_WRITE_PACKET_FILTER = 3,
+	/* Read packet filter program and/or data */
+	QCA_WLAN_READ_PACKET_FILTER = 4,
+	/* Enable APF feature */
+	QCA_WLAN_ENABLE_PACKET_FILTER = 5,
+	/* Disable APF feature */
+	QCA_WLAN_DISABLE_PACKET_FILTER = 6,
 };
 
 /**
@@ -4888,12 +4910,20 @@ enum qca_wlan_vendor_attr_packet_filter {
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION,
 	/* Unsigned 32-bit value indicating the packet filter id */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_ID,
-	/* Unsigned 32-bit value indicating the packet filter size */
+	/**
+	 * Unsigned 32-bit value indicating the packet filter size including
+	 * program + data.
+	 */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
 	/* Unsigned 32-bit value indicating the packet filter current offset */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_CURRENT_OFFSET,
-	/* Unsigned 32-bit value indicating length of BPF instructions */
+	/* Program and/or data in bytes */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM,
+	/* Unsigned 32-bit value of the length of the program section in packet
+	 * filter buffer.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROG_LENGTH = 7,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX =

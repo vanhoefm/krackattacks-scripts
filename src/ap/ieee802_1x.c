@@ -1691,6 +1691,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	struct sta_info *sta;
 	u32 session_timeout = 0, termination_action, acct_interim_interval;
 	int session_timeout_set;
+	u32 reason_code;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
 	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
@@ -1839,6 +1840,13 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	case RADIUS_CODE_ACCESS_REJECT:
 		sm->eap_if->aaaFail = TRUE;
 		override_eapReq = 1;
+		if (radius_msg_get_attr_int32(msg, RADIUS_ATTR_WLAN_REASON_CODE,
+					      &reason_code) == 0) {
+			wpa_printf(MSG_DEBUG,
+				   "RADIUS server indicated WLAN-Reason-Code %u in Access-Reject for "
+				   MACSTR, reason_code, MAC2STR(sta->addr));
+			sta->disconnect_reason_code = reason_code;
+		}
 		break;
 	case RADIUS_CODE_ACCESS_CHALLENGE:
 		sm->eap_if->aaaEapReq = TRUE;

@@ -1379,13 +1379,16 @@ static void ap_sta_delayed_1x_auth_fail_cb(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
 	struct sta_info *sta = timeout_ctx;
+	u16 reason;
 
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
 		"IEEE 802.1X: Scheduled disconnection of " MACSTR
 		" after EAP-Failure", MAC2STR(sta->addr));
 
-	ap_sta_disconnect(hapd, sta, sta->addr,
-			  WLAN_REASON_IEEE_802_1X_AUTH_FAILED);
+	reason = sta->disconnect_reason_code;
+	if (!reason)
+		reason = WLAN_REASON_IEEE_802_1X_AUTH_FAILED;
+	ap_sta_disconnect(hapd, sta, sta->addr, reason);
 	if (sta->flags & WLAN_STA_WPS)
 		hostapd_wps_eap_completed(hapd);
 }

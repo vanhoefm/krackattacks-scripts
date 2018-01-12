@@ -728,6 +728,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 	int code;
 	unsigned int sess_id;
 	struct radius_hdr *hdr = radius_msg_get_hdr(request);
+	u16 reason = WLAN_REASON_IEEE_802_1X_AUTH_FAILED;
 
 	if (sess->eap_if->eapFail) {
 		sess->eap_if->eapFail = FALSE;
@@ -838,6 +839,15 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 				radius_msg_free(msg);
 				return NULL;
 			}
+		}
+	}
+
+	if (code == RADIUS_CODE_ACCESS_REJECT) {
+		if (radius_msg_add_attr_int32(msg, RADIUS_ATTR_WLAN_REASON_CODE,
+					      reason) < 0) {
+			RADIUS_DEBUG("Failed to add WLAN-Reason-Code attribute");
+			radius_msg_free(msg);
+			return NULL;
 		}
 	}
 

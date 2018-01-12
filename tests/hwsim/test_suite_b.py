@@ -525,3 +525,62 @@ def test_suite_b_192_rsa_radius(dev, apdev):
     if tls_cipher != "ECDHE-RSA-AES256-GCM-SHA384" and \
        tls_cipher != "ECDHE-RSA-AES-256-GCM-AEAD":
         raise Exception("Unexpected TLS cipher: " + tls_cipher)
+
+def test_suite_b_192_rsa_ecdhe_radius_rsa2048_client(dev, apdev):
+    """Suite B 192-bit level and RSA (ECDHE) and RSA2048 client"""
+    run_suite_b_192_rsa_radius_rsa2048_client(dev, apdev, True)
+
+def test_suite_b_192_rsa_dhe_radius_rsa2048_client(dev, apdev):
+    """Suite B 192-bit level and RSA (DHE) and RSA2048 client"""
+    run_suite_b_192_rsa_radius_rsa2048_client(dev, apdev, False)
+
+def run_suite_b_192_rsa_radius_rsa2048_client(dev, apdev, ecdhe):
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/rsa3072-ca.pem'
+    params['server_cert'] = 'auth_serv/rsa3072-server.pem'
+    params['private_key'] = 'auth_serv/rsa3072-server.key'
+    del params['openssl_ciphers']
+    if ecdhe:
+        params["tls_flags"] = "[SUITEB]"
+        ciphers = "ECDHE-RSA-AES256-GCM-SHA384"
+    else:
+        params["tls_flags"] = "[SUITEB-NO-ECDH]"
+        params["dh_file"] = "auth_serv/dh_param_3072.pem"
+        ciphers = "DHE-RSA-AES256-GCM-SHA384"
+
+    hostapd.add_ap(apdev[1], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   openssl_ciphers=ciphers,
+                   phase1="tls_suiteb=1",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/rsa3072-ca.pem",
+                   client_cert="auth_serv/rsa3072-user-rsa2048.pem",
+                   private_key="auth_serv/rsa3072-user-rsa2048.key",
+                   pairwise="GCMP-256", group="GCMP-256",
+                   group_mgmt="BIP-GMAC-256", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    if "reason=23" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev);

@@ -56,8 +56,22 @@ $OPENSSL ca -config rsa3072-ca-openssl.cnf.tmp -batch -keyfile rsa3072-ca.key -c
 rm rsa3072-ca-openssl.cnf.tmp
 
 echo
+echo "---[ User RSA2048 ]-----------------------------------------------------"
+echo
+
+cat ec-ca-openssl.cnf |
+	sed "s/#@CN@/commonName_default = user-rsa3072-rsa2048/" |
+	sed "s/#@ALTNAME@/subjectAltName=email:user-rsa3072-rsa2048@w1.fi/" |
+	sed s%\./ec-ca$%./rsa3072-ca% \
+	> rsa3072-ca-openssl.cnf.tmp
+$OPENSSL req -config rsa3072-ca-openssl.cnf.tmp -batch -new -newkey rsa:2048 -nodes -keyout rsa3072-user-rsa2048.key -out rsa3072-user-rsa2048.req -outform PEM -extensions ext_client -sha384
+$OPENSSL ca -config rsa3072-ca-openssl.cnf.tmp -batch -keyfile rsa3072-ca.key -cert rsa3072-ca.pem -create_serial -in rsa3072-user-rsa2048.req -out rsa3072-user-rsa2048.pem -extensions ext_client -days 730 -md sha384
+rm rsa3072-ca-openssl.cnf.tmp
+
+echo
 echo "---[ Verify ]-----------------------------------------------------------"
 echo
 
 $OPENSSL verify -CAfile rsa3072-ca.pem rsa3072-server.pem
 $OPENSSL verify -CAfile rsa3072-ca.pem rsa3072-user.pem
+$OPENSSL verify -CAfile rsa3072-ca.pem rsa3072-user-rsa2048.pem

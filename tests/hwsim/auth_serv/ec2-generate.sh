@@ -46,8 +46,22 @@ $OPENSSL ca -config ec-ca-openssl.cnf.tmp -batch -keyfile ec2-ca.key -cert ec2-c
 rm ec-ca-openssl.cnf.tmp
 
 echo
+echo "---[ User p256 ]--------------------------------------------------------"
+echo
+
+cat ec-ca-openssl.cnf |
+	sed "s/#@CN@/commonName_default = user-p256/" |
+	sed "s/#@ALTNAME@/subjectAltName=email:user-p256@w1.fi/" \
+	> ec-ca-openssl.cnf.tmp
+$OPENSSL ecparam -out ec2-user-p256.key -name prime256v1 -genkey
+$OPENSSL req -config ec-ca-openssl.cnf.tmp -batch -new -nodes -key ec2-user-p256.key -out ec2-user-p256.req -outform PEM -extensions ext_client -sha256
+$OPENSSL ca -config ec-ca-openssl.cnf.tmp -batch -keyfile ec2-ca.key -cert ec2-ca.pem -create_serial -in ec2-user-p256.req -out ec2-user-p256.pem -extensions ext_client -md sha256
+rm ec-ca-openssl.cnf.tmp
+
+echo
 echo "---[ Verify ]-----------------------------------------------------------"
 echo
 
 $OPENSSL verify -CAfile ec2-ca.pem ec2-server.pem
 $OPENSSL verify -CAfile ec2-ca.pem ec2-user.pem
+$OPENSSL verify -CAfile ec2-ca.pem ec2-user-p256.pem

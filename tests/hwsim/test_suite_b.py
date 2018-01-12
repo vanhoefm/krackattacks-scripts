@@ -235,6 +235,48 @@ def test_suite_b_192_radius(dev, apdev):
                    private_key="auth_serv/ec2-user.key",
                    pairwise="GCMP-256", group="GCMP-256", scan_freq="2412")
 
+def test_suite_b_192_radius_and_p256_cert(dev, apdev):
+    """Suite B 192-bit level and p256 client cert"""
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/ec2-ca.pem'
+    params['server_cert'] = 'auth_serv/ec2-server.pem'
+    params['private_key'] = 'auth_serv/ec2-server.key'
+    params['openssl_ciphers'] = 'SUITEB192'
+    hostapd.add_ap(apdev[1], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   #openssl_ciphers="SUITEB192",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/ec2-ca.pem",
+                   client_cert="auth_serv/ec2-user-p256.pem",
+                   private_key="auth_serv/ec2-user-p256.key",
+                   pairwise="GCMP-256", group="GCMP-256", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP-Failure not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    if "reason=23" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev);
+
 def test_suite_b_pmkid_failure(dev, apdev):
     """WPA2/GCMP connection at Suite B 128-bit level and PMKID derivation failure"""
     check_suite_b_capa(dev)

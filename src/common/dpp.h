@@ -187,8 +187,11 @@ struct dpp_authentication {
 	unsigned int num_freq_iters;
 	size_t secret_len;
 	u8 Mx[DPP_MAX_SHARED_SECRET_LEN];
+	size_t Mx_len;
 	u8 Nx[DPP_MAX_SHARED_SECRET_LEN];
+	size_t Nx_len;
 	u8 Lx[DPP_MAX_SHARED_SECRET_LEN];
+	size_t Lx_len;
 	u8 k1[DPP_MAX_HASH_LEN];
 	u8 k2[DPP_MAX_HASH_LEN];
 	u8 ke[DPP_MAX_HASH_LEN];

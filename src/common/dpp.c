@@ -1431,6 +1431,12 @@ static int dpp_derive_ke(struct dpp_authentication *auth, u8 *ke,
 	size_t len[3];
 	size_t num_elem = 0;
 
+	if (!auth->Mx_len || !auth->Nx_len) {
+		wpa_printf(MSG_DEBUG,
+			   "DPP: Mx/Nx not available - cannot derive ke");
+		return -1;
+	}
+
 	/* ke = HKDF(I-nonce | R-nonce, "DPP Key", M.x | N.x [| L.x]) */
 
 	/* HKDF-Extract(I-nonce | R-nonce, M.x | N.x [| L.x]) */
@@ -1438,12 +1444,17 @@ static int dpp_derive_ke(struct dpp_authentication *auth, u8 *ke,
 	os_memcpy(nonces, auth->i_nonce, nonce_len);
 	os_memcpy(&nonces[nonce_len], auth->r_nonce, nonce_len);
 	addr[num_elem] = auth->Mx;
-	len[num_elem] = auth->secret_len;
+	len[num_elem] = auth->Mx_len;
 	num_elem++;
 	addr[num_elem] = auth->Nx;
-	len[num_elem] = auth->secret_len;
+	len[num_elem] = auth->Nx_len;
 	num_elem++;
 	if (auth->peer_bi && auth->own_bi) {
+		if (!auth->Lx_len) {
+			wpa_printf(MSG_DEBUG,
+				   "DPP: Lx not available - cannot derive ke");
+			return -1;
+		}
 		addr[num_elem] = auth->Lx;
 		len[num_elem] = auth->secret_len;
 		num_elem++;
@@ -2129,6 +2140,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 
 	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (M.x)",
 			auth->Mx, auth->secret_len);
+	auth->Mx_len = auth->secret_len;
 
 	if (dpp_derive_k1(auth->Mx, auth->secret_len, auth->k1,
 			  auth->curve->hash_len) < 0)
@@ -2295,8 +2307,11 @@ static void dpp_auth_success(struct dpp_authentication *auth)
 	wpa_printf(MSG_DEBUG,
 		   "DPP: Authentication success - clear temporary keys");
 	os_memset(auth->Mx, 0, sizeof(auth->Mx));
+	auth->Mx_len = 0;
 	os_memset(auth->Nx, 0, sizeof(auth->Nx));
+	auth->Nx_len = 0;
 	os_memset(auth->Lx, 0, sizeof(auth->Lx));
+	auth->Lx_len = 0;
 	os_memset(auth->k1, 0, sizeof(auth->k1));
 	os_memset(auth->k2, 0, sizeof(auth->k2));
 
@@ -2518,6 +2533,7 @@ static int dpp_auth_derive_l_responder(struct dpp_authentication *auth)
 	if (dpp_bn2bin_pad(lx, auth->Lx, auth->secret_len) < 0)
 		goto fail;
 	wpa_hexdump_key(MSG_DEBUG, "DPP: L.x", auth->Lx, auth->secret_len);
+	auth->Lx_len = auth->secret_len;
 	ret = 0;
 fail:
 	EC_POINT_clear_free(l);
@@ -2579,6 +2595,7 @@ static int dpp_auth_derive_l_initiator(struct dpp_authentication *auth)
 	if (dpp_bn2bin_pad(lx, auth->Lx, auth->secret_len) < 0)
 		goto fail;
 	wpa_hexdump_key(MSG_DEBUG, "DPP: L.x", auth->Lx, auth->secret_len);
+	auth->Lx_len = auth->secret_len;
 	ret = 0;
 fail:
 	EC_POINT_clear_free(l);
@@ -2673,6 +2690,7 @@ static int dpp_auth_build_resp_ok(struct dpp_authentication *auth)
 
 	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (N.x)",
 			auth->Nx, auth->secret_len);
+	auth->Nx_len = auth->secret_len;
 
 	if (dpp_derive_k2(auth->Nx, auth->secret_len, auth->k2,
 			  auth->curve->hash_len) < 0)
@@ -2963,6 +2981,7 @@ dpp_auth_req_rx(void *msg_ctx, u8 dpp_allowed_roles, int qr_mutual,
 
 	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (M.x)",
 			auth->Mx, auth->secret_len);
+	auth->Mx_len = auth->secret_len;
 
 	if (dpp_derive_k1(auth->Mx, auth->secret_len, auth->k1,
 			  auth->curve->hash_len) < 0)
@@ -3562,6 +3581,7 @@ dpp_auth_resp_rx(struct dpp_authentication *auth, const u8 *hdr,
 
 	wpa_hexdump_key(MSG_DEBUG, "DPP: ECDH shared secret (N.x)",
 			auth->Nx, auth->secret_len);
+	auth->Nx_len = auth->secret_len;
 
 	if (dpp_derive_k2(auth->Nx, auth->secret_len, auth->k2,
 			  auth->curve->hash_len) < 0)

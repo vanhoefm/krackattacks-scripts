@@ -897,6 +897,15 @@ struct wpa_ssid {
 	 * currently supported.
 	 */
 	int owe_group;
+
+	/**
+	 * owe_only - OWE-only mode (disable transition mode)
+	 *
+	 * 0 = enable transition mode (allow connection to either OWE or open
+	 *	BSS)
+	 * 1 = disable transition mode (allow connection only with OWE)
+	 */
+	int owe_only;
 };
 
 #endif /* CONFIG_SSID_H */

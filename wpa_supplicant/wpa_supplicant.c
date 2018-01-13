@@ -1261,6 +1261,15 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 						WPA_CIPHER_AES_128_CMAC;
 			}
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_OWE
+			if ((ssid->key_mgmt & WPA_KEY_MGMT_OWE) &&
+			    !ssid->owe_only &&
+			    !bss_wpa && !bss_rsn && !bss_osen) {
+				wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+				wpa_s->wpa_proto = 0;
+				return 0;
+			}
+#endif /* CONFIG_OWE */
 			wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Set cipher suites "
 				"based on configuration");
 		} else

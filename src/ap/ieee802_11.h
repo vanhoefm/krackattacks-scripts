@@ -154,4 +154,7 @@ void handle_auth_fils(struct hostapd_data *hapd, struct sta_info *sta,
 				 struct sta_info *sta,
 				 u16 resp, struct wpabuf *data, int pub));
 
+size_t hostapd_eid_owe_trans_len(struct hostapd_data *hapd);
+u8 * hostapd_eid_owe_trans(struct hostapd_data *hapd, u8 *eid, size_t len);
+
 #endif /* IEEE802_11_H */

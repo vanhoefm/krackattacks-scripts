@@ -3826,6 +3826,7 @@ def int_eap_server_params():
 def test_ap_wpa2_eap_tls_ocsp_key_id(dev, apdev, params):
     """EAP-TLS and OCSP certificate signed OCSP response using key ID"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-server-cache-key-id.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -3841,6 +3842,7 @@ def test_ap_wpa2_eap_tls_ocsp_key_id(dev, apdev, params):
 def test_ap_wpa2_eap_tls_ocsp_ca_signed_good(dev, apdev, params):
     """EAP-TLS and CA signed OCSP response (good)"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -3856,6 +3858,7 @@ def test_ap_wpa2_eap_tls_ocsp_ca_signed_good(dev, apdev, params):
 def test_ap_wpa2_eap_tls_ocsp_ca_signed_revoked(dev, apdev, params):
     """EAP-TLS and CA signed OCSP response (revoked)"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed-revoked.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -3887,6 +3890,7 @@ def test_ap_wpa2_eap_tls_ocsp_ca_signed_revoked(dev, apdev, params):
 def test_ap_wpa2_eap_tls_ocsp_ca_signed_unknown(dev, apdev, params):
     """EAP-TLS and CA signed OCSP response (unknown)"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-resp-ca-signed-unknown.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -3916,6 +3920,7 @@ def test_ap_wpa2_eap_tls_ocsp_ca_signed_unknown(dev, apdev, params):
 def test_ap_wpa2_eap_tls_ocsp_server_signed(dev, apdev, params):
     """EAP-TLS and server signed OCSP response"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     ocsp = os.path.join(params['logdir'], "ocsp-resp-server-signed.der")
     if not os.path.exists(ocsp):
         raise HwsimSkip("No OCSP response available")
@@ -3945,6 +3950,7 @@ def test_ap_wpa2_eap_tls_ocsp_server_signed(dev, apdev, params):
 def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP data"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-req.der"
     hostapd.add_ap(apdev[0], params)
@@ -3971,6 +3977,7 @@ def test_ap_wpa2_eap_tls_ocsp_invalid_data(dev, apdev):
 def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and invalid OCSP response"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-server-cache.der-invalid"
     hostapd.add_ap(apdev[0], params)
@@ -3997,6 +4004,7 @@ def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
 def test_ap_wpa2_eap_tls_ocsp_unknown_sign(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and unknown OCSP signer"""
     check_ocsp_support(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["ocsp_stapling_response"] = "auth_serv/ocsp-server-cache.der-unknown-sign"
     hostapd.add_ap(apdev[0], params)
@@ -4384,6 +4392,7 @@ def test_ap_wpa2_eap_tls_ocsp_multi_revoked(dev, apdev, params):
     """EAP-TLS and CA signed OCSP multi response (revoked)"""
     check_ocsp_support(dev[0])
     check_ocsp_multi_support(dev[0])
+    check_pkcs12_support(dev[0])
 
     ocsp_revoked = os.path.join(params['logdir'],
                                 "ocsp-resp-ca-signed-revoked.der")
@@ -4443,6 +4452,7 @@ def test_ap_wpa2_eap_tls_ocsp_multi_revoked(dev, apdev, params):
 def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
     check_domain_match_full(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -4457,6 +4467,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
 def test_ap_wpa2_eap_tls_domain_match_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domainmatch (CN)"""
     check_domain_match(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -4471,6 +4482,7 @@ def test_ap_wpa2_eap_tls_domain_match_cn(dev, apdev):
 def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
     check_domain_match_full(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -4485,6 +4497,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
 def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix mismatch (CN)"""
     check_domain_suffix_match(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"
@@ -4513,6 +4526,7 @@ def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
 def test_ap_wpa2_eap_tls_domain_mismatch_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain mismatch (CN)"""
     check_domain_match(dev[0])
+    check_pkcs12_support(dev[0])
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
     params["private_key"] = "auth_serv/server-no-dnsname.key"

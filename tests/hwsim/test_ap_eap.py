@@ -5497,6 +5497,7 @@ def test_eap_ttls_no_session_resumption(dev, apdev):
 
 def test_eap_peap_session_resumption(dev, apdev):
     """EAP-PEAP session resumption"""
+    check_eap_capa(dev[0], "MSCHAPV2")
     params = int_eap_server_params()
     params['tls_session_lifetime'] = '60'
     hapd = hostapd.add_ap(apdev[0], params)

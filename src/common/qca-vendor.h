@@ -91,6 +91,49 @@ enum qca_radiotap_vendor_ids {
  *	which supports DFS offloading, to indicate a radar pattern has been
  *	detected. The channel is now unusable.
  *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET: Get the feature bitmap
+ *	based on enum wifi_logger_supported_features. Attributes defined in
+ *	enum qca_wlan_vendor_attr_get_logger_features.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA: Get the ring data from a particular
+ *	logger ring, QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID is passed as the
+ *	attribute for this command. Attributes defined in
+ *	enum qca_wlan_vendor_attr_wifi_logger_start.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_CAPABILITIES: Get the supported TDLS
+ *	capabilities of the driver, parameters includes the attributes defined
+ *	in enum qca_wlan_vendor_attr_tdls_get_capabilities.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS: Vendor command used to offload
+ *	sending of certain periodic IP packet to firmware, attributes defined in
+ *	enum qca_wlan_vendor_attr_offloaded_packets.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI: Command used to configure RSSI
+ *	monitoring, defines min and max RSSI which are configured for RSSI
+ *	monitoring. Also used to notify the RSSI breach and provides the BSSID
+ *	and RSSI value that was breached. Attributes defined in
+ *	enum qca_wlan_vendor_attr_rssi_monitoring.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_NDP: Command used for performing various NAN
+ *	Data Path (NDP) related operations, attributes defined in
+ *	enum qca_wlan_vendor_attr_ndp_params.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_ND_OFFLOAD: Command used to enable/disable
+ *	Neighbour Discovery offload, attributes defined in
+ *	enum qca_wlan_vendor_attr_nd_offload.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER: Used to set/get the various
+ *	configuration parameter for BPF packet filter, attributes defined in
+ *	enum qca_wlan_vendor_attr_packet_filter.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE: Gets the driver-firmware
+ *	maximum supported size, attributes defined in
+ *	enum qca_wlan_vendor_drv_info.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS: Command to get various
+ *	data about wake reasons and datapath IP statistics, attributes defined
+ *	in enum qca_wlan_vendor_attr_wake_stats.
+ *
  * @QCA_NL80211_VENDOR_SUBCMD_OCB_SET_CONFIG: Command used to set configuration
  *	for IEEE 802.11 communicating outside the context of a basic service
  *	set, called OCB command. Uses the attributes defines in
@@ -453,7 +496,17 @@ enum qca_nl80211_vendor_subcmds {
 	/* Wi-Fi configuration subcommands */
 	QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION = 74,
 	QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION = 75,
-	/* 76-90 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET = 76,
+	QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA = 77,
+	QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_CAPABILITIES = 78,
+	QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS = 79,
+	QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI = 80,
+	QCA_NL80211_VENDOR_SUBCMD_NDP = 81,
+	QCA_NL80211_VENDOR_SUBCMD_ND_OFFLOAD = 82,
+	QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER = 83,
+	QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE = 84,
+	QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS = 85,
+	/* 86-90 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_DATA_OFFLOAD = 91,
 	QCA_NL80211_VENDOR_SUBCMD_OCB_SET_CONFIG = 92,
 	QCA_NL80211_VENDOR_SUBCMD_OCB_SET_UTC_TIME = 93,
@@ -4525,6 +4578,362 @@ enum qca_wlan_vendor_attr_mac_info {
 	QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAC_INFO_MAX =
 	QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_logger_features - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET.
+ */
+enum qca_wlan_vendor_attr_get_logger_features {
+	QCA_WLAN_VENDOR_ATTR_LOGGER_INVALID = 0,
+	/* Unsigned 32-bit enum value of wifi_logger_supported_features */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED = 1,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_MAX =
+		QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST - 1,
+};
+
+/**
+ * enum wifi_logger_supported_features - Values for supported logger features
+ */
+enum wifi_logger_supported_features {
+	WIFI_LOGGER_MEMORY_DUMP_FEATURE = (1 << (0)),
+	WIFI_LOGGER_PER_PACKET_TX_RX_STATUS_FEATURE = (1 << (1)),
+	WIFI_LOGGER_CONNECT_EVENT_FEATURE = (1 << (2)),
+	WIFI_LOGGER_POWER_EVENT_FEATURE = (1 << (3)),
+	WIFI_LOGGER_WAKE_LOCK_FEATURE = (1 << (4)),
+	WIFI_LOGGER_VERBOSE_FEATURE = (1 << (5)),
+	WIFI_LOGGER_WATCHDOG_TIMER_FEATURE = (1 << (6)),
+	WIFI_LOGGER_DRIVER_DUMP_FEATURE = (1 << (7)),
+	WIFI_LOGGER_PACKET_FATE_FEATURE = (1 << (8)),
+};
+
+/**
+ * enum qca_wlan_tdls_caps_features_supported - Values for TDLS get
+ * capabilities features
+ */
+enum qca_wlan_tdls_caps_features_supported
+{
+	WIFI_TDLS_SUPPORT = (1 << (0)),
+	WIFI_TDLS_EXTERNAL_CONTROL_SUPPORT = (1 << (1)),
+	WIFI_TDLS_OFFCHANNEL_SUPPORT = (1 << (2))
+};
+
+/**
+ * enum qca_wlan_vendor_attr_tdls_get_capabilities - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_CAPABILITIES.
+ */
+enum qca_wlan_vendor_attr_tdls_get_capabilities
+{
+	QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_INVALID = 0,
+	/* Indicates the max concurrent sessions */
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX_CONC_SESSIONS,
+	/* Indicates the support for features */
+	/* Unsigned 32-bit bitmap qca_wlan_tdls_caps_features_supported
+	 */
+	QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_FEATURES_SUPPORTED,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX =
+		QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_offloaded_packets_sending_control - Offload packets control
+ * command used as value for the attribute
+ * QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL.
+ */
+enum qca_wlan_offloaded_packets_sending_control
+{
+	QCA_WLAN_OFFLOADED_PACKETS_SENDING_CONTROL_INVALID = 0,
+	QCA_WLAN_OFFLOADED_PACKETS_SENDING_START,
+	QCA_WLAN_OFFLOADED_PACKETS_SENDING_STOP
+};
+
+/**
+ * enum qca_wlan_vendor_attr_offloaded_packets - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS.
+ */
+enum qca_wlan_vendor_attr_offloaded_packets {
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_INVALID = 0,
+	/* Takes valid value from the enum
+	 * qca_wlan_offloaded_packets_sending_control
+	 * Unsigned 32-bit value
+	 */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
+	/* array of u8 len: Max packet size */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_IP_PACKET_DATA,
+	/* 6-byte MAC address used to represent source MAC address */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SRC_MAC_ADDR,
+	/* 6-byte MAC address used to represent destination MAC address */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_DST_MAC_ADDR,
+	/* Unsigned 32-bit value, in milli seconds */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_PERIOD,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_MAX =
+		QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_rssi_monitoring_control - RSSI control commands used as values
+ * by the attribute QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL.
+ */
+enum qca_wlan_rssi_monitoring_control {
+	QCA_WLAN_RSSI_MONITORING_CONTROL_INVALID = 0,
+	QCA_WLAN_RSSI_MONITORING_START,
+	QCA_WLAN_RSSI_MONITORING_STOP,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_rssi_monitoring - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI.
+ */
+enum qca_wlan_vendor_attr_rssi_monitoring {
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_INVALID = 0,
+	/* Takes valid value from the enum
+	 * qca_wlan_rssi_monitoring_control
+	 * Unsigned 32-bit value enum qca_wlan_rssi_monitoring_control
+	 */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL,
+	/* Unsigned 32-bit value */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID,
+	/* Signed 8-bit value in dBm */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MAX_RSSI,
+	/* Signed 8-bit value in dBm */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MIN_RSSI,
+	/* attributes to be used/received in callback */
+	/* 6-byte MAC address used to represent current BSSID MAC address */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CUR_BSSID,
+	/* Signed 8-bit value indicating the current RSSI */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CUR_RSSI,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MAX =
+		QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ndp_params - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_NDP.
+ */
+enum qca_wlan_vendor_attr_ndp_params {
+	QCA_WLAN_VENDOR_ATTR_NDP_PARAM_INVALID = 0,
+	/* Unsigned 32-bit value
+	 * enum of sub commands values in qca_wlan_ndp_sub_cmd
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+	/* Unsigned 16-bit value */
+	QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+	/* NL attributes for data used NDP SUB cmds */
+	/* Unsigned 32-bit value indicating a service info */
+	QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
+	/* Unsigned 32-bit value; channel frequency in MHz */
+	QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
+	/* Interface Discovery MAC address. An array of 6 Unsigned int8 */
+	QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
+	/* Interface name on which NDP is being created */
+	QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+	/* Unsigned 32-bit value for security */
+	/* CONFIG_SECURITY is deprecated, use NCS_SK_TYPE/PMK/SCID instead */
+	QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_SECURITY,
+	/* Unsigned 32-bit value for QoS */
+	QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS,
+	/* Array of u8: len = QCA_WLAN_VENDOR_ATTR_NAN_DP_APP_INFO_LEN */
+	QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
+	/* Unsigned 32-bit value for NDP instance Id */
+	QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
+	/* Array of instance Ids */
+	QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
+	/* Unsigned 32-bit value for initiator/responder NDP response code
+	 * accept/reject */
+	QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE,
+	/* NDI MAC address. An array of 6 Unsigned int8 */
+	QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR,
+	/* Unsigned 32-bit value errors types returned by driver
+	 * The wifi_nan.h in AOSP project platform/hardware/libhardware_legacy
+	 * NanStatusType includes these values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE,
+	/* Unsigned 32-bit value error values returned by driver
+	 * The nan_i.h in AOSP project platform/hardware/qcom/wlan
+	 * NanInternalStatusType includes these values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE,
+	/* Unsigned 32-bit value for Channel setup configuration
+	 * The wifi_nan.h in AOSP project platform/hardware/libhardware_legacy
+	 * NanDataPathChannelCfg includes these values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_CONFIG,
+	/* Unsigned 32-bit value for Cipher Suite Shared Key Type */
+	QCA_WLAN_VENDOR_ATTR_NDP_CSID,
+	/* Array of u8: len = NAN_PMK_INFO_LEN 32 bytes */
+	QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+	/* Security Context Identifier that contains the PMKID
+	 * Array of u8: len = NAN_SCID_BUF_LEN 1024 bytes
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_SCID,
+	/* Array of u8: len = NAN_SECURITY_MAX_PASSPHRASE_LEN 63 bytes */
+	QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
+	/* Array of u8: len = NAN_MAX_SERVICE_NAME_LEN 255 bytes */
+	QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_MAX =
+		QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_AFTER_LAST - 1,
+};
+
+enum qca_wlan_ndp_sub_cmd {
+	QCA_WLAN_VENDOR_ATTR_NDP_INVALID = 0,
+	/* Command to create a NAN data path interface */
+	QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_CREATE = 1,
+	/* Command to delete a NAN data path interface */
+	QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_DELETE = 2,
+	/* Command to initiate a NAN data path session */
+	QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_REQUEST = 3,
+	/* Command to notify if the NAN data path session was sent */
+	QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_RESPONSE = 4,
+	/* Command to respond to NAN data path session */
+	QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_REQUEST = 5,
+	/* Command to notify on the responder about the response */
+	QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_RESPONSE = 6,
+	/* Command to initiate a NAN data path end */
+	QCA_WLAN_VENDOR_ATTR_NDP_END_REQUEST = 7,
+	/* Command to notify the if end request was sent */
+	QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE = 8,
+	/* Command to notify the peer about the end request */
+	QCA_WLAN_VENDOR_ATTR_NDP_REQUEST_IND = 9,
+	/* Command to confirm the NAN data path session is complete */
+	QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 10,
+	/* Command to indicate the peer about the end request being received */
+	QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11
+};
+
+/**
+ * enum qca_wlan_vendor_attr_nd_offload - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_ND_OFFLOAD.
+ */
+enum qca_wlan_vendor_attr_nd_offload {
+	QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_INVALID = 0,
+	/* Flag to set Neighbour Discovery offload */
+	QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_FLAG,
+	/* Keep last */
+	QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_MAX =
+		QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_AFTER_LAST - 1,
+};
+
+/**
+ * enum packet_filter_sub_cmd - Packet filter sub command
+ */
+enum packet_filter_sub_cmd {
+	QCA_WLAN_SET_PACKET_FILTER = 1,
+	QCA_WLAN_GET_PACKET_FILTER = 2,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_packet_filter - BPF control commands used by
+ * vendor QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER.
+ */
+enum qca_wlan_vendor_attr_packet_filter {
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_INVALID = 0,
+	/* Unsigned 32-bit enum passed using packet_filter_sub_cmd */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD,
+	/* Unsigned 32-bit value indicating the packet filter version */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION,
+	/* Unsigned 32-bit value indicating the packet filter id */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_ID,
+	/* Unsigned 32-bit value indicating the packet filter size */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
+	/* Unsigned 32-bit value indicating the packet filter current offset */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_CURRENT_OFFSET,
+	/* Unsigned 32-bit value indicating length of BPF instructions */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX =
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_drv_info - WLAN driver info used by vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE.
+ */
+enum qca_wlan_vendor_drv_info {
+	QCA_WLAN_VENDOR_ATTR_DRV_INFO_INVALID = 0,
+	/* Maximum Message size info between firmware & HOST
+	 * Unsigned 32-bit value
+	 */
+	QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_DRV_INFO_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_DRV_INFO_MAX =
+		QCA_WLAN_VENDOR_ATTR_DRV_INFO_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_wake_stats - Wake lock stats used by vendor
+ * command QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS.
+ */
+enum qca_wlan_vendor_attr_wake_stats {
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_INVALID = 0,
+	/* Unsigned 32-bit value indicating the total count of wake event */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_CMD_EVENT_WAKE,
+	/* Array of individual wake count, each index representing wake reason
+	 */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_PTR,
+	/* Unsigned 32-bit value representing wake count array */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_SZ,
+	/* Unsigned 32-bit total wake count value of driver/fw */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_DRIVER_FW_LOCAL_WAKE,
+	/* Array of wake stats of driver/fw */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_PTR,
+	/* Unsigned 32-bit total wake count value of driver/fw */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_SZ,
+	/* Unsigned 32-bit total wake count value of packets received */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_RX_DATA_WAKE,
+	/* Unsigned 32-bit wake count value unicast packets received */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_RX_UNICAST_CNT,
+	/* Unsigned 32-bit wake count value multicast packets received */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_RX_MULTICAST_CNT,
+	/* Unsigned 32-bit wake count value broadcast packets received */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_RX_BROADCAST_CNT,
+	/* Unsigned 32-bit wake count value of ICMP packets */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP_PKT,
+	/* Unsigned 32-bit wake count value of ICMP6 packets */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP6_PKT,
+	/* Unsigned 32-bit value ICMP6 router advertisement */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP6_RA,
+	/* Unsigned 32-bit value ICMP6 neighbor advertisement */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP6_NA,
+	/* Unsigned 32-bit value ICMP6 neighbor solicitation */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP6_NS,
+	/* Unsigned 32-bit wake count value of receive side ICMP4 multicast */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP4_RX_MULTICAST_CNT,
+	/* Unsigned 32-bit wake count value of receive side ICMP6 multicast */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_ICMP6_RX_MULTICAST_CNT,
+	/* Unsigned 32-bit wake count value of receive side multicast */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_OTHER_RX_MULTICAST_CNT,
+	/* Unsigned 32-bit wake count value of a given RSSI breach */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_RSSI_BREACH_CNT,
+	/* Unsigned 32-bit wake count value of low RSSI */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_LOW_RSSI_CNT,
+	/* Unsigned 32-bit value GSCAN count */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_GSCAN_CNT,
+	/* Unsigned 32-bit value PNO complete count */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_PNO_COMPLETE_CNT,
+	/* Unsigned 32-bit value PNO match count */
+	QCA_WLAN_VENDOR_ATTR_WAKE_STATS_PNO_MATCH_CNT,
+	/* keep last */
+	QCA_WLAN_VENDOR_GET_WAKE_STATS_AFTER_LAST,
+	QCA_WLAN_VENDOR_GET_WAKE_STATS_MAX =
+		QCA_WLAN_VENDOR_GET_WAKE_STATS_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

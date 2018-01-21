@@ -402,7 +402,7 @@ void hostapd_dpp_tx_status(struct hostapd_data *hapd, const u8 *dst,
 		hostapd_drv_send_action_cancel_wait(hapd);
 
 		if (hapd->dpp_auth->neg_freq !=
-		    hapd->iface->freq && hapd->iface->freq > 0) {
+		    (unsigned int) hapd->iface->freq && hapd->iface->freq > 0) {
 			/* TODO: Listen operation on non-operating channel */
 			wpa_printf(MSG_INFO,
 				   "DPP: Listen operation on non-operating channel (%d MHz) is not yet supported (operating channel: %d MHz)",
@@ -475,7 +475,7 @@ static void hostapd_dpp_reply_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 		   freq, wait_time);
 	hapd->dpp_in_response_listen = 1;
 
-	if (freq != hapd->iface->freq && hapd->iface->freq > 0) {
+	if (freq != (unsigned int) hapd->iface->freq && hapd->iface->freq > 0) {
 		/* TODO: Listen operation on non-operating channel */
 		wpa_printf(MSG_INFO,
 			   "DPP: Listen operation on non-operating channel (%d MHz) is not yet supported (operating channel: %d MHz)",

@@ -225,6 +225,7 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 			*pos |= 0x40; /* Bit 70 - FTM responder */
 		if (hapd->conf->ftm_initiator)
 			*pos |= 0x80; /* Bit 71 - FTM initiator */
+		break;
 	case 9: /* Bits 72-79 */
 #ifdef CONFIG_FILS
 		if ((hapd->conf->wpa & WPA_PROTO_RSN) &&

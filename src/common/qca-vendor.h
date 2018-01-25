@@ -4783,6 +4783,22 @@ enum qca_wlan_vendor_attr_ndp_params {
 	QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
 	/* Array of u8: len = NAN_MAX_SERVICE_NAME_LEN 255 bytes */
 	QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+	/* Unsigned 32-bit bitmap indicating schedule update
+	 * BIT_0: NSS Update
+	 * BIT_1: Channel list update
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_REASON,
+	/* Unsigned 32-bit value for NSS */
+	QCA_WLAN_VENDOR_ATTR_NDP_NSS,
+	/* Unsigned 32-bit value for NUMBER NDP CHANNEL */
+	QCA_WLAN_VENDOR_ATTR_NDP_NUM_CHANNELS,
+	/* Unsigned 32-bit value for CHANNEL BANDWIDTH
+	 * 0:20 MHz, 1:40 MHz, 2:80 MHz, 3:160 MHz
+	 */
+	QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_WIDTH,
+	/* Array of channel/band width */
+	QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_INFO,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_MAX =
@@ -4812,7 +4828,9 @@ enum qca_wlan_ndp_sub_cmd {
 	/* Command to confirm the NAN data path session is complete */
 	QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 10,
 	/* Command to indicate the peer about the end request being received */
-	QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11
+	QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11,
+	/* Command to indicate the peer of schedule update */
+	QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND = 12
 };
 
 /**

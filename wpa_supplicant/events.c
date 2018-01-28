@@ -3760,18 +3760,26 @@ static void wpa_supplicant_notify_avoid_freq(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
-					    union wpa_event_data *data)
+static void wpa_supplicant_event_port_authorized(struct wpa_supplicant *wpa_s)
 {
-	wpa_dbg(wpa_s, MSG_DEBUG,
-		"Connection authorized by device, previous state %d",
-		wpa_s->wpa_state);
 	if (wpa_s->wpa_state == WPA_ASSOCIATED) {
 		wpa_supplicant_cancel_auth_timeout(wpa_s);
 		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 		eapol_sm_notify_portValid(wpa_s->eapol, TRUE);
 		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
 	}
+}
+
+
+static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
+					    union wpa_event_data *data)
+{
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"Connection authorized by device, previous state %d",
+		wpa_s->wpa_state);
+
+	wpa_supplicant_event_port_authorized(wpa_s);
+
 	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
 	wpa_sm_set_ptk_kck_kek(wpa_s->wpa, data->assoc_info.ptk_kck,
 			       data->assoc_info.ptk_kck_len,
@@ -4597,6 +4605,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		sme_external_auth_trigger(wpa_s, data);
 #endif /* CONFIG_SAE */
+		break;
+	case EVENT_PORT_AUTHORIZED:
+		wpa_supplicant_event_port_authorized(wpa_s);
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

@@ -2220,6 +2220,32 @@ static void nl80211_external_auth(struct wpa_driver_nl80211_data *drv,
 	wpa_supplicant_event(drv->ctx, EVENT_EXTERNAL_AUTH, &event);
 }
 
+
+static void nl80211_port_authorized(struct wpa_driver_nl80211_data *drv,
+				    struct nlattr **tb)
+{
+	const u8 *addr;
+
+	if (!tb[NL80211_ATTR_MAC] ||
+	    nla_len(tb[NL80211_ATTR_MAC]) != ETH_ALEN) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore port authorized event without BSSID");
+		return;
+	}
+
+	addr = nla_data(tb[NL80211_ATTR_MAC]);
+	if (os_memcmp(addr, drv->bssid, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore port authorized event for " MACSTR
+			   " (not the currently connected BSSID " MACSTR ")",
+			   MAC2STR(addr), MAC2STR(drv->bssid));
+		return;
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_PORT_AUTHORIZED, NULL);
+}
+
+
 static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				 struct nlattr **tb)
 {
@@ -2417,6 +2443,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_NEW_PEER_CANDIDATE:
 		nl80211_new_peer_candidate(drv, tb);
+		break;
+	case NL80211_CMD_PORT_AUTHORIZED:
+		nl80211_port_authorized(drv, tb);
 		break;
 	default:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "

@@ -5347,6 +5347,14 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			return -1;
 	}
 
+	/* Add PSK in case of 4-way handshake offload */
+	if (params->psk &&
+	    (drv->capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE)) {
+		wpa_hexdump_key(MSG_DEBUG, "  * PSK", params->psk, 32);
+		if (nla_put(msg, NL80211_ATTR_PMK, 32, params->psk))
+			return -1;
+	}
+
 	if (nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT))
 		return -1;
 

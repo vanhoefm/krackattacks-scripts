@@ -83,6 +83,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(BEACON_LOSS);
 	E2S(DFS_PRE_CAC_EXPIRED);
 	E2S(EXTERNAL_AUTH);
+	E2S(PORT_AUTHORIZED);
 	}
 
 	return "UNKNOWN";

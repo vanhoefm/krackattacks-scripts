@@ -4557,6 +4557,15 @@ enum wpa_event_type {
 	 * happen.
 	 */
 	EVENT_EXTERNAL_AUTH,
+
+	/**
+	 * EVENT_PORT_AUTHORIZED - Notification that a connection is authorized
+	 *
+	 * This event should be indicated when the driver completes the 4-way
+	 * handshake. This event should be preceded by an EVENT_ASSOC that
+	 * indicates the completion of IEEE 802.11 association.
+	 */
+	EVENT_PORT_AUTHORIZED,
 };
 
 

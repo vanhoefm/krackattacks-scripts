@@ -736,6 +736,15 @@ int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
 		sta = ap_get_sta(hapd, dst);
 		if (!sta || !(sta->flags & WLAN_STA_ASSOC))
 			bssid = wildcard_bssid;
+	} else if (is_broadcast_ether_addr(dst) &&
+		   len > 0 && data[0] == WLAN_ACTION_PUBLIC) {
+		/*
+		 * The only current use case of Public Action frames with
+		 * broadcast destination address is DPP PKEX. That case is
+		 * directing all devices and not just the STAs within the BSS,
+		 * so have to use the wildcard BSSID value.
+		 */
+		bssid = wildcard_bssid;
 	}
 	return hapd->driver->send_action(hapd->drv_priv, freq, wait, dst,
 					 hapd->own_addr, bssid, data, len, 0);

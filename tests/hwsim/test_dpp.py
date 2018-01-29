@@ -78,6 +78,90 @@ def test_dpp_qr_code_parsing(dev, apdev):
     if "FAIL" in res:
         raise Exception("Failed to parse self-generated QR Code URI")
 
+dpp_key_p256 ="30570201010420777fc55dc51e967c10ec051b91d860b5f1e6c934e48d5daffef98d032c64b170a00a06082a8648ce3d030107a124032200020c804188c7f85beb6e91070d2b3e5e39b90ca77b4d3c5251bc1844d6ca29dcad"
+dpp_key_p384 = "307402010104302f56fdd83b5345cacb630eb7c22fa5ad5daba37307c95191e2a75756d137003bd8b32dbcb00eb5650c1eb499ecfcaec0a00706052b81040022a13403320003615ec2141b5b77aebb6523f8a012755f9a34405a8398d2ceeeebca7f5ce868bf55056cba4c4ec62fad3ed26dd29e0f23"
+dpp_key_p521 = "308198020101044200c8010d5357204c252551aaf4e210343111e503fd1dc615b257058997c49b6b643c975226e93be8181cca3d83a7072defd161dfbdf433c19abe1f2ad51867a05761a00706052b81040023a1460344000301cdf3608b1305fe34a1f976095dcf001182b9973354efe156291a66830292f9babd8f412ad462958663e7a75d1d0610abdfc3dd95d40669f7ab3bc001668cfb3b7c"
+dpp_key_bp256 = "3058020101042057133a676fb60bf2a3e6797e19833c7b0f89dc192ab99ab5fa377ae23a157765a00b06092b2403030208010107a12403220002945d9bf7ce30c9c1ac0ff21ca62b984d5bb80ff69d2be8c9716ab39a10d2caf0"
+dpp_key_bp384 = "307802010104304902df9f3033a9b7128554c0851dc7127c3573eed150671dae74c0013e9896a9b1c22b6f7d43d8a2ebb7cd474dc55039a00b06092b240303020801010ba13403320003623cb5e68787f351faababf3425161571560add2e6f9a306fcbffb507735bf955bb46dd20ba246b0d5cadce73e5bd6a6"
+dpp_key_bp512 = "30819802010104405803494226eb7e50bf0e90633f37e7e35d33f5fa502165eeba721d927f9f846caf12e925701d18e123abaaaf4a7edb4fc4de21ce18bc10c4d12e8b3439f74e40a00b06092b240303020801010da144034200033b086ccd47486522d35dc16fbb2229642c2e9e87897d45abbf21f9fb52acb5a6272b31d1b227c3e53720769cc16b4cb181b26cd0d35fe463218aaedf3b6ec00a"
+
+def test_dpp_qr_code_curves(dev, apdev):
+    """DPP QR Code and supported curves"""
+    check_dpp_capab(dev[0])
+    tests = [ ("prime256v1", dpp_key_p256),
+              ("secp384r1", dpp_key_p384),
+              ("secp521r1", dpp_key_p521) ]
+    for curve, hex in tests:
+        id = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode key=" + hex)
+        if "FAIL" in id:
+            raise Exception("Failed to set key for " + curve)
+        info = dev[0].request("DPP_BOOTSTRAP_INFO " + id)
+        if "FAIL" in info:
+            raise Exception("Failed to get info for " + curve)
+        if "curve=" + curve not in info:
+            raise Exception("Curve mismatch for " + curve)
+
+def test_dpp_qr_code_curves_brainpool(dev, apdev):
+    """DPP QR Code and supported Brainpool curves"""
+    check_dpp_capab(dev[0], brainpool=True)
+    tests = [ ("brainpoolP256r1", dpp_key_bp256),
+              ("brainpoolP384r1", dpp_key_bp384),
+              ("brainpoolP512r1", dpp_key_bp512) ]
+    for curve, hex in tests:
+        id = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode key=" + hex)
+        if "FAIL" in id:
+            raise Exception("Failed to set key for " + curve)
+        info = dev[0].request("DPP_BOOTSTRAP_INFO " + id)
+        if "FAIL" in info:
+            raise Exception("Failed to get info for " + curve)
+        if "curve=" + curve not in info:
+            raise Exception("Curve mismatch for " + curve)
+
+def test_dpp_qr_code_curve_select(dev, apdev):
+    """DPP QR Code and curve selection"""
+    check_dpp_capab(dev[0], brainpool=True)
+    check_dpp_capab(dev[1], brainpool=True)
+
+    addr = dev[0].own_addr().replace(':', '')
+    bi = []
+    for key in [ dpp_key_p256, dpp_key_p384, dpp_key_p521,
+                 dpp_key_bp256, dpp_key_bp384, dpp_key_bp512 ]:
+        id = dev[0].request("DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr + " key=" + key)
+        if "FAIL" in id:
+            raise Exception("Failed to set key for " + curve)
+        info = dev[0].request("DPP_BOOTSTRAP_INFO " + id)
+        for i in info.splitlines():
+            if '=' in i:
+                name, val = i.split('=')
+                if name == "curve":
+                    curve = val
+                    break
+        uri = dev[0].request("DPP_BOOTSTRAP_GET_URI " + id)
+        bi.append((curve, uri))
+
+    for curve, uri in bi:
+        logger.info("Curve: " + curve)
+        logger.info("URI: " + uri)
+
+        if "OK" not in dev[0].request("DPP_LISTEN 2412"):
+            raise Exception("Failed to start listen operation")
+
+        res = dev[1].request("DPP_QR_CODE " + uri)
+        if "FAIL" in res:
+            raise Exception("Failed to parse QR Code URI")
+        if "OK" not in dev[1].request("DPP_AUTH_INIT peer=" + res):
+            raise Exception("Failed to initiate DPP Authentication")
+        ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+        if ev is None:
+            raise Exception("DPP authentication did not succeed (Responder)")
+        ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+        if ev is None:
+            raise Exception("DPP authentication did not succeed (Initiator)")
+        dev[0].request("DPP_STOP_LISTEN")
+        dev[1].request("DPP_STOP_LISTEN")
+        dev[0].dump_monitor()
+        dev[1].dump_monitor()
+
 def test_dpp_qr_code_auth_broadcast(dev, apdev):
     """DPP QR Code and authentication exchange (broadcast)"""
     check_dpp_capab(dev[0])

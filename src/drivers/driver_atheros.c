@@ -1861,7 +1861,7 @@ atheros_set_ssid(void *priv, const u8 *buf, int len)
 	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 	iwr.u.essid.flags = 1; /* SSID active */
 	iwr.u.essid.pointer = (caddr_t) buf;
-	iwr.u.essid.length = len + 1;
+	iwr.u.essid.length = len;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
 		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWESSID,len=%d]: %s",

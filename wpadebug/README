@@ -20,6 +20,19 @@ Build
 -----
 
 - Install Android SDK and build tools
+
+wpadebug depends on zxing core to launch QR code display/scanning.
+To build zxing core:
+
+- mkdir hostap/wpadebug/libs # target for the jar file
+- Install maven tool
+- clone latest zxing code [git clone https://github.com/zxing/zxing.git]
+- cd zxing/core
+- run: mvn install -DskipTests
+- copy target/core-*.*.*-SNAPSHOT.jar to hostap/wpadebug/libs
+
+To build wpadebug application:
+
 - update project target if desired; for example:
   android list targets
   android update project --target 1 --path $PWD

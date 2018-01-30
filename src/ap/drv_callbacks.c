@@ -530,7 +530,8 @@ skip_wpa_check:
 
 		npos = owe_auth_req_process(hapd, sta,
 					    elems.owe_dh, elems.owe_dh_len,
-					    p, &reason);
+					    p, sizeof(buf) - (p - buf),
+					    &reason);
 		if (npos)
 			p = npos;
 		if (!npos &&

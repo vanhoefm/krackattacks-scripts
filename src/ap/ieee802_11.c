@@ -2990,9 +2990,17 @@ done:
 #ifdef CONFIG_OWE
 u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 			  const u8 *owe_dh, u8 owe_dh_len,
-			  u8 *owe_buf, u16 *reason)
+			  u8 *owe_buf, size_t owe_buf_len, u16 *reason)
 {
 	struct wpabuf *pub;
+
+	if (wpa_auth_sta_get_pmksa(sta->wpa_sm)) {
+		wpa_printf(MSG_DEBUG, "OWE: Using PMKSA caching");
+		owe_buf = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, owe_buf,
+							owe_buf_len, NULL, 0);
+		*reason = WLAN_STATUS_SUCCESS;
+		return owe_buf;
+	}
 
 	*reason = owe_process_assoc_req(hapd, sta, owe_dh, owe_dh_len);
 	if (*reason != WLAN_STATUS_SUCCESS)

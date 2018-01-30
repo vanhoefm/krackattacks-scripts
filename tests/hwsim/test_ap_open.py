@@ -426,7 +426,9 @@ def test_ap_open_disconnect_in_ps(dev, apdev, params):
         raise Exception("No connection event received from hostapd")
 
     time.sleep(0.2)
-    hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_MANUAL_POLL)
+    # enable power save mode
+    hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_ENABLED)
+    time.sleep(0.1)
     try:
         # inject some traffic
         sa = hapd.own_addr()

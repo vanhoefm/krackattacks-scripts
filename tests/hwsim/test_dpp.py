@@ -2196,8 +2196,8 @@ def test_dpp_pkex_test_vector(dev, apdev):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
 
-    init_addr = "0c:c5:fc:af:f3:ec"
-    resp_addr = "cd:9b:a8:f3:e5:36"
+    init_addr = "ac:64:91:f4:52:07"
+    resp_addr = "6e:5e:ce:6e:f3:dd"
 
     identifier = "joes_key"
     code = "thisisreallysecret"
@@ -2209,10 +2209,10 @@ def test_dpp_pkex_test_vector(dev, apdev):
     resp_priv = "2ae8956293f49986b6d0b8169a86805d9232babb5f6813fdfe96f19d59536c60"
 
     # Initiator x/X keypair override
-    init_x_priv = "c18f91b88b2c8e12349b2f755c888c143bcfa8e42ce744ba24ef656cf893032f"
+    init_x_priv = "8365c5ed93d751bef2d92b410dc6adfd95670889183fac1bd66759ad85c3187a"
 
     # Responder y/Y keypair override
-    resp_y_priv = "cc6cf1b24f59370920df1633a818c6c777013a116a4e1e285c80ed1cc996f0f5"
+    resp_y_priv = "d98faa24d7dd3f592665d71a95c862bfd02c4c48acb0c515a41cbc6e929675ea"
 
     p256_prefix = "30310201010420"
     p256_postfix = "a00a06082a8648ce3d030107"

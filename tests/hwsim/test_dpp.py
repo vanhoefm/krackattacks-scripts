@@ -2195,38 +2195,54 @@ def test_dpp_pkex_test_vector(dev, apdev):
     """DPP and PKEX (P-256) test vector"""
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
-    dev[0].set("dpp_pkex_own_mac_override", "cd:9b:a8:f3:e5:36")
-    dev[0].set("dpp_pkex_peer_mac_override", "0c:c5:fc:af:f3:ec")
-    dev[1].set("dpp_pkex_own_mac_override", "0c:c5:fc:af:f3:ec")
-    dev[1].set("dpp_pkex_peer_mac_override", "cd:9b:a8:f3:e5:36")
+
+    init_addr = "0c:c5:fc:af:f3:ec"
+    resp_addr = "cd:9b:a8:f3:e5:36"
+
     identifier = "joes_key"
     code = "thisisreallysecret"
 
+    # Initiator bootstrapping private key
+    init_priv = "5941b51acfc702cdc1c347264beb2920db88eb1a0bf03a211868b1632233c269"
+
+    # Responder bootstrapping private key
+    resp_priv = "2ae8956293f49986b6d0b8169a86805d9232babb5f6813fdfe96f19d59536c60"
+
+    # Initiator x/X keypair override
+    init_x_priv = "c18f91b88b2c8e12349b2f755c888c143bcfa8e42ce744ba24ef656cf893032f"
+
+    # Responder y/Y keypair override
+    resp_y_priv = "cc6cf1b24f59370920df1633a818c6c777013a116a4e1e285c80ed1cc996f0f5"
+
+    p256_prefix = "30310201010420"
+    p256_postfix = "a00a06082a8648ce3d030107"
+
+    dev[0].set("dpp_pkex_own_mac_override", resp_addr)
+    dev[0].set("dpp_pkex_peer_mac_override", init_addr)
+    dev[1].set("dpp_pkex_own_mac_override", init_addr)
+    dev[1].set("dpp_pkex_peer_mac_override", resp_addr)
+
     # Responder bootstrapping key
-    priv = "2ae8956293f49986b6d0b8169a86805d9232babb5f6813fdfe96f19d59536c60"
-    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=" + p256_prefix + resp_priv + p256_postfix
     res = dev[0].request(cmd)
     if "FAIL" in res:
         raise Exception("Failed to generate bootstrapping info")
     id0 = int(res)
 
     # Responder y/Y keypair override
-    priv = "cc6cf1b24f59370920df1633a818c6c777013a116a4e1e285c80ed1cc996f0f5"
     dev[0].set("dpp_pkex_ephemeral_key_override",
-               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+               p256_prefix + resp_y_priv + p256_postfix)
 
     # Initiator bootstrapping key
-    priv = "5941b51acfc702cdc1c347264beb2920db88eb1a0bf03a211868b1632233c269"
-    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=30310201010420" + priv + "a00a06082a8648ce3d030107"
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex key=" + p256_prefix + init_priv + p256_postfix
     res = dev[1].request(cmd)
     if "FAIL" in res:
         raise Exception("Failed to generate bootstrapping info")
     id1 = int(res)
 
     # Initiator x/X keypair override
-    priv = "c18f91b88b2c8e12349b2f755c888c143bcfa8e42ce744ba24ef656cf893032f"
     dev[1].set("dpp_pkex_ephemeral_key_override",
-               "30310201010420" + priv + "a00a06082a8648ce3d030107")
+               p256_prefix + init_x_priv + p256_postfix)
 
     cmd = "DPP_PKEX_ADD own=%d identifier=%s code=%s" % (id0, identifier, code)
     res = dev[0].request(cmd)

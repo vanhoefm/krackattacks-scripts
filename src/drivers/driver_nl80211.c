@@ -5256,7 +5256,9 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	    params->key_mgmt_suite == WPA_KEY_MGMT_FILS_SHA256 ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_FILS_SHA384 ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_FILS_SHA256 ||
-	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_FILS_SHA384) {
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_FILS_SHA384 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_OWE ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_DPP) {
 		int mgmt = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 
 		switch (params->key_mgmt_suite) {
@@ -5298,6 +5300,12 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			break;
 		case WPA_KEY_MGMT_FT_FILS_SHA384:
 			mgmt = RSN_AUTH_KEY_MGMT_FT_FILS_SHA384;
+			break;
+		case WPA_KEY_MGMT_OWE:
+			mgmt = RSN_AUTH_KEY_MGMT_OWE;
+			break;
+		case WPA_KEY_MGMT_DPP:
+			mgmt = RSN_AUTH_KEY_MGMT_DPP;
 			break;
 		case WPA_KEY_MGMT_PSK:
 		default:

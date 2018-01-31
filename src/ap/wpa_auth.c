@@ -4543,7 +4543,7 @@ void wpa_auth_get_fils_aead_params(struct wpa_state_machine *sm,
 #endif /* CONFIG_FILS */
 
 
-#if CONFIG_TESTING_OPTIONS
+#ifdef CONFIG_TESTING_OPTIONS
 
 int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce,
 		       void (*cb)(void *ctx1, void *ctx2),

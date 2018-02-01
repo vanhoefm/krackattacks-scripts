@@ -861,6 +861,12 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 					       sm->p2p_dev_addr, pmk, &pmk_len);
 			if (pmk == NULL)
 				break;
+#ifdef CONFIG_IEEE80211R_AP
+			if (wpa_key_mgmt_ft_psk(sm->wpa_key_mgmt)) {
+				os_memcpy(sm->xxkey, pmk, pmk_len);
+				sm->xxkey_len = pmk_len;
+			}
+#endif /* CONFIG_IEEE80211R_AP */
 		} else {
 			pmk = sm->PMK;
 			pmk_len = sm->pmk_len;
@@ -2643,6 +2649,12 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 			if (pmk == NULL)
 				break;
 			psk_found = 1;
+#ifdef CONFIG_IEEE80211R_AP
+			if (wpa_key_mgmt_ft_psk(sm->wpa_key_mgmt)) {
+				os_memcpy(sm->xxkey, pmk, pmk_len);
+				sm->xxkey_len = pmk_len;
+			}
+#endif /* CONFIG_IEEE80211R_AP */
 		} else {
 			pmk = sm->PMK;
 			pmk_len = sm->pmk_len;

@@ -5408,10 +5408,6 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	     nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT)))
 		return -1;
 
-	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED &&
-	    nla_put_u32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED))
-		return -1;
-
 	if (params->rrm_used) {
 		u32 drv_rrm_flags = drv->capa.rrm_flags;
 		if ((!((drv_rrm_flags &
@@ -5486,6 +5482,15 @@ static int wpa_driver_nl80211_try_connect(
 
 	ret = nl80211_connect_common(drv, params, msg);
 	if (ret)
+		goto fail;
+
+	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED &&
+	    nla_put_u32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED))
+		goto fail;
+
+	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_OPTIONAL &&
+	    (drv->capa.flags & WPA_DRIVER_FLAGS_MFP_OPTIONAL) &&
+	    nla_put_u32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_OPTIONAL))
 		goto fail;
 
 	algs = 0;
@@ -5605,6 +5610,10 @@ static int wpa_driver_nl80211_associate(
 
 	ret = nl80211_connect_common(drv, params, msg);
 	if (ret)
+		goto fail;
+
+	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED &&
+	    nla_put_u32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED))
 		goto fail;
 
 	if (params->fils_kek) {

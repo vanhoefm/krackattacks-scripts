@@ -407,6 +407,10 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 	    ext_feature_isset(ext_features, len,
 			      NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_1X))
 		capa->flags |= WPA_DRIVER_FLAGS_4WAY_HANDSHAKE;
+
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_MFP_OPTIONAL))
+		capa->flags |= WPA_DRIVER_FLAGS_MFP_OPTIONAL;
 }
 
 

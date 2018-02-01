@@ -1563,6 +1563,8 @@ struct wpa_driver_capa {
  * functionality but can support only OCE STA-CFON functionality.
  */
 #define WPA_DRIVER_FLAGS_OCE_STA_CFON		0x0020000000000000ULL
+/** Driver supports MFP-optional in the connect command */
+#define WPA_DRIVER_FLAGS_MFP_OPTIONAL		0x0040000000000000ULL
 	u64 flags;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \

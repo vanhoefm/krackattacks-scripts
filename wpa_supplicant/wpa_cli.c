@@ -2487,6 +2487,8 @@ static int wpa_cli_cmd_p2p_remove_client(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "P2P_REMOVE_CLIENT", 1, argc, argv);
 }
 
+#endif /* CONFIG_P2P */
+
 
 static int wpa_cli_cmd_vendor_elem_add(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
@@ -2508,7 +2510,6 @@ static int wpa_cli_cmd_vendor_elem_remove(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "VENDOR_ELEM_REMOVE", 2, argc, argv);
 }
 
-#endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WIFI_DISPLAY
 
@@ -3421,6 +3422,7 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_remove_client", wpa_cli_cmd_p2p_remove_client,
 	  wpa_cli_complete_p2p_peer, cli_cmd_flag_none,
 	  "<address|iface=address> = remove a peer from all groups" },
+#endif /* CONFIG_P2P */
 	{ "vendor_elem_add", wpa_cli_cmd_vendor_elem_add, NULL,
 	  cli_cmd_flag_none,
 	  "<frame id> <hexdump of elem(s)> = add vendor specific IEs to frame(s)\n"
@@ -3433,7 +3435,6 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "<frame id> <hexdump of elem(s)> = remove vendor specific IE(s) in frame(s)\n"
 	  VENDOR_ELEM_FRAME_ID },
-#endif /* CONFIG_P2P */
 #ifdef CONFIG_WIFI_DISPLAY
 	{ "wfd_subelem_set", wpa_cli_cmd_wfd_subelem_set, NULL,
 	  cli_cmd_flag_none,

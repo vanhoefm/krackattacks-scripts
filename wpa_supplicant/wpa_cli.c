@@ -476,7 +476,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 #endif /* CONFIG_P2P */
 		"country", "bss_max_count", "bss_expiration_age",
 		"bss_expiration_scan_count", "filter_ssids", "filter_rssi",
-		"max_num_sta", "disassoc_low_ack",
+		"max_num_sta", "disassoc_low_ack", "ap_isolate",
 #ifdef CONFIG_HS20
 		"hs20",
 #endif /* CONFIG_HS20 */
@@ -573,7 +573,7 @@ static char ** wpa_cli_complete_get(const char *str, int pos)
 #endif /* CONFIG_P2P */
 		"bss_max_count", "bss_expiration_age",
 		"bss_expiration_scan_count", "filter_ssids", "filter_rssi",
-		"max_num_sta", "disassoc_low_ack",
+		"max_num_sta", "disassoc_low_ack", "ap_isolate",
 #ifdef CONFIG_HS20
 		"hs20",
 #endif /* CONFIG_HS20 */

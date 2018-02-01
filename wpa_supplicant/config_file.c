@@ -1282,6 +1282,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "filter_rssi=%d\n", config->filter_rssi);
 	if (config->max_num_sta != DEFAULT_MAX_NUM_STA)
 		fprintf(f, "max_num_sta=%u\n", config->max_num_sta);
+	if (config->ap_isolate != DEFAULT_AP_ISOLATE)
+		fprintf(f, "ap_isolate=%u\n", config->ap_isolate);
 	if (config->disassoc_low_ack)
 		fprintf(f, "disassoc_low_ack=%d\n", config->disassoc_low_ack);
 #ifdef CONFIG_HS20

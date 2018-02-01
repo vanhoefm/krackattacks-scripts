@@ -32,6 +32,7 @@
 #define DEFAULT_BSS_EXPIRATION_AGE 180
 #define DEFAULT_BSS_EXPIRATION_SCAN_COUNT 2
 #define DEFAULT_MAX_NUM_STA 128
+#define DEFAULT_AP_ISOLATE 0
 #define DEFAULT_ACCESS_NETWORK_TYPE 15
 #define DEFAULT_SCAN_CUR_FREQ 0
 #define DEFAULT_P2P_SEARCH_DELAY 500
@@ -841,6 +842,20 @@ struct wpa_config {
 	 * max_num_sta - Maximum number of STAs in an AP/P2P GO
 	 */
 	unsigned int max_num_sta;
+
+	/**
+	 * ap_isolate - Whether to use client isolation feature
+	 *
+	 * Client isolation can be used to prevent low-level bridging of
+	 * frames between associated stations in the BSS. By default,
+	 * this bridging is allowed (ap_isolate=0); except in P2P GO case,
+	 * where p2p_intra_bss parameter is used to determine whether to allow
+	 * intra-BSS forwarding (ap_isolate = !p2p_intra_bss).
+	 *
+	 * 0 = do not enable AP isolation
+	 * 1 = enable AP isolation
+	 */
+	int ap_isolate;
 
 	/**
 	 * freq_list - Array of allowed scan frequencies or %NULL for all

@@ -506,6 +506,9 @@ no_wps:
 	else
 		bss->max_num_sta = wpa_s->conf->max_num_sta;
 
+	if (!bss->isolate)
+		bss->isolate = wpa_s->conf->ap_isolate;
+
 	bss->disassoc_low_ack = wpa_s->conf->disassoc_low_ack;
 
 	if (wpa_s->conf->ap_vendor_elements) {

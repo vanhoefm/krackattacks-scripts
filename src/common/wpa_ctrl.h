@@ -446,7 +446,7 @@ void wpa_ctrl_close(struct wpa_ctrl *ctrl);
  *
  * This function is used to send commands to wpa_supplicant/hostapd. Received
  * response will be written to reply and reply_len is set to the actual length
- * of the reply. This function will block for up to two seconds while waiting
+ * of the reply. This function will block for up to 10 seconds while waiting
  * for the reply. If unsolicited messages are received, the blocking time may
  * be longer.
  *

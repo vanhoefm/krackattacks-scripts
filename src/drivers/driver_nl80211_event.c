@@ -131,6 +131,7 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 	C2S(NL80211_CMD_SET_QOS_MAP)
 	C2S(NL80211_CMD_ADD_TX_TS)
 	C2S(NL80211_CMD_DEL_TX_TS)
+	C2S(NL80211_CMD_EXTERNAL_AUTH)
 	default:
 		return "NL80211_CMD_UNKNOWN";
 	}
@@ -2175,6 +2176,50 @@ static void nl80211_reg_change_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_external_auth(struct wpa_driver_nl80211_data *drv,
+				  struct nlattr **tb)
+{
+	union wpa_event_data event;
+	enum nl80211_external_auth_action act;
+
+	if (!tb[NL80211_ATTR_AKM_SUITES] ||
+	    !tb[NL80211_ATTR_EXTERNAL_AUTH_ACTION] ||
+	    !tb[NL80211_ATTR_BSSID] ||
+	    !tb[NL80211_ATTR_SSID])
+		return;
+
+	os_memset(&event, 0, sizeof(event));
+	act = nla_get_u32(tb[NL80211_ATTR_EXTERNAL_AUTH_ACTION]);
+	switch (act) {
+	case NL80211_EXTERNAL_AUTH_START:
+		event.external_auth.action = EXT_AUTH_START;
+		break;
+	case NL80211_EXTERNAL_AUTH_ABORT:
+		event.external_auth.action = EXT_AUTH_ABORT;
+		break;
+	default:
+		return;
+	}
+
+	event.external_auth.key_mgmt_suite =
+		nla_get_u32(tb[NL80211_ATTR_AKM_SUITES]);
+
+	event.external_auth.ssid_len = nla_len(tb[NL80211_ATTR_SSID]);
+	if (event.external_auth.ssid_len > SSID_MAX_LEN)
+		return;
+	os_memcpy(event.external_auth.ssid, nla_data(tb[NL80211_ATTR_SSID]),
+		  event.external_auth.ssid_len);
+
+	os_memcpy(event.external_auth.bssid, nla_data(tb[NL80211_ATTR_BSSID]),
+		  ETH_ALEN);
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: External auth action: %u, AKM: 0x%x",
+		   event.external_auth.action,
+		   event.external_auth.key_mgmt_suite);
+	wpa_supplicant_event(drv->ctx, EVENT_EXTERNAL_AUTH, &event);
+}
+
 static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				 struct nlattr **tb)
 {
@@ -2372,6 +2417,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_NEW_PEER_CANDIDATE:
 		nl80211_new_peer_candidate(drv, tb);
+		break;
+	case NL80211_CMD_EXTERNAL_AUTH:
+		nl80211_external_auth(drv, tb);
 		break;
 	default:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "

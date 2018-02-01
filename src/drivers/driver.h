@@ -2052,6 +2052,36 @@ enum wpa_drv_update_connect_params_mask {
 };
 
 /**
+ * struct external_auth - External authentication trigger parameters
+ *
+ * These are used across the external authentication request and event
+ * interfaces.
+ * @action: Action type / trigger for external authentication. Only significant
+ *	for the event interface.
+ * @bssid: BSSID of the peer with which the authentication has to happen. Used
+ *	by both the request and event interface.
+ * @ssid: SSID of the AP. Used by both the request and event interface.
+ * @ssid_len: SSID length in octets.
+ * @key_mgmt_suite: AKM suite of the respective authentication. Optional for
+ *	the request interface.
+ * @status: Status code, %WLAN_STATUS_SUCCESS for successful authentication,
+ *	use %WLAN_STATUS_UNSPECIFIED_FAILURE if wpa_supplicant cannot give
+ *	the real status code for failures. Used only for the request interface
+ *	from user space to the driver.
+ */
+struct external_auth {
+	enum {
+		EXT_AUTH_START,
+		EXT_AUTH_ABORT,
+	} action;
+	u8 bssid[ETH_ALEN];
+	u8 ssid[SSID_MAX_LEN];
+	size_t ssid_len;
+	unsigned int key_mgmt_suite;
+	u16 status;
+};
+
+/**
  * struct wpa_driver_ops - Driver interface API definition
  *
  * This structure defines the API that each driver interface needs to implement
@@ -4012,6 +4042,16 @@ struct wpa_driver_ops {
 	int (*update_connect_params)(
 		void *priv, struct wpa_driver_associate_params *params,
 		enum wpa_drv_update_connect_params_mask mask);
+
+	/**
+	 * send_external_auth_status - Indicate the status of external
+	 * authentication processing to the host driver.
+	 * @priv: Private driver interface data
+	 * @params: Status of authentication processing.
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*send_external_auth_status)(void *priv,
+					 struct external_auth *params);
 };
 
 /**
@@ -4507,6 +4547,16 @@ enum wpa_event_type {
 	 * performed before start operating on this channel.
 	 */
 	EVENT_DFS_PRE_CAC_EXPIRED,
+
+	/**
+	 * EVENT_EXTERNAL_AUTH - This event interface is used by host drivers
+	 * that do not define separate commands for authentication and
+	 * association (~WPA_DRIVER_FLAGS_SME) but offload the 802.11
+	 * authentication to wpa_supplicant. This event carries all the
+	 * necessary information from the host driver for the authentication to
+	 * happen.
+	 */
+	EVENT_EXTERNAL_AUTH,
 };
 
 
@@ -5309,6 +5359,9 @@ union wpa_event_data {
 			P2P_LO_STOPPED_REASON_NOT_SUPPORTED,
 		} reason_code;
 	} p2p_lo_stop;
+
+	/* For EVENT_EXTERNAL_AUTH */
+	struct external_auth external_auth;
 };
 
 /**

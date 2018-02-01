@@ -2020,7 +2020,9 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with non-AP "
 		   "handle %p", bss->nl_mgmt);
 
-	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
+	if (drv->nlmode == NL80211_IFTYPE_ADHOC ||
+	    ((drv->capa.flags & WPA_DRIVER_FLAGS_SAE) &&
+	     !(drv->capa.flags & WPA_DRIVER_FLAGS_SME))) {
 		u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_AUTH << 4);
 
 		/* register for any AUTH message */
@@ -5366,6 +5368,11 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 
 	if ((params->auth_alg & WPA_AUTH_ALG_FILS) &&
 	    nl80211_put_fils_connect_params(drv, params, msg) != 0)
+		return -1;
+
+	if ((params->auth_alg & WPA_AUTH_ALG_SAE) &&
+	    (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) &&
+	    nla_put_flag(msg, NL80211_ATTR_EXTERNAL_AUTH_SUPPORT))
 		return -1;
 
 	return 0;
@@ -10377,6 +10384,38 @@ fail:
 }
 
 
+static int nl80211_send_external_auth_status(void *priv,
+					     struct external_auth *params)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg = NULL;
+	int ret = -1;
+
+	wpa_dbg(drv->ctx, MSG_DEBUG,
+		"nl80211: External auth status: %u", params->status);
+
+	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_EXTERNAL_AUTH);
+	if (!msg ||
+	    nla_put_u16(msg, NL80211_ATTR_STATUS_CODE, params->status) ||
+	    nla_put(msg, NL80211_ATTR_SSID, params->ssid_len,
+		    params->ssid) ||
+	    nla_put(msg, NL80211_ATTR_BSSID, ETH_ALEN, params->bssid))
+		goto fail;
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: External Auth status update failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto fail;
+	}
+fail:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -10504,4 +10543,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.configure_data_frame_filters = nl80211_configure_data_frame_filters,
 	.get_ext_capab = nl80211_get_ext_capab,
 	.update_connect_params = nl80211_update_connection_params,
+	.send_external_auth_status = nl80211_send_external_auth_status,
 };

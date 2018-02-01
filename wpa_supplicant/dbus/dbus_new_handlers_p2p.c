@@ -146,8 +146,11 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 
 	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
-	wpas_p2p_find(wpa_s, timeout, type, num_req_dev_types, req_dev_types,
-		      NULL, 0, 0, NULL, freq);
+	if (wpas_p2p_find(wpa_s, timeout, type, num_req_dev_types,
+			  req_dev_types, NULL, 0, 0, NULL, freq))
+		reply = wpas_dbus_error_unknown_error(
+			message, "Could not start P2P find");
+
 	os_free(req_dev_types);
 	return reply;
 

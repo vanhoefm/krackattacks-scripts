@@ -4267,6 +4267,16 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				break;
 			}
 
+#ifdef CONFIG_SAE
+			if (stype == WLAN_FC_STYPE_AUTH &&
+			    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+			    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SAE)) {
+				sme_external_auth_mgmt_rx(
+					wpa_s, data->rx_mgmt.frame,
+					data->rx_mgmt.frame_len);
+				break;
+			}
+#endif /* CONFIG_SAE */
 			wpa_dbg(wpa_s, MSG_DEBUG, "AP: ignore received "
 				"management frame in non-AP mode");
 			break;
@@ -4578,6 +4588,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_BEACON_LOSS);
 		bgscan_notify_beacon_loss(wpa_s);
+		break;
+	case EVENT_EXTERNAL_AUTH:
+#ifdef CONFIG_SAE
+		if (!wpa_s->current_ssid) {
+			wpa_printf(MSG_DEBUG, "SAE: current_ssid is NULL");
+			break;
+		}
+		sme_external_auth_trigger(wpa_s, data);
+#endif /* CONFIG_SAE */
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

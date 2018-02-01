@@ -2473,6 +2473,10 @@ static u8 * wpas_populate_assoc_ies(
 	}
 #endif /* CONFIG_FILS */
 #endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_SAE
+	if (wpa_s->key_mgmt & (WPA_KEY_MGMT_SAE | WPA_KEY_MGMT_FT_SAE))
+		algs = WPA_AUTH_ALG_SAE;
+#endif /* CONFIG_SAE */
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Automatic auth_alg selection: 0x%x", algs);
 	if (ssid->auth_alg) {

@@ -397,7 +397,8 @@ struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 	if (f == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to open config file '%s', "
 			   "error: %s", name, strerror(errno));
-		os_free(config);
+		if (config != cfgp)
+			os_free(config);
 		return NULL;
 	}
 

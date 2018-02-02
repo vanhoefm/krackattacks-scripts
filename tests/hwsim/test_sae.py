@@ -13,6 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip, alloc_fail, fail_test, wait_fail_trigger
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -1201,3 +1202,24 @@ def test_sae_password_long(dev, apdev):
     dev[0].request("SET sae_groups ")
     dev[0].connect("test-sae", sae_password=100*"A", key_mgmt="SAE",
                    scan_freq="2412")
+
+def test_sae_connect_cmd(dev, apdev):
+    """SAE with connect command"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    if "SAE" not in wpas.get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    wpas.request("SET sae_groups ")
+    wpas.connect("test-sae", psk="12345678", key_mgmt="SAE",
+                 scan_freq="2412", wait_connect=False)
+    # mac80211_hwsim does not support SAE offload, so accept both a successful
+    # connection and association rejection.
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED", "CTRL-EVENT-ASSOC-REJECT",
+                          "Association request to the driver failed"],
+                         timeout=15)
+    if ev is None:
+        raise Exception("No connection result reported")

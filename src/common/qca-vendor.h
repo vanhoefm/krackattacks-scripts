@@ -441,6 +441,10 @@ enum qca_radiotap_vendor_ids {
  *	driver. Thermal temperature and indication of resume completion are
  *	reported as thermal events. The attributes for this command are defined
  *	in enum qca_wlan_vendor_attr_thermal_event.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION: Sub command to set WiFi
+ * 	test configuration. Attributes for this command are defined in
+ * 	enum qca_wlan_vendor_attr_wifi_test_config.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -596,6 +600,8 @@ enum qca_nl80211_vendor_subcmds {
 	/* Thermal shutdown commands to protect wifi chip */
 	QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD = 167,
 	QCA_NL80211_VENDOR_SUBCMD_THERMAL_EVENT = 168,
+	/* Wi-Fi test configuration subcommand */
+	QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION = 169,
 };
 
 
@@ -5098,6 +5104,126 @@ enum qca_wlan_vendor_attr_thermal_event {
 	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_MAX =
 	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_AFTER_LAST - 1,
+};
+
+/**
+ * enum he_fragmentation_val - HE fragmentation support values
+ * Indicates level of dynamic fragmentation that is supported by
+ * a STA as a recipient.
+ * HE fragmentation values are defined in IEEE P802.11ax/D2.0, 9.4.2.237.2
+ * (HE MAC Capabilities Information field) and are used in HE Capabilities
+ * element to advertise the support. These values are validated in the driver
+ * to check the device capability and advertised in the HE Capabilities
+ * element. These values are used to configure testbed device to allow the
+ * advertised hardware capabilities to be downgraded for testing purposes.
+ *
+ * @HE_FRAG_DISABLE: no support for dynamic fragmentation
+ * @HE_FRAG_LEVEL1: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU, no support for dynamic fragments
+ * 	within an A-MPDU that is not an S-MPDU.
+ * @HE_FRAG_LEVEL2: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU and support for up to one dynamic
+ * 	fragment for each MSDU, each A-MSDU if supported by the recipient, and
+ * 	each MMPDU within an A-MPDU or multi-TID A-MPDU that is not an
+ * 	MPDU or S-MPDU.
+ * @HE_FRAG_LEVEL3: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU and support for multiple dynamic
+ * 	fragments for each MSDU and for each A-MSDU if supported by the
+ * 	recipient within an A-MPDU or multi-TID AMPDU and up to one dynamic
+ * 	fragment for each MMPDU in a multi-TID A-MPDU that is not an S-MPDU.
+ */
+enum he_fragmentation_val {
+	HE_FRAG_DISABLE,
+	HE_FRAG_LEVEL1,
+	HE_FRAG_LEVEL2,
+	HE_FRAG_LEVEL3,
+};
+
+/**
+ * enum he_mcs_config - HE MCS support configuration
+ *
+ * Configures the HE Tx/Rx MCS map in HE capability IE for given bandwidth.
+ * These values are used in driver to configure the HE MCS map to advertise
+ * Tx/Rx MCS map in HE capability and these values are applied for all the
+ * streams supported by the device. To configure MCS for different bandwidths,
+ * vendor command needs to be sent using this attribute with appropriate value.
+ * For example, to configure HE_80_MCS_0_7, send vendor command using HE MCS
+ * attribute with HE_80_MCS0_7. And to configure HE MCS for HE_160_MCS0_11
+ * send this command using HE MCS config attribute with value HE_160_MCS0_11.
+ * These values are used to configure testbed device to allow the advertised
+ * hardware capabilities to be downgraded for testing purposes. The enum values
+ * are defined such that BIT[1:0] indicates the MCS map value. Values 3,7 and
+ * 11 are not used as BIT[1:0] value is 3 which is used to disable MCS map.
+ * These values are validated in the driver before setting the MCS map and
+ * driver returns error if the input is other than these enum values.
+ *
+ * @HE_80_MCS0_7: support for HE 80/40/20 MHz MCS 0 to 7
+ * @HE_80_MCS0_9: support for HE 80/40/20 MHz MCS 0 to 9
+ * @HE_80_MCS0_11: support for HE 80/40/20 MHz MCS 0 to 11
+ * @HE_160_MCS0_7: support for HE 160 MHz MCS 0 to 7
+ * @HE_160_MCS0_9: support for HE 160 MHz MCS 0 to 9
+ * @HE_160_MCS0_11: support for HE 160 MHz MCS 0 to 11
+ * @HE_80P80_MCS0_7: support for HE 80p80 MHz MCS 0 to 7
+ * @HE_80P80_MCS0_9: support for HE 80p80 MHz MCS 0 to 9
+ * @HE_80P80_MCS0_11: support for HE 80p80 MHz MCS 0 to 11
+ */
+enum he_mcs_config {
+	HE_80_MCS0_7 = 0,
+	HE_80_MCS0_9 = 1,
+	HE_80_MCS0_11 = 2,
+	HE_160_MCS0_7 = 4,
+	HE_160_MCS0_9 = 5,
+	HE_160_MCS0_11 = 6,
+	HE_80P80_MCS0_7 = 8,
+	HE_80P80_MCS0_9 = 9,
+	HE_80P80_MCS0_11 = 10,
+};
+
+/* Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION
+ */
+enum qca_wlan_vendor_attr_wifi_test_config {
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_INVALID = 0,
+	/* 8-bit unsigned value to configure the driver to enable/disable
+	 * WMM feature. This attribute is used to configure testbed device.
+	 * 1-enable, 0-disable
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE = 1,
+
+	/* 8-bit unsigned value to configure the driver to accept/reject
+	 * the addba request from peer. This attribute is used to configure
+	 * the testbed device.
+	 * 1-accept addba, 0-reject addba
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ = 2,
+
+	/* 8-bit unsigned value to configure the driver to send or not to
+	 * send the addba request to peer.
+	 * This attribute is used to configure the testbed device.
+	 * 1-send addba, 0-do not send addba
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ = 3,
+
+	/* 8-bit unsigned value to indicate the HE fragmentation support.
+	 * Uses enum he_fragmentation_val values.
+	 * This attribute is used to configure the testbed device to
+	 * allow the advertised hardware capabilities to be downgraded
+	 * for testing purposes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION = 4,
+
+	/* 8-bit unsigned value to indicate the HE MCS support.
+	 * Uses enum he_mcs_config values.
+	 * This attribute is used to configure the testbed device to
+	 * allow the advertised hardware capabilities to be downgraded
+	 * for testing purposes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS = 5,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_MAX =
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */

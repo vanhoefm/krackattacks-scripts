@@ -1538,7 +1538,7 @@ static int wpa_cli_cmd_remove_cred(struct wpa_ctrl *ctrl, int argc,
 }
 
 
-static const char const *cred_fields[] = {
+static const char * const cred_fields[] = {
 	"temporary", "priority", "sp_priority", "pcsc", "eap",
 	"update_identifier", "min_dl_bandwidth_home", "min_ul_bandwidth_home",
 	"min_dl_bandwidth_roaming", "min_ul_bandwidth_roaming", "max_bss_load",

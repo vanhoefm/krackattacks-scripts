@@ -65,3 +65,11 @@ Our scripts are officially only supported on Kali Linux. Nevertheless, some user
 2. Execute `pip install pycryptodomex`
 
 They further recommended to install this python module under a virtual python environment using virtualenv.
+
+# Extra: Manual Tests
+
+It's also possible to manually perform tests by cloning the hostap git repository:
+
+	git clone git://w1.fi/srv/git/hostap.git
+	
+And following the instructions in [tests/cipher-and-key-mgmt-testing.txt](https://w1.fi/cgit/hostap/tree/tests/cipher-and-key-mgmt-testing.txt).

@@ -1267,6 +1267,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			    !bss_wpa && !bss_rsn && !bss_osen) {
 				wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 				wpa_s->wpa_proto = 0;
+				*wpa_ie_len = 0;
 				return 0;
 			}
 #endif /* CONFIG_OWE */

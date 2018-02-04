@@ -2022,3 +2022,34 @@ def test_ap_ft_reassoc_replay(dev, apdev, params):
 
     if not ok:
         raise Exception("The second hwsim connectivity test failed")
+
+def test_ap_ft_psk_file(dev, apdev):
+    """WPA2-PSK-FT AP with PSK from a file"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1a(ssid=ssid, passphrase=passphrase)
+    params['wpa_psk_file'] = 'hostapd.wpa_psk'
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[1].connect(ssid, psk="very secret",
+                   key_mgmt="FT-PSK", proto="WPA2", ieee80211w="1",
+                   scan_freq="2412", wait_connect=False)
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="1", scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].connect(ssid, psk="very secret", key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="1", scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].connect(ssid, psk="secret passphrase",
+                   key_mgmt="FT-PSK", proto="WPA2", ieee80211w="1",
+                   scan_freq="2412")
+    dev[2].connect(ssid, psk="another passphrase for all STAs",
+                   key_mgmt="FT-PSK", proto="WPA2", ieee80211w="1",
+                   scan_freq="2412")
+    ev = dev[1].wait_event(["WPA: 4-Way Handshake failed"], timeout=10)
+    if ev is None:
+        raise Exception("Timed out while waiting for failure report")
+    dev[1].request("REMOVE_NETWORK all")

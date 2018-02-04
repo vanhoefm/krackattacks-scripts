@@ -1010,7 +1010,13 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 			"file '%s' - exiting", wpa_s->confname);
 		return -1;
 	}
-	wpa_config_read(wpa_s->confanother, conf);
+	if (wpa_s->confanother &&
+	    !wpa_config_read(wpa_s->confanother, conf)) {
+		wpa_msg(wpa_s, MSG_ERROR,
+			"Failed to parse the configuration file '%s' - exiting",
+			wpa_s->confanother);
+		return -1;
+	}
 
 	conf->changed_parameters = (unsigned int) -1;
 
@@ -5219,7 +5225,13 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 			return -1;
 		}
 		wpa_s->confanother = os_rel2abs_path(iface->confanother);
-		wpa_config_read(wpa_s->confanother, wpa_s->conf);
+		if (wpa_s->confanother &&
+		    !wpa_config_read(wpa_s->confanother, wpa_s->conf)) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to read or parse configuration '%s'.",
+				   wpa_s->confanother);
+			return -1;
+		}
 
 		/*
 		 * Override ctrl_interface and driver_param if set on command

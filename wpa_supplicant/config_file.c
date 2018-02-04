@@ -464,7 +464,8 @@ struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 
 #ifndef WPA_IGNORE_CONFIG_ERRORS
 	if (errors) {
-		wpa_config_free(config);
+		if (config != cfgp)
+			wpa_config_free(config);
 		config = NULL;
 		head = NULL;
 	}

@@ -3015,7 +3015,7 @@ u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 	*owe_buf++ = WLAN_EID_EXTENSION; /* Element ID */
 	*owe_buf++ = 1 + 2 + wpabuf_len(pub); /* Length */
 	*owe_buf++ = WLAN_EID_EXT_OWE_DH_PARAM; /* Element ID Extension */
-	WPA_PUT_LE16(owe_buf, OWE_DH_GROUP);
+	WPA_PUT_LE16(owe_buf, sta->owe_group);
 	owe_buf += 2;
 	os_memcpy(owe_buf, wpabuf_head(pub), wpabuf_len(pub));
 	owe_buf += wpabuf_len(pub);

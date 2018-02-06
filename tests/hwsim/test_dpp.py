@@ -1664,8 +1664,11 @@ def run_dpp_auto_connect_legacy(dev, apdev, conf='sta-psk',
                                  passphrase="secret passphrase")
     if sae_only:
             params['wpa_key_mgmt'] = 'SAE'
+            params['ieee80211w'] = '2'
     elif psk_sae:
             params['wpa_key_mgmt'] = 'WPA-PSK SAE'
+            params['ieee80211w'] = '1'
+            params['sae_require_mfp'] = '1'
 
     hapd = hostapd.add_ap(apdev[0], params)
 

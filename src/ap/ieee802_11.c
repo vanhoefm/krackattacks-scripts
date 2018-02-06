@@ -2992,8 +2992,6 @@ u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 			  const u8 *owe_dh, u8 owe_dh_len,
 			  u8 *owe_buf, size_t owe_buf_len, u16 *reason)
 {
-	struct wpabuf *pub;
-
 	if (wpa_auth_sta_get_pmksa(sta->wpa_sm)) {
 		wpa_printf(MSG_DEBUG, "OWE: Using PMKSA caching");
 		owe_buf = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, owe_buf,
@@ -3005,25 +3003,31 @@ u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 	*reason = owe_process_assoc_req(hapd, sta, owe_dh, owe_dh_len);
 	if (*reason != WLAN_STATUS_SUCCESS)
 		return NULL;
-	pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);
-	if (!pub) {
-		*reason = WLAN_STATUS_UNSPECIFIED_FAILURE;
-		return NULL;
-	}
 
 	owe_buf = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, owe_buf,
 						owe_buf_len, NULL, 0);
 
-	/* OWE Diffie-Hellman Parameter element */
-	*owe_buf++ = WLAN_EID_EXTENSION; /* Element ID */
-	*owe_buf++ = 1 + 2 + wpabuf_len(pub); /* Length */
-	*owe_buf++ = WLAN_EID_EXT_OWE_DH_PARAM; /* Element ID Extension */
-	WPA_PUT_LE16(owe_buf, sta->owe_group);
-	owe_buf += 2;
-	os_memcpy(owe_buf, wpabuf_head(pub), wpabuf_len(pub));
-	owe_buf += wpabuf_len(pub);
-	wpabuf_free(pub);
-	*reason = WLAN_STATUS_SUCCESS;
+	if (sta->owe_ecdh) {
+		struct wpabuf *pub;
+
+		pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);
+		if (!pub) {
+			*reason = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			return owe_buf;
+		}
+
+		/* OWE Diffie-Hellman Parameter element */
+		*owe_buf++ = WLAN_EID_EXTENSION; /* Element ID */
+		*owe_buf++ = 1 + 2 + wpabuf_len(pub); /* Length */
+		*owe_buf++ = WLAN_EID_EXT_OWE_DH_PARAM; /* Element ID Extension
+							 */
+		WPA_PUT_LE16(owe_buf, sta->owe_group);
+		owe_buf += 2;
+		os_memcpy(owe_buf, wpabuf_head(pub), wpabuf_len(pub));
+		owe_buf += wpabuf_len(pub);
+		wpabuf_free(pub);
+	}
+
 	return owe_buf;
 }
 #endif /* CONFIG_OWE */

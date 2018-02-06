@@ -1165,7 +1165,7 @@ static struct wpa_ssid * wpas_dpp_add_network(struct wpa_supplicant *wpa_s,
 
 	if (auth->connector) {
 		ssid->key_mgmt = WPA_KEY_MGMT_DPP;
-		ssid->ieee80211w = 1;
+		ssid->ieee80211w = MGMT_FRAME_PROTECTION_REQUIRED;
 		ssid->dpp_connector = os_strdup(auth->connector);
 		if (!ssid->dpp_connector)
 			goto fail;
@@ -1200,7 +1200,7 @@ static struct wpa_ssid * wpas_dpp_add_network(struct wpa_supplicant *wpa_s,
 		if (auth->akm == DPP_AKM_SAE || auth->akm == DPP_AKM_PSK_SAE)
 			ssid->key_mgmt |= WPA_KEY_MGMT_SAE |
 				WPA_KEY_MGMT_FT_SAE;
-		ssid->ieee80211w = 1;
+		ssid->ieee80211w = MGMT_FRAME_PROTECTION_OPTIONAL;
 		if (auth->passphrase[0]) {
 			if (wpa_config_set_quoted(ssid, "psk",
 						  auth->passphrase) < 0)

@@ -2988,9 +2988,9 @@ done:
 
 
 #ifdef CONFIG_OWE
-u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
-			  const u8 *owe_dh, u8 owe_dh_len,
-			  u8 *owe_buf, size_t owe_buf_len, u16 *reason)
+u8 * owe_assoc_req_process(struct hostapd_data *hapd, struct sta_info *sta,
+			   const u8 *owe_dh, u8 owe_dh_len,
+			   u8 *owe_buf, size_t owe_buf_len, u16 *reason)
 {
 	if (wpa_auth_sta_get_pmksa(sta->wpa_sm)) {
 		wpa_printf(MSG_DEBUG, "OWE: Using PMKSA caching");

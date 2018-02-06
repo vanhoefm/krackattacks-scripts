@@ -19,6 +19,7 @@ def test_owe(dev, apdev):
         raise HwsimSkip("OWE not supported")
     params = { "ssid": "owe",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "OWE",
                "rsn_pairwise": "CCMP" }
     hapd = hostapd.add_ap(apdev[0], params)
@@ -29,7 +30,8 @@ def test_owe(dev, apdev):
     if "[WPA2-OWE-CCMP]" not in bss['flags']:
         raise Exception("OWE AKM not recognized: " + bss['flags'])
 
-    dev[0].connect("owe", key_mgmt="OWE")
+    dev[0].connect("owe", key_mgmt="OWE", ieee80211w="2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
     val = dev[0].get_status_field("key_mgmt")
     if val != "OWE":

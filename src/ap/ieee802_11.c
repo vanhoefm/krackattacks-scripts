@@ -3011,6 +3011,9 @@ u8 * owe_auth_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 		return NULL;
 	}
 
+	owe_buf = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, owe_buf,
+						owe_buf_len, NULL, 0);
+
 	/* OWE Diffie-Hellman Parameter element */
 	*owe_buf++ = WLAN_EID_EXTENSION; /* Element ID */
 	*owe_buf++ = 1 + 2 + wpabuf_len(pub); /* Length */

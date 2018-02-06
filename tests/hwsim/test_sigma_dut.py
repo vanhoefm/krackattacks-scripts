@@ -970,6 +970,7 @@ def test_sigma_dut_dpp_qr_init_enrollee(dev, apdev):
 
     params = { "ssid": "DPPNET01",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "DPP",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
@@ -1035,6 +1036,7 @@ def run_sigma_dut_dpp_qr_mutual_init_enrollee_check(dev, apdev, extra=''):
 
     params = { "ssid": "DPPNET01",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "DPP",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
@@ -1124,6 +1126,7 @@ def run_sigma_dut_dpp_qr_mutual_resp_enrollee(dev, apdev, extra=None):
 
     params = { "ssid": "DPPNET01",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "DPP",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
@@ -1221,6 +1224,7 @@ def run_sigma_dut_dpp_qr_mutual_init_enrollee(dev, apdev, resp_pending):
 
     params = { "ssid": "DPPNET01",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "DPP",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,
@@ -1883,6 +1887,7 @@ def init_sigma_dut_dpp_proto_peer_disc_req(dev, apdev):
 
     params = { "ssid": "DPPNET01",
                "wpa": "2",
+               "ieee80211w": "2",
                "wpa_key_mgmt": "DPP",
                "rsn_pairwise": "CCMP",
                "dpp_connector": ap_connector,

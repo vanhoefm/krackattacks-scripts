@@ -234,6 +234,7 @@ def run_owe_transition_mode_multi_bss(dev, apdev):
     ifname2 = apdev[0]['ifname'] + '-2'
     hapd1 = hostapd.add_bss(apdev[0], ifname1, 'owe-bss-1.conf')
     hapd2 = hostapd.add_bss(apdev[0], ifname2, 'owe-bss-2.conf')
+    hapd2.bssidx = 1
 
     bssid = hapd1.own_addr()
     bssid2 = hapd2.own_addr()
@@ -247,10 +248,13 @@ def run_owe_transition_mode_multi_bss(dev, apdev):
     dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].connect("transition-mode-open", key_mgmt="OWE")
-    hwsim_utils.test_connectivity(dev[0], hapd2)
+    val = dev[0].get_status_field("bssid")
+    if val != bssid2:
+        raise Exception("Unexpected bssid: " + val)
     val = dev[0].get_status_field("key_mgmt")
     if val != "OWE":
         raise Exception("Unexpected key_mgmt: " + val)
+    hwsim_utils.test_connectivity(dev[0], hapd2)
 
 def test_owe_unsupported_group(dev, apdev):
     """Opportunistic Wireless Encryption and unsupported group"""

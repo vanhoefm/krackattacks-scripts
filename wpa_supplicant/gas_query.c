@@ -862,6 +862,15 @@ int gas_query_stop(struct gas_query *gas, u8 dialog_token)
 
 	dl_list_for_each(query, &gas->pending, struct gas_query_pending, list) {
 		if (query->dialog_token == dialog_token) {
+			if (!gas->work) {
+				/* The pending radio work has not yet been
+				 * started, but the pending entry has a
+				 * reference to the soon to be freed query.
+				 * Need to remove that radio work now to avoid
+				 * leaving behind a reference to freed memory.
+				 */
+				radio_remove_pending_work(gas->wpa_s, query);
+			}
 			gas_query_done(gas, query, GAS_QUERY_STOPPED);
 			return 0;
 		}

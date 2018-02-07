@@ -1,6 +1,7 @@
 /*
  * wpa_supplicant - DPP
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1654,6 +1655,62 @@ fail:
 }
 
 
+static int wpas_dpp_allow_ir(struct wpa_supplicant *wpa_s, unsigned int freq)
+{
+	int i, j;
+
+	if (!wpa_s->hw.modes)
+		return -1;
+
+	for (i = 0; i < wpa_s->hw.num_modes; i++) {
+		struct hostapd_hw_modes *mode = &wpa_s->hw.modes[i];
+
+		for (j = 0; j < mode->num_channels; j++) {
+			struct hostapd_channel_data *chan = &mode->channels[j];
+
+			if (chan->freq != (int) freq)
+				continue;
+
+			if (chan->flag & (HOSTAPD_CHAN_DISABLED |
+					  HOSTAPD_CHAN_NO_IR |
+					  HOSTAPD_CHAN_RADAR))
+				continue;
+
+			return 1;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "DPP: Frequency %u MHz not supported or does not allow PKEX initiation in the current channel list",
+		   freq);
+
+	return 0;
+}
+
+
+static int wpas_dpp_pkex_next_channel(struct wpa_supplicant *wpa_s,
+				      struct dpp_pkex *pkex)
+{
+	if (pkex->freq == 2437)
+		pkex->freq = 5745;
+	else if (pkex->freq == 5745)
+		pkex->freq = 5220;
+	else if (pkex->freq == 5220)
+		pkex->freq = 60480;
+	else
+		return -1; /* no more channels to try */
+
+	if (wpas_dpp_allow_ir(wpa_s, pkex->freq) == 1) {
+		wpa_printf(MSG_DEBUG, "DPP: Try to initiate on %u MHz",
+			   pkex->freq);
+		return 0;
+	}
+
+	/* Could not use this channel - try the next one */
+	return wpas_dpp_pkex_next_channel(wpa_s, pkex);
+}
+
+
 static void wpas_dpp_pkex_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -1662,11 +1719,14 @@ static void wpas_dpp_pkex_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 	if (!pkex || !pkex->exchange_req)
 		return;
 	if (pkex->exch_req_tries >= 5) {
-		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
-			"No response from PKEX peer");
-		dpp_pkex_free(pkex);
-		wpa_s->dpp_pkex = NULL;
-		return;
+		if (wpas_dpp_pkex_next_channel(wpa_s, pkex) < 0) {
+			wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_FAIL
+				"No response from PKEX peer");
+			dpp_pkex_free(pkex);
+			wpa_s->dpp_pkex = NULL;
+			return;
+		}
+		pkex->exch_req_tries = 0;
 	}
 
 	pkex->exch_req_tries++;
@@ -2400,7 +2460,6 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 		wait_time = wpa_s->max_remain_on_chan;
 		if (wait_time > 2000)
 			wait_time = 2000;
-		/* TODO: Support for 5 GHz channels */
 		pkex->freq = 2437;
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_TX "dst=" MACSTR
 			" freq=%u type=%d",

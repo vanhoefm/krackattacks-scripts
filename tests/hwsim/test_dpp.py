@@ -159,6 +159,12 @@ def test_dpp_qr_code_curve_select(dev, apdev):
         ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
         if ev is None:
             raise Exception("DPP authentication did not succeed (Initiator)")
+        ev = dev[0].wait_event(["DPP-CONF-FAILED"], timeout=2)
+        if ev is None:
+            raise Exception("DPP configuration result not seen (Enrollee)")
+        ev = dev[1].wait_event(["DPP-CONF-SENT"], timeout=2)
+        if ev is None:
+            raise Exception("DPP configuration result not seen (Responder)")
         dev[0].request("DPP_STOP_LISTEN")
         dev[1].request("DPP_STOP_LISTEN")
         dev[0].dump_monitor()

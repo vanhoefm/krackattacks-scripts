@@ -1,11 +1,13 @@
 # Test cases for Device Provisioning Protocol (DPP)
 # Copyright (c) 2017, Qualcomm Atheros, Inc.
+# Copyright (c) 2018, The Linux Foundation
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
 import logging
 logger = logging.getLogger()
+import subprocess
 import time
 
 import hostapd
@@ -2193,6 +2195,57 @@ def run_dpp_pkex(dev, apdev, curve=None, init_extra="", check_config=False):
         ev = dev[0].wait_event(["DPP-CONF-RECEIVED"], timeout=5)
         if ev is None:
             raise Exception("DPP configuration not completed (Enrollee)")
+
+def test_dpp_pkex_5ghz(dev, apdev):
+    """DPP and PKEX on 5 GHz"""
+    try:
+        dev[0].request("SET country US")
+        dev[1].request("SET country US")
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=1)
+        if ev is None:
+            ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"],
+                                          timeout=1)
+        run_dpp_pkex_5ghz(dev, apdev)
+    finally:
+        dev[0].request("SET country 00")
+        dev[1].request("SET country 00")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+
+def run_dpp_pkex_5ghz(dev, apdev):
+    check_dpp_capab(dev[0])
+    check_dpp_capab(dev[1])
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id0 = int(res)
+
+    cmd = "DPP_BOOTSTRAP_GEN type=pkex"
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to generate bootstrapping info")
+    id1 = int(res)
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test code=secret" % (id0)
+    res = dev[0].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (responder)")
+    cmd = "DPP_LISTEN 5745"
+    if "OK" not in dev[0].request(cmd):
+        raise Exception("Failed to start listen operation")
+
+    cmd = "DPP_PKEX_ADD own=%d identifier=test init=1 code=secret" % (id1)
+    res = dev[1].request(cmd)
+    if "FAIL" in res:
+        raise Exception("Failed to set PKEX data (initiator)")
+
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS", "DPP-FAIL"], timeout=20)
+    if ev is None or "DPP-AUTH-SUCCESS" not in ev:
+        raise Exception("DPP authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("DPP authentication did not succeed (Responder)")
 
 def test_dpp_pkex_test_vector(dev, apdev):
     """DPP and PKEX (P-256) test vector"""

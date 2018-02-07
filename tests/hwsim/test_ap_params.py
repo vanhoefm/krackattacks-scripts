@@ -158,6 +158,76 @@ def test_ap_acl_deny(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected association")
 
+def test_ap_acl_mgmt(dev, apdev):
+    """MAC ACL accept/deny management"""
+    ssid = "acl"
+    params = {}
+    params['ssid'] = ssid
+    params['deny_mac_file'] = "hostapd.macaddr"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    accept = hapd.request("ACCEPT_ACL SHOW").splitlines()
+    logger.info("accept: " + str(accept))
+    deny = hapd.request("DENY_ACL SHOW").splitlines()
+    logger.info("deny: " + str(deny))
+    if len(accept) != 0:
+        raise Exception("Unexpected number of accept entries")
+    if len(deny) != 3:
+        raise Exception("Unexpected number of deny entries")
+    if "01:01:01:01:01:01 VLAN_ID=0" not in deny:
+        raise Exception("Missing deny entry")
+
+    hapd.request("ACCEPT_ACL ADD_MAC 22:33:44:55:66:77")
+    hapd.request("DENY_ACL ADD_MAC 22:33:44:55:66:88 VLAN_ID=2")
+
+    accept = hapd.request("ACCEPT_ACL SHOW").splitlines()
+    logger.info("accept: " + str(accept))
+    deny = hapd.request("DENY_ACL SHOW").splitlines()
+    logger.info("deny: " + str(deny))
+    if len(accept) != 1:
+        raise Exception("Unexpected number of accept entries (2)")
+    if len(deny) != 4:
+        raise Exception("Unexpected number of deny entries (2)")
+    if "01:01:01:01:01:01 VLAN_ID=0" not in deny:
+        raise Exception("Missing deny entry (2)")
+    if "22:33:44:55:66:88 VLAN_ID=2" not in deny:
+        raise Exception("Missing deny entry (2)")
+    if "22:33:44:55:66:77 VLAN_ID=0" not in accept:
+        raise Exception("Missing accept entry (2)")
+
+    hapd.request("ACCEPT_ACL DEL_MAC 22:33:44:55:66:77")
+    hapd.request("DENY_ACL DEL_MAC 22:33:44:55:66:88")
+
+    accept = hapd.request("ACCEPT_ACL SHOW").splitlines()
+    logger.info("accept: " + str(accept))
+    deny = hapd.request("DENY_ACL SHOW").splitlines()
+    logger.info("deny: " + str(deny))
+    if len(accept) != 0:
+        raise Exception("Unexpected number of accept entries (3)")
+    if len(deny) != 3:
+        raise Exception("Unexpected number of deny entries (3)")
+    if "01:01:01:01:01:01 VLAN_ID=0" not in deny:
+        raise Exception("Missing deny entry (3)")
+
+    hapd.request("ACCEPT_ACL CLEAR")
+    hapd.request("DENY_ACL CLEAR")
+
+    accept = hapd.request("ACCEPT_ACL SHOW").splitlines()
+    logger.info("accept: " + str(accept))
+    deny = hapd.request("DENY_ACL SHOW").splitlines()
+    logger.info("deny: " + str(deny))
+    if len(accept) != 0:
+        raise Exception("Unexpected number of accept entries (4)")
+    if len(deny) != 0:
+        raise Exception("Unexpected number of deny entries (4)")
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[0].dump_monitor()
+    hapd.request("DENY_ACL ADD_MAC " + dev[0].own_addr())
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+
 @remote_compatible
 def test_ap_wds_sta(dev, apdev):
     """WPA2-PSK AP with STA using 4addr mode"""

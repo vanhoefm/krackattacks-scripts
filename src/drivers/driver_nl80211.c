@@ -7615,6 +7615,7 @@ static int nl80211_pmkid(struct i802_bss *bss, int cmd,
 			 struct wpa_pmkid_params *params)
 {
 	struct nl_msg *msg;
+	const size_t PMK_MAX_LEN = 48; /* current cfg80211 limit */
 
 	if (!(msg = nl80211_bss_msg(bss, 0, cmd)) ||
 	    (params->pmkid &&
@@ -7626,7 +7627,7 @@ static int nl80211_pmkid(struct i802_bss *bss, int cmd,
 	    (params->fils_cache_id &&
 	     nla_put(msg, NL80211_ATTR_FILS_CACHE_ID, 2,
 		     params->fils_cache_id)) ||
-	    (params->pmk_len &&
+	    (params->pmk_len && params->pmk_len <= PMK_MAX_LEN &&
 	     nla_put(msg, NL80211_ATTR_PMK, params->pmk_len, params->pmk))) {
 		nlmsg_free(msg);
 		return -ENOBUFS;

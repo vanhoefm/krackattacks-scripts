@@ -7639,6 +7639,7 @@ static int nl80211_pmkid(struct i802_bss *bss, int cmd,
 static int nl80211_add_pmkid(void *priv, struct wpa_pmkid_params *params)
 {
 	struct i802_bss *bss = priv;
+	int ret;
 
 	if (params->bssid)
 		wpa_printf(MSG_DEBUG, "nl80211: Add PMKID for " MACSTR,
@@ -7650,13 +7651,21 @@ static int nl80211_add_pmkid(void *priv, struct wpa_pmkid_params *params)
 			   wpa_ssid_txt(params->ssid, params->ssid_len));
 	}
 
-	return nl80211_pmkid(bss, NL80211_CMD_SET_PMKSA, params);
+	ret = nl80211_pmkid(bss, NL80211_CMD_SET_PMKSA, params);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: NL80211_CMD_SET_PMKSA failed: %d (%s)",
+			   ret, strerror(-ret));
+	}
+
+	return ret;
 }
 
 
 static int nl80211_remove_pmkid(void *priv, struct wpa_pmkid_params *params)
 {
 	struct i802_bss *bss = priv;
+	int ret;
 
 	if (params->bssid)
 		wpa_printf(MSG_DEBUG, "nl80211: Delete PMKID for " MACSTR,
@@ -7668,7 +7677,14 @@ static int nl80211_remove_pmkid(void *priv, struct wpa_pmkid_params *params)
 			   wpa_ssid_txt(params->ssid, params->ssid_len));
 	}
 
-	return nl80211_pmkid(bss, NL80211_CMD_DEL_PMKSA, params);
+	ret = nl80211_pmkid(bss, NL80211_CMD_DEL_PMKSA, params);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: NL80211_CMD_DEL_PMKSA failed: %d (%s)",
+			   ret, strerror(-ret));
+	}
+
+	return ret;
 }
 
 

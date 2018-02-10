@@ -312,7 +312,7 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 	if (buf == NULL)
 		return -1;
 
-	res = gas_query_req(wpa_s->gas, bss->bssid, bss->freq, buf,
+	res = gas_query_req(wpa_s->gas, bss->bssid, bss->freq, 0, buf,
 			    interworking_anqp_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "ANQP: Failed to send Query Request");
@@ -2752,7 +2752,7 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 	if (buf == NULL)
 		return -1;
 
-	res = gas_query_req(wpa_s->gas, dst, freq, buf, anqp_resp_cb, wpa_s);
+	res = gas_query_req(wpa_s->gas, dst, freq, 0, buf, anqp_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "ANQP: Failed to send Query Request");
 		wpabuf_free(buf);
@@ -3154,7 +3154,7 @@ int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 	} else
 		wpabuf_put_le16(buf, 0);
 
-	res = gas_query_req(wpa_s->gas, dst, freq, buf, gas_resp_cb, wpa_s);
+	res = gas_query_req(wpa_s->gas, dst, freq, 0, buf, gas_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "GAS: Failed to send Query Request");
 		wpabuf_free(buf);

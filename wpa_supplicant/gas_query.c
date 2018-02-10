@@ -42,6 +42,7 @@ struct gas_query_pending {
 	unsigned int wait_comeback:1;
 	unsigned int offchannel_tx_started:1;
 	unsigned int retry:1;
+	unsigned int wildcard_bssid:1;
 	int freq;
 	u16 status_code;
 	struct wpabuf *req;
@@ -302,10 +303,11 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 	if (gas->wpa_s->max_remain_on_chan &&
 	    wait_time > gas->wpa_s->max_remain_on_chan)
 		wait_time = gas->wpa_s->max_remain_on_chan;
-	if (!gas->wpa_s->conf->gas_address3 ||
-	    (gas->wpa_s->current_ssid &&
-	     gas->wpa_s->wpa_state >= WPA_ASSOCIATED &&
-	     os_memcmp(query->addr, gas->wpa_s->bssid, ETH_ALEN) == 0))
+	if (!query->wildcard_bssid &&
+	    (!gas->wpa_s->conf->gas_address3 ||
+	     (gas->wpa_s->current_ssid &&
+	      gas->wpa_s->wpa_state >= WPA_ASSOCIATED &&
+	      os_memcmp(query->addr, gas->wpa_s->bssid, ETH_ALEN) == 0)))
 		bssid = query->addr;
 	else
 		bssid = wildcard_bssid;
@@ -805,7 +807,7 @@ static int gas_query_set_sa(struct gas_query *gas,
  * Returns: dialog token (>= 0) on success or -1 on failure
  */
 int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
-		  struct wpabuf *req,
+		  int wildcard_bssid, struct wpabuf *req,
 		  void (*cb)(void *ctx, const u8 *dst, u8 dialog_token,
 			     enum gas_query_result result,
 			     const struct wpabuf *adv_proto,
@@ -833,6 +835,7 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 	}
 	os_memcpy(query->addr, dst, ETH_ALEN);
 	query->dialog_token = dialog_token;
+	query->wildcard_bssid = !!wildcard_bssid;
 	query->freq = freq;
 	query->cb = cb;
 	query->ctx = ctx;

@@ -123,11 +123,12 @@ def report(conn, prefill, build, commit, run, test, result, duration, logdir,
                              logdir + "/" + test + "." + log)
 
 class DataCollector(object):
-    def __init__(self, logdir, testname, tracing, dmesg):
+    def __init__(self, logdir, testname, args):
         self._logdir = logdir
         self._testname = testname
-        self._tracing = tracing
-        self._dmesg = dmesg
+        self._tracing = args.tracing
+        self._dmesg = args.dmesg
+        self._dbus = args.dbus
     def __enter__(self):
         if self._tracing:
             output = os.path.abspath(os.path.join(self._logdir, '%s.dat' % (self._testname, )))
@@ -142,6 +143,16 @@ class DataCollector(object):
             res = self._trace_cmd.returncode
             if res:
                 print "Failed calling trace-cmd: returned exit status %d" % res
+                sys.exit(1)
+        if self._dbus:
+            output = os.path.abspath(os.path.join(self._logdir, '%s.dbus' % (self._testname, )))
+            self._dbus_cmd = subprocess.Popen(['dbus-monitor', '--system'],
+                                              stdout=open(output, 'w'),
+                                              stderr=open('/dev/null', 'w'),
+                                              cwd=self._logdir)
+            res = self._dbus_cmd.returncode
+            if res:
+                print "Failed calling dbus-monitor: returned exit status %d" % res
                 sys.exit(1)
     def __exit__(self, type, value, traceback):
         if self._tracing:
@@ -214,6 +225,8 @@ def main():
                         help='collect tracing per test case (in log directory)')
     parser.add_argument('-D', action='store_true', dest='dmesg',
                         help='collect dmesg per test case (in log directory)')
+    parser.add_argument('--dbus', action='store_true', dest='dbus',
+                        help='collect dbus per test case (in log directory)')
     parser.add_argument('--shuffle-tests', action='store_true',
                         dest='shuffle_tests',
                         help='Shuffle test cases to randomize order')
@@ -414,7 +427,7 @@ def main():
             logger.addHandler(log_handler)
 
         reset_ok = True
-        with DataCollector(args.logdir, name, args.tracing, args.dmesg):
+        with DataCollector(args.logdir, name, args):
             count = count + 1
             msg = "START {} {}/{}".format(name, count, num_tests)
             logger.info(msg)

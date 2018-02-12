@@ -45,7 +45,7 @@ make
 cd ../hostapd
 cp ../tests/hwsim/example-hostapd.config .config
 make clean
-make hostapd hlr_auc_gw
+make hostapd hostapd_cli hlr_auc_gw
 cd ../wlantest
 make clean
 make

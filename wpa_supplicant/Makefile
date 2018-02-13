@@ -1868,7 +1868,7 @@ preauth_test: $(OBJS_t2)
 	@$(E) "  LD " $@
 
 wpa_passphrase: $(OBJS_p)
-	$(Q)$(LDO) $(LDFLAGS) -o wpa_passphrase $(OBJS_p) $(LIBS_p)
+	$(Q)$(LDO) $(LDFLAGS) -o wpa_passphrase $(OBJS_p) $(LIBS_p) $(LIBS)
 	@$(E) "  LD " $@
 
 wpa_cli: $(OBJS_c)

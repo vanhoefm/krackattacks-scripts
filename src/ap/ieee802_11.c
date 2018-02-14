@@ -1577,20 +1577,21 @@ void ieee802_11_finish_fils_auth(struct hostapd_data *hapd,
 #endif /* CONFIG_FILS */
 
 
-static int
+int
 ieee802_11_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			   const u8 *msg, size_t len, u32 *session_timeout,
 			   u32 *acct_interim_interval,
 			   struct vlan_description *vlan_id,
 			   struct hostapd_sta_wpa_psk_short **psk,
-			   char **identity, char **radius_cui)
+			   char **identity, char **radius_cui, int is_probe_req)
 {
 	int res;
 
 	os_memset(vlan_id, 0, sizeof(*vlan_id));
 	res = hostapd_allowed_address(hapd, addr, msg, len,
 				      session_timeout, acct_interim_interval,
-				      vlan_id, psk, identity, radius_cui);
+				      vlan_id, psk, identity, radius_cui,
+				      is_probe_req);
 
 	if (res == HOSTAPD_ACL_REJECT) {
 		wpa_printf(MSG_INFO,
@@ -1826,8 +1827,12 @@ static void handle_auth(struct hostapd_data *hapd,
 
 	res = ieee802_11_allowed_address(
 		hapd, mgmt->sa, (const u8 *) mgmt, len, &session_timeout,
-		&acct_interim_interval, &vlan_id, &psk, &identity, &radius_cui);
+		&acct_interim_interval, &vlan_id, &psk, &identity, &radius_cui,
+		0);
 	if (res == HOSTAPD_ACL_REJECT) {
+		wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+			"Ignore Authentication frame from " MACSTR
+			" due to ACL reject", MAC2STR(mgmt->sa));
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
@@ -3189,8 +3194,12 @@ static void handle_assoc(struct hostapd_data *hapd,
 			acl_res = ieee802_11_allowed_address(
 				hapd, mgmt->sa, (const u8 *) mgmt, len,
 				&session_timeout, &acct_interim_interval,
-				&vlan_id, &psk, &identity, &radius_cui);
+				&vlan_id, &psk, &identity, &radius_cui, 0);
 			if (acl_res == HOSTAPD_ACL_REJECT) {
+				wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+					"Ignore Association Request frame from "
+					MACSTR " due to ACL reject",
+					MAC2STR(mgmt->sa));
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 				goto fail;
 			}

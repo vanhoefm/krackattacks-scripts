@@ -951,7 +951,7 @@ nl80211_find_drv(struct nl80211_global *global, int idx, u8 *buf, size_t len,
 
 
 static void nl80211_refresh_mac(struct wpa_driver_nl80211_data *drv,
-				int ifindex)
+				int ifindex, int notify)
 {
 	struct i802_bss *bss;
 	u8 addr[ETH_ALEN];
@@ -970,6 +970,9 @@ static void nl80211_refresh_mac(struct wpa_driver_nl80211_data *drv,
 			   ifindex, bss->ifname,
 			   MAC2STR(bss->addr), MAC2STR(addr));
 		os_memcpy(bss->addr, addr, ETH_ALEN);
+		if (notify)
+			wpa_supplicant_event(drv->ctx,
+					     EVENT_INTERFACE_MAC_CHANGED, NULL);
 	}
 }
 
@@ -1041,11 +1044,11 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		namebuf[0] = '\0';
 		if (if_indextoname(ifi->ifi_index, namebuf) &&
 		    linux_iface_up(drv->global->ioctl_sock, namebuf) > 0) {
-			/* Re-read MAC address as it may have changed */
-			nl80211_refresh_mac(drv, ifi->ifi_index);
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "
 				   "event since interface %s is up", namebuf);
 			drv->ignore_if_down_event = 0;
+			/* Re-read MAC address as it may have changed */
+			nl80211_refresh_mac(drv, ifi->ifi_index, 1);
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "nl80211: Interface down (%s/%s)",
@@ -1091,7 +1094,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				   "removed", drv->first_bss->ifname);
 		} else {
 			/* Re-read MAC address as it may have changed */
-			nl80211_refresh_mac(drv, ifi->ifi_index);
+			nl80211_refresh_mac(drv, ifi->ifi_index, 0);
 
 			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;

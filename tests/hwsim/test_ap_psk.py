@@ -2660,12 +2660,16 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
                '30120100000fac040100000fac040100000fac02'),
               ('Reserved RSN Capabilities bits set',
                '30140100000fac040100000fac040100000fac023cff'),
+              ('Truncated RSN Capabilities field',
+               '30130100000fac040100000fac040100000fac023c'),
               ('Extra pairwise cipher suite (unsupported)',
                '30180100000fac040200ffffffff000fac040100000fac020c00'),
               ('Extra AKM suite (unsupported)',
                '30180100000fac040100000fac040200ffffffff000fac020c00'),
               ('PMKIDCount field included',
                '30160100000fac040100000fac040100000fac020c000000'),
+              ('Truncated PMKIDCount field',
+               '30150100000fac040100000fac040100000fac020c0000'),
               ('Unexpected Group Management Cipher Suite with PMF disabled',
                '301a0100000fac040100000fac040100000fac020c000000000fac06'),
               ('Extra octet after defined fields (future extensibility)',
@@ -2673,6 +2677,8 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
     for txt,ie in tests:
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+        dev[0].request("NOTE " + txt)
         logger.info(txt)
         hapd.disable()
         hapd.set('own_ie_override', ie)

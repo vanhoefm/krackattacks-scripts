@@ -2533,6 +2533,18 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 		return -1;
 	}
 #endif /* OPENSSL_VERSION_NUMBER */
+
+#ifdef OPENSSL_IS_BORINGSSL
+	if (openssl_ciphers && os_strcmp(openssl_ciphers, "SUITEB192") == 0) {
+		int nid[1] = { NID_secp384r1 };
+
+		if (SSL_set1_curves(ssl, nid, 1) != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B curves");
+			return -1;
+		}
+	}
+#endif /* OPENSSL_IS_BORINGSSL */
 #endif /* CONFIG_SUITEB */
 
 	return 0;
@@ -4258,6 +4270,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	const char *cert_id = params->cert_id;
 	const char *ca_cert_id = params->ca_cert_id;
 	const char *engine_id = params->engine ? params->engine_id : NULL;
+	const char *ciphers;
 
 	if (conn == NULL)
 		return -1;
@@ -4377,11 +4390,21 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
-	if (params->openssl_ciphers &&
-	    SSL_set_cipher_list(conn->ssl, params->openssl_ciphers) != 1) {
+	ciphers = params->openssl_ciphers;
+#ifdef CONFIG_SUITEB
+#ifdef OPENSSL_IS_BORINGSSL
+	if (ciphers && os_strcmp(ciphers, "SUITEB192") == 0) {
+		/* BoringSSL removed support for SUITEB192, so need to handle
+		 * this with hardcoded ciphersuite and additional checks for
+		 * other parameters. */
+		ciphers = "ECDHE-ECDSA-AES256-GCM-SHA384";
+	}
+#endif /* OPENSSL_IS_BORINGSSL */
+#endif /* CONFIG_SUITEB */
+	if (ciphers && SSL_set_cipher_list(conn->ssl, ciphers) != 1) {
 		wpa_printf(MSG_INFO,
 			   "OpenSSL: Failed to set cipher string '%s'",
-			   params->openssl_ciphers);
+			   ciphers);
 		return -1;
 	}
 

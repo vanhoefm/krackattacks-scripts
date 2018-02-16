@@ -18,9 +18,9 @@ def check_suite_b_capa(dev):
         raise HwsimSkip("BIP-GMAC-128 not supported")
     if "WPA-EAP-SUITE-B" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("WPA-EAP-SUITE-B not supported")
-    check_suite_b_tls_lib(dev)
+    check_suite_b_tls_lib(dev, level128=True)
 
-def check_suite_b_tls_lib(dev):
+def check_suite_b_tls_lib(dev, dhe=False, level128=False):
     tls = dev[0].request("GET tls_library")
     if tls.startswith("GnuTLS"):
         return
@@ -29,6 +29,9 @@ def check_suite_b_tls_lib(dev):
     supported = False
     for ver in [ '1.0.2', '1.1.0' ]:
         if "build=OpenSSL " + ver in tls and "run=OpenSSL " + ver in tls:
+            supported = True
+            break
+        if not dhe and not level128 and "build=OpenSSL " + ver in tls and "run=BoringSSL" in tls:
             supported = True
             break
     if not supported:
@@ -133,14 +136,14 @@ def test_suite_b_radius(dev, apdev):
                    private_key="auth_serv/ec-user.key",
                    pairwise="GCMP", group="GCMP", scan_freq="2412")
 
-def check_suite_b_192_capa(dev):
+def check_suite_b_192_capa(dev, dhe=False):
     if "GCMP-256" not in dev[0].get_capability("pairwise"):
         raise HwsimSkip("GCMP-256 not supported")
     if "BIP-GMAC-256" not in dev[0].get_capability("group_mgmt"):
         raise HwsimSkip("BIP-GMAC-256 not supported")
     if "WPA-EAP-SUITE-B-192" not in dev[0].get_capability("key_mgmt"):
         raise HwsimSkip("WPA-EAP-SUITE-B-192 not supported")
-    check_suite_b_tls_lib(dev)
+    check_suite_b_tls_lib(dev, dhe=dhe)
 
 def suite_b_192_ap_params():
     params = { "ssid": "test-suite-b",
@@ -379,7 +382,7 @@ def test_suite_b_192_rsa_dhe(dev, apdev):
     run_suite_b_192_rsa(dev, apdev, no_ecdh=True)
 
 def run_suite_b_192_rsa(dev, apdev, no_ecdh=False, no_dhe=False):
-    check_suite_b_192_capa(dev)
+    check_suite_b_192_capa(dev, dhe=no_ecdh)
     dev[0].flush_scan_cache()
     params = suite_b_192_rsa_ap_params()
     if no_ecdh:
@@ -458,7 +461,7 @@ def test_suite_b_192_rsa_insufficient_key(dev, apdev):
 
 def test_suite_b_192_rsa_insufficient_dh(dev, apdev):
     """WPA2/GCMP-256 connection at Suite B 192-bit level and RSA with insufficient DH key length"""
-    check_suite_b_192_capa(dev)
+    check_suite_b_192_capa(dev, dhe=True)
     dev[0].flush_scan_cache()
     params = suite_b_192_rsa_ap_params()
     params["tls_flags"] = "[SUITEB-NO-ECDH]"
@@ -535,7 +538,7 @@ def test_suite_b_192_rsa_dhe_radius_rsa2048_client(dev, apdev):
     run_suite_b_192_rsa_radius_rsa2048_client(dev, apdev, False)
 
 def run_suite_b_192_rsa_radius_rsa2048_client(dev, apdev, ecdhe):
-    check_suite_b_192_capa(dev)
+    check_suite_b_192_capa(dev, dhe=not ecdhe)
     dev[0].flush_scan_cache()
     params = suite_b_as_params()
     params['ca_cert'] = 'auth_serv/rsa3072-ca.pem'

@@ -29,7 +29,9 @@
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ctrl_iface_common.h"
+#ifdef CONFIG_DPP
 #include "common/dpp.h"
+#endif /* CONFIG_DPP */
 #include "common/wpa_ctrl.h"
 #include "crypto/tls.h"
 #include "drivers/driver.h"

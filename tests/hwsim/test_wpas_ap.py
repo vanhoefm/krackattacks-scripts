@@ -78,6 +78,28 @@ def test_wpas_ap_open(dev):
     dev[1].request("DISCONNECT")
     dev[2].request("DISCONNECT")
 
+def test_wpas_ap_open_isolate(dev):
+    """wpa_supplicant AP mode - open network with client isolation"""
+    try:
+        dev[0].set("ap_isolate", "1")
+        id = dev[0].add_network()
+        dev[0].set_network(id, "mode", "2")
+        dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+        dev[0].set_network(id, "key_mgmt", "NONE")
+        dev[0].set_network(id, "frequency", "2412")
+        dev[0].set_network(id, "scan_freq", "2412")
+        dev[0].select_network(id)
+        wait_ap_ready(dev[0])
+
+        dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+        dev[2].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
+        hwsim_utils.test_connectivity(dev[0], dev[1])
+        hwsim_utils.test_connectivity(dev[0], dev[2])
+        hwsim_utils.test_connectivity(dev[1], dev[2], success_expected=False,
+                                      timeout=1)
+    finally:
+        dev[0].set("ap_isolate", "0")
+
 @remote_compatible
 def test_wpas_ap_wep(dev):
     """wpa_supplicant AP mode - WEP"""

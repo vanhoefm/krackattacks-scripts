@@ -3060,6 +3060,12 @@ def test_dbus_p2p_discovery(dev, apdev):
 
         def deviceLost(self, path):
             logger.debug("deviceLost: path=%s" % path)
+            if not self.found or not self.found2:
+                # This may happen if a previous test case ended up scheduling
+                # deviceLost event and that event did not get delivered before
+                # starting the next test execution.
+                logger.debug("Ignore deviceLost before the deviceFound events")
+                return
             self.lost = True
             try:
                 p2p.RejectPeer(path)

@@ -879,7 +879,7 @@ struct wpa_config {
 	unsigned int changed_parameters;
 
 	/**
-	 * disassoc_low_ack - Disassocicate stations with massive packet loss
+	 * disassoc_low_ack - Disassociate stations with massive packet loss
 	 */
 	int disassoc_low_ack;
 

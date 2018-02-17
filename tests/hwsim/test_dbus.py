@@ -325,6 +325,7 @@ def test_dbus_set_global_properties(dev, apdev):
     """D-Bus Get/Set fi.w1.wpa_supplicant1 interface global properties"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
+    dev[0].set("model_name", "")
     props = [ ('Okc', '0', '1'), ('ModelName', '', 'blahblahblah') ]
 
     for p in props:
@@ -340,6 +341,7 @@ def test_dbus_set_global_properties(dev, apdev):
                          dbus_interface=dbus.PROPERTIES_IFACE)
         if res != p[2]:
             raise Exception("Unexpected " + p[0] + " value after set: " + str(res))
+    dev[0].set("model_name", "")
 
 def test_dbus_invalid_method(dev, apdev):
     """D-Bus invalid method"""

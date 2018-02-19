@@ -2536,6 +2536,7 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 
 #ifdef OPENSSL_IS_BORINGSSL
 	if (openssl_ciphers && os_strcmp(openssl_ciphers, "SUITEB192") == 0) {
+		uint16_t sigalgs[1] = { SSL_SIGN_ECDSA_SECP384R1_SHA384 };
 		int nid[1] = { NID_secp384r1 };
 
 		if (SSL_set1_curves(ssl, nid, 1) != 1) {
@@ -2543,6 +2544,16 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 				   "OpenSSL: Failed to set Suite B curves");
 			return -1;
 		}
+
+		if (SSL_CTX_set_verify_algorithm_prefs(conn->ssl_ctx, sigalgs,
+						       1) != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B sigalgs");
+			return -1;
+		}
+	} else {
+		/* Use defaults from BoringSSL */
+		SSL_CTX_set_verify_algorithm_prefs(conn->ssl_ctx, NULL, 0);
 	}
 #endif /* OPENSSL_IS_BORINGSSL */
 #endif /* CONFIG_SUITEB */

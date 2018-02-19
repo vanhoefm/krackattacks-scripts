@@ -2464,6 +2464,10 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 		SSL_clear_options(ssl, SSL_OP_NO_TLSv1_2);
 #endif /* SSL_OP_NO_TLSv1_2 */
 #ifdef CONFIG_SUITEB
+#ifdef OPENSSL_IS_BORINGSSL
+	/* Start with defaults from BoringSSL */
+	SSL_CTX_set_verify_algorithm_prefs(conn->ssl_ctx, NULL, 0);
+#endif /* OPENSSL_IS_BORINGSSL */
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	if (flags & TLS_CONN_SUITEB_NO_ECDH) {
 		const char *ciphers = "DHE-RSA-AES256-GCM-SHA384";
@@ -2513,7 +2517,16 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 		EC_KEY_free(ecdh);
 	}
 	if (flags & (TLS_CONN_SUITEB | TLS_CONN_SUITEB_NO_ECDH)) {
-#ifndef OPENSSL_IS_BORINGSSL
+#ifdef OPENSSL_IS_BORINGSSL
+		uint16_t sigalgs[1] = { SSL_SIGN_RSA_PKCS1_SHA384 };
+
+		if (SSL_CTX_set_verify_algorithm_prefs(conn->ssl_ctx, sigalgs,
+						       1) != 1) {
+			wpa_printf(MSG_INFO,
+				   "OpenSSL: Failed to set Suite B sigalgs");
+			return -1;
+		}
+#else /* OPENSSL_IS_BORINGSSL */
 		/* ECDSA+SHA384 if need to add EC support here */
 		if (SSL_set1_sigalgs_list(ssl, "RSA+SHA384") != 1) {
 			wpa_printf(MSG_INFO,
@@ -2551,9 +2564,6 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 				   "OpenSSL: Failed to set Suite B sigalgs");
 			return -1;
 		}
-	} else {
-		/* Use defaults from BoringSSL */
-		SSL_CTX_set_verify_algorithm_prefs(conn->ssl_ctx, NULL, 0);
 	}
 #endif /* OPENSSL_IS_BORINGSSL */
 #endif /* CONFIG_SUITEB */

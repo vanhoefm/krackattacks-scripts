@@ -2483,6 +2483,7 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 		EC_KEY *ecdh;
 		const char *ciphers =
 			"ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384";
+		int nid[1] = { NID_secp384r1 };
 
 		if (openssl_ciphers) {
 			wpa_printf(MSG_DEBUG,
@@ -2496,7 +2497,7 @@ static int tls_set_conn_flags(struct tls_connection *conn, unsigned int flags,
 			return -1;
 		}
 
-		if (SSL_set1_curves_list(ssl, "P-384") != 1) {
+		if (SSL_set1_curves(ssl, nid, 1) != 1) {
 			wpa_printf(MSG_INFO,
 				   "OpenSSL: Failed to set Suite B curves");
 			return -1;

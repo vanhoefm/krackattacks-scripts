@@ -1626,7 +1626,8 @@ ieee802_1x_mka_decode_dist_sak_body(
 		os_free(unwrap_sak);
 		return -1;
 	}
-	wpa_hexdump(MSG_DEBUG, "\tAES Key Unwrap of SAK:", unwrap_sak, sak_len);
+	wpa_hexdump_key(MSG_DEBUG, "\tAES Key Unwrap of SAK:",
+			unwrap_sak, sak_len);
 
 	sa_key = os_zalloc(sizeof(*sa_key));
 	if (!sa_key) {
@@ -2017,7 +2018,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 		wpa_printf(MSG_ERROR, "KaY: SAK Length not support");
 		goto fail;
 	}
-	wpa_hexdump(MSG_DEBUG, "KaY: generated new SAK", key, key_len);
+	wpa_hexdump_key(MSG_DEBUG, "KaY: generated new SAK", key, key_len);
 	os_free(context);
 	context = NULL;
 

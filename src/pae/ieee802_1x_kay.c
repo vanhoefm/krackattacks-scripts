@@ -245,13 +245,15 @@ ieee802_1x_mka_dump_sak_use_body(struct ieee802_1x_mka_sak_use_body *body)
  * ieee802_1x_kay_get_participant -
  */
 static struct ieee802_1x_mka_participant *
-ieee802_1x_kay_get_participant(struct ieee802_1x_kay *kay, const u8 *ckn)
+ieee802_1x_kay_get_participant(struct ieee802_1x_kay *kay, const u8 *ckn,
+			       size_t len)
 {
 	struct ieee802_1x_mka_participant *participant;
 
 	dl_list_for_each(participant, &kay->participant_list,
 			 struct ieee802_1x_mka_participant, list) {
-		if (os_memcmp(participant->ckn.name, ckn,
+		if (participant->ckn.len == len &&
+		    os_memcmp(participant->ckn.name, ckn,
 			      participant->ckn.len) == 0)
 			return participant;
 	}
@@ -748,6 +750,8 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 	struct ieee802_1x_mka_participant *participant;
 	const struct ieee802_1x_mka_basic_body *body;
 	struct ieee802_1x_kay_peer *peer;
+	size_t ckn_len;
+	size_t body_len;
 
 	body = (const struct ieee802_1x_mka_basic_body *) mka_msg;
 
@@ -761,7 +765,15 @@ ieee802_1x_mka_decode_basic_body(struct ieee802_1x_kay *kay, const u8 *mka_msg,
 		return NULL;
 	}
 
-	participant = ieee802_1x_kay_get_participant(kay, body->ckn);
+	body_len = get_mka_param_body_len(body);
+	if (body_len < sizeof(struct ieee802_1x_mka_basic_body) - MKA_HDR_LEN) {
+		wpa_printf(MSG_DEBUG, "KaY: Too small body length %zu",
+			   body_len);
+		return NULL;
+	}
+	ckn_len = body_len -
+	    (sizeof(struct ieee802_1x_mka_basic_body) - MKA_HDR_LEN);
+	participant = ieee802_1x_kay_get_participant(kay, body->ckn, ckn_len);
 	if (!participant) {
 		wpa_printf(MSG_DEBUG, "Peer is not included in my CA");
 		return NULL;
@@ -2856,6 +2868,7 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 	size_t mka_msg_len;
 	struct ieee802_1x_mka_participant *participant;
 	size_t body_len;
+	size_t ckn_len;
 	u8 icv[MAX_ICV_LEN];
 	u8 *msg_icv;
 
@@ -2895,8 +2908,22 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
+	if (body_len < sizeof(struct ieee802_1x_mka_basic_body) - MKA_HDR_LEN) {
+		wpa_printf(MSG_DEBUG, "KaY: Too small body length %zu",
+			   body_len);
+		return -1;
+	}
+	ckn_len = body_len -
+		(sizeof(struct ieee802_1x_mka_basic_body) - MKA_HDR_LEN);
+	if (ckn_len < 1 || ckn_len > MAX_CKN_LEN) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: Received EAPOL-MKA CKN Length (%zu bytes) is out of range (<= %u bytes)",
+			   ckn_len, MAX_CKN_LEN);
+		return -1;
+	}
+
 	/* CKN should be owned by I */
-	participant = ieee802_1x_kay_get_participant(kay, body->ckn);
+	participant = ieee802_1x_kay_get_participant(kay, body->ckn, ckn_len);
 	if (!participant) {
 		wpa_printf(MSG_DEBUG, "CKN is not included in my CA");
 		return -1;
@@ -3403,7 +3430,7 @@ ieee802_1x_kay_delete_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn)
 	wpa_printf(MSG_DEBUG, "KaY: participant removed");
 
 	/* get the participant */
-	participant = ieee802_1x_kay_get_participant(kay, ckn->name);
+	participant = ieee802_1x_kay_get_participant(kay, ckn->name, ckn->len);
 	if (!participant) {
 		wpa_hexdump(MSG_DEBUG, "KaY: participant is not found",
 			    ckn->name, ckn->len);
@@ -3462,7 +3489,7 @@ void ieee802_1x_kay_mka_participate(struct ieee802_1x_kay *kay,
 	if (!kay || !ckn)
 		return;
 
-	participant = ieee802_1x_kay_get_participant(kay, ckn->name);
+	participant = ieee802_1x_kay_get_participant(kay, ckn->name, ckn->len);
 	if (!participant)
 		return;
 

@@ -2093,6 +2093,7 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 	struct ieee802_1x_kay_peer *key_server = NULL;
 	struct ieee802_1x_kay *kay = participant->kay;
 	Boolean i_is_key_server;
+	int priority_comparison;
 
 	if (participant->is_obliged_key_server) {
 		participant->new_sak = TRUE;
@@ -2123,8 +2124,14 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 
 		tmp.key_server_priority = kay->actor_priority;
 		os_memcpy(&tmp.sci, &kay->actor_sci, sizeof(tmp.sci));
-		if (compare_priorities(&tmp, key_server) < 0)
+		priority_comparison = compare_priorities(&tmp, key_server);
+		if (priority_comparison < 0) {
 			i_is_key_server = TRUE;
+		} else if (priority_comparison == 0) {
+			wpa_printf(MSG_WARNING,
+				   "KaY: Cannot elect key server between me and peer, duplicate MAC detected");
+			key_server = NULL;
+		}
 	} else if (participant->can_be_key_server) {
 		i_is_key_server = TRUE;
 	}

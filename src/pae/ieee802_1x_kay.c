@@ -2399,7 +2399,7 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 			participant->orx = FALSE;
 			participant->is_key_server = FALSE;
 			participant->is_elected = FALSE;
-			kay->authenticated = TRUE;
+			kay->authenticated = FALSE;
 			kay->secured = FALSE;
 			kay->failed = FALSE;
 			kay->ltx_kn = 0;
@@ -2416,7 +2416,7 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 				ieee802_1x_delete_transmit_sa(kay, txsa);
 			}
 
-			ieee802_1x_cp_connect_authenticated(kay->cp);
+			ieee802_1x_cp_connect_pending(kay->cp);
 			ieee802_1x_cp_sm_step(kay->cp);
 		} else {
 			ieee802_1x_kay_elect_key_server(participant);

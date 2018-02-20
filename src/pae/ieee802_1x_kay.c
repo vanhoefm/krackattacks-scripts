@@ -1343,8 +1343,8 @@ ieee802_1x_mka_decode_sak_use_body(
 		}
 	}
 
-	/* check old key is valid */
-	if (body->otx || body->orx) {
+	/* check old key is valid (but only if we remember our old key) */
+	if (participant->oki.kn != 0 && (body->otx || body->orx)) {
 		if (os_memcmp(participant->oki.mi, body->osrv_mi,
 			      sizeof(participant->oki.mi)) != 0 ||
 		    be_to_host32(body->okn) != participant->oki.kn ||

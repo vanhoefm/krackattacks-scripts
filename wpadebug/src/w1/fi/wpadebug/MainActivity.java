@@ -47,6 +47,24 @@ public class MainActivity extends Activity
 	startActivity(intent);
     }
 
+    public void runQrScan(View view)
+    {
+	Intent intent = new Intent(this, QrCodeScannerActivity.class);
+	startActivity(intent);
+    }
+
+    public void runQrInput(View view)
+    {
+	Intent intent = new Intent(this, InputUri.class);
+	startActivity(intent);
+    }
+
+    public void runQrDisplay(View view)
+    {
+	Intent intent = new Intent(this, QrCodeDisplayActivity.class);
+	startActivity(intent);
+    }
+
     public void runWpaCommands(View view)
     {
 	Intent intent = new Intent(this, WpaCommandListActivity.class);

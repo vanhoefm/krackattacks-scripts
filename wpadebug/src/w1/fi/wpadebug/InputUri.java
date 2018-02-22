@@ -10,6 +10,8 @@ package w1.fi.wpadebug;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -34,6 +36,28 @@ public class InputUri extends Activity {
         setContentView(R.layout.input_uri);
         mEditText = (EditText)findViewById(R.id.edit_uri);
         mSubmitButton = (Button)findViewById(R.id.submit_uri);
+
+	mEditText.addTextChangedListener(new TextWatcher() {
+		@Override
+		public void onTextChanged(CharSequence s, int start, int before,
+					  int count) {
+		    mUriText = mEditText.getText().toString();
+		    if (mUriText.startsWith("DPP:") &&
+			mUriText.endsWith(";;")) {
+			writeToFile(mUriText);
+			finish();
+		    }
+		}
+
+		@Override
+		public void beforeTextChanged(CharSequence s, int start,
+					      int count, int after) {
+		}
+
+		@Override
+		public void afterTextChanged(Editable s) {
+		}
+	    });
     }
 
     @Override

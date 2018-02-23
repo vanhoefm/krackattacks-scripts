@@ -59,6 +59,11 @@
 		  android:label="Input URI"
 		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
 	</activity>
+	<activity
+		  android:name="w1.fi.wpadebug.QrCodeReadActivity"
+		  android:label="Start Scan"
+		 android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
 	<activity android:name="w1.fi.wpadebug.WpaWebViewActivity"
 		  android:label="WebView"
 		  android:launchMode="singleTop"

@@ -35,6 +35,9 @@ public class QrCodeScannerActivity extends Activity {
 
         Intent intent = new Intent();
         intent.setAction(ACTION);
+	intent.putExtra("SCAN_MODE", "QR_CODE_MODE");
+	intent.putExtra("PROMPT_MESSAGE",
+			"Place a QR Code inside the viewfinder rectangle to scan it.");
         try {
             startActivityForResult(intent, QRCODE);
         } catch (ActivityNotFoundException e) {
@@ -46,8 +49,12 @@ public class QrCodeScannerActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+	Log.d(TAG, "onActivityResult: requestCode=" + requestCode + " resultCode=" + resultCode);
         if (requestCode == QRCODE && resultCode == RESULT_OK) {
-            writeToFile(data.getStringExtra(RESULT));
+	    String contents = data.getStringExtra(RESULT);
+	    writeToFile(contents);
+	    Log.d(TAG, "onActivityResult: QRCODE RESULT_OK: " + contents);
+	    finishActivity(requestCode);
             finish();
         }
     }

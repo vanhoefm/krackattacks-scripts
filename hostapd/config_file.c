@@ -2330,8 +2330,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "pwd_group") == 0) {
 		bss->pwd_group = atoi(pos);
 #endif /* EAP_SERVER_PWD */
+#ifdef CONFIG_ERP
 	} else if (os_strcmp(buf, "eap_server_erp") == 0) {
 		bss->eap_server_erp = atoi(pos);
+#endif /* CONFIG_ERP */
 #endif /* EAP_SERVER */
 	} else if (os_strcmp(buf, "eap_message") == 0) {
 		char *term;

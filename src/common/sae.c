@@ -29,6 +29,8 @@ int sae_set_group(struct sae_data *sae, int group)
 	/* First, check if this is an ECC group */
 	tmp->ec = crypto_ec_init(group);
 	if (tmp->ec) {
+		wpa_printf(MSG_DEBUG, "SAE: Selecting supported ECC group %d",
+			   group);
 		sae->group = group;
 		tmp->prime_len = crypto_ec_prime_len(tmp->ec);
 		tmp->prime = crypto_ec_get_prime(tmp->ec);
@@ -39,6 +41,8 @@ int sae_set_group(struct sae_data *sae, int group)
 	/* Not an ECC group, check FFC */
 	tmp->dh = dh_groups_get(group);
 	if (tmp->dh) {
+		wpa_printf(MSG_DEBUG, "SAE: Selecting supported FFC group %d",
+			   group);
 		sae->group = group;
 		tmp->prime_len = tmp->dh->prime_len;
 		if (tmp->prime_len > SAE_MAX_PRIME_LEN) {
@@ -66,6 +70,8 @@ int sae_set_group(struct sae_data *sae, int group)
 	}
 
 	/* Unsupported group */
+	wpa_printf(MSG_DEBUG,
+		   "SAE: Group %d not supported by the crypto library", group);
 	return -1;
 }
 

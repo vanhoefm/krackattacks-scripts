@@ -1492,7 +1492,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		os_memcpy(key_data, kde, kde_len);
 		WPA_PUT_BE16(key_mic + mic_len, kde_len);
 #ifdef CONFIG_FILS
-	} else if (!mic_len) {
+	} else if (!mic_len && kde) {
 		const u8 *aad[1];
 		size_t aad_len[1];
 

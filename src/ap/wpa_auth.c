@@ -881,7 +881,8 @@ static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
 			break;
 		}
 
-		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt))
+		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) ||
+		    wpa_key_mgmt_sae(sm->wpa_key_mgmt))
 			break;
 	}
 
@@ -2680,7 +2681,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		}
 #endif /* CONFIG_FILS */
 
-		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt))
+		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt) ||
+		    wpa_key_mgmt_sae(sm->wpa_key_mgmt))
 			break;
 	}
 

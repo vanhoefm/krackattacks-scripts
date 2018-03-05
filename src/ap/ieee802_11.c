@@ -3021,7 +3021,7 @@ u8 * owe_assoc_req_process(struct hostapd_data *hapd, struct sta_info *sta,
 	owe_buf = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, owe_buf,
 						owe_buf_len, NULL, 0);
 
-	if (sta->owe_ecdh) {
+	if (sta->owe_ecdh && owe_buf) {
 		struct wpabuf *pub;
 
 		pub = crypto_ecdh_get_pubkey(sta->owe_ecdh, 0);

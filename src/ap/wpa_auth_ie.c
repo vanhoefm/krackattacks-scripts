@@ -1042,7 +1042,7 @@ u8 * wpa_auth_write_assoc_resp_owe(struct wpa_state_machine *sm,
 #ifdef CONFIG_TESTING_OPTIONS
 	if (conf->own_ie_override_len) {
 		if (max_len < conf->own_ie_override_len)
-			return 0;
+			return NULL;
 		wpa_hexdump(MSG_DEBUG, "WPA: Forced own IE(s) for testing",
 			    conf->own_ie_override, conf->own_ie_override_len);
 		os_memcpy(pos, conf->own_ie_override,

@@ -1694,6 +1694,7 @@ struct hostapd_data;
 #define STA_DRV_DATA_RX_VHT_NSS BIT(5)
 #define STA_DRV_DATA_TX_SHORT_GI BIT(6)
 #define STA_DRV_DATA_RX_SHORT_GI BIT(7)
+#define STA_DRV_DATA_LAST_ACK_RSSI BIT(8)
 
 struct hostap_sta_driver_data {
 	unsigned long rx_packets, tx_packets;
@@ -1706,8 +1707,7 @@ struct hostap_sta_driver_data {
 	unsigned long num_ps_buf_frames;
 	unsigned long tx_retry_failed;
 	unsigned long tx_retry_count;
-	int last_rssi;
-	int last_ack_rssi;
+	s8 last_ack_rssi;
 	s8 signal;
 	u8 rx_vhtmcs;
 	u8 tx_vhtmcs;

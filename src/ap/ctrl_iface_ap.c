@@ -153,6 +153,13 @@ static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
 						   supported_mcs_set);
 	}
 
+	if (data.flags & STA_DRV_DATA_LAST_ACK_RSSI) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "last_ack_signal=%d\n", data.last_ack_rssi);
+		if (!os_snprintf_error(buflen - len, ret))
+			len += ret;
+	}
+
 	return len;
 }
 

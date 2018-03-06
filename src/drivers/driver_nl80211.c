@@ -6049,6 +6049,7 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 		[NL80211_STA_INFO_RX_BYTES64] = { .type = NLA_U64 },
 		[NL80211_STA_INFO_TX_BYTES64] = { .type = NLA_U64 },
 		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
+		[NL80211_STA_INFO_ACK_SIGNAL] = { .type = NLA_U8 },
 	};
 	struct nlattr *rate[NL80211_RATE_INFO_MAX + 1];
 	static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1] = {
@@ -6111,6 +6112,11 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 			nla_get_u32(stats[NL80211_STA_INFO_TX_FAILED]);
 	if (stats[NL80211_STA_INFO_SIGNAL])
 		data->signal = nla_get_u8(stats[NL80211_STA_INFO_SIGNAL]);
+	if (stats[NL80211_STA_INFO_ACK_SIGNAL]) {
+		data->last_ack_rssi =
+			nla_get_u8(stats[NL80211_STA_INFO_ACK_SIGNAL]);
+		data->flags |= STA_DRV_DATA_LAST_ACK_RSSI;
+	}
 
 	if (stats[NL80211_STA_INFO_TX_BITRATE] &&
 	    nla_parse_nested(rate, NL80211_RATE_INFO_MAX,

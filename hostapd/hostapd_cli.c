@@ -1473,6 +1473,13 @@ static int hostapd_cli_cmd_deny_macacl(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_poll_sta(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "POLL_STA", 1, argc, argv);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1642,6 +1649,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "=Add/Delete/Show/Clear accept MAC ACL" },
 	{ "deny_acl", hostapd_cli_cmd_deny_macacl, NULL,
 	  "=Add/Delete/Show/Clear deny MAC ACL" },
+	{ "poll_sta", hostapd_cli_cmd_poll_sta, hostapd_complete_stations,
+	  "<addr> = poll a STA to check connectivity with a QoS null frame" },
 	{ NULL, NULL, NULL, NULL }
 };
 

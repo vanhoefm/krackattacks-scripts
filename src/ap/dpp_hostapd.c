@@ -1145,6 +1145,17 @@ static void hostapd_dpp_auth_success(struct hostapd_data *hapd, int initiator)
 	wpa_printf(MSG_DEBUG, "DPP: Authentication succeeded");
 	wpa_msg(hapd->msg_ctx, MSG_INFO, DPP_EVENT_AUTH_SUCCESS "init=%d",
 		initiator);
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_AUTH_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Authentication Confirm");
+		if (hapd->dpp_auth->configurator) {
+			/* Prevent GAS response */
+			hapd->dpp_auth->auth_success = 0;
+		}
+		return;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (!hapd->dpp_auth->configurator)
 		hostapd_dpp_start_gas_client(hapd);

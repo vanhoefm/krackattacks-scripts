@@ -1434,6 +1434,17 @@ static void wpas_dpp_auth_success(struct wpa_supplicant *wpa_s, int initiator)
 {
 	wpa_printf(MSG_DEBUG, "DPP: Authentication succeeded");
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_AUTH_SUCCESS "init=%d", initiator);
+#ifdef CONFIG_TESTING_OPTIONS
+	if (dpp_test == DPP_TEST_STOP_AT_AUTH_CONF) {
+		wpa_printf(MSG_INFO,
+			   "DPP: TESTING - stop at Authentication Confirm");
+		if (wpa_s->dpp_auth->configurator) {
+			/* Prevent GAS response */
+			wpa_s->dpp_auth->auth_success = 0;
+		}
+		return;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (wpa_s->dpp_auth->configurator)
 		wpas_dpp_start_gas_server(wpa_s);

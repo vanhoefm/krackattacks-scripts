@@ -345,6 +345,11 @@ extern "C" {
  * parameters: sa=<STA MAC address> signal=<signal> */
 #define RX_PROBE_REQUEST "RX-PROBE-REQUEST "
 
+/* Event to indicate station's HT/VHT operation mode change information */
+#define STA_OPMODE_MAX_BW_CHANGED "STA-OPMODE-MAX-BW-CHANGED "
+#define STA_OPMODE_SMPS_MODE_CHANGED "STA-OPMODE-SMPS-MODE-CHANGED "
+#define STA_OPMODE_N_SS_CHANGED "STA-OPMODE-N_SS-CHANGED "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

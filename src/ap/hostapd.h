@@ -608,6 +608,9 @@ hostapd_get_eap_user(struct hostapd_data *hapd, const u8 *identity,
 
 struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 					const char *ifname);
+void hostapd_event_sta_opmode_changed(struct hostapd_data *hapd, const u8 *addr,
+				      enum smps_mode smps_mode,
+				      enum chan_width chan_width, u8 rx_nss);
 
 #ifdef CONFIG_FST
 void fst_hostapd_fill_iface_obj(struct hostapd_data *hapd,

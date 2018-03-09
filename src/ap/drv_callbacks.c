@@ -653,6 +653,73 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+void hostapd_event_sta_opmode_changed(struct hostapd_data *hapd, const u8 *addr,
+				      enum smps_mode smps_mode,
+				      enum chan_width chan_width, u8 rx_nss)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	const char *txt;
+
+	if (!sta)
+		return;
+
+	switch (smps_mode) {
+	case SMPS_AUTOMATIC:
+		txt = "automatic";
+		break;
+	case SMPS_OFF:
+		txt = "off";
+		break;
+	case SMPS_DYNAMIC:
+		txt = "dynamic";
+		break;
+	case SMPS_STATIC:
+		txt = "static";
+		break;
+	default:
+		txt = NULL;
+		break;
+	}
+	if (txt) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_SMPS_MODE_CHANGED
+			MACSTR " %s", MAC2STR(addr), txt);
+	}
+
+	switch (chan_width) {
+	case CHAN_WIDTH_20_NOHT:
+		txt = "20(no-HT)";
+		break;
+	case CHAN_WIDTH_20:
+		txt = "20";
+		break;
+	case CHAN_WIDTH_40:
+		txt = "40";
+		break;
+	case CHAN_WIDTH_80:
+		txt = "80";
+		break;
+	case CHAN_WIDTH_80P80:
+		txt = "80+80";
+		break;
+	case CHAN_WIDTH_160:
+		txt = "160";
+		break;
+	default:
+		txt = NULL;
+		break;
+	}
+	if (txt) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_MAX_BW_CHANGED
+			MACSTR " %s", MAC2STR(addr), txt);
+	}
+
+	if (rx_nss != 0xff) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_N_SS_CHANGED
+			MACSTR " %d", MAC2STR(addr), rx_nss);
+	}
+}
+
+
 void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 			     int offset, int width, int cf1, int cf2)
 {
@@ -1614,6 +1681,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					     &data->acs_selected_channels);
 		break;
 #endif /* CONFIG_ACS */
+	case EVENT_STATION_OPMODE_CHANGED:
+		hostapd_event_sta_opmode_changed(hapd, data->sta_opmode.addr,
+						 data->sta_opmode.smps_mode,
+						 data->sta_opmode.chan_width,
+						 data->sta_opmode.rx_nss);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

@@ -4609,6 +4609,18 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_PORT_AUTHORIZED:
 		wpa_supplicant_event_port_authorized(wpa_s);
 		break;
+	case EVENT_STATION_OPMODE_CHANGED:
+#ifdef CONFIG_AP
+		if (!wpa_s->ap_iface || !data)
+			break;
+
+		hostapd_event_sta_opmode_changed(wpa_s->ap_iface->bss[0],
+						 data->sta_opmode.addr,
+						 data->sta_opmode.smps_mode,
+						 data->sta_opmode.chan_width,
+						 data->sta_opmode.rx_nss);
+#endif /* CONFIG_AP */
+		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
 		break;

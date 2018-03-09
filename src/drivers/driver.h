@@ -1877,6 +1877,17 @@ enum wnm_oper {
 	WNM_SLEEP_TFS_IE_DEL        /* AP delete the TFS IE */
 };
 
+/* enum smps_mode - SMPS mode definitions */
+enum smps_mode {
+	SMPS_AUTOMATIC,
+	SMPS_OFF,
+	SMPS_DYNAMIC,
+	SMPS_STATIC,
+
+	/* Keep last */
+	SMPS_INVALID,
+};
+
 /* enum chan_width - Channel width definitions */
 enum chan_width {
 	CHAN_WIDTH_20_NOHT,
@@ -4568,6 +4579,12 @@ enum wpa_event_type {
 	 * indicates the completion of IEEE 802.11 association.
 	 */
 	EVENT_PORT_AUTHORIZED,
+
+	/**
+	 * EVENT_STATION_OPMODE_CHANGED - Notify STA's HT/VHT operation mode
+	 * change event.
+	 */
+	EVENT_STATION_OPMODE_CHANGED,
 };
 
 
@@ -5373,6 +5390,22 @@ union wpa_event_data {
 
 	/* For EVENT_EXTERNAL_AUTH */
 	struct external_auth external_auth;
+
+	/**
+	 * struct sta_opmode - Station's operation mode change event
+	 * @addr: The station MAC address
+	 * @smps_mode: SMPS mode of the station
+	 * @chan_width: Channel width of the station
+	 * @rx_nss: RX_NSS of the station
+	 *
+	 * This is used as data with EVENT_STATION_OPMODE_CHANGED.
+	 */
+	struct sta_opmode {
+		const u8 *addr;
+		enum smps_mode smps_mode;
+		enum chan_width chan_width;
+		u8 rx_nss;
+	} sta_opmode;
 };
 
 /**

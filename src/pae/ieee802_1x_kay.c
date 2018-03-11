@@ -3269,8 +3269,9 @@ ieee802_1x_kay_deinit(struct ieee802_1x_kay *kay)
  * ieee802_1x_kay_create_mka -
  */
 struct ieee802_1x_mka_participant *
-ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
-			  struct mka_key *cak, u32 life,
+ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
+			  const struct mka_key_name *ckn,
+			  const struct mka_key *cak, u32 life,
 			  enum mka_created_mode mode, Boolean is_authenticator)
 {
 	struct ieee802_1x_mka_participant *participant;

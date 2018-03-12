@@ -3617,6 +3617,36 @@ def test_dpp_proto_stop_at_auth_conf(dev, apdev):
     if "result=TIMEOUT" not in ev:
         raise Exception("Unexpected GAS result: " + ev)
 
+def test_dpp_proto_stop_at_auth_conf_tx(dev, apdev):
+    """DPP protocol testing - stop when transmitting Auth Conf (Registrar)"""
+    run_dpp_proto_init(dev, 1, 89, init_enrollee=True)
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("Authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication did not succeed (Responder)")
+    ev = dev[1].wait_event(["GAS-QUERY-START"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected GAS query")
+
+    # There is currently no timeout on GAS server side, so no event to wait for
+    # in this case.
+
+def test_dpp_proto_stop_at_auth_conf_tx2(dev, apdev):
+    """DPP protocol testing - stop when transmitting Auth Conf (Enrollee)"""
+    run_dpp_proto_init(dev, 1, 89)
+    ev = dev[1].wait_event(["DPP-AUTH-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("Authentication did not succeed (Initiator)")
+    ev = dev[0].wait_event(["DPP-AUTH-SUCCESS"], timeout=5)
+    if ev is None:
+        raise Exception("Authentication did not succeed (Responder)")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=5)
+    if ev is None or "result=TIMEOUT" not in ev:
+        raise Exception("GAS query did not time out")
+
 def test_dpp_proto_stop_at_conf_req(dev, apdev):
     """DPP protocol testing - stop when receiving Auth Req"""
     run_dpp_proto_init(dev, 1, 90)

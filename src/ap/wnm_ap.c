@@ -341,6 +341,19 @@ static void ieee802_11_rx_bss_trans_mgmt_query(struct hostapd_data *hapd,
 }
 
 
+void ap_sta_reset_steer_flag_timer(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta = timeout_ctx;
+
+	if (sta->agreed_to_steer) {
+		wpa_printf(MSG_DEBUG, "%s: Reset steering flag for STA " MACSTR,
+			   hapd->conf->iface, MAC2STR(sta->addr));
+		sta->agreed_to_steer = 0;
+	}
+}
+
+
 static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 					      const u8 *addr, const u8 *frm,
 					      size_t len)
@@ -348,6 +361,7 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 	u8 dialog_token, status_code, bss_termination_delay;
 	const u8 *pos, *end;
 	int enabled = hapd->conf->bss_transition;
+	struct sta_info *sta;
 
 #ifdef CONFIG_MBO
 	if (hapd->conf->mbo_enabled)
@@ -379,11 +393,23 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 		   "bss_termination_delay=%u", MAC2STR(addr), dialog_token,
 		   status_code, bss_termination_delay);
 
+	sta = ap_get_sta(hapd, addr);
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR
+			   " not found for received BSS TM Response",
+			   MAC2STR(addr));
+		return;
+	}
+
 	if (status_code == WNM_BSS_TM_ACCEPT) {
 		if (end - pos < ETH_ALEN) {
 			wpa_printf(MSG_DEBUG, "WNM: not enough room for Target BSSID field");
 			return;
 		}
+		sta->agreed_to_steer = 1;
+		eloop_cancel_timeout(ap_sta_reset_steer_flag_timer, hapd, sta);
+		eloop_register_timeout(2, 0, ap_sta_reset_steer_flag_timer,
+				       hapd, sta);
 		wpa_printf(MSG_DEBUG, "WNM: Target BSSID: " MACSTR,
 			   MAC2STR(pos));
 		wpa_msg(hapd->msg_ctx, MSG_INFO, BSS_TM_RESP MACSTR
@@ -393,6 +419,7 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 			MAC2STR(pos));
 		pos += ETH_ALEN;
 	} else {
+		sta->agreed_to_steer = 0;
 		wpa_msg(hapd->msg_ctx, MSG_INFO, BSS_TM_RESP MACSTR
 			" status_code=%u bss_termination_delay=%u",
 			MAC2STR(addr), status_code, bss_termination_delay);

@@ -642,7 +642,7 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 {
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 
-	if (!sta || !hapd->conf->disassoc_low_ack)
+	if (!sta || !hapd->conf->disassoc_low_ack || sta->agreed_to_steer)
 		return;
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,

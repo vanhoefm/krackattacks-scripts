@@ -115,6 +115,7 @@ struct sta_info {
 	unsigned int added_unassoc:1;
 	unsigned int pending_wds_enable:1;
 	unsigned int power_capab:1;
+	unsigned int agreed_to_steer:1;
 
 	u16 auth_alg;
 

@@ -361,6 +361,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	os_free(sta->ext_capability);
 
+#ifdef CONFIG_WNM_AP
+	eloop_cancel_timeout(ap_sta_reset_steer_flag_timer, hapd, sta);
+#endif /* CONFIG_WNM_AP */
+
 	os_free(sta);
 }
 

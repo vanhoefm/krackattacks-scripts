@@ -62,6 +62,7 @@ extern "C" {
 /** EAP authentication failed due to no response received */
 #define WPA_EVENT_EAP_TIMEOUT_FAILURE "CTRL-EVENT-EAP-TIMEOUT-FAILURE "
 #define WPA_EVENT_EAP_TIMEOUT_FAILURE2 "CTRL-EVENT-EAP-TIMEOUT-FAILURE2 "
+#define WPA_EVENT_EAP_ERROR_CODE "EAP-ERROR-CODE "
 /** Network block temporarily disabled (e.g., due to authentication failure) */
 #define WPA_EVENT_TEMP_DISABLED "CTRL-EVENT-SSID-TEMP-DISABLED "
 /** Temporarily disabled network block re-enabled */

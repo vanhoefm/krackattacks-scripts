@@ -816,6 +816,12 @@ void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
 }
 
 
+void wpas_notify_eap_error(struct wpa_supplicant *wpa_s, int error_code)
+{
+	wpa_msg(wpa_s, MSG_ERROR, WPA_EVENT_EAP_ERROR_CODE "%d", error_code);
+}
+
+
 void wpas_notify_network_bssid_set_changed(struct wpa_supplicant *wpa_s,
 					   struct wpa_ssid *ssid)
 {

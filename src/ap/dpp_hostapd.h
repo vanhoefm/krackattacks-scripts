@@ -30,6 +30,8 @@ void hostapd_dpp_gas_status_handler(struct hostapd_data *hapd, int ok);
 int hostapd_dpp_configurator_add(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_configurator_remove(struct hostapd_data *hapd, const char *id);
 int hostapd_dpp_configurator_sign(struct hostapd_data *hapd, const char *cmd);
+int hostapd_dpp_configurator_get_key(struct hostapd_data *hapd, unsigned int id,
+				     char *buf, size_t buflen);
 int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd);
 int hostapd_dpp_pkex_remove(struct hostapd_data *hapd, const char *id);
 void hostapd_dpp_stop(struct hostapd_data *hapd);

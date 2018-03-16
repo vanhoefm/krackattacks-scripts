@@ -1436,6 +1436,13 @@ static int hostapd_cli_cmd_dpp_configurator_remove(struct wpa_ctrl *ctrl,
 }
 
 
+static int hostapd_cli_cmd_dpp_configurator_get_key(struct wpa_ctrl *ctrl,
+						    int argc, char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "DPP_CONFIGURATOR_GET_KEY", 1, argc, argv);
+}
+
+
 static int hostapd_cli_cmd_dpp_pkex_add(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -1623,6 +1630,9 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "dpp_configurator_remove", hostapd_cli_cmd_dpp_configurator_remove,
 	  NULL,
 	  "*|<id> = remove DPP configurator" },
+	{ "dpp_configurator_remove", hostapd_cli_cmd_dpp_configurator_get_key,
+	  NULL,
+	  "<id> = Get DPP configurator's private key" },
 	{ "dpp_pkex_add", hostapd_cli_cmd_dpp_pkex_add, NULL,
 	  "add PKEX code" },
 	{ "dpp_pkex_remove", hostapd_cli_cmd_dpp_pkex_remove, NULL,

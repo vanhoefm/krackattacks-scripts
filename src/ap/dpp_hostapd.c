@@ -1881,6 +1881,19 @@ int hostapd_dpp_configurator_sign(struct hostapd_data *hapd, const char *cmd)
 }
 
 
+int hostapd_dpp_configurator_get_key(struct hostapd_data *hapd, unsigned int id,
+				     char *buf, size_t buflen)
+{
+	struct dpp_configurator *conf;
+
+	conf = hostapd_dpp_configurator_get_id(hapd, id);
+	if (!conf)
+		return -1;
+
+	return dpp_configurator_get_key(conf, buf, buflen);
+}
+
+
 int hostapd_dpp_pkex_add(struct hostapd_data *hapd, const char *cmd)
 {
 	struct dpp_bootstrap_info *own_bi;

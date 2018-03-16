@@ -2275,6 +2275,19 @@ int wpas_dpp_configurator_sign(struct wpa_supplicant *wpa_s, const char *cmd)
 }
 
 
+int wpas_dpp_configurator_get_key(struct wpa_supplicant *wpa_s, unsigned int id,
+				  char *buf, size_t buflen)
+{
+	struct dpp_configurator *conf;
+
+	conf = dpp_configurator_get_id(wpa_s, id);
+	if (!conf)
+		return -1;
+
+	return dpp_configurator_get_key(conf, buf, buflen);
+}
+
+
 static void
 wpas_dpp_tx_introduction_status(struct wpa_supplicant *wpa_s,
 				unsigned int freq, const u8 *dst,

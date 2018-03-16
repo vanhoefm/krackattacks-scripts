@@ -2948,6 +2948,13 @@ static int wpa_cli_cmd_dpp_configurator_remove(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_dpp_configurator_get_key(struct wpa_ctrl *ctrl, int argc,
+						char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_CONFIGURATOR_GET_KEY", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_dpp_pkex_add(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
@@ -3604,6 +3611,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "dpp_configurator_remove", wpa_cli_cmd_dpp_configurator_remove, NULL,
 	  cli_cmd_flag_none,
 	  "*|<id> = remove DPP configurator" },
+	{ "dpp_configurator_get_key", wpa_cli_cmd_dpp_configurator_get_key,
+	  NULL, cli_cmd_flag_none,
+	  "<id> = Get DPP configurator's private key" },
 	{ "dpp_pkex_add", wpa_cli_cmd_dpp_pkex_add, NULL,
 	  cli_cmd_flag_sensitive,
 	  "add PKEX code" },

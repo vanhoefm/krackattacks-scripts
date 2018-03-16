@@ -5510,6 +5510,30 @@ void dpp_configurator_free(struct dpp_configurator *conf)
 }
 
 
+int dpp_configurator_get_key(const struct dpp_configurator *conf, char *buf,
+			     size_t buflen)
+{
+	EC_KEY *eckey;
+	int key_len, ret = -1;
+	unsigned char *key = NULL;
+
+	if (!conf->csign)
+		return -1;
+
+	eckey = EVP_PKEY_get1_EC_KEY(conf->csign);
+	if (!eckey)
+		return -1;
+
+	key_len = i2d_ECPrivateKey(eckey, &key);
+	if (key_len > 0)
+		ret = wpa_snprintf_hex(buf, buflen, key, key_len);
+
+	EC_KEY_free(eckey);
+	OPENSSL_free(key);
+	return ret;
+}
+
+
 struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,
 			size_t privkey_len)

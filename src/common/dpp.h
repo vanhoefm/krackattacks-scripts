@@ -394,6 +394,8 @@ const u8 * dpp_get_attr(const u8 *buf, size_t len, u16 req_id, u16 *ret_len);
 int dpp_check_attrs(const u8 *buf, size_t len);
 int dpp_key_expired(const char *timestamp, os_time_t *expiry);
 const char * dpp_akm_str(enum dpp_akm akm);
+int dpp_configurator_get_key(const struct dpp_configurator *conf, char *buf,
+			     size_t buflen);
 void dpp_configurator_free(struct dpp_configurator *conf);
 struct dpp_configurator *
 dpp_keygen_configurator(const char *curve, const u8 *privkey,

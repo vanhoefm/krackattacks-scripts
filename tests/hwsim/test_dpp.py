@@ -1370,6 +1370,10 @@ def test_dpp_ap_config_p521_p521(dev, apdev):
     """DPP and AP configuration (P-521 + P-521)"""
     run_dpp_ap_config(dev, apdev, curve="P-521", conf_curve="P-521")
 
+def test_dpp_ap_config_reconfig_configurator(dev, apdev):
+    """DPP and AP configuration with Configurator reconfiguration"""
+    run_dpp_ap_config(dev, apdev, reconf_configurator=True)
+
 def update_hapd_config(hapd):
     ev = hapd.wait_event(["DPP-CONFOBJ-SSID"], timeout=1)
     if ev is None:
@@ -1408,7 +1412,8 @@ def update_hapd_config(hapd):
         hapd.set("dpp_netaccesskey_expiry", net_access_key_expiry)
     hapd.enable()
 
-def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
+def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None,
+                      reconf_configurator=False):
     check_dpp_capab(dev[0])
     check_dpp_capab(dev[1])
     hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
@@ -1431,6 +1436,11 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     if "FAIL" in res:
         raise Exception("Failed to add configurator")
     conf_id = int(res)
+
+    if reconf_configurator:
+        csign = dev[0].request("DPP_CONFIGURATOR_GET_KEY %d" % conf_id)
+        if "FAIL" in csign or len(csign) == 0:
+            raise Exception("DPP_CONFIGURATOR_GET_KEY failed")
 
     res = dev[0].request("DPP_QR_CODE " + uri)
     if "FAIL" in res:
@@ -1471,6 +1481,19 @@ def run_dpp_ap_config(dev, apdev, curve=None, conf_curve=None):
     if "FAIL" in res:
         raise Exception("Failed to parse QR Code URI")
     id0b = int(res)
+
+    if reconf_configurator:
+        res = dev[0].request("DPP_CONFIGURATOR_REMOVE %d" % conf_id)
+        if "OK" not in res:
+            raise Exception("DPP_CONFIGURATOR_REMOVE failed")
+        cmd = "DPP_CONFIGURATOR_ADD"
+        if conf_curve:
+            cmd += " curve=" + conf_curve
+        cmd += " key=" + csign
+        res = dev[0].request(cmd);
+        if "FAIL" in res:
+            raise Exception("Failed to add configurator (reconf)")
+        conf_id = int(res)
 
     cmd = "DPP_LISTEN 2412"
     if "OK" not in dev[1].request(cmd):
@@ -2880,7 +2903,14 @@ def test_dpp_own_config_ap(dev, apdev):
     finally:
         dev[0].set("dpp_config_processing", "0")
 
-def run_dpp_own_config_ap(dev, apdev):
+def test_dpp_own_config_ap_reconf(dev, apdev):
+    """DPP configurator (AP) signing own connector and configurator reconf"""
+    try:
+        run_dpp_own_config_ap(dev, apdev)
+    finally:
+        dev[0].set("dpp_config_processing", "0")
+
+def run_dpp_own_config_ap(dev, apdev, reconf_configurator=False):
     check_dpp_capab(dev[0])
     hapd = hostapd.add_ap(apdev[0], { "ssid": "unconfigured" })
     check_dpp_capab(hapd)
@@ -2891,11 +2921,26 @@ def run_dpp_own_config_ap(dev, apdev):
         raise Exception("Failed to add configurator")
     conf_id = int(res)
 
+    if reconf_configurator:
+        csign = hapd.request("DPP_CONFIGURATOR_GET_KEY %d" % conf_id)
+        if "FAIL" in csign or len(csign) == 0:
+            raise Exception("DPP_CONFIGURATOR_GET_KEY failed")
+
     cmd = "DPP_CONFIGURATOR_SIGN  conf=ap-dpp configurator=%d" % (conf_id)
     res = hapd.request(cmd)
     if "FAIL" in res:
         raise Exception("Failed to generate own configuration")
     update_hapd_config(hapd)
+
+    if reconf_configurator:
+        res = hapd.request("DPP_CONFIGURATOR_REMOVE %d" % conf_id)
+        if "OK" not in res:
+            raise Exception("DPP_CONFIGURATOR_REMOVE failed")
+        cmd = "DPP_CONFIGURATOR_ADD key=" + csign
+        res = hapd.request(cmd);
+        if "FAIL" in res:
+            raise Exception("Failed to add configurator (reconf)")
+        conf_id = int(res)
 
     addr = dev[0].own_addr().replace(':', '')
     cmd = "DPP_BOOTSTRAP_GEN type=qrcode chan=81/1 mac=" + addr

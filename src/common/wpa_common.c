@@ -82,6 +82,60 @@ unsigned int wpa_mic_len(int akmp, size_t pmk_len)
 
 
 /**
+ * wpa_use_akm_defined - Is AKM-defined Key Descriptor Version used
+ * @akmp: WPA_KEY_MGMT_* used in key derivation
+ * Returns: 1 if AKM-defined Key Descriptor Version is used; 0 otherwise
+ */
+int wpa_use_akm_defined(int akmp)
+{
+	return akmp == WPA_KEY_MGMT_OSEN ||
+		akmp == WPA_KEY_MGMT_OWE ||
+		akmp == WPA_KEY_MGMT_DPP ||
+		wpa_key_mgmt_sae(akmp) ||
+		wpa_key_mgmt_suite_b(akmp) ||
+		wpa_key_mgmt_fils(akmp);
+}
+
+
+/**
+ * wpa_use_cmac - Is CMAC integrity algorithm used for EAPOL-Key MIC
+ * @akmp: WPA_KEY_MGMT_* used in key derivation
+ * Returns: 1 if CMAC is used; 0 otherwise
+ */
+int wpa_use_cmac(int akmp)
+{
+	return akmp == WPA_KEY_MGMT_OSEN ||
+		akmp == WPA_KEY_MGMT_OWE ||
+		akmp == WPA_KEY_MGMT_DPP ||
+		wpa_key_mgmt_ft(akmp) ||
+		wpa_key_mgmt_sha256(akmp) ||
+		wpa_key_mgmt_sae(akmp) ||
+		wpa_key_mgmt_suite_b(akmp);
+}
+
+
+/**
+ * wpa_use_aes_key_wrap - Is AES Keywrap algorithm used for EAPOL-Key Key Data
+ * @akmp: WPA_KEY_MGMT_* used in key derivation
+ * Returns: 1 if AES Keywrap is used; 0 otherwise
+ *
+ * Note: AKM 00-0F-AC:1 and 00-0F-AC:2 have special rules for selecting whether
+ * to use AES Keywrap based on the negotiated pairwise cipher. This function
+ * does not cover those special cases.
+ */
+int wpa_use_aes_key_wrap(int akmp)
+{
+	return akmp == WPA_KEY_MGMT_OSEN ||
+		akmp == WPA_KEY_MGMT_OWE ||
+		akmp == WPA_KEY_MGMT_DPP ||
+		wpa_key_mgmt_ft(akmp) ||
+		wpa_key_mgmt_sha256(akmp) ||
+		wpa_key_mgmt_sae(akmp) ||
+		wpa_key_mgmt_suite_b(akmp);
+}
+
+
+/**
  * wpa_eapol_key_mic - Calculate EAPOL-Key MIC
  * @key: EAPOL-Key Key Confirmation Key (KCK)
  * @key_len: KCK length in octets
@@ -131,6 +185,13 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
 	case WPA_KEY_INFO_TYPE_AKM_DEFINED:
 		switch (akmp) {
+#ifdef CONFIG_SAE
+		case WPA_KEY_MGMT_SAE:
+		case WPA_KEY_MGMT_FT_SAE:
+			wpa_printf(MSG_DEBUG,
+				   "WPA: EAPOL-Key MIC using AES-CMAC (AKM-defined - SAE)");
+			return omac1_aes_128(key, buf, len, mic);
+#endif /* CONFIG_SAE */
 #ifdef CONFIG_HS20
 		case WPA_KEY_MGMT_OSEN:
 			wpa_printf(MSG_DEBUG,

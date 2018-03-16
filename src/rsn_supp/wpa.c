@@ -181,8 +181,7 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 	int key_info, ver;
 	u8 bssid[ETH_ALEN], *rbuf, *key_mic, *mic;
 
-	if (sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
-	    wpa_key_mgmt_suite_b(sm->key_mgmt))
+	if (wpa_use_akm_defined(sm->key_mgmt))
 		ver = WPA_KEY_INFO_TYPE_AKM_DEFINED;
 	else if (wpa_key_mgmt_ft(sm->key_mgmt) ||
 		 wpa_key_mgmt_sha256(sm->key_mgmt))
@@ -1814,10 +1813,7 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 #endif /* CONFIG_NO_RC4 */
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC ||
-		   sm->key_mgmt == WPA_KEY_MGMT_OWE ||
-		   sm->key_mgmt == WPA_KEY_MGMT_DPP ||
-		   sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
-		   wpa_key_mgmt_suite_b(sm->key_mgmt)) {
+		   wpa_use_aes_key_wrap(sm->key_mgmt)) {
 		u8 *buf;
 
 		wpa_printf(MSG_DEBUG,
@@ -2094,29 +2090,14 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES &&
-	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
-	    !wpa_key_mgmt_fils(sm->key_mgmt) &&
-	    sm->key_mgmt != WPA_KEY_MGMT_OWE &&
-	    sm->key_mgmt != WPA_KEY_MGMT_DPP &&
-	    sm->key_mgmt != WPA_KEY_MGMT_OSEN) {
+	    !wpa_use_akm_defined(sm->key_mgmt)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: Unsupported EAPOL-Key descriptor version %d",
 			ver);
 		goto out;
 	}
 
-	if (sm->key_mgmt == WPA_KEY_MGMT_OSEN &&
-	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
-		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
-			"OSEN: Unsupported EAPOL-Key descriptor version %d",
-			ver);
-		goto out;
-	}
-
-	if ((wpa_key_mgmt_suite_b(sm->key_mgmt) ||
-	     wpa_key_mgmt_fils(sm->key_mgmt) ||
-	     sm->key_mgmt == WPA_KEY_MGMT_DPP ||
-	     sm->key_mgmt == WPA_KEY_MGMT_OWE) &&
+	if (wpa_use_akm_defined(sm->key_mgmt) &&
 	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"RSN: Unsupported EAPOL-Key descriptor version %d (expected AKM defined = 0)",
@@ -2127,7 +2108,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		/* IEEE 802.11r uses a new key_info type (AES-128-CMAC). */
-		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
+		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
+		    !wpa_use_akm_defined(sm->key_mgmt)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"FT: AP did not use AES-128-CMAC");
 			goto out;
@@ -2137,9 +2119,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 #ifdef CONFIG_IEEE80211W
 	if (wpa_key_mgmt_sha256(sm->key_mgmt)) {
 		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
-		    sm->key_mgmt != WPA_KEY_MGMT_OSEN &&
-		    !wpa_key_mgmt_fils(sm->key_mgmt) &&
-		    !wpa_key_mgmt_suite_b(sm->key_mgmt)) {
+		    !wpa_use_akm_defined(sm->key_mgmt)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"WPA: AP did not use the "
 				"negotiated AES-128-CMAC");
@@ -2148,10 +2128,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	} else
 #endif /* CONFIG_IEEE80211W */
 	if (sm->pairwise_cipher == WPA_CIPHER_CCMP &&
-	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
-	    !wpa_key_mgmt_fils(sm->key_mgmt) &&
-	    sm->key_mgmt != WPA_KEY_MGMT_OWE &&
-	    sm->key_mgmt != WPA_KEY_MGMT_DPP &&
+	    !wpa_use_akm_defined(sm->key_mgmt) &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: CCMP is used, but EAPOL-Key "
@@ -2171,7 +2148,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		} else
 			goto out;
 	} else if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&
-		   !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
+		   !wpa_use_akm_defined(sm->key_mgmt) &&
 		   ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: GCMP is used, but EAPOL-Key "

@@ -238,23 +238,6 @@ static void wpa_sta_disconnect(struct wpa_authenticator *wpa_auth,
 }
 
 
-static int wpa_use_aes_cmac(struct wpa_state_machine *sm)
-{
-	int ret = 0;
-#ifdef CONFIG_IEEE80211R_AP
-	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
-		ret = 1;
-#endif /* CONFIG_IEEE80211R_AP */
-#ifdef CONFIG_IEEE80211W
-	if (wpa_key_mgmt_sha256(sm->wpa_key_mgmt))
-		ret = 1;
-#endif /* CONFIG_IEEE80211W */
-	if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN)
-		ret = 1;
-	return ret;
-}
-
-
 static void wpa_rekey_gmk(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_authenticator *wpa_auth = eloop_ctx;
@@ -1010,10 +993,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		u16 ver = key_info & WPA_KEY_INFO_TYPE_MASK;
 		if (sm->pairwise == WPA_CIPHER_CCMP ||
 		    sm->pairwise == WPA_CIPHER_GCMP) {
-			if (wpa_use_aes_cmac(sm) &&
-			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN &&
-			    !wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
-			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
+			if (wpa_use_cmac(sm->wpa_key_mgmt) &&
+			    !wpa_use_akm_defined(sm->wpa_key_mgmt) &&
 			    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1023,11 +1004,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 				return;
 			}
 
-			if (!wpa_use_aes_cmac(sm) &&
-			    !wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
-			    !wpa_key_mgmt_fils(sm->wpa_key_mgmt) &&
-			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OWE &&
-			    sm->wpa_key_mgmt != WPA_KEY_MGMT_DPP &&
+			if (!wpa_use_cmac(sm->wpa_key_mgmt) &&
+			    !wpa_use_akm_defined(sm->wpa_key_mgmt) &&
 			    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1037,10 +1015,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			}
 		}
 
-		if ((wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
-		     wpa_key_mgmt_fils(sm->wpa_key_mgmt) ||
-		     sm->wpa_key_mgmt == WPA_KEY_MGMT_DPP ||
-		     sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE) &&
+		if (wpa_use_akm_defined(sm->wpa_key_mgmt) &&
 		    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_WARNING,
 					"did not use EAPOL-Key descriptor version 0 as required for AKM-defined cases");
@@ -1401,13 +1376,9 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	if (force_version)
 		version = force_version;
-	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
-		 sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
-		 sm->wpa_key_mgmt == WPA_KEY_MGMT_DPP ||
-		 wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
-		 wpa_key_mgmt_fils(sm->wpa_key_mgmt))
+	else if (wpa_use_akm_defined(sm->wpa_key_mgmt))
 		version = WPA_KEY_INFO_TYPE_AKM_DEFINED;
-	else if (wpa_use_aes_cmac(sm))
+	else if (wpa_use_cmac(sm->wpa_key_mgmt))
 		version = WPA_KEY_INFO_TYPE_AES_128_CMAC;
 	else if (sm->pairwise != WPA_CIPHER_TKIP)
 		version = WPA_KEY_INFO_TYPE_HMAC_SHA1_AES;
@@ -1429,10 +1400,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	key_data_len = kde_len;
 
 	if ((version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
-	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
-	     sm->wpa_key_mgmt == WPA_KEY_MGMT_DPP ||
-	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
-	     wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
+	     wpa_use_aes_key_wrap(sm->wpa_key_mgmt) ||
 	     version == WPA_KEY_INFO_TYPE_AES_128_CMAC) && encr) {
 		pad_len = key_data_len % 8;
 		if (pad_len)
@@ -1531,10 +1499,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		wpa_hexdump_key(MSG_DEBUG, "Plaintext EAPOL-Key Key Data",
 				buf, key_data_len);
 		if (version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
-		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OWE ||
-		    sm->wpa_key_mgmt == WPA_KEY_MGMT_DPP ||
-		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
-		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
+		    wpa_use_aes_key_wrap(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 			wpa_printf(MSG_DEBUG,
 				   "WPA: Encrypt Key Data using AES-WRAP (KEK length %u)",

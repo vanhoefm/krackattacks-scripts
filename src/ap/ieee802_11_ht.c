@@ -236,6 +236,7 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	int i;
 	const u8 *start = (const u8 *) mgmt;
 	const u8 *data = start + IEEE80211_HDRLEN + 2;
+	struct sta_info *sta;
 
 	wpa_printf(MSG_DEBUG,
 		   "HT: Received 20/40 BSS Coexistence Management frame from "
@@ -287,6 +288,13 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	if (bc_ie->coex_param & WLAN_20_40_BSS_COEX_20MHZ_WIDTH_REQ) {
 		/* Intra-BSS communication prohibiting 20/40 MHz BSS operation
 		 */
+		sta = ap_get_sta(hapd, mgmt->sa);
+		if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
+			wpa_printf(MSG_DEBUG,
+				   "Ignore intra-BSS 20/40 BSS Coexistence Management frame from not-associated STA");
+			return;
+		}
+
 		hostapd_logger(hapd, mgmt->sa,
 			       HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,

@@ -217,8 +217,10 @@ static int hostapd_config_read_maclist(const char *fname,
 		if (*pos != '\0')
 			vlan_id = atoi(pos);
 
-		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0)
+		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0) {
+			fclose(f);
 			return -1;
+		}
 	}
 
 	fclose(f);

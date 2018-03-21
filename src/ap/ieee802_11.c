@@ -3727,9 +3727,6 @@ static int handle_action(struct hostapd_data *hapd,
 		if (len >= IEEE80211_HDRLEN + 2 &&
 		    mgmt->u.action.u.public_action.action ==
 		    WLAN_PA_20_40_BSS_COEX) {
-			wpa_printf(MSG_DEBUG,
-				   "HT20/40 coex mgmt frame received from STA "
-				   MACSTR, MAC2STR(mgmt->sa));
 			hostapd_2040_coex_action(hapd, mgmt, len);
 			return 1;
 		}

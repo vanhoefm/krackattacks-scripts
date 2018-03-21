@@ -332,8 +332,10 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 		for (i = 0; i < ielen - 1; i++) {
 			u8 chan = ic_report->variable[i];
 
+			if (chan == iface->conf->channel)
+				continue; /* matching own primary channel */
 			if (is_40_allowed(iface, chan))
-				continue;
+				continue; /* not within affected channels */
 			hostapd_logger(hapd, mgmt->sa,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,

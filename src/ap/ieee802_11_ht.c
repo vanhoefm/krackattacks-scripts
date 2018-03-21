@@ -313,8 +313,8 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	}
 
 	/* 20/40 BSS Intolerant Channel Report element (zero or more times) */
-	if (start + len - data >= 3 &&
-	    data[0] == WLAN_EID_20_40_BSS_INTOLERANT && data[1] >= 1) {
+	while (start + len - data >= 3 &&
+	       data[0] == WLAN_EID_20_40_BSS_INTOLERANT && data[1] >= 1) {
 		u8 ielen = data[1];
 
 		if (ielen > start + len - data - 2) {
@@ -341,6 +341,8 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 				       chan);
 			is_ht40_allowed = 0;
 		}
+
+		data += 2 + ielen;
 	}
 	wpa_printf(MSG_DEBUG, "is_ht40_allowed=%d num_sta_ht40_intolerant=%d",
 		   is_ht40_allowed, iface->num_sta_ht40_intolerant);

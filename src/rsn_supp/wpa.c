@@ -288,6 +288,18 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		eapol_sm_notify_cached(sm->eapol);
 #ifdef CONFIG_IEEE80211R
 		sm->xxkey_len = 0;
+#ifdef CONFIG_SAE
+		if (sm->key_mgmt == WPA_KEY_MGMT_FT_SAE &&
+		    sm->pmk_len == PMK_LEN) {
+			/* Need to allow FT key derivation to proceed with
+			 * PMK from SAE being used as the XXKey in cases where
+			 * the PMKID in msg 1/4 matches the PMKSA entry that was
+			 * just added based on SAE authentication for the
+			 * initial mobility domain association. */
+			os_memcpy(sm->xxkey, sm->pmk, sm->pmk_len);
+			sm->xxkey_len = sm->pmk_len;
+		}
+#endif /* CONFIG_SAE */
 #endif /* CONFIG_IEEE80211R */
 	} else if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) && sm->eapol) {
 		int res, pmk_len;

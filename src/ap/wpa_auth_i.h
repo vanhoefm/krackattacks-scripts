@@ -58,6 +58,7 @@ struct wpa_state_machine {
 	u8 alt_replay_counter[WPA_REPLAY_COUNTER_LEN];
 	u8 PMK[PMK_LEN_MAX];
 	unsigned int pmk_len;
+	u8 pmkid[PMKID_LEN]; /* valid if pmkid_set == 1 */
 	struct wpa_ptk PTK;
 	Boolean PTK_valid;
 	Boolean pairwise_set;
@@ -90,6 +91,7 @@ struct wpa_state_machine {
 	unsigned int pmk_r1_name_valid:1;
 #endif /* CONFIG_IEEE80211R_AP */
 	unsigned int is_wnmsleep:1;
+	unsigned int pmkid_set:1;
 
 	u8 req_replay_counter[WPA_REPLAY_COUNTER_LEN];
 	int req_replay_counter_used;

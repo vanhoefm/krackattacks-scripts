@@ -2035,11 +2035,31 @@ SM_STATE(WPA_PTK, PTKSTART)
 		pmkid[1] = RSN_SELECTOR_LEN + PMKID_LEN;
 		RSN_SELECTOR_PUT(&pmkid[2], RSN_KEY_DATA_PMKID);
 		if (sm->pmksa) {
+			wpa_hexdump(MSG_DEBUG,
+				    "RSN: Message 1/4 PMKID from PMKSA entry",
+				    sm->pmksa->pmkid, PMKID_LEN);
 			os_memcpy(&pmkid[2 + RSN_SELECTOR_LEN],
 				  sm->pmksa->pmkid, PMKID_LEN);
 		} else if (wpa_key_mgmt_suite_b(sm->wpa_key_mgmt)) {
 			/* No KCK available to derive PMKID */
+			wpa_printf(MSG_DEBUG,
+				   "RSN: No KCK available to derive PMKID for message 1/4");
 			pmkid = NULL;
+#ifdef CONFIG_SAE
+		} else if (wpa_key_mgmt_sae(sm->wpa_key_mgmt)) {
+			if (sm->pmkid_set) {
+				wpa_hexdump(MSG_DEBUG,
+					    "RSN: Message 1/4 PMKID from SAE",
+					    sm->pmkid, PMKID_LEN);
+				os_memcpy(&pmkid[2 + RSN_SELECTOR_LEN],
+					  sm->pmkid, PMKID_LEN);
+			} else {
+				/* No PMKID available */
+				wpa_printf(MSG_DEBUG,
+					   "RSN: No SAE PMKID available for message 1/4");
+				pmkid = NULL;
+			}
+#endif /* CONFIG_SAE */
 		} else {
 			/*
 			 * Calculate PMKID since no PMKSA cache entry was
@@ -2048,6 +2068,9 @@ SM_STATE(WPA_PTK, PTKSTART)
 			rsn_pmkid(sm->PMK, sm->pmk_len, sm->wpa_auth->addr,
 				  sm->addr, &pmkid[2 + RSN_SELECTOR_LEN],
 				  sm->wpa_key_mgmt);
+			wpa_hexdump(MSG_DEBUG,
+				    "RSN: Message 1/4 PMKID derived from PMK",
+				    &pmkid[2 + RSN_SELECTOR_LEN], PMKID_LEN);
 		}
 	}
 	wpa_send_eapol(sm->wpa_auth, sm,
@@ -4037,6 +4060,13 @@ int wpa_auth_pmksa_add_sae(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		return 0;
 
 	return -1;
+}
+
+
+void wpa_auth_add_sae_pmkid(struct wpa_state_machine *sm, const u8 *pmkid)
+{
+	os_memcpy(sm->pmkid, pmkid, PMKID_LEN);
+	sm->pmkid_set = 1;
 }
 
 

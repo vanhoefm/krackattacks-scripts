@@ -2538,6 +2538,10 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_SAE
+		if (wpa_auth_uses_sae(sta->wpa_sm) && sta->sae &&
+		    sta->sae->state == SAE_ACCEPTED)
+			wpa_auth_add_sae_pmkid(sta->wpa_sm, sta->sae->pmkid);
+
 		if (wpa_auth_uses_sae(sta->wpa_sm) &&
 		    sta->auth_alg == WLAN_AUTH_OPEN) {
 			struct rsn_pmksa_cache_entry *sa;

@@ -1728,6 +1728,134 @@ def test_fils_and_ft(dev, apdev, params):
     #dev[0].roam_over_ds(apdev[1]['bssid'])
     dev[0].roam(apdev[1]['bssid'])
 
+def test_fils_and_ft_over_air(dev, apdev, params):
+    """FILS SK using ERP and FT-over-air (SHA256)"""
+    run_fils_and_ft_over_air(dev, apdev, params, "FT-FILS-SHA256")
+
+def run_fils_and_ft_over_air(dev, apdev, params, key_mgmt):
+    hapd = run_fils_and_ft_setup(dev, apdev, params, key_mgmt)
+
+    logger.info("FT protocol using FT key hierarchy established during FILS authentication")
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412", force_scan=True)
+    hapd.request("NOTE FT protocol to AP2 using FT keys established during FILS FILS authentication")
+    dev[0].roam(apdev[1]['bssid'])
+
+    logger.info("FT protocol using the previously established FT key hierarchy from FILS authentication")
+    hapd.request("NOTE FT protocol back to AP1 using FT keys established during FILS FILS authentication")
+    dev[0].roam(apdev[0]['bssid'])
+
+    hapd.request("NOTE FT protocol back to AP2 using FT keys established during FILS FILS authentication")
+    dev[0].roam(apdev[1]['bssid'])
+
+    hapd.request("NOTE FT protocol back to AP1 using FT keys established during FILS FILS authentication (2)")
+    dev[0].roam(apdev[0]['bssid'])
+
+def test_fils_and_ft_over_ds(dev, apdev, params):
+    """FILS SK using ERP and FT-over-DS (SHA256)"""
+    run_fils_and_ft_over_ds(dev, apdev, params, "FT-FILS-SHA256")
+
+def run_fils_and_ft_over_ds(dev, apdev, params, key_mgmt):
+    hapd = run_fils_and_ft_setup(dev, apdev, params, key_mgmt)
+
+    logger.info("FT protocol using FT key hierarchy established during FILS authentication")
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412", force_scan=True)
+    hapd.request("NOTE FT protocol to AP2 using FT keys established during FILS FILS authentication")
+    dev[0].roam_over_ds(apdev[1]['bssid'])
+
+    logger.info("FT protocol using the previously established FT key hierarchy from FILS authentication")
+    hapd.request("NOTE FT protocol back to AP1 using FT keys established during FILS FILS authentication")
+    dev[0].roam_over_ds(apdev[0]['bssid'])
+
+    hapd.request("NOTE FT protocol back to AP2 using FT keys established during FILS FILS authentication")
+    dev[0].roam_over_ds(apdev[1]['bssid'])
+
+    hapd.request("NOTE FT protocol back to AP1 using FT keys established during FILS FILS authentication (2)")
+    dev[0].roam_over_ds(apdev[0]['bssid'])
+
+def run_fils_and_ft_setup(dev, apdev, params, key_mgmt):
+    check_fils_capa(dev[0])
+    check_erp_capa(dev[0])
+
+    er = start_erp_as(apdev[1],
+                      msk_dump=os.path.join(params['logdir'], "msk.lst"))
+
+    logger.info("Set up ERP key hierarchy without FILS/FT authentication")
+    bssid = apdev[0]['bssid']
+    params = hostapd.wpa2_eap_params(ssid="fils")
+    params['wpa_key_mgmt'] = key_mgmt
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params['ieee80211w'] = "2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].request("ERP_FLUSH")
+    hapd.request("NOTE Initial association to establish ERP keys")
+    id = dev[0].connect("fils", key_mgmt=key_mgmt, ieee80211w="2",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    hapd.disable()
+    dev[0].flush_scan_cache()
+    if "FAIL" in dev[0].request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+
+    logger.info("Initial mobility domain association using FILS authentication")
+    params = hostapd.wpa2_eap_params(ssid="fils-ft")
+    params['wpa_key_mgmt'] = key_mgmt
+    params['auth_server_port'] = "18128"
+    params['erp_domain'] = 'example.com'
+    params['fils_realm'] = 'example.com'
+    params['disable_pmksa_caching'] = '1'
+    params["mobility_domain"] = "a1b2"
+    params["r0_key_lifetime"] = "10000"
+    params["pmk_r1_push"] = "1"
+    params["reassociation_deadline"] = "1000"
+    params['nas_identifier'] = "nas1.w1.fi"
+    params['r1_key_holder'] = "000102030405"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    params['ieee80211w'] = "2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].dump_monitor()
+    hapd.request("NOTE Initial FT mobility domain association using FILS authentication")
+    dev[0].set_network_quoted(id, "ssid", "fils-ft")
+    dev[0].select_network(id, freq=2412)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-AUTH-REJECT",
+                            "EVENT-ASSOC-REJECT",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection using FILS/ERP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    if "CTRL-EVENT-AUTH-REJECT" in ev:
+        raise Exception("Authentication failed")
+    if "EVENT-ASSOC-REJECT" in ev:
+        raise Exception("Association failed")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    er.disable()
+
+    params['wpa_key_mgmt'] = key_mgmt
+    params['nas_identifier'] = "nas2.w1.fi"
+    params['r1_key_holder'] = "000102030406"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    return hapd
+
 def test_fils_assoc_replay(dev, apdev, params):
     """FILS AP and replayed Association Request frame"""
     capfile = os.path.join(params['logdir'], "hwsim0.pcapng")

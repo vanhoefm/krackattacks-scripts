@@ -1459,6 +1459,11 @@ static int wpa_ft_pull_pmk_r1(struct wpa_state_machine *sm,
 			    sm->r0kh_id, sm->r0kh_id_len);
 		return -1;
 	}
+	if (os_memcmp(r0kh->addr, sm->wpa_auth->addr, ETH_ALEN) == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "FT: R0KH-ID points to self - no matching key available");
+		return -1;
+	}
 
 	key = r0kh->key;
 	key_len = sizeof(r0kh->key);

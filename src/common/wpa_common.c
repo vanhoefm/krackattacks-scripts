@@ -41,6 +41,21 @@ static unsigned int wpa_kck_len(int akmp, size_t pmk_len)
 }
 
 
+#ifdef CONFIG_IEEE80211R
+static unsigned int wpa_kck2_len(int akmp)
+{
+	switch (akmp) {
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
+		return 16;
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return 24;
+	default:
+		return 0;
+	}
+}
+#endif /* CONFIG_IEEE80211R */
+
+
 static unsigned int wpa_kek_len(int akmp, size_t pmk_len)
 {
 	switch (akmp) {
@@ -59,6 +74,21 @@ static unsigned int wpa_kek_len(int akmp, size_t pmk_len)
 		return 16;
 	}
 }
+
+
+#ifdef CONFIG_IEEE80211R
+static unsigned int wpa_kek2_len(int akmp)
+{
+	switch (akmp) {
+	case WPA_KEY_MGMT_FT_FILS_SHA256:
+		return 16;
+	case WPA_KEY_MGMT_FT_FILS_SHA384:
+		return 32;
+	default:
+		return 0;
+	}
+}
+#endif /* CONFIG_IEEE80211R */
 
 
 unsigned int wpa_mic_len(int akmp, size_t pmk_len)
@@ -404,6 +434,9 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 	os_memcpy(ptk->tk, tmp + ptk->kck_len + ptk->kek_len, ptk->tk_len);
 	wpa_hexdump_key(MSG_DEBUG, "WPA: TK", ptk->tk, ptk->tk_len);
 
+	ptk->kek2_len = 0;
+	ptk->kck2_len = 0;
+
 	os_memset(tmp, 0, sizeof(tmp));
 	return 0;
 }
@@ -581,6 +614,9 @@ int fils_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const u8 *spa, const u8 *aa,
 		wpa_hexdump_key(MSG_DEBUG, "FILS: FILS-FT",
 				fils_ft, *fils_ft_len);
 	}
+
+	ptk->kek2_len = 0;
+	ptk->kck2_len = 0;
 
 	os_memset(tmp, 0, sizeof(tmp));
 	ret = 0;
@@ -1470,8 +1506,8 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 	u8 *pos, hash[32];
 	const u8 *addr[6];
 	size_t len[6];
-	u8 tmp[WPA_KCK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN];
-	size_t ptk_len;
+	u8 tmp[2 * WPA_KCK_MAX_LEN + 2 * WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN];
+	size_t ptk_len, offset;
 
 	/*
 	 * PTK = KDF-PTKLen(PMK-R1, "FT-PTK", SNonce || ANonce ||
@@ -1488,9 +1524,12 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 	pos += ETH_ALEN;
 
 	ptk->kck_len = wpa_kck_len(akmp, PMK_LEN);
+	ptk->kck2_len = wpa_kck2_len(akmp);
 	ptk->kek_len = wpa_kek_len(akmp, PMK_LEN);
+	ptk->kek2_len = wpa_kek2_len(akmp);
 	ptk->tk_len = wpa_cipher_key_len(cipher);
-	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len;
+	ptk_len = ptk->kck_len + ptk->kek_len + ptk->tk_len +
+		ptk->kck2_len + ptk->kek2_len;
 
 	if (sha256_prf(pmk_r1, PMK_LEN, "FT-PTK", buf, pos - buf,
 		       tmp, ptk_len) < 0)
@@ -1518,11 +1557,23 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 	os_memcpy(ptk_name, hash, WPA_PMK_NAME_LEN);
 
 	os_memcpy(ptk->kck, tmp, ptk->kck_len);
-	os_memcpy(ptk->kek, tmp + ptk->kck_len, ptk->kek_len);
-	os_memcpy(ptk->tk, tmp + ptk->kck_len + ptk->kek_len, ptk->tk_len);
+	offset = ptk->kck_len;
+	os_memcpy(ptk->kek, tmp + offset, ptk->kek_len);
+	offset += ptk->kek_len;
+	os_memcpy(ptk->tk, tmp + offset, ptk->tk_len);
+	offset += ptk->tk_len;
+	os_memcpy(ptk->kck2, tmp + offset, ptk->kck2_len);
+	offset = ptk->kck2_len;
+	os_memcpy(ptk->kek2, tmp + offset, ptk->kek2_len);
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: KCK", ptk->kck, ptk->kck_len);
 	wpa_hexdump_key(MSG_DEBUG, "FT: KEK", ptk->kek, ptk->kek_len);
+	if (ptk->kck2_len)
+		wpa_hexdump_key(MSG_DEBUG, "FT: KCK2",
+				ptk->kck2, ptk->kck2_len);
+	if (ptk->kek2_len)
+		wpa_hexdump_key(MSG_DEBUG, "FT: KEK2",
+				ptk->kek2, ptk->kek2_len);
 	wpa_hexdump_key(MSG_DEBUG, "FT: TK", ptk->tk, ptk->tk_len);
 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
 

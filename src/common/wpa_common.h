@@ -210,9 +210,13 @@ struct wpa_ptk {
 	u8 kck[WPA_KCK_MAX_LEN]; /* EAPOL-Key Key Confirmation Key (KCK) */
 	u8 kek[WPA_KEK_MAX_LEN]; /* EAPOL-Key Key Encryption Key (KEK) */
 	u8 tk[WPA_TK_MAX_LEN]; /* Temporal Key (TK) */
+	u8 kck2[WPA_KCK_MAX_LEN]; /* FT reasoc Key Confirmation Key (KCK2) */
+	u8 kek2[WPA_KEK_MAX_LEN]; /* FT reassoc Key Encryption Key (KEK2) */
 	size_t kck_len;
 	size_t kek_len;
 	size_t tk_len;
+	size_t kck2_len;
+	size_t kek2_len;
 	int installed; /* 1 if key has already been installed to driver */
 };
 

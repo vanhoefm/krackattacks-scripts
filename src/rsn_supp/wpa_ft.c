@@ -385,6 +385,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	u8 ptk_name[WPA_PMK_NAME_LEN];
 	int ret;
 	const u8 *bssid;
+	const u8 *kck;
+	size_t kck_len;
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 	wpa_hexdump(MSG_DEBUG, "FT: RIC IEs", ric_ies, ric_ies_len);
@@ -485,9 +487,16 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			      ptk_name, sm->key_mgmt, sm->pairwise_cipher) < 0)
 		return -1;
 
+	if (wpa_key_mgmt_fils(sm->key_mgmt)) {
+		kck = sm->ptk.kck2;
+		kck_len = sm->ptk.kck2_len;
+	} else {
+		kck = sm->ptk.kck;
+		kck_len = sm->ptk.kck_len;
+	}
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, ftie->anonce,
 				    sm->pmk_r1_name,
-				    sm->ptk.kck, sm->ptk.kck_len, bssid,
+				    kck, kck_len, bssid,
 				    ric_ies, ric_ies_len,
 				    parse.mdie ? parse.mdie - 2 : NULL);
 	if (ft_ies) {
@@ -679,6 +688,8 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	struct rsn_ftie *ftie;
 	unsigned int count;
 	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
+	const u8 *kck;
+	size_t kck_len;
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 
@@ -776,7 +787,15 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (wpa_ft_mic(sm->ptk.kck, sm->ptk.kck_len, sm->own_addr, src_addr, 6,
+	if (wpa_key_mgmt_fils(sm->key_mgmt)) {
+		kck = sm->ptk.kck2;
+		kck_len = sm->ptk.kck2_len;
+	} else {
+		kck = sm->ptk.kck;
+		kck_len = sm->ptk.kck_len;
+	}
+
+	if (wpa_ft_mic(kck, kck_len, sm->own_addr, src_addr, 6,
 		       parse.mdie - 2, parse.mdie_len + 2,
 		       parse.ftie - 2, parse.ftie_len + 2,
 		       parse.rsn - 2, parse.rsn_len + 2,

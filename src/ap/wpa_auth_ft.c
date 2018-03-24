@@ -1806,6 +1806,8 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	struct wpa_ft_ies parse;
 	u8 *ric_start;
 	u8 *anonce, *snonce;
+	const u8 *kck;
+	size_t kck_len;
 
 	if (sm == NULL)
 		return pos;
@@ -1898,9 +1900,15 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	if (ric_start == pos)
 		ric_start = NULL;
 
+	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt)) {
+		kck = sm->PTK.kck2;
+		kck_len = sm->PTK.kck2_len;
+	} else {
+		kck = sm->PTK.kck;
+		kck_len = sm->PTK.kck_len;
+	}
 	if (auth_alg == WLAN_AUTH_FT &&
-	    wpa_ft_mic(sm->PTK.kck, sm->PTK.kck_len, sm->addr,
-		       sm->wpa_auth->addr, 6,
+	    wpa_ft_mic(kck, kck_len, sm->addr, sm->wpa_auth->addr, 6,
 		       mdie, mdie_len, ftie, ftie_len,
 		       rsnie, rsnie_len,
 		       ric_start, ric_start ? pos - ric_start : 0,
@@ -2310,6 +2318,8 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
 	size_t mic_len = 16;
 	unsigned int count;
+	const u8 *kck;
+	size_t kck_len;
 
 	if (sm == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -2423,8 +2433,14 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	if (wpa_ft_mic(sm->PTK.kck, sm->PTK.kck_len, sm->addr,
-		       sm->wpa_auth->addr, 5,
+	if (wpa_key_mgmt_fils(sm->wpa_key_mgmt)) {
+		kck = sm->PTK.kck2;
+		kck_len = sm->PTK.kck2_len;
+	} else {
+		kck = sm->PTK.kck;
+		kck_len = sm->PTK.kck_len;
+	}
+	if (wpa_ft_mic(kck, kck_len, sm->addr, sm->wpa_auth->addr, 5,
 		       parse.mdie - 2, parse.mdie_len + 2,
 		       parse.ftie - 2, parse.ftie_len + 2,
 		       parse.rsn - 2, parse.rsn_len + 2,

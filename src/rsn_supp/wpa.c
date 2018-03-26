@@ -3520,6 +3520,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	os_memcpy(sm->fils_anonce, elems.fils_nonce, FILS_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", sm->fils_anonce, FILS_NONCE_LEN);
 
+#ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		struct wpa_ft_ies parse;
 
@@ -3567,6 +3568,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 		wpabuf_free(sm->fils_ft_ies);
 		sm->fils_ft_ies = NULL;
 	}
+#endif /* CONFIG_IEEE80211R */
 
 	/* PMKID List */
 	if (rsn.pmkid && rsn.num_pmkid > 0) {

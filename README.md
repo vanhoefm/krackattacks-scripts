@@ -13,7 +13,7 @@ Then **disable hardware encryption** using the script `./krackattack/disable-hwc
 
 Finally compile our modified hostapd instance:
 
-      cd ../hostapd
+      cd hostapd
       cp defconfig .config
       make -j 2
 

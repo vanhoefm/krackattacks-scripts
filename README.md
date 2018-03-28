@@ -99,16 +99,78 @@ Their tools supports several different tests, and these tests correspond to the 
 - 4.2.1 (Group key handshake vulnerability test on STA). Execue this test using `./krack-test-client.py --group`.
 - 4.3.1 (Reinstallation of GTK and IGTK on STA supporting WNM sleep mode). We currently do not support this test (and neither does the Wi-Fi Alliance).
 
+
 # Testing Access Points: Detecting a vulnerable FT Handshake (802.11r)
 
-The attached Linux script `krack-ft-test.py` can be used to determine if an AP is vulnerable to our attack. The script contains detailed documentation on how to use it:
+1. Create a wpa_supplicant configuration file that can be used to connect to the network. A basic example is:
 
-	cd krackattack/
-	./krack-ft-test.py --help
+		ctrl_interface=/var/run/wpa_supplicant
+		network={{
+		  ssid="testnet"
+		  key_mgmt=FT-PSK
+		  psk="password"
+		}}
 
-**Now follow the detail instructions that the script outputs.**
-Essentially, it wraps a normal `wpa_supplicant` client, and will keep replaying the FT Reassociation Request (making the AP reinstall the PTK).
+	Note the use of "FT-PSK". Save it as network.conf or similar. For more info see [wpa_supplicant.conf](https://w1.fi/cgit/hostap/plain/wpa_supplicant/wpa_supplicant.conf).
 
+2. Try to connect to the network using your platform's wpa_supplicant. This will likely require a command such as:
+
+		sudo wpa_supplicant -D nl80211 -i wlan0 -c network.conf
+
+	If this fails, either the AP does not support FT, or you provided the wrong network configuration options in step 1.
+
+3. Use this script as a wrapper over the previous wpa_supplicant command:
+
+		sudo ./krack-ft-test.py wpa_supplicant -D nl80211 -i wlan0 -c network.conf
+
+	This will execute the wpa_supplicant command using the provided parameters, and will add a virtual monitor interface that will perform attack tests.
+
+4. Use wpa_cli to roam to a different AP of the same network. For example:
+
+		sudo wpa_cli -i wlan0
+		> status
+		bssid=c4:e9:84:db:fb:7b
+		ssid=testnet
+		...
+		> scan_results 
+		bssid / frequency / signal level / flags / ssid
+		c4:e9:84:db:fb:7b	2412  -21  [WPA2-PSK+FT/PSK-CCMP][ESS] testnet
+		c4:e9:84:1d:a5:bc	2412  -31  [WPA2-PSK+FT/PSK-CCMP][ESS] testnet
+		...
+		> roam c4:e9:84:1d:a5:bc
+		...
+   
+	In this example we were connected to AP c4:e9:84:db:fb:7b of testnet (see status command). The scan_results command shows this network also has a second AP with MAC c4:e9:84:1d:a5:bc. We then roam to this second AP.
+
+5. Generate traffic between the AP and client. For example:
+
+		sudo arping -I wlan0 192.168.1.10
+
+6. Now look at the output of ./krack-ft-test.py to see if the AP is vulnerable.
+
+	1. First it should say "Detected FT reassociation frame". Then it will start replaying this frame to try the attack.
+	2. The script shows which IVs (= packet numbers) the AP is using when sending data frames.
+	3. Message `IV reuse detected (IV=X, seq=Y). AP is vulnerable!` means we confirmed it's vulnerable.
+
+	Be sure to manually check network traces as well, to confirm this script is replaying the reassociation request properly, and to manually confirm whether there is IV (= packet number) reuse or not.
+
+	Example output of vulnerable AP:
+	
+		[15:59:24] Replaying Reassociation Request
+		[15:59:25] AP transmitted data using IV=1 (seq=0)
+		[15:59:25] Replaying Reassociation Request
+		[15:59:26] AP transmitted data using IV=1 (seq=0)
+		[15:59:26] IV reuse detected (IV=1, seq=0). AP is vulnerable!
+
+	Example output of patched AP (note that IVs are never reused):
+	
+		[16:00:49] Replaying Reassociation Request
+		[16:00:49] AP transmitted data using IV=1 (seq=0)
+		[16:00:50] AP transmitted data using IV=2 (seq=1)
+		[16:00:50] Replaying Reassociation Request
+		[16:00:51] AP transmitted data using IV=3 (seq=2)
+		[16:00:51] Replaying Reassociation Request
+		[16:00:52] AP transmitted data using IV=4 (seq=3)
 
 # Extra: Ubuntu 16.04
 
@@ -121,7 +183,7 @@ They further recommended to install this python module under a virtual python en
 
 # Extra: Manual Tests
 
-It's also possible to manually perform tests by cloning the hostap git repository:
+It's also possible to manually perform (more detailed) tests by cloning the hostap git repository:
 
 	git clone git://w1.fi/srv/git/hostap.git
 	

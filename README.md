@@ -94,8 +94,8 @@ Their tools supports several different tests, and these tests correspond to the 
 - 4.1.1 (Plaintext retransmission of EAPOL Message 3). We currently do not support this test.
 - 4.1.2 (Immediate retransmission of EAPOL M3 in plaintext). We currently do not suppor this test.
 - 4.1.3 (Immediate retransmission of encrypted EAPOL M3 during pairwise rekey handshake). This corresponds to `./krack-test-client.py` except that encrypted EAPOL M3 are sent periodically instead of immediately.
-- 4.1.5 (PTK reinstallation in 4-way handshake when STA uses Temporal PTK construction, same ANonce). Execue this test using `./krack-test-client.py --tptk`.
-- 4.1.6 (PTK reinstallation in 4-way handshake when STA uses Temporal PTK construction, random ANonce). Execue this test using `./krack-test-client.py --tptk-rand`.
+- 4.1.5 (PTK reinstallation in 4-way handshake when STA uses Temporal PTK construction, same ANonce). Execute this test using `./krack-test-client.py --tptk`.
+- 4.1.6 (PTK reinstallation in 4-way handshake when STA uses Temporal PTK construction, random ANonce). Execute this test using `./krack-test-client.py --tptk-rand`.
 - 4.2.1 (Group key handshake vulnerability test on STA). Execue this test using `./krack-test-client.py --group`.
 - 4.3.1 (Reinstallation of GTK and IGTK on STA supporting WNM sleep mode). We currently do not support this test (and neither does the Wi-Fi Alliance).
 

@@ -318,7 +318,7 @@ CONFIG_IPV6=y
 # connect to this hostapd. These options allow, for example, to drop a
 # certain percentage of probe requests or auth/(re)assoc frames.
 #
-#CONFIG_TESTING_OPTIONS=y
+CONFIG_TESTING_OPTIONS=y
 
 # Automatic Channel Selection
 # This will allow hostapd to pick the channel automatically when channel is set

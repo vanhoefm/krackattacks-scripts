@@ -12,4 +12,6 @@
 // against the client.
 #define KRACK_TEST_CLIENT
 
+void poc_log(const u8 *clientmac, const char *format, ...);
+
 #endif // ATTACKS_H_

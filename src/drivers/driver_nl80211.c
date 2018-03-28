@@ -2867,13 +2867,6 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
 		return 0;
 
-#ifdef KRACK_TEST_CLIENT
-	// Delete the key first to so that in patched kernels (that ignore key reinstallations), this still causes
-	// the associated transmit counter to be reset (required when testing group key reinstallations).
-	if (alg != WPA_ALG_NONE)
-		wpa_driver_nl80211_set_key(ifname, bss, WPA_ALG_NONE, addr, key_idx, set_tx, seq, seq_len, key, key_len);
-#endif // KRACK_TEST_CLIENT
-
 	ifindex = if_nametoindex(ifname);
 	wpa_printf(MSG_DEBUG, "%s: ifindex=%d (%s) alg=%d addr=%p key_idx=%d "
 		   "set_tx=%d seq_len=%lu key_len=%lu",

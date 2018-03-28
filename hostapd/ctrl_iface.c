@@ -2012,7 +2012,11 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 		if (hapd->last_gtk_alg == WPA_ALG_NONE)
 			return -1;
 
+#ifdef KRACK_TEST_CLIENT
+		poc_log(NULL, "Reset PN for GTK\n");
+#else
 		wpa_printf(MSG_INFO, "TESTING: Reset PN for GTK");
+#endif
 
 		/* First, use a zero key to avoid any possible duplicate key
 		 * avoidance in the driver. */
@@ -2038,8 +2042,12 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 	if (sta->last_tk_alg == WPA_ALG_NONE)
 		return -1;
 
+#ifdef KRACK_TEST_CLIENT
+	poc_log(sta->addr, "Reset PN\n");
+#else
 	wpa_printf(MSG_INFO, "TESTING: Reset PN for " MACSTR,
 		   MAC2STR(sta->addr));
+#endif
 
 	/* First, use a zero key to avoid any possible duplicate key avoidance
 	 * in the driver. */
@@ -2142,7 +2150,12 @@ static int hostapd_ctrl_resend_m1(struct hostapd_data *hapd, const char *cmd)
 				    NULL, 0);
 	}
 
+#ifdef KRACK_TEST_CLIENT
+	poc_log(sta->addr, "sending a new 4-way message 1 (%s)\n",
+		os_strstr(cmd, "change-anonce") != NULL ? "with random ANonce" : "with same ANonce");
+#else
 	wpa_printf(MSG_INFO, "TESTING: Send M1 to " MACSTR, MAC2STR(sta->addr));
+#endif
 	return wpa_auth_resend_m1(sta->wpa_sm,
 				  os_strstr(cmd, "change-anonce") != NULL,
 				  plain ? restore_tk : NULL, hapd, sta);
@@ -2172,7 +2185,11 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 				    NULL, 0);
 	}
 
+#ifdef KRACK_TEST_CLIENT
+	poc_log(sta->addr, "sending a new 4-way message 3\n");
+#else
 	wpa_printf(MSG_INFO, "TESTING: Send M3 to " MACSTR, MAC2STR(sta->addr));
+#endif
 	return wpa_auth_resend_m3(sta->wpa_sm,
 				  plain ? restore_tk : NULL, hapd, sta);
 }
@@ -2202,9 +2219,13 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 				    NULL, 0);
 	}
 
+#ifdef KRACK_TEST_CLIENT
+	poc_log(sta->addr, "Send group M1 for the same GTK and zero RSC\n");
+#else
 	wpa_printf(MSG_INFO,
 		   "TESTING: Send group M1 for the same GTK and zero RSC to "
 		   MACSTR, MAC2STR(sta->addr));
+#endif
 	return wpa_auth_resend_group_m1(sta->wpa_sm,
 					plain ? restore_tk : NULL, hapd, sta);
 }
@@ -3102,12 +3123,6 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
 						      reply_size);
 #ifdef KRACK_TEST_CLIENT
-	} else if (os_strcmp(buf, "TEST_TPTK") == 0) {
-		poc_test_tptk_construction(hapd->wpa_auth, TEST_TPTK_REPLAY);
-	} else if (os_strcmp(buf, "TEST_TPTK_RAND") == 0) {
-		poc_test_tptk_construction(hapd->wpa_auth, TEST_TPTK_RAND);
-	} else if (os_strcmp(buf, "START_GROUP_TESTS") == 0) {
-		poc_start_testing_group_handshake(hapd->wpa_auth);
 	} else if (os_strncmp(buf, "GET_TK ", 7) == 0) {
 		reply_len = hostapd_get_tk(hapd, buf + 7, reply, reply_size);
 #endif

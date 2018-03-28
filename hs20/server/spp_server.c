@@ -1823,10 +1823,8 @@ static xml_node_t * hs20_spp_post_dev_data(struct hs20_svc *ctx,
 	}
 
 	if (strcasecmp(req_reason, "User input completed") == 0) {
-		if (devinfo)
-			db_add_session_devinfo(ctx, session_id, devinfo);
-		if (devdetail)
-			db_add_session_devdetail(ctx, session_id, devdetail);
+		db_add_session_devinfo(ctx, session_id, devinfo);
+		db_add_session_devdetail(ctx, session_id, devdetail);
 		ret = hs20_user_input_complete(ctx, user, realm, dmacc,
 					       session_id);
 		hs20_eventlog_node(ctx, user, realm, session_id,

@@ -96,6 +96,9 @@ int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
 		   const u8 *buf, size_t len)
 {
 	int ret;
+
+	if (TEST_FAIL())
+		return -1;
 	if (l2 == NULL)
 		return -1;
 	if (l2->l2_hdr) {
@@ -457,6 +460,9 @@ int l2_packet_set_packet_filter(struct l2_packet_data *l2,
 				enum l2_packet_filter_type type)
 {
 	const struct sock_fprog *sock_filter;
+
+	if (TEST_FAIL())
+		return -1;
 
 	switch (type) {
 	case L2_PACKET_FILTER_DHCP:

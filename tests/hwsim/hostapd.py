@@ -326,7 +326,8 @@ class Hostapd:
     def mgmt_tx(self, msg):
         t = (msg['fc'], 0) + mac2tuple(msg['da']) + mac2tuple(msg['sa']) + mac2tuple(msg['bssid']) + (0,)
         hdr = struct.pack('<HH6B6B6BH', *t)
-        self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
+        if "OK" not in self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload'])):
+            raise Exception("MGMT_TX command to hostapd failed")
 
     def get_sta(self, addr, info=None, next=False):
         cmd = "STA-NEXT " if next else "STA "

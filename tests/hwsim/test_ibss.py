@@ -99,12 +99,18 @@ def test_ibss_rsn(dev):
 
     logger.info("Start IBSS on the first STA")
     id = add_ibss_rsn(dev[0], ssid)
+    # FIX: For now, this disables HT to avoid a strange issue with mac80211
+    # frame reordering during the final test_connectivity() call. Once that is
+    # figured out, these disable_ht=1 calls should be removed from the test
+    # case.
+    dev[0].set_network(id, "disable_ht", "1")
     connect_ibss_cmd(dev[0], id)
     bssid0 = wait_ibss_connection(dev[0])
 
     logger.info("Join two STAs to the IBSS")
 
     id = add_ibss_rsn(dev[1], ssid)
+    dev[1].set_network(id, "disable_ht", "1")
     connect_ibss_cmd(dev[1], id)
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:
@@ -133,6 +139,7 @@ def test_ibss_rsn(dev):
     dev[1].request("REMOVE_NETWORK all")
     time.sleep(1)
     id = add_ibss_rsn(dev[1], ssid)
+    dev[1].set_network(id, "disable_ht", "1")
     connect_ibss_cmd(dev[1], id)
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:

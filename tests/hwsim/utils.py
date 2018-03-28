@@ -4,7 +4,9 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import os
+import struct
 import time
 import remotehost
 
@@ -52,11 +54,11 @@ class fail_test(object):
             if self._dev.request("GET_FAIL") != "0:%s" % self._funcs:
                 raise Exception("Test failure did not trigger")
 
-def wait_fail_trigger(dev, cmd, note="Failure not triggered"):
-    for i in range(0, 40):
+def wait_fail_trigger(dev, cmd, note="Failure not triggered", max_iter=40):
+    for i in range(0, max_iter):
         if dev.request(cmd).startswith("0:"):
             break
-        if i == 39:
+        if i == max_iter - 1:
             raise Exception(note)
         time.sleep(0.05)
 
@@ -102,3 +104,15 @@ def get_phy(ap, ifname=None):
             phy = "phy" + words[1]
             break
     return phy
+
+def parse_ie(buf):
+    ret = {}
+    data = binascii.unhexlify(buf)
+    while len(data) >= 2:
+        ie,elen = struct.unpack('BB', data[0:2])
+        data = data[2:]
+        if elen > len(data):
+            break
+        ret[ie] = data[0:elen]
+        data = data[elen:]
+    return ret

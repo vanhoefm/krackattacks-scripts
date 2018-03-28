@@ -40,8 +40,12 @@ def test_ap_pmf_required(dev, apdev):
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[1], hapd)
-    hapd.request("SA_QUERY " + dev[0].p2p_interface_addr())
-    hapd.request("SA_QUERY " + dev[1].p2p_interface_addr())
+    if "OK" not in hapd.request("SA_QUERY " + dev[0].own_addr()):
+        raise Exception("SA_QUERY failed")
+    if "OK" not in hapd.request("SA_QUERY " + dev[1].own_addr()):
+        raise Exception("SA_QUERY failed")
+    if "FAIL" not in hapd.request("SA_QUERY foo"):
+        raise Exception("Invalid SA_QUERY accepted")
     wt.require_ap_pmf_mandatory(apdev[0]['bssid'])
     wt.require_sta_pmf(apdev[0]['bssid'], dev[0].p2p_interface_addr())
     wt.require_sta_pmf_mandatory(apdev[0]['bssid'], dev[1].p2p_interface_addr())
@@ -469,3 +473,60 @@ def test_ap_pmf_required_sta_no_pmf(dev, apdev):
     if "CTRL-EVENT-ASSOC-REJECT" in ev:
         raise Exception("Tried to connect to PMF required AP without PMF enabled")
     dev[0].request("REMOVE_NETWORK all")
+
+def test_ap_pmf_inject_auth(dev, apdev):
+    """WPA2-PSK AP with PMF and Authentication frame injection"""
+    ssid = "test-pmf"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk="12345678", ieee80211w="2",
+                   key_mgmt="WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    bssid = hapd.own_addr().replace(':', '')
+    addr = dev[0].own_addr().replace(':', '')
+
+    # Inject an unprotected Authentication frame claiming to be from the
+    # associated STA.
+    auth = "b0003a01" + bssid + addr + bssid + '1000000001000000'
+    hapd.request("SET ext_mgmt_frame_handling 1")
+    res = hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % auth)
+    hapd.request("SET ext_mgmt_frame_handling 0")
+    if "OK" not in res:
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    # Verify that original association is still functional.
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_pmf_tkip_reject(dev, apdev):
+    """Mixed mode BSS and MFP-enabled AP rejecting TKIP"""
+    params = hostapd.wpa2_params(ssid="test-pmf", passphrase="12345678")
+    params['wpa'] = '3'
+    params["ieee80211w"] = "1"
+    params["wpa_pairwise"] = "TKIP CCMP"
+    params["rsn_pairwise"] = "TKIP CCMP"
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].connect("test-pmf", psk="12345678", pairwise="CCMP", ieee80211w="2",
+                   scan_freq="2412")
+    dev[0].dump_monitor()
+
+    dev[1].connect("test-pmf", psk="12345678", proto="WPA", pairwise="TKIP",
+                   ieee80211w="0", scan_freq="2412")
+    dev[1].dump_monitor()
+
+    dev[2].connect("test-pmf", psk="12345678", pairwise="TKIP",
+                   ieee80211w="2", scan_freq="2412", wait_connect=False)
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+    if ev is None:
+        raise Exception("No connection result reported")
+    if "CTRL-EVENT-ASSOC-REJECT" not in ev:
+        raise Exception("MFP + TKIP connection was not rejected")
+    if "status_code=31" not in ev:
+        raise Exception("Unexpected status code in rejection: " + ev)
+    dev[2].request("DISCONNECT")
+    dev[2].dump_monitor()

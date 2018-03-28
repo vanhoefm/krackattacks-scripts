@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <application android:label="wpadebug">
         <activity android:name="w1.fi.wpadebug.MainActivity"
                   android:label="wpadebug">
@@ -44,6 +45,24 @@
 	<activity android:name="w1.fi.wpadebug.WpaCredEditActivity"
 		  android:label="Credential"
 		  android:parentActivityName="w1.fi.wpadebug.WpaCredActivity">
+	</activity>
+	<activity android:name="w1.fi.wpadebug.QrCodeScannerActivity"
+		  android:label="QR Code Reader"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
+	<activity android:name="w1.fi.wpadebug.QrCodeDisplayActivity"
+		  android:label="QR Code Display"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
+	<activity
+		  android:name="w1.fi.wpadebug.InputUri"
+		  android:label="Input URI"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
+	<activity
+		  android:name="w1.fi.wpadebug.QrCodeReadActivity"
+		  android:label="Start Scan"
+		 android:parentActivityName="w1.fi.wpadebug.MainActivity">
 	</activity>
 	<activity android:name="w1.fi.wpadebug.WpaWebViewActivity"
 		  android:label="WebView"

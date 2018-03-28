@@ -43,6 +43,10 @@ struct neighbor_report {
 	unsigned int rm_capab_present:1;
 	unsigned int bearing_present:1;
 	unsigned int bss_term_present:1;
+	unsigned int acceptable:1;
+#ifdef CONFIG_MBO
+	unsigned int is_first:1;
+#endif /* CONFIG_MBO */
 	struct measurement_pilot *meas_pilot;
 	struct multiple_bssid *mul_bssid;
 	int freq;
@@ -56,7 +60,10 @@ void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 			      const struct ieee80211_mgmt *mgmt, size_t len);
 
 int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
-				       u8 query_reason, int cand_list);
+				       u8 query_reason,
+				       const char *btm_candidates,
+				       int cand_list);
+
 void wnm_deallocate_memory(struct wpa_supplicant *wpa_s);
 
 

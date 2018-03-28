@@ -50,6 +50,22 @@ def test_hostapd_oom_wpa2_psk(dev, apdev):
     params['wpa_psk_file'] = 'hostapd.wpa_psk'
     hostapd_oom_loop(apdev, params)
 
+    tests = [ "hostapd_config_read_wpa_psk", "hostapd_derive_psk" ]
+    for t in tests:
+        hapd = hostapd.add_ap(apdev[0], { "ssid": "ctrl" })
+        hapd.request("TEST_ALLOC_FAIL 1:%s" % t)
+        try:
+            hostapd.add_ap(apdev[1], params, timeout=2.5)
+            raise Exception("Unexpected add_ap() success during OOM")
+        except Exception, e:
+            if "Failed to enable hostapd" in str(e):
+                pass
+            else:
+                raise
+        state = hapd.request('GET_ALLOC_FAIL')
+        if state != "0:%s" % t:
+            raise Exception("OOM not triggered")
+
 @remote_compatible
 def test_hostapd_oom_wpa2_eap(dev, apdev):
     """hostapd failing to setup WPA2-EAP mode due to OOM"""

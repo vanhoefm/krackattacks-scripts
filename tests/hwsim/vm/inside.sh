@@ -90,6 +90,8 @@ if [ "$TIMEWARP" = "1" ] ; then
     ) &
 fi
 
+echo 8 8 8 8 > /proc/sys/kernel/printk
+
 # check if we're rebooting due to a kernel panic ...
 if grep -q 'Kernel panic' /tmp/logs/console ; then
 	echo "KERNEL CRASHED!" >/dev/ttyS0

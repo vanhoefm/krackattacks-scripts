@@ -107,7 +107,7 @@ def test_erp_server_no_match(dev, apdev):
         raise Exception("Unexpected use of ERP")
     dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
-def start_erp_as(apdev):
+def start_erp_as(apdev, erp_domain="example.com", msk_dump=None):
     params = { "ssid": "as", "beacon_int": "2000",
                "radius_server_clients": "auth_serv/radius_clients.conf",
                "radius_server_auth_port": '18128',
@@ -122,8 +122,10 @@ def start_erp_as(apdev):
                "eap_fast_a_id": "101112131415161718191a1b1c1d1e1f",
                "eap_fast_a_id_info": "test server",
                "eap_server_erp": "1",
-               "erp_domain": "example.com" }
-    hostapd.add_ap(apdev, params)
+               "erp_domain": erp_domain }
+    if msk_dump:
+        params["dump_msk_file"] = msk_dump
+    return hostapd.add_ap(apdev, params)
 
 def test_erp_radius(dev, apdev):
     """ERP enabled on RADIUS server and peer"""
@@ -314,11 +316,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
         raise Exception("KCK not found while associated")
     if kek not in buf:
         raise Exception("KEK not found while associated")
-    if tk in buf:
-        raise Exception("TK found from memory")
-    if gtk in buf:
-        get_key_locations(buf, gtk, "GTK")
-        raise Exception("GTK found from memory")
+    #if tk in buf:
+    #    raise Exception("TK found from memory")
 
     logger.info("Checking keys in memory after disassociation")
     buf = read_process_memory(pid, password)
@@ -335,6 +334,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
+    if gtk in buf:
+        get_key_locations(buf, gtk, "GTK")
     verify_not_present(buf, gtk, fname, "GTK")
 
     dev[0].request("RECONNECT")
@@ -455,7 +456,7 @@ def test_erp_home_realm_oom(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
 
     for count in range(1, 3):
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                            identity="erp-ttls@example.com",
@@ -469,7 +470,7 @@ def test_erp_home_realm_oom(dev, apdev):
             dev[0].wait_disconnected()
 
     for count in range(1, 3):
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("ERP_FLUSH")
             dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                            identity="erp-ttls",
@@ -493,7 +494,7 @@ def test_erp_home_realm_oom(dev, apdev):
         dev[0].wait_connected(timeout=10)
         if range > 1:
             continue
-        with alloc_fail(dev[0], count, "eap_home_realm"):
+        with alloc_fail(dev[0], count, "eap_get_realm"):
             dev[0].request("DISCONNECT")
             dev[0].wait_disconnected(timeout=15)
             dev[0].request("RECONNECT")

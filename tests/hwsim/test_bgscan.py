@@ -1,5 +1,5 @@
 # bgscan tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2017, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,6 +10,7 @@ logger = logging.getLogger()
 import os
 
 import hostapd
+from utils import alloc_fail, fail_test
 
 def test_bgscan_simple(dev, apdev):
     """bgscan_simple"""
@@ -67,6 +68,75 @@ def test_bgscan_simple(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
         raise Exception("dev1 did not complete a scan")
+
+def test_bgscan_simple_beacon_loss(dev, apdev):
+    """bgscan_simple and beacon loss"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="simple:1:-20:2")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    if "OK" not in hapd.request("STOP_AP"):
+        raise Exception("Failed to stop AP")
+    ev = dev[0].wait_event(["CTRL-EVENT-BEACON-LOSS"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon loss not reported")
+
+def test_bgscan_simple_scan_failure(dev, apdev):
+    """bgscan_simple and scan failure"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="simple:1:-20:2")
+    with alloc_fail(dev[0], 1,
+                    "wpa_supplicant_trigger_scan;bgscan_simple_timeout"):
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=10)
+        if ev is None:
+            raise Exception("No scan failure reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+    if ev is None:
+        raise Exception("Scanning not continued after failure")
+
+def test_bgscan_simple_scanning(dev, apdev):
+    """bgscan_simple and scanning behavior"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="simple:1:-20:2")
+    # Go through seven bgscan_simple_timeout calls for code coverage. This falls
+    # back from short to long scan interval and then reduces short_scan_count
+    # back to zero.
+    for i in range(7):
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+        if ev is None:
+            raise Exception("Scanning not continued")
+
+def test_bgscan_simple_same_scan_int(dev, apdev):
+    """bgscan_simple and same short/long scan interval"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="simple:1:-20:1")
+    for i in range(2):
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+        if ev is None:
+            raise Exception("Scanning not continued")
+
+def test_bgscan_simple_oom(dev, apdev):
+    """bgscan_simple OOM"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    with alloc_fail(dev[0], 1, "bgscan_simple_init"):
+        dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                       bgscan="simple:1:-20:2")
+
+def test_bgscan_simple_driver_conf_failure(dev, apdev):
+    """bgscan_simple driver configuration failure"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    with fail_test(dev[0], 1, "bgscan_simple_init"):
+        dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                       bgscan="simple:1:-20:2")
 
 def test_bgscan_learn(dev, apdev):
     """bgscan_learn"""
@@ -165,3 +235,53 @@ def test_bgscan_learn(dev, apdev):
             os.remove("/tmp/test_bgscan_learn.bgscan")
         except:
             pass
+
+def test_bgscan_learn_beacon_loss(dev, apdev):
+    """bgscan_simple and beacon loss"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="learn:1:-20:2")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    if "OK" not in hapd.request("STOP_AP"):
+        raise Exception("Failed to stop AP")
+    ev = dev[0].wait_event(["CTRL-EVENT-BEACON-LOSS"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon loss not reported")
+
+def test_bgscan_learn_scan_failure(dev, apdev):
+    """bgscan_learn and scan failure"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="learn:1:-20:2")
+    with alloc_fail(dev[0], 1,
+                    "wpa_supplicant_trigger_scan;bgscan_learn_timeout"):
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=10)
+        if ev is None:
+            raise Exception("No scan failure reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+    if ev is None:
+        raise Exception("Scanning not continued after failure")
+
+def test_bgscan_learn_oom(dev, apdev):
+    """bgscan_learn OOM"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    with alloc_fail(dev[0], 1, "bgscan_learn_init"):
+        dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                       bgscan="learn:1:-20:2")
+
+def test_bgscan_learn_driver_conf_failure(dev, apdev):
+    """bgscan_learn driver configuration failure"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+
+    with fail_test(dev[0], 1, "bgscan_learn_init"):
+        dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                       bgscan="learn:1:-20:2")
+
+def test_bgscan_unknown_module(dev, apdev):
+    """bgscan init failing due to unknown module"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "bgscan" })
+    dev[0].connect("bgscan", key_mgmt="NONE", scan_freq="2412",
+                   bgscan="unknown:-20:2")

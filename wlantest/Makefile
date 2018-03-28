@@ -50,6 +50,7 @@ CFLAGS += -DCONFIG_IEEE80211W
 CFLAGS += -DCONFIG_IEEE80211R
 CFLAGS += -DCONFIG_HS20
 CFLAGS += -DCONFIG_DEBUG_FILE
+CFLAGS += -DCONFIG_FILS
 
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
@@ -69,7 +70,6 @@ OBJS += rx_ip.o
 OBJS += rx_tdls.o
 OBJS += bss.o
 OBJS += sta.o
-OBJS += crc32.o
 OBJS += ccmp.o
 OBJS += tkip.o
 OBJS += ctrl.o
@@ -81,7 +81,6 @@ OBJS += gcmp.o
 LIBS += -lpcap
 
 TOBJS += test_vectors.o
-TOBJS += crc32.o
 TOBJS += ccmp.o
 TOBJS += tkip.o
 TOBJS += wep.o

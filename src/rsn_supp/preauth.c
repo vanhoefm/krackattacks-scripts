@@ -97,7 +97,7 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol,
 					NULL, 0,
 					sm->preauth_bssid, sm->own_addr,
 					sm->network_ctx,
-					WPA_KEY_MGMT_IEEE8021X);
+					WPA_KEY_MGMT_IEEE8021X, NULL);
 		} else {
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"RSN: failed to get master session key from "
@@ -342,7 +342,8 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 		/* Some drivers (e.g., NDIS) expect to get notified about the
 		 * PMKIDs again, so report the existing data now. */
 		if (p) {
-			wpa_sm_add_pmkid(sm, candidate->bssid, p->pmkid);
+			wpa_sm_add_pmkid(sm, NULL, candidate->bssid, p->pmkid,
+					 NULL, p->pmk, p->pmk_len);
 		}
 
 		dl_list_del(&candidate->list);

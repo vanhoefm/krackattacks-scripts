@@ -54,11 +54,8 @@ LIBS += $(SRC)/eap_common/libeap_common.a
 LIBS += $(SRC)/l2_packet/libl2_packet.a
 LIBS += $(SRC)/utils/libutils.a
 
-ELIBS += $(SRC)/crypto/libcrypto.a
-ELIBS += $(SRC)/tls/libtls.a
-
 eapol-fuzzer: eapol-fuzzer.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^ $(LIBS) $(ELIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^ -Wl,--start-group $(LIBS) -Wl,--end-group
 
 clean:
 	$(MAKE) -C $(SRC) clean

@@ -619,6 +619,22 @@ def test_wpas_ctrl_get(dev):
     if "FAIL" not in dev[0].request("GET foo"):
         raise Exception("Unexpected success on get command")
 
+    dev[0].set("wifi_display", "0")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value")
+    dev[0].set("wifi_display", "1")
+    if dev[0].request("GET wifi_display") != '1':
+        raise Exception("Unexpected wifi_display value")
+    dev[0].request("P2P_SET disabled 1")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value (P2P disabled)")
+    dev[0].request("P2P_SET disabled 0")
+    if dev[0].request("GET wifi_display") != '1':
+        raise Exception("Unexpected wifi_display value (P2P re-enabled)")
+    dev[0].set("wifi_display", "0")
+    if dev[0].request("GET wifi_display") != '0':
+        raise Exception("Unexpected wifi_display value")
+
 @remote_compatible
 def test_wpas_ctrl_preauth(dev):
     """wpa_supplicant ctrl_iface preauth"""
@@ -626,14 +642,6 @@ def test_wpas_ctrl_preauth(dev):
         raise Exception("Unexpected success on invalid PREAUTH")
     if "FAIL" in dev[0].request("PREAUTH 00:11:22:33:44:55"):
         raise Exception("Unexpected failure on PREAUTH")
-
-@remote_compatible
-def test_wpas_ctrl_stkstart(dev):
-    """wpa_supplicant ctrl_iface strkstart"""
-    if "FAIL" not in dev[0].request("STKSTART "):
-        raise Exception("Unexpected success on invalid STKSTART")
-    if "FAIL" not in dev[0].request("STKSTART 00:11:22:33:44:55"):
-        raise Exception("Unexpected success on STKSTART")
 
 @remote_compatible
 def test_wpas_ctrl_tdls_discover(dev):
@@ -1913,12 +1921,14 @@ def test_wpas_ctrl_sched_scan_plans(dev, apdev):
     """wpa_supplicant sched_scan_plans parsing"""
     dev[0].request("SET sched_scan_plans foo")
     dev[0].request("SET sched_scan_plans 10:100 20:200 30")
-    with alloc_fail(dev[0], 1, "wpas_sched_scan_plans_set"):
-        dev[0].request("SET sched_scan_plans 10:100")
     dev[0].request("SET sched_scan_plans 4294967295:0")
     dev[0].request("SET sched_scan_plans 1 1")
     dev[0].request("SET sched_scan_plans  ")
-    dev[0].request("SET sched_scan_plans ")
+    try:
+        with alloc_fail(dev[0], 1, "wpas_sched_scan_plans_set"):
+            dev[0].request("SET sched_scan_plans 10:100")
+    finally:
+        dev[0].request("SET sched_scan_plans ")
 
 def test_wpas_ctrl_signal_monitor(dev, apdev):
     """wpa_supplicant SIGNAL_MONITOR command"""
@@ -1973,3 +1983,122 @@ def test_wpas_ctrl_driver_flags(dev, apdev):
     flags = hapd_flags.split('\n')
     if 'AP' not in flags:
         raise Exception("AP flag missing from DRIVER_FLAGS")
+
+def test_wpas_ctrl_bss_current(dev, apdev):
+    """wpa_supplicant BSS CURRENT command"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    bssid = hapd.own_addr()
+    res = dev[0].request("BSS CURRENT")
+    if res != '':
+        raise Exception("Unexpected BSS CURRENT response in disconnected state")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    res = dev[0].request("BSS CURRENT")
+    if bssid not in res:
+        raise Exception("Unexpected BSS CURRENT response in connected state")
+
+def test_wpas_ctrl_set_lci_errors(dev):
+    """wpa_supplicant SET lci error cases"""
+    if "FAIL" not in dev[0].request("SET lci q"):
+        raise Exception("Invalid LCI value accepted")
+
+    with fail_test(dev[0], 1, "os_get_reltime;wpas_ctrl_iface_set_lci"):
+        if "FAIL" not in dev[0].request("SET lci 00"):
+            raise Exception("SET lci accepted with failing os_get_reltime")
+
+def test_wpas_ctrl_set_radio_disabled(dev):
+    """wpa_supplicant SET radio_disabled"""
+    # This is not currently supported with nl80211, but execute the commands
+    # without checking the result for some additional code coverage.
+    dev[0].request("SET radio_disabled 1")
+    dev[0].request("SET radio_disabled 0")
+
+def test_wpas_ctrl_set_tdls_trigger_control(dev):
+    """wpa_supplicant SET tdls_trigger_control"""
+    # This is not supported with upstream nl80211, but execute the commands
+    # without checking the result for some additional code coverage.
+    dev[0].request("SET tdls_trigger_control 1")
+    dev[0].request("SET tdls_trigger_control 0")
+
+def test_wpas_ctrl_set_sched_scan_relative_rssi(dev):
+    """wpa_supplicant SET relative RSSI"""
+    tests = [ "relative_rssi -1",
+              "relative_rssi 101",
+              "relative_band_adjust 2G",
+              "relative_band_adjust 2G:-101",
+              "relative_band_adjust 2G:101",
+              "relative_band_adjust 3G:1" ]
+    for t in tests:
+        if "FAIL" not in dev[0].request("SET " + t):
+            raise Exception("No failure reported for SET " + t)
+
+    tests = [ "relative_rssi 0",
+              "relative_rssi 10",
+              "relative_rssi disable",
+              "relative_band_adjust 2G:-1",
+              "relative_band_adjust 2G:0",
+              "relative_band_adjust 2G:1",
+              "relative_band_adjust 5G:-1",
+              "relative_band_adjust 5G:1",
+              "relative_band_adjust 5G:0" ]
+    for t in tests:
+        if "OK" not in dev[0].request("SET " + t):
+            raise Exception("Failed to SET " + t)
+
+def test_wpas_ctrl_get_pref_freq_list_override(dev):
+    """wpa_supplicant get_pref_freq_list_override"""
+    if dev[0].request("GET_PREF_FREQ_LIST ").strip() != "FAIL":
+        raise Exception("Invalid GET_PREF_FREQ_LIST accepted")
+
+    dev[0].set("get_pref_freq_list_override", "foo")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "FAIL":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1234:1,2,3 0")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "FAIL":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1234:1,2,3 0:")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "0":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "0:1,2")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1,2":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1:3,4 0:1,2 2:5,6")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1,2":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "1:3,4 0:1 2:5,6")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "0:1000,1001 2:1002,1003 3:1004,1005 4:1006,1007 8:1010,1011 9:1008,1009")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    if res != "1000,1001":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST AP").strip()
+    if res != "1002,1003":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST P2P_GO").strip()
+    if res != "1004,1005":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST P2P_CLIENT").strip()
+    if res != "1006,1007":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST IBSS").strip()
+    if res != "1008,1009":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+    res = dev[0].request("GET_PREF_FREQ_LIST TDLS").strip()
+    if res != "1010,1011":
+        raise Exception("Unexpected GET_PREF_FREQ_LIST response: " + res)
+
+    dev[0].set("get_pref_freq_list_override", "")
+    res = dev[0].request("GET_PREF_FREQ_LIST STATION").strip()
+    logger.info("STATION (without override): " + res)

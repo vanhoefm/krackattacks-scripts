@@ -59,7 +59,7 @@ static void rx_data_eth(struct wlantest *wt, const u8 *bssid,
 {
 	switch (ethertype) {
 	case ETH_P_PAE:
-		rx_data_eapol(wt, dst, src, data, len, prot);
+		rx_data_eapol(wt, bssid, sta_addr, dst, src, data, len, prot);
 		break;
 	case ETH_P_IP:
 		rx_data_ip(wt, bssid, sta_addr, dst, src, data, len,
@@ -137,6 +137,7 @@ static u8 * try_all_ptk(struct wlantest *wt, int pairwise_cipher,
 
 static void rx_data_bss_prot_group(struct wlantest *wt,
 				   const struct ieee80211_hdr *hdr,
+				   size_t hdrlen,
 				   const u8 *qos, const u8 *dst, const u8 *src,
 				   const u8 *data, size_t len)
 {
@@ -145,6 +146,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	u8 *decrypted = NULL;
 	size_t dlen;
 	u8 pn[6];
+	int replay = 0;
 
 	bss = bss_get(wt, hdr->addr2);
 	if (bss == NULL)
@@ -210,6 +212,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 			 " Retry" : "");
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
+		replay = 1;
 	}
 
 skip_replay_det:
@@ -232,8 +235,9 @@ skip_replay_det:
 	if (decrypted) {
 		rx_data_process(wt, bss->bssid, NULL, dst, src, decrypted,
 				dlen, 1, NULL);
-		os_memcpy(bss->rsc[keyid], pn, 6);
-		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
+		if (!replay)
+			os_memcpy(bss->rsc[keyid], pn, 6);
+		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,
 				     decrypted, dlen);
 	} else
 		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
@@ -242,11 +246,11 @@ skip_replay_det:
 
 
 static void rx_data_bss_prot(struct wlantest *wt,
-			     const struct ieee80211_hdr *hdr, const u8 *qos,
-			     const u8 *dst, const u8 *src, const u8 *data,
-			     size_t len)
+			     const struct ieee80211_hdr *hdr, size_t hdrlen,
+			     const u8 *qos, const u8 *dst, const u8 *src,
+			     const u8 *data, size_t len)
 {
-	struct wlantest_bss *bss;
+	struct wlantest_bss *bss, *bss2;
 	struct wlantest_sta *sta, *sta2;
 	int keyid;
 	u16 fc = le_to_host16(hdr->frame_control);
@@ -258,13 +262,40 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	const u8 *tk = NULL;
 	int ptk_iter_done = 0;
 	int try_ptk_iter = 0;
+	int replay = 0;
 
 	if (hdr->addr1[0] & 0x01) {
-		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
+		rx_data_bss_prot_group(wt, hdr, hdrlen, qos, dst, src,
+				       data, len);
 		return;
 	}
 
-	if (fc & WLAN_FC_TODS) {
+	if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+	    (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
+		bss = bss_find(wt, hdr->addr1);
+		if (bss) {
+			sta = sta_find(bss, hdr->addr2);
+			if (sta) {
+				sta->counters[
+					WLANTEST_STA_COUNTER_PROT_DATA_TX]++;
+			}
+			if (!sta || !sta->ptk_set) {
+				bss2 = bss_find(wt, hdr->addr2);
+				if (bss2) {
+					sta2 = sta_find(bss2, hdr->addr1);
+					if (sta2 && (!sta || sta2->ptk_set)) {
+						bss = bss2;
+						sta = sta2;
+					}
+				}
+			}
+		} else {
+			bss = bss_find(wt, hdr->addr2);
+			if (!bss)
+				return;
+			sta = sta_find(bss, hdr->addr1);
+		}
+	} else if (fc & WLAN_FC_TODS) {
 		bss = bss_get(wt, hdr->addr1);
 		if (bss == NULL)
 			return;
@@ -373,6 +404,12 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			rsc = tdls->rsc_init[tid];
 		else
 			rsc = tdls->rsc_resp[tid];
+	} else if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+		   (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
+		if (os_memcmp(sta->addr, hdr->addr2, ETH_ALEN) == 0)
+			rsc = sta->rsc_tods[tid];
+		else
+			rsc = sta->rsc_fromds[tid];
 	} else if (fc & WLAN_FC_TODS)
 		rsc = sta->rsc_tods[tid];
 	else
@@ -397,6 +434,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			 " Retry" : "");
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
+		replay = 1;
 	}
 
 skip_replay_det:
@@ -405,7 +443,7 @@ skip_replay_det:
 			decrypted = ccmp_256_decrypt(tk, hdr, data, len, &dlen);
 		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
 			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
-			decrypted = gcmp_decrypt(tk, sta->tk_len, hdr, data,
+			decrypted = gcmp_decrypt(tk, sta->ptk.tk_len, hdr, data,
 						 len, &dlen);
 		else
 			decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
@@ -419,7 +457,7 @@ skip_replay_det:
 						     len, &dlen);
 		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
 			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
-			decrypted = gcmp_decrypt(sta->ptk.tk, sta->tk_len,
+			decrypted = gcmp_decrypt(sta->ptk.tk, sta->ptk.tk_len,
 						 hdr, data, len, &dlen);
 		else
 			decrypted = ccmp_decrypt(sta->ptk.tk, hdr, data, len,
@@ -441,10 +479,11 @@ skip_replay_det:
 		const u8 *peer_addr = NULL;
 		if (!(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)))
 			peer_addr = hdr->addr1;
-		os_memcpy(rsc, pn, 6);
+		if (!replay)
+			os_memcpy(rsc, pn, 6);
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
 				dlen, 1, peer_addr);
-		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
+		write_pcap_decrypted(wt, (const u8 *) hdr, hdrlen,
 				     decrypted, dlen);
 	} else if (!try_ptk_iter)
 		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
@@ -453,8 +492,8 @@ skip_replay_det:
 
 
 static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
-			const u8 *qos, const u8 *dst, const u8 *src,
-			const u8 *data, size_t len)
+			size_t hdrlen, const u8 *qos, const u8 *dst,
+			const u8 *src, const u8 *data, size_t len)
 {
 	u16 fc = le_to_host16(hdr->frame_control);
 	int prot = !!(fc & WLAN_FC_ISWEP);
@@ -477,7 +516,7 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 	}
 
 	if (prot)
-		rx_data_bss_prot(wt, hdr, qos, dst, src, data, len);
+		rx_data_bss_prot(wt, hdr, hdrlen, qos, dst, src, data, len);
 	else {
 		const u8 *bssid, *sta_addr, *peer_addr;
 		struct wlantest_bss *bss;
@@ -620,7 +659,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_direct_link(wt, hdr->addr3, hdr->addr1, hdr->addr2);
-		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_FROMDS:
@@ -632,7 +671,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_ap_path(wt, hdr->addr2, hdr->addr1, hdr->addr3);
-		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr3,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr3,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_TODS:
@@ -644,7 +683,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_ap_path(wt, hdr->addr1, hdr->addr3, hdr->addr2);
-		rx_data_bss(wt, hdr, qos, hdr->addr3, hdr->addr2,
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr3, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_TODS | WLAN_FC_FROMDS:
@@ -656,6 +695,8 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3),
 			   MAC2STR((const u8 *) (hdr + 1)));
+		rx_data_bss(wt, hdr, hdrlen, qos, hdr->addr1, hdr->addr2,
+			    data + hdrlen, len - hdrlen);
 		break;
 	}
 }

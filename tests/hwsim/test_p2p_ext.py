@@ -258,10 +258,18 @@ def _test_p2p_ext_vendor_elem_go_neg_conf(dev, apdev, params):
     if "OK" not in dev[0].request("VENDOR_ELEM_ADD 8 dd050011223305"):
         raise Exception("VENDOR_ELEM_ADD failed")
     dev[0].p2p_listen()
-    dev[1].p2p_listen()
     dev[1].p2p_go_neg_auth(addr0, "12345670", "enter")
+    dev[1].p2p_listen()
     dev[0].p2p_go_neg_init(addr1, "12345678", "display")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("GO negotiation timed out")
+    ev = dev[0].wait_global_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("Group formation failure not indicated")
+    dev[0].dump_monitor()
     dev[1].p2p_go_neg_auth_result(expect_failure=True)
+    dev[1].dump_monitor()
 
     out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
                      "wifi_p2p.public_action.subtype == 2")

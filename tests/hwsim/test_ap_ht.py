@@ -11,7 +11,7 @@ logger = logging.getLogger()
 import struct
 
 import hostapd
-from utils import HwsimSkip, alloc_fail
+from utils import HwsimSkip, alloc_fail, parse_ie
 import hwsim_utils
 from test_ap_csa import csa_supported
 
@@ -64,7 +64,12 @@ def test_ap_ht40_scan(dev, apdev):
     if sec != "-1":
         raise Exception("Unexpected secondary channel")
 
+    status = hapd.get_status()
+    logger.info("hostapd STATUS: " + str(status))
+
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+    sta = hapd.get_sta(dev[0].own_addr())
+    logger.info("hostapd STA: " + str(sta))
 
 @remote_compatible
 def test_ap_ht40_scan_conflict(dev, apdev):
@@ -692,6 +697,43 @@ def test_obss_coex_report_handling1(dev, apdev):
     if sec != "1":
         raise Exception("AP did not return to 40 MHz channel")
 
+def test_obss_coex_report_handling2(dev, apdev):
+    """Overlapping BSS scan report handling with obss_interval=1 and no overlap"""
+    clear_scan_cache(apdev[0])
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40+]",
+               "obss_interval": "1" }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
+
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "1":
+        raise Exception("AP is not using 40 MHz channel")
+
+    # 20/40 MHz co-ex report that does not force a move to 20 MHz channel
+    # (out of affected range and matching primary channel cases)
+    msg = '0400' + '480100' + '49020001' + '49020006'
+    req = "MGMT_TX {} {} freq=2437 action={}".format(bssid, bssid, msg)
+    if "OK" not in dev[0].request(req):
+        raise Exception("Could not send management frame")
+    time.sleep(0.5)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "1":
+        raise Exception("Unexpected move to 20 MHz channel")
+
+    # 20/40 MHz co-ex report forcing 20 MHz channel
+    # (out of affected range and in affected range but not matching primary)
+    msg = '0400' + '480100' + '4903000105'
+    req = "MGMT_TX {} {} freq=2437 action={}".format(bssid, bssid, msg)
+    if "OK" not in dev[0].request(req):
+        raise Exception("Could not send management frame")
+    time.sleep(0.5)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "0":
+        raise Exception("AP did not move to 20 MHz channel")
+
 def test_olbc(dev, apdev):
     """OLBC detection"""
     params = { "ssid": "test-olbc",
@@ -1234,3 +1276,137 @@ def test_ap_ht40_scan_broken_ap(dev, apdev):
     dev[1].connect("legacy-20", key_mgmt="NONE", scan_freq="2442")
     hwsim_utils.test_connectivity(dev[0], hapd)
     hwsim_utils.test_connectivity(dev[1], hapd2)
+
+def run_op_class(dev, apdev, hw_mode, channel, country, ht_capab, sec_chan,
+                 freq, opclass):
+    clear_scan_cache(apdev[0])
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": hw_mode,
+                   "channel": channel,
+                   "ht_capab": ht_capab }
+        if country:
+            params['country_code'] = country
+        hapd = hostapd.add_ap(apdev[0], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-DISABLED", "AP-ENABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup failure timed out")
+        if "AP-DISABLED" in ev:
+            raise HwsimSkip("Channel not supported")
+        sec = hapd.get_status_field("secondary_channel")
+        if sec != sec_chan:
+            raise Exception("Unexpected secondary_channel: " + sec)
+        dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+        bss = dev[0].get_bss(hapd.own_addr())
+        ie = parse_ie(bss['ie'])
+        if 59 not in ie:
+            raise Exception("Missing Supported Operating Classes element")
+        rx_opclass, = struct.unpack('B', ie[59][0:1])
+        if rx_opclass != opclass:
+            raise Exception("Unexpected operating class: %d" % rx_opclass)
+    finally:
+        set_world_reg(apdev[0], None, None)
+
+def test_ap_ht_op_class_81(dev, apdev):
+    """HT20 on operationg class 81"""
+    run_op_class(dev, apdev, "g", "1", None, "", "0", "2412", 81)
+
+def test_ap_ht_op_class_83(dev, apdev):
+    """HT40 on operationg class 83"""
+    run_op_class(dev, apdev, "g", "1", None, "[HT40+]", "1", "2412", 83)
+
+def test_ap_ht_op_class_84(dev, apdev):
+    """HT40 on operationg class 84"""
+    run_op_class(dev, apdev, "g", "11", None, "[HT40-]", "-1", "2462", 84)
+
+def test_ap_ht_op_class_115(dev, apdev):
+    """HT20 on operationg class 115"""
+    run_op_class(dev, apdev, "a", "36", "FI", "", "0", "5180", 115)
+
+def test_ap_ht_op_class_116(dev, apdev):
+    """HT40 on operationg class 116"""
+    run_op_class(dev, apdev, "a", "36", "FI", "[HT40+]", "1", "5180", 116)
+
+def test_ap_ht_op_class_117(dev, apdev):
+    """HT40 on operationg class 117"""
+    run_op_class(dev, apdev, "a", "40", "FI", "[HT40-]", "-1", "5200", 117)
+
+def test_ap_ht_op_class_118(dev, apdev):
+    """HT20 on operationg class 118"""
+    run_op_class(dev, apdev, "a", "60", "RS", "", "0", "5300", 118)
+
+def test_ap_ht_op_class_119(dev, apdev):
+    """HT40 on operationg class 119"""
+    run_op_class(dev, apdev, "a", "60", "RS", "[HT40+]", "1", "5300", 119)
+
+def test_ap_ht_op_class_120(dev, apdev):
+    """HT40 on operationg class 120"""
+    run_op_class(dev, apdev, "a", "64", "RS", "[HT40-]", "-1", "5320", 120)
+
+def test_ap_ht_op_class_121(dev, apdev):
+    """HT20 on operationg class 121"""
+    run_op_class(dev, apdev, "a", "100", "ZA", "", "0", "5500", 121)
+
+def test_ap_ht_op_class_122(dev, apdev):
+    """HT40 on operationg class 122"""
+    run_op_class(dev, apdev, "a", "100", "ZA", "[HT40+]", "1", "5500", 122)
+
+def test_ap_ht_op_class_123(dev, apdev):
+    """HT40 on operationg class 123"""
+    run_op_class(dev, apdev, "a", "104", "ZA", "[HT40-]", "-1", "5520", 123)
+
+def test_ap_ht_op_class_124(dev, apdev):
+    """HT20 on operationg class 124"""
+    run_op_class(dev, apdev, "a", "149", "US", "", "0", "5745", 124)
+
+def test_ap_ht_op_class_125(dev, apdev):
+    """HT20 on operationg class 125"""
+    run_op_class(dev, apdev, "a", "169", "NL", "", "0", "5845", 125)
+
+def test_ap_ht_op_class_126(dev, apdev):
+    """HT40 on operationg class 126"""
+    run_op_class(dev, apdev, "a", "149", "US", "[HT40+]", "1", "5745", 126)
+
+def test_ap_ht_op_class_127(dev, apdev):
+    """HT40 on operationg class 127"""
+    run_op_class(dev, apdev, "a", "153", "US", "[HT40-]", "-1", "5765", 127)
+
+def test_ap_ht40_plus_minus1(dev, apdev):
+    """HT40 with both plus and minus allowed (1)"""
+    clear_scan_cache(apdev[0])
+    params = { "ssid": "test-ht40",
+               "channel": "11",
+               "ht_capab": "[HT40+][HT40-]"}
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2462":
+        raise Exception("Unexpected frequency: " + freq)
+    pri = hapd.get_status_field("channel")
+    if pri != "11":
+        raise Exception("Unexpected primary channel: " + pri)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "-1":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_ap_ht40_plus_minus2(dev, apdev):
+    """HT40 with both plus and minus allowed (2)"""
+    clear_scan_cache(apdev[0])
+    params = { "ssid": "test-ht40",
+               "channel": "1",
+               "ht_capab": "[HT40+][HT40-]"}
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2412":
+        raise Exception("Unexpected frequency: " + freq)
+    pri = hapd.get_status_field("channel")
+    if pri != "1":
+        raise Exception("Unexpected primary channel: " + pri)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "1":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)

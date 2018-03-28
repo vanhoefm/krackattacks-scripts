@@ -743,10 +743,8 @@ def test_fst_sta_connect_to_non_fst_ap(dev, apdev, test_params):
         try:
             orig_sta1_mbies = sta1.get_local_mbies()
             orig_sta2_mbies = sta2.get_local_mbies()
-            vals = sta2.scan()
-            freq = vals['freq']
             sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
-                                        key_mgmt="NONE", scan_freq=freq)
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
@@ -831,9 +829,8 @@ def test_fst_second_sta_connect_to_non_fst_ap(dev, apdev, test_params):
             time.sleep(2)
             orig_sta1_mbies = sta1.get_local_mbies()
             orig_sta2_mbies = sta2.get_local_mbies()
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             res_sta1_mbies = sta1.get_local_mbies()
             res_sta2_mbies = sta2.get_local_mbies()
@@ -857,9 +854,8 @@ def test_fst_second_sta_connect_to_fst_ap(dev, apdev, test_params):
     with HWSimRadio() as (radio, iface):
         non_fst_ap = hostapd.add_ap(iface, { "ssid": "non_fst_11g" })
         try:
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             orig_sta1_mbies = sta1.get_local_mbies()
             orig_sta2_mbies = sta2.get_local_mbies()
@@ -890,9 +886,8 @@ def test_fst_disconnect_1_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
         try:
             vals = sta1.scan(freq=fst_test_common.fst_test_def_freq_a)
             sta1.connect(fst_ap1, key_mgmt="NONE", scan_freq=fst_test_common.fst_test_def_freq_a)
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             orig_sta1_mbies = sta1.get_local_mbies()
             orig_sta2_mbies = sta2.get_local_mbies()
@@ -922,9 +917,8 @@ def test_fst_disconnect_1_of_2_stas_from_fst_ap(dev, apdev, test_params):
         try:
             vals = sta1.scan(freq=fst_test_common.fst_test_def_freq_a)
             sta1.connect(fst_ap1, key_mgmt="NONE", scan_freq=fst_test_common.fst_test_def_freq_a)
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             orig_sta1_mbies = sta1.get_local_mbies()
             orig_sta2_mbies = sta2.get_local_mbies()
@@ -954,9 +948,8 @@ def test_fst_disconnect_2_of_2_stas_from_non_fst_ap(dev, apdev, test_params):
         try:
             vals = sta1.scan(freq=fst_test_common.fst_test_def_freq_a)
             sta1.connect(fst_ap1, key_mgmt="NONE", scan_freq=fst_test_common.fst_test_def_freq_a)
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             sta1.disconnect()
             time.sleep(2)
@@ -988,9 +981,8 @@ def test_fst_disconnect_2_of_2_stas_from_fst_ap(dev, apdev, test_params):
         try:
             vals = sta1.scan(freq=fst_test_common.fst_test_def_freq_a)
             sta1.connect(fst_ap1, key_mgmt="NONE", scan_freq=fst_test_common.fst_test_def_freq_a)
-            vals = sta2.scan()
-            freq = vals['freq']
-            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g", key_mgmt="NONE", scan_freq=freq)
+            sta2.connect_to_external_ap(non_fst_ap, ssid="non_fst_11g",
+                                        key_mgmt="NONE", scan_freq='2412')
             time.sleep(2)
             sta2.disconnect_from_external_ap()
             time.sleep(2)

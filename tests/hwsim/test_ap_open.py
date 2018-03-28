@@ -17,6 +17,7 @@ import hwsim_utils
 from tshark import run_tshark
 from utils import alloc_fail, fail_test, wait_fail_trigger
 from wpasupplicant import WpaSupplicant
+from test_ap_ht import set_world_reg
 
 @remote_compatible
 def test_ap_open(dev, apdev):
@@ -181,12 +182,37 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
                         apdev[0]['bssid']])
     dev[0].wait_disconnected(timeout=15)
 
+def test_ap_open_external_assoc(dev, apdev):
+    """AP with open mode and external association"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open-ext-assoc" })
+    try:
+        dev[0].request("STA_AUTOCONNECT 0")
+        id = dev[0].connect("open-ext-assoc", key_mgmt="NONE", scan_freq="2412",
+                            only_add_network=True)
+        dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+        dev[0].dump_monitor()
+        # This will be accepted due to matching network
+        dev[0].cmd_execute(['iw', 'dev', dev[0].ifname, 'connect',
+                            'open-ext-assoc', "2412", apdev[0]['bssid']])
+        ev = dev[0].wait_event([ "CTRL-EVENT-DISCONNECTED",
+                                 "CTRL-EVENT-CONNECTED" ], timeout=10)
+        if ev is None:
+            raise Exception("Connection timed out")
+        if "CTRL-EVENT-DISCONNECTED" in ev:
+            raise Exception("Unexpected disconnection event")
+        dev[0].dump_monitor()
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=5)
+    finally:
+        dev[0].request("STA_AUTOCONNECT 1")
+
 @remote_compatible
 def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""
     hapd = hostapd.add_ap(apdev[0],
                           { "ssid": "open",
-                            "bss_load_update_period": "10" })
+                            "bss_load_update_period": "10",
+                            "chan_util_avg_period": "20" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     # this does not really get much useful output with mac80211_hwsim currently,
     # but run through the channel survey update couple of times
@@ -195,6 +221,17 @@ def test_ap_bss_load(dev, apdev):
         hwsim_utils.test_connectivity(dev[0], hapd)
         hwsim_utils.test_connectivity(dev[0], hapd)
         time.sleep(0.15)
+    avg = hapd.get_status_field("chan_util_avg")
+    if avg is None:
+        raise Exception("No STATUS chan_util_avg seen")
+
+def test_ap_bss_load_fail(dev, apdev):
+    """BSS Load update failing to get survey data"""
+    hapd = hostapd.add_ap(apdev[0],
+                          { "ssid": "open",
+                            "bss_load_update_period": "1" })
+    with fail_test(hapd, 1, "wpa_driver_nl80211_get_survey"):
+        wait_fail_trigger(hapd, "GET_FAIL")
 
 def hapd_out_of_mem(hapd, apdev, count, func):
     with alloc_fail(hapd, count, func):
@@ -389,7 +426,9 @@ def test_ap_open_disconnect_in_ps(dev, apdev, params):
         raise Exception("No connection event received from hostapd")
 
     time.sleep(0.2)
-    hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_MANUAL_POLL)
+    # enable power save mode
+    hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_ENABLED)
+    time.sleep(0.1)
     try:
         # inject some traffic
         sa = hapd.own_addr()
@@ -608,3 +647,164 @@ def test_ap_open_drv_fail(dev, apdev):
                        wait_connect=False)
         wait_fail_trigger(dev[0], "GET_FAIL")
         dev[0].request("REMOVE_NETWORK all")
+
+def run_multicast_to_unicast(dev, apdev, convert):
+    params = { "ssid": "open" }
+    params["multicast_to_unicast"] = "1" if convert else "0"
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].scan_for_bss(hapd.own_addr(), freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
+    hwsim_utils.test_connectivity(dev[0], hapd, multicast_to_unicast=convert)
+    dev[0].request("DISCONNECT")
+    ev = hapd.wait_event([ "AP-STA-DISCONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No disconnection event received from hostapd")
+
+def test_ap_open_multicast_to_unicast(dev, apdev):
+    """Multicast-to-unicast conversion enabled"""
+    run_multicast_to_unicast(dev, apdev, True)
+
+def test_ap_open_multicast_to_unicast_disabled(dev, apdev):
+    """Multicast-to-unicast conversion disabled"""
+    run_multicast_to_unicast(dev, apdev, False)
+
+def test_ap_open_drop_duplicate(dev, apdev, params):
+    """AP dropping duplicate management frames"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "interworking": "1" })
+    hapd.set("ext_mgmt_frame_handling", "1")
+    bssid = hapd.own_addr().replace(':', '')
+    addr = "020304050607"
+    auth = "b0003a01" + bssid + addr + bssid + '1000000001000000'
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % auth):
+        raise Exception("MGMT_RX_PROCESS failed")
+    auth = "b0083a01" + bssid + addr + bssid + '1000000001000000'
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % auth):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    ies = "00046f70656e010802040b160c12182432043048606c2d1a3c101bffff0000000000000000000001000000000000000000007f0a04000a020140004000013b155151525354737475767778797a7b7c7d7e7f808182dd070050f202000100"
+    assoc_req = "00003a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % assoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    assoc_req = "00083a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % assoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    reassoc_req = "20083a01" + bssid + addr + bssid + "2000" + "21040500" + ies
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % reassoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % reassoc_req):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    action = "d0003a01" + bssid + addr + bssid + "1000" + "040a006c0200000600000102000101"
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % action):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    action = "d0083a01" + bssid + addr + bssid + "1000" + "040a006c0200000600000102000101"
+    if "OK" not in hapd.request("MGMT_RX_PROCESS freq=2412 datarate=0 ssi_signal=-30 frame=%s" % action):
+        raise Exception("MGMT_RX_PROCESS failed")
+
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan.fc.type == 0", ["wlan.fc.subtype"])
+    num_auth = 0
+    num_assoc = 0
+    num_reassoc = 0
+    num_action = 0
+    for subtype in out.splitlines():
+        val = int(subtype)
+        if val == 11:
+            num_auth += 1
+        elif val == 1:
+            num_assoc += 1
+        elif val == 3:
+            num_reassoc += 1
+        elif val == 13:
+            num_action += 1
+    if num_auth != 1:
+        raise Exception("Unexpected number of Authentication frames: %d" % num_auth)
+    if num_assoc != 1:
+        raise Exception("Unexpected number of association frames: %d" % num_assoc)
+    if num_reassoc != 1:
+        raise Exception("Unexpected number of reassociation frames: %d" % num_reassoc)
+    if num_action != 1:
+        raise Exception("Unexpected number of Action frames: %d" % num_action)
+
+def test_ap_open_select_network_freq(dev, apdev):
+    """AP with open mode and use for SELECT_NETWORK freq parameter"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    id = dev[0].connect("open", key_mgmt="NONE", only_add_network=True)
+    dev[0].select_network(id, freq=2412)
+    start = os.times()[4]
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan not started")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=15)
+    if ev is None:
+        raise Exception("Scan not completed")
+    end = os.times()[4]
+    logger.info("Scan duration: {} seconds".format(end - start))
+    if end - start > 3:
+        raise Exception("Scan took unexpectedly long time")
+    dev[0].wait_connected()
+
+def test_ap_open_noncountry(dev, apdev):
+    """AP with open mode and noncountry entity as Country String"""
+    _test_ap_open_country(dev, apdev, "XX", "0x58")
+
+def test_ap_open_country_table_e4(dev, apdev):
+    """AP with open mode and Table E-4 Country String"""
+    _test_ap_open_country(dev, apdev, "DE", "0x04")
+
+def test_ap_open_country_indoor(dev, apdev):
+    """AP with open mode and indoor country code"""
+    _test_ap_open_country(dev, apdev, "DE", "0x49")
+
+def test_ap_open_country_outdoor(dev, apdev):
+    """AP with open mode and outdoor country code"""
+    _test_ap_open_country(dev, apdev, "DE", "0x4f")
+
+def _test_ap_open_country(dev, apdev, country_code, country3):
+    try:
+        run_ap_open_country(dev, apdev, country_code, country3)
+    finally:
+        dev[0].request("DISCONNECT")
+        set_world_reg(apdev[0], apdev[1], dev[0])
+        dev[0].flush_scan_cache()
+
+def run_ap_open_country(dev, apdev, country_code, country3):
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open",
+                                      "country_code": country_code,
+                                      "country3": country3,
+                                      "ieee80211d": "1" })
+    dev[0].scan_for_bss(hapd.own_addr(), freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+def test_ap_open_disable_select(dev, apdev):
+    """DISABLE_NETWORK for connected AP followed by SELECT_NETWORK"""
+    hapd1 = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    hapd2 = hostapd.add_ap(apdev[1], { "ssid": "open" })
+    id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+    dev[0].request("DISABLE_NETWORK %d" % id)
+    dev[0].wait_disconnected()
+    res = dev[0].request("BLACKLIST")
+    if hapd1.own_addr() in res or hapd2.own_addr() in res:
+        raise Exception("Unexpected blacklist entry added")
+    dev[0].request("SELECT_NETWORK %d" % id)
+    dev[0].wait_connected()
+
+def test_ap_open_reassoc_same(dev, apdev):
+    """AP with open mode and STA reassociating back to same AP without auth exchange"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    try:
+        dev[0].request("SET reassoc_same_bss_optim 1")
+        dev[0].request("REATTACH")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity(dev[0], hapd)
+    finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")

@@ -34,7 +34,7 @@ order to make it possible to select which of the methods are included
 in the build.
 
 EAP methods must implement the interface defined in \ref eap_i.h. struct
-eap_method defines the needed function pointers that each EAP method
+\ref eap_method defines the needed function pointers that each EAP method
 must provide. In addition, the EAP type and name are registered using
 this structure. This interface is based on section 4.4 of RFC 4137.
 

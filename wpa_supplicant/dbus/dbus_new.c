@@ -793,6 +793,144 @@ nomem:
 
 #endif /* CONFIG_WPS */
 
+
+#ifdef CONFIG_MESH
+
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshGroupStarted");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
+					     (const char *) ssid->ssid,
+					     ssid->ssid_len) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+
+
+void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
+					 const u8 *meshid, u8 meshid_len,
+					 int reason)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshGroupRemoved");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
+					     (const char *) meshid,
+					     meshid_len) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "DisconnectReason",
+					reason) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+
+
+void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
+					  const u8 *peer_addr)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshPeerConnected");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "PeerAddress",
+					     (const char *) peer_addr,
+					     ETH_ALEN) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+
+
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (!iface || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_MESH,
+				      "MeshPeerDisconnected");
+	if (!msg)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "PeerAddress",
+					     (const char *) peer_addr,
+					     ETH_ALEN) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "DisconnectReason",
+					reason) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+}
+
+#endif /* CONFIG_MESH */
+
+
 void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 				    int depth, const char *subject,
 				    const char *altsubject[],
@@ -1256,9 +1394,12 @@ static void peer_groups_changed(struct wpa_supplicant *wpa_s)
  * @wpa_s: %wpa_supplicant network interface data
  * @client: this device is P2P client
  * @persistent: 0 - non persistent group, 1 - persistent group
+ * @ip: When group role is client, it contains local IP address, netmask, and
+ *	GO's IP address, if assigned; otherwise, NULL
  */
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-					int client, int persistent)
+					int client, int persistent,
+					const u8 *ip)
 {
 	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
@@ -1300,6 +1441,13 @@ void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 	    !wpa_dbus_dict_append_bool(&dict_iter, "persistent", persistent) ||
 	    !wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
 					      wpa_s->dbus_groupobj_path) ||
+	    (ip &&
+	     (!wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddr",
+					       (char *) ip, 4) ||
+	      !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrMask",
+					       (char *) ip + 4, 4) ||
+	      !wpa_dbus_dict_append_byte_array(&dict_iter, "IpAddrGo",
+					       (char *) ip + 8, 4))) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	} else {
@@ -1977,6 +2125,11 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	case WPAS_DBUS_PROP_AP_SCAN:
 		prop = "ApScan";
 		break;
+#ifdef CONFIG_IEEE80211W
+	case WPAS_DBUS_PROP_PMF:
+		prop = "Pmf";
+		break;
+#endif /* CONFIG_IEEE80211W */
 	case WPAS_DBUS_PROP_SCANNING:
 		prop = "Scanning";
 		break;
@@ -3071,6 +3224,20 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "TDLSChannelSwitch", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_channel_switch,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "TDLSCancelChannelSwitch", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_cancel_channel_switch,
+	  {
+		  { "peer_address", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
 #endif /* CONFIG_TDLS */
 	{ "VendorElemAdd", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) wpas_dbus_handler_vendor_elem_add,
@@ -3104,6 +3271,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_NO_CONFIG_WRITE */
+	{ "AbortScan", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_abort_scan,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 
@@ -3128,6 +3301,13 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  wpas_dbus_setter_ap_scan,
 	  NULL
 	},
+#ifdef CONFIG_IEEE80211W
+	{ "Pmf", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
+	  wpas_dbus_getter_pmf,
+	  wpas_dbus_setter_pmf,
+	  NULL
+	},
+#endif /* CONFIG_IEEE80211W */
 	{ "BSSExpireAge", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
 	  wpas_dbus_getter_bss_expire_age,
 	  wpas_dbus_setter_bss_expire_age,
@@ -3224,6 +3404,42 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  wpas_dbus_setter_config_methods,
 	  NULL
 	},
+	{
+	  "DeviceName", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_device_name,
+	  wpas_dbus_setter_wps_device_name,
+	  NULL
+	},
+	{
+	  "Manufacturer", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_manufacturer,
+	  wpas_dbus_setter_wps_manufacturer,
+	  NULL
+	},
+	{
+	  "ModelName", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_device_model_name,
+	  wpas_dbus_setter_wps_device_model_name,
+	  NULL
+	},
+	{
+	  "ModelNumber", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_device_model_number,
+	  wpas_dbus_setter_wps_device_model_number,
+	  NULL
+	},
+	{
+	  "SerialNumber", WPAS_DBUS_NEW_IFACE_WPS, "s",
+	  wpas_dbus_getter_wps_device_serial_number,
+	  wpas_dbus_setter_wps_device_serial_number,
+	  NULL
+	},
+	{
+	  "DeviceType", WPAS_DBUS_NEW_IFACE_WPS, "ay",
+	  wpas_dbus_getter_wps_device_device_type,
+	  wpas_dbus_setter_wps_device_device_type,
+	  NULL
+	},
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ "P2PDeviceConfig", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "a{sv}",
@@ -3267,6 +3483,18 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  NULL,
 	  NULL
 	},
+#ifdef CONFIG_MESH
+	{ "MeshPeers", WPAS_DBUS_NEW_IFACE_MESH, "aay",
+	  wpas_dbus_getter_mesh_peers,
+	  NULL,
+	  NULL
+	},
+	{ "MeshGroup", WPAS_DBUS_NEW_IFACE_MESH, "ay",
+	  wpas_dbus_getter_mesh_group,
+	  NULL,
+	  NULL
+	},
+#endif /* CONFIG_MESH */
 	{ NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
@@ -3544,6 +3772,32 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+#ifdef CONFIG_MESH
+	{ "MeshGroupStarted", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "MeshGroupRemoved", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "MeshPeerConnected", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "MeshPeerDisconnected", WPAS_DBUS_NEW_IFACE_MESH,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_MESH */
 	{ NULL, NULL, { END_ARGS } }
 };
 

@@ -110,8 +110,8 @@ cd ca
 ./clean.sh
 rm -fr rootCA"
 old_hostname=myserver.local
-./setup.sh -C "Hotspot 2.0 Trust Root CA - CT" -d $old_hostname \
-   -I "Hotspot 2.0 Intermediate CA - CT" -o $old_hostname-osu-client \
+./setup.sh -C "Hotspot 2.0 Trust Root CA - CT" \
+   -o $old_hostname-osu-client \
    -O $old_hostname-oscp -p lanforge -S $old_hostname \
    -V $old_hostname-osu-revoked \
    -m local -u http://$old_hostname:8888/

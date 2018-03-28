@@ -243,7 +243,7 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 	inc_byte_array(pn, 6);
 
 	os_memset(dummy, 0x11, sizeof(dummy));
-	if (tk) 
+	if (tk)
 		crypt = ccmp_encrypt(incorrect_key ? dummy : tk,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);

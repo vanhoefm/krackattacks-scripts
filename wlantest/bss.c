@@ -93,7 +93,7 @@ int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
 	if (pmk == NULL)
 		return -1;
 	if (pbkdf2_sha1(passphrase, bss->ssid, bss->ssid_len, 4096,
-			pmk->pmk, sizeof(pmk->pmk)) < 0) {
+			pmk->pmk, PMK_LEN) < 0) {
 		os_free(pmk);
 		return -1;
 	}
@@ -101,7 +101,7 @@ int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
 	wpa_printf(MSG_INFO, "Add possible PMK for BSSID " MACSTR
 		   " based on passphrase '%s'",
 		   MAC2STR(bss->bssid), passphrase);
-	wpa_hexdump(MSG_DEBUG, "Possible PMK", pmk->pmk, sizeof(pmk->pmk));
+	wpa_hexdump(MSG_DEBUG, "Possible PMK", pmk->pmk, PMK_LEN);
 	dl_list_add(&bss->pmk, &pmk->list);
 
 	return 0;
@@ -223,6 +223,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 	if (!update)
 		return;
 
+	bss->beacon_seen = 1;
 	bss->prev_capab_info = bss->capab_info;
 	bss->proto = 0;
 	bss->pairwise_cipher = 0;

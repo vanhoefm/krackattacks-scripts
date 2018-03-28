@@ -36,6 +36,7 @@ else
 	$HAPD -gfoo > /dev/null 2>&1
 	$HAPD -Gfoo-not-exists > /dev/null 2>&1
 	$HAPD -z > /dev/null 2>&1
+	$HAPD -i foo1,foo2,foo3 > /dev/null 2>&1
     fi
     if [ -e $LOGDIR/alt-hostapd-as/hostapd/hostapd ]; then
 	HAPD_AS=$LOGDIR/alt-hostapd-as/hostapd/hostapd
@@ -57,6 +58,8 @@ fi
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then
     GROUP=admin
+elif groups | tr ' ' "\n" | grep -q ^wheel$; then
+    GROUP=wheel
 else
     GROUP=adm
 fi
@@ -100,13 +103,13 @@ else
 	NUM_CH=1
 fi
 
-test -f /proc/modules && sudo modprobe mac80211_hwsim radios=7 channels=$NUM_CH support_p2p_device=0
+test -f /proc/modules && sudo modprobe mac80211_hwsim radios=7 channels=$NUM_CH support_p2p_device=0 dyndbg=+p
 
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dtN -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do
     DBUSARG=""
-    if [ $i = "0" -a -r /var/run/dbus/pid -a -r /var/run/dbus/hwsim-test ]; then
+    if [ $i = "0" ] && ([ -r /var/run/dbus/pid ] || [ -r /var/run/dbus/system_bus_socket ]); then
 	if $WPAS | grep -q -- -u; then
 	    DBUSARG="-u"
 	fi
@@ -117,6 +120,8 @@ done
 sudo $(printf -- "$VALGRIND_WPAS" 5) $WPAS -g /tmp/wpas-wlan5 -G$GROUP \
     -ddKt$TRACE -f $LOGDIR/log5 &
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -f $LOGDIR/hostapd &
+HPID=$!
+echo $HPID > $LOGDIR/hostapd-test.pid
 
 if [ -x $HLR_AUC_GW ]; then
     cp $DIR/auth_serv/hlr_auc_gw.milenage_db $LOGDIR/hlr_auc_gw.milenage_db
@@ -162,7 +167,7 @@ for i in unknown revoked; do
 done
 
 openssl ocsp -reqout $LOGDIR/ocsp-req.der -issuer $DIR/auth_serv/ca.pem \
-    -serial 0xD8D3E3A6CBE3CCE9 -no_nonce -sha256 >> $LOGDIR/ocsp.log 2>&1
+    -sha256 -serial 0xD8D3E3A6CBE3CD12 -no_nonce >> $LOGDIR/ocsp.log 2>&1
 for i in "" "-unknown" "-revoked"; do
     openssl ocsp -index $DIR/auth_serv/index$i.txt \
 	-rsigner $DIR/auth_serv/ca.pem \

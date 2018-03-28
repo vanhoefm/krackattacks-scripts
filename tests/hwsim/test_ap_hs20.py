@@ -17,7 +17,7 @@ import socket
 import subprocess
 
 import hostapd
-from utils import HwsimSkip, skip_with_fips, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, skip_with_fips, alloc_fail, fail_test, wait_fail_trigger
 import hwsim_utils
 from tshark import run_tshark
 from wlantest import Wlantest
@@ -186,6 +186,9 @@ def test_ap_anqp_sharing(dev, apdev):
     dev[0].scan_for_bss(bssid2, freq="2412")
     interworking_select(dev[0], None, "home", freq="2412")
     dev[0].dump_monitor()
+    state = dev[0].get_status_field('wpa_state')
+    if state != "DISCONNECTED":
+        raise Exception("Unexpected wpa_state after INTERWORKING_SELECT: " + state)
 
     logger.debug("BSS entries:\n" + dev[0].request("BSS RANGE=ALL"))
     res1 = dev[0].get_bss(bssid)
@@ -212,6 +215,31 @@ def test_ap_anqp_sharing(dev, apdev):
     res2 = dev[0].get_bss(bssid2)
     if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
         raise Exception("ANQP results were not unshared")
+
+def test_ap_anqp_domain_id(dev, apdev):
+    """ANQP Domain ID"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    dev[0].flush_scan_cache()
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_domain_id'] = '1234'
+    hostapd.add_ap(apdev[0], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_domain_id'] = '1234'
+    hostapd.add_ap(apdev[1], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    interworking_select(dev[0], None, "home", freq="2412")
 
 def test_ap_anqp_no_sharing_diff_ess(dev, apdev):
     """ANQP no sharing between ESSs"""
@@ -402,6 +430,13 @@ def _test_ap_interworking_scan_filtering(dev, apdev):
     Wlantest.setup(hapd0)
     wt = Wlantest()
     wt.flush()
+
+    # Make sure wlantest has seen both BSSs to avoid issues in trying to clear
+    # counters for non-existing BSS.
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
 
     logger.info("Check probe request filtering based on HESSID")
 
@@ -2446,6 +2481,9 @@ def test_ap_hs20_deauth_req_without_pmf(dev, apdev):
     ev = dev[0].wait_event(["HS20-DEAUTH-IMMINENT-NOTICE"], timeout=0.2)
     if ev is not None:
         raise Exception("Deauth imminent notice without PMF accepted")
+    with alloc_fail(hapd, 1, "wpabuf_alloc;hostapd_ctrl_iface_hs20_deauth_req"):
+        if "FAIL" not in hapd.request("HS20_DEAUTH_REQ " + addr + " 1 120 http://example.com/"):
+            raise Exception("HS20_DEAUTH_REQ accepted during OOM")
 
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""
@@ -2515,6 +2553,8 @@ def _test_ap_hs20_remediation_required_ctrl(dev, apdev):
         raise Exception("Unexpected HS20_WNM_NOTIF success")
     if "FAIL" not in hapd.request("HS20_WNM_NOTIF " + addr + " https://12345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678927.very.long.example.com/"):
         raise Exception("Unexpected HS20_WNM_NOTIF success")
+    if "OK" not in hapd.request("HS20_WNM_NOTIF " + addr + " "):
+        raise Exception("HS20_WNM_NOTIF failed with empty URL")
 
 def test_ap_hs20_session_info(dev, apdev):
     """Hotspot 2.0 connection and session information from RADIUS"""
@@ -4212,26 +4252,12 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
 
     if ebtables:
         for chain in [ 'FORWARD', 'OUTPUT' ]:
-            subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
-                             '-d', 'Broadcast', '-o', apdev[0]['ifname'],
-                             '-j', 'DROP'])
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'neighbor-solicitation',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'neighbor-advertisement',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            subprocess.call(['ebtables', '-A', chain,
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', 'router-solicitation',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
-            # Multicast Listener Report Message
-            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                             '--ip6-icmp-type', '143',
-                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            try:
+                subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
+                                 '-d', 'Broadcast', '-o', apdev[0]['ifname'],
+                                 '-j', 'DROP'])
+            except:
+                raise HwsimSkip("No ebtables available")
 
     time.sleep(0.5)
     cmd = {}
@@ -4267,32 +4293,6 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     addr0 = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
     addr2 = dev[2].p2p_interface_addr()
-
-    src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
-    src_ll_opt1 = "\x01\x01" + binascii.unhexlify(addr1.replace(':',''))
-
-    # DAD NS
-    send_ns(dev[0], ip_src="::", target="aaaa:bbbb:cccc::2")
-
-    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2")
-    # test frame without source link-layer address option
-    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
-            opt='')
-    # test frame with bogus option
-    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
-            opt="\x70\x01\x01\x02\x03\x04\x05\x05")
-    # test frame with truncated source link-layer address option
-    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
-            opt="\x01\x01\x01\x02\x03\x04")
-    # test frame with foreign source link-layer address option
-    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
-            opt="\x01\x01\x01\x02\x03\x04\x05\x06")
-
-    send_ns(dev[1], ip_src="aaaa:bbbb:dddd::2", target="aaaa:bbbb:dddd::2")
-
-    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
-    # another copy for additional code coverage
-    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
 
     pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
                          ip_src="192.168.1.1", ip_dst="255.255.255.255",
@@ -4365,14 +4365,8 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
 
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After connect: " + str(matches))
-    if len(matches) != 4:
+    if len(matches) != 1:
         raise Exception("Unexpected number of neighbor entries after connect")
-    if 'aaaa:bbbb:cccc::2 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
-        raise Exception("dev0 addr missing")
-    if 'aaaa:bbbb:dddd::2 dev ap-br0 lladdr 02:00:00:00:01:00 PERMANENT' not in matches:
-        raise Exception("dev1 addr(1) missing")
-    if 'aaaa:bbbb:eeee::2 dev ap-br0 lladdr 02:00:00:00:01:00 PERMANENT' not in matches:
-        raise Exception("dev1 addr(2) missing")
     if '192.168.1.123 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
         raise Exception("dev0 IPv4 addr missing")
 
@@ -4457,38 +4451,6 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     # ARP Request to verify previous mapping
     send_arp(dev[1], sender_ip="192.168.1.127", target_ip="192.168.1.123")
     send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.127")
-
-    time.sleep(0.1)
-
-    send_ns(dev[0], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:cccc::2")
-    time.sleep(0.1)
-    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:dddd::2")
-    time.sleep(0.1)
-    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:dddd::2",
-            ip_src="aaaa:bbbb:ffff::2")
-    time.sleep(0.1)
-    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:ff00::2")
-    time.sleep(0.1)
-    send_ns(dev[2], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:ff00::2")
-    time.sleep(0.1)
-    send_ns(dev[2], target="aaaa:bbbb:eeee::2", ip_src="aaaa:bbbb:ff00::2")
-    time.sleep(0.1)
-
-    # Try to probe for an already assigned address
-    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="::")
-    time.sleep(0.1)
-    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc::2", ip_src="::")
-    time.sleep(0.1)
-    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="::")
-    time.sleep(0.1)
-
-    # Unsolicited NA
-    send_na(dev[1], target="aaaa:bbbb:cccc:aeae::3",
-            ip_src="aaaa:bbbb:cccc:aeae::3", ip_dst="ff02::1")
-    send_na(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc:aeae::4",
-            ip_src="aaaa:bbbb:cccc:aeae::4", ip_dst="ff02::1")
-    send_na(dev[2], target="aaaa:bbbb:cccc:aeae::5",
-            ip_src="aaaa:bbbb:cccc:aeae::5", ip_dst="ff02::1")
 
     try:
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
@@ -4581,6 +4543,198 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     #     bssid, '192.168.1.101' ] not in arp_reply:
     #    raise Exception("br did not get ARP response for 192.168.1.123")
 
+def _test_proxyarp_open_ipv6(dev, apdev, params, ebtables=False):
+    prefix = "proxyarp_open"
+    if ebtables:
+        prefix += "_ebtables"
+    cap_br = os.path.join(params['logdir'], prefix + ".ap-br0.pcap")
+    cap_dev0 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[0].ifname)
+    cap_dev1 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[1].ifname)
+    cap_dev2 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[2].ifname)
+
+    bssid = apdev[0]['bssid']
+    params = { 'ssid': 'open' }
+    params['proxy_arp'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+    hapd.set("ap_isolate", "1")
+    hapd.set('bridge', 'ap-br0')
+    hapd.dump_monitor()
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    params2 = { 'ssid': 'another' }
+    hapd2 = hostapd.add_ap(apdev[1], params2, no_enable=True)
+    hapd2.set('bridge', 'ap-br0')
+    hapd2.enable()
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    if ebtables:
+        for chain in [ 'FORWARD', 'OUTPUT' ]:
+            try:
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'neighbor-solicitation',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'neighbor-advertisement',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                subprocess.call(['ebtables', '-A', chain,
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', 'router-solicitation',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+                # Multicast Listener Report Message
+                subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                                 '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                                 '--ip6-icmp-type', '143',
+                                 '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            except:
+                raise HwsimSkip("No ebtables available")
+
+    time.sleep(0.5)
+    cmd = {}
+    cmd[0] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', 'ap-br0',
+                               '-w', cap_br, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+    cmd[1] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[0].ifname,
+                               '-w', cap_dev0, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+    cmd[2] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[1].ifname,
+                               '-w', cap_dev1, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+    cmd[3] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[2].ifname,
+                               '-w', cap_dev2, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[2].connect("another", key_mgmt="NONE", scan_freq="2412")
+    time.sleep(0.1)
+
+    brcmd = subprocess.Popen(['brctl', 'show'], stdout=subprocess.PIPE)
+    res = brcmd.stdout.read()
+    brcmd.stdout.close()
+    logger.info("Bridge setup: " + res)
+
+    brcmd = subprocess.Popen(['brctl', 'showstp', 'ap-br0'],
+                             stdout=subprocess.PIPE)
+    res = brcmd.stdout.read()
+    brcmd.stdout.close()
+    logger.info("Bridge showstp: " + res)
+
+    addr0 = dev[0].p2p_interface_addr()
+    addr1 = dev[1].p2p_interface_addr()
+    addr2 = dev[2].p2p_interface_addr()
+
+    src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
+    src_ll_opt1 = "\x01\x01" + binascii.unhexlify(addr1.replace(':',''))
+
+    # DAD NS
+    send_ns(dev[0], ip_src="::", target="aaaa:bbbb:cccc::2")
+
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2")
+    # test frame without source link-layer address option
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt='')
+    # test frame with bogus option
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x70\x01\x01\x02\x03\x04\x05\x05")
+    # test frame with truncated source link-layer address option
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x01\x01\x01\x02\x03\x04")
+    # test frame with foreign source link-layer address option
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x01\x01\x01\x02\x03\x04\x05\x06")
+
+    send_ns(dev[1], ip_src="aaaa:bbbb:dddd::2", target="aaaa:bbbb:dddd::2")
+
+    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
+    # another copy for additional code coverage
+    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
+
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After connect (showmacs): " + str(macs))
+
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After connect: " + str(matches))
+    if len(matches) != 3:
+        raise Exception("Unexpected number of neighbor entries after connect")
+    if 'aaaa:bbbb:cccc::2 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
+        raise Exception("dev0 addr missing")
+    if 'aaaa:bbbb:dddd::2 dev ap-br0 lladdr 02:00:00:00:01:00 PERMANENT' not in matches:
+        raise Exception("dev1 addr(1) missing")
+    if 'aaaa:bbbb:eeee::2 dev ap-br0 lladdr 02:00:00:00:01:00 PERMANENT' not in matches:
+        raise Exception("dev1 addr(2) missing")
+
+    send_ns(dev[0], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:cccc::2")
+    time.sleep(0.1)
+    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:dddd::2")
+    time.sleep(0.1)
+    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:dddd::2",
+            ip_src="aaaa:bbbb:ffff::2")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:eeee::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
+
+    # Try to probe for an already assigned address
+    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+
+    # Unsolicited NA
+    send_na(dev[1], target="aaaa:bbbb:cccc:aeae::3",
+            ip_src="aaaa:bbbb:cccc:aeae::3", ip_dst="ff02::1")
+    send_na(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc:aeae::4",
+            ip_src="aaaa:bbbb:cccc:aeae::4", ip_dst="ff02::1")
+    send_na(dev[2], target="aaaa:bbbb:cccc:aeae::5",
+            ip_src="aaaa:bbbb:cccc:aeae::5", ip_dst="ff02::1")
+
+    try:
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
+    except Exception, e:
+        logger.info("test_connectibity_iface failed: " + str(e))
+        raise HwsimSkip("Assume kernel did not have the required patches for proxyarp")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "ap-br0")
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    time.sleep(0.5)
+    for i in range(len(cmd)):
+        cmd[i].terminate()
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After disconnect (showmacs): " + str(macs))
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After disconnect: " + str(matches))
+    if len(matches) > 0:
+        raise Exception("Unexpected neighbor entries after disconnect")
+    if ebtables:
+        cmd = subprocess.Popen(['ebtables', '-L', '--Lc'],
+                               stdout=subprocess.PIPE)
+        res = cmd.stdout.read()
+        cmd.stdout.close()
+        logger.info("ebtables results:\n" + res)
+
     ns = tshark_get_ns(cap_dev0)
     logger.info("dev0 seen NS: " + str(ns))
     na = tshark_get_na(cap_dev0)
@@ -4588,7 +4742,10 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
 
     if [ addr0, addr1, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:cccc::2',
          'aaaa:bbbb:dddd::2', addr1 ] not in na:
-        raise Exception("dev0 did not get NA for aaaa:bbbb:dddd::2")
+        # For now, skip the test instead of reporting the error since the IPv6
+        # proxyarp support is not yet in the upstream kernel tree.
+        #raise Exception("dev0 did not get NA for aaaa:bbbb:dddd::2")
+        raise HwsimSkip("Assume kernel did not have the required patches for proxyarp (IPv6)")
 
     if ebtables:
         for req in ns:
@@ -4635,6 +4792,16 @@ def test_proxyarp_open(dev, apdev, params):
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
 
+def test_proxyarp_open_ipv6(dev, apdev, params):
+    """ProxyARP with open network (IPv6)"""
+    try:
+        _test_proxyarp_open_ipv6(dev, apdev, params)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
 def test_proxyarp_open_ebtables(dev, apdev, params):
     """ProxyARP with open network"""
     try:
@@ -4649,6 +4816,86 @@ def test_proxyarp_open_ebtables(dev, apdev, params):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
+
+def test_proxyarp_open_ebtables_ipv6(dev, apdev, params):
+    """ProxyARP with open network (IPv6)"""
+    try:
+        _test_proxyarp_open_ipv6(dev, apdev, params, ebtables=True)
+    finally:
+        try:
+            subprocess.call(['ebtables', '-F', 'FORWARD'])
+            subprocess.call(['ebtables', '-F', 'OUTPUT'])
+        except:
+            pass
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def test_proxyarp_errors(dev, apdev, params):
+    """ProxyARP error cases"""
+    try:
+        run_proxyarp_errors(dev, apdev, params)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def run_proxyarp_errors(dev, apdev, params):
+    params = { 'ssid': 'open',
+               'proxy_arp': '1',
+               'ap_isolate': '1',
+               'bridge': 'ap-br0',
+               'disable_dgaf': '1' }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    hapd.disable()
+    with alloc_fail(hapd, 1, "l2_packet_init;x_snoop_get_l2_packet;dhcp_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with alloc_fail(hapd, 1, "l2_packet_init;x_snoop_get_l2_packet;ndisc_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with fail_test(hapd, 1, "l2_packet_set_packet_filter;x_snoop_get_l2_packet;ndisc_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    with fail_test(hapd, 1, "l2_packet_set_packet_filter;x_snoop_get_l2_packet;dhcp_snoop_init"):
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE accepted unexpectedly")
+    hapd.enable()
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    addr0 = dev[0].own_addr()
+
+    pkt = build_ra(src_ll=apdev[0]['bssid'], ip_src="aaaa:bbbb:cccc::33",
+                   ip_dst="ff01::1")
+    with fail_test(hapd, 1, "x_snoop_mcast_to_ucast_convert_send"):
+        if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+            raise Exception("DATA_TEST_FRAME failed")
+        wait_fail_trigger(dev[0], "GET_FAIL")
+
+    with alloc_fail(hapd, 1, "sta_ip6addr_add"):
+        src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
+        pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
+                       ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
+                       opt=src_ll_opt0)
+        if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
+            raise Exception("DATA_TEST_FRAME failed")
+        wait_fail_trigger(dev[0], "GET_ALLOC_FAIL")
 
 def test_ap_hs20_connect_deinit(dev, apdev):
     """Hotspot 2.0 connection interrupted with deinit"""

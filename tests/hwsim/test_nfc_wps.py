@@ -58,6 +58,15 @@ def test_nfc_wps_password_token_sta(dev, apdev):
     dev[0].wait_connected(timeout=30)
     check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
 
+    if "FAIL" not in hapd.request("WPS_NFC_TAG_READ 0"):
+        raise Exception("Invalid WPS_NFC_TAG_READ accepted")
+    if "FAIL" not in hapd.request("WPS_NFC_TAG_READ 0q"):
+        raise Exception("Invalid WPS_NFC_TAG_READ accepted")
+    with alloc_fail(hapd, 1,
+                    "wpabuf_alloc;hostapd_ctrl_iface_wps_nfc_tag_read"):
+        if "FAIL" not in hapd.request("WPS_NFC_TAG_READ 00"):
+            raise Exception("WPS_NFC_TAG_READ accepted during OOM")
+
 def test_nfc_wps_config_token(dev, apdev):
     """NFC tag with configuration token from AP"""
     ssid = "test-wps-nfc-conf-token"
@@ -67,6 +76,7 @@ def test_nfc_wps_config_token(dev, apdev):
     conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
     if "FAIL" in conf:
         raise Exception("Failed to generate configuration token")
+    ndef_conf = conf
     dev[0].dump_monitor()
     res = dev[0].request("WPS_NFC_TAG_READ " + conf)
     if "FAIL" in res:
@@ -78,6 +88,16 @@ def test_nfc_wps_config_token(dev, apdev):
         conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
         if "FAIL" not in conf:
             raise Exception("Unexpected configuration token received during OOM")
+
+    wps_conf = hapd.request("WPS_NFC_CONFIG_TOKEN WPS").rstrip()
+    if "FAIL" in wps_conf:
+        raise Exception("Failed to generate configuration token (WPS)")
+    if wps_conf not in ndef_conf:
+        raise Exception("WPS config token not within NDEF encapsulated one")
+
+    conf = hapd.request("WPS_NFC_CONFIG_TOKEN FOO").rstrip()
+    if "FAIL" not in conf:
+        raise Exception("Invalid WPS_NFC_CONFIG_TOKEN accepted")
 
 def test_nfc_wps_config_token_init(dev, apdev):
     """NFC tag with configuration token from AP with auto configuration"""
@@ -151,6 +171,9 @@ def test_nfc_wps_password_token_ap(dev, apdev):
         if "FAIL" not in hapd.request("WPS_NFC_TOKEN WPS"):
             raise Exception("Unexpected WPS_NFC_TOKEN success")
 
+    if "FAIL" not in hapd.request("WPS_NFC_TOKEN foo"):
+        raise Exception("Invalid WPS_NFC_TOKEN accepted")
+
 def test_nfc_wps_handover_init(dev, apdev):
     """Connect to WPS AP with NFC connection handover and move to configured state"""
     try:
@@ -184,6 +207,17 @@ def _test_nfc_wps_handover_init(dev, apdev):
         if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR"):
             raise Exception("Unexpected NFC_GET_HANDOVER_SEL success during OOM")
 
+    if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL NDEF").rstrip():
+        raise Exception("Invalid NFC_GET_HANDOVER_SEL accepted")
+    if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL foo foo").rstrip():
+        raise Exception("Invalid NFC_GET_HANDOVER_SEL accepted")
+    if "FAIL" not in hapd.request("NFC_GET_HANDOVER_SEL NDEF foo").rstrip():
+        raise Exception("Invalid NFC_GET_HANDOVER_SEL accepted")
+    res_ndef = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+    res_wps = hapd.request("NFC_GET_HANDOVER_SEL WPS WPS-CR").rstrip()
+    if res_wps not in res_ndef:
+        raise Exception("WPS handover select not in NDEF encapsulated version")
+
 @remote_compatible
 def test_nfc_wps_handover_errors(dev, apdev):
     """WPS AP NFC handover report error cases"""
@@ -213,6 +247,11 @@ def test_nfc_wps_handover_errors(dev, apdev):
         raise Exception("Unexpected handover report success")
     if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP FOO 001122 00"):
         raise Exception("Unexpected handover report success")
+    for i in range(1, 3):
+        with alloc_fail(hapd, i,
+                        "wpabuf_alloc;hostapd_ctrl_iface_nfc_report_handover"):
+            if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 001122 001122"):
+                raise Exception("NFC_REPORT_HANDOVER RESP succeeded during OOM")
 
 def test_nfc_wps_handover(dev, apdev):
     """Connect to WPS AP with NFC connection handover"""

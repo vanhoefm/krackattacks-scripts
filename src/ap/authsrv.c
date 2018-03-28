@@ -71,11 +71,10 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 	}
 
 	if (eap_user->password) {
-		user->password = os_malloc(eap_user->password_len);
+		user->password = os_memdup(eap_user->password,
+					   eap_user->password_len);
 		if (user->password == NULL)
 			goto out;
-		os_memcpy(user->password, eap_user->password,
-			  eap_user->password_len);
 		user->password_len = eap_user->password_len;
 		user->password_hash = eap_user->password_hash;
 	}
@@ -133,6 +132,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 	srv.erp = conf->eap_server_erp;
 	srv.erp_domain = conf->erp_domain;
 	srv.tls_session_lifetime = conf->tls_session_lifetime;
+	srv.tls_flags = conf->tls_flags;
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {
@@ -157,6 +157,7 @@ int authsrv_init(struct hostapd_data *hapd)
 
 		os_memset(&conf, 0, sizeof(conf));
 		conf.tls_session_lifetime = hapd->conf->tls_session_lifetime;
+		conf.tls_flags = hapd->conf->tls_flags;
 		hapd->ssl_ctx = tls_init(&conf);
 		if (hapd->ssl_ctx == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to initialize TLS");

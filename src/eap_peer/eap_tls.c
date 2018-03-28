@@ -338,12 +338,11 @@ static u8 * eap_tls_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->key_data == NULL)
 		return NULL;
 
-	key = os_malloc(EAP_TLS_KEY_LEN);
+	key = os_memdup(data->key_data, EAP_TLS_KEY_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_TLS_KEY_LEN;
-	os_memcpy(key, data->key_data, EAP_TLS_KEY_LEN);
 
 	return key;
 }
@@ -357,12 +356,11 @@ static u8 * eap_tls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->key_data == NULL)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->key_data + EAP_TLS_KEY_LEN, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_EMSK_LEN;
-	os_memcpy(key, data->key_data + EAP_TLS_KEY_LEN, EAP_EMSK_LEN);
 
 	return key;
 }
@@ -376,12 +374,11 @@ static u8 * eap_tls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->session_id == NULL)
 		return NULL;
 
-	id = os_malloc(data->id_len);
+	id = os_memdup(data->session_id, data->id_len);
 	if (id == NULL)
 		return NULL;
 
 	*len = data->id_len;
-	os_memcpy(id, data->session_id, data->id_len);
 
 	return id;
 }

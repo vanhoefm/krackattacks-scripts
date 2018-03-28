@@ -140,7 +140,7 @@ def test_autogo_m2d(dev):
     autogo(dev[0], freq=2412)
     go_addr = dev[0].p2p_dev_addr()
 
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     if not dev[1].discover_peer(go_addr, social=True):
         raise Exception("GO " + go_addr + " not found")
     dev[1].dump_monitor()
@@ -324,14 +324,17 @@ def test_autogo_legacy(dev):
 
 def test_autogo_chan_switch(dev):
     """P2P autonomous GO switching channels"""
+    run_autogo_chan_switch(dev)
+
+def run_autogo_chan_switch(dev):
     autogo(dev[0], freq=2417)
-    connect_cli(dev[0], dev[1])
-    res = dev[0].request("CHAN_SWITCH 5 2422")
+    connect_cli(dev[0], dev[1], freq=2417)
+    res = dev[0].group_request("CHAN_SWITCH 5 2422")
     if "FAIL" in res:
         # for now, skip test since mac80211_hwsim support is not yet widely
         # deployed
         raise HwsimSkip("Assume mac80211_hwsim did not support channel switching")
-    ev = dev[0].wait_event(["AP-CSA-FINISHED"], timeout=10)
+    ev = dev[0].wait_group_event(["AP-CSA-FINISHED"], timeout=10)
     if ev is None:
         raise Exception("CSA finished event timed out")
     if "freq=2422" not in ev:
@@ -340,6 +343,14 @@ def test_autogo_chan_switch(dev):
     dev[1].dump_monitor()
     time.sleep(0.1)
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+
+def test_autogo_chan_switch_group_iface(dev):
+    """P2P autonomous GO switching channels (separate group interface)"""
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    run_autogo_chan_switch(dev)
 
 @remote_compatible
 def test_autogo_extra_cred(dev):
@@ -617,7 +628,11 @@ def test_go_search_non_social(dev):
     dev[1].p2p_find(freq=2422)
     ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=3.5)
     if ev is None:
-        raise Exception("Did not find GO quickly enough")
+        dev[1].p2p_stop_find()
+        dev[1].p2p_find(freq=2422)
+        ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=3.5)
+        if ev is None:
+            raise Exception("Did not find GO quickly enough")
     dev[2].p2p_listen()
     ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is None:
@@ -625,6 +640,36 @@ def test_go_search_non_social(dev):
     dev[2].p2p_stop_find()
     dev[1].p2p_stop_find()
     dev[0].remove_group()
+
+def test_go_search_non_social2(dev):
+    """P2P_FIND with freq parameter to scan a single channel (2)"""
+    addr0 = dev[0].p2p_dev_addr()
+    dev[1].p2p_find(freq=2422)
+    # Wait for the first p2p_find scan round to complete before starting GO
+    time.sleep(1)
+    autogo(dev[0], freq=2422)
+    # Verify that p2p_find is still scanning the specified frequency
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        dev[1].p2p_stop_find()
+        raise Exception("Did not find GO quickly enough")
+    # Verify that p2p_find is scanning the social channels
+    dev[2].p2p_listen()
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Did not find peer")
+    dev[2].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[0].remove_group()
+    dev[1].dump_monitor()
+
+    # Verify that social channel as the specific channel works
+    dev[1].p2p_find(freq=2412)
+    time.sleep(0.5)
+    dev[2].p2p_listen()
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Did not find peer (2)")
 
 def test_autogo_many(dev):
     """P2P autonomous GO with large number of GO instances"""
@@ -813,3 +858,44 @@ def test_autogo_join_before_found(dev):
         raise Exception("Joining the group timed out")
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_noa(dev):
+    """P2P autonomous GO and NoA"""
+    res = autogo(dev[0])
+    dev[0].group_request("P2P_SET noa 1,5,20")
+    dev[0].group_request("P2P_SET noa 255,10,50")
+
+    # Connect and disconnect legacy STA to check NoA special cases
+    try:
+        dev[1].request("SET p2p_disabled 1")
+        dev[1].connect(ssid=res['ssid'], psk=res['passphrase'], proto='RSN',
+                       key_mgmt='WPA-PSK', pairwise='CCMP', group='CCMP',
+                       scan_freq=res['freq'])
+        dev[0].group_request("P2P_SET noa 255,15,55")
+        dev[1].request("DISCONNECT")
+        dev[1].wait_disconnected()
+    finally:
+        dev[1].request("SET p2p_disabled 0")
+
+    dev[0].group_request("P2P_SET noa 0,0,0")
+
+def test_autogo_interworking(dev):
+    """P2P autonomous GO and Interworking"""
+    try:
+        run_autogo_interworking(dev)
+    finally:
+        dev[0].set("go_interworking", "0")
+
+def run_autogo_interworking(dev):
+    dev[0].set("go_interworking", "1")
+    dev[0].set("go_access_network_type", "1")
+    dev[0].set("go_internet", "1")
+    dev[0].set("go_venue_group", "2")
+    dev[0].set("go_venue_type", "3")
+    res = autogo(dev[0])
+    bssid = dev[0].p2p_interface_addr()
+    dev[1].scan_for_bss(bssid, freq=res['freq'])
+    bss = dev[1].get_bss(bssid)
+    dev[0].remove_group()
+    if '6b03110203' not in bss['ie']:
+        raise Exception("Interworking element not seen")

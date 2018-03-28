@@ -47,7 +47,7 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			    int verify_peer, int eap_type)
 {
 	u8 session_ctx[8];
-	unsigned int flags = 0;
+	unsigned int flags = sm->tls_flags;
 
 	if (sm->ssl_ctx == NULL) {
 		wpa_printf(MSG_ERROR, "TLS context not initialized - cannot use TLS-based EAP method");

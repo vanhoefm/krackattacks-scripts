@@ -4,15 +4,18 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import logging
 logger = logging.getLogger()
+import socket
+import struct
 import subprocess
 import time
 
 import hostapd
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail
+from utils import alloc_fail, HwsimSkip, wait_fail_trigger
 from test_ap_eap import eap_connect
 
 def test_pmksa_cache_on_roam_back(dev, apdev):
@@ -282,7 +285,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
 def test_pmksa_cache_expiration(dev, apdev):
     """PMKSA cache entry expiration"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0], params)
+    hapd = hostapd.add_ap(apdev[0], params)
     bssid = apdev[0]['bssid']
     dev[0].request("SET dot11RSNAConfigPMKLifetime 10")
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
@@ -302,6 +305,7 @@ def test_pmksa_cache_expiration(dev, apdev):
     pmksa2 = dev[0].get_pmksa(bssid)
     if pmksa['pmkid'] == pmksa2['pmkid']:
         raise Exception("PMKID did not change")
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_pmksa_cache_expiration_disconnect(dev, apdev):
     """PMKSA cache entry expiration (disconnect)"""
@@ -381,6 +385,42 @@ def test_pmksa_cache_and_cui(dev, apdev):
         time.sleep(0.1)
     if state != "COMPLETED":
         raise Exception("Reauthentication did not complete")
+
+def test_pmksa_cache_preauth_auto(dev, apdev):
+    """RSN pre-authentication based on pre-connection scan results"""
+    try:
+        run_pmksa_cache_preauth_auto(dev, apdev)
+    finally:
+        hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', 'dev',
+                                       'ap-br0', 'down', '2>', '/dev/null'],
+                            shell=True)
+        hostapd.cmd_execute(apdev[0], ['brctl', 'delbr', 'ap-br0',
+                                       '2>', '/dev/null'], shell=True)
+
+def run_pmksa_cache_preauth_auto(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['bridge'] = 'ap-br0'
+    params['rsn_preauth'] = '1'
+    params['rsn_preauth_interfaces'] = 'ap-br0'
+
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.cmd_execute(['brctl', 'setfd', 'ap-br0', '0'])
+    hapd.cmd_execute(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+
+    found = False
+    for i in range(20):
+        time.sleep(0.5)
+        res1 = dev[0].get_pmksa(apdev[0]['bssid'])
+        res2 = dev[0].get_pmksa(apdev[1]['bssid'])
+        if res1 and res2:
+            found = True
+            break
+    if not found:
+        raise Exception("The expected PMKSA cache entries not found")
 
 def generic_pmksa_cache_preauth(dev, apdev, extraparams, identity, databridge,
                                 force_disconnect=False):
@@ -734,8 +774,10 @@ def _test_pmksa_cache_preauth_oom(dev, apdev):
 
     tests = [ (1, "rsn_preauth_receive"),
               (2, "rsn_preauth_receive"),
-              (1, "rsn_preauth_send") ]
+              (1, "rsn_preauth_send"),
+              (1, "wpa_auth_pmksa_add_preauth;rsn_preauth_finished") ]
     for test in tests:
+        hapd.request("DEAUTHENTICATE ff:ff:ff:ff:ff:ff")
         with alloc_fail(hapd, test[0], test[1]):
             dev[0].scan_for_bss(bssid1, freq="2412")
             if "OK" not in dev[0].request("PREAUTH " + bssid1):
@@ -887,3 +929,188 @@ def test_pmksa_cache_ctrl(dev, apdev):
         raise Exception("PMKID mismatch in PMKSA cache entries after reconnect")
     if pmksa_sta2['pmkid'] == pmksa_sta['pmkid']:
         raise Exception("PMKID did not change after reconnect")
+
+def test_pmksa_cache_ctrl_events(dev, apdev):
+    """PMKSA cache control interface events"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412", wait_connect=False)
+
+    ev = dev[0].wait_event(["PMKSA-CACHE-ADDED"], timeout=15)
+    if ev is None:
+        raise Exception("No PMKSA-CACHE-ADDED event")
+    dev[0].wait_connected()
+    items = ev.split(' ')
+    if items[1] != bssid:
+        raise Exception("BSSID mismatch: " + ev)
+    if int(items[2]) != id:
+        raise Exception("network_id mismatch: " + ev)
+
+    dev[0].request("PMKSA_FLUSH")
+    ev = dev[0].wait_event(["PMKSA-CACHE-REMOVED"], timeout=15)
+    if ev is None:
+        raise Exception("No PMKSA-CACHE-REMOVED event")
+    dev[0].wait_disconnected()
+    dev[0].request("DISCONNECT")
+    items = ev.split(' ')
+    if items[1] != bssid:
+        raise Exception("BSSID mismatch: " + ev)
+    if int(items[2]) != id:
+        raise Exception("network_id mismatch: " + ev)
+
+def test_pmksa_cache_ctrl_ext(dev, apdev):
+    """PMKSA cache control interface for external management"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412")
+
+    res1 = dev[0].request("PMKSA_GET %d" % id)
+    logger.info("PMKSA_GET: " + res1)
+    if "UNKNOWN COMMAND" in res1:
+        raise HwsimSkip("PMKSA_GET not supported in the build")
+    if bssid not in res1:
+        raise Exception("PMKSA cache entry missing")
+
+    hostapd.add_ap(apdev[1], params)
+    bssid2 = apdev[1]['bssid']
+    dev[0].scan_for_bss(bssid2, freq=2412, force_scan=True)
+    dev[0].request("ROAM " + bssid2)
+    dev[0].wait_connected()
+
+    res2 = dev[0].request("PMKSA_GET %d" % id)
+    logger.info("PMKSA_GET: " + res2)
+    if bssid not in res2:
+        raise Exception("PMKSA cache entry 1 missing")
+    if bssid2 not in res2:
+        raise Exception("PMKSA cache entry 2 missing")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].request("PMKSA_FLUSH")
+
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412", only_add_network=True)
+    res3 = dev[0].request("PMKSA_GET %d" % id)
+    if res3 != '':
+        raise Exception("Unexpected PMKSA cache entry remains: " + res3)
+    res4 = dev[0].request("PMKSA_GET %d" % (id + 1234))
+    if not res4.startswith('FAIL'):
+        raise Exception("Unexpected PMKSA cache entry for unknown network: " + res4)
+
+    for entry in res2.splitlines():
+        if "OK" not in dev[0].request("PMKSA_ADD %d %s" % (id, entry)):
+            raise Exception("Failed to add PMKSA entry")
+
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange after external PMKSA cache restore")
+
+def test_rsn_preauth_processing(dev, apdev):
+    """RSN pre-authentication processing on AP"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['rsn_preauth'] = '1'
+    params['rsn_preauth_interfaces'] = "lo"
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    _bssid = binascii.unhexlify(bssid.replace(':', ''))
+    eap_connect(dev[0], hapd, "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+    addr = dev[0].own_addr()
+    _addr = binascii.unhexlify(addr.replace(':', ''))
+
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,
+                         socket.htons(0x88c7))
+    sock.bind(("lo", socket.htons(0x88c7)))
+
+    foreign = "\x02\x03\x04\x05\x06\x07"
+    proto = "\x88\xc7"
+    tests = []
+    # RSN: too short pre-auth packet (len=14)
+    tests += [ _bssid + foreign + proto ]
+    # Not EAPOL-Start
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 0, 0, 0) ]
+    # RSN: pre-auth for foreign address 02:03:04:05:06:07
+    tests += [ foreign + foreign + proto + struct.pack('>BBH', 0, 0, 0) ]
+    # RSN: pre-auth for already association STA 02:00:00:00:00:00
+    tests += [ _bssid + _addr + proto + struct.pack('>BBH', 0, 0, 0) ]
+    # New STA
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 0, 1, 1) ]
+    # IEEE 802.1X: received EAPOL-Start from STA
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 0, 1, 0) ]
+    # frame too short for this IEEE 802.1X packet
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 0, 1, 1) ]
+    # EAPOL-Key - Dropped key data from unauthorized Supplicant
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 2, 3, 0) ]
+    # EAPOL-Encapsulated-ASF-Alert
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 2, 4, 0) ]
+    # unknown IEEE 802.1X packet type
+    tests += [ _bssid + foreign + proto + struct.pack('>BBH', 2, 255, 0) ]
+    for t in tests:
+        sock.send(t)
+
+def test_rsn_preauth_local_errors(dev, apdev):
+    """RSN pre-authentication and local errors on AP"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['rsn_preauth'] = '1'
+    params['rsn_preauth_interfaces'] = "lo"
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+    _bssid = binascii.unhexlify(bssid.replace(':', ''))
+
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,
+                         socket.htons(0x88c7))
+    sock.bind(("lo", socket.htons(0x88c7)))
+
+    foreign = "\x02\x03\x04\x05\x06\x07"
+    foreign2 = "\x02\x03\x04\x05\x06\x08"
+    proto = "\x88\xc7"
+
+    with alloc_fail(hapd, 1, "ap_sta_add;rsn_preauth_receive"):
+        sock.send(_bssid + foreign + proto + struct.pack('>BBH', 2, 1, 0))
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+
+    with alloc_fail(hapd, 1, "eapol_auth_alloc;rsn_preauth_receive"):
+        sock.send(_bssid + foreign + proto + struct.pack('>BBH', 2, 1, 0))
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+    sock.send(_bssid + foreign + proto + struct.pack('>BBH', 2, 1, 0))
+
+    with alloc_fail(hapd, 1, "eap_server_sm_init;ieee802_1x_new_station;rsn_preauth_receive"):
+        sock.send(_bssid + foreign2 + proto + struct.pack('>BBH', 2, 1, 0))
+        wait_fail_trigger(hapd, "GET_ALLOC_FAIL")
+    sock.send(_bssid + foreign2 + proto + struct.pack('>BBH', 2, 1, 0))
+
+    hapd.request("DISABLE")
+    tests = [ (1, "=rsn_preauth_iface_add"),
+              (2, "=rsn_preauth_iface_add"),
+              (1, "l2_packet_init;rsn_preauth_iface_add"),
+              (1, "rsn_preauth_iface_init"),
+              (1, "rsn_preauth_iface_init") ]
+    for count,func in tests:
+        with alloc_fail(hapd, count, func):
+            if "FAIL" not in hapd.request("ENABLE"):
+                raise Exception("ENABLE succeeded unexpectedly")
+
+    hapd.set("rsn_preauth_interfaces", "lo  lo lo does-not-exist lo ")
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("ENABLE succeeded unexpectedly")
+    hapd.set("rsn_preauth_interfaces", " lo  lo ")
+    if "OK" not in hapd.request("ENABLE"):
+        raise Exception("ENABLE failed")
+    sock.send(_bssid + foreign + proto + struct.pack('>BBH', 2, 1, 0))
+    sock.send(_bssid + foreign2 + proto + struct.pack('>BBH', 2, 1, 0))

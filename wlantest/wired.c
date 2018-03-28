@@ -87,16 +87,17 @@ static void process_radius_access_request(struct wlantest *wt, u32 dst,
 }
 
 
-static void wlantest_add_pmk(struct wlantest *wt, const u8 *pmk)
+static void wlantest_add_pmk(struct wlantest *wt, const u8 *pmk, size_t pmk_len)
 {
 	struct wlantest_pmk *p;
 
 	p = os_zalloc(sizeof(*p));
 	if (p == NULL)
 		return;
-	os_memcpy(p->pmk, pmk, 32);
+	os_memcpy(p->pmk, pmk, pmk_len);
+	p->pmk_len = pmk_len;
 	dl_list_add(&wt->pmk, &p->list);
-	wpa_hexdump(MSG_INFO, "Add PMK", pmk, 32);
+	wpa_hexdump(MSG_INFO, "Add PMK", pmk, pmk_len);
 }
 
 
@@ -127,20 +128,25 @@ static void process_radius_access_accept(struct wlantest *wt, u32 dst, u32 src,
 					      (u8 *) s->secret,
 					      os_strlen(s->secret));
 		if (keys && keys->send && keys->recv) {
-			u8 pmk[32];
+			u8 pmk[PMK_LEN_MAX];
+			size_t pmk_len, len2;
+
 			wpa_hexdump_key(MSG_DEBUG, "MS-MPPE-Send-Key",
 					keys->send, keys->send_len);
 			wpa_hexdump_key(MSG_DEBUG, "MS-MPPE-Recv-Key",
 					keys->recv, keys->recv_len);
-			os_memcpy(pmk, keys->recv,
-				  keys->recv_len > 32 ? 32 : keys->recv_len);
-			if (keys->recv_len < 32) {
-				os_memcpy(pmk + keys->recv_len,
-					  keys->send,
-					  keys->recv_len + keys->send_len > 32
-					  ? 32 : 32 - keys->recv_len);
+			pmk_len = keys->recv_len;
+			if (pmk_len > PMK_LEN_MAX)
+				pmk_len = PMK_LEN_MAX;
+			os_memcpy(pmk, keys->recv, pmk_len);
+			if (pmk_len < PMK_LEN_MAX) {
+				len2 = keys->send_len;
+				if (pmk_len + len2 > PMK_LEN_MAX)
+					len2 = PMK_LEN_MAX - pmk_len;
+				os_memcpy(pmk + pmk_len, keys->send, len2);
+				pmk_len += len2;
 			}
-			wlantest_add_pmk(wt, pmk);
+			wlantest_add_pmk(wt, pmk, pmk_len);
 			found = 1;
 		}
 

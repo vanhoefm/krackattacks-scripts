@@ -54,7 +54,7 @@ def reset_devs(dev, apdev):
 
     wpas = None
     try:
-        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5', monitor=False)
         ifaces = wpas.global_request("INTERFACES").splitlines()
         for iface in ifaces:
             if iface.startswith("wlan"):
@@ -67,6 +67,9 @@ def reset_devs(dev, apdev):
     try:
         hapd = HostapdGlobal()
         hapd.flush()
+        hapd.remove('wlan3-6')
+        hapd.remove('wlan3-5')
+        hapd.remove('wlan3-4')
         hapd.remove('wlan3-3')
         hapd.remove('wlan3-2')
         for ap in apdev:
@@ -120,11 +123,12 @@ def report(conn, prefill, build, commit, run, test, result, duration, logdir,
                              logdir + "/" + test + "." + log)
 
 class DataCollector(object):
-    def __init__(self, logdir, testname, tracing, dmesg):
+    def __init__(self, logdir, testname, args):
         self._logdir = logdir
         self._testname = testname
-        self._tracing = tracing
-        self._dmesg = dmesg
+        self._tracing = args.tracing
+        self._dmesg = args.dmesg
+        self._dbus = args.dbus
     def __enter__(self):
         if self._tracing:
             output = os.path.abspath(os.path.join(self._logdir, '%s.dat' % (self._testname, )))
@@ -139,6 +143,16 @@ class DataCollector(object):
             res = self._trace_cmd.returncode
             if res:
                 print "Failed calling trace-cmd: returned exit status %d" % res
+                sys.exit(1)
+        if self._dbus:
+            output = os.path.abspath(os.path.join(self._logdir, '%s.dbus' % (self._testname, )))
+            self._dbus_cmd = subprocess.Popen(['dbus-monitor', '--system'],
+                                              stdout=open(output, 'w'),
+                                              stderr=open('/dev/null', 'w'),
+                                              cwd=self._logdir)
+            res = self._dbus_cmd.returncode
+            if res:
+                print "Failed calling dbus-monitor: returned exit status %d" % res
                 sys.exit(1)
     def __exit__(self, type, value, traceback):
         if self._tracing:
@@ -211,6 +225,8 @@ def main():
                         help='collect tracing per test case (in log directory)')
     parser.add_argument('-D', action='store_true', dest='dmesg',
                         help='collect dmesg per test case (in log directory)')
+    parser.add_argument('--dbus', action='store_true', dest='dbus',
+                        help='collect dbus per test case (in log directory)')
     parser.add_argument('--shuffle-tests', action='store_true',
                         dest='shuffle_tests',
                         help='Shuffle test cases to randomize order')
@@ -411,7 +427,7 @@ def main():
             logger.addHandler(log_handler)
 
         reset_ok = True
-        with DataCollector(args.logdir, name, args.tracing, args.dmesg):
+        with DataCollector(args.logdir, name, args):
             count = count + 1
             msg = "START {} {}/{}".format(name, count, num_tests)
             logger.info(msg)
@@ -421,6 +437,7 @@ def main():
             if t.__doc__:
                 logger.info("Test: " + t.__doc__)
             start = datetime.now()
+            open('/dev/kmsg', 'w').write('TEST-START %s @%.6f\n' % (name, time.time()))
             for d in dev:
                 try:
                     d.dump_monitor()
@@ -465,6 +482,7 @@ def main():
                 if args.loglevel == logging.WARNING:
                     print "Exception: " + str(e)
                 result = "FAIL"
+            open('/dev/kmsg', 'w').write('TEST-STOP %s @%.6f\n' % (name, time.time()))
             for d in dev:
                 try:
                     d.dump_monitor()
@@ -513,6 +531,8 @@ def main():
                 rename_log(args.logdir, 'fst-wpa_supplicant', name, None)
             if os.path.exists(os.path.join(args.logdir, 'fst-hostapd')):
                 rename_log(args.logdir, 'fst-hostapd', name, None)
+            if os.path.exists(os.path.join(args.logdir, 'wmediumd.log')):
+                rename_log(args.logdir, 'wmediumd.log', name, None)
 
         end = datetime.now()
         diff = end - start

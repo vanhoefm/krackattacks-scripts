@@ -271,6 +271,14 @@ def test_ap_wpa2_tdls_wrong_tpk_m3_mic(dev, apdev):
     dev[1].tdls_setup(addr0)
     time.sleep(1)
 
+def test_ap_wpa2_tdls_double_tpk_m2(dev, apdev):
+    """Double TPK M2 during TDLS setup initiation"""
+    hapd = start_ap_wpa2_psk(apdev[0])
+    wlantest_setup(hapd)
+    connect_2sta_wpa2_psk(dev, hapd)
+    dev[0].request("SET tdls_testing 0x1000")
+    setup_tdls(dev[1], dev[0], hapd)
+
 def test_ap_wpa_tdls(dev, apdev):
     """WPA-PSK AP and two stations using TDLS"""
     skip_with_fips(dev[0])
@@ -540,6 +548,8 @@ def test_tdls_chan_switch(dev, apdev):
         raise Exception("Could not disable TDLS channel switching")
     if "FAIL" not in dev[0].request("TDLS_CANCEL_CHAN_SWITCH " + dev[1].own_addr()):
         raise Exception("TDLS_CANCEL_CHAN_SWITCH accepted even though channel switching was already disabled")
+    if "FAIL" not in dev[0].request("TDLS_CHAN_SWITCH foo 81 2462"):
+        raise Exception("Invalid TDLS channel switching command accepted")
 
 def test_ap_tdls_link_status(dev, apdev):
     """Check TDLS link status between two stations"""
@@ -553,3 +563,66 @@ def test_ap_tdls_link_status(dev, apdev):
     check_tdls_link(dev[0], dev[1], connected=False)
     if "FAIL" not in dev[0].request("TDLS_LINK_STATUS foo"):
         raise Exception("Unexpected TDLS_LINK_STATUS response for invalid argument")
+
+def test_ap_tdls_prohibit(dev, apdev):
+    """Open AP and TDLS prohibited"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open",
+                                      "tdls_prohibit": "1" })
+    connect_2sta_open(dev, hapd)
+    if "FAIL" not in dev[0].request("TDLS_SETUP " + dev[1].own_addr()):
+        raise Exception("TDLS_SETUP accepted unexpectedly")
+
+def test_ap_tdls_chan_switch_prohibit(dev, apdev):
+    """Open AP and TDLS channel switch prohibited"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open",
+                                      "tdls_prohibit_chan_switch": "1" })
+    wlantest_setup(hapd)
+    connect_2sta_open(dev, hapd)
+    setup_tdls(dev[0], dev[1], hapd)
+
+def test_ap_open_tdls_external_control(dev, apdev):
+    """TDLS and tdls_external_control"""
+    try:
+        _test_ap_open_tdls_external_control(dev, apdev)
+    finally:
+        dev[0].set("tdls_external_control", "0")
+
+def _test_ap_open_tdls_external_control(dev, apdev):
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-open" })
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+
+    dev[0].set("tdls_external_control", "1")
+    if "FAIL" in dev[0].request("TDLS_SETUP " + addr1):
+        # tdls_external_control not supported; try without it
+        dev[0].set("tdls_external_control", "0")
+        if "FAIL" in dev[0].request("TDLS_SETUP " + addr1):
+            raise Exception("TDLS_SETUP failed")
+    connected = False
+    for i in range(50):
+        res0 = dev[0].request("TDLS_LINK_STATUS " + addr1)
+        res1 = dev[1].request("TDLS_LINK_STATUS " + addr0)
+        if "TDLS link status: connected" in res0 and "TDLS link status: connected" in res1:
+            connected = True
+            break
+        time.sleep(0.1)
+    if not connected:
+        raise Exception("TDLS setup did not complete")
+
+    dev[0].set("tdls_external_control", "1")
+    if "FAIL" in dev[0].request("TDLS_TEARDOWN " + addr1):
+        # tdls_external_control not supported; try without it
+        dev[0].set("tdls_external_control", "0")
+        if "FAIL" in dev[0].request("TDLS_TEARDOWN " + addr1):
+            raise Exception("TDLS_TEARDOWN failed")
+    for i in range(50):
+        res0 = dev[0].request("TDLS_LINK_STATUS " + addr1)
+        res1 = dev[1].request("TDLS_LINK_STATUS " + addr0)
+        if "TDLS link status: connected" not in res0 and "TDLS link status: connected" not in res1:
+            connected = False
+            break
+        time.sleep(0.1)
+    if connected:
+        raise Exception("TDLS teardown did not complete")

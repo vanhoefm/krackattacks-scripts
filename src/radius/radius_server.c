@@ -26,9 +26,14 @@
 #define RADIUS_SESSION_TIMEOUT 60
 
 /**
+ * RADIUS_SESSION_MAINTAIN - Completed session expiration timeout in seconds
+ */
+#define RADIUS_SESSION_MAINTAIN 5
+
+/**
  * RADIUS_MAX_SESSION - Maximum number of active sessions
  */
-#define RADIUS_MAX_SESSION 100
+#define RADIUS_MAX_SESSION 1000
 
 /**
  * RADIUS_MAX_MSG_LEN - Maximum message length for incoming RADIUS messages
@@ -266,6 +271,8 @@ struct radius_server_data {
 	struct dl_list erp_keys; /* struct eap_server_erp_key */
 
 	unsigned int tls_session_lifetime;
+
+	unsigned int tls_flags;
 
 	/**
 	 * wps - Wi-Fi Protected Setup context
@@ -657,14 +664,14 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	sess->username = os_malloc(user_len * 4 + 1);
 	if (sess->username == NULL) {
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 	printf_encode(sess->username, user_len * 4 + 1, user, user_len);
 
 	sess->nas_ip = os_strdup(from_addr);
 	if (sess->nas_ip == NULL) {
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 
@@ -691,13 +698,14 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.server_id_len = os_strlen(data->server_id);
 	eap_conf.erp = data->erp;
 	eap_conf.tls_session_lifetime = data->tls_session_lifetime;
+	eap_conf.tls_flags = data->tls_flags;
 	radius_server_testing_options(sess, &eap_conf);
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
 	if (sess->eap == NULL) {
 		RADIUS_DEBUG("Failed to initialize EAP state machine for the "
 			     "new session");
-		radius_server_session_free(data, sess);
+		radius_server_session_remove(data, sess);
 		return NULL;
 	}
 	sess->eap_if = eap_get_interface(sess->eap);
@@ -720,6 +728,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 	int code;
 	unsigned int sess_id;
 	struct radius_hdr *hdr = radius_msg_get_hdr(request);
+	u16 reason = WLAN_REASON_IEEE_802_1X_AUTH_FAILED;
 
 	if (sess->eap_if->eapFail) {
 		sess->eap_if->eapFail = FALSE;
@@ -830,6 +839,15 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 				radius_msg_free(msg);
 				return NULL;
 			}
+		}
+	}
+
+	if (code == RADIUS_CODE_ACCESS_REJECT) {
+		if (radius_msg_add_attr_int32(msg, RADIUS_ATTR_WLAN_REASON_CODE,
+					      reason) < 0) {
+			RADIUS_DEBUG("Failed to add WLAN-Reason-Code attribute");
+			radius_msg_free(msg);
+			return NULL;
 		}
 	}
 
@@ -1057,7 +1075,7 @@ static int radius_server_request(struct radius_server_data *data,
 			     "message");
 		return -1;
 	}
-		      
+
 	eap = radius_msg_get_eap(msg);
 	if (eap == NULL && sess->macacl) {
 		reply = radius_server_macacl(data, client, sess, msg);
@@ -1172,7 +1190,7 @@ send_reply:
 			     sess->sess_id);
 		eloop_cancel_timeout(radius_server_session_remove_timeout,
 				     data, sess);
-		eloop_register_timeout(10, 0,
+		eloop_register_timeout(RADIUS_SESSION_MAINTAIN, 0,
 				       radius_server_session_remove_timeout,
 				       data, sess);
 	}
@@ -1749,6 +1767,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->erp = conf->erp;
 	data->erp_domain = conf->erp_domain;
 	data->tls_session_lifetime = conf->tls_session_lifetime;
+	data->tls_flags = conf->tls_flags;
 
 	if (conf->subscr_remediation_url) {
 		data->subscr_remediation_url =

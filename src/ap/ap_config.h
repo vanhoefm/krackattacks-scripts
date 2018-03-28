@@ -224,6 +224,12 @@ struct anqp_element {
 	struct wpabuf *payload;
 };
 
+struct fils_realm {
+	struct dl_list list;
+	u8 hash[2];
+	char realm[];
+};
+
 
 /**
  * struct hostapd_bss_config - Per-BSS configuration
@@ -242,7 +248,8 @@ struct hostapd_bss_config {
 	int max_num_sta; /* maximum number of STAs in station table */
 
 	int dtim_period;
-	int bss_load_update_period;
+	unsigned int bss_load_update_period;
+	unsigned int chan_util_avg_period;
 
 	int ieee802_1x; /* use IEEE 802.1X */
 	int eapol_version;
@@ -287,7 +294,7 @@ struct hostapd_bss_config {
 	char iapp_iface[IFNAMSIZ + 1]; /* interface used with IAPP broadcast
 					* frames */
 
-	enum {
+	enum macaddr_acl {
 		ACCEPT_UNLESS_DENIED = 0,
 		DENY_UNLESS_ACCEPTED = 1,
 		USE_EXTERNAL_RADIUS_AUTH = 2
@@ -319,27 +326,36 @@ struct hostapd_bss_config {
 		PSK_RADIUS_REQUIRED = 2
 	} wpa_psk_radius;
 	int wpa_pairwise;
+	int group_cipher; /* wpa_group value override from configuation */
 	int wpa_group;
 	int wpa_group_rekey;
+	int wpa_group_rekey_set;
 	int wpa_strict_rekey;
 	int wpa_gmk_rekey;
 	int wpa_ptk_rekey;
+	u32 wpa_group_update_count;
+	u32 wpa_pairwise_update_count;
+	int wpa_disable_eapol_key_retries;
 	int rsn_pairwise;
 	int rsn_preauth;
 	char *rsn_preauth_interfaces;
-	int peerkey;
 
-#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_IEEE80211R_AP
 	/* IEEE 802.11r - Fast BSS Transition */
 	u8 mobility_domain[MOBILITY_DOMAIN_ID_LEN];
 	u8 r1_key_holder[FT_R1KH_ID_LEN];
 	u32 r0_key_lifetime;
+	int rkh_pos_timeout;
+	int rkh_neg_timeout;
+	int rkh_pull_timeout; /* ms */
+	int rkh_pull_retries;
 	u32 reassociation_deadline;
 	struct ft_remote_r0kh *r0kh_list;
 	struct ft_remote_r1kh *r1kh_list;
 	int pmk_r1_push;
 	int ft_over_ds;
-#endif /* CONFIG_IEEE80211R */
+	int ft_psk_generate_local;
+#endif /* CONFIG_IEEE80211R_AP */
 
 	char *ctrl_interface; /* directory for UNIX domain sockets */
 #ifndef CONFIG_NATIVE_WINDOWS
@@ -353,6 +369,7 @@ struct hostapd_bss_config {
 	char *private_key_passwd;
 	int check_crl;
 	unsigned int tls_session_lifetime;
+	unsigned int tls_flags;
 	char *ocsp_stapling_response;
 	char *ocsp_stapling_response_multi;
 	char *dh_file;
@@ -464,6 +481,7 @@ struct hostapd_bss_config {
 	int time_advertisement;
 	char *time_zone;
 	int wnm_sleep_mode;
+	int wnm_sleep_mode_no_keys;
 	int bss_transition;
 
 	/* IEEE 802.11u - Interworking */
@@ -508,7 +526,7 @@ struct hostapd_bss_config {
 	struct dl_list anqp_elem; /* list of struct anqp_element */
 
 	u16 gas_comeback_delay;
-	int gas_frag_limit;
+	size_t gas_frag_limit;
 	int gas_address3;
 
 	u8 qos_map_set[16 + 2 * 21];
@@ -566,7 +584,10 @@ struct hostapd_bss_config {
 	struct wpabuf *assocresp_elements;
 
 	unsigned int sae_anti_clogging_threshold;
+	unsigned int sae_sync;
+	int sae_require_mfp;
 	int *sae_groups;
+	char *sae_password;
 
 	char *wowlan_triggers; /* Wake-on-WLAN triggers */
 
@@ -574,6 +595,8 @@ struct hostapd_bss_config {
 	u8 bss_load_test[5];
 	u8 bss_load_test_set;
 	struct wpabuf *own_ie_override;
+	int sae_reflection_attack;
+	struct wpabuf *sae_commit_override;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #define MESH_ENABLED BIT(0)
@@ -591,12 +614,69 @@ struct hostapd_bss_config {
 
 #ifdef CONFIG_MBO
 	int mbo_enabled;
+	/**
+	 * oce - Enable OCE in AP and/or STA-CFON mode
+	 *  - BIT(0) is Reserved
+	 *  - Set BIT(1) to enable OCE in STA-CFON mode
+	 *  - Set BIT(2) to enable OCE in AP mode
+	 */
+	unsigned int oce;
+	int mbo_cell_data_conn_pref;
 #endif /* CONFIG_MBO */
 
 	int ftm_responder;
 	int ftm_initiator;
+
+#ifdef CONFIG_FILS
+	u8 fils_cache_id[FILS_CACHE_ID_LEN];
+	int fils_cache_id_set;
+	struct dl_list fils_realms; /* list of struct fils_realm */
+	int fils_dh_group;
+	struct hostapd_ip_addr dhcp_server;
+	int dhcp_rapid_commit_proxy;
+	unsigned int fils_hlp_wait_time;
+	u16 dhcp_server_port;
+	u16 dhcp_relay_port;
+#endif /* CONFIG_FILS */
+
+	int multicast_to_unicast;
+
+	int broadcast_deauth;
+
+#ifdef CONFIG_DPP
+	char *dpp_connector;
+	struct wpabuf *dpp_netaccesskey;
+	unsigned int dpp_netaccesskey_expiry;
+	struct wpabuf *dpp_csign;
+#endif /* CONFIG_DPP */
+
+#ifdef CONFIG_OWE
+	macaddr owe_transition_bssid;
+	u8 owe_transition_ssid[SSID_MAX_LEN];
+	size_t owe_transition_ssid_len;
+	char owe_transition_ifname[IFNAMSIZ + 1];
+	int *owe_groups;
+#endif /* CONFIG_OWE */
 };
 
+/**
+ * struct he_phy_capabilities_info - HE PHY capabilities
+ */
+struct he_phy_capabilities_info {
+	Boolean he_su_beamformer;
+	Boolean he_su_beamformee;
+	Boolean he_mu_beamformer;
+};
+
+/**
+ * struct he_operation - HE operation
+ */
+struct he_operation {
+	u8 he_bss_color;
+	u8 he_default_pe_duration;
+	u8 he_twt_required;
+	u8 he_rts_threshold;
+};
 
 /**
  * struct hostapd_config - Per-radio interface configuration
@@ -612,6 +692,7 @@ struct hostapd_config {
 	u8 channel;
 	u8 acs;
 	struct wpa_freq_range_list acs_ch_list;
+	int acs_exclude_dfs;
 	enum hostapd_hw_mode hw_mode; /* HOSTAPD_MODE_IEEE80211A, .. */
 	enum {
 		LONG_PREAMBLE = 0,
@@ -620,6 +701,8 @@ struct hostapd_config {
 
 	int *supported_rates;
 	int *basic_rates;
+	unsigned int beacon_rate;
+	enum beacon_rate_type rate_type;
 
 	const struct wpa_driver_ops *driver;
 	char *driver_params;
@@ -635,6 +718,9 @@ struct hostapd_config {
 			  * ' ' (ascii 32): all environments
 			  * 'O': Outdoor environemnt only
 			  * 'I': Indoor environment only
+			  * 'X': Used with noncountry entity ("XXX")
+			  * 0x00..0x31: identifying IEEE 802.11 standard
+			  *	Annex E table (0x04 = global table)
 			  */
 
 	int ieee80211d;
@@ -675,6 +761,7 @@ struct hostapd_config {
 	u8 vht_oper_chwidth;
 	u8 vht_oper_centr_freq_seg0_idx;
 	u8 vht_oper_centr_freq_seg1_idx;
+	u8 ht40_plus_minus_allowed;
 
 	/* Use driver-generated interface addresses when adding multiple BSSs */
 	u8 use_driver_iface_addr;
@@ -707,6 +794,13 @@ struct hostapd_config {
 
 	struct wpabuf *lci;
 	struct wpabuf *civic;
+	int stationary_ap;
+
+	int ieee80211ax;
+#ifdef CONFIG_IEEE80211AX
+	struct he_phy_capabilities_info he_phy_capab;
+	struct he_operation he_op;
+#endif /* CONFIG_IEEE80211AX */
 };
 
 
@@ -714,6 +808,7 @@ int hostapd_mac_comp(const void *a, const void *b);
 struct hostapd_config * hostapd_config_defaults(void);
 void hostapd_config_defaults_bss(struct hostapd_bss_config *bss);
 void hostapd_config_free_eap_user(struct hostapd_eap_user *user);
+void hostapd_config_free_eap_users(struct hostapd_eap_user *user);
 void hostapd_config_clear_wpa_psk(struct hostapd_wpa_psk **p);
 void hostapd_config_free_bss(struct hostapd_bss_config *conf);
 void hostapd_config_free(struct hostapd_config *conf);

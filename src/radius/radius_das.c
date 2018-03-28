@@ -373,13 +373,12 @@ radius_das_init(struct radius_das_conf *conf)
 	os_memcpy(&das->client_addr, conf->client_addr,
 		  sizeof(das->client_addr));
 
-	das->shared_secret = os_malloc(conf->shared_secret_len);
+	das->shared_secret = os_memdup(conf->shared_secret,
+				       conf->shared_secret_len);
 	if (das->shared_secret == NULL) {
 		radius_das_deinit(das);
 		return NULL;
 	}
-	os_memcpy(das->shared_secret, conf->shared_secret,
-		  conf->shared_secret_len);
 	das->shared_secret_len = conf->shared_secret_len;
 
 	das->sock = radius_das_open_socket(conf->port);

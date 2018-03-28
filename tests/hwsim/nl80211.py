@@ -320,24 +320,26 @@ nl80211_attr = {
 }
 
 def build_nl80211_attr(id, val):
-    return struct.pack("@HH", 4 + len(val), nl80211_attr[id]) + val
+    attr = struct.pack("@HH", 4 + len(val), nl80211_attr[id]) + val
+    if len(attr) % 4 != 0:
+        attr += '\0' * (4 - (len(attr) % 4))
+    return attr
 
 def build_nl80211_attr_u32(id, val):
     return build_nl80211_attr(id, struct.pack("@I", val))
 
 def build_nl80211_attr_u16(id, val):
-    return build_nl80211_attr(id, struct.pack("@HH", val, 0))
+    return build_nl80211_attr(id, struct.pack("@H", val))
 
 def build_nl80211_attr_u8(id, val):
-    return build_nl80211_attr(id, struct.pack("@4B", val, 0, 0, 0))
+    return build_nl80211_attr(id, struct.pack("@B", val))
 
 def build_nl80211_attr_flag(id):
     return build_nl80211_attr(id, '')
 
 def build_nl80211_attr_mac(id, val):
     addr = struct.unpack('6B', binascii.unhexlify(val.replace(':','')))
-    t = addr + (0, 0)
-    aval = struct.pack('<6BBB', *t)
+    aval = struct.pack('<6B', *addr)
     return build_nl80211_attr(id, aval)
 
 def parse_nl80211_attrs(msg):

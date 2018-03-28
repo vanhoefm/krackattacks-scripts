@@ -41,6 +41,7 @@ enum tls_fail_reason {
 	TLS_FAIL_SERVER_CHAIN_PROBE = 8,
 	TLS_FAIL_DOMAIN_SUFFIX_MISMATCH = 9,
 	TLS_FAIL_DOMAIN_MISMATCH = 10,
+	TLS_FAIL_INSUFFICIENT_KEY_LEN = 11,
 };
 
 
@@ -80,6 +81,7 @@ struct tls_config {
 	int cert_in_cb;
 	const char *openssl_ciphers;
 	unsigned int tls_session_lifetime;
+	unsigned int tls_flags;
 
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);
@@ -97,6 +99,8 @@ struct tls_config {
 #define TLS_CONN_DISABLE_TLSv1_0 BIT(8)
 #define TLS_CONN_EXT_CERT_CHECK BIT(9)
 #define TLS_CONN_REQUIRE_OCSP_ALL BIT(10)
+#define TLS_CONN_SUITEB BIT(11)
+#define TLS_CONN_SUITEB_NO_ECDH BIT(12)
 
 /**
  * struct tls_connection_params - Parameters for TLS connection

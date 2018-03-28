@@ -452,3 +452,58 @@ def test_mbo_wnm_bss_tm_ie_parsing(dev, apdev):
         raise Exception("MGMT_RX_PROCESS failed")
 
     dev[0].request("SET ext_mgmt_frame_handling 0")
+
+def test_mbo_without_pmf(dev, apdev):
+    """MBO and WPA2 without PMF"""
+    ssid = "test-wnm-mbo"
+    params = { 'ssid': ssid, 'mbo': '1', "wpa": '2',
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "wpa_passphrase": "12345678" }
+    try:
+        # "MBO: PMF needs to be enabled whenever using WPA2 with MBO"
+        hostapd.add_ap(apdev[0], params)
+        raise Exception("AP setup succeeded unexpectedly")
+    except Exception, e:
+        if "Failed to enable hostapd" in str(e):
+            pass
+        else:
+            raise
+
+def check_mbo_anqp(dev, bssid, cell_data_conn_pref):
+    if "OK" not in dev.request("ANQP_GET " + bssid + " 272,mbo:2"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev.wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    if cell_data_conn_pref is not None:
+        ev = dev.wait_event(["RX-MBO-ANQP"], timeout=1)
+        if ev is None or "cell_conn_pref" not in ev:
+            raise Exception("Did not receive MBO Cellular Data Connection Preference")
+        if cell_data_conn_pref != int(ev.split('=')[1]):
+            raise Exception("Unexpected cell_conn_pref value: " + ev)
+
+    dev.dump_monitor()
+
+def test_mbo_anqp(dev, apdev):
+    """MBO ANQP"""
+    params = { 'ssid': "test-wnm-mbo",
+               'mbo': '1',
+               'interworking': '1',
+               'mbo_cell_data_conn_pref': '1' }
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    check_mbo_anqp(dev[0], bssid, 1)
+
+    hapd.set('mbo_cell_data_conn_pref', '255')
+    check_mbo_anqp(dev[0], bssid, 255)
+
+    hapd.set('mbo_cell_data_conn_pref', '-1')
+    check_mbo_anqp(dev[0], bssid, None)

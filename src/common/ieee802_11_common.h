@@ -64,6 +64,22 @@ struct ieee802_11_elems {
 	const u8 *pref_freq_list;
 	const u8 *supp_op_classes;
 	const u8 *rrm_enabled;
+	const u8 *cag_number;
+	const u8 *ap_csn;
+	const u8 *fils_indic;
+	const u8 *dils;
+	const u8 *assoc_delay_info;
+	const u8 *fils_req_params;
+	const u8 *fils_key_confirm;
+	const u8 *fils_session;
+	const u8 *fils_hlp;
+	const u8 *fils_ip_addr_assign;
+	const u8 *key_delivery;
+	const u8 *fils_wrapped_data;
+	const u8 *fils_pk;
+	const u8 *fils_nonce;
+	const u8 *owe_dh;
+	const u8 *power_capab;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -96,6 +112,18 @@ struct ieee802_11_elems {
 	u8 pref_freq_list_len;
 	u8 supp_op_classes_len;
 	u8 rrm_enabled_len;
+	u8 cag_number_len;
+	u8 fils_indic_len;
+	u8 dils_len;
+	u8 fils_req_params_len;
+	u8 fils_key_confirm_len;
+	u8 fils_hlp_len;
+	u8 fils_ip_addr_assign_len;
+	u8 key_delivery_len;
+	u8 fils_wrapped_data_len;
+	u8 fils_pk_len;
+	u8 owe_dh_len;
+	u8 power_capab_len;
 
 	struct mb_ies_info mb_ies;
 };
@@ -150,7 +178,20 @@ extern const struct oper_class_map global_op_class[];
 extern size_t global_op_class_size;
 
 const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
+const u8 * get_ie_ext(const u8 *ies, size_t len, u8 ext);
 
 size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len);
+
+struct country_op_class {
+	u8 country_op_class;
+	u8 global_op_class;
+};
+
+u8 country_to_global_op_class(const char *country, u8 op_class);
+
+const struct oper_class_map * get_oper_class(const char *country, u8 op_class);
+
+int ieee802_11_parse_candidate_list(const char *pos, u8 *nei_rep,
+				    size_t nei_rep_len);
 
 #endif /* IEEE802_11_COMMON_H */

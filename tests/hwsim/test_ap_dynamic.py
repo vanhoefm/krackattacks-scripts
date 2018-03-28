@@ -13,7 +13,7 @@ import os
 
 import hwsim_utils
 import hostapd
-from utils import alloc_fail, require_under_vm
+from utils import alloc_fail, require_under_vm, get_phy
 from test_ap_acs import force_prev_ap_on_24g
 
 @remote_compatible
@@ -504,3 +504,64 @@ def _test_ap_iapp(dev, apdev):
 
     hapd.disable()
     hapd2.disable()
+
+def test_ap_duplicate_bssid(dev, apdev):
+    """Duplicate BSSID"""
+    params = { "ssid": "test" }
+    hapd = hostapd.add_ap(apdev[0], params, no_enable=True)
+    hapd.enable()
+    ifname2 = apdev[0]['ifname'] + '-2'
+    ifname3 = apdev[0]['ifname'] + '-3'
+    # "BSS 'wlan3-2' may not have BSSID set to the MAC address of the radio"
+    try:
+        hostapd.add_bss(apdev[0], ifname2, 'bss-2-dup.conf')
+        raise Exception("BSS add succeeded unexpectedly")
+    except Exception, e:
+        if "Could not add hostapd BSS" in str(e):
+            pass
+        else:
+            raise
+
+    hostapd.add_bss(apdev[0], ifname3, 'bss-3.conf')
+
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    hapd.set("bssid", "02:00:00:00:03:02")
+    hapd.disable()
+    # "Duplicate BSSID 02:00:00:00:03:02 on interface 'wlan3-3' and 'wlan3'."
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("ENABLE with duplicate BSSID succeeded unexpectedly")
+
+def test_ap_bss_config_file(dev, apdev, params):
+    """hostapd BSS config file"""
+    pidfile = os.path.join(params['logdir'], "ap_bss_config_file-hostapd.pid")
+    logfile = os.path.join(params['logdir'], "ap_bss_config_file-hostapd-log")
+    prg = os.path.join(params['logdir'], 'alt-hostapd/hostapd/hostapd')
+    if not os.path.exists(prg):
+        prg = '../../hostapd/hostapd'
+    phy = get_phy(apdev[0])
+    cmd = [ prg, '-B', '-dddt', '-P', pidfile, '-f', logfile, '-S', '-T',
+            '-b', phy + ':bss-1.conf', '-b', phy + ':bss-2.conf',
+            '-b', phy + ':bss-3.conf' ]
+    res = subprocess.check_call(cmd)
+    if res != 0:
+        raise Exception("Could not start hostapd: %s" % str(res))
+    multi_check(dev, [ True, True, True ])
+    for i in range(0, 3):
+        dev[i].request("DISCONNECT")
+
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.ping()
+    if "OK" not in hapd.request("TERMINATE"):
+        raise Exception("Failed to terminate hostapd process")
+    ev = hapd.wait_event(["CTRL-EVENT-TERMINATING"], timeout=15)
+    if ev is None:
+        raise Exception("CTRL-EVENT-TERMINATING not seen")
+    for i in range(30):
+        time.sleep(0.1)
+        if not os.path.exists(pidfile):
+            break
+    if os.path.exists(pidfile):
+        raise Exception("PID file exits after process termination")

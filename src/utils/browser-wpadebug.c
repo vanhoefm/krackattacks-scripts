@@ -52,7 +52,7 @@ static void http_req(void *ctx, struct http_request *req)
 			eloop_terminate();
 		return;
 	}
-	wpabuf_put_str(resp, "User input completed");
+	wpabuf_put_str(resp, "HTTP/1.1\r\n\r\nUser input completed");
 
 	if (done) {
 		eloop_cancel_timeout(browser_timeout, NULL, NULL);

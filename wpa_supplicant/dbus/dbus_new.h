@@ -22,6 +22,7 @@ struct wps_credential;
 
 enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_AP_SCAN,
+	WPAS_DBUS_PROP_PMF,
 	WPAS_DBUS_PROP_SCANNING,
 	WPAS_DBUS_PROP_STATE,
 	WPAS_DBUS_PROP_CURRENT_BSS,
@@ -63,6 +64,8 @@ enum wpas_dbus_bss_prop {
 
 #define WPAS_DBUS_NEW_IFACE_P2PDEVICE	\
 		WPAS_DBUS_NEW_IFACE_INTERFACE ".P2PDevice"
+
+#define WPAS_DBUS_NEW_IFACE_MESH WPAS_DBUS_NEW_IFACE_INTERFACE ".Mesh"
 
 /*
  * Groups correspond to P2P groups where this device is a GO (owner)
@@ -190,7 +193,8 @@ void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 				     const u8 *src, u16 dev_passwd_id,
 				     u8 go_intent);
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-					int client, int persistent);
+					int client, int persistent,
+					const u8 *ip);
 void wpas_dbus_signal_p2p_group_formation_failure(struct wpa_supplicant *wpa_s,
 						  const char *reason);
 void wpas_dbus_register_p2p_group(struct wpa_supplicant *wpa_s,
@@ -237,6 +241,15 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					      const u8 *sa, const u8 *dev_addr,
 					      const u8 *bssid, int id,
 					      int op_freq);
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid);
+void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
+					 const u8 *meshid, u8 meshid_len,
+					 int reason);
+void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
+					  const u8 *peer_addr);
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -400,7 +413,8 @@ static inline void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 
 static inline void
 wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
-				   int client, int persistent)
+				   int client, int persistent,
+				   const u8 *ip)
 {
 }
 
@@ -548,6 +562,31 @@ void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
 					      const u8 *sa, const u8 *dev_addr,
 					      const u8 *bssid, int id,
 					      int op_freq)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_group_started(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_group_removed(struct wpa_supplicant *wpa_s,
+					 const u8 *meshid, u8 meshid_len,
+					 int reason)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_peer_connected(struct wpa_supplicant *wpa_s,
+					  const u8 *peer_addr)
+{
+}
+
+static inline
+void wpas_dbus_signal_mesh_peer_disconnected(struct wpa_supplicant *wpa_s,
+					     const u8 *peer_addr, int reason)
 {
 }
 

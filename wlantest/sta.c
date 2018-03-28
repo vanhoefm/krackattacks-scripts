@@ -66,7 +66,8 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 	struct wpa_ie_data data;
 	struct wlantest_bss *bss = sta->bss;
 
-	if (elems->wpa_ie && !bss->wpaie[0]) {
+	if (elems->wpa_ie && !bss->wpaie[0] &&
+	    (bss->beacon_seen || bss->proberesp_seen)) {
 		wpa_printf(MSG_INFO, "WPA IE included in Association Request "
 			   "frame from " MACSTR " even though BSS does not "
 			   "use WPA - ignore IE",
@@ -74,7 +75,8 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 		elems->wpa_ie = NULL;
 	}
 
-	if (elems->rsn_ie && !bss->rsnie[0]) {
+	if (elems->rsn_ie && !bss->rsnie[0] &&
+	    (bss->beacon_seen || bss->proberesp_seen)) {
 		wpa_printf(MSG_INFO, "RSN IE included in Association Request "
 			   "frame from " MACSTR " even though BSS does not "
 			   "use RSN - ignore IE",
@@ -82,7 +84,8 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 		elems->rsn_ie = NULL;
 	}
 
-	if (elems->osen && !bss->osenie[0]) {
+	if (elems->osen && !bss->osenie[0] &&
+	    (bss->beacon_seen || bss->proberesp_seen)) {
 		wpa_printf(MSG_INFO, "OSEN IE included in Association Request "
 			   "frame from " MACSTR " even though BSS does not "
 			   "use OSEN - ignore IE",

@@ -1,5 +1,5 @@
 # Scanning tests
-# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2016, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -13,8 +13,9 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger
+from utils import HwsimSkip, fail_test, alloc_fail, wait_fail_trigger, parse_ie
 from tshark import run_tshark
+from test_ap_csa import switch_channel, wait_channel_switch, csa_supported
 
 def check_scan(dev, params, other_started=False, test_busy=False):
     if not other_started:
@@ -619,7 +620,7 @@ def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
 
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
     if ev is None:
-        print "Scan did not complete"
+        raise Exception("Scan did not complete")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.2)
     if ev is not None:
         raise Exception("Unexpected scan started")
@@ -790,9 +791,35 @@ def _test_scan_random_mac(dev, apdev, params):
         if not found:
             raise Exception("Fixed OUI random address not seen")
 
+def test_scan_random_mac_connected(dev, apdev, params):
+    """Random MAC address in scans while connected"""
+    try:
+        _test_scan_random_mac_connected(dev, apdev, params)
+    finally:
+        dev[0].request("MAC_RAND_SCAN all enable=0")
+
+def _test_scan_random_mac_connected(dev, apdev, params):
+    hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+    if dev[0].get_driver_status_field('capa.mac_addr_rand_scan_supported') != '1':
+        raise HwsimSkip("Driver does not support random MAC address for scanning")
+
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412")
+
+    hostapd.add_ap(apdev[1], { "ssid": "test-scan-2", "channel": "11" })
+    bssid1 = apdev[1]['bssid']
+
+    # Verify that scanning can be completed while connected even if that means
+    # disabling use of random MAC address.
+    dev[0].request("MAC_RAND_SCAN all enable=1")
+    dev[0].scan_for_bss(bssid1, freq=2462, force_scan=True)
+
 @remote_compatible
 def test_scan_trigger_failure(dev, apdev):
     """Scan trigger to the driver failing"""
+    if dev[0].get_status_field('wpa_state') == "SCANNING":
+        raise Exception("wpa_state was already SCANNING")
+
     hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
 
@@ -1114,6 +1141,18 @@ def test_scan_fail(dev, apdev):
     with alloc_fail(dev[0], 1, "wpa_bss_add"):
         dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
 
+def test_scan_fail_type_only(dev, apdev):
+    """Scan failures for TYPE=ONLY"""
+    with fail_test(dev[0], 1, "wpa_driver_nl80211_scan"):
+        dev[0].request("SCAN TYPE=ONLY freq=2417")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=5)
+        if ev is None:
+            raise Exception("Scan trigger failure not reported")
+    # Verify that scan_only_handler() does not get left set as the
+    # wpa_s->scan_res_handler in failure case.
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
 @remote_compatible
 def test_scan_freq_list(dev, apdev):
     """Scan with SET freq_list and scan_cur_freq"""
@@ -1154,3 +1193,284 @@ def _test_scan_bss_limit(dev, apdev):
     hapd2 = hostapd.add_ap(apdev[1], { "ssid": "test-scan-2",
                                        "channel": "6" })
     dev[0].scan_for_bss(apdev[1]['bssid'], freq=2437, force_scan=True)
+
+def run_scan(dev, bssid, exp_freq):
+    for i in range(5):
+        dev.request("SCAN freq=2412,2437,2462")
+        ev = dev.wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+        if ev is None:
+            raise Exception("Scan did not complete")
+        bss = dev.get_bss(bssid)
+        freq = int(bss['freq']) if bss else 0
+        if freq == exp_freq:
+            break
+    if freq != exp_freq:
+        raise Exception("BSS entry shows incorrect frequency: %d != %d" % (freq, exp_freq))
+
+def test_scan_chan_switch(dev, apdev):
+    """Scanning and AP changing channels"""
+
+    # This test verifies that wpa_supplicant updates its local BSS table based
+    # on the correct cfg80211 scan entry in cases where the cfg80211 BSS table
+    # has multiple (one for each frequency) BSS entries for the same BSS.
+
+    csa_supported(dev[0])
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan", "channel": "1" })
+    csa_supported(hapd)
+    bssid = hapd.own_addr()
+
+    logger.info("AP channel switch while not connected")
+    run_scan(dev[0], bssid, 2412)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 1, 2437)
+    run_scan(dev[0], bssid, 2437)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 1, 2462)
+    run_scan(dev[0], bssid, 2462)
+    dev[0].dump_monitor()
+
+    logger.info("AP channel switch while connected")
+    dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412 2437 2462")
+    run_scan(dev[0], bssid, 2462)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 2, 2437)
+    wait_channel_switch(dev[0], 2437)
+    dev[0].dump_monitor()
+    run_scan(dev[0], bssid, 2437)
+    dev[0].dump_monitor()
+    switch_channel(hapd, 2, 2412)
+    wait_channel_switch(dev[0], 2412)
+    dev[0].dump_monitor()
+    run_scan(dev[0], bssid, 2412)
+    dev[0].dump_monitor()
+
+def test_scan_new_only(dev, apdev):
+    """Scan and only_new=1 multiple times"""
+    try:
+        _test_scan_new_only(dev, apdev)
+    finally:
+        dev[0].set("ignore_old_scan_res", "0")
+def _test_scan_new_only(dev, apdev):
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].set("ignore_old_scan_res", "1")
+    # Get the BSS added to cfg80211 BSS list
+    bssid = hapd.own_addr()
+    dev[0].scan_for_bss(bssid, freq=2412)
+    bss = dev[0].get_bss(bssid)
+    idx1 = bss['update_idx']
+    dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+    dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+    bss = dev[0].get_bss(bssid)
+    idx2 = bss['update_idx']
+    if int(idx2) <= int(idx1):
+        raise Exception("Scan result update_idx did not increase")
+    # Disable AP to ensure there are no new scan results after this.
+    hapd.disable()
+
+    # Try to scan multiple times to verify that old scan results do not get
+    # accepted as new.
+    for i in range(10):
+        dev[0].scan(freq=2412)
+        bss = dev[0].get_bss(bssid)
+        if bss:
+            idx = bss['update_idx']
+            if int(idx) > int(idx2):
+                raise Exception("Unexpected update_idx increase")
+
+def test_scan_flush(dev, apdev):
+    """Ongoing scan and FLUSH"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan" })
+    dev[0].dump_monitor()
+    dev[0].request("SCAN TYPE=ONLY freq=2412-2472 passive=1")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not start")
+    time.sleep(0.1)
+    dev[0].request("FLUSH")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS",
+                            "CTRL-EVENT-SCAN-FAILED",
+                            "CTRL-EVENT-BSS-ADDED"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+    if "CTRL-EVENT-BSS-ADDED" in ev:
+        raise Exception("Unexpected BSS entry addition after FLUSH")
+
+def test_scan_ies(dev, apdev):
+    """Scan and both Beacon and Probe Response frame IEs"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "beacon_int": "20" })
+    bssid = hapd.own_addr()
+    dev[0].dump_monitor()
+
+    for i in range(10):
+        dev[0].request("SCAN TYPE=ONLY freq=2412 passive=1")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=15)
+        if ev is None:
+            raise Exception("Scan did not complete")
+        if dev[0].get_bss(bssid):
+            break
+
+    for i in range(10):
+        dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+        bss = dev[0].get_bss(bssid)
+        if 'beacon_ie' in bss:
+            if bss['ie'] != bss['beacon_ie']:
+                break
+
+    if not bss or 'beacon_ie' not in bss:
+        raise Exception("beacon_ie not present")
+    ie = parse_ie(bss['ie'])
+    logger.info("ie: " + str(ie.keys()))
+    beacon_ie = parse_ie(bss['beacon_ie'])
+    logger.info("beacon_ie: " + str(ie.keys()))
+    if bss['ie'] == bss['beacon_ie']:
+        raise Exception("Both ie and beacon_ie show same data")
+
+def test_scan_parsing(dev, apdev):
+    """Scan result parsing"""
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES START"):
+        raise Exception("DRIVER_EVENT SCAN_RES START failed")
+
+    if "FAIL" not in dev[0].request("DRIVER_EVENT SCAN_RES foo "):
+        raise Exception("Invalid DRIVER_EVENT SCAN_RES accepted")
+
+    tests = [ "",
+              "flags=ffffffff",
+              "bssid=02:03:04:05:06:07",
+              "freq=1234",
+              "beacon_int=102",
+              "caps=1234",
+              "qual=10",
+              "noise=10",
+              "level=10",
+              "tsf=1122334455667788",
+              "age=123",
+              "est_throughput=100",
+              "snr=10",
+              "parent_tsf=1122334455667788",
+              "tsf_bssid=02:03:04:05:06:07",
+              "ie=00",
+              "beacon_ie=00",
+              # Too long SSID
+              "bssid=02:ff:00:00:00:01 ie=0033" + 33*'FF',
+              # All parameters
+              "flags=ffffffff bssid=02:ff:00:00:00:02 freq=1234 beacon_int=102 caps=1234 qual=10 noise=10 level=10 tsf=1122334455667788 age=123456 est_throughput=100 snr=10 parent_tsf=1122334455667788 tsf_bssid=02:03:04:05:06:07 ie=000474657374 beacon_ie=000474657374",
+              # Beacon IEs truncated
+              "bssid=02:ff:00:00:00:03 ie=0000 beacon_ie=0003ffff",
+              # Probe Response IEs truncated
+              "bssid=02:ff:00:00:00:04 ie=00000101 beacon_ie=0000",
+              # DMG (invalid caps)
+              "bssid=02:ff:00:00:00:05 freq=58320 ie=0003646d67",
+              # DMG (IBSS)
+              "bssid=02:ff:00:00:00:06 freq=60480 caps=0001 ie=0003646d67",
+              # DMG (PBSS)
+              "bssid=02:ff:00:00:00:07 freq=62640 caps=0002 ie=0003646d67",
+              # DMG (AP)
+              "bssid=02:ff:00:00:00:08 freq=64800 caps=0003 ie=0003646d67",
+              # Test BSS for updates
+              "bssid=02:ff:00:00:00:09 freq=2412 caps=0011 level=1 ie=0003757064010182",
+              # Minimal BSS data
+              "bssid=02:ff:00:00:00:00 ie=0000" ]
+    for t in tests:
+        if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES BSS " + t):
+            raise Exception("DRIVER_EVENT SCAN_RES BSS failed")
+
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES END"):
+        raise Exception("DRIVER_EVENT SCAN_RES END failed")
+
+    res = dev[0].request("SCAN_RESULTS")
+    logger.info("SCAN_RESULTS:\n" + res)
+
+    bss = []
+    res = dev[0].request("BSS FIRST")
+    if "FAIL" in res:
+        raise Exception("BSS FIRST failed")
+    while "\nbssid=" in res:
+        logger.info("BSS output:\n" + res)
+        bssid = None
+        id = None
+        for val in res.splitlines():
+            if val.startswith("id="):
+                id = val.split('=')[1]
+            if val.startswith("bssid="):
+                bssid = val.split('=')[1]
+        if bssid is None or id is None:
+            raise Exception("Missing id or bssid line")
+        bss.append(bssid)
+        res = dev[0].request("BSS NEXT-" + id)
+
+    logger.info("Discovered BSSs: " + str(bss))
+    invalid_bss = [ "02:03:04:05:06:07", "02:ff:00:00:00:01" ]
+    valid_bss = [ "02:ff:00:00:00:00", "02:ff:00:00:00:02",
+                  "02:ff:00:00:00:03", "02:ff:00:00:00:04",
+                  "02:ff:00:00:00:05", "02:ff:00:00:00:06",
+                  "02:ff:00:00:00:07", "02:ff:00:00:00:08",
+                  "02:ff:00:00:00:09" ]
+    for bssid in invalid_bss:
+        if bssid in bss:
+            raise Exception("Invalid BSS included: " + bssid)
+    for bssid in valid_bss:
+        if bssid not in bss:
+            raise Exception("Valid BSS missing: " + bssid)
+
+    logger.info("Update BSS parameters")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES START"):
+        raise Exception("DRIVER_EVENT SCAN_RES START failed")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES BSS bssid=02:ff:00:00:00:09 freq=2412 caps=0002 level=2 ie=000375706401028204"):
+        raise Exception("DRIVER_EVENT SCAN_RES BSS failed")
+    if "OK" not in dev[0].request("DRIVER_EVENT SCAN_RES END"):
+        raise Exception("DRIVER_EVENT SCAN_RES END failed")
+    res = dev[0].request("BSS 02:ff:00:00:00:09")
+    logger.info("Updated BSS:\n" + res)
+
+def test_scan_specific_bssid(dev, apdev):
+    """Scan for a specific BSSID"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "test-scan",
+                                      "beacon_int": "1000" })
+    bssid = hapd.own_addr()
+
+    time.sleep(0.1)
+    dev[0].request("SCAN TYPE=ONLY freq=2412 bssid=02:ff:ff:ff:ff:ff")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan did not complete")
+    bss1 = dev[0].get_bss(bssid)
+
+    for i in range(10):
+        dev[0].request("SCAN TYPE=ONLY freq=2412 bssid=" + bssid)
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+        if ev is None:
+            raise Exception("Scan did not complete")
+        bss2 = dev[0].get_bss(bssid)
+        if bss2:
+            break
+
+    if not bss2:
+        raise Exception("Did not find BSS")
+    if bss1 and 'beacon_ie' in bss1 and 'ie' in bss1 and bss1['beacon_ie'] != bss2['ie']:
+        raise Exception("First scan for unknown BSSID returned unexpected response")
+    if bss2 and 'beacon_ie' in bss2 and 'ie' in bss2 and bss2['beacon_ie'] == bss2['ie']:
+        raise Exception("Second scan did find Probe Response frame")
+
+def test_scan_probe_req_events(dev, apdev):
+    """Probe Request frame RX events from hostapd"""
+    hapd = hostapd.add_ap(apdev[0], { "ssid": "open" })
+    hapd2 = hostapd.Hostapd(apdev[0]['ifname'])
+    if "OK" not in hapd2.mon.request("ATTACH probe_rx_events=1"):
+        raise Exception("Failed to register for events")
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+
+    ev = hapd2.wait_event(["RX-PROBE-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("RX-PROBE-REQUEST not reported")
+    if "sa=" + dev[0].own_addr() not in ev:
+        raise Exception("Unexpected event parameters: " + ev)
+
+    ev = hapd.wait_event(["RX-PROBE-REQUEST"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected RX-PROBE-REQUEST")

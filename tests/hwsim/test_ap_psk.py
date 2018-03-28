@@ -118,6 +118,25 @@ def test_ap_wpa2_ptk_rekey(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
+def test_ap_wpa2_ptk_rekey_anonce(dev, apdev):
+    """WPA2-PSK AP and PTK rekey enforced by station and ANonce change"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
+    dev[0].dump_monitor()
+    anonce1 = dev[0].request("GET anonce")
+    if "OK" not in dev[0].request("KEY_REQUEST 0 1"):
+        raise Exception("KEY_REQUEST failed")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"])
+    if ev is None:
+        raise Exception("PTK rekey timed out")
+    anonce2 = dev[0].request("GET anonce")
+    if anonce1 == anonce2:
+        raise Exception("AP did not update ANonce in requested PTK rekeying")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
 @remote_compatible
 def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by AP"""
@@ -217,7 +236,7 @@ def test_ap_wpa_ccmp(dev, apdev):
                         ("dot11RSNAAuthenticationSuiteSelected", "00-50-f2-2"),
                         ("dot1xSuppSuppControlledPortStatus", "Authorized") ])
 
-def test_ap_wpa2_psk_file(dev, apdev):
+def test_ap_wpa2_psk_file_errors(dev, apdev):
     """WPA2-PSK AP with various PSK file error and success cases"""
     addr0 = dev[0].own_addr()
     addr1 = dev[1].own_addr()
@@ -301,6 +320,20 @@ def test_ap_wpa2_gtk_rekey(dev, apdev):
     params['wpa_group_rekey'] = '1'
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_gtk_rekey_request(dev, apdev):
+    """WPA2-PSK AP and GTK rekey by AP request"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    if "OK" not in hapd.request("REKEY_GTK"):
+        raise Exception("REKEY_GTK failed")
     ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
     if ev is None:
         raise Exception("GTK rekey timed out")
@@ -576,6 +609,495 @@ def test_ap_wpa2_psk_ext_retry_msg_3(dev, apdev):
         raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
 
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3b(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (b)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    # Do not send the first msg 3/4 to the STA yet; wait for retransmission
+    # from AP.
+    msg3_1 = ev
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3_2 = ev
+
+    # Send the first msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3_1.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+    dev[0].wait_connected(timeout=15)
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    # Send the second msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3_2.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    # Do not send the second msg 4/4 to the AP
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3c(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (c)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    # and replace nonce (this results in "WPA: ANonce from message 1 of
+    # 4-Way Handshake differs from 3 of 4-Way Handshake - drop packet" when
+    # wpa_supplicant processed msg 3/4 afterwards)
+    #msg1b = msg1[0:18] + msg3[18:34] + 32*"ff" + msg1[98:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # Send previously received msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3d(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (d)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # EAPOL-Key msg 3/4 (retry 2)
+    # New one needed to get the correct Replay Counter value
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_retry_msg_3e(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and retry for EAPOL-Key msg 3/4 (e)"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg1 = ev.split(' ')[2]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to hostapd to trigger retry
+
+    # STA believes everything is ready
+    dev[0].wait_connected()
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send a forged msg 1/4 to STA (update replay counter and replace ANonce)
+    msg1b = msg1[0:18] + msg3[18:34] + 32*"ff" + msg1[98:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    # Do not send msg 2/4 to hostapd
+
+    # Send a forged msg 1/4 to STA (back to previously used ANonce)
+    msg1b = msg1[0:18] + msg3[18:34] + msg1[34:]
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg1b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        # wpa_supplicant seems to have ignored the forged message. This means
+        # the attack would fail.
+        logger.info("wpa_supplicant ignored forged EAPOL-Key msg 1/4")
+        return
+    # Do not send msg 2/4 to hostapd
+
+    # EAPOL-Key msg 3/4 (retry 2)
+    # New one needed to get the correct Replay Counter value
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    msg3 = ev.split(' ')[2]
+
+    # Send msg 3/4 to STA
+    res = dev[0].request("EAPOL_RX " + bssid + " " + msg3)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_ext_delayed_ptk_rekey(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O and delayed PTK rekey exchange"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    params['wpa_ptk_rekey'] = '3'
+    hapd = hostapd.add_ap(apdev[0], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg2 = ev.split(' ')[2]
+    # Do not send this to the AP
+
+    # EAPOL-Key msg 1/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4 = ev.split(' ')[2]
+    # Do not send msg 4/4 to AP
+
+    # EAPOL-Key msg 3/4 (retry)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    msg4b = ev.split(' ')[2]
+    # Do not send msg 4/4 to AP
+
+    # Send the previous EAPOL-Key msg 4/4 to AP
+    res = hapd.request("EAPOL_RX " + addr + " " + msg4)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    # Wait for PTK rekeying to be initialized
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+
+    # EAPOL-Key msg 2/4 from the previous 4-way handshake
+    # hostapd is expected to ignore this due to unexpected Replay Counter
+    res = hapd.request("EAPOL_RX " + addr + " " + msg2)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4 (actually, this ends up being retransmitted 1/4)
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    keyinfo = ev.split(' ')[2][10:14]
+    if keyinfo != "008a":
+        raise Exception("Unexpected key info when expected msg 1/4:" + keyinfo)
+
+    # EAPOL-Key msg 4/4 from the previous 4-way handshake
+    # hostapd is expected to ignore this due to unexpected Replay Counter
+    res = hapd.request("EAPOL_RX " + addr + " " + msg4b)
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # Check if any more EAPOL-Key frames are seen. If the second 4-way handshake
+    # was accepted, there would be no more EAPOL-Key frames. If the Replay
+    # Counters were rejected, there would be a retransmitted msg 1/4 here.
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=1)
+    if ev is None:
+        raise Exception("Did not see EAPOL-TX from hostapd in the end (expected msg 1/4)")
+    keyinfo = ev.split(' ')[2][10:14]
+    if keyinfo != "008a":
+        raise Exception("Unexpected key info when expected msg 1/4:" + keyinfo)
 
 def parse_eapol(data):
     (version, type, length) = struct.unpack('>BBH', data[0:4])
@@ -1033,7 +1555,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1043,7 +1565,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 0"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 0 not reported")
@@ -1052,7 +1574,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '1', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 1"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 1 not reported")
@@ -1061,7 +1583,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '123456789', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported AES-WRAP len 9"])
     if ev is None:
         raise Exception("Unsupported AES-WRAP len 9 not reported")
@@ -1070,7 +1592,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter)
     # do not increment counter to test replay protection
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: AES unwrap failed"])
     if ev is None:
         raise Exception("AES unwrap failure not reported")
@@ -1079,7 +1601,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     dev[0].dump_monitor()
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: EAPOL-Key Replay Counter did not increase"])
     if ev is None:
         raise Exception("Replay Counter replay not reported")
@@ -1089,7 +1611,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               key_info=0x134a)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: No Ack bit in key_info"])
     if ev is None:
         raise Exception("Missing Ack bit not reported")
@@ -1099,7 +1621,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               key_info=0x1bca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: EAPOL-Key with Request bit"])
     if ev is None:
         raise Exception("Request bit not reported")
@@ -1109,7 +1631,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13c8)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 0"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 0 not reported")
@@ -1119,7 +1641,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13c9)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: CCMP is used, but EAPOL-Key descriptor version (1) is not 2"])
     if ev is None:
         raise Exception("Not allowed EAPOL-Key descriptor version not reported")
@@ -1129,7 +1651,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13ca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: AES unwrap failed"])
     if ev is None:
         raise Exception("AES unwrap failure not reported")
@@ -1139,7 +1661,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cb)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: CCMP is used, but EAPOL-Key descriptor version (3) is not 2"])
     if ev is None:
         raise Exception("CCMP key descriptor mismatch not reported")
@@ -1155,7 +1677,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cc)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 4"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 4 not reported")
@@ -1165,7 +1687,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '0123456789abcdef',
                               replay_counter=counter, key_info=0x13cf)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported EAPOL-Key descriptor version 7"])
     if ev is None:
         raise Exception("Unsupported EAPOL-Key descriptor version 7 not reported")
@@ -1175,7 +1697,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               extra_len=-1)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Invalid EAPOL-Key frame - key_data overflow (8 > 7)"])
     if ev is None:
         raise Exception("Key data overflow not reported")
@@ -1184,19 +1706,19 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               extra_len=1)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("Unsupported descriptor type 0")
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               descr_type=0)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("WPA descriptor type 0")
     msg = build_eapol_key_3_4(anonce, kck, '12345678', replay_counter=counter,
                               descr_type=254)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
 
     logger.debug("Non-zero key index for pairwise key")
     dev[0].dump_monitor()
@@ -1204,7 +1726,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13ea)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Ignored EAPOL-Key (Pairwise) with non-zero key index"])
     if ev is None:
         raise Exception("Non-zero key index not reported")
@@ -1214,7 +1736,7 @@ def test_ap_wpa2_psk_supp_proto(dev, apdev):
     wrapped = aes_wrap(kek, 16*'z')
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
@@ -1230,7 +1752,7 @@ def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1241,7 +1763,7 @@ def test_ap_wpa2_psk_supp_proto_no_ie(dev, apdev):
     wrapped = aes_wrap(kek, 16*'\0')
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
@@ -1257,7 +1779,7 @@ def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1268,7 +1790,7 @@ def test_ap_wpa2_psk_supp_proto_ie_mismatch(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(binascii.unhexlify('30060100000fac04dd16000fac010100dc11188831bf4aa4a8678d2b41498618')))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
@@ -1284,7 +1806,7 @@ def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1296,7 +1818,7 @@ def test_ap_wpa2_psk_supp_proto_ok(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
@@ -1312,7 +1834,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1324,7 +1846,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
     if ev is not None:
         raise Exception("Unexpected connection completion reported")
@@ -1342,7 +1864,7 @@ def test_ap_wpa2_psk_supp_proto_anonce_change(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1355,7 +1877,7 @@ def test_ap_wpa2_psk_supp_proto_anonce_change(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce2, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: ANonce from message 1 of 4-Way Handshake differs from 3 of 4-Way Handshake"])
     if ev is None:
         raise Exception("ANonce change not reported")
@@ -1373,7 +1895,7 @@ def test_ap_wpa2_psk_supp_proto_unexpected_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1385,7 +1907,7 @@ def test_ap_wpa2_psk_supp_proto_unexpected_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Group Key Handshake started prior to completion of 4-way handshake"])
     if ev is None:
         raise Exception("Unexpected group key message not reported")
@@ -1406,7 +1928,7 @@ def test_ap_wpa2_psk_supp_proto_msg_1_invalid_kde(dev, apdev):
     msg = build_eapol_key_1_4(anonce, replay_counter=counter,
                               key_data=binascii.unhexlify('5555'))
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
@@ -1422,7 +1944,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1435,7 +1957,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_pairwise_key_len(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_len=15)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Invalid CCMP key length 15"])
     if ev is None:
         raise Exception("Invalid CCMP key length not reported")
@@ -1454,7 +1976,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_group_key_len(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1466,7 +1988,7 @@ def test_ap_wpa2_psk_supp_proto_wrong_group_key_len(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported CCMP Group Cipher key length 15"])
     if ev is None:
         raise Exception("Invalid CCMP key length not reported")
@@ -1485,7 +2007,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_tx_bit_workaround(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1497,7 +2019,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_tx_bit_workaround(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Tx bit set for GTK, but pairwise keys are used - ignore Tx bit"])
     if ev is None:
         raise Exception("GTK Tx bit workaround not reported")
@@ -1516,7 +2038,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1528,7 +2050,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("Valid EAPOL-Key group msg 1/2 (GTK keyidx 3)")
@@ -1538,7 +2060,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     ev = dev[0].wait_event(["WPA: Group rekeying completed"])
     if ev is None:
@@ -1550,7 +2072,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_keyidx_0_and_3(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, plain, replay_counter=counter,
                               key_info=0x03c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: GTK IE in unencrypted key data"])
     if ev is None:
         raise Exception("Unencrypted GTK KDE not reported")
@@ -1569,7 +2091,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1581,7 +2103,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("No GTK KDE in EAPOL-Key group msg 1/2")
@@ -1591,7 +2113,7 @@ def test_ap_wpa2_psk_supp_proto_no_gtk_in_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: No GTK IE in Group Key msg 1/2"])
     if ev is None:
         raise Exception("Missing GTK KDE not reported")
@@ -1610,7 +2132,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1622,7 +2144,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_connected(timeout=1)
 
     logger.debug("EAPOL-Key group msg 1/2 with too long GTK KDE")
@@ -1632,7 +2154,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_in_group_msg(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter,
                               key_info=0x13c2)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: Unsupported CCMP Group Cipher key length 33"])
     if ev is None:
         raise Exception("Too long GTK KDE not reported")
@@ -1651,7 +2173,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_kde(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1663,7 +2185,7 @@ def test_ap_wpa2_psk_supp_proto_too_long_gtk_kde(dev, apdev):
     wrapped = aes_wrap(kek, pad_key_data(plain))
     msg = build_eapol_key_3_4(anonce, kck, wrapped, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     dev[0].wait_disconnected(timeout=1)
 
 def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
@@ -1679,7 +2201,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
     counter = 1
     msg = build_eapol_key_1_4(anonce, replay_counter=counter)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     msg = recv_eapol(dev[0])
     snonce = msg['rsn_key_nonce']
 
@@ -1691,7 +2213,7 @@ def test_ap_wpa2_psk_supp_proto_gtk_not_encrypted(dev, apdev):
     msg = build_eapol_key_3_4(anonce, kck, plain, replay_counter=counter,
                               key_info=0x03ca)
     counter += 1
-    send_eapol(dev[0], addr, build_eapol(msg))
+    send_eapol(dev[0], bssid, build_eapol(msg))
     ev = dev[0].wait_event(["WPA: GTK IE in unencrypted key data"])
     if ev is None:
         raise Exception("Unencrypted GTK KDE not reported")
@@ -1837,11 +2359,8 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
         raise Exception("KCK not found while associated")
     if kek not in buf:
         raise Exception("KEK not found while associated")
-    if tk in buf:
-        raise Exception("TK found from memory")
-    if gtk in buf:
-        get_key_locations(buf, gtk, "GTK")
-        raise Exception("GTK found from memory")
+    #if tk in buf:
+    #    raise Exception("TK found from memory")
 
     logger.info("Checking keys in memory after disassociation")
     buf = read_process_memory(pid, pmk)
@@ -1854,6 +2373,8 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
+    if gtk in buf:
+        get_key_locations(buf, gtk, "GTK")
     verify_not_present(buf, gtk, fname, "GTK")
 
     dev[0].request("REMOVE_NETWORK all")
@@ -2139,12 +2660,16 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
                '30120100000fac040100000fac040100000fac02'),
               ('Reserved RSN Capabilities bits set',
                '30140100000fac040100000fac040100000fac023cff'),
+              ('Truncated RSN Capabilities field',
+               '30130100000fac040100000fac040100000fac023c'),
               ('Extra pairwise cipher suite (unsupported)',
                '30180100000fac040200ffffffff000fac040100000fac020c00'),
               ('Extra AKM suite (unsupported)',
                '30180100000fac040100000fac040200ffffffff000fac020c00'),
               ('PMKIDCount field included',
                '30160100000fac040100000fac040100000fac020c000000'),
+              ('Truncated PMKIDCount field',
+               '30150100000fac040100000fac040100000fac020c0000'),
               ('Unexpected Group Management Cipher Suite with PMF disabled',
                '301a0100000fac040100000fac040100000fac020c000000000fac06'),
               ('Extra octet after defined fields (future extensibility)',
@@ -2152,6 +2677,8 @@ def test_rsn_ie_proto_psk_sta(dev, apdev):
     for txt,ie in tests:
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+        dev[0].request("NOTE " + txt)
         logger.info(txt)
         hapd.disable()
         hapd.set('own_ie_override', ie)
@@ -2228,6 +2755,18 @@ def test_ap_wpa2_psk_assoc_rsn(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
         dev[0].dump_monitor()
 
+def test_ap_wpa2_psk_assoc_rsn_pmkid(dev, apdev):
+    """WPA2-PSK AP and association request RSN IE with PMKID"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    set_test_assoc_ie(dev[0], "30260100000fac040100000fac040100000fac0200000100" + 16*'00')
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+
 def test_ap_wpa_psk_rsn_pairwise(dev, apdev):
     """WPA-PSK AP and only rsn_pairwise set"""
     params = { "ssid": "wpapsk", "wpa": "1", "wpa_key_mgmt": "WPA-PSK",
@@ -2235,3 +2774,111 @@ def test_ap_wpa_psk_rsn_pairwise(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], params)
     dev[0].connect("wpapsk", psk="1234567890", proto="WPA", pairwise="TKIP",
                    scan_freq="2412")
+
+def test_ap_wpa2_eapol_retry_limit(dev, apdev):
+    """WPA2-PSK EAPOL-Key retry limit configuration"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_ptk_rekey'] = '2'
+    params['wpa_group_update_count'] = '1'
+    params['wpa_pairwise_update_count'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"])
+    if ev is None:
+        raise Exception("PTK rekey timed out")
+
+    if "FAIL" not in hapd.request("SET wpa_group_update_count 0"):
+        raise Exception("Invalid wpa_group_update_count value accepted")
+    if "FAIL" not in hapd.request("SET wpa_pairwise_update_count 0"):
+        raise Exception("Invalid wpa_pairwise_update_count value accepted")
+
+def test_ap_wpa2_disable_eapol_retry(dev, apdev):
+    """WPA2-PSK disable EAPOL-Key retry"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_disable_eapol_key_retries'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    logger.info("Verify working 4-way handshake without retries")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].wait_disconnected()
+    dev[0].dump_monitor()
+    addr = dev[0].own_addr()
+
+    logger.info("Verify no retransmission of message 3/4")
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M1) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M1 retry) from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX (M1) to wpa_supplicant failed")
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M2) from wpa_supplicant")
+    dev[0].dump_monitor()
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX (M2) to hostapd failed")
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (M3) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected EAPOL-TX M3 retry from hostapd")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=3)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()
+
+def test_ap_wpa2_disable_eapol_retry_group(dev, apdev):
+    """WPA2-PSK disable EAPOL-Key retry for group handshake"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_disable_eapol_key_retries'] = '1'
+    params['wpa_strict_rekey'] = '1'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = apdev[0]['bssid']
+
+    id = dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    dev[0].dump_monitor()
+    addr = dev[0].own_addr()
+
+    dev[1].request("DISCONNECT")
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out")
+    dev[1].request("RECONNECT")
+    dev[1].wait_connected()
+    dev[0].dump_monitor()
+
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[1].request("DISCONNECT")
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX (group M1) from hostapd")
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected EAPOL-TX group M1 retry from hostapd")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=3)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()

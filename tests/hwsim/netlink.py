@@ -163,7 +163,7 @@ class Connection(object):
         contents = self.descriptor.recv(16384)
         # XXX: python doesn't give us message flags, check
         #      len(contents) vs. msglen for TRUNC
-        msglen, msg_type, flags, seq, pid = struct.unpack("IHHII", 
+        msglen, msg_type, flags, seq, pid = struct.unpack("IHHII",
                                                           contents[:16])
         msg = Message(msg_type, flags, seq, contents[16:])
         msg.pid = pid

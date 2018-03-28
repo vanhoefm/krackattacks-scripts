@@ -35,7 +35,8 @@ struct wlantest_passphrase {
 
 struct wlantest_pmk {
 	struct dl_list list;
-	u8 pmk[32];
+	u8 pmk[PMK_LEN_MAX];
+	size_t pmk_len;
 };
 
 struct wlantest_ptk {
@@ -59,6 +60,7 @@ struct wlantest_sta {
 		STATE2 /* authenticated */,
 		STATE3 /* associated */
 	} state;
+	u16 auth_alg;
 	u16 aid;
 	u8 rsnie[257]; /* WPA/RSN IE */
 	u8 osenie[257]; /* OSEN IE */
@@ -70,7 +72,6 @@ struct wlantest_sta {
 	u8 anonce[32]; /* ANonce from the previous EAPOL-Key msg 1/4 or 3/4 */
 	u8 snonce[32]; /* SNonce from the previous EAPOL-Key msg 2/4 */
 	struct wpa_ptk ptk; /* Derived PTK */
-	size_t tk_len;
 	int ptk_set;
 	struct wpa_ptk tptk; /* Derived PTK during rekeying */
 	int tptk_set;
@@ -128,6 +129,7 @@ struct wlantest_bss {
 	u16 prev_capab_info;
 	u8 ssid[32];
 	size_t ssid_len;
+	int beacon_seen;
 	int proberesp_seen;
 	int parse_error_reported;
 	u8 wpaie[257];
@@ -237,14 +239,14 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_80211(struct wlantest *wt, const u8 *data, size_t len);
 void wlantest_process_wired(struct wlantest *wt, const u8 *data, size_t len);
-u32 crc32(const u8 *frame, size_t frame_len);
 int monitor_init(struct wlantest *wt, const char *ifname);
 int monitor_init_wired(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
 void rx_mgmt_ack(struct wlantest *wt, const struct ieee80211_hdr *hdr);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);
-void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
+void rx_data_eapol(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
+		   const u8 *dst, const u8 *src,
 		   const u8 *data, size_t len, int prot);
 void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 		const u8 *dst, const u8 *src, const u8 *data, size_t len,

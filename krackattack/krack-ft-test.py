@@ -23,103 +23,6 @@ IEEE80211_RADIOTAP_DATA_RETRIES = (1 << 17)
 #TODO: - Option to use a secondary interface for injection + WARNING if a virtual interface is used + repeat advice to disable hardware encryption
 #TODO: - Test whether injection works on the virtual interface (send probe requests to nearby AP and wait for replies)
 
-# FIXME: We are repeating the "disable hw encryption" script to client tests
-USAGE = """{name} - Tool to test Key Reinstallation Attacks against an AP
-
-To test wheter an AP is vulnerable to a Key Reinstallation Attack against
-the Fast BSS Transition (FT) handshake, take the following steps:
-
-1. The hardware encryption engine of some Wi-Fi NICs have bugs that interfere
-   with our script. So disable hardware encryption by executing:
-
-      ./disable-hwcrypto.sh
-
-   This only needs to be done once. It's recommended to reboot after executing
-   this script. After plugging in your Wi-Fi NIC, use `systool -vm ath9k_htc`
-   or similar to confirm the nohwcript/.. param has been set. We tested this
-   with an a TP-Link TL-WN722N and an Alfa AWUS051NH v2.
-
-2. Create a wpa_supplicant configuration file that can be used to connect
-   to the network. A basic example is:
-
-      ctrl_interface=/var/run/wpa_supplicant
-      network={{
-          ssid="testnet"
-          key_mgmt=FT-PSK
-          psk="password"
-      }}
-
-   Note the use of "FT-PSK". Save it as network.conf or similar. For more
-   info see https://w1.fi/cgit/hostap/plain/wpa_supplicant/wpa_supplicant.conf
-
-3. Try to connect to the network using your platform's wpa_supplicant.
-   This will likely require a command such as:
-
-      sudo wpa_supplicant -D nl80211 -i wlan0 -c network.conf
-
-   If this fails, either the AP does not support FT, or you provided the wrong
-   network configuration options in step 1.
-
-4. Use this script as a wrapper over the previous wpa_supplicant command:
-
-      sudo {name} wpa_supplicant -D nl80211 -i wlan0 -c network.conf
-
-   This will execute the wpa_supplicant command using the provided parameters,
-   and will add a virtual monitor interface that will perform attack tests.
-
-5. Use wpa_cli to roam to a different AP of the same network. For example:
-
-      sudo wpa_cli -i wlan0
-      > status
-      bssid=c4:e9:84:db:fb:7b
-      ssid=testnet
-      ...
-      > scan_results 
-      bssid / frequency / signal level / flags / ssid
-      c4:e9:84:db:fb:7b	2412  -21  [WPA2-PSK+FT/PSK-CCMP][ESS] testnet
-      c4:e9:84:1d:a5:bc	2412  -31  [WPA2-PSK+FT/PSK-CCMP][ESS] testnet
-      ...
-      > roam c4:e9:84:1d:a5:bc
-      ...
-   
-   In this example we were connected to AP c4:e9:84:db:fb:7b of testnet (see
-   status command). The scan_results command shows this network also has a
-   second AP with MAC c4:e9:84:1d:a5:bc. We then roam to this second AP.
-
-6. Generate traffic between the AP and client. For example:
-
-      sudo arping -I wlan0 192.168.1.10
-
-7. Now look at the output of {name} to see if the AP is vulnerable.
-
-   6a. First it should say "Detected FT reassociation frame". Then it will
-       start replaying this frame to try the attack.
-   6b. The script shows which IVs (= packet numbers) the AP is using when
-       sending data frames.
-   6c. Message "IV reuse detected (IV=X, seq=Y). AP is vulnerable!" means
-       we confirmed it's vulnerable.
-
-  !! Be sure to manually check network traces as well, to confirm this script
-  !! is replaying the reassociation request properly, and to manually confirm
-  !! whether there is IV (= packet number) reuse or not.
-
-   Example output of vulnerable AP:
-      [15:59:24] Replaying Reassociation Request
-      [15:59:25] AP transmitted data using IV=1 (seq=0)
-      [15:59:25] Replaying Reassociation Request
-      [15:59:26] AP transmitted data using IV=1 (seq=0)
-      [15:59:26] IV reuse detected (IV=1, seq=0). AP is vulnerable!
-
-   Example output of patched AP (note that IVs are never reused):
-      [16:00:49] Replaying Reassociation Request
-      [16:00:49] AP transmitted data using IV=1 (seq=0)
-      [16:00:50] AP transmitted data using IV=2 (seq=1)
-      [16:00:50] Replaying Reassociation Request
-      [16:00:51] AP transmitted data using IV=3 (seq=2)
-      [16:00:51] Replaying Reassociation Request
-      [16:00:52] AP transmitted data using IV=4 (seq=3)
-"""
-
 #### Man-in-the-middle Code ####
 
 class KRAckAttackFt():
@@ -249,7 +152,7 @@ def argv_get_interface():
 
 if __name__ == "__main__":
 	if len(sys.argv) <= 1 or "--help" in sys.argv or "-h" in sys.argv:
-		print USAGE.format(name=sys.argv[0])
+		print "See README.md for instructions on how to use this script"
 		quit(1)
 
 	# TODO: Verify that we only accept CCMP?

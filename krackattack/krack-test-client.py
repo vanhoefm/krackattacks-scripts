@@ -22,118 +22,6 @@ from wpaspy import Ctrl
 # - Ability to test the group key handshake against specific clients only
 # - Individual test to see if the client accepts replayed broadcast traffic (without performing key reinstallation)
 
-# FIXME: We are repeating the "disable hw encryption" of FT tests
-USAGE = """{name} - Tool to test Key Reinstallation Attacks against clients
-
-To test wheter a client is vulnerable to Key Reinstallation Attack against
-the 4-way handshake or group key handshake, take the following steps:
-
-1. Compile our modified hostapd instance. This only needs to be done once.
-
-      cd ../hostapd
-      cp defconfig .config
-      make -j 2
-
-2. The hardware encryption engine of some Wi-Fi NICs have bugs that interfere
-   with our script. So disable hardware encryption by executing:
-
-      cd ../krackattack/
-      ./disable-hwcrypto.sh
-
-   This only needs to be done once. It's recommended to reboot after executing
-   this script. After plugging in your Wi-Fi NIC, use `systool -vm ath9k_htc`
-   or similar to confirm the nohwcript/.. param has been set. We tested this
-   script with an Intel Dual Band Wireless-AC 7260 and a TP-Link TL-WN722N.
-
-3. Execute this script. Accepted parameters are:
-
-      --group      Test the group key handshake instead of the 4-way handshake
-      --debug      Show more debug messages
-      --tptk       See step 5 (forge Msg1/4 with replayed ANonce before Msg3/4)
-      --tptk-rand  See step 5 (forge Msg1/4 with random ANonce before Msg3/4)
-
-   All other supplied arguments are passed on to hostapd.
-   The only two commands you will normally have to execute are:
-
-      {name}
-      {name} --group
-
-   The first one tests for key reinstallations in the 4-way handshake (see
-   step 4), and the second tests one for key reinstallations in the group key
-   handshake (see step 5).
-
-   !! The default network name is testnetwork with password abcdefgh !!
-
-   Note that you can change settings of the AP by modifying hostapd.conf.
-   You will probably have to edit the line `interface=` to specify the
-   correct Wi-Fi interface to use for the AP.
-
-4. To test key reinstallations in the 4-way handshake, the script will keep
-   sending encrypted message 3's to the client. To start the script execute:
-
-      {name}
-
-   Connect the the AP and the following tests will be performed automatically:
-
-   4a. The script monitors traffic sent by the client to see if the pairwise
-     key is being reinstalled. To assure the client is sending enough frames,
-     you can optionally ping the AP: ping 192.168.100.254 .
-
-     If the client is vulnerable, the script will show something like:
-        [19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
-
-     If the client is patched, the script will show (this can take a minute):
-        [18:58:11] 90:18:7c:6e:6b:20: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake.
-
-   4b. Once the client has requested an IP using DHCP, the script tests for
-     reinstallations of the group key by sending broadcast ARP requests to the
-     client using an already used (replayed) packet number (= IV). The client
-     *must* request an IP using DHCP for this test to start.
-
-     If the client is vulnerable, the script will show something like:
-        [19:03:08] 78:31:c1:c4:88:92: Received 5 unique replies to replayed broadcast ARP requests. Client is vulnerable to group
-        [19:03:08]                    key reinstallations in the 4-way handshake (or client accepts replayed broadcast frames)!
-
-     If the client is patched, the script will show (this can take a minute):
-        [19:03:08] 78:31:c1:c4:88:92: client DOESN'T seem vulnerable to group key reinstallation in the 4-way handshake handshake.
-
-     Note that this scripts *indirectly* tests for reinstallations of the group
-     key, by testing if replayed broadcast frames are accepted by the client.
-
-5. Some supplicants (e.g. wpa_supplicant v2.6) are only vulnerable to pairwise
-   key reinstallations in the 4-way handshake when a forged message 1 is
-   injected before sending a retransmitted message 3. To test for this variant
-   of the attack, you can execute:
-
-      {name} --tptk         # Inject message 1 with a replayed ANonce
-      {name} --tptk-rand    # Inject message 1 with a random ANonce
-
-   Now follow the same steps as in step 4 to see if a supplicant is vulnerable.
-   Try both these attack variants after running the normal tests of step 4.
-
-6. To test key reinstallations in the group key handshake, the script will keep
-   performing new group key handshakes using an identical (static) group key.
-   The client *must* request an IP using DHCP for this test to start. To start
-   the script execute:
-
-      {name} --group
-
-   Connect the the AP and all tests will be performed automatically. The
-   working and output of the script is now similar as in step 4b.
-
-7. Some final recommendations:
-
-   6a. Perform these tests in a room with little interference. A high amount
-       of packet loss will make this script unreliable!
-   6b. Manually inspect network traffic to confirm the output of the script:
-       - Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls
-         by monitoring the IVs of frames sent by the client.
-       - Capture traffic on the client to see if the replayed broadcast ARP
-         requests are accepted or not.
-   6c. If the client being tested can use multiple Wi-Fi radios/NICs, test
-       using a few different ones.
-"""
-
 # After how many seconds a new message 3, or new group key message 1, is sent.
 # This value must match the one in `../src/ap/wpa_auth.c` (same variable name).
 HANDSHAKE_TRANSMIT_INTERVAL = 2
@@ -595,7 +483,7 @@ def hostapd_read_config(config):
 
 if __name__ == "__main__":
 	if "--help" in sys.argv or "-h" in sys.argv:
-		print USAGE.format(name=sys.argv[0])
+		print "See README.md for instructions on how to use this script"
 		quit(1)
 
 	test_grouphs = argv_pop_argument("--group")

@@ -12,6 +12,7 @@ import subprocess
 import logging
 logger = logging.getLogger()
 import os
+import signal
 import socket
 import SocketServer
 import struct
@@ -6365,3 +6366,56 @@ def test_ap_wpa2_eap_wildcard_ssid(dev, apdev):
                    identity="gpsk user",
                    password="abcdefghijklmnop0123456789abcdef",
                    scan_freq="2412")
+
+def test_ap_wpa2_eap_psk_mac_addr_change(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PSK after MAC address change"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    cmd = subprocess.Popen(['ps', '-eo', 'pid,command'], stdout=subprocess.PIPE)
+    res = cmd.stdout.read()
+    cmd.stdout.close()
+    pid = 0
+    for p in res.splitlines():
+        if "wpa_supplicant" not in p:
+            continue
+        if dev[0].ifname not in p:
+            continue
+        pid = int(p.strip().split(' ')[0])
+    if pid == 0:
+        logger.info("Could not find wpa_supplicant PID")
+    else:
+        logger.info("wpa_supplicant PID %d" % pid)
+
+    addr = dev[0].get_status_field("address")
+    subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'down'])
+    subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'address',
+                     '02:11:22:33:44:55'])
+    subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'up'])
+    addr1 = dev[0].get_status_field("address")
+    if addr1 != '02:11:22:33:44:55':
+        raise Exception("Failed to change MAC address")
+
+    # Scan using the externally set MAC address, stop the wpa_supplicant
+    # process to avoid it from processing the ifdown event before the interface
+    # is already UP, change the MAC address back, allow the wpa_supplicant
+    # process to continue. This will result in the ifdown + ifup sequence of
+    # RTM_NEWLINK events to be processed while the interface is already UP.
+    try:
+        dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+        os.kill(pid, signal.SIGSTOP)
+        time.sleep(0.1)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'down'])
+        subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'address',
+                         addr])
+        subprocess.call(['ip', 'link', 'set', 'dev', dev[0].ifname, 'up'])
+        time.sleep(0.1)
+        os.kill(pid, signal.SIGCONT)
+
+    eap_connect(dev[0], hapd, "PSK", "psk.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+
+    addr2 = dev[0].get_status_field("address")
+    if addr != addr2:
+        raise Exception("Failed to restore MAC address")

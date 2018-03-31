@@ -119,8 +119,8 @@ class ClientState():
 			if self.vuln_4way != ClientState.VULNERABLE:
 				iv = dot11_get_iv(p)
 				seq = dot11_get_seqnum(p)
-				log(INFO, ("%s: IV reuse detected (IV=%d, seq=%d). " +
-					"Client reinstalls the pairwise key in the 4-way handshake (this is bad)") % (self.mac, iv, seq), color="green")
+				log(WARNING, ("%s: IV reuse detected (IV=%d, seq=%d). " +
+					"Client reinstalls the pairwise key in the 4-way handshake (this is bad)") % (self.mac, iv, seq))
 			self.vuln_4way = ClientState.VULNERABLE
 
 		# If it's a higher IV than all previous ones, try to check if the client seems patched
@@ -153,9 +153,9 @@ class ClientState():
 		if self.vuln_4way != ClientState.VULNERABLE:
 			iv = dot11_get_iv(p)
 			seq = dot11_get_seqnum(p)
-			log(INFO, ("%s: usage of all-zero key detected (IV=%d, seq=%d). " +
-				"Client (re)installs an all-zero key in the 4-way handshake (this is very bad).") % (self.mac, iv, seq), color="green")
-			log(WARNING, "%s: !!! Other tests are unreliable due to all-zero key usage, please fix this vulnerability first !!!" % self.mac)
+			log(WARNING, ("%s: usage of all-zero key detected (IV=%d, seq=%d). " +
+				"Client (re)installs an all-zero key in the 4-way handshake (this is very bad).") % (self.mac, iv, seq))
+			log(WARNING, "%s: !!! Other tests are unreliable due to all-zero key usage, please fix this vulnerability first !!!" % self.mac, color="red")
 		self.vuln_4way = ClientState.VULNERABLE
 
 
@@ -174,13 +174,13 @@ class ClientState():
 		if self.options.variant in [TestOptions.Fourway, TestOptions.Grouphs]:
 			hstype = "group key" if self.options.variant == TestOptions.Grouphs else "4-way"
 			if self.options.gtkinit:
-				log(INFO, "%s: Client always installs the group key in the %s handshake with a zero replay counter (this is bad)." % (self.mac, hstype), color="green")
+				log(WARNING, "%s: Client always installs the group key in the %s handshake with a zero replay counter (this is bad)." % (self.mac, hstype))
 			else:
-				log(INFO, "%s: Client reinstalls the group key in the %s handshake (this is bad)." % (self.mac, hstype), color="green")
-			log(INFO, "                   Or client accepts replayed broadcast frames (see --replay-broadcast).", color="green")
+				log(WARNING, "%s: Client reinstalls the group key in the %s handshake (this is bad)." % (self.mac, hstype))
+			log(WARNING, "                   Or client accepts replayed broadcast frames (see --replay-broadcast).")
 		if self.options.variant == TestOptions.ReplayBroadcast:
-			log(INFO, "%s: Client accepts replayed broadcast frames (this is bad)." % self.mac, color="green")
-			log(INFO, "                   Fix this before testing for group key (re)installations!", color="green")
+			log(WARNING, "%s: Client accepts replayed broadcast frames (this is bad)." % self.mac)
+			log(WARNING, "                   Fix this before testing for group key (re)installations!")
 
 	def broadcast_process_reply(self, p):
 		"""Handle replies to the replayed ARP broadcast request (which reuses an IV)"""

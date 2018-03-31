@@ -1143,11 +1143,15 @@ continue_processing:
 		    sm->wpa_ptk_state != WPA_PTK_PTKCALCNEGOTIATING &&
 		    (!sm->update_snonce ||
 		     sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING)) {
+#ifdef KRACK_TEST_CLIENT
+			poc_log(sm->addr, "received a new message 2\n");
+#else
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 					 "received EAPOL-Key msg 2/4 in "
 					 "invalid state (%d) - dropped - MIC %d",
 					 sm->wpa_ptk_state,
 					 wpa_verify_key_mic(sm->wpa_key_mgmt, sm->pmk_len, &sm->PTK, data, data_len));
+#endif
 			return;
 		}
 		random_add_randomness(key->key_nonce, WPA_NONCE_LEN);

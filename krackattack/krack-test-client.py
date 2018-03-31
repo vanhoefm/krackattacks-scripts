@@ -29,7 +29,13 @@ HANDSHAKE_TRANSMIT_INTERVAL = 2
 
 #### Utility Commands ####
 
+def hostapd_clear_messages(hostapd_ctrl):
+	# Clear old replies and messages from the hostapd control interface
+	while hostapd_ctrl.pending():
+		hostapd_ctrl.recv()
+
 def hostapd_command(hostapd_ctrl, cmd):
+	hostapd_clear_messages(hostapd_ctrl)
 	rval = hostapd_ctrl.request(cmd)
 	if "UNKNOWN COMMAND" in rval:
 		log(ERROR, "Hostapd did not recognize the command %s. Did you (re)compile hostapd?" % cmd.split()[0])
@@ -80,9 +86,6 @@ class ClientState():
 	# TODO: Put in libwifi?
 	def get_encryption_key(self, hostapd_ctrl):
 		if self.TK is None:
-			# Clear old replies and messages from the hostapd control interface
-			while hostapd_ctrl.pending():
-				hostapd_ctrl.recv()
 			# Contact our modified Hostapd instance to request the pairwise key
 			response = hostapd_command(hostapd_ctrl, "GET_TK " + self.mac)
 			if not "FAIL" in response:

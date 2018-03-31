@@ -72,9 +72,9 @@ class ClientState():
 	def broadcast_reset(self):
 		self.broadcast_state = ClientState.IDLE
 		self.broadcast_prev_canary_time = 0
-		self.broadcast_num_canaries = 0
-		self.broadcast_requests_sent = 0
-		self.broadcast_patched_intervals = -1 # -1 because the first broadcast ARP requests are still valid
+		self.broadcast_num_canaries_received = -1 # -1 because the first broadcast ARP requests are still valid
+		self.broadcast_requests_sent = -1 # -1 because the first broadcast ARP requests are still valid
+		self.broadcast_patched_intervals = 0
 
 	# TODO: Put in libwifi?
 	def get_encryption_key(self, hostapd_ctrl):
@@ -189,12 +189,12 @@ class ClientState():
 		if not self.broadcast_state in [ClientState.STARTED, ClientState.GOT_CANARY]: return
 		if self.broadcast_prev_canary_time + 1 > p.time: return
 
-		self.broadcast_num_canaries += 1
-		log(DEBUG, "%s: received %d replies to the replayed broadcast ARP requests" % (self.mac, self.broadcast_num_canaries))
+		self.broadcast_num_canaries_received += 1
+		log(DEBUG, "%s: received %d replies to the replayed broadcast ARP requests" % (self.mac, self.broadcast_num_canaries_received))
 
 		# We wait for several replies before marking the client as vulnerable, because
 		# the first few broadcast ARP requests still use a valid (not yet used) IV.
-		if self.broadcast_num_canaries >= 5:
+		if self.broadcast_num_canaries_received >= 5:
 			assert self.vuln_bcast != ClientState.VULNERABLE
 			self.vuln_bcast = ClientState.VULNERABLE
 			self.broadcast_state = ClientState.FINISHED

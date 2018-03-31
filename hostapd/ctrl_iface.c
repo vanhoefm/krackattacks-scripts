@@ -2747,6 +2747,14 @@ static int hostapd_get_tk(struct hostapd_data *hapd, const char *txtaddr, char *
 
 	return res;
 }
+
+static int hostapd_renew_gtk(struct hostapd_data *hapd)
+{
+	wpa_gtk_rekey(hapd->wpa_auth);
+	poc_log(NULL, "Renewed the group key\n");
+
+	return 0;
+}
 #endif
 
 
@@ -3127,6 +3135,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 #ifdef KRACK_TEST_CLIENT
 	} else if (os_strncmp(buf, "GET_TK ", 7) == 0) {
 		reply_len = hostapd_get_tk(hapd, buf + 7, reply, reply_size);
+	} else if (os_strcmp(buf, "RENEW_GTK") == 0) {
+		if (hostapd_renew_gtk(hapd))
+			reply_len = -1;
 #endif
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		eloop_terminate();

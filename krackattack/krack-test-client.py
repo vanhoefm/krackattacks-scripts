@@ -449,7 +449,13 @@ class KRAckAttackClient():
 
 			# Periodically send the replayed broadcast ARP requests to test for group key reinstallations
 			if time.time() > self.next_arp:
-				hostapd_command(self.hostapd_ctrl, "RESET_PN FF:FF:FF:FF:FF:FF")
+				# When testing if the replay counter of the group key is properly installed, always install
+				# a new group key. Otherwise KRACK patches might interfere with this test.
+				# Otherwise just reset the replay counter of the current group key.
+				if self.options.variant in [TestOptions.Fourway, TestOptions.Groupkey] and self.options.gtkinit:
+					hostapd_command(self.hostapd_ctrl, "RENEW_GTK")
+				else:
+					hostapd_command(self.hostapd_ctrl, "RESET_PN FF:FF:FF:FF:FF:FF")
 
 				self.next_arp = time.time() + HANDSHAKE_TRANSMIT_INTERVAL
 				for client in self.clients.values():

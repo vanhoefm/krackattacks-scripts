@@ -14,10 +14,16 @@ from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select, os.path
 from wpaspy import Ctrl
 
+# TODOs:
+# - Always mention 4-way handshake attack test (normal, tptk, tptk-rand)
+# - Stop testing a client even when we think it's patched?
+# - The --gtkinit with the 4-way handshake is very sensitive to packet loss
+
 # Futute work:
 # - If the client installs an all-zero key, we cannot reliably test the group key handshake
 # - Automatically execute all relevant tests in order
 # - Force client to request a new IP address when connecting
+# - More reliable group key reinstall test: install very high RSC, then install a zero one
 
 # After how many seconds a new message 3, or new group key message 1, is sent.
 HANDSHAKE_TRANSMIT_INTERVAL = 2
@@ -459,7 +465,7 @@ class KRAckAttackClient():
 					if self.options.variant == TestOptions.Fourway and self.options.gtkinit and client.vuln_bcast != ClientState.VULNERABLE:
 						# Execute a new handshake to test stations that don't accept a retransmitted message 3
 						hostapd_command(self.hostapd_ctrl, "RENEW_PTK " + client.mac)
-						# TODO: wait untill 4-way handshake completed?
+						# TODO: wait untill 4-way handshake completed? And detect failures (it's sensitive to frame losses)?
 					elif self.options.variant == TestOptions.Fourway and not self.options.gtkinit and client.vuln_4way != ClientState.VULNERABLE:
 						# First inject a message 1 if requested using the TPTK option
 						if self.options.tptk == TestOptions.TptkReplay:

@@ -5892,6 +5892,11 @@ def test_ap_wpa2_eap_sim_db(dev, apdev, params):
                         eap="SIM", identity="1232010000000000",
                         password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
                         scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["EAP-ERROR-CODE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP method specific error code not reported")
+    if int(ev.split()[1]) != 16384:
+        raise Exception("Unexpected EAP method specific error code: " + ev)
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("EAP-Failure not reported")

@@ -13,5 +13,6 @@
 #define KRACK_TEST_CLIENT
 
 void poc_log(const u8 *clientmac, const char *format, ...);
+void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx);
 
 #endif // ATTACKS_H_

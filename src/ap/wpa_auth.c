@@ -310,8 +310,11 @@ static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 	}
 }
 
-
+#ifdef KRACK_TEST_CLIENT
+void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
+#else
 static void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
+#endif
 {
 	struct wpa_authenticator *wpa_auth = eloop_ctx;
 	struct wpa_state_machine *sm = timeout_ctx;
@@ -3139,9 +3142,13 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 		sm->PInitAKeys = TRUE;
 	else
 		sm->has_GTK = TRUE;
+#ifdef KRACK_TEST_CLIENT
+	poc_log(sm->addr, "4-way handshake completed (%s)\n", sm->wpa == WPA_VERSION_WPA ? "WPA" : "RSN");
+#else
 	wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_INFO,
 			 "pairwise key handshake completed (%s)",
 			 sm->wpa == WPA_VERSION_WPA ? "WPA" : "RSN");
+#endif
 
 #ifdef CONFIG_IEEE80211R_AP
 	wpa_ft_push_pmk_r1(sm->wpa_auth, sm->addr);

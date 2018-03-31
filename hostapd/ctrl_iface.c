@@ -2755,6 +2755,21 @@ static int hostapd_renew_gtk(struct hostapd_data *hapd)
 
 	return 0;
 }
+
+static int hostapd_renew_ptk(struct hostapd_data *hapd, const char *txtaddr)
+{
+	struct sta_info *sta;
+	u8 addr[ETH_ALEN];
+
+	if (hwaddr_aton(txtaddr, addr)) return -1;
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !sta->wpa_sm) return -1;
+
+	poc_log(sta->addr, "Executing a new four-way handshake\n");
+	wpa_rekey_ptk(hapd->wpa_auth, sta->wpa_sm);
+
+	return 0;
+}
 #endif
 
 
@@ -3137,6 +3152,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = hostapd_get_tk(hapd, buf + 7, reply, reply_size);
 	} else if (os_strcmp(buf, "RENEW_GTK") == 0) {
 		if (hostapd_renew_gtk(hapd))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "RENEW_PTK ", 10) == 0) {
+		if (hostapd_renew_ptk(hapd, buf + 10))
 			reply_len = -1;
 #endif
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {

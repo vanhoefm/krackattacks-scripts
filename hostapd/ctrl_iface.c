@@ -2167,6 +2167,7 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 	struct sta_info *sta;
 	u8 addr[ETH_ALEN];
 	int plain = os_strstr(cmd, "plaintext") != NULL;
+	int maxrsc = os_strstr(cmd, "maxrsc") != NULL;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2186,12 +2187,12 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 	}
 
 #ifdef KRACK_TEST_CLIENT
-	poc_log(sta->addr, "sending a new 4-way message 3\n");
+	poc_log(sta->addr, "sending a new 4-way message 3 where the GTK has a %s RSC\n", maxrsc ? "max" : "zero");
 #else
 	wpa_printf(MSG_INFO, "TESTING: Send M3 to " MACSTR, MAC2STR(sta->addr));
 #endif
 	return wpa_auth_resend_m3(sta->wpa_sm,
-				  plain ? restore_tk : NULL, hapd, sta);
+				  plain ? restore_tk : NULL, hapd, sta, maxrsc);
 }
 
 
@@ -2201,6 +2202,7 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 	struct sta_info *sta;
 	u8 addr[ETH_ALEN];
 	int plain = os_strstr(cmd, "plaintext") != NULL;
+	int maxrsc = os_strstr(cmd, "maxrsc") != NULL;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2220,14 +2222,14 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 	}
 
 #ifdef KRACK_TEST_CLIENT
-	poc_log(sta->addr, "Send group M1 for the same GTK and zero RSC\n");
+	poc_log(sta->addr, "Send group message 1 for the same GTK and %s RSC\n", maxrsc ? "max" : "zero");
 #else
 	wpa_printf(MSG_INFO,
-		   "TESTING: Send group M1 for the same GTK and zero RSC to "
-		   MACSTR, MAC2STR(sta->addr));
+		   "TESTING: Send group M1 for the same GTK and %s RSC to "
+		   MACSTR, maxrsc ? "max" : "zero", MAC2STR(sta->addr));
 #endif
 	return wpa_auth_resend_group_m1(sta->wpa_sm,
-					plain ? restore_tk : NULL, hapd, sta);
+					plain ? restore_tk : NULL, hapd, sta, maxrsc);
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */

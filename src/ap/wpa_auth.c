@@ -185,10 +185,10 @@ void poc_log(const u8 *clientmac, const char *format, ...)
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
 	if (clientmac == NULL) {
-		printf("[%02d:%02d:%02d] Hostapd: ", timeinfo->tm_hour,
+		printf("[%02d:%02d:%02d] ", timeinfo->tm_hour,
 			timeinfo->tm_min, timeinfo->tm_sec);
 	} else {
-		printf("[%02d:%02d:%02d] " MACSTR ": Hostapd: ", timeinfo->tm_hour,
+		printf("[%02d:%02d:%02d] " MACSTR ": ", timeinfo->tm_hour,
 			timeinfo->tm_min, timeinfo->tm_sec, MAC2STR(clientmac));
 	}
 
@@ -1187,10 +1187,14 @@ continue_processing:
 	case GROUP_2:
 		if (sm->wpa_ptk_group_state != WPA_PTK_GROUP_REKEYNEGOTIATING
 		    || !sm->PTK_valid) {
+#ifdef KRACK_TEST_CLIENT
+			poc_log(sm->addr, "received a new group message 2\n");
+#else
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 					 "received EAPOL-Key msg 2/2 in "
 					 "invalid state (%d) - dropped",
 					 sm->wpa_ptk_group_state);
+#endif
 			return;
 		}
 		break;
@@ -4615,7 +4619,7 @@ int wpa_auth_resend_m1(struct wpa_state_machine *sm, int change_anonce,
 
 int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 		       void (*cb)(void *ctx1, void *ctx2),
-		       void *ctx1, void *ctx2)
+		       void *ctx1, void *ctx2, int maxrsc)
 {
 	u8 rsc[WPA_KEY_RSC_LEN], *_rsc, *gtk, *kde, *pos;
 #ifdef CONFIG_IEEE80211W
@@ -4630,8 +4634,8 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 	   GTK[GN], IGTK, [FTIE], [TIE * 2])
 	 */
 
-	/* Use 0 RSC */
-	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
+	/* Use 0 RSC or maximum RSC (avoid special edge case of 0xFF though) */
+	os_memset(rsc, maxrsc ? 0x88 : 0, WPA_KEY_RSC_LEN);
 	/* If FT is used, wpa_auth->wpa_ie includes both RSNIE and MDIE */
 	wpa_ie = sm->wpa_auth->wpa_ie;
 	wpa_ie_len = sm->wpa_auth->wpa_ie_len;
@@ -4792,7 +4796,7 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 
 int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 			     void (*cb)(void *ctx1, void *ctx2),
-			     void *ctx1, void *ctx2)
+			     void *ctx1, void *ctx2, int maxrsc)
 {
 	u8 rsc[WPA_KEY_RSC_LEN];
 	struct wpa_group *gsm = sm->group;
@@ -4805,8 +4809,9 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 	u8 *gtk;
 
 	/* Send EAPOL(1, 1, 1, !Pair, G, RSC, GNonce, MIC(PTK), GTK[GN]) */
-	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
-	/* Use 0 RSC */
+
+	/* Use 0 RSC or maximum RSC (avoid special edge case of 0xFF though) */
+	os_memset(rsc, maxrsc ? 0x88 : 0, WPA_KEY_RSC_LEN);
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/2 msg of Group Key Handshake (TESTING)");
 

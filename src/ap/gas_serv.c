@@ -288,7 +288,7 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 #endif /* CONFIG_FILS */
 	if (get_anqp_elem(hapd, ANQP_CAG))
 		wpabuf_put_le16(buf, ANQP_CAG);
-	if (get_anqp_elem(hapd, ANQP_VENUE_URL))
+	if (hapd->conf->venue_url || get_anqp_elem(hapd, ANQP_VENUE_URL))
 		wpabuf_put_le16(buf, ANQP_VENUE_URL);
 	if (get_anqp_elem(hapd, ANQP_ADVICE_OF_CHARGE))
 		wpabuf_put_le16(buf, ANQP_ADVICE_OF_CHARGE);
@@ -322,6 +322,29 @@ static void anqp_add_venue_name(struct hostapd_data *hapd, struct wpabuf *buf)
 			wpabuf_put_u8(buf, 3 + vn->name_len);
 			wpabuf_put_data(buf, vn->lang, 3);
 			wpabuf_put_data(buf, vn->name, vn->name_len);
+		}
+		gas_anqp_set_element_len(buf, len);
+	}
+}
+
+
+static void anqp_add_venue_url(struct hostapd_data *hapd, struct wpabuf *buf)
+{
+	if (anqp_add_override(hapd, buf, ANQP_VENUE_URL))
+		return;
+
+	if (hapd->conf->venue_url) {
+		u8 *len;
+		unsigned int i;
+
+		len = gas_anqp_add_element(buf, ANQP_VENUE_URL);
+		for (i = 0; i < hapd->conf->venue_url_count; i++) {
+			struct hostapd_venue_url *url;
+
+			url = &hapd->conf->venue_url[i];
+			wpabuf_put_u8(buf, 1 + url->url_len);
+			wpabuf_put_u8(buf, url->venue_number);
+			wpabuf_put_data(buf, url->url, url->url_len);
 		}
 		gas_anqp_set_element_len(buf, len);
 	}
@@ -946,6 +969,10 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 			continue;
 		}
 #endif /* CONFIG_FILS */
+		if (extra_req[i] == ANQP_VENUE_URL) {
+			anqp_add_venue_url(hapd, buf);
+			continue;
+		}
 		anqp_add_elem(hapd, buf, extra_req[i]);
 	}
 
@@ -1082,7 +1109,10 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 				   "ANQP: FILS Realm Information (local)");
 		} else
 #endif /* CONFIG_FILS */
-		if (!get_anqp_elem(hapd, info_id)) {
+		if (info_id == ANQP_VENUE_URL && hapd->conf->venue_url) {
+			wpa_printf(MSG_DEBUG,
+				   "ANQP: Venue URL (local)");
+		} else if (!get_anqp_elem(hapd, info_id)) {
 			wpa_printf(MSG_DEBUG, "ANQP: Unsupported Info Id %u",
 				   info_id);
 			break;

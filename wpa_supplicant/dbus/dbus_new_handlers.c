@@ -980,7 +980,7 @@ dbus_bool_t wpas_dbus_getter_global_capabilities(
 	const struct wpa_dbus_property_desc *property_desc,
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {
-	const char *capabilities[5] = { NULL, NULL, NULL, NULL, NULL };
+	const char *capabilities[6] = { NULL, NULL, NULL, NULL, NULL, NULL };
 	size_t num_items = 0;
 
 #ifdef CONFIG_AP
@@ -998,6 +998,9 @@ dbus_bool_t wpas_dbus_getter_global_capabilities(
 #ifdef CONFIG_IEEE80211W
 	capabilities[num_items++] = "pmf";
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_MESH
+	capabilities[num_items++] = "mesh";
+#endif /* CONFIG_MESH */
 
 	return wpas_dbus_simple_array_property_getter(iter,
 						      DBUS_TYPE_STRING,

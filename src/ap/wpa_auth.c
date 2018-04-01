@@ -4737,7 +4737,8 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 	pos = ieee80211w_kde_add(sm, pos);
 	if (pos - opos >= WPA_IGTK_KDE_PREFIX_LEN) {
 		poc_log(sm->addr, "Msg 3/4: including IGTK with %s RSC\n", maxrsc ? "max" : "zero");
-		opos += 2 + RSN_SELECTOR_LEN + 2; /* skip KDE header and keyid */
+		/* skip KDE header and keyid */
+		opos += 2 + RSN_SELECTOR_LEN + 2;
 		os_memset(opos, maxrsc ? 0x88 : 0, 6); /* clear PN */
 	}
 #endif /* CONFIG_IEEE80211W */
@@ -4845,8 +4846,13 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 		pos = ieee80211w_kde_add(sm, pos);
 		if (pos - opos >= WPA_IGTK_KDE_PREFIX_LEN) {
 			poc_log(sm->addr, "Group message 1: including IGTK with %s RSC\n", maxrsc ? "max" : "zero");
-			opos += 2 + RSN_SELECTOR_LEN + 2; /* skip KDE header and keyid */
+			/* skip KDE header and keyid */
+			opos += 2 + RSN_SELECTOR_LEN + 2;
 			os_memset(opos, maxrsc ? 0x88 : 0, 6); /* clear PN */
+		if (pos - opos >=
+		    2 + RSN_SELECTOR_LEN + WPA_IGTK_KDE_PREFIX_LEN) {
+
+			os_memset(opos, 0, 6); /* clear PN */
 		}
 #endif /* CONFIG_IEEE80211W */
 		kde_len = pos - kde;

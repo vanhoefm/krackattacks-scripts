@@ -47,6 +47,7 @@ struct eap_sim_data {
 	} state;
 	int result_ind, use_result_ind;
 	int use_pseudonym;
+	int error_code;
 };
 
 
@@ -93,6 +94,9 @@ static void * eap_sim_init(struct eap_sm *sm)
 		os_free(data);
 		return NULL;
 	}
+
+	/* Zero is a valid error code, so we need to initialize */
+	data->error_code = NO_EAP_METHOD_ERROR;
 
 	data->min_num_chal = 2;
 	if (config && config->phase1) {
@@ -920,6 +924,7 @@ static struct wpabuf * eap_sim_process_notification(
 
 	eap_sim_report_notification(sm->msg_ctx, attr->notification, 0);
 	if (attr->notification >= 0 && attr->notification < 32768) {
+		data->error_code = attr->notification;
 		eap_sim_state(data, FAILURE);
 	} else if (attr->notification == EAP_SIM_SUCCESS &&
 		   data->state == RESULT_SUCCESS)
@@ -1244,6 +1249,23 @@ static u8 * eap_sim_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static int eap_sim_get_error_code(void *priv)
+{
+	struct eap_sim_data *data = priv;
+	int current_data_error;
+
+	if (!data)
+		return NO_EAP_METHOD_ERROR;
+
+	current_data_error = data->error_code;
+
+	/* Now reset for next transaction */
+	data->error_code = NO_EAP_METHOD_ERROR;
+
+	return current_data_error;
+}
+
+
 int eap_peer_sim_register(void)
 {
 	struct eap_method *eap;
@@ -1264,6 +1286,7 @@ int eap_peer_sim_register(void)
 	eap->init_for_reauth = eap_sim_init_for_reauth;
 	eap->get_identity = eap_sim_get_identity;
 	eap->get_emsk = eap_sim_get_emsk;
+	eap->get_error_code = eap_sim_get_error_code;
 
 	return eap_peer_method_register(eap);
 }

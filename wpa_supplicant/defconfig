@@ -73,6 +73,12 @@ CONFIG_DRIVER_NL80211=y
 # Driver interface for wired Ethernet drivers
 CONFIG_DRIVER_WIRED=y
 
+# Driver interface for MACsec capable Qualcomm Atheros drivers
+#CONFIG_DRIVER_MACSEC_QCA=y
+
+# Driver interface for Linux MACsec drivers
+#CONFIG_DRIVER_MACSEC_LINUX=y
+
 # Driver interface for the Broadcom RoboSwitch family
 #CONFIG_DRIVER_ROBOSWITCH=y
 
@@ -83,8 +89,8 @@ CONFIG_DRIVER_WIRED=y
 #LIBS += -lsocket -ldlpi -lnsl
 #LIBS_c += -lsocket
 
-# Enable IEEE 802.1X Supplicant (automatically included if any EAP method is
-# included)
+# Enable IEEE 802.1X Supplicant (automatically included if any EAP method or
+# MACsec is included)
 CONFIG_IEEE8021X_EAPOL=y
 
 # EAP-MD5
@@ -165,6 +171,9 @@ CONFIG_EAP_LEAP=y
 
 # EAP-EKE
 #CONFIG_EAP_EKE=y
+
+# MACsec
+#CONFIG_MACSEC=y
 
 # PKCS#12 (PFX) support (used to read private key and certificate file from
 # a file that usually has extension .p12 or .pfx)

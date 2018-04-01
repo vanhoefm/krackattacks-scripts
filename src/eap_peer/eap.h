@@ -246,6 +246,13 @@ struct eapol_callbacks {
 	void (*notify_status)(void *ctx, const char *status,
 			      const char *parameter);
 
+	/**
+	 * notify_eap_error - Report EAP method error code
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @error_code: Error code from the used EAP method
+	 */
+	void (*notify_eap_error)(void *ctx, int error_code);
+
 #ifdef CONFIG_EAP_PROXY
 	/**
 	 * eap_proxy_cb - Callback signifying any updates from eap_proxy

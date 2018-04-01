@@ -4374,6 +4374,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			data->signal_change.current_noise,
 			data->signal_change.current_txrate);
 		break;
+	case EVENT_INTERFACE_MAC_CHANGED:
+		wpa_supplicant_update_mac_addr(wpa_s);
+		break;
 	case EVENT_INTERFACE_ENABLED:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Interface was enabled");
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {

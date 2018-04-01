@@ -1038,6 +1038,14 @@ static void wpa_supplicant_status_cb(void *ctx, const char *status,
 }
 
 
+static void wpa_supplicant_eap_error_cb(void *ctx, int error_code)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpas_notify_eap_error(wpa_s, error_code);
+}
+
+
 static void wpa_supplicant_set_anon_id(void *ctx, const u8 *id, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -1115,6 +1123,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->cert_cb = wpa_supplicant_cert_cb;
 	ctx->cert_in_cb = wpa_s->conf->cert_in_cb;
 	ctx->status_cb = wpa_supplicant_status_cb;
+	ctx->eap_error_cb = wpa_supplicant_eap_error_cb;
 	ctx->set_anon_id = wpa_supplicant_set_anon_id;
 	ctx->cb_ctx = wpa_s;
 	wpa_s->eapol = eapol_sm_init(ctx);

@@ -411,6 +411,10 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
 	if (ext_feature_isset(ext_features, len,
 			      NL80211_EXT_FEATURE_MFP_OPTIONAL))
 		capa->flags |= WPA_DRIVER_FLAGS_MFP_OPTIONAL;
+
+	if (ext_feature_isset(ext_features, len,
+			      NL80211_EXT_FEATURE_DFS_OFFLOAD))
+		capa->flags |= WPA_DRIVER_FLAGS_DFS_OFFLOAD;
 }
 
 

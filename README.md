@@ -19,71 +19,29 @@ Finally compile our modified hostapd instance:
 
 Remember to disable Wi-Fi in your network manager before using our scripts. After disabling Wi-Fi, execute `sudo rfkill unblock wifi` so our scripts can still use Wi-Fi though.
 
-# Testing Clients: detecting a vulnerable 4-way and group key handshake
+# Testing Clients
 
-To test wheter a client is vulnerable to Key Reinstallation Attack against the 4-way handshake or group key handshake, take the following steps:
+First modify `hostapd/hostapd.conf` and **edit the line `interface=` to specify the Wi-Fi interface** that will be used to execute the tests. Note that in all tests, once the script is running, the device being tested must connect to the **SSID testnetwork with password abcdefgh**. You can change settings of the AP by modifying `hostapd/hostapd.conf`. In all tests the **client must use DHCP to get an IP** after connecting to the Wi-Fi network. Put differently, some tests only start after the client as requested an IP!
 
-1. Execute `krackattack/krack-test-client.py`. Accepted parameters are:
+You should now run the following tests:
 
-		--group      Test the group key handshake instead of the 4-way handshake
-		--debug      Show more debug messages
-		--tptk       See step 3 (forge Msg1/4 with replayed ANonce before Msg3/4)
-		--tptk-rand  See step 3 (forge Msg1/4 with random ANonce before Msg3/4)
+1. **`./krack-test-client.py --replay-broadcast`**. This tests whether the client acceps replayed broadcast frames. If the client accepts replayed broadcast frames, this must be patched first. If you do not patch the client, our script will not be able to determine if the group key is being reinstalled (the script will always say the group key is being reinstalled).
+2. **`./krack-test-client.py --group --gtkinit`**. This tests whether the client installs the group key in the group key handshake with the given receive sequence counter (RSC).
+3. **`./krack-test-client.py --group`**. This tests whether the client reinstalls the group key in the group key handshake. The script tests for reinstallations of the group key by sending broadcast ARP requests to the client using an already used (replayed) packet number (= IV). If the client always accepts replayed broadcast frames (see `--replay-broadcast`), this test might incorrectly conclude the group key is being reinstalled.
+4. **`./krack-test-client.py`**. This tests for key reinstallations in the 4-way handshake by repeatedly sending encrypted message 3's to the client. The script monitors traffic sent by the client to see if the pairwise key is being reinstalled. Note that this effectively performs two tests: whether the pairwise key is reinstalled, and whether the group key is reinstalled. Make sure the client requests an IP using DHCP for the group key reinstallation test to start. To assure the client is sending enough unicast frames, you can optionally ping the AP: `ping 192.168.100.254`.
+5. **`./krack-test-client.py --tptk`**. Identical to test 5, except that a forged message 1 is injected before sending the encrypted message 3. This variant of the test is important because some clients (e.g. wpa_supplicant v2.6) are only vulnerable to pairwise key reinstallations in the 4-way handshake when a forged message 1 is injected before sending a retransmitted message 3.
+6. **`./krack-test-client.py --gtkinit`**. This tests whether the client installs the group key in the 4-way handshake with the given receive sequence counter (RSC). The script will continously execute new 4-way handshakes to test this. Unfortunately, this test can be rather unreliable, because any missed handshake messages negatively the test. You should only execute this test in environments with little background noise.
 
-	All other supplied arguments are passed on to hostapd. The main commands you will execute are:
-
-		krack-test-client.py
-		krack-test-client.py --tptk
-		krack-test-client.py --tptk-rand
-		krack-test-client.py --group
-		
-	These commands are further explained below. In all tests, once the script is running, the device being tested must connect to the **SSID testnetwork with password abcdefgh**. You can change settings of the AP by modifying `hostapd.conf`. In particular you will have to **edit the line `interface=` to specify the correct Wi-Fi interface to use for the AP**. The script assumes the client will use DHCP to get an IP after connecting to the Wi-Fi network.
-
-2. To test key reinstallations in the 4-way handshake, the script will keep sending encrypted message 3's to the client. To start the script execute:
-
-	      krack-test-client.py
-
-	Connect to the AP and the following tests will be performed automatically:
-
-	1. The script monitors traffic sent by the client to see if the pairwise key is being reinstalled. To assure the client is sending enough frames, you can optionally ping the AP: ping 192.168.100.254 . If the client is vulnerable, the script will show something like:
-
-			[19:02:37] 78:31:c1:c4:88:92: IV reuse detected (IV=1, seq=10). Client is vulnerable to pairwise key reinstallations in the 4-way handshake!
-
-		If the client is patched, the script will show (this can take a minute):
-	
-			[18:58:11] 90:18:7c:6e:6b:20: client DOESN'T seem vulnerable to pairwise key reinstallation in the 4-way handshake.
-
-	2. Once the client has requested an IP using DHCP, the script tests for reinstallations of the group key by sending broadcast ARP requests to the client using an already used (replayed) packet number (= IV). The client *must* request an IP using DHCP for this test to start. If the client is vulnerable, the script will show something like:
-
-			[19:03:08] 78:31:c1:c4:88:92: Received 5 unique replies to replayed broadcast ARP requests. Client is vulnerable to group
-			[19:03:08]                    key reinstallations in the 4-way handshake (or client accepts replayed broadcast frames)!
-
-		If the client is patched, the script will show (this can take a minute):
-	
-			[19:03:08] 78:31:c1:c4:88:92: client DOESN'T seem vulnerable to group key reinstallation in the 4-way handshake handshake.
-
-     Note that this scripts *indirectly* tests for reinstallations of the group key, by testing if replayed broadcast frames are accepted by the client. This may mean that the device will be reported as vulnerable if it accepts replayed broadcast frames, even though it's not reinstalling the group key
-
-3. Some supplicants (e.g. wpa_supplicant v2.6) are only vulnerable to pairwise key reinstallations in the 4-way handshake when a forged message 1 is injected before sending a retransmitted message 3. To test for this variant of the attack, you can execute:
-
-		krack-test-client.py --tptk         # Inject message 1 with a replayed ANonce
-		krack-test-client.py --tptk-rand    # Inject message 1 with a random ANonce
-
-	Now follow the same steps as in step 4 to see if a supplicant is vulnerable. Try both these attack variants after running the normal tests of step 4.
-
-4. To test key reinstallations in the group key handshake, the script will keep performing new group key handshakes using an identical (static) group key. The client *must* request an IP using DHCP for this test to start. To start the script execute:
-
-		krack-test-client.py --group
-
-	Connect the the AP and all tests will be performed automatically. The working and output of the script is now similar as in step 2b.
-
-5. Some final recommendations:
-
-	* Perform these tests in a room with little interference. A high amount of packet loss will make this script unreliable!
-	* Manually inspect network traffic to confirm the output of the script:
-		- Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls by monitoring the IVs of frames sent by the client.
-		- Capture traffic on the client to see if the replayed broadcast ARP requests are accepted or not.
-	* If the client being tested can use multiple Wi-Fi radios/NICs, test using a few different ones.
+Some additional remarks:
+* The most important test is `./krack-test-client`, which tests for ordinary key reinstallations in the 4-way handshake.
+* Perform these tests in a room with little interference. A high amount of packet loss will make this script unreliable!
+* Manually inspect network traffic to confirm the output of the script:
+	- Use an extra Wi-Fi NIC in monitor mode to conform that our script (the AP) sends out frames using the proper packet numbers (IVs). In particular whether replayed broadcast frames indeed are sent using an already used packet number (IV).
+	- Use an extra Wi-Fi NIC in monitor mode to check pairwise key reinstalls by monitoring the IVs of frames sent by the client.
+	- Capture traffic on the client to see if the replayed broadcast ARP requests are accepted or not.
+* If the client being tested can use multiple Wi-Fi radios/NICs, test using a few different ones.
+* You can add the `--debug` parameter for more debugging output.
+* All unrecognized parameters are passed on to hostapd, so you can include something like `-dd -K` to make hostapd output all debug info.
 
 ## Correspondence to Wi-Fi Alliance tests
 

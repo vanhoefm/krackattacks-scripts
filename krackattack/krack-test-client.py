@@ -18,12 +18,14 @@ from wpaspy import Ctrl
 # - Always mention 4-way handshake attack test (normal, tptk, tptk-rand)
 # - Stop testing a client even when we think it's patched?
 # - The --gtkinit with the 4-way handshake is very sensitive to packet loss
+# - Add an option to test replays of unicast traffic
 
 # Futute work:
 # - If the client installs an all-zero key, we cannot reliably test the group key handshake
 # - Automatically execute all relevant tests in order
 # - Force client to request a new IP address when connecting
-# - More reliable group key reinstall test: install very high RSC, then install a zero one
+# - More reliable group key reinstall test: install very high RSC, then install a zero one.
+#   This avoids constantly having to execute a new 4-way handshake for example.
 
 # After how many seconds a new message 3, or new group key message 1, is sent.
 HANDSHAKE_TRANSMIT_INTERVAL = 2

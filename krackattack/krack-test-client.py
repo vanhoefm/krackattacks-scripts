@@ -383,6 +383,22 @@ class KRAckAttackClient():
 		log(INFO, "%s: sending broadcast ARP to %s from %s (sent %d ARPs this interval)" % (client.mac,
 			clientip, self.broadcast_sender_ip, client.broadcast_requests_sent))
 
+	def experimental_test_igtk_installation(self):
+		"""To test if the IGTK is installed using the given replay counter"""
+		# 1. Set ieee80211w=2 in hostapd.conf
+		# 2. Run this script using --gtkinit so a new group key is generated before calling this function
+
+		# 3. Install the new IGTK using a very high given replay counter
+		hostapd_command(self.hostapd_ctrl, "RESEND_GROUP_M1 %s maxrsc" % client.mac)
+		time.sleep(1)
+
+		# 4. Now kill the AP
+		quit(1)
+
+		# 5. Hostapd sends a broadcast deauth message. At least iOS will reply using its own
+		#    deauthentication respose if this frame is accepted. Sometimes hostapd doesn't
+		#    send a broadcast deauthentication. Is this when the client is sleeping?
+
 	def configure_interfaces(self):
 		log(STATUS, "Note: disable Wi-Fi in network manager & disable hardware encryption. Both may interfere with this script.")
 
@@ -464,6 +480,8 @@ class KRAckAttackClient():
 
 				self.next_arp = time.time() + HANDSHAKE_TRANSMIT_INTERVAL
 				for client in self.clients.values():
+					#self.experimental_test_igtk_installation()
+
 					# 1. Test the 4-way handshake
 					if self.options.variant == TestOptions.Fourway and self.options.gtkinit and client.vuln_bcast != ClientState.VULNERABLE:
 						# Execute a new handshake to test stations that don't accept a retransmitted message 3

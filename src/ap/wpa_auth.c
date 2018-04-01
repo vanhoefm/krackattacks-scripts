@@ -4849,6 +4849,7 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 			/* skip KDE header and keyid */
 			opos += 2 + RSN_SELECTOR_LEN + 2;
 			os_memset(opos, maxrsc ? 0x88 : 0, 6); /* clear PN */
+		}
 		if (pos - opos >=
 		    2 + RSN_SELECTOR_LEN + WPA_IGTK_KDE_PREFIX_LEN) {
 

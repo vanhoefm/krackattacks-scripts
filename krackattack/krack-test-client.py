@@ -41,6 +41,9 @@ def hostapd_command(hostapd_ctrl, cmd):
 	if "UNKNOWN COMMAND" in rval:
 		log(ERROR, "Hostapd did not recognize the command %s. Did you (re)compile hostapd?" % cmd.split()[0])
 		quit(1)
+	elif "FAIL" in rval:
+		log(ERROR, "Failed to execute command %s" % cmd)
+		quit(1)
 	return rval
 
 #### Main Testing Code ####

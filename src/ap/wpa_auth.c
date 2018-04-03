@@ -4646,7 +4646,13 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 	 */
 
 	/* Use 0 RSC or maximum RSC (avoid special edge case of 0xFF though) */
-	os_memset(rsc, maxrsc ? 0x88 : 0, WPA_KEY_RSC_LEN);
+	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
+	if (maxrsc) {
+		/* Use a high but realistic RSC - to avoid tests such as wpa_supplicant_rsc_relaxation */
+		rsc[0] = 0xFF;
+		rsc[1] = 0xFF;
+		rsc[2] = 0x02;
+	}
 	/* If FT is used, wpa_auth->wpa_ie includes both RSNIE and MDIE */
 	wpa_ie = sm->wpa_auth->wpa_ie;
 	wpa_ie_len = sm->wpa_auth->wpa_ie_len;
@@ -4739,7 +4745,13 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 		poc_log(sm->addr, "Msg 3/4: including IGTK with %s RSC\n", maxrsc ? "max" : "zero");
 		/* skip KDE header and keyid */
 		opos += 2 + RSN_SELECTOR_LEN + 2;
-		os_memset(opos, maxrsc ? 0x88 : 0, 6); /* clear PN */
+		os_memset(opos, 0, 6); /* clear PN */
+		if (maxrsc) {
+			/* Use a high but realistic RSC - to avoid tests such as wpa_supplicant_rsc_relaxation */
+			rsc[0] = 0xFF;
+			rsc[1] = 0xFF;
+			rsc[2] = 0x02;
+		}
 	}
 #endif /* CONFIG_IEEE80211W */
 
@@ -4824,7 +4836,13 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 	/* Send EAPOL(1, 1, 1, !Pair, G, RSC, GNonce, MIC(PTK), GTK[GN]) */
 
 	/* Use 0 RSC or maximum RSC (avoid special edge case of 0xFF though) */
-	os_memset(rsc, maxrsc ? 0x88 : 0, WPA_KEY_RSC_LEN);
+	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
+	if (maxrsc) {
+		/* Use a high but realistic RSC - to avoid tests such as wpa_supplicant_rsc_relaxation */
+		rsc[0] = 0xFF;
+		rsc[1] = 0xFF;
+		rsc[2] = 0x02;
+	}
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/2 msg of Group Key Handshake (TESTING)");
 
@@ -4848,7 +4866,13 @@ int wpa_auth_resend_group_m1(struct wpa_state_machine *sm,
 			poc_log(sm->addr, "Group message 1: including IGTK with %s RSC\n", maxrsc ? "max" : "zero");
 			/* skip KDE header and keyid */
 			opos += 2 + RSN_SELECTOR_LEN + 2;
-			os_memset(opos, maxrsc ? 0x88 : 0, 6); /* clear PN */
+			os_memset(opos, 0, 6); /* clear PN */
+			if (maxrsc) {
+				/* Use a high but realistic RSC - to avoid tests such as wpa_supplicant_rsc_relaxation */
+				rsc[0] = 0xFF;
+				rsc[1] = 0xFF;
+				rsc[2] = 0x02;
+			}
 		}
 		if (pos - opos >=
 		    2 + RSN_SELECTOR_LEN + WPA_IGTK_KDE_PREFIX_LEN) {

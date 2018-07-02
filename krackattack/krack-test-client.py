@@ -14,11 +14,23 @@ from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select, os.path
 from wpaspy import Ctrl
 
+# Concrete TODOs:
+# 0. Option to send plaintext retransmissions of message 3 (this is now easy to do)
+# 1. More reliable group key high RSC installation test in the 4-way HS (see below)
+# 2. Test for unicast replay protection
+# 3. Retransmit the handshake messages?
+# 4. --group --gtkinit is a bit unreliable. Perhaps due to race condition between
+#    install the group key and sending the broadcast ARP request?
+# 5. How are we sure the broadcast ARP indeed using a PN=1? We should monitor
+#    this interface and throw an error if there is other traffic!
+
 # TODOs:
 # - Always mention 4-way handshake attack test (normal, tptk, tptk-rand)
 # - Stop testing a client even when we think it's patched?
 # - The --gtkinit with the 4-way handshake is very sensitive to packet loss
 # - Add an option to test replays of unicast traffic
+# - Also send replayed broadcast using a PN of 2 to avoid edge cases where
+#   the client may always reject PNs of zero or 1.
 
 # Futute work:
 # - If the client installs an all-zero key, we cannot reliably test the group key handshake
@@ -379,7 +391,7 @@ class KRAckAttackClient():
 			hostapd_command(self.hostapd_ctrl, cmd)
 
 		# Send a replayed broadcast ARP request to the client
-		request = Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(op=1, hwsrc=self.apmac, psrc=self.broadcast_sender_ip, pdst=clientip)
+		request = Ether(src=self.apmac, dst="ff:ff:ff:ff:ff:ff")/ARP(op=1, hwsrc=self.apmac, psrc=self.broadcast_sender_ip, pdst=clientip)
 		self.sock_eth.send(request)
 		client.broadcast_requests_sent += 1
 		log(INFO, "%s: sending broadcast ARP to %s from %s (sent %d ARPs this interval)" % (client.mac,
@@ -497,7 +509,7 @@ class KRAckAttackClient():
 							hostapd_command(self.hostapd_ctrl, "RESEND_M1 " + client.mac + " change-anonce")
 
 						# Note that we rely on an encrypted message 4 as reply to detect pairwise key reinstallations reinstallations.
-						hostapd_command(self.hostapd_ctrl, "RESEND_M3 " + client.mac + ("maxrsc" if self.options.gtkinit else ""))
+						hostapd_command(self.hostapd_ctrl, "RESEND_M3 " + client.mac + (" maxrsc" if self.options.gtkinit else ""))
 
 					# 2. Test if broadcast ARP request are accepted by the client. Keep injecting even
 					#    to PATCHED clients (just to be sure they keep rejecting replayed frames).
@@ -507,6 +519,7 @@ class KRAckAttackClient():
 
 						# 2b. Send new broadcast ARP requests (and handshake messages if needed)
 						if client.vuln_bcast != ClientState.VULNERABLE and client.mac in self.dhcp.leases:
+							time.sleep(1)
 							self.broadcast_send_request(client)
 
 

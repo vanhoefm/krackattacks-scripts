@@ -63,11 +63,11 @@ Their tools supports several different tests, and these tests correspond to the 
 1. Create a wpa_supplicant configuration file that can be used to connect to the network. A basic example is:
 
 		ctrl_interface=/var/run/wpa_supplicant
-		network={{
+		network={
 		  ssid="testnet"
 		  key_mgmt=FT-PSK
 		  psk="password"
-		}}
+		}
 
 	Note the use of "FT-PSK". Save it as network.conf or similar. For more info see [wpa_supplicant.conf](https://w1.fi/cgit/hostap/plain/wpa_supplicant/wpa_supplicant.conf).
 

@@ -7,9 +7,9 @@ Remember that our scripts are not attack scripts! You will need the appropriate 
 Our scripts were tested on Kali Linux. To install the required dependencies on Kali, execute:
 
 	apt-get update
-	apt-get install libnl-3-dev libnl-genl-3-dev pkg-config libssl-dev net-tools git sysfsutils python-scapy python-pycryptodome
+	apt-get install libnl-3-dev libnl-genl-3-dev pkg-config libssl-dev net-tools git sysfsutils python-scapy python-pycryptodome virtualenv
 
-Then **disable hardware encryption** using the script `./krackattack/disable-hwcrypto.sh`. It's recommended to reboot after executing this script. After plugging in your Wi-Fi NIC, use `systool -vm ath9k_htc` or similar to confirm the nohwcript/swcrypto/hwcrypto parameter has been set. We tested our scripts with an Intel Dual Band Wireless-AC 7260 and a TP-Link TL-WN722N v1 on Kali Linux.
+Then **disable hardware encryption** using the script `./krackattack/disable-hwcrypto.sh`. It's recommended to reboot after executing this script. If you want to confirm this script work, execute `systool -vm ath9k_htc` or similar after plugging in your Wi-Fi NIC to confirm the nohwcript/swcrypto/hwcrypto parameter has been set. We tested our scripts with an Intel Dual Band Wireless-AC 7260 and a TP-Link TL-WN722N v1 on Kali Linux.
 
 Finally compile our modified hostapd instance:
 
@@ -19,11 +19,13 @@ Finally compile our modified hostapd instance:
 
 Remember to disable Wi-Fi in your network manager before using our scripts. After disabling Wi-Fi, execute `sudo rfkill unblock wifi` so our scripts can still use Wi-Fi.
 
+To assure you're using the correct version of scapy, you can create a virtualenv with the dependencies listed in `krackattack/requirements.txt`.
+
 # Testing Clients
 
 First modify `hostapd/hostapd.conf` and **edit the line `interface=` to specify the Wi-Fi interface** that will be used to execute the tests. Note that for all tests, once the script is running, you must let the device being tested connect to the **SSID testnetwork using the password abcdefgh**. You can change settings of the AP by modifying `hostapd/hostapd.conf`. In all tests the **client must use DHCP to get an IP** after connecting to the Wi-Fi network. This is because some tests only start after the client has requested an IP using DHCP!
 
-You should now run the following tests:
+You should now run the following tests located in the `krackattacks/` directory:
 
 1. **`./krack-test-client.py --replay-broadcast`**. This tests whether the client acceps replayed broadcast frames. If the client accepts replayed broadcast frames, this must be patched first. If you do not patch the client, our script will not be able to determine if the group key is being reinstalled (because then the script will always say the group key is being reinstalled).
 2. **`./krack-test-client.py --group --gtkinit`**. This tests whether the client installs the group key in the group key handshake with the given receive sequence counter (RSC). See section 6.4 of our [follow-up research paper(https://papers.mathyvanhoef.com/ccs2018.pdf)] for the details behind this vulnerability.

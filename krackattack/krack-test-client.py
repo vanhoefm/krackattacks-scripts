@@ -298,7 +298,7 @@ class KRAckAttackClient():
 	def handle_replay(self, p):
 		"""Replayed frames (caused by a pairwise key reinstallation) are rejected by the kernel. This
 		function processes these frames manually so we can still test reinstallations of the group key."""
-		if not Dot11WEP in p: return
+		if not dot11_is_encrypted_data(p): return
 
 		# Reconstruct Ethernet header
 		clientmac = p.addr2
@@ -343,7 +343,7 @@ class KRAckAttackClient():
 			self.reset_client_info(clientmac)
 
 		# Inspect encrypt frames for IV reuse & handle replayed frames rejected by the kernel
-		elif p.addr1 == self.apmac and Dot11WEP in p:
+		elif p.addr1 == self.apmac and dot11_is_encrypted_data(p):
 			if not clientmac in self.clients:
 				self.clients[clientmac] = ClientState(clientmac, options=options)
 			client = self.clients[clientmac]

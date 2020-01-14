@@ -23,6 +23,19 @@ def log(level, msg, color=None, showtime=True):
 	print (datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m"
 
 
+#### Back-wards compatibility with older scapy
+
+if not "Dot11FCS" in locals():
+	class Dot11FCS():
+		pass
+if not "Dot11Encrypted" in locals():
+	class Dot11Encrypted():
+		pass
+	class Dot11CCMP():
+		pass
+	class Dot11TKIP():
+		pass
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
@@ -76,12 +89,12 @@ class MitmSocket(L2Socket):
 
 	def send(self, p):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
-		p[Dot11].FCfield |= 0x20
+		p.FCfield |= 0x20
 		L2Socket.send(self, RadioTap()/p)
 
 	def _strip_fcs(self, p):
-		# Scapy can't handle the optional Frame Check Sequence (FCS) field automatically
-		if p[RadioTap].present & 2 != 0:
+		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically
+		if p[RadioTap].present & 2 != 0 and not Dot11FCS in p:
 			rawframe = str(p[RadioTap])
 			pos = 8
 			while ord(rawframe[pos - 1]) & 0x80 != 0: pos += 4
@@ -99,33 +112,62 @@ class MitmSocket(L2Socket):
 
 	def recv(self, x=MTU):
 		p = L2Socket.recv(self, x)
-		if p == None or not Dot11 in p: return None
+		if p == None or not (Dot11 in p or Dot11FCS in p):
+			return None
 
 		# Hack: ignore frames that we just injected and are echoed back by the kernel
-		if p[Dot11].FCfield & 0x20 != 0:
+		if p.FCfield & 0x20 != 0:
 			return None
 
 		# Strip the FCS if present, and drop the RadioTap header
-		return self._strip_fcs(p)
+		if Dot11FCS in p:
+			return p
+		else:
+			return self._strip_fcs(p)
 
 	def close(self):
 		super(MitmSocket, self).close()
 
 def dot11_get_seqnum(p):
-	return p[Dot11].SC >> 4
+	return p.SC >> 4
+
+def dot11_is_encrypted_data(p):
+	# All these different cases are explicitly tested to handle older scapy versions
+	return (p.FCfield & 0x40) or Dot11CCMP in p or Dot11TKIP in p or Dot11WEP in p or Dot11Encrypted in p
+
+def payload_to_iv(payload):
+	iv0 = payload[0]
+	iv1 = payload[1]
+	wepdata = payload[4:8]
+
+	# FIXME: Only CCMP is supported (TKIP uses a different IV structure)
+	return ord(iv0) + (ord(iv1) << 8) + (struct.unpack(">I", wepdata)[0] << 16)
 
 def dot11_get_iv(p):
-	"""Scapy can't handle Extended IVs, so do this properly ourselves (only works for CCMP)"""
-	if Dot11WEP not in p:
+	"""
+	Assume it's a CCMP frame. Old scapy can't handle Extended IVs.
+	This code only works for CCMP frames.
+	"""
+	if Dot11CCMP in p or Dot11TKIP in p or Dot11Encrypted in p:
+		# Scapy uses a heuristic to differentiate CCMP/TKIP and this may be wrong.
+		# So even when we get a Dot11TKIP frame, we should treat it like a Dot11CCMP frame.
+		payload = str(p[Dot11Encrypted])
+		return payload_to_iv(payload)
+
+	elif Dot11WEP in p:
+		wep = p[Dot11WEP]
+		if wep.keyid & 32:
+			# FIXME: Only CCMP is supported (TKIP uses a different IV structure)
+			return ord(wep.iv[0]) + (ord(wep.iv[1]) << 8) + (struct.unpack(">I", wep.wepdata[:4])[0] << 16)
+		else:
+			return ord(wep.iv[0]) + (ord(wep.iv[1]) << 8) + (ord(wep.iv[2]) << 16)
+
+	elif p.FCfield & 0x40:
+		return payload_to_iv(p[Raw].load)
+
+	else:
 		log(ERROR, "INTERNAL ERROR: Requested IV of plaintext frame")
 		return 0
-
-	wep = p[Dot11WEP]
-	if wep.keyid & 32:
-		# FIXME: Only CCMP is supported (TKIP uses a different IV structure)
-		return ord(wep.iv[0]) + (ord(wep.iv[1]) << 8) + (struct.unpack(">I", wep.wepdata[:4])[0] << 16)
-	else:
-		return ord(wep.iv[0]) + (ord(wep.iv[1]) << 8) + (ord(wep.iv[2]) << 16)
 
 def get_tlv_value(p, type):
 	if not Dot11Elt in p: return None
@@ -144,14 +186,19 @@ def dot11_get_priority(p):
 #### Crypto functions and util ####
 
 def get_ccmp_payload(p):
-	# Extract encrypted payload:
-	# - Skip extended IV (4 bytes in total)
-	# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
-	return str(p.wepdata[4:-4])
+	if Dot11WEP in p:
+		# Extract encrypted payload:
+		# - Skip extended IV (4 bytes in total)
+		# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
+		return str(p.wepdata[4:-4])
+	elif Dot11CCMP in p or Dot11TKIP in p or Dot11Encrypted in p:
+		return p[Dot11Encrypted].data
+	else:
+		return p[Raw].load
 
 def decrypt_ccmp(p, key):
 	payload   = get_ccmp_payload(p)
-	sendermac = p[Dot11].addr2
+	sendermac = p.addr2
 	priority  = dot11_get_priority(p)
 	iv        = dot11_get_iv(p)
 	pn        = struct.pack(">I", iv >> 16) + struct.pack(">H", iv & 0xFFFF)

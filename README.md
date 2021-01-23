@@ -2,7 +2,7 @@ This project contains scripts to test if clients or access points (APs) are affe
 
 Remember that our scripts are not attack scripts! You will need the appropriate network credentials in order to test if an access point or client is affected by the KRACK attack.
 
-**21 January 2021**: the scripts have been made compatible with Python3 and has been updated to better support newer Linux distributions.
+**21 January 2021**: the scripts have been made compatible with Python3 and has been updated to better support newer Linux distributions. If you want to revert to the old version, execute `git fetch --tags && git checkout v1` after cloning the repository (and switch back to the latest version using `git checkout research`).
 
 
 # Prerequisites

@@ -1,7 +1,7 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Tests for key reinstallation vulnerabilities in Wi-Fi clients
-# Copyright (c) 2017, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
+# Copyright (c) 2017-2021, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
 #
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -99,21 +99,19 @@ class ClientState():
 		self.broadcast_requests_sent = -1 # -1 because the first broadcast ARP requests are still valid
 		self.broadcast_patched_intervals = 0
 
-	# TODO: Put in libwifi?
 	def get_encryption_key(self, hostapd_ctrl):
 		if self.TK is None:
 			# Contact our modified Hostapd instance to request the pairwise key
 			response = hostapd_command(hostapd_ctrl, "GET_TK " + self.mac)
 			if not "FAIL" in response:
-				self.TK = response.strip().decode("hex")
+				self.TK = bytes.fromhex(response.strip())
 		return self.TK
 
-	# TODO: Put in libwifi?
 	def decrypt(self, p, hostapd_ctrl):
 		payload = get_ccmp_payload(p)
 		llcsnap, packet = payload[:8], payload[8:]
 
-		if payload.startswith("\xAA\xAA\x03\x00\x00\x00"):
+		if payload.startswith(b"\xAA\xAA\x03\x00\x00\x00"):
 			# On some kernels, the virtual interface associated to the real AP interface will return
 			# frames where the payload is already decrypted (this happens when hardware decryption is
 			# used). So if the payload seems decrypted, just extract the full plaintext from the frame.
@@ -123,8 +121,8 @@ class ClientState():
 			plaintext = decrypt_ccmp(p, key)
 
 			# If it still fails, try an all-zero key
-			if not plaintext.startswith("\xAA\xAA\x03\x00\x00\x00"):
-				plaintext = decrypt_ccmp(p, "\x00" * 16)
+			if plaintext == None:
+				plaintext = decrypt_ccmp(p, b"\x00" * 16)
 
 		return plaintext
 
@@ -305,24 +303,14 @@ class KRAckAttackClient():
 		header = Ether(dst=self.apmac, src=clientmac)
 		header.time = p.time
 
-		# Decrypt the payload and obtain LLC/SNAP header and packet content
+		# Decrypt the Wi-Fi frame
 		client = self.clients[clientmac]
 		plaintext = client.decrypt(p, self.hostapd_ctrl)
-		llcsnap, packet = plaintext[:8], plaintext[8:]
-
-		# Rebuild the full Ethernet packet
-		if   llcsnap == "\xAA\xAA\x03\x00\x00\x00\x08\x06":
-			decap = header/ARP(packet)
-		elif llcsnap == "\xAA\xAA\x03\x00\x00\x00\x08\x00":
-			decap = header/IP(packet)
-		elif llcsnap == "\xAA\xAA\x03\x00\x00\x00\x86\xdd":
-			decap = header/IPv6(packet)
-		#elif llcsnap == "\xAA\xAA\x03\x00\x00\x00\x88\x8e":
-		# 	# EAPOL
-		else:
+		if plaintext == None:
 			return
 
 		# Now process the packet as if it were a valid (non-replayed) one
+		decap = header/plaintext[SNAP].payload
 		self.process_eth_rx(decap)
 
 	def handle_mon_rx(self):
@@ -351,7 +339,7 @@ class KRAckAttackClient():
 			iv = dot11_get_iv(p)
 			log(DEBUG, "%s: transmitted data using IV=%d (seq=%d)" % (clientmac, iv, dot11_get_seqnum(p)))
 
-			if decrypt_ccmp(p, "\x00" * 16).startswith("\xAA\xAA\x03\x00\x00\x00"):
+			if decrypt_ccmp(p, b"\x00" * 16) != None:
 				client.mark_allzero_key(p)
 			if self.options.variant == TestOptions.Fourway and not self.options.gtkinit:
 				client.check_pairwise_reinstall(p)
@@ -575,8 +563,8 @@ def hostapd_read_config(config):
 
 if __name__ == "__main__":
 	if "--help" in sys.argv or "-h" in sys.argv:
-		print "\nSee README.md for usage instructions. Accepted parameters are"
-		print "\n\t" + "\n\t".join(["--replay-broadcast", "--group", "--tptk", "--tptk-rand", "--gtkinit", "--debug"]) + "\n"
+		print("\nSee README.md for usage instructions. Accepted parameters are")
+		print("\n\t" + "\n\t".join(["--replay-broadcast", "--group", "--tptk", "--tptk-rand", "--gtkinit", "--debug"]) + "\n")
 		quit(1)
 
 	options = TestOptions()
@@ -587,7 +575,7 @@ if __name__ == "__main__":
 	groupkey = argv_pop_argument("--group")
 	fourway = argv_pop_argument("--fourway")
 	if replay_broadcast + replay_unicast + fourway + groupkey > 1:
-		print "You can only select one argument of out replay-broadcast, replay-unicast, fourway, and group"
+		print("You can only select one argument of out replay-broadcast, replay-unicast, fourway, and group")
 		quit(1)
 	if replay_broadcast:
 		options.variant = TestOptions.ReplayBroadcast
@@ -602,7 +590,7 @@ if __name__ == "__main__":
 	tptk = argv_pop_argument("--tptk")
 	tptk_rand = argv_pop_argument("--tptk-rand")
 	if tptk + tptk_rand > 1:
-		print "You can only select one argument of out tptk and tptk-rand"
+		print("You can only select one argument of out tptk and tptk-rand")
 		quit(1)
 	if tptk:
 		options.tptk = TestOptions.TptkReplay

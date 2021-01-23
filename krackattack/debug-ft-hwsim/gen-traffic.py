@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import logging, time
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *

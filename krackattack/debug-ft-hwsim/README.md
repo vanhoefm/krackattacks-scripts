@@ -7,6 +7,8 @@ To verify the script is working correctly, try it out against a virtualized Wi-F
 
 Now read the documentation in `krack-ft-test.py`. Go to step 3 and start the tool using:
 
+	sudo su
+	source ../venv/bin/activate
 	../krack-ft-test.py wpa_supplicant -D nl80211 -i wlan2 -c supplicant.conf
 
 Follow the next steps. To generate traffic in step 5 use `./gen-traffic.py`.

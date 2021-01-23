@@ -34,4 +34,4 @@ do rmmod $MODULE 2> /dev/null || true; done
 
 # 3. Done. To be sure parameters are reloaded, reboot computer.
 
-echo "Done. Reboot your computer."
+echo "Hardware decryption disabled. Reboot your computer."

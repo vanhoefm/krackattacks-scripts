@@ -33,3 +33,4 @@ wlantest/test_vectors
 wlantest/wlantest
 wlantest/wlantest_cli
 **/parallel-vm.log
+venv/

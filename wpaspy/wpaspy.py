@@ -54,7 +54,7 @@ class Ctrl:
                     break
                 self.s = socket.socket(af, socktype)
                 self.s.settimeout(5)
-                self.s.sendto("GET_COOKIE", sockaddr)
+                self.s.sendto(b"GET_COOKIE", sockaddr)
                 reply, server = self.s.recvfrom(4096)
                 self.cookie = reply
                 self.port = port
@@ -83,13 +83,24 @@ class Ctrl:
             self.started = False
 
     def request(self, cmd, timeout=10):
+        if type(cmd) == str:
+            try:
+                cmd2 = cmd.encode()
+                cmd = cmd2
+            except UnicodeDecodeError as e:
+                pass
         if self.udp:
             self.s.sendto(self.cookie + cmd, self.sockaddr)
         else:
             self.s.send(cmd)
         [r, w, e] = select.select([self.s], [], [], timeout)
         if r:
-            return self.s.recv(4096)
+            res = self.s.recv(4096).decode()
+            try:
+                r = str(res)
+            except UnicodeDecodeError as e:
+                r = res
+            return r
         raise Exception("Timeout on waiting response")
 
     def attach(self):
@@ -103,6 +114,9 @@ class Ctrl:
 
     def detach(self):
         if not self.attached:
+            return None
+        if self.s.fileno() == -1:
+            self.attached = False
             return None
         while self.pending():
             ev = self.recv()
@@ -129,5 +143,9 @@ class Ctrl:
         return False
 
     def recv(self):
-        res = self.s.recv(4096)
-        return res
+        res = self.s.recv(4096).decode()
+        try:
+            r = str(res)
+        except UnicodeDecodeError as e:
+            r = res
+        return r

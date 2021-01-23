@@ -1,2 +1,2 @@
-pycryptodomex==3.9.4
-scapy==2.4.3
+pycryptodome==3.9.9
+scapy==2.4.4

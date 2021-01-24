@@ -183,6 +183,15 @@ Their tools supports several different tests, and these tests correspond to the 
 To confirm that hardware decryption is disable, execute `systool -vm ath9k_htc` or similar after plugging in your Wi-Fi NIC to confirm the nohwcript/swcrypto/hwcrypto parameter has been set. Note that you must replace `ath9k_htc` with the kernel module for your wireless network card.
 
 
+# Extra: 5 GHz not supported
+
+There's no official support for testing devices in the 5 GHz band.
+
+If you nevertheless want to use the tool on 5 GHz channels, the network card being used must allow the injection of frames in the 5 GHz channel. Unfortunately, this is not always possible due to regulatory constraints. To see on which channels you can inject frames you can execute `iw list` and look under Frequencies for channels that are not marked as disabled, no IR, or radar detection. Note that these conditions may depend on your network card, the current configured country, and the AP you are connected to. For more information see, for example, the [Arch Linux documentation](https://wiki.archlinux.org/index.php/Network_configuration/Wireless#Respecting_the_regulatory_domain).
+
+Note that the Linux kernel may not allow the injection of frames even though it is allowed to send normal frames. This is because in the function `ieee80211_monitor_start_xmit` the kernel refuses to inject frames when `cfg80211_reg_can_beacon` returns false. As a result, Linux may refuse to inject frames even though this is actually allowed. Making `cfg80211_reg_can_beacon` return true under the correct (or all) conditions prevents this bug. So you'll have to patch the Linux drivers so that `cfg80211_reg_can_beacon` always returns true, for instance, by manually patching the [packport driver](https://backports.wiki.kernel.org/index.php/Main_Page) code.
+
+
 # Extra: Manual Tests
 
 It's also possible to manually perform (more detailed) tests by cloning the hostap git repository:

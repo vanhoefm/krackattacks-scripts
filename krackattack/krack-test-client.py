@@ -327,7 +327,7 @@ class KRAckAttackClient():
 		if apmac != self.apmac: return None
 
 		# Reset info about disconnected clients
-		if Dot11Deauth in p or Dot11Disas in p:
+		if Dot11AssoReq in p or Dot11Deauth in p or Dot11Disas in p:
 			self.reset_client_info(clientmac)
 
 		# Inspect encrypt frames for IV reuse & handle replayed frames rejected by the kernel
@@ -561,11 +561,23 @@ def hostapd_read_config(config):
 
 	return interface
 
+def get_expected_scapy_ver():
+	for line in open("requirements.txt"):
+		if line.startswith("scapy=="):
+			return line[7:].strip()
+	return None
+
 if __name__ == "__main__":
 	if "--help" in sys.argv or "-h" in sys.argv:
 		print("\nSee README.md for usage instructions. Accepted parameters are")
 		print("\n\t" + "\n\t".join(["--replay-broadcast", "--group", "--tptk", "--tptk-rand", "--gtkinit", "--debug"]) + "\n")
 		quit(1)
+
+	# Check if we're using the expected scapy version
+	expected_ver = get_expected_scapy_ver()
+	if expected_ver!= None and scapy.VERSION != expected_ver:
+		log(WARNING, f"You are using scapy version {scapy.VERSION} instead of the expected {expected_ver}")
+		log(WARNING, "Are you executing the script from inside the correct python virtual environment?")
 
 	options = TestOptions()
 

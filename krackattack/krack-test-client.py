@@ -266,7 +266,7 @@ class KRAckAttackClient():
 
 		# Set other variables
 		self.nic_iface = interface
-		self.nic_mon = interface + "mon"
+		self.nic_mon = ("mon" + interface)[:15]
 		self.options = None
 		try:
 			self.apmac = scapy.arch.get_if_hwaddr(interface)

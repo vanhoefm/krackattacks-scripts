@@ -620,7 +620,7 @@ if __name__ == "__main__":
 	# Parse remaining options
 	options.gtkinit = argv_pop_argument("--gtkinit")
 	while argv_pop_argument("--debug"):
-		libwifi.global_log_level -= 1
+		change_log_level(-1)
 
 	# Now start the tests
 	attack = KRAckAttackClient()

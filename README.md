@@ -126,13 +126,15 @@ Their tools supports several different tests, and these tests correspond to the 
 
 3. Use this script as a wrapper over the previous wpa_supplicant command:
 
-		sudo ./krack-ft-test.py wpa_supplicant -D nl80211 -i wlan0 -c network.conf
+		sudo su
+		source venv/bin/activate
+		./krack-ft-test.py wpa_supplicant -D nl80211 -i wlan0 -c network.conf
 
-	This will execute the wpa_supplicant command using the provided parameters, and will add a virtual monitor interface that will perform attack tests.
+	This will execute the wpa_supplicant command using the provided parameters, and will add a virtual monitor interface that will perform attack tests. It's important to first become root and then load the python virtual environment (see above how to create this virtual environment).
 
 4. Use wpa_cli to roam to a different AP of the same network. For example:
 
-		sudo wpa_cli -i wlan0
+		wpa_cli -i wlan0
 		> status
 		bssid=c4:e9:84:db:fb:7b
 		ssid=testnet
@@ -149,7 +151,7 @@ Their tools supports several different tests, and these tests correspond to the 
 
 5. Generate traffic between the AP and client. For example:
 
-		sudo arping -I wlan0 192.168.1.10
+		arping -I wlan0 192.168.1.10
 
 6. Now look at the output of ./krack-ft-test.py to see if the AP is vulnerable.
 

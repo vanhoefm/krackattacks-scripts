@@ -48,7 +48,7 @@ First modify `hostapd/hostapd.conf` and **edit the line `interface=` to specify 
 
 You should now run the following tests located in the `krackattacks/` directory:
 
-1. **`./krack-test-client.py --replay-broadcast`**. This tests whether the client acceps replayed broadcast frames. If the client accepts replayed broadcast frames, this must be patched first. If you do not patch the client, our script will not be able to determine if the group key is being reinstalled (because then the script will always say the group key is being reinstalled).
+1. **`./krack-test-client.py --replay-broadcast`**. This tests whether the client accepts replayed broadcast frames. If the client accepts replayed broadcast frames, this must be patched first. If you do not patch the client, our script will not be able to determine if the group key is being reinstalled (because then the script will always say the group key is being reinstalled).
 
 2. **`./krack-test-client.py --group --gtkinit`**. This tests whether the client installs the group key in the group key handshake with the given receive sequence counter (RSC). See section 6.4 of our [follow-up research paper(https://papers.mathyvanhoef.com/ccs2018.pdf)] for the details behind this vulnerability.
 

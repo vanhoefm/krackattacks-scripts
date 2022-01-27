@@ -42,6 +42,8 @@ Every time before you use the scripts you must **disable Wi-Fi** in your network
 After doing this you can executing the scripts multiple times as long as you don't close the terminal.
 
 
+If you want to undo the effects of the `disable-hwcrypto.sh` then delete the file `/etc/modprobe.d/nohwcrypt.conf`.
+
 # Testing Clients
 
 First modify `hostapd/hostapd.conf` and **edit the line `interface=` to specify the Wi-Fi interface** that will be used to execute the tests. Note that for all tests, once the script is running, you must let the device being tested connect to the **SSID testnetwork using the password abcdefgh**. You can change settings of the AP by modifying `hostapd/hostapd.conf`. In all tests the **client must use DHCP to get an IP** after connecting to the Wi-Fi network. This is because some tests only start after the client has requested an IP using DHCP!

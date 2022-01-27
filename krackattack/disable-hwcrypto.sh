@@ -7,7 +7,7 @@
 
 set -e
 
-NOHWCRYPT="ath5k ath9k ath9k_htc rt2800usb carl9170 b43 p54common rt2500usb rt2800pci rt2800usb rt73usb"
+NOHWCRYPT="ath5k ath9k ath9k_htc rt2800usb carl9170 b43 p54common rt2500usb rt2800pci rt73usb"
 SWCRYPTO="iwlwifi iwl3945 iwl4965"
 HWCRYPTO="ipw2200"
 

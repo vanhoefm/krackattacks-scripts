@@ -359,7 +359,7 @@ def get_ccmp_payload(p):
 		# Extract encrypted payload:
 		# - Skip extended IV (4 bytes in total)
 		# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
-		return str(p.wepdata[4:-4])
+		return raw(p.wepdata[4:-4])
 	elif Dot11CCMP in p:
 		return p[Dot11CCMP].data
 	elif Dot11TKIP in p:

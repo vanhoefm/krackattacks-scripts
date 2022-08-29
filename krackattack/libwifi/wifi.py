@@ -354,6 +354,11 @@ def dot11_get_priority(p):
 
 #### Crypto functions and util ####
 
+def get_ccmp_keyid(p):
+	if Dot11WEP in p:
+		return p.keyid
+	return p.key_id
+
 def get_ccmp_payload(p):
 	if Dot11WEP in p:
 		# Extract encrypted payload:

@@ -108,7 +108,7 @@ def decrypt_ccmp(p, tk, verify=True):
 	p = p.copy()
 
 	# Get used CCMP parameters
-	keyid = p.key_id
+	keyid = get_ccmp_keyid(p)
 	priority = dot11_get_priority(p)
 	pn = dot11ccmp_get_pn(p)
 

@@ -14,6 +14,8 @@ from libwifi import *
 import sys, socket, struct, time, subprocess, atexit, select, os.path
 from wpaspy import Ctrl
 
+warned_hardware_decryption = False
+
 # Concrete TODOs:
 # 0. Option to send plaintext retransmissions of message 3 (this is now easy to do)
 # 1. More reliable group key high RSC installation test in the 4-way HS (see below)
@@ -319,14 +321,45 @@ class KRAckAttackClient():
 		decap = header/plaintext[SNAP].payload
 		self.process_eth_rx(decap)
 
+	def check_hardware_encryption(self, p):
+		global warned_hardware_decryption
+
+		# Check for hardware decryption usage that prevents detection of IV reuse. The utility
+		# function get_ccmp_payload was made so that it returns the payload after an extended IV.
+		# Basically this script works if the plaintext starts at `get_ccmp_payload`, but if the
+		# plaintext starts at other locations, it's unknown what the layout of the frame is. In
+		# that case we should kill the script.
+		payload = get_ccmp_payload(p)
+		if dot11_is_encrypted_data(p) and payload != None and b"\xAA\xAA\x03\x00\x00\x00" in raw(p):
+			if payload.startswith(b"\xAA\xAA\x03\x00\x00\x00"):
+				if not warned_hardware_decryption:
+					# - With the ath9k_htc it was not possible to detect the usage of an all-zero key
+					#   when using hardware decryption. It seems as if the hardware tries decryption,
+					#   thereby scrambling the contect of the frame, and then sees that decryption failed.
+					#   This means userspace doesn't receive the original frame, but a frame where the
+					#   (encrypted) data is scrambled.
+					# - The ath9k_htc doesn't reset the (group) IV when installing a new key. this means
+					#   it will always think a device reinstalls the group key, because the ath9k_htc
+					#   will always use an incremented IV when though we reset the group key. We also
+					#   can't seem to detect this in userspace because the hardware may override the IV?
+					log(WARNING, f"Hardware decryption detected! Attemping to still detect IV reuse, but this is unreliable.")
+					log(ERROR, f"!!! Ideally you disable hardware decryption or use a different network card !!!")
+					log(WARNING, f"E.g., detecting all-zero key use may currently be unreliable, and with some network")
+					log(WARNING, f"      cards key reinstallations cannot be detected at all currently...")
+					warned_hardware_decryption = True
+			else:
+				# Whether an IV is included may depend on the direction of the packet. For instance,
+				# with the "Intel Tiger Lake PCH CNVi WiFi" there's no IV included in transmitted frames,
+				# but the IV *is* included in received frames.
+				log(ERROR, "Hardware decryption seems to be dropping the IV, meaning we cannot detect key reinstallations.")
+				log(ERROR, "Try to disable hardware decryption, use a different network card, or report this as a bug.")
+				log(WARNING, f"Frame causing the issue: {repr(p)} with raw data being {p}")
+				quit(1)
+
 	def handle_mon_rx(self):
 		p = self.sock_mon.recv()
 		if p == None: return
 		if p.type == 1: return
-
-		# Note: we cannot verify that the NIC is indeed reusing IVs when sending the broadcast
-		# ARP requests, because it may override them in the firmware/hardware (some Atheros
-		# Wi-Fi NICs do no properly reset the Tx group key IV when using hardware encryption).
 
 		# The first bit in FCfield is set if the frames is "to-DS"
 		clientmac, apmac = (p.addr1, p.addr2) if (p.FCfield & 2) != 0 else (p.addr2, p.addr1)
@@ -338,6 +371,8 @@ class KRAckAttackClient():
 
 		# Inspect encrypt frames for IV reuse & handle replayed frames rejected by the kernel
 		elif p.addr1 == self.apmac and dot11_is_encrypted_data(p):
+			self.check_hardware_encryption(p)
+
 			if not clientmac in self.clients:
 				self.clients[clientmac] = ClientState(clientmac, options=options)
 			client = self.clients[clientmac]

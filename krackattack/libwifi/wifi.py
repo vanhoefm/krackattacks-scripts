@@ -371,8 +371,10 @@ def get_ccmp_payload(p):
 		return p[Dot11TKIP].data
 	elif Dot11Encrypted in p:
 		return p[Dot11Encrypted].data
-	else:
+	elif Raw in p:
 		return p[Raw].load
+	else:
+		return None
 
 class IvInfo():
 	def __init__(self, p):

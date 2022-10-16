@@ -314,7 +314,7 @@ class KRAckAttackClient():
 		if plaintext == None:
 			return
 		if not SNAP in plaintext:
-			log(WARNING, f"No SNAP layer in decrypted packet {plaintext}")
+			log(WARNING, "No SNAP layer in decrypted packet {}".format(plaintext))
 			return None
 
 		# Now process the packet as if it were a valid (non-replayed) one
@@ -342,10 +342,10 @@ class KRAckAttackClient():
 					#   it will always think a device reinstalls the group key, because the ath9k_htc
 					#   will always use an incremented IV when though we reset the group key. We also
 					#   can't seem to detect this in userspace because the hardware may override the IV?
-					log(WARNING, f"Hardware decryption detected! Attemping to still detect IV reuse, but this is unreliable.")
-					log(ERROR, f"!!! Ideally you disable hardware decryption or use a different network card !!!")
-					log(WARNING, f"E.g., detecting all-zero key use may currently be unreliable, and with some network")
-					log(WARNING, f"      cards key reinstallations cannot be detected at all currently...")
+					log(WARNING, "Hardware decryption detected! Attemping to still detect IV reuse, but this is unreliable.")
+					log(ERROR, "!!! Ideally you disable hardware decryption or use a different network card !!!")
+					log(WARNING, "E.g., detecting all-zero key use may currently be unreliable, and with some network")
+					log(WARNING, "      cards key reinstallations cannot be detected at all currently...")
 					warned_hardware_decryption = True
 			else:
 				# Whether an IV is included may depend on the direction of the packet. For instance,
@@ -353,7 +353,7 @@ class KRAckAttackClient():
 				# but the IV *is* included in received frames.
 				log(ERROR, "Hardware decryption seems to be dropping the IV, meaning we cannot detect key reinstallations.")
 				log(ERROR, "Try to disable hardware decryption, use a different network card, or report this as a bug.")
-				log(WARNING, f"Frame causing the issue: {repr(p)} with raw data being {p}")
+				log(WARNING, "Frame causing the issue: {} with raw data being {}".format(repr(p), p))
 				quit(1)
 
 	def handle_mon_rx(self):
@@ -617,7 +617,7 @@ if __name__ == "__main__":
 	# Check if we're using the expected scapy version
 	expected_ver = get_expected_scapy_ver()
 	if expected_ver!= None and scapy.VERSION != expected_ver:
-		log(WARNING, f"You are using scapy version {scapy.VERSION} instead of the expected {expected_ver}")
+		log(WARNING, "You are using scapy version {} instead of the expected {}".format(scapy.VERSION, expected_ver))
 		log(WARNING, "Are you executing the script from inside the correct python virtual environment?")
 
 	options = TestOptions()

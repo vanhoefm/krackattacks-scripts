@@ -156,7 +156,7 @@ if __name__ == "__main__":
 	# Check if we're using the expected scapy version
 	expected_ver = get_expected_scapy_ver()
 	if expected_ver!= None and scapy.VERSION != expected_ver:
-		log(WARNING, f"You are using scapy version {scapy.VERSION} instead of the expected {expected_ver}")
+		log(WARNING, "You are using scapy version {} instead of the expected {}".format(scapy.VERSION, expected_ver))
 		log(WARNING, "Are you executing the script from inside the correct python virtual environment?")
 
 	# TODO: Verify that we only accept CCMP?

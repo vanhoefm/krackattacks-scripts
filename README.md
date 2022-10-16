@@ -12,23 +12,19 @@ Our scripts were tested on Kali Linux. To install the required dependencies on K
 	sudo apt update
 	sudo apt install libnl-3-dev libnl-genl-3-dev pkg-config libssl-dev net-tools git sysfsutils virtualenv
 
-Then **disable hardware encryption**:
+Now compile our modified hostapd instance and create a python virtual environment. This assure you're using compatible python libraries (those listed in `krackattack/requirements.txt`):
+
+	git clone https://github.com/vanhoefm/krackattacks-scripts.git
+	cd krackattacks-scripts/krackattack
+	./build.sh
+	./pysetup.sh
+
+Then **disable hardware encryption** for optimal results:
 
 	cd krackattack
 	sudo ./disable-hwcrypto.sh
 
 Note that if needed you can later re-enable hardware encryption using the script `sudo ./reenable-hwcrypto.sh`. It's recommended to reboot after disabling hardware encryption. We tested our scripts with an Intel Dual Band Wireless-AC 7260 and a TP-Link TL-WN722N v1 on Kali Linux.
-
-Now compile our modified hostapd instance:
-
-	cd krackattack
-	./build.sh
-
-Finally, to assure you're using compatible python libraries, create a virtualenv with the dependencies listed in `krackattack/requirements.txt`:
-
-	cd krackattack
-	./pysetup.sh
-
 
 # Before every usage
 

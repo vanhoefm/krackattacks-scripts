@@ -3,6 +3,8 @@
 # Start from a clean environment
 rm -rf venv/
 
+sudo apt install python3-venv -y
+
 # Basic python3 virtual environment
 python3 -m venv venv
 source venv/bin/activate

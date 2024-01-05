@@ -1,2 +1,2 @@
-pycryptodome==3.9.9
+pycryptodome==3.19.1
 scapy==2.4.4

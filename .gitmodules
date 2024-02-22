@@ -1,0 +1,6 @@
+[submodule "hostap-wpa_supplicant-2.5"]
+	path = hostap-wpa_supplicant-2.5
+	url = git://w1.fi/hostap.git
+[submodule "hostap-wpa_supplicant-2.3"]
+	path = hostap-wpa_supplicant-2.3
+	url = git://w1.fi/hostap.git

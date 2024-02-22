@@ -559,6 +559,8 @@ class KRAckAttackClient():
 			self.hostapd.wait()
 		if self.sock_mon: self.sock_mon.close()
 		if self.sock_eth: self.sock_eth.close()
+		# 1. Remove unused virtual interfaces to start from a clean state
+		subprocess.call(["iw", self.nic_mon, "del"])
 
 
 def cleanup():

